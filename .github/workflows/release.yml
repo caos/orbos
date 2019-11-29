@@ -26,3 +26,4 @@ jobs:
         docker push ${TAG_LATEST}
         docker push ${TAG_VERSION}
         npx semantic-release
+
