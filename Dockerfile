@@ -13,7 +13,7 @@ RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
 WORKDIR /src
 
 ENV GO111MODULE=on \
-    INFROP_ROOT=/src
+    ORBITER_ROOT=/src
 
 COPY go.mod go.sum ./
 RUN go mod download

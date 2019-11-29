@@ -27,7 +27,7 @@ spec:
       containers:
       - name: orbiter
         imagePullPolicy: Always
-        image: eu.grc.io/caos-240809/orbiter:${INFROP_BRANCH}
+        image: eu.grc.io/caos-240809/orbiter:${ORBITER_BRANCH}
         volumeMounts:
         - name: config-volume
           mountPath: /etc/orbiter/config
