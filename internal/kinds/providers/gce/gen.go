@@ -1,3 +1,3 @@
-//go:generate gen-kindstubs -parentpath=github.com/caos/infrop/internal/kinds/providers -versions=v1 -kind=infrop.caos.ch/GCEProvider
+//go:generate gen-kindstubs -parentpath=github.com/caos/orbiter/internal/kinds/providers -versions=v1 -kind=orbiter.caos.ch/GCEProvider
 
 package gce

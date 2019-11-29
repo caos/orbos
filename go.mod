@@ -1,4 +1,4 @@
-module github.com/caos/infrop
+module github.com/caos/orbiter
 
 go 1.12
 

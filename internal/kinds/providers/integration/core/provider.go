@@ -5,9 +5,9 @@ package core
 import (
 	"sync"
 
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/core/helpers"
-	"github.com/caos/infrop/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
 
 type Provider interface {

@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 )
 
 type Compute struct {

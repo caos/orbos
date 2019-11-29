@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string) (bool, error) {

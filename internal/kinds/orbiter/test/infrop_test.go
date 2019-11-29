@@ -1,12 +1,12 @@
-package infrop_test
+package orbiter_test
 
 import (
 	"testing"
 
-	"github.com/caos/infrop/internal/core/operator/test"
+	"github.com/caos/orbiter/internal/core/operator/test"
 )
 
-func TestInfropEmptyNodeAgent(t *testing.T) {
+func TestOrbiterEmptyNodeAgent(t *testing.T) {
 
 	t.SkipNow()
 
@@ -21,7 +21,7 @@ func TestInfropEmptyNodeAgent(t *testing.T) {
 
 	stop := make(chan struct{})
 
-	iterations, cleanup, _, err := test.Run(stop, "test empty nodeagent", t, `kind: infrop.caos.ch/Infrop
+	iterations, cleanup, _, err := test.Run(stop, "test empty nodeagent", t, `kind: orbiter.caos.ch/Orbiter
 version: v1
 `, desire)
 	defer cleanup()

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/caos/infrop/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/logging"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"

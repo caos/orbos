@@ -5,8 +5,8 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/providers/gce/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
 )
 
 func init() {

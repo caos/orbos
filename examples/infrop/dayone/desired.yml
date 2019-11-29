@@ -1,8 +1,8 @@
-kind: infrop.caos.ch/Infrop
+kind: orbiter.caos.ch/Orbiter
 version: v1
 deps:
   prod:
-    kind: infrop.caos.ch/KubernetesCluster
+    kind: orbiter.caos.ch/KubernetesCluster
     version: v1
     spec:
       version: "v1.15.0"
@@ -19,7 +19,7 @@ deps:
           pool: isolated
     deps:
       static:
-        kind: infrop.caos.ch/StaticProvider
+        kind: orbiter.caos.ch/StaticProvider
         version: v1
         spec:
           remoteuser: root
@@ -45,7 +45,7 @@ deps:
               internalIP: 10.61.0.129
         deps:
           dynamic:
-            kind: infrop.caos.ch/DynamicLoadBalancer
+            kind: orbiter.caos.ch/DynamicLoadBalancer
             version: v1
             spec:
               controlplane:

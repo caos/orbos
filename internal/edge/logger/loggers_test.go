@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
 ) 
 
 type testcase struct {

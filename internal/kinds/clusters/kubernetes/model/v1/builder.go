@@ -5,16 +5,16 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/model"
-	"github.com/caos/infrop/internal/kinds/providers/gce"
-	gceadapter "github.com/caos/infrop/internal/kinds/providers/gce/adapter"
-	"github.com/caos/infrop/internal/kinds/providers/static"
-	staticadapter "github.com/caos/infrop/internal/kinds/providers/static/adapter"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
+	"github.com/caos/orbiter/internal/kinds/providers/gce"
+	gceadapter "github.com/caos/orbiter/internal/kinds/providers/gce/adapter"
+	"github.com/caos/orbiter/internal/kinds/providers/static"
+	staticadapter "github.com/caos/orbiter/internal/kinds/providers/static/adapter"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -35,8 +35,8 @@ func init() {
 
 		return spec, func(cfg model.Config, deps map[string]map[string]interface{}) (map[string]operator.Assembler, error) {
 
-			if spec.Versions.Infrop != "" {
-				if ensureErr := ensureArtifacts(cfg.Params.Logger, secrets, cfg.Params.ID, cfg.Params.RepoURL, cfg.Params.RepoKey, cfg.Params.MasterKey, spec.Versions.Infrop); err != nil {
+			if spec.Versions.Orbiter != "" {
+				if ensureErr := ensureArtifacts(cfg.Params.Logger, secrets, cfg.Params.ID, cfg.Params.RepoURL, cfg.Params.RepoKey, cfg.Params.MasterKey, spec.Versions.Orbiter); err != nil {
 					return nil, ensureErr
 				}
 			}
@@ -71,7 +71,7 @@ func init() {
 				})
 				providerID := cfg.Params.ID + providerName
 				switch kindStr {
-				case "infrop.caos.ch/GCEProvider":
+				case "orbiter.caos.ch/GCEProvider":
 					var lbs map[string]*infra.Ingress
 
 					if !spec.Destroyed && spec.ControlPlane.Provider == providerName {
@@ -83,7 +83,7 @@ func init() {
 						}
 					}
 					subassemblers[providerName] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providerlogger, providerID, lbs, nil, ""))
-				case "infrop.caos.ch/StaticProvider":
+				case "orbiter.caos.ch/StaticProvider":
 					updatesDisabled := make([]string, 0)
 					for _, pool := range spec.Workers {
 						if pool.UpdatesDisabled {
@@ -106,7 +106,7 @@ func init() {
 	}
 }
 
-func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNamespace, repourl, repokey, masterkey, infropversion string) error {
+func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNamespace, repourl, repokey, masterkey, orbiterversion string) error {
 
 	kc, err := secrets.Read(secretsNamespace + "_kubeconfig")
 	if err != nil {
@@ -142,20 +142,20 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 
 	if err := client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "infrop",
+			Name:      "orbiter",
 			Namespace: "caos-system",
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "infrop",
+					"app": "orbiter",
 				},
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
 					Labels: map[string]string{
-						"app": "infrop",
+						"app": "orbiter",
 					},
 				},
 				Spec: core.PodSpec{
@@ -170,17 +170,17 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 					}},
 					// TODO: Remove before open sourcing #39
 					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "infropregistry",
+						Name: "orbiterregistry",
 					}},
 					Containers: []core.Container{{
-						Name:            "infrop",
+						Name:            "orbiter",
 						ImagePullPolicy: core.PullAlways,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/infrop/infrop:%s", infropversion),
-						Command:         []string{"/artifacts/infrop", "--recur", "--repourl", repourl},
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbiter/orbiter:%s", orbiterversion),
+						Command:         []string{"/artifacts/orbiter", "--recur", "--repourl", repourl},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",
 							ReadOnly:  true,
-							MountPath: "/etc/infrop",
+							MountPath: "/etc/orbiter",
 						}},
 					}},
 					Volumes: []core.Volume{{

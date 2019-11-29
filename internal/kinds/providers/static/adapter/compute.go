@@ -3,9 +3,9 @@ package adapter
 import (
 	"strings"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/edge/ssh"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
 )
 
 type compute struct {

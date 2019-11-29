@@ -1,9 +1,9 @@
 package model
 
 import (
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 )
 
 type UserSpec struct {
@@ -11,7 +11,7 @@ type UserSpec struct {
 	Verbose   bool
 	Versions  struct {
 		Kubernetes string
-		Infrop     string
+		Orbiter     string
 		Toolsop    string
 	}
 	Networking struct {
@@ -30,7 +30,7 @@ type Parameters struct {
 	RepoURL          string
 	RepoKey          string
 	MasterKey        string
-	InfropVersion    string
+	OrbiterVersion    string
 	CurrentFile      string
 	SecretsFile      string
 	SelfAbsolutePath []string

@@ -3,8 +3,8 @@
 package adapter
 
 import (
-	infra "github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	model "github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/model"
+	infra "github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	model "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 )
 
 // deriveFilter returns a list of all items in the list that matches the predicate.

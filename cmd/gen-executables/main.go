@@ -9,13 +9,13 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/caos/infrop/internal/edge/executables"
+	"github.com/caos/orbiter/internal/edge/executables"
 )
 
 func main() {
 
-	tag := flag.String("tag", "none", "Path to the git repositorys path to the file containing infrops current state")
-	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing infrops current state")
+	tag := flag.String("tag", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing orbiters current state")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 
 	flag.Parse()

@@ -1,6 +1,6 @@
 package model
 
-import "github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/model"
+import "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 
 type UserSpec struct {
 	IP string

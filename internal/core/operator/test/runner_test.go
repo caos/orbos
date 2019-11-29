@@ -5,8 +5,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/core/operator/test"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/test"
 )
 
 func TestChaniningDesired(t *testing.T) {
@@ -30,14 +30,14 @@ func TestChaniningDesired(t *testing.T) {
 func TestParsingCurrent(t *testing.T) {
 	testError := "testerror"
 	marshalled := test.MapIteration(&operator.IterationDone{Error: errors.New(testError), Current: []byte(`current:
-  kind: infrop.caos.ch/Infrop
+  kind: orbiter.caos.ch/Orbiter
   state: {}
   version: v1
 deps:
   clusters:
     prod:
       current:
-        kind: infrop.caos.ch/KubernetesCluster
+        kind: orbiter.caos.ch/KubernetesCluster
         state:
           computes:
             testkubernetesprodgooglebelgium-centos-1c3atmnzs59wlavleny1n7oz:

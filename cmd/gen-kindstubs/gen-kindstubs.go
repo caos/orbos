@@ -26,8 +26,8 @@ type Input struct {
 
 func main() {
 
-	kind := flag.String("kind", "", "e.g. infrop.caos.ch/KubernetesCluster")
-	parentpath := flag.String("parentpath", "", "e.g. github.com/caos/infrop/internal/cluster-clusters")
+	kind := flag.String("kind", "", "e.g. orbiter.caos.ch/KubernetesCluster")
+	parentpath := flag.String("parentpath", "", "e.g. github.com/caos/orbiter/internal/cluster-clusters")
 	versions := flag.String("versions", "", "e.g. v1,v2")
 
 	flag.Parse()
@@ -53,7 +53,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/infrop/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator"
 
 	"{{ .QualifiedPackage }}/adapter"
 	"{{ .QualifiedPackage }}/model"
@@ -144,7 +144,7 @@ package adapter
 import (
 	"context"
 
-	"github.com/caos/infrop/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator"
 	"{{ .QualifiedPackage }}/model"
 )
 
@@ -180,7 +180,7 @@ package {{ .Package }}
 import (
 	"errors"
 
-	"github.com/caos/infrop/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator"
 	"{{ .QualifiedPackage }}/model"
 )
 

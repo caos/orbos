@@ -3,9 +3,9 @@ package adapter
 import (
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/static/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/static/model"
 )
 
 func desireHostname(poolsSpec map[string][]*model.Compute, mapNodeAgent func(cmp infra.Compute) *operator.NodeAgentCurrent) func(compute infra.Compute, pool string) error {

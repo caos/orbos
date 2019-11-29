@@ -9,12 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/nodeagent/adapter"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/k8s"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/k8s"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
 )
 
 type Installer interface {

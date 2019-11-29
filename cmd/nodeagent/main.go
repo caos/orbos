@@ -9,18 +9,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/nodeagent"
-	"github.com/caos/infrop/internal/kinds/nodeagent/adapter"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/conv"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/firewall"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/rebooter/node"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/nodeagent"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/conv"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/node"
 
-	logcontext "github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
-	"github.com/caos/infrop/internal/edge/watcher/cron"
-	"github.com/caos/infrop/internal/edge/watcher/immediate"
+	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/edge/watcher/cron"
+	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 )
 
 var gitCommit string

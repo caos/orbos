@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/caos/infrop/internal/kinds/nodeagent/adapter"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/rebooter"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter"
 )
 
 func New() adapter.Rebooter {

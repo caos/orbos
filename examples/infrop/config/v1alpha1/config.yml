@@ -1,9 +1,9 @@
-apiVersion: infrop.caos.ch/v1
-kind: Infrop
+apiVersion: orbiter.caos.ch/v1
+kind: Orbiter
 desired:
   clusters:
     ops:
-      apiVersion: infrop.caos.ch/v1
+      apiVersion: orbiter.caos.ch/v1
       kind: KubernetesCluster
       desired:
         version: "v1.15.1"
@@ -20,7 +20,7 @@ desired:
             nodes: 1
             pool: highmem
 #    taxes:
-#      apiVersion: infrop.caos.ch/v1
+#      apiVersion: orbiter.caos.ch/v1
 #      kind: KubernetesCluster
 #      spec:
 #        version: "v1.15.1"
@@ -48,7 +48,7 @@ desired:
 #          pool: standard
   providers:
     google:
-      apiVersion: infrop.caos.ch/v1
+      apiVersion: orbiter.caos.ch/v1
       kind: GCEProvider
       desired:
         project: caos-240809

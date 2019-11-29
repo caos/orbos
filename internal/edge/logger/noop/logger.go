@@ -1,6 +1,6 @@
 package noop
 
-import "github.com/caos/infrop/internal/core/logging"
+import "github.com/caos/orbiter/internal/core/logging"
 
 type logger struct{}
 

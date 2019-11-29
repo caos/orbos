@@ -3,7 +3,7 @@ package infra
 import (
 	"io"
 
-	"github.com/caos/infrop/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator"
 )
 
 type ProviderCurrent interface {

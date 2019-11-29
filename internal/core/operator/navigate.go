@@ -5,9 +5,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/helpers"
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/edge/git"
+	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/edge/git"
 	"gopkg.in/yaml.v2"
 )
 

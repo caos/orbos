@@ -6,20 +6,20 @@ import (
 	"testing"
 	"time"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator/test"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator/test"
 )
 
-const dayOneDesired = `kind: infrop.caos.ch/Infrop
+const dayOneDesired = `kind: orbiter.caos.ch/Orbiter
 version: v1
 deps:
   prod:
-    kind: infrop.caos.ch/KubernetesCluster
+    kind: orbiter.caos.ch/KubernetesCluster
     version: v1
     spec:
       versions:
         kubernetes: "v1.15.0"
-        infrop: dev
+        orbiter: dev
         toolsop: comingSoon
       controlplane:
         updatesDisabled: false 
@@ -44,7 +44,7 @@ deps:
           pool: isolated
     deps:
       static:
-        kind: infrop.caos.ch/StaticProvider
+        kind: orbiter.caos.ch/StaticProvider
         version: v1
         spec:
           remoteuser: root
@@ -70,7 +70,7 @@ deps:
               internalIP: 10.61.0.179
         deps:
           dynamic:
-            kind: infrop.caos.ch/DynamicLoadBalancer
+            kind: orbiter.caos.ch/DynamicLoadBalancer
             version: v1
             spec:
               controlplane:
@@ -124,12 +124,12 @@ deps:
                       path: /healthz
                       code: 200
 #          kubeapi:
-#            kind: infrop.caos.ch/ExternalLoadBalancer
+#            kind: orbiter.caos.ch/ExternalLoadBalancer
 #            version: v1
 #            spec:
 #              address: "10.61.0.254:6443"
 #      googlebelgium:
-#        kind: infrop.caos.ch/GCEProvider
+#        kind: orbiter.caos.ch/GCEProvider
 #        version: v1
 #        spec:
 #          project: caos-240809
@@ -148,7 +148,7 @@ deps:
 #              minMemoryGB: 1
 #              storageGB: 15
 #      googlezurich:
-#        kind: infrop.caos.ch/GCEProvider
+#        kind: orbiter.caos.ch/GCEProvider
 #        version: v1
 #        spec:
 #          project: caos-240809
@@ -220,7 +220,7 @@ func dayOneIterationTester(logger logging.Logger, t *testing.T) (func(it *test.I
 	clusters:
 		for clusterName, cluster := range it.Current.Deps {
 			switch cluster.Current.Kind {
-			case "infrop.caos.ch/KubernetesCluster":
+			case "orbiter.caos.ch/KubernetesCluster":
 				allClusters++
 				clusterKubeConfig := fmt.Sprintf("%s_kubeconfig", strings.ToLower(t.Name())+clusterName)
 				// Success case first

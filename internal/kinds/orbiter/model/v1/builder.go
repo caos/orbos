@@ -3,11 +3,11 @@ package v1
 import (
 	"fmt"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/adapter"
-	k8s "github.com/caos/infrop/internal/kinds/clusters/kubernetes/model"
-	"github.com/caos/infrop/internal/kinds/infrop/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/adapter"
+	k8s "github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
+	"github.com/caos/orbiter/internal/kinds/orbiter/model"
 
 	"github.com/mitchellh/mapstructure"
 )
@@ -48,7 +48,7 @@ func init() {
 
 				path := []string{"deps", clusterName}
 				switch kindStr {
-				case "infrop.caos.ch/KubernetesCluster":
+				case "orbiter.caos.ch/KubernetesCluster":
 					subassemblers[clusterName] = kubernetes.New(path, overwriteDesired, adapter.New(k8s.Parameters{
 						Logger: cfg.Logger.WithFields(map[string]interface{}{
 							"cluster": clusterName,
@@ -58,7 +58,7 @@ func init() {
 						RepoURL:          cfg.NodeagentRepoURL,
 						RepoKey:          cfg.NodeagentRepoKey,
 						MasterKey:        cfg.Masterkey,
-						InfropVersion:    cfg.InfropVersion,
+						OrbiterVersion:    cfg.OrbiterVersion,
 						CurrentFile:      cfg.CurrentFile,
 						SecretsFile:      cfg.SecretsFile,
 					}))

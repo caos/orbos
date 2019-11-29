@@ -8,13 +8,13 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/nodeagent/model"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/model"
 )
 
 func init() {
-	if err := os.MkdirAll("/var/infrop", 0700); err != nil {
+	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
 		panic(err)
 	}
 }

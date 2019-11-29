@@ -1,3 +1,3 @@
-//go:generate gen-kindstubs -parentpath=github.com/caos/infrop/internal/kinds/providers -versions=v1 -kind=infrop.caos.ch/StaticProvider
+//go:generate gen-kindstubs -parentpath=github.com/caos/orbiter/internal/kinds/providers -versions=v1 -kind=orbiter.caos.ch/StaticProvider
 
 package static

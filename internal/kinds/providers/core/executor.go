@@ -3,7 +3,7 @@ package core
 import (
 	"sync"
 
-	"github.com/caos/infrop/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/goombaio/dag"
 )
 

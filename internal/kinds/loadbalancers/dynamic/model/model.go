@@ -3,9 +3,9 @@
 package model
 
 import (
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
 
 	"github.com/pkg/errors"
 )

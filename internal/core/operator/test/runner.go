@@ -11,19 +11,19 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/edge/git"
-	logcontext "github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
-	"github.com/caos/infrop/internal/edge/watcher/cron"
-	"github.com/caos/infrop/internal/edge/watcher/immediate"
-	"github.com/caos/infrop/internal/kinds/infrop"
-	"github.com/caos/infrop/internal/kinds/infrop/adapter"
-	"github.com/caos/infrop/internal/kinds/infrop/model"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/edge/git"
+	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/edge/watcher/cron"
+	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	"github.com/caos/orbiter/internal/kinds/orbiter"
+	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
+	"github.com/caos/orbiter/internal/kinds/orbiter/model"
 )
 
-const testRepoURL = "git@github.com:caos/infrop-test.git"
+const testRepoURL = "git@github.com:caos/orbiter-test.git"
 
 type Desire func(map[string]interface{})
 
@@ -95,12 +95,12 @@ func Run(
 
 	gitClient := git.New(runContext, logger, t.Name(), testRepoURL)
 
-	masterKey, err := ioutil.ReadFile("/etc/infrop/masterkey")
+	masterKey, err := ioutil.ReadFile("/etc/orbiter/masterkey")
 	if err != nil {
 		return nil, cleanup, logger, err
 	}
 
-	repoKey, err := ioutil.ReadFile("/etc/infrop/repokey")
+	repoKey, err := ioutil.ReadFile("/etc/orbiter/repokey")
 	if err != nil {
 		return nil, cleanup, logger, err
 	}
@@ -136,17 +136,17 @@ func Run(
 		CurrentFile:   currentYml,
 		SecretsFile:   secretsYml,
 		DeploymentKey: string(repoKey),
-		RepoCommitter: "Infrop",
+		RepoCommitter: "Orbiter",
 		Watchers: []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 30s"),
 		},
-		RootAssembler: infrop.New(nil, desire, adapter.New(&model.Config{
+		RootAssembler: orbiter.New(nil, desire, adapter.New(&model.Config{
 			Logger:           logger,
-			ConfigID:         "infroptest",
+			ConfigID:         "orbitertest",
 			NodeagentRepoURL: testRepoURL,
 			NodeagentRepoKey: string(repoKey),
-			InfropVersion:    "dev",
+			OrbiterVersion:    "dev",
 			CurrentFile:      currentYml,
 			SecretsFile:      secretsYml,
 			Masterkey:        string(masterKey),

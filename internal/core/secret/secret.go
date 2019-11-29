@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 
-	"github.com/caos/infrop/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/logging"
 )
 
 type constErr string

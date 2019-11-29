@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caos/infrop/internal/kinds/providers/core"
-	logcontext "github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
+	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
 )
 
 type equalsCase struct {

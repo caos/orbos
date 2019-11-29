@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator/test"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator/test"
 )
 
 var (
@@ -17,16 +17,16 @@ var (
 
 func dayTwo(t *testing.T) (func(), func() error) {
 
-	dayTwoCluster := fmt.Sprintf(`kind: infrop.caos.ch/Infrop
+	dayTwoCluster := fmt.Sprintf(`kind: orbiter.caos.ch/Orbiter
 version: v1
 deps:
   prod:
-    kind: infrop.caos.ch/KubernetesCluster
+    kind: orbiter.caos.ch/KubernetesCluster
     version: v1
     spec:
       versions:
         kubernetes: %s
-        infrop: dev
+        orbiter: dev
         toolsop: comingSoon
       controlplane:
         updatesDisabled: false 
@@ -51,7 +51,7 @@ deps:
 #          pool: highstorage
     deps:
 #      googlebelgium:
-#        kind: infrop.caos.ch/GCEProvider
+#        kind: orbiter.caos.ch/GCEProvider
 #        version: v1
 #        spec:
 #          project: caos-240809
@@ -74,7 +74,7 @@ deps:
 #              minMemoryGB: 1
 #              storageGB: 15
 #      googlezurich:
-#        kind: infrop.caos.ch/GCEProvider
+#        kind: orbiter.caos.ch/GCEProvider
 #        version: v1
 #        spec:
 #          project: caos-240809
@@ -87,7 +87,7 @@ deps:
 #              minMemoryGB: 1
 #              storageGB: 16
       static:
-        kind: infrop.caos.ch/StaticProvider
+        kind: orbiter.caos.ch/StaticProvider
         version: v1
         spec:
           remoteuser: root
@@ -121,16 +121,16 @@ deps:
               internalIP: 10.61.0.211
         deps:
           dynamic:
-            kind: infrop.caos.ch/DynamicLoadBalancer
+            kind: orbiter.caos.ch/DynamicLoadBalancer
             version: v1
 #            deps:
 #              kubeapi:
-#                kind: infrop.caos.ch/DynamicKubeAPILoadBalancer
+#                kind: orbiter.caos.ch/DynamicKubeAPILoadBalancer
 #                version: v1
 #                spec:
 #                  ip: "10.61.0.254"
 #              ingress:
-#                kind: infrop.caos.ch/DynamicKubeIngressLoadBalancer
+#                kind: orbiter.caos.ch/DynamicKubeIngressLoadBalancer
 #                version: v1
 #                spec:
 #                  ip: "10.61.0.253"
@@ -228,7 +228,7 @@ func dayTwoIterationTester(logger logging.Logger, t *testing.T) (func(it *test.I
 		var uptodateClusters int
 		for clusterName, cluster := range it.Current.Deps {
 
-			if cluster.Current.Kind == "infrop.caos.ch/KubernetesCluster" {
+			if cluster.Current.Kind == "orbiter.caos.ch/KubernetesCluster" {
 				allClusters++
 
 				clusterLogger := logger.WithFields(map[string]interface{}{

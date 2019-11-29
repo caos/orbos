@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caos/infrop/internal/core/helpers"
-	"github.com/caos/infrop/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/logging"
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"

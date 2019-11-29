@@ -3,19 +3,19 @@ package conv
 import (
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/nodeagent/adapter"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/cri"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/hostname"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/k8s/kubeadm"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/k8s/kubectl"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/k8s/kubelet"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/keepalived"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/middleware"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/nginx"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/swap"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/cri"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/hostname"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/k8s/kubeadm"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/k8s/kubectl"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/k8s/kubelet"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/keepalived"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/nginx"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/swap"
 )
 
 type Converter interface {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/model"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 )
 
 func vrrpHealthChecksScript(transport []model.Source) string {

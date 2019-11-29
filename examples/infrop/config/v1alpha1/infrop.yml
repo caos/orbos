@@ -1,10 +1,10 @@
 # desired.yml
-kind: infrop.caos.ch/Infrop
+kind: orbiter.caos.ch/Orbiter
 desiredVersion: v1
 desired:
   clusters:
     ops:
-      kind: infrop.caos.ch/KubernetesCluster
+      kind: orbiter.caos.ch/KubernetesCluster
       desiredVersion: v1alpha5
       desired:
         version: "v1.15.1"
@@ -21,7 +21,7 @@ desired:
             pool: highmem
   providers:
     google:
-      kind: infrop.caos.ch/GCEProvider
+      kind: orbiter.caos.ch/GCEProvider
       desiredVersion: v1
       desired:
         project: caos-240809
@@ -46,19 +46,19 @@ desired:
 ###############################################
 ######    GENERATED FILE, DO NOT EDIT    ######
 ###############################################
-kind: infrop.caos.ch/Infrop
+kind: orbiter.caos.ch/Orbiter
 currentVersion: v1
 current:
   status: maintaining
   clusters:
     ops:
-      kind: infrop.caos.ch/KubernetesCluster
+      kind: orbiter.caos.ch/KubernetesCluster
       currentVersion: v1
       current:
         status: maintaining
         providers:
           google:
-            kind: infrop.caos.ch/GCEProvider
+            kind: orbiter.caos.ch/GCEProvider
             currentVersion: v1
             current: dag
         computes:

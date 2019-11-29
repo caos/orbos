@@ -3,8 +3,8 @@ package v1
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 )
 
 func init() {

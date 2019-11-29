@@ -3,7 +3,7 @@ package infra
 import (
 	"sync"
 
-	"github.com/caos/infrop/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/helpers"
 )
 
 func Destroy(providers map[string]interface{}) (err error) {

@@ -6,15 +6,15 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	dynamiclbmodel "github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/model"
-	"github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/wrap"
-	externallbmodel "github.com/caos/infrop/internal/kinds/loadbalancers/external/model"
-	"github.com/caos/infrop/internal/kinds/providers/core"
-	"github.com/caos/infrop/internal/kinds/providers/edge/ssh"
-	"github.com/caos/infrop/internal/kinds/providers/static/model"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	dynamiclbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/wrap"
+	externallbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/external/model"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
+	"github.com/caos/orbiter/internal/kinds/providers/static/model"
 )
 
 type infraCurrent struct {

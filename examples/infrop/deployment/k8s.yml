@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: infrop
+  name: orbiter
   namespace: kube-system
   labels:
-    app: infrop
+    app: orbiter
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: infrop
+      app: orbiter
   template:
     metadata:
       labels:
-        app: infrop
+        app: orbiter
     spec:
       imagePullSecrets:
         - name: gcr
@@ -25,20 +25,20 @@ spec:
         value: ""
         effect: "NoSchedule"
       containers:
-      - name: infrop
+      - name: orbiter
         imagePullPolicy: Always
-        image: eu.grc.io/caos-240809/infrop:${INFROP_BRANCH}
+        image: eu.grc.io/caos-240809/orbiter:${INFROP_BRANCH}
         volumeMounts:
         - name: config-volume
-          mountPath: /etc/infrop/config
+          mountPath: /etc/orbiter/config
         - name: secrets-volume
-          mountPath: /etc/infrop/secrets
+          mountPath: /etc/orbiter/secrets
         command:
           - "--reconcile"
       volumes:
       - name: config-volume 
         configMap:
-          name: infrop
+          name: orbiter
       - name: secrets-volume 
         secret:
-          secretName: infrop
+          secretName: orbiter

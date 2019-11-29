@@ -3,7 +3,7 @@ package stdlib
 import (
 	"io"
 
-	"github.com/caos/infrop/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/logging"
 )
 
 type logger struct {

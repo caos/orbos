@@ -11,11 +11,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/helpers"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/model"
-	"github.com/caos/infrop/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
 
 type Overwriter interface {

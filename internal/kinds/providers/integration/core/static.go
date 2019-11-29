@@ -6,12 +6,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/core"
-	"github.com/caos/infrop/internal/kinds/providers/static"
-	staticconfig "github.com/caos/infrop/internal/kinds/providers/static/config"
-	logcontext "github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/kinds/providers/static"
+	staticconfig "github.com/caos/orbiter/internal/kinds/providers/static/config"
+	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
 
 	"github.com/spf13/viper"
 )

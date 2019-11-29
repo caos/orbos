@@ -4,12 +4,12 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/loadbalancers/dynamic"
-	dynamiclbadapter "github.com/caos/infrop/internal/kinds/loadbalancers/dynamic/adapter"
-	"github.com/caos/infrop/internal/kinds/loadbalancers/external"
-	externallbadapter "github.com/caos/infrop/internal/kinds/loadbalancers/external/adapter"
-	"github.com/caos/infrop/internal/kinds/providers/static/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
+	dynamiclbadapter "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/adapter"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/external"
+	externallbadapter "github.com/caos/orbiter/internal/kinds/loadbalancers/external/adapter"
+	"github.com/caos/orbiter/internal/kinds/providers/static/model"
 )
 
 func init() {
@@ -45,9 +45,9 @@ func init() {
 								}
 				*/
 				switch depKind {
-				case "infrop.caos.ch/ExternalLoadBalancer":
+				case "orbiter.caos.ch/ExternalLoadBalancer":
 					subassemblers[depKey] = external.New(depPath, generalOverwriteSpec, externallbadapter.New())
-				case "infrop.caos.ch/DynamicLoadBalancer":
+				case "orbiter.caos.ch/DynamicLoadBalancer":
 					subassemblers[depKey] = dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(spec.RemoteUser))
 				default:
 					return subassemblers, errors.Errorf("unknown dependency type %s", depKind)

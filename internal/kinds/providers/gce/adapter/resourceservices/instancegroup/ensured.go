@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/core"
-	"github.com/caos/infrop/internal/kinds/providers/gce/edge/api"
-	"github.com/caos/infrop/internal/kinds/providers/gce/adapter/resourceservices/instance"
-	"github.com/caos/infrop/internal/kinds/providers/gce/model"
-	"github.com/caos/infrop/internal/core/logging"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/kinds/providers/gce/edge/api"
+	"github.com/caos/orbiter/internal/kinds/providers/gce/adapter/resourceservices/instance"
+	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
+	"github.com/caos/orbiter/internal/core/logging"
 	"google.golang.org/api/compute/v1"
 )
 

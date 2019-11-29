@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/loadbalancers/external/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/external/model"
 )
 
 func New() Builder {

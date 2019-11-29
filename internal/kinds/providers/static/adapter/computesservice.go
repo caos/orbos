@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/core"
-	"github.com/caos/infrop/internal/kinds/providers/static/model"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/core"
+	"github.com/caos/orbiter/internal/kinds/providers/static/model"
 )
 
 type computesService struct {
@@ -38,7 +38,7 @@ func NewComputesService(
 	return &computesService{
 		logger,
 		spec,
-		filepath.Join("/var/infrop", id),
+		filepath.Join("/var/orbiter", id),
 		bootstrapKeyProperty,
 		dynamicKeyProperty,
 		dynamicPublicKey,

@@ -1,9 +1,9 @@
 package immediate
 
 import (
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/edge/watcher"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/edge/watcher"
 )
 
 func New(logger logging.Logger) operator.Watcher {

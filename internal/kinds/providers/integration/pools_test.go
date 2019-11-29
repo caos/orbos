@@ -8,10 +8,10 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/core/helpers"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/core/helpers"
 
-	"github.com/caos/infrop/internal/kinds/providers/integration/core"
+	"github.com/caos/orbiter/internal/kinds/providers/integration/core"
 )
 
 type resourcesNotReturnedError struct {

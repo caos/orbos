@@ -9,10 +9,10 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 )
 
 type node struct {
@@ -129,7 +129,7 @@ func ensureK8sVersion(
 			cfg.Params.Logger.WithFields(map[string]interface{}{
 				"compute": node.compute.ID(),
 				"from":    node.current.Version,
-				"to":      cfg.Params.InfropVersion,
+				"to":      cfg.Params.OrbiterVersion,
 			}).Info("Ensuring node agent")
 
 			return errors.Wrap(installNodeAgent(cfg, node.compute, nodeagentFullPath), "upgrading node agent failed")
@@ -225,7 +225,7 @@ func ensureK8sVersion(
 			return ensureNodeagent, nil
 		}
 
-		if node.current.Version != cfg.Params.InfropVersion {
+		if node.current.Version != cfg.Params.OrbiterVersion {
 			showVersion := "node-agent --version"
 
 			err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, node.compute, func(cmp infra.Compute) error {
@@ -238,7 +238,7 @@ func ensureK8sVersion(
 				"response": string(response),
 			}).Debug("Executed command")
 
-			if err != nil || strings.Split(string(response), " ")[0] != cfg.Params.InfropVersion {
+			if err != nil || strings.Split(string(response), " ")[0] != cfg.Params.OrbiterVersion {
 				return ensureNodeagent, nil
 			}
 		}

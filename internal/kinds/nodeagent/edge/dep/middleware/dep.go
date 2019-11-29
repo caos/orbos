@@ -1,6 +1,6 @@
 package middleware
 
-import "github.com/caos/infrop/internal/kinds/nodeagent/adapter"
+import "github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 
 type Installer interface {
 	adapter.Installer

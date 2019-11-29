@@ -25,7 +25,7 @@ COPY . .
 
 # go test --timeout 40m --race --cover --bench . ./... && \
 RUN go run cmd/gen-executables/*.go -tag $GIT_TAG -commit $GIT_COMMIT && \
-    CGO_ENABLED=0 go build -ldflags "-s -w -X main.gitCommit=$GIT_COMMIT -X main.gitTag=$GIT_TAG" -o /artifacts/infrop ./cmd/infrop
+    CGO_ENABLED=0 go build -ldflags "-s -w -X main.gitCommit=$GIT_COMMIT -X main.gitTag=$GIT_TAG" -o /artifacts/orbiter ./cmd/orbiter
 
 FROM scratch AS prod
 
@@ -35,4 +35,4 @@ COPY --from=build --chown=65534:65534 /artifacts/ /artifacts/
 
 USER nobody
 
-ENTRYPOINT [ "/artifacts/infrop" ]
+ENTRYPOINT [ "/artifacts/orbiter" ]

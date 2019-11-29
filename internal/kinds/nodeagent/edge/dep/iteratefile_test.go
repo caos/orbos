@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 )
 
 func TestIterateFile(t *testing.T) {

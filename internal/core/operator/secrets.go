@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"sync"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/secret"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/secret"
 	"gopkg.in/yaml.v2"
 )
 

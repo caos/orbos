@@ -7,7 +7,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/infrop/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/logging"
 )
 
 var nodeagentBytesGZIPBase64 string

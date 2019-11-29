@@ -7,8 +7,8 @@ import (
 	"encoding/pem"
 	"strings"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/core/secret"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/pkg/errors"
 	sshlib "golang.org/x/crypto/ssh"
 )

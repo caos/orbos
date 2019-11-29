@@ -3,7 +3,7 @@ package operator
 import (
 	"sort"
 
-	"github.com/caos/infrop/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/helpers"
 	"gopkg.in/yaml.v2"
 )
 

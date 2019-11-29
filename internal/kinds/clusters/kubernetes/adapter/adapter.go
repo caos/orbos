@@ -6,10 +6,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/model"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 )
 
 func New(params model.Parameters) Builder {
@@ -98,7 +98,7 @@ func New(params model.Parameters) Builder {
 				fmt.Println()
 				fmt.Println("# Copy the following and paste it into your terminal, hit enter and enjoy.")
 				fmt.Println()
-				fmt.Printf("mkdir -p ~/.kube && git pull && docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/infrop:/etc/infrop:ro --workdir /secrets --interactive docker.pkg.github.com/caos/infrop/infrop:%s --readsecret %s_kubeconfig > ~/.kube/config && kubectl get pods --all-namespaces --watch\n", cfg.Spec.Versions.Infrop, cfg.Params.ID)
+				fmt.Printf("mkdir -p ~/.kube && git pull && docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:%s --readsecret %s_kubeconfig > ~/.kube/config && kubectl get pods --all-namespaces --watch\n", cfg.Spec.Versions.Orbiter, cfg.Params.ID)
 				fmt.Println()
 				fmt.Println()
 			}
@@ -117,18 +117,18 @@ func New(params model.Parameters) Builder {
 /*
 func before(curr *model.Current, k8s *k8s.Client, selftag, repourl, repokey, masterkey string) error {
 
-	curr.InfropDeployment = map[string]interface{}{
+	curr.OrbiterDeployment = map[string]interface{}{
 		"apiVersion": "apps/v1",
 		"kind":       "Deployment",
 		"metadata": map[string]string{
-			"name":      "infrop",
+			"name":      "orbiter",
 			"namespace": "kube-system",
 		},
 		"spec": map[string]interface{}{
 			"replicas": 1,
 			"selector": map[string]interface{}{
 				"matchLabels": map[string]string{
-					"name": "infrop",
+					"name": "orbiter",
 				},
 			},
 			"strategy": map[string]interface{}{
@@ -140,7 +140,7 @@ func before(curr *model.Current, k8s *k8s.Client, selftag, repourl, repokey, mas
 						"prometheus.io/port": "3031",
 					},
 					"labels": map[string]string{
-						"name": "infrop",
+						"name": "orbiter",
 					},
 				},
 				"spec": map[string]interface{}{
@@ -155,17 +155,17 @@ func before(curr *model.Current, k8s *k8s.Client, selftag, repourl, repokey, mas
 					}},
 					// TODO: Remove before open sourcing #39
 					"imagePullSecrets": []map[string]string{{
-						"name": "infropregistry",
+						"name": "orbiterregistry",
 					}},
 					"containers": []map[string]interface{}{{
-						"name":            "infrop",
+						"name":            "orbiter",
 						"imagePullPolicy": core.PullAlways,
-						"image":           fmt.Sprintf("docker.pkg.github.com/caos/infrop/infrop:%s", selftag),
-						"command":         []string{"/artifacts/infrop", "--recur", "--repourl", repourl},
+						"image":           fmt.Sprintf("docker.pkg.github.com/caos/orbiter/orbiter:%s", selftag),
+						"command":         []string{"/artifacts/orbiter", "--recur", "--repourl", repourl},
 						"volumeMounts": []map[string]interface{}{{
 							"name":      "keys",
 							"readOnly":  true,
-							"mountPath": "/etc/infrop",
+							"mountPath": "/etc/orbiter",
 						}},
 					}},
 					"volumes": []map[string]interface{}{{
@@ -244,7 +244,7 @@ func before(curr *model.Current, k8s *k8s.Client, selftag, repourl, repokey, mas
 						LivenessProbe:  fluxProbes,
 						ReadinessProbe: fluxProbes,
 						Args:           []string{},
-						Command:        []string{"/artifacts/infrop", "--recur", "--repourl", repourl},
+						Command:        []string{"/artifacts/orbiter", "--recur", "--repourl", repourl},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "git-key",
 							ReadOnly:  true,

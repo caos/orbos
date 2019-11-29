@@ -1,7 +1,7 @@
 package model
 
 import (
-	"github.com/caos/infrop/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator"
 )
 
 type UserSpec struct {

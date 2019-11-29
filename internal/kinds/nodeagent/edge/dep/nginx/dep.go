@@ -4,10 +4,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/kinds/nodeagent/adapter"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
 )
 
 type Installer interface {

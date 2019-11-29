@@ -7,12 +7,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caos/infrop/internal/node-agent/executor"
-	"github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
-	"github.com/caos/infrop/internal/kinds/nodeagent/edge/rebooter/mock/noop"
-	"github.com/caos/infrop/internal/pkg/repository/mock/dummy"
-	"github.com/caos/infrop/internal/pkg/resolver/mock"
+	"github.com/caos/orbiter/internal/node-agent/executor"
+	"github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/mock/noop"
+	"github.com/caos/orbiter/internal/pkg/repository/mock/dummy"
+	"github.com/caos/orbiter/internal/pkg/resolver/mock"
 )
 
 type ensureCurrentTestcase struct {

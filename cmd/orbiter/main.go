@@ -12,16 +12,16 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/core/operator"
-	"github.com/caos/infrop/internal/core/secret"
-	logcontext "github.com/caos/infrop/internal/edge/logger/context"
-	"github.com/caos/infrop/internal/edge/logger/stdlib"
-	"github.com/caos/infrop/internal/edge/watcher/cron"
-	"github.com/caos/infrop/internal/edge/watcher/immediate"
-	"github.com/caos/infrop/internal/kinds/infrop"
-	"github.com/caos/infrop/internal/kinds/infrop/adapter"
-	"github.com/caos/infrop/internal/kinds/infrop/model"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/secret"
+	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
+	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/internal/edge/watcher/cron"
+	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	"github.com/caos/orbiter/internal/kinds/orbiter"
+	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
+	"github.com/caos/orbiter/internal/kinds/orbiter/model"
 )
 
 var gitCommit string
@@ -97,7 +97,7 @@ func main() {
 		"destroy": *destroy,
 		"verbose": *verbose,
 		"repoURL": *repoURL,
-	}).Info("Infrop is starting")
+	}).Info("Orbiter is taking off")
 
 	muxFlagsErr := errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 	if *recur && *destroy {
@@ -120,15 +120,15 @@ func main() {
 		CurrentFile:   currentFile,
 		SecretsFile:   secretsFile,
 		DeploymentKey: repoKey,
-		RepoCommitter: "Infrop",
+		RepoCommitter: "Orbiter",
 		Watchers: []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 30s"),
 		},
-		RootAssembler: infrop.New(nil, nil, adapter.New(&model.Config{
+		RootAssembler: orbiter.New(nil, nil, adapter.New(&model.Config{
 			Logger:           logger,
 			ConfigID:         configID,
-			InfropVersion:    gitTag,
+			OrbiterVersion:   gitTag,
 			NodeagentRepoURL: *repoURL,
 			NodeagentRepoKey: repoKey,
 			CurrentFile:      currentFile,
@@ -188,7 +188,7 @@ func initSecret(logger logging.Logger, property string, masterkey string) (*secr
 }
 
 func readSecretFile(sec string) string {
-	secretsPath := "/etc/infrop/" + sec
+	secretsPath := "/etc/orbiter/" + sec
 	secret, err := ioutil.ReadFile(secretsPath)
 	if err != nil {
 		panic(fmt.Sprintf("secret not found at %s", secretsPath))

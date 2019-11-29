@@ -1,11 +1,11 @@
 package instance
 
 import (
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
-	"github.com/caos/infrop/internal/kinds/providers/edge/ssh"
-	"github.com/caos/infrop/internal/kinds/providers/gce/edge/api"
-	"github.com/caos/infrop/internal/kinds/providers/gce/model"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
+	"github.com/caos/orbiter/internal/kinds/providers/gce/edge/api"
+	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
 	"google.golang.org/api/compute/v1"
 )
 

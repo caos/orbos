@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/infrop/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator"
 )
 
 type KubernetesVersion int

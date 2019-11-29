@@ -8,9 +8,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/core/helpers"
-	"github.com/caos/infrop/internal/core/logging"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 )
 
 func try(logger logging.Logger, timer *time.Timer, interval time.Duration, compute infra.Compute, callback func(cmp infra.Compute) error) error {

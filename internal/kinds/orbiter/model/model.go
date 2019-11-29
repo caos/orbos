@@ -1,6 +1,6 @@
 package model
 
-import "github.com/caos/infrop/internal/core/logging"
+import "github.com/caos/orbiter/internal/core/logging"
 
 type UserSpec struct {
 	Verbose   bool
@@ -10,7 +10,7 @@ type UserSpec struct {
 type Config struct {
 	Logger           logging.Logger
 	ConfigID         string
-	InfropVersion    string
+	OrbiterVersion    string
 	NodeagentRepoURL string
 	NodeagentRepoKey string
 	CurrentFile      string

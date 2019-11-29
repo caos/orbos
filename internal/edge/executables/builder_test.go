@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/caos/infrop/internal/edge/executables"
+	"github.com/caos/orbiter/internal/edge/executables"
 )
 
 func TestBuildAndParseNodeAgent(t *testing.T) {

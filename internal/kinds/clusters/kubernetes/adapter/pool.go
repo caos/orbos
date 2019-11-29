@@ -5,11 +5,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/infrop/internal/kinds/clusters/kubernetes/model"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 
-	"github.com/caos/infrop/internal/core/helpers"
-	"github.com/caos/infrop/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 )
 
 type pool struct {
