@@ -1,0 +1,88 @@
+apiVersion: infrop.caos.ch/v1
+kind: Infrop
+desired:
+  clusters:
+    ops:
+      apiVersion: infrop.caos.ch/v1
+      kind: KubernetesCluster
+      desired:
+        version: "v1.15.1"
+#        etcd: 
+#          stacked: false
+#          cluster: ops-etcd
+        controlplane:
+          provider: google
+          nodes: 1
+          pool: standard
+        workers:
+          belgium:
+            provider: google
+            nodes: 1
+            pool: highmem
+#    taxes:
+#      apiVersion: infrop.caos.ch/v1
+#      kind: KubernetesCluster
+#      spec:
+#        version: "v1.15.1"
+#        controlplane:
+#          provider: google
+#          nodes: 1
+#          pool: standard
+#        workers:
+#          belgium:
+#            provider: google
+#            nodes: 1
+#            pool: highcpu
+
+#        - provider: abraxas
+#          nodes: 1
+#          pool: lupfig
+#    ops-etcd:
+#      apiVersion: clusters.caos.ch/v1alpha3
+#      kind: EtcdCluster
+#      spec:
+#        version: "v1.15.1"
+#        controlplane:
+#          provider: google
+#          nodes: 1
+#          pool: standard
+  providers:
+    google:
+      apiVersion: infrop.caos.ch/v1
+      kind: GCEProvider
+      desired:
+        project: caos-240809
+        region: europe-west1
+        zone: europe-west1-b
+        pools:
+          standard:
+            minCPUCores: 2
+            minMemoryGB: 1
+            storageGB: 15
+          highmem:
+            minCPUCores: 2
+            minMemoryGB: 1
+            storageGB: 15
+          highcpu:
+            minCPUCores: 2
+            minMemoryGB: 1
+            storageGB: 15
+#    abraxas:
+#      apiVersion: providers.caos.ch/v1
+#      kind: StaticProvider
+#      spec:
+#        remoteUser: deployer
+#        loadbalancers:
+#          leolb:
+#            address: "35.201.113.221"
+#            pools:
+#            - leo
+#        pools:
+#          leo:
+#          - id: leo-1
+#            externalIP: "34.77.160.140"
+#            internalIP: "10.132.0.124"
+#          lupfig:
+#          - id: lupfig-1
+#            externalIP: "35.195.202.105"
+#            internalIP: "10.132.0.126"

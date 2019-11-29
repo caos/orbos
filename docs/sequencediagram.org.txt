@@ -1,0 +1,51 @@
+title Kubernetes Reconciliation
+participant infrop
+participant cloud provider
+participant kubernetes
+participant node-agent(s)
+
+infrop->cloud provider: Ensure infrastructure
+infrop<--cloud provider: Pools and IPs
+infrop->cloud provider:Ensure desired number of computes per pool\n(add computes or kubectl drain + remove computes)
+activate infrop
+infrop->node-agent(s):Pass initial metadata to new computes\nand run node-agent(s) on them
+activate node-agent(s)
+node-agent(s)->node-agent(s):Ensure software\nand restart node
+node-agent(s)->cloud provider: Mark self as initialized
+deactivate node-agent(s)
+activate node-agent(s)
+infrop->cloud provider: Wait until all node-agents are initialized
+deactivate infrop
+infrop->cloud provider:Ensure kubernetes nodes number is equal\nto cloud provider computes number\n(kubeadm init/join)
+node-agent(s)->kubernetes:Safe metadata as soon as \nKubernetes API is available
+deactivate node-agent(s)
+note right of infrop:Kubernetes scale is ensured, from\nnow on software versions are ensured...
+loop #2f2e7b #white alpha.[software].caos.ch/desired-version is current-version
+node-agent(s)->kubernetes:Read metadata
+kubernetes-->node-agent(s):Node metadata
+end
+loop #2f2e7b #white i < nodes
+infrop->kubernetes:Read metadata
+kubernetes-->infrop:Node metadata
+opt #2f2e7b #white desired version != current version or desired version != actually needed version
+infrop->kubernetes:Save metadata\nalpha.node.caos.ch/changes-allowed true
+loop #2f2e7b #white alpha.node.caos.ch/changes-allowed is true
+infrop->kubernetes:Read metadata
+kubernetes-->infrop:Node metadata
+alt #2f2e7b #white alpha.[software].caos.ch/desired-version is not the actually needed version; continue in loop after execution
+infrop->kubernetes:kubectl drain + kubectl cordon
+infrop->kubernetes:Save metadata\nalpha.[software].caos.ch/desired-version [actually needed version]\nalpha.[software].caos.ch/desired-version [actually needed version]\nalpha.[software].caos.ch/desired-version [actually needed version]
+activate node-agent(s)
+node-agent(s)->kubernetes: Save metadata\nalpha.node.caos.ch/ready false
+node-agent(s)->node-agent(s):Ensure software
+else alpha.node.caos.ch/ready is true and alpha.node.caos.ch/changes-allowed is true and alpha.[software].caos.ch/desired-version is alpha.[software].caos.ch/current-version
+infrop->kubernetes:kubectl uncordon
+infrop->kubernetes:Save metadata alpha.node.caos.ch/changes-allowed false
+else continue in loop
+end
+node-agent(s)->node-agent(s):Possibly restart\nnode
+node-agent(s)->kubernetes: Save metadata\nalpha.node.caos.ch/ready true
+deactivate node-agent(s)
+end
+end
+end

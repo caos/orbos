@@ -1,0 +1,7 @@
+*
+!cmd
+!internal
+!pkg
+!go.mod
+!go.sum
+*secrets.y*ml

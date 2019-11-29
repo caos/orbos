@@ -1,0 +1,75 @@
+kind: infrop.caos.ch/Infrop
+version: v1
+deps:
+  prod:
+    kind: infrop.caos.ch/KubernetesCluster
+    version: v1
+    spec:
+      version: "v1.15.1"
+      controlplane:
+        updatesDisabled: false 
+        provider: static
+        nodes: 3
+        pool: controlplane
+      workers:
+    deps:
+      static:
+        kind: infrop.caos.ch/StaticProvider
+        version: v1
+        spec:
+          remoteuser: root
+          remotePublicKeyPath: /root/.ssh/authorized_keys
+          pools:
+            controlplane:
+            - id: first
+              hostname: an.ubuntu
+              externalIP: 10.61.0.150
+              internalIP: 10.61.0.150
+            - id: second
+              hostname: a.centos
+              externalIP: 10.61.0.151
+              internalIP: 10.61.0.151
+            - id: third
+              hostname: another.ubuntu
+              externalIP: 10.61.0.152
+              internalIP: 10.61.0.152
+            isolated:
+            - id: fourth
+              hostname: again.an.ubuntu
+              externalIP: 10.61.0.153
+              internalIP: 10.61.0.153
+        deps:
+          dynamic:
+            kind: infrop.caos.ch/DynamicLoadBalancer
+            version: v1
+            spec:
+              controlplane:
+              - ip: "10.61.0.254"
+                transport:
+                - name: kubeapi
+                  sourcePort: 6443
+                  destinations:
+                  - port: 6443
+                    pool: controlplane
+              isolated:
+              - ip: "10.61.0.253"
+                transport:
+                - name: dashboard
+                  sourcePort: 443
+                  destinations:
+                  - port: 443
+                    pool: controlplane
+              - ip: "10.61.0.252"
+                transport:
+                - name: httpsingress
+                  sourcePort: 443
+                  destinations:
+                  - port: 443
+                    pool: isolated
+                - name: httpingress
+                  sourcePort: 80
+                  destinations:
+                  - port: 80
+                    pool: controlplane
+                  - port: 8080
+                    pool: isolated

@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: infrop
+  namespace: kube-system
+  labels:
+    app: infrop
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: infrop
+  template:
+    metadata:
+      labels:
+        app: infrop
+    spec:
+      imagePullSecrets:
+        - name: gcr
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Equal"
+        value: ""
+        effect: "NoSchedule"
+      containers:
+      - name: infrop
+        imagePullPolicy: Always
+        image: eu.grc.io/caos-240809/infrop:${INFROP_BRANCH}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/infrop/config
+        - name: secrets-volume
+          mountPath: /etc/infrop/secrets
+        command:
+          - "--reconcile"
+      volumes:
+      - name: config-volume 
+        configMap:
+          name: infrop
+      - name: secrets-volume 
+        secret:
+          secretName: infrop
