@@ -11,18 +11,19 @@ jobs:
       uses: actions/checkout@v1
       with:
         fetch-depth: 1
-    - name: Release
-      shell: bash
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        export GIT_TAG="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
-        export IMAGE=docker.pkg.github.com/caos/orbiter/orbiter
-        export TAG_LATEST=${IMAGE}:latest
-        export TAG_VERSION=${IMAGE}:${GIT_TAG}
-        docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --build-arg GIT_COMMIT=${{ github.sha }} --build-arg GIT_TAG .
-        [[ "$GIT_TAG" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
-        docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
-        docker push ${TAG_LATEST}
-        docker push ${TAG_VERSION}
-        npx semantic-release
+#    - name: Release
+#      shell: bash
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      run: |
+#        export GIT_TAG="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
+#        export IMAGE=docker.pkg.github.com/caos/orbiter/orbiter
+#        export TAG_LATEST=${IMAGE}:latest
+#        export TAG_VERSION=${IMAGE}:${GIT_TAG}
+#        docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --build-arg GIT_COMMIT=${{ github.sha }} --build-arg GIT_TAG .
+#        [[ "$GIT_TAG" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
+#        docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
+#        docker push ${TAG_LATEST}
+#        docker push ${TAG_VERSION}
+#        npx semantic-release
+#
