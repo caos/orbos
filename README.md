@@ -12,9 +12,9 @@ Orbiter boostraps, lifecycles and destroys clustered software and other cluster 
 
 1. Create a new repository (e.g. git@github.com:caos/orbiter-tmp.git), clone it and change directory to its root and export according environment variables.
 ```bash
-export INFROP_REPOSITORY=git@github.com:caos/orbiter-tmp.git
-# Set INFROP_SECRETSPREFIX to your repositorys name without dashes
-export INFROP_SECRETSPREFIX=orbitertmp
+export ORBITER_REPOSITORY=git@github.com:caos/orbiter-tmp.git
+# Set ORBITER_SECRETSPREFIX to your repositorys name without dashes
+export ORBITER_SECRETSPREFIX=orbitertmp
 ```
 
 1. Initialize Orbiter runtime secrets
@@ -29,10 +29,10 @@ ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f "/etc/orbiter/
 ssh-add /etc/orbiter/repokey
 
 # Add the bootstrap private key
-cat /etc/orbiter/repokey | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${INFROP_SECRETSPREFIX}prodstatic_bootstrapkey
+cat /etc/orbiter/repokey | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${ORBITER_SECRETSPREFIX}prodstatic_bootstrapkey
 
 # Add the bootstrap public key
-cat /etc/orbiter/repokey.pub | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${INFROP_SECRETSPREFIX}prodstatic_bootstrapkey_pub
+cat /etc/orbiter/repokey.pub | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${ORBITER_SECRETSPREFIX}prodstatic_bootstrapkey_pub
 ```
 
 1. Add your generated public key to your git repositorys deploy keys with write access
