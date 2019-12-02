@@ -12,9 +12,9 @@ Orbiter boostraps, lifecycles and destroys clustered software and other cluster 
 
 1. Create a new repository (e.g. git@github.com:caos/orbiter-tmp.git), clone it and change directory to its root and export according environment variables.
 ```bash
-export INFROP_REPOSITORY=git@github.com:caos/orbiter-tmp.git
-# Set INFROP_SECRETSPREFIX to your repositorys name without dashes
-export INFROP_SECRETSPREFIX=orbitertmp
+export ORBITER_REPOSITORY=git@github.com:caos/orbiter-tmp.git
+# Set ORBITER_SECRETSPREFIX to your repositorys name without dashes
+export ORBITER_SECRETSPREFIX=orbitertmp
 ```
 
 1. As long as github packages [does not allow anonymously pulling](https://github.community/t5/GitHub-Actions/Make-it-possible-to-pull-docker-images-anonymously-from-GitHub/m-p/36141#M2453) the orbiter docker image, you need to authenticate
@@ -34,10 +34,10 @@ ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f "/etc/orbiter/
 ssh-add /etc/orbiter/repokey
 
 # Add the bootstrap private key
-cat /etc/orbiter/repokey | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${INFROP_SECRETSPREFIX}prodstatic_bootstrapkey
+cat /etc/orbiter/repokey | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${ORBITER_SECRETSPREFIX}prodstatic_bootstrapkey
 
 # Add the bootstrap public key
-cat /etc/orbiter/repokey.pub | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${INFROP_SECRETSPREFIX}prodstatic_bootstrapkey_pub
+cat /etc/orbiter/repokey.pub | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${ORBITER_SECRETSPREFIX}prodstatic_bootstrapkey_pub
 ```
 
 1. Add your generated public key to your git repositorys deploy keys with write access
@@ -53,7 +53,7 @@ sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh
 1. Push your newly created yaml files `git add . && git commit -m "bootstrap cluster" && git push`.
 1. Bootstrap a cluster. Adjust the arguments to your setup
 ```bash
-docker run --rm --volume /etc/orbiter:/etc/orbiter:ro --user $(id -u):$(id -g) docker.pkg.github.com/caos/orbiter/orbiter:latest --repourl $INFROP_REPOSITORY
+docker run --rm --volume /etc/orbiter:/etc/orbiter:ro --user $(id -u):$(id -g) docker.pkg.github.com/caos/orbiter/orbiter:latest --repourl $ORBITER_REPOSITORY
 ```
 1. Connect to the cluster by using the automatically created new secrets
 ```bash
@@ -61,10 +61,10 @@ docker run --rm --volume /etc/orbiter:/etc/orbiter:ro --user $(id -u):$(id -g) d
 git pull
 
 # Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
-docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${INFROP_SECRETSPREFIX}prodstatic_maintenancekey > /tmp/orbiter-maintenancekey && chmod 0600 /tmp/orbiter-maintenancekey && ssh-add /tmp/orbiter-maintenancekey
+docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${ORBITER_SECRETSPREFIX}prodstatic_maintenancekey > /tmp/orbiter-maintenancekey && chmod 0600 /tmp/orbiter-maintenancekey && ssh-add /tmp/orbiter-maintenancekey
 
 # Overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${INFROP_SECRETSPREFIX}prod_kubeconfig > ~/.kube/config
+mkdir -p ~/.kube && docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${ORBITER_SECRETSPREFIX}prod_kubeconfig > ~/.kube/config
 
 # TODO: Not needed anymore when docker registry is public for reading #39
 kubectl -n kube-system create secret docker-registry orbiterregistry --docker-server=docker.pkg.github.com --docker-username=${GITHUB_USERNAME} --docker-password=${GITHUB_ACCESS_TOKEN}
@@ -153,7 +153,7 @@ Configure your tooling to use certain environment variables. E.g. in VSCode, add
 {
     "go.testEnvVars": {
         "MODE": "DEBUG",
-        "INFROP_ROOT": "/home/elio/Code/src/github.com/caos/orbiter"
+        "ORBITER_ROOT": "/home/elio/Code/src/github.com/caos/orbiter"
     },
     "go.testTimeout": "40m",
 }
