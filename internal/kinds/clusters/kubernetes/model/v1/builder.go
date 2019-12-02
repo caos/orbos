@@ -150,7 +150,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 			core.DockerConfigJsonKey: `{
 		"auths": {
 				"docker.pkg.github.com": {
-						"auth": "aW1ncHVsbGVyOjVkNWViMWFhNGMwNzUxZDk2NDY5ZTIwNzM3M2Q0MzZiMGExNDZhMmI="
+						"auth": "aW1ncHVsbGVyOmU2NTAxMWI3NDk1OGMzOGIzMzcwYzM5Zjg5MDlkNDE5OGEzODBkMmM="
 				}
 		}
 }`,

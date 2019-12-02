@@ -19,7 +19,7 @@ export ORBITER_SECRETSPREFIX=orbitertmp
 
 1. As long as github packages [does not allow anonymously pulling](https://github.community/t5/GitHub-Actions/Make-it-possible-to-pull-docker-images-anonymously-from-GitHub/m-p/36141#M2453) the orbiter docker image, you need to authenticate
 ```bash
-docker login docker.pkg.github.com -u imgpuller -p 5d5eb1aa4c0751d96469e207373d436b0a146a2b
+docker login docker.pkg.github.com -u imgpuller -p $(echo ZTY1MDExYjc0OTU4YzM4YjMzNzBjMzlmODkwOWQ0MTk4YTM4MGQyYw== | base64 --decode)
 ```
 
 1. Initialize Orbiter runtime secrets
