@@ -2,6 +2,7 @@ package v1
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/mitchellh/mapstructure"
 
@@ -116,7 +117,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 	kcStr := string(kc)
 	client := k8s.New(logger, &kcStr)
 
-	if err := client.ApplyNamespace(&core.Namespace{
+	if _, err := client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
@@ -127,7 +128,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	}
 
-	if err := client.ApplySecret(&core.Secret{
+	if _, err := client.ApplySecret(&core.Secret{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "caos",
 			Namespace: "caos-system",
@@ -140,7 +141,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	}
 
-	if err := client.ApplySecret(&core.Secret{
+	if _, err := client.ApplySecret(&core.Secret{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "public-github-packages",
 			Namespace: "caos-system",
@@ -159,7 +160,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	created, err := client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "orbiter",
 			Namespace: "caos-system",
@@ -213,8 +214,13 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 				},
 			},
 		},
-	}); err != nil {
+	})
+	if err != nil {
 		return err
+	}
+
+	if created {
+		os.Exit(0)
 	}
 
 	// TODO: Apply toolsop

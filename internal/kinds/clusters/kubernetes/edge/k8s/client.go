@@ -68,7 +68,7 @@ type File struct {
 	Content []byte
 }
 
-func (c *Client) ApplyNamespace(ns *core.Namespace) error {
+func (c *Client) ApplyNamespace(ns *core.Namespace) (bool, error) {
 	return c.apply("namespace", ns.GetName(), func() error {
 		_, err := c.set.CoreV1().Namespaces().Create(ns)
 		return err
@@ -78,7 +78,7 @@ func (c *Client) ApplyNamespace(ns *core.Namespace) error {
 	})
 }
 
-func (c *Client) ApplyDeployment(depl *apps.Deployment) error {
+func (c *Client) ApplyDeployment(depl *apps.Deployment) (bool, error) {
 	return c.apply("deployment", depl.GetName(), func() error {
 		_, err := c.set.AppsV1().Deployments(depl.GetNamespace()).Create(depl)
 		return err
@@ -88,7 +88,7 @@ func (c *Client) ApplyDeployment(depl *apps.Deployment) error {
 	})
 }
 
-func (c *Client) ApplySecret(sec *core.Secret) error {
+func (c *Client) ApplySecret(sec *core.Secret) (bool, error) {
 	return c.apply("secret", sec.GetName(), func() error {
 		_, err := c.set.CoreV1().Secrets(sec.GetNamespace()).Create(sec)
 		return err
@@ -98,23 +98,20 @@ func (c *Client) ApplySecret(sec *core.Secret) error {
 	})
 }
 
-func (c *Client) apply(object, name string, create func() error, update func() error) (err error) {
+func (c *Client) apply(object, name string, create func() error, update func() error) (created bool, err error) {
 	defer func() {
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
 	}()
 
 	if c.set == nil {
-		return &NotAvailableError{}
+		return false, &NotAvailableError{}
 	}
 
 	err = update()
-	if err == nil {
-		return
+	if err == nil || !macherrs.IsNotFound(err) {
+		return false, err
 	}
-	if !macherrs.IsNotFound(err) {
-		return err
-	}
-	return create()
+	return true, create()
 }
 
 func (c *Client) Refresh(kubeconfig *string) (err error) {
