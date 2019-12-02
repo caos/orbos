@@ -11,8 +11,8 @@ type UserSpec struct {
 	Verbose   bool
 	Versions  struct {
 		Kubernetes string
-		Orbiter     string
-		Toolsop    string
+		Orbiter    string
+		Boom       string
 	}
 	Networking struct {
 		DNSDomain   string
@@ -30,7 +30,7 @@ type Parameters struct {
 	RepoURL          string
 	RepoKey          string
 	MasterKey        string
-	OrbiterVersion    string
+	OrbiterVersion   string
 	CurrentFile      string
 	SecretsFile      string
 	SelfAbsolutePath []string
