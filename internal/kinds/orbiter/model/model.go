@@ -1,6 +1,6 @@
 package model
 
-import "github.com/caos/orbiter/internal/core/logging"
+import "github.com/caos/orbiter/logging"
 
 type UserSpec struct {
 	Verbose   bool

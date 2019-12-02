@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 )
 

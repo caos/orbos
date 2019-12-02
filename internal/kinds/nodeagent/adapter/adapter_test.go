@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/caos/orbiter/internal/node-agent/executor"
-	"github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	"github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/mock/noop"
 	"github.com/caos/orbiter/internal/pkg/repository/mock/dummy"
 	"github.com/caos/orbiter/internal/pkg/resolver/mock"

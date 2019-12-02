@@ -17,8 +17,8 @@ import (
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/node"
 
-	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 )

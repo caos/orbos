@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbiter/internal/kinds/providers/static"
 	staticadapter "github.com/caos/orbiter/internal/kinds/providers/static/adapter"
 
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 
 	apps "k8s.io/api/apps/v1"

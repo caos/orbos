@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/adapter/resourceservices/backendservice"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/adapter/resourceservices/targetproxy"
