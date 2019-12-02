@@ -2,6 +2,7 @@
 !cmd
 !internal
 !pkg
+!logging
 !go.mod
 !go.sum
 *secrets.y*ml
