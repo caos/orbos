@@ -148,7 +148,6 @@ outer:
 	for it := range iterations {
 		if it.Error != nil {
 			logger.Error(it.Error)
-			continue
 		}
 
 		if *destroy {
@@ -156,6 +155,9 @@ outer:
 		}
 
 		if !*recur {
+			if it.Error != nil {
+				return
+			}
 			statusReader := struct {
 				Deps map[string]struct {
 					Current struct {
@@ -171,7 +173,7 @@ outer:
 					continue outer
 				}
 			}
-			break
+			return
 		}
 	}
 }
