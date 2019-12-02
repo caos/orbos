@@ -1,7 +1,7 @@
 package immediate
 
 import (
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/edge/watcher"
 )

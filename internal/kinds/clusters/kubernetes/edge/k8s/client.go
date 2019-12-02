@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"

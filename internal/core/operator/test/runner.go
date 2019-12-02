@@ -11,11 +11,11 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/edge/git"
-	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 	"github.com/caos/orbiter/internal/kinds/orbiter"

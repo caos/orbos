@@ -10,8 +10,8 @@ import (
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 	"github.com/caos/orbiter/internal/kinds/providers/static"
 	staticconfig "github.com/caos/orbiter/internal/kinds/providers/static/config"
-	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
 
 	"github.com/spf13/viper"
 )

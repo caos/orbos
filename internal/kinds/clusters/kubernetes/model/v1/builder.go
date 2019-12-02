@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbiter/internal/kinds/providers/static"
 	staticadapter "github.com/caos/orbiter/internal/kinds/providers/static/adapter"
 
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 
 	apps "k8s.io/api/apps/v1"
@@ -37,7 +37,7 @@ func init() {
 		return spec, func(cfg model.Config, deps map[string]map[string]interface{}) (map[string]operator.Assembler, error) {
 
 			if spec.Versions.Orbiter != "" {
-				if ensureErr := ensureArtifacts(cfg.Params.Logger, secrets, cfg.Params.ID, cfg.Params.RepoURL, cfg.Params.RepoKey, cfg.Params.MasterKey, spec.Versions.Orbiter); err != nil {
+				if ensureErr := ensureArtifacts(cfg.Params.Logger, secrets, cfg.Params.ID, cfg.Params.RepoURL, cfg.Params.RepoKey, cfg.Params.MasterKey, spec.Versions.Orbiter, spec.Versions.Boom); err != nil {
 					return nil, ensureErr
 				}
 			}
@@ -107,7 +107,7 @@ func init() {
 	}
 }
 
-func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNamespace, repourl, repokey, masterkey, orbiterversion string) error {
+func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNamespace, repourl, repokey, masterkey, orbiterversion string, boomversion string) error {
 
 	kc, err := secrets.Read(secretsNamespace + "_kubeconfig")
 	if err != nil {
@@ -193,7 +193,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 					}},
 					Containers: []core.Container{{
 						Name:            "orbiter",
-						ImagePullPolicy: core.PullAlways,
+						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbiter/orbiter:%s", orbiterversion),
 						Command:         []string{"/artifacts/orbiter", "--recur", "--repourl", repourl},
 						VolumeMounts: []core.VolumeMount{{
@@ -223,8 +223,48 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		os.Exit(0)
 	}
 
-	// TODO: Apply toolsop
-	return nil
+	if boomversion == "" {
+		return nil
+	}
+
+	_, err = client.ApplyDeployment(&apps.Deployment{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "boom",
+			Namespace: "caos-system",
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &mach.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "boom",
+				},
+			},
+			Template: core.PodTemplateSpec{
+				ObjectMeta: mach.ObjectMeta{
+					Labels: map[string]string{
+						"app": "boom",
+					},
+				},
+				Spec: core.PodSpec{
+					ImagePullSecrets: []core.LocalObjectReference{{
+						Name: "public-github-packages",
+					}},
+					Containers: []core.Container{{
+						Name:            "boom",
+						ImagePullPolicy: core.PullIfNotPresent,
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
+						Command:         []string{"/boom"},
+						Args: []string{
+							"--metrics-addr", "127.0.0.1:8080",
+							"--enable-leader-election",
+							// "--git-crd-secret", "/secrets/tools-secret/id_rsa-toolsop-tools-read",
+						},
+					}},
+				},
+			},
+		},
+	})
+	return err
 }
 
 func int32Ptr(i int32) *int32 { return &i }

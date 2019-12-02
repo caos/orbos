@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 )
 
 type logger struct {

@@ -13,8 +13,8 @@ import (
 	gcetypes "github.com/caos/orbiter/internal/kinds/providers/gce/config/api"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/api"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/resourceservices/instance"
-	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
+	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
 	"github.com/spf13/viper"
 )
 

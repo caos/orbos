@@ -8,9 +8,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
-) 
+	"github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
+)
 
 type testcase struct {
 	desc string

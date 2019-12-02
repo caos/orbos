@@ -9,7 +9,7 @@ import (
 	"github.com/caos/orbiter/internal/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/adapter/resourceservices/instance"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
-	"github.com/caos/orbiter/internal/core/logging"
+	"github.com/caos/orbiter/logging"
 	"google.golang.org/api/compute/v1"
 )
 

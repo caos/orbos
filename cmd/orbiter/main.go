@@ -12,16 +12,16 @@ import (
 
 	"gopkg.in/yaml.v2"
 
-	"github.com/caos/orbiter/internal/core/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
-	logcontext "github.com/caos/orbiter/internal/edge/logger/context"
-	"github.com/caos/orbiter/internal/edge/logger/stdlib"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 	"github.com/caos/orbiter/internal/kinds/orbiter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/model"
+	"github.com/caos/orbiter/logging"
+	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
 )
 
 var gitCommit string
