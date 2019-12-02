@@ -17,6 +17,11 @@ export INFROP_REPOSITORY=git@github.com:caos/orbiter-tmp.git
 export INFROP_SECRETSPREFIX=orbitertmp
 ```
 
+1. As long as github packages [does not allow anonymously pulling](https://github.community/t5/GitHub-Actions/Make-it-possible-to-pull-docker-images-anonymously-from-GitHub/m-p/36141#M2453) the orbiter docker image, you need to authenticate
+```bash
+docker login docker.pkg.github.com -u imgpuller -p 5d5eb1aa4c0751d96469e207373d436b0a146a2b
+```
+
 1. Initialize Orbiter runtime secrets
 ```bash
 # Create a master key used to symmetrically encrypt all other keys
@@ -55,7 +60,7 @@ docker run --rm --volume /etc/orbiter:/etc/orbiter:ro --user $(id -u):$(id -g) d
 # Update git changes made by Orbiter
 git pull
 
-# Teach your ssh daemon to use the newly created ssh key for connecting the VMS directly. The bootstrap key is not going to work anymore. 
+# Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
 docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${INFROP_SECRETSPREFIX}prodstatic_maintenancekey > /tmp/orbiter-maintenancekey && chmod 0600 /tmp/orbiter-maintenancekey && ssh-add /tmp/orbiter-maintenancekey
 
 # Overwrite your kubeconfig by the newly created admin kubeconfig

@@ -140,6 +140,25 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	}
 
+	if err := client.ApplySecret(&core.Secret{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "public-github-packages",
+			Namespace: "caos-system",
+		},
+		Type: core.SecretTypeDockerConfigJson,
+		StringData: map[string]string{
+			core.DockerConfigJsonKey: `{
+		"auths": {
+				"docker.pkg.github.com": {
+						"auth": "aW1ncHVsbGVyOjVkNWViMWFhNGMwNzUxZDk2NDY5ZTIwNzM3M2Q0MzZiMGExNDZhMmI="
+				}
+		}
+}`,
+		},
+	}); err != nil {
+		return err
+	}
+
 	if err := client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "orbiter",
@@ -168,9 +187,8 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 						Value:    "",
 						Effect:   "NoSchedule",
 					}},
-					// TODO: Remove before open sourcing #39
 					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "orbiterregistry",
+						Name: "public-github-packages",
 					}},
 					Containers: []core.Container{{
 						Name:            "orbiter",
