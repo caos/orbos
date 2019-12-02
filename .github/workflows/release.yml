@@ -1,8 +1,5 @@
 name: Release
-on:
-  push:
-    branches:
-    - master
+on: push
 jobs:
   release:
     runs-on: ubuntu-18.04
