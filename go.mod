@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/AppsFlyer/go-sundheit v0.1.0
+	github.com/go-logr/logr v0.1.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
