@@ -3,7 +3,7 @@ package cron
 import (
 	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/edge/watcher"
+	"github.com/caos/orbiter/watcher"
 	"github.com/robfig/cron"
 )
 

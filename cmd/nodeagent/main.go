@@ -19,8 +19,8 @@ import (
 
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	"github.com/caos/orbiter/watcher/cron"
+	"github.com/caos/orbiter/watcher/immediate"
 )
 
 var gitCommit string

@@ -4,7 +4,7 @@ package viper
 import (
 	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/edge/watcher"
+	"github.com/caos/orbiter/watcher"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/viper"
 )

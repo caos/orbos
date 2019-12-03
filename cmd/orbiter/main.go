@@ -14,8 +14,8 @@ import (
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	"github.com/caos/orbiter/watcher/cron"
+	"github.com/caos/orbiter/watcher/immediate"
 	"github.com/caos/orbiter/internal/kinds/orbiter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/model"
