@@ -1,10 +1,9 @@
-This project is in alpha state. The API will continue breaking until version 1.0.0 is released
------  
-
 # Orbiter the Meta Cluster Manager
 
 ![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)
 ![Github Release Badge](https://github.com/caos/orbiter/workflows/Release/badge.svg)
+
+> This project is in alpha state. The API will continue breaking until version 1.0.0 is released
 
 Orbiter boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
 
@@ -68,7 +67,7 @@ Connect to the cluster by using the automatically created new secrets
 # Update git changes made by Orbiter
 git pull
 
-# Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
+# Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore.
 docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${ORBITER_SECRETSPREFIX}prodstatic_maintenancekey > /tmp/orbiter-maintenancekey && chmod 0600 /tmp/orbiter-maintenancekey && ssh-add /tmp/orbiter-maintenancekey
 
 # Overwrite your kubeconfig by the newly created admin kubeconfig
@@ -92,7 +91,7 @@ Cleanup your environment
 sudo ignite rm -f $(sudo ignite ps -aq)
 ```
 
-## Why another cluster manager?
+## Why another cluster manager
 
 We observe a universal trend of increasing system distribution. Key drivers are cloud native engineering, microservices architectures, global competition among hyperscalers and so on.
 
@@ -106,45 +105,46 @@ What makes Orbiter special is that it ships with a nice **Launchpad UI** providi
 
 ### More to come
 
-* Other cluster managers
-  * Nomad
-  * Mesos
-* Databases
-  * etcd
-  * CockroachDB
-* Message Brokers
-  * Kafka
-  * RabbitMQ
+- Other cluster managers
+  - Nomad
+  - Mesos
+- Databases
+  - etcd
+  - CockroachDB
+- Message Brokers
+  - Kafka
+  - RabbitMQ
+  - NATS
 
 If you desire an explicit implementation, file an issue. Also, pull requests are welcome and appreciated.
 
 ## Supported providers
 
-* Google Compute Engine
-* Static provider (orbiter only manages clusters, infrastructure is already existing and managed manually)
+- Google Compute Engine
+- Static provider (orbiter only manages clusters, infrastructure is already existing and managed manually)
 
 More to come:
 
-* Hyperscalers
-  * Amazon Web Services
-  * Alibaba Cloud
-  * Microsoft Azure
-* Virtualization software
-  * VMWare
-  * KubeVirt
-  * Ignite
-* Bare Metal
-  * PXE Boot
+- Hyperscalers
+  - Amazon Web Services
+  - Alibaba Cloud
+  - Microsoft Azure
+- Virtualization software
+  - VMWare
+  - KubeVirt
+  - Ignite
+- Bare Metal
+  - PXE Boot
 
 If you desire an explicit implementation, file an issue. Also, pull requests are welcome and appreciated.
 
-## How does it work?
+## How does it work
 
 An Orbiter instance runs in a Kubernetes Pod managing n configured clusters, typically including the one it is running in. It scales the clusters nodes and instructs Node Agents over the kube-apiserver which software to install on the node they run on. The Node Agents run as native system processes which are managed by systemd.
 
 For more details, take a look at the [technical docs](./docs/README.md).
 
-## How to develop?
+## How to develop
 
 Configure your tooling to use certain environment variables. E.g. in VSCode, add the following to your settings.json.
 
@@ -184,4 +184,3 @@ For debugging node agents, use a configuration similar to the following VSCode l
 The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using Orbiter for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
 
 See the exact licensing terms [here](./LICENSE)
-
