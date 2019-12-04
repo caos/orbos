@@ -78,7 +78,7 @@ func main() {
 
 		value, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
-			panic(err) 
+			panic(err)
 		}
 		updatedSecrets, err := sec.Write(value)
 		if err != nil {
@@ -108,7 +108,7 @@ func main() {
 	repoKey := readSecretFile("repokey")
 
 	currentFile := "current.yml"
-	secretsFile := "secrets.yml" 
+	secretsFile := "secrets.yml"
 	configID := strings.ReplaceAll(strings.TrimSuffix(repoURLValue[strings.LastIndex(repoURLValue, "/")+1:], ".git"), "-", "")
 
 	op := operator.New(&operator.Arguments{
