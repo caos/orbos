@@ -1,0 +1,48 @@
+kind: orbiter.caos.ch/Orbiter
+version: v1
+deps:
+  t01:
+    kind: orbiter.caos.ch/KubernetesCluster
+    version: v1
+    spec:
+      versions:
+        kubernetes: v1.16.0
+        orbiter: v0.1.3
+        boom: v0.2.14
+      networking:
+        dnsDomain: cluster.inhouse
+        network: calico
+        serviceCidr: 100.126.48.0/20
+        podCidr: 100.126.32.0/20
+      controlplane:
+        updatesDisabled: false 
+        provider: gce
+        nodes: 3
+        pool: masters
+      workers:
+        workers:
+          updatesDisabled: false
+          provider: gce
+          nodes: 3
+          pool: workers
+    deps:
+      gce:
+        apiVersion: orbiter.caos.ch/v1
+        kind: GCEProvider
+        desired:
+          project: caos-240809
+          region: europe-west1
+          zone: europe-west1-b
+          pools:
+            standard:
+              minCPUCores: 2
+              minMemoryGB: 5
+              storageGB: 15
+            highmem:
+              minCPUCores: 2
+              minMemoryGB: 10
+              storageGB: 15
+            highcpu:
+              minCPUCores: 4
+              minMemoryGB: 5
+              storageGB: 15
