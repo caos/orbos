@@ -7,6 +7,11 @@
 
 Orbiter boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
 
+## The name
+
+Wikipedia defines a `orbiter` as follows `An object that orbits another, especially a spacecraft that orbits a planet etc. without landing on it.`
+We think this definition is greatly applicable to a tool, that manages clustered software from afar, whithout directly touching it.
+
 ## Bootstrap a new static cluster on firecracker VMs using ignite
 
 Create a new repository (e.g. git@github.com:caos/orbiter-tmp.git), clone it and change directory to its root and export according environment variables.
@@ -103,7 +108,7 @@ What makes Orbiter special is that it ships with a nice **Launchpad UI** providi
 
 - Kubernetes (vanilla)
 
-### More to come
+### More clusterd software to come
 
 - Other cluster managers
   - Nomad
@@ -123,7 +128,7 @@ If you desire an explicit implementation, file an issue. Also, pull requests are
 - Google Compute Engine
 - Static provider (orbiter only manages clusters, infrastructure is already existing and managed manually)
 
-More to come:
+### More providers to come
 
 - Hyperscalers
   - Amazon Web Services
