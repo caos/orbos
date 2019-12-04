@@ -14,8 +14,8 @@ import (
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
-	"github.com/caos/orbiter/watcher/cron"
-	"github.com/caos/orbiter/watcher/immediate"
+	"github.com/caos/orbiter/internal/edge/watcher/cron"
+	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 	"github.com/caos/orbiter/internal/kinds/orbiter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/model"
@@ -78,7 +78,7 @@ func main() {
 
 		value, err := ioutil.ReadAll(os.Stdin)
 		if err != nil {
-			panic(err)
+			panic(err) 
 		}
 		updatedSecrets, err := sec.Write(value)
 		if err != nil {
@@ -108,7 +108,7 @@ func main() {
 	repoKey := readSecretFile("repokey")
 
 	currentFile := "current.yml"
-	secretsFile := "secrets.yml"
+	secretsFile := "secrets.yml" 
 	configID := strings.ReplaceAll(strings.TrimSuffix(repoURLValue[strings.LastIndex(repoURLValue, "/")+1:], ".git"), "-", "")
 
 	op := operator.New(&operator.Arguments{

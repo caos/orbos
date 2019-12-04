@@ -17,10 +17,10 @@ import (
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/node"
 
+	"github.com/caos/orbiter/internal/edge/watcher/cron"
+	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
-	"github.com/caos/orbiter/watcher/cron"
-	"github.com/caos/orbiter/watcher/immediate"
 )
 
 var gitCommit string
