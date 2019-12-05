@@ -11,6 +11,7 @@ require (
 	github.com/pkg/errors v0.8.1
 	github.com/robfig/cron v1.2.0
 	github.com/satori/go.uuid v1.2.0
+	github.com/spf13/cobra v0.0.5
 	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e
 	google.golang.org/api v0.14.0
 	gopkg.in/src-d/go-billy.v4 v4.3.2

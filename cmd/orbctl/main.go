@@ -1,32 +1,91 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"strings"
 
-	"github.com/pkg/errors"
-
-	"gopkg.in/yaml.v2"
-
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/core/secret"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	"github.com/caos/orbiter/internal/kinds/orbiter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/model"
-	"github.com/caos/orbiter/logging"
-	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
+	"github.com/spf13/cobra"
 )
 
-var gitCommit string
-var gitTag string
+var (
+	// Build arguments
+	gitCommit = "none"
+	gitTag    = "none"
 
+	// orbctl
+	repokey        string
+	repokeyFile    string
+	repokeyStdin   bool
+	masterkey      string
+	masterkeyFile  string
+	masterkeyStdin bool
+	rootCmd        = &cobra.Command{
+		Use:   "orbctl [repo-url] [command]",
+		Short: "Interact with your orbs",
+		Long: `orbctl launches orbiters and simplifies common tasks such as updating your kubeconfig.
+	Participate in our community on https://github.com/caos/orbiter
+	or visit our website on https://caos.ch`,
+		Args: cobra.ExactArgs(1),
+	}
+
+	// takeoff
+	verbose    bool
+	recur      bool
+	destroy    bool
+	takeoffCmd = &cobra.Command{
+		Use:   "takeoff",
+		Short: "Launch an orbiter",
+		Long:  "Ensures a desired state",
+	}
+
+	// read secret
+	readSecretCmd = &cobra.Command{
+		Use:   "readsecret [name]",
+		Short: "Decrypt and print to stdout",
+		Args:  cobra.ExactArgs(1),
+	}
+
+	// write secret
+	value          string
+	file           string
+	stdin          bool
+	writeSecretCmd = &cobra.Command{
+		Use:   "writesecret [name]",
+		Short: "Encrypt and push",
+		Args:  cobra.ExactArgs(1),
+	}
+
+	// kubeconfig
+	kubeconfigCmd = &cobra.Command{
+		Use:   "kubeconfig",
+		Short: "Ensure your ~/.kube/config contains the orbs kubeconfig",
+	}
+)
+
+func init() {
+	rootCmd.Version = fmt.Sprintf("%s %s\n", gitTag, gitCommit)
+	rootCmd.Flags().StringVar(&repokey, "repokey", "", "SSH private key value for authenticating to orbs git repo")
+	rootCmd.Flags().StringVarP(&repokeyFile, "repokey-file", "", "r", "SSH private key file for authenticating to orbs git repo")
+	rootCmd.Flags().BoolVar(&repokeyStdin, "repokey-stdin", false, "Read SSH private key for authenticating to orbs git repo from standard input")
+	rootCmd.Flags().StringVar(&masterkey, "masterkey", "", "Secret phrase value used for encrypting and decrypting secrets")
+	rootCmd.Flags().StringVarP(&masterkeyFile, "masterkey-file", "", "m", "Secret phrase file used for encrypting and decrypting secrets")
+	rootCmd.Flags().BoolVar(&masterkeyStdin, "masterkey-stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
+
+	takeoffCmd.Flags().BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
+	takeoffCmd.Flags().BoolVar(&recur, "recur", false, "Ensure the desired state continously")
+	takeoffCmd.Flags().BoolVar(&destroy, "destroy", false, "Destroy everything and clean up")
+
+	writeSecretCmd.Flags().StringVar(&value, "value", "", "Secret phrase value used for encrypting and decrypting secrets")
+	writeSecretCmd.Flags().StringVarP(&file, "file", "", "m", "Secret phrase file used for encrypting and decrypting secrets")
+	writeSecretCmd.Flags().BoolVar(&stdin, "stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
+
+	rootCmd.AddCommand(takeoffCmd, readSecretCmd, writeSecretCmd, kubeconfigCmd)
+}
+
+func main() {
+	rootCmd.Execute()
+}
+
+/*
 func main() {
 
 	defer func() {
@@ -37,7 +96,6 @@ func main() {
 	}()
 
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
-	version := flag.Bool("version", false, "Print build information")
 	repoURL := flag.String("repourl", "", "Repository URL")
 	recur := flag.Bool("recur", false, "Continously ensures the desired state")
 	destroy := flag.Bool("destroy", false, "Destroys everything")
@@ -45,11 +103,6 @@ func main() {
 	readSecret := flag.String("readsecret", "", "Decodes and decrypts the secret at the given property key in ./secrets.yml and writes it to STDOUT")
 
 	flag.Parse()
-
-	if *version {
-		fmt.Printf("%s %s\n", gitTag, gitCommit)
-		os.Exit(0)
-	}
 
 	logger := logcontext.Add(stdlib.New(os.Stdout))
 	if *verbose {
@@ -197,3 +250,4 @@ func readSecretFile(sec string) string {
 	}
 	return string(secret)
 }
+*/
