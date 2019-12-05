@@ -14,7 +14,7 @@ type Config struct{}
 
 type Current struct {
 	SourcePools map[string][]string
-	Addresses   map[string]string
+	Addresses   map[string]infra.Address
 	Desire      func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent) error `yaml:"-"`
 }
 

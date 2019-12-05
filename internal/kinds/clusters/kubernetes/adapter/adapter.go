@@ -45,7 +45,7 @@ func New(params model.Parameters) Builder {
 
 			cloudPools := make(map[string]map[string]infra.Pool)
 			providersCleanupped := make([]<-chan error, 0)
-			var kubeAPIAddress string
+			var kubeAPIAddress infra.Address
 
 			for providerName, provider := range ensuredDependencies {
 				if cloudPools[providerName] == nil {
