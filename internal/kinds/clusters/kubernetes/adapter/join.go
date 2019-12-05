@@ -163,7 +163,7 @@ nodeRegistration:
 			return nil, err
 		}
 
-		cmd := fmt.Sprintf("sudo kubeadm join %s --config %s", *joinAtIP, kubeAPI.Port, kubeadmCfgPath)
+		cmd := fmt.Sprintf("sudo kubeadm join %s:%d --config %s", *joinAtIP, kubeAPI.Port, kubeadmCfgPath)
 		joinStdout, err := joining.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
