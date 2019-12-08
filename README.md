@@ -10,29 +10,28 @@ Orbiter boostraps, lifecycles and destroys clustered software and other cluster 
 
 ## Bootstrap a new static cluster on firecracker VMs using ignite
 
-Create a new repository (e.g. git@github.com:caos/my-orb.git), then configure your environment.
-```bash
-export ORB_SECRETSPREFIX=myorb # Set ORB_SECRETSPREFIX to your repositorys name without dashes
-export ORB_REPOKEY_PATH="~/.ssh/${ORB_SECRETSPREFIX}_bootstrap"
-alias myorb="orbctl --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key!'"
-```
+Download orbctl from https://github.com/caos/orbiter/releases and add it to your PATH  
 
-Initialize Orbiter runtime secrets
+Create a new repository (e.g. git@github.com:caos/my-orb.git)  
+
 ```bash
+# Set some environment variables in order to avoid too much retyping.
+ORB_NAME=myorb # Set ORB_NAME to your repositorys name without dashes
+ORB_REPOKEY_PATH="~/.ssh/${ORB_NAME}_bootstrap"
+alias myorb="orbctl --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key!'"
+
 # Create a new ssh key pair.
 ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f $ORB_REPOKEY_PATH -q && ssh-add $ORB_REPOKEY_PATH
 ```
 
-Add the public part to the git repositories trusted deploy keys.
+Add the public part to the git repositories trusted deploy keys.  
 
 ```bash
 # Add the bootstrap key pair to the remote secrets file. For simplicity, we use the repokey here.
-cat ${ORB_REPOKEY_PATH} | myorb addsecret ${ORB_SECRETSPREFIX}prodstatic_bootstrapkey --stdin
-cat ${ORB_REPOKEY_PATH}.pub | myorb addsecret ${ORB_SECRETSPREFIX}prodstatic_bootstrapkey_pub --stdin
-```
+cat ${ORB_REPOKEY_PATH} | myorb addsecret ${ORB_NAME}prodstatic_bootstrapkey --stdin
+cat ${ORB_REPOKEY_PATH}.pub | myorb addsecret ${ORB_NAME}prodstatic_bootstrapkey_pub --stdin
 
-Create four firecracker VMs
-```bash
+# Create four firecracker VMs
 sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name first
 sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name second
 sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name third
@@ -41,15 +40,14 @@ sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh
 
 Make sure your orb repo contains a desired.yml file similar to [this example](examples/dayone/desired.yml). Show your VMs IPs with `sudo ignite ps -a`  
 
-Your environment is ready now. Now it's time to do actual work.
 ```bash
-# Launch a local orbiter that bootstraps your orb
+# Your environment is ready now, finally we can do some actual work. Launch a local orbiter that bootstraps your orb
 myorb takeoff
 
-# Overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && myorb readsecret ${ORB_SECRETSPREFIX}prod_kubeconfig > ~/.kube/config
+# When the orbiter exits, overwrite your kubeconfig by the newly created admin kubeconfig
+mkdir -p ~/.kube && myorb readsecret ${ORB_NAME}prod_kubeconfig > ~/.kube/config
 
-# TODO: Not needed anymore when docker registry is public for reading #39
+# TODO: Not needed anymore when docker registry is anonymously pullable #39
 kubectl -n kube-system create secret docker-registry orbiterregistry --docker-server=docker.pkg.github.com --docker-username=
 ${GITHUB_USERNAME} --docker-password=${GITHUB_ACCESS_TOKEN}
 
@@ -60,10 +58,13 @@ kubectl get nodes --watch
 kubectl get pods --all-namespaces --watch
 
 # [Optional] Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
-myorb readsecret ${ORB_SECRETSPREFIX}prodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
+myorb readsecret ${ORB_NAME}prodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
+
+# Cleanup your environment
+sudo ignite rm -f $(sudo ignite ps -aq)
 ```
 
-Cleanup your environment by running `sudo ignite rm -f $(sudo ignite ps -aq)` and by deleting your git repository
+Delete your git repository
 
 ## Why another cluster manager?
 
