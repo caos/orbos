@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/AppsFlyer/go-sundheit v0.1.0
+	github.com/awalterschulze/goderive v0.0.0-20190728081913-2613afbe1240 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
 	github.com/imdario/mergo v0.3.8 // indirect
