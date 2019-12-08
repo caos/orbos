@@ -9,8 +9,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 
 	"github.com/caos/orbiter/logging"
 )
@@ -29,12 +29,12 @@ type Property struct {
 
 type Secret struct {
 	logger    logging.Logger
-	file      []byte
+	file      map[string]interface{}
 	property  string
 	masterKey string
 }
 
-func New(logger logging.Logger, file []byte, property string, masterKey string) *Secret {
+func New(logger logging.Logger, file map[string]interface{}, property string, masterKey string) *Secret {
 	return &Secret{
 		logger: logger.WithFields(map[string]interface{}{
 			"property": property,
@@ -46,18 +46,18 @@ func New(logger logging.Logger, file []byte, property string, masterKey string) 
 }
 
 // Write returns the whole file passed in secret.New() updated at the property passed in secret.New()
-func (s *Secret) Write(secret []byte) (newFile []byte, err error) {
+func (s *Secret) Write(secret []byte) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "Writing secret %s failed", s.property)
 	}()
 
 	if !utf8.Valid(secret) {
-		return nil, errors.Errorf("Binary secrets are not allowed")
+		return errors.Errorf("Binary secrets are not allowed")
 	}
 
 	if len(s.masterKey) > 32 {
-		return nil, errors.New("Master key cannot be longer than 32 characters")
+		return errors.New("Master key cannot be longer than 32 characters")
 	}
 
 	masterKey := make([]byte, 32)
@@ -67,30 +67,21 @@ func (s *Secret) Write(secret []byte) (newFile []byte, err error) {
 
 	c, err := aes.NewCipher(masterKey)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	cipherText := make([]byte, aes.BlockSize+len(secret))
 	iv := cipherText[:aes.BlockSize]
 	if _, err = io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
+		return err
 	}
 
 	stream := cipher.NewCFBEncrypter(c, iv)
 	stream.XORKeyStream(cipherText[aes.BlockSize:], secret)
 
-	secrets := make(map[string]*Property)
-	if err := yaml.Unmarshal(s.file, secrets); err != nil {
-		return nil, err
-	}
-
-	secrets[s.property] = &Property{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}
-	newSecrets, err := yaml.Marshal(secrets)
-	if err != nil {
-		return nil, err
-	}
+	s.file[s.property] = &Property{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}
 	s.logger.Info("Encrypted and encoded secret")
-	return newSecrets, nil
+	return nil
 }
 
 func (s *Secret) Read(to io.Writer) (err error) {
@@ -99,12 +90,12 @@ func (s *Secret) Read(to io.Writer) (err error) {
 		err = errors.Wrapf(err, "Reading secret %s failed", s.property)
 	}()
 
-	secrets := make(map[string]*Property)
-	if err := yaml.Unmarshal(s.file, secrets); err != nil {
+	properties := make(map[string]Property)
+	if err := mapstructure.Decode(s.file, &properties); err != nil {
 		return err
 	}
 
-	property, ok := secrets[s.property]
+	property, ok := properties[s.property]
 	if !ok {
 		return ErrNotExist
 	}

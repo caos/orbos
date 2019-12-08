@@ -10,77 +10,61 @@ Orbiter boostraps, lifecycles and destroys clustered software and other cluster 
 
 ## Bootstrap a new static cluster on firecracker VMs using ignite
 
-1. Create a new repository (e.g. git@github.com:caos/orbiter-tmp.git), clone it and change directory to its root and export according environment variables.
+Download orbctl from https://github.com/caos/orbiter/releases
+
+Create a new repository (e.g. git@github.com:caos/my-orb.git)  
+
 ```bash
-export ORBITER_REPOSITORY=git@github.com:caos/orbiter-tmp.git
-# Set ORBITER_SECRETSPREFIX to your repositorys name without dashes
-export ORBITER_SECRETSPREFIX=orbitertmp
+# Set some environment variables in order to avoid too much retyping.
+ORB_NAME=myorb # Set ORB_NAME to your repositorys name without dashes
+ORB_REPOKEY_PATH="~/.ssh/${ORB_NAME}_bootstrap"
+alias myorb="~/Downloads/orbctl-linux-amd64 --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key'"
+
+# Create a new ssh key pair.
+ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f $ORB_REPOKEY_PATH -q && ssh-add $ORB_REPOKEY_PATH
 ```
 
-1. As long as github packages [does not allow anonymously pulling](https://github.community/t5/GitHub-Actions/Make-it-possible-to-pull-docker-images-anonymously-from-GitHub/m-p/36141#M2453) the orbiter docker image, you need to authenticate
+Add the public part to the git repositories trusted deploy keys.  
+
 ```bash
-docker login docker.pkg.github.com -u imgpuller -p $(echo ZTY1MDExYjc0OTU4YzM4YjMzNzBjMzlmODkwOWQ0MTk4YTM4MGQyYw== | base64 --decode)
+# Add the bootstrap key pair to the remote secrets file. For simplicity, we use the repokey here.
+cat ${ORB_REPOKEY_PATH} | myorb addsecret ${ORB_NAME}prodstatic_bootstrapkey --stdin
+cat ${ORB_REPOKEY_PATH}.pub | myorb addsecret ${ORB_NAME}prodstatic_bootstrapkey_pub --stdin
+
+# Create four firecracker VMs
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name first
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name second
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name third
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name fourth
 ```
 
-1. Initialize Orbiter runtime secrets
+Make sure your orb repo contains a desired.yml file similar to [this example](examples/dayone/desired.yml). Show your VMs IPs with `sudo ignite ps -a`  
+
 ```bash
-# Create a master key used to symmetrically encrypt all other keys
-sudo mkdir -p /etc/orbiter && sudo chown $(id -u):$(id -g) /etc/orbiter && echo -n "a very secret key!" > /etc/orbiter/masterkey && chmod 600 /etc/orbiter/masterkey
+# Your environment is ready now, finally we can do some actual work. Launch a local orbiter that bootstraps your orb
+myorb takeoff
 
-# Create a new key pair. This will be used to bootstrap new VMs as well as authenticating our git calls.
-ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f "/etc/orbiter/repokey" -q
+# When the orbiter exits, overwrite your kubeconfig by the newly created admin kubeconfig
+mkdir -p ~/.kube && myorb readsecret ${ORB_NAME}prod_kubeconfig > ~/.kube/config
 
-# Add the private part to your ssh daemon
-ssh-add /etc/orbiter/repokey
+# TODO: Not needed anymore when docker registry is anonymously pullable #39
+kubectl -n kube-system create secret docker-registry orbiterregistry --docker-server=docker.pkg.github.com --docker-username=
+${GITHUB_USERNAME} --docker-password=${GITHUB_ACCESS_TOKEN}
 
-# Add the bootstrap private key
-cat /etc/orbiter/repokey | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${ORBITER_SECRETSPREFIX}prodstatic_bootstrapkey
-
-# Add the bootstrap public key
-cat /etc/orbiter/repokey.pub | docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --addsecret ${ORBITER_SECRETSPREFIX}prodstatic_bootstrapkey_pub
-```
-
-1. Add your generated public key to your git repositorys deploy keys with write access
-
-1. Create four firecracker VMs
-```bash
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=/etc/orbiter/repokey.pub --ports 5000:5000 --ports 6443:6443 --name first
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=/etc/orbiter/repokey.pub --ports 5000:5000 --ports 6443:6443 --name second
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=/etc/orbiter/repokey.pub --ports 5000:5000 --ports 6443:6443 --name third
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=/etc/orbiter/repokey.pub --ports 5000:5000 --ports 6443:6443 --name fourth
-```
-1. Create a new file called desired.yml (see [](examples/dayone/desired.yml)). Replace the IPs in the example file by the outputs from `sudo ignite ps -a`
-1. Push your newly created yaml files `git add . && git commit -m "bootstrap cluster" && git push`.
-1. Bootstrap a cluster. Adjust the arguments to your setup
-```bash
-docker run --rm --volume /etc/orbiter:/etc/orbiter:ro --user $(id -u):$(id -g) docker.pkg.github.com/caos/orbiter/orbiter:latest --repourl $ORBITER_REPOSITORY
-```
-1. Connect to the cluster by using the automatically created new secrets
-```bash
-# Update git changes made by Orbiter
-git pull
-
-# Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
-docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${ORBITER_SECRETSPREFIX}prodstatic_maintenancekey > /tmp/orbiter-maintenancekey && chmod 0600 /tmp/orbiter-maintenancekey && ssh-add /tmp/orbiter-maintenancekey
-
-# Overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:latest --readsecret ${ORBITER_SECRETSPREFIX}prod_kubeconfig > ~/.kube/config
-
-# TODO: Not needed anymore when docker registry is public for reading #39
-kubectl -n kube-system create secret docker-registry orbiterregistry --docker-server=docker.pkg.github.com --docker-username=${GITHUB_USERNAME} --docker-password=${GITHUB_ACCESS_TOKEN}
-
-# Watch your nodes becoming ready
+# Watch your nodes become ready
 kubectl get nodes --watch
 
-# Watch your pods becoming ready
+# Watch your pods become ready
 kubectl get pods --all-namespaces --watch
-```
 
-1. Overwrite your desired.yml by the contents of examples/daytwo/desired.yml, push your changes with `git add . && git commit -m "change cluster" && git push` and let Orbiter do its work.
-1. Cleanup your environment
-```bash
+# [Optional] Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
+myorb readsecret ${ORB_NAME}prodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
+
+# Cleanup your environment
 sudo ignite rm -f $(sudo ignite ps -aq)
 ```
+
+Delete your git repository
 
 ## Why another cluster manager?
 

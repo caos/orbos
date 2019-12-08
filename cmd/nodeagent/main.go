@@ -10,17 +10,18 @@ import (
 	"strings"
 
 	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/internal/edge/watcher/cron"
+	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/stdlib"
+
 	"github.com/caos/orbiter/internal/kinds/nodeagent"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/conv"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/node"
-
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
 )
 
 var gitCommit string
@@ -91,14 +92,18 @@ func main() {
 		panic(err)
 	}
 
+	ctx := context.Background()
+	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *computeID), *repoURL)
+	if err := gitClient.Init(repoKey); err != nil {
+		panic(err)
+	}
+
 	op := operator.New(&operator.Arguments{
-		Ctx:           context.Background(),
-		Logger:        logger,
-		RepoURL:       *repoURL,
-		CurrentFile:   *currentFile,
-		SecretsFile:   *secretsFile,
-		DeploymentKey: string(repoKey),
-		RepoCommitter: fmt.Sprintf("Node Agent %s", *computeID),
+		Ctx:         ctx,
+		GitClient:   gitClient,
+		Logger:      logger,
+		CurrentFile: *currentFile,
+		SecretsFile: *secretsFile,
 		Watchers: []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 30s"),

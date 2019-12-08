@@ -7,8 +7,8 @@ deps:
     spec:
       versions:
         kubernetes: v1.16.0
-        orbiter: v0.1.3
-        boom: v0.2.14
+        orbiter: v0.3.2
+        boom: v0.3.0
       networking:
         dnsDomain: cluster.inhouse
         network: calico
@@ -27,12 +27,12 @@ deps:
           pool: workers
     deps:
       gce:
-        apiVersion: orbiter.caos.ch/v1
-        kind: GCEProvider
+        version: v1
+        kind: orbiter.caos.ch/GCEProvider
         desired:
           project: caos-240809
-          region: europe-west1
-          zone: europe-west1-b
+          region: europe-west6
+          zone: europe-west6-b
           pools:
             standard:
               minCPUCores: 2
