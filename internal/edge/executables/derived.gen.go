@@ -8,49 +8,49 @@ import (
 
 // deriveTupleBuilt returns a function, which returns the input values.
 // Since tuples are not first class citizens in Go, this is a way to fake it, because functions that return tuples are first class citizens.
-func deriveTupleBuilt(v0 string, v1 io.Reader, v2 func(), v3 error) func() (string, io.Reader, func(), error) {
-	return func() (string, io.Reader, func(), error) {
+func deriveTupleBuilt(v0 Bin, v1 io.Reader, v2 func(), v3 error) func() (Bin, io.Reader, func(), error) {
+	return func() (Bin, io.Reader, func(), error) {
 		return v0, v1, v2, v3
 	}
 }
 
 // deriveTuplePacked returns a function, which returns the input values.
 // Since tuples are not first class citizens in Go, this is a way to fake it, because functions that return tuples are first class citizens.
-func deriveTuplePacked(v0 string, v1 *string, v2 error) func() (string, *string, error) {
-	return func() (string, *string, error) {
+func deriveTuplePacked(v0 Bin, v1 *string, v2 error) func() (Bin, *string, error) {
+	return func() (Bin, *string, error) {
 		return v0, v1, v2
 	}
 }
 
 // deriveCurryDebug returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryDebug(f func(debug bool, gitCommit string, gitTag string, mainDir string) BuiltTuple) func(debug bool) func(gitCommit string, gitTag string, mainDir string) BuiltTuple {
-	return func(debug bool) func(gitCommit string, gitTag string, mainDir string) BuiltTuple {
-		return func(gitCommit string, gitTag string, mainDir string) BuiltTuple {
-			return f(debug, gitCommit, gitTag, mainDir)
+func deriveCurryDebug(f func(debug bool, gitCommit string, gitTag string, bin Bin) BuiltTuple) func(debug bool) func(gitCommit string, gitTag string, bin Bin) BuiltTuple {
+	return func(debug bool) func(gitCommit string, gitTag string, bin Bin) BuiltTuple {
+		return func(gitCommit string, gitTag string, bin Bin) BuiltTuple {
+			return f(debug, gitCommit, gitTag, bin)
 		}
 	}
 }
 
 // deriveCurryCommit returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryCommit(f func(gitCommit string, gitTag string, mainDir string) BuiltTuple) func(gitCommit string) func(gitTag string, mainDir string) BuiltTuple {
-	return func(gitCommit string) func(gitTag string, mainDir string) BuiltTuple {
-		return func(gitTag string, mainDir string) BuiltTuple {
-			return f(gitCommit, gitTag, mainDir)
+func deriveCurryCommit(f func(gitCommit string, gitTag string, bin Bin) BuiltTuple) func(gitCommit string) func(gitTag string, bin Bin) BuiltTuple {
+	return func(gitCommit string) func(gitTag string, bin Bin) BuiltTuple {
+		return func(gitTag string, bin Bin) BuiltTuple {
+			return f(gitCommit, gitTag, bin)
 		}
 	}
 }
 
 // deriveCurryTag returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryTag(f func(gitTag string, mainDir string) BuiltTuple) func(gitTag string) func(mainDir string) BuiltTuple {
-	return func(gitTag string) func(mainDir string) BuiltTuple {
-		return func(mainDir string) BuiltTuple {
-			return f(gitTag, mainDir)
+func deriveCurryTag(f func(gitTag string, bin Bin) BuiltTuple) func(gitTag string) func(bin Bin) BuiltTuple {
+	return func(gitTag string) func(bin Bin) BuiltTuple {
+		return func(bin Bin) BuiltTuple {
+			return f(gitTag, bin)
 		}
 	}
 }
 
 // deriveFmap returns an output channel where the items are the result of the input function being applied to the items on the input channel.
-func deriveFmap(f func(string) BuiltTuple, in <-chan string) <-chan BuiltTuple {
+func deriveFmap(f func(Bin) BuiltTuple, in <-chan Bin) <-chan BuiltTuple {
 	out := make(chan BuiltTuple, cap(in))
 	go func() {
 		for a := range in {

@@ -49,17 +49,16 @@ func init() {
 	}
 
 	for pt := range deriveFmapPack(pack, builds) {
-		mainDir, packed, packErr := pt()
+		bin, packed, packErr := pt()
 		err = helpers.Concat(err, packErr)
 		if err != nil {
 			continue
 		}
 
 		if _, err = prebuilt.WriteString(fmt.Sprintf(`
-		"%s": unpack("%s"),`, filepath.Base(mainDir), *packed)); err != nil {
+		"%s": unpack("%s"),`, filepath.Base(bin.MainDir), *packed)); err != nil {
 			continue
 		}
-
 	}
 
 	if err != nil {
@@ -74,19 +73,19 @@ func init() {
 	return err
 }
 
-func packedTupleFunc(mainDir string) func(*string, error) packedTuple {
+func packedTupleFunc(bin Bin) func(*string, error) packedTuple {
 	return func(packed *string, err error) packedTuple {
-		return deriveTuplePacked(mainDir, packed, err)
+		return deriveTuplePacked(bin, packed, err)
 	}
 }
 
-type packedTuple func() (string, *string, error)
+type packedTuple func() (Bin, *string, error)
 
 func pack(built BuiltTuple) packedTuple {
 
-	mainDir, executable, close, err := built()
+	bin, executable, close, err := built()
 	defer close()
-	packedTuple := packedTupleFunc(mainDir)
+	packedTuple := packedTupleFunc(bin)
 	if err != nil {
 		return packedTuple(nil, err)
 	}
