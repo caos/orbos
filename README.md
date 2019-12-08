@@ -10,7 +10,7 @@ Orbiter boostraps, lifecycles and destroys clustered software and other cluster 
 
 ## Bootstrap a new static cluster on firecracker VMs using ignite
 
-Download orbctl from https://github.com/caos/orbiter/releases and add it to your PATH  
+Download orbctl from https://github.com/caos/orbiter/releases
 
 Create a new repository (e.g. git@github.com:caos/my-orb.git)  
 
@@ -18,7 +18,7 @@ Create a new repository (e.g. git@github.com:caos/my-orb.git)
 # Set some environment variables in order to avoid too much retyping.
 ORB_NAME=myorb # Set ORB_NAME to your repositorys name without dashes
 ORB_REPOKEY_PATH="~/.ssh/${ORB_NAME}_bootstrap"
-alias myorb="orbctl --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key!'"
+alias myorb="~/Downloads/orbctl-linux-amd64 --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key'"
 
 # Create a new ssh key pair.
 ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f $ORB_REPOKEY_PATH -q && ssh-add $ORB_REPOKEY_PATH
