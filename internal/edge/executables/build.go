@@ -4,8 +4,6 @@ package executables
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -18,10 +16,11 @@ var Unpack func(string)
 
 type Bin struct {
 	MainDir string
+	OutDir  string
 	Env     map[string]string
 }
 
-type BuiltTuple func() (bin Bin, executable io.Reader, close func(), err error)
+type BuiltTuple func() (bin Bin, err error)
 
 func Build(debug bool, gitCommit, gitTag string, bins ...Bin) <-chan BuiltTuple {
 	return deriveFmap(curryBuild(debug, gitCommit, gitTag), toChan(bins))
@@ -47,14 +46,13 @@ func toChan(bins []Bin) <-chan Bin {
 
 func build(debug bool, gitCommit, gitTag string, bin Bin) BuiltTuple {
 
-	builtTuple := builtTupleFunc(bin)
-
-	bf, err := ioutil.TempFile(os.TempDir(), "")
-	if err != nil {
-		return builtTuple(nil, func() {}, errors.Wrap(err, "opening tempfile failed"))
+	if bin.OutDir == "" {
+		bin.OutDir = filepath.Join(os.TempDir(), filepath.Base(bin.MainDir))
 	}
 
-	args := []string{"build", "-o", bf.Name()}
+	builtTuple := builtTupleFunc(bin)
+
+	args := []string{"build", "-o", bin.OutDir}
 
 	ldflags := "-s -w "
 	if debug {
@@ -76,15 +74,12 @@ func build(debug bool, gitCommit, gitTag string, bin Bin) BuiltTuple {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return builtTuple(bf, func() {
-		bf.Close()
-		os.Remove(bf.Name())
-	}, errors.Wrapf(cmd.Run(), "building %s failed", bf.Name()))
+	return builtTuple(errors.Wrapf(cmd.Run(), "building %s failed", bin.OutDir))
 }
 
-func builtTupleFunc(bin Bin) func(io.Reader, func(), error) BuiltTuple {
-	return func(executable io.Reader, close func(), err error) BuiltTuple {
-		return deriveTupleBuilt(bin, executable, close, err)
+func builtTupleFunc(bin Bin) func(error) BuiltTuple {
+	return func(err error) BuiltTuple {
+		return deriveTupleBuilt(bin, err)
 	}
 }
 

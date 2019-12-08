@@ -83,9 +83,18 @@ type packedTuple func() (Bin, *string, error)
 
 func pack(built BuiltTuple) packedTuple {
 
-	bin, executable, close, err := built()
-	defer close()
+	bin, err := built()
 	packedTuple := packedTupleFunc(bin)
+
+	defer func() {
+		os.Remove(bin.OutDir)
+	}()
+
+	if err != nil {
+		return packedTuple(nil, err)
+	}
+
+	executable, err := os.Open(bin.OutDir)
 	if err != nil {
 		return packedTuple(nil, err)
 	}

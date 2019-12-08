@@ -2,15 +2,11 @@
 
 package executables
 
-import (
-	"io"
-)
-
 // deriveTupleBuilt returns a function, which returns the input values.
 // Since tuples are not first class citizens in Go, this is a way to fake it, because functions that return tuples are first class citizens.
-func deriveTupleBuilt(v0 Bin, v1 io.Reader, v2 func(), v3 error) func() (Bin, io.Reader, func(), error) {
-	return func() (Bin, io.Reader, func(), error) {
-		return v0, v1, v2, v3
+func deriveTupleBuilt(v0 Bin, v1 error) func() (Bin, error) {
+	return func() (Bin, error) {
+		return v0, v1
 	}
 }
 

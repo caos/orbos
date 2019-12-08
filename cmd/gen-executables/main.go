@@ -5,11 +5,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
-	"sync"
 
 	"github.com/caos/orbiter/internal/edge/executables"
 )
@@ -47,55 +45,54 @@ func main() {
 		return
 	}
 
+	// Use all available CPUs from now on
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	orbctlMain := path("orbctl")
 	orbctls := executables.Build(*debug, *commit, *tag,
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "darwin", "GOARCH": "386"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "darwin", "GOARCH": "amd64"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "freebsd", "GOARCH": "386"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "freebsd", "GOARCH": "amd64"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "linux", "GOARCH": "386"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "openbsd", "GOARCH": "386"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "openbsd", "GOARCH": "amd64"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "windows", "GOARCH": "386"}},
-		executables.Bin{MainDir: path("orbctl"), Env: map[string]string{"GOOS": "windows", "GOARCH": "amd64"}},
+		orbctlBin(orbctlMain, *orbctldir, "darwin", "386"),
+		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "freebsd", "386"),
+		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "linux", "386"),
+		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "openbsd", "386"),
+		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "windows", "386"),
+		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
 	)
 
-	var wg sync.WaitGroup
+	var hasErr bool
 	for orbctl := range orbctls {
-		wg.Add(1)
-		go writeOrbctl(&wg, *orbctldir, orbctl)
+		bin, err := orbctl()
+		if err != nil {
+			hasErr = true
+			fmt.Printf("Building %s failed\n", bin.OutDir)
+			continue
+		}
+		fmt.Printf("Successfully built %s\n", bin.OutDir)
+	}
+	if hasErr {
+		panic("Building orbctl failed")
+	}
+}
+
+func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
+
+	outdir := filepath.Join(outPath, fmt.Sprintf("orbctl-%s-%s", goos, goarch))
+	if goos == "windows" {
+		outdir += ".exe"
 	}
 
-	wg.Wait()
+	return executables.Bin{
+		MainDir: mainPath,
+		OutDir:  outdir,
+		Env:     map[string]string{"GOOS": goos, "GOARCH": goarch},
+	}
 }
 
 func curryJoinPath(cmdPath string) func(dir string) string {
 	return func(dir string) string {
 		return filepath.Join(cmdPath, dir)
-	}
-}
-
-func writeOrbctl(wg *sync.WaitGroup, outDir string, orbctlTuple executables.BuiltTuple) {
-	bin, executable, close, err := orbctlTuple()
-	defer close()
-	defer wg.Done()
-	if err != nil {
-		panic(err)
-	}
-
-	filePath := filepath.Join(outDir, fmt.Sprintf("orbctl-%s-%s", bin.Env["GOOS"], bin.Env["GOARCH"]))
-	if bin.Env["GOOS"] == "windows" {
-		filePath = filePath + ".exe"
-	}
-
-	file, err := os.Create(filePath)
-	if err != nil {
-		panic(err)
-	}
-	defer file.Close()
-
-	_, err = io.Copy(file, executable)
-	if err != nil {
-		panic(err)
 	}
 }
