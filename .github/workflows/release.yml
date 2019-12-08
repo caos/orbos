@@ -32,8 +32,9 @@ jobs:
         export TAG_LATEST=${IMAGE}:latest
         export TAG_VERSION=${IMAGE}:${GIT_TAG}
         go mod download
-        mkdir ./artifacts
-        go run cmd/gen-executables/*.go -tag $GIT_TAG -commit {{ github.sha }} --orbctl ./artifacts
+        mkdir -p ./artifacts
+        echo "Building executables by passing version $GIT_TAG and commit {{ github.sha }}"
+        go run cmd/gen-executables/*.go -tag "$GIT_TAG" -commit "{{ github.sha }}" --orbctl ./artifacts
         [[ "$GIT_TAG" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
         docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} .
         docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
