@@ -101,7 +101,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		return &IterationDone{Error: err}
 	}
 
-	if err := yaml.Unmarshal(secretsBytes, i.secrets); err != nil {
+	if err := yaml.Unmarshal(secretsBytes, &i.secrets); err != nil {
 		return &IterationDone{Error: err}
 	}
 
@@ -134,11 +134,11 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		current map[string]interface{}
 	)
 
-	if err := yaml.Unmarshal(desiredBytes, desired); err != nil {
+	if err := yaml.Unmarshal(desiredBytes, &desired); err != nil {
 		return &IterationDone{Error: err}
 	}
 
-	if err := yaml.Unmarshal(currentBytes, current); err != nil {
+	if err := yaml.Unmarshal(currentBytes, &current); err != nil {
 		return &IterationDone{Error: err}
 	}
 
@@ -168,7 +168,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent []byte) ([]byte, error) {
 
 			var reloadedCurrentMap map[string]interface{}
-			if err := yaml.Unmarshal(currentBytes, current); err != nil {
+			if err := yaml.Unmarshal(reloadedCurrent, &reloadedCurrentMap); err != nil {
 				return nil, err
 			}
 
