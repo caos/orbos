@@ -166,7 +166,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 	i.latestCurrent, err = i.args.GitClient.UpdateRemoteUntilItWorks(
 		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent []byte) ([]byte, error) {
 
-			var reloadedCurrentMap map[string]interface{}
+			reloadedCurrentMap := make(map[string]interface{})
 			if err := yaml.Unmarshal(reloadedCurrent, &reloadedCurrentMap); err != nil {
 				return nil, err
 			}
