@@ -92,9 +92,13 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		return &IterationDone{Error: errors.Wrap(err, "pulling repository before iterating failed")}
 	}
 
-	desiredBytes, err := i.args.GitClient.Read(i.args.DesiredFile)
-	if err != nil {
-		return &IterationDone{Error: err}
+	desiredBytes := make([]byte, 0)
+	if i.args.DesiredFile != "" {
+		var err error
+		desiredBytes, err = i.args.GitClient.Read(i.args.DesiredFile)
+		if err != nil {
+			return &IterationDone{Error: err}
+		}
 	}
 
 	secretsBytes, err := i.args.GitClient.Read(i.args.SecretsFile)
