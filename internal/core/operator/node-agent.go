@@ -170,7 +170,7 @@ func newNodeAgentCurrent(logger logging.Logger, path []string, nodeAgentSource m
 	}
 
 	switch kind.Current.Version {
-	case "v1":
+	case "v0":
 		kind.Current.State.changer = changer
 		return kind.Current.State
 	default:
