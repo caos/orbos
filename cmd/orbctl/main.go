@@ -13,6 +13,7 @@ import (
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
+	"github.com/caos/orbiter/internal/edge/executables"
 	"github.com/caos/orbiter/internal/edge/git"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
@@ -104,6 +105,8 @@ var (
 				panic(err)
 			}
 
+			executables.Populate()
+
 			go op.Run(iterations)
 
 		outer:
@@ -151,6 +154,11 @@ var (
 		Use:   "readsecret [name]",
 		Short: "Decrypt and print to stdout",
 		Args:  cobra.ExactArgs(1),
+		Example: `
+mkdir -p ~/.kube
+orbctl --repourl git@github.com:example/my-orb.git \
+       --repokey-file ~/.ssh/my-orb --masterkey 'my very secret key'
+       readsecret myorbk8s_kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			_, logger, gitClient, _, mk, err := commonValues()
@@ -182,6 +190,10 @@ var (
 		Use:   "writesecret [name]",
 		Short: "Encrypt and push",
 		Args:  cobra.ExactArgs(1),
+		Example: `alias myorb="orbctl --repourl git@github.com:example/my-orb.git --repokey-file ~/.ssh/my-orb-repo --masterkey 'my very secret key'"
+myorb writesecret myorbsomeclusterstaticprovider_bootstrapkey --file ~/.ssh/my-orb-bootstrap
+myorb writesecret myorbsomeclusterstaticprovider_bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
+myorb writesecret myorbsomeclustergceprovider_google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			if stdin && (masterkeyStdin || repokeyStdin) {
