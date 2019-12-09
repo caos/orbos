@@ -8,7 +8,7 @@ FROM scratch
 
 COPY --from=minimal /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=minimal /etc_passwd /etc/passwd
-COPY --chown=65534:65534 artifacts/orbctl-linux-amd64 /orbctl
+COPY --chown=65534:65534 artifacts/orbctl-Linux-x86_64 /orbctl
 
 USER nobody
 

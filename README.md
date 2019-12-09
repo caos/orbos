@@ -21,7 +21,7 @@ sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 # Set some environment variables in order to avoid too much retyping.
 ORB_NAME=myorb # Set ORB_NAME to your repositorys name without dashes
 ORB_REPOKEY_PATH="~/.ssh/${ORB_NAME}_bootstrap"
-alias myorb="~/Downloads/orbctl-linux-amd64 --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key'"
+alias myorb="orbctl --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key'"
 
 # Create a new ssh key pair.
 ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f $ORB_REPOKEY_PATH -q && ssh-add $ORB_REPOKEY_PATH
