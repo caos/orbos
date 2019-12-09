@@ -1,4 +1,4 @@
-package v1
+package v0
 
 import (
 	"fmt"
@@ -27,12 +27,6 @@ func init() {
 		err := mapstructure.Decode(desired, &spec)
 
 		return spec, func(cfg model.Config, deps map[string]map[string]interface{}) (map[string]operator.Assembler, error) {
-
-			if spec.Versions.Orbiter != "" {
-				if ensureErr := ensureArtifacts(cfg.Params.Logger, secrets, cfg.Params.ID, cfg.Params.RepoURL, cfg.Params.RepoKey, cfg.Params.MasterKey, spec.Versions.Orbiter, spec.Versions.Boom); err != nil {
-					return nil, ensureErr
-				}
-			}
 
 			if err != nil {
 				return nil, err
@@ -98,6 +92,3 @@ func init() {
 		}
 	}
 }
-
-func int32Ptr(i int32) *int32 { return &i }
-func boolPtr(b bool) *bool    { return &b }

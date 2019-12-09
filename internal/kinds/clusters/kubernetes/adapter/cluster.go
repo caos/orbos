@@ -160,7 +160,7 @@ func ensureCluster(
 		return nil
 	}
 
-	targetVersion := k8s.ParseString(cfg.Spec.Versions.Kubernetes)
+	targetVersion := k8s.ParseString(cfg.Spec.Kubernetes)
 	upgradingDone, err := ensureK8sVersion(
 		cfg,
 		nodeagentFullPath,

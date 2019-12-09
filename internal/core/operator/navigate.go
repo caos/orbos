@@ -6,21 +6,16 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/logging"
 	"gopkg.in/yaml.v2"
 )
 
-func toNestedRoot(logger logging.Logger, gitClient *git.Client, path []string, desiredFile string, current map[string]interface{}) (map[string]interface{}, map[string]interface{}, error) {
+func toNestedRoot(logger logging.Logger, gitClient *git.Client, path []string, desired map[string]interface{}, current map[string]interface{}) (map[string]interface{}, map[string]interface{}, error) {
 
 	workCurrent := current
-	var workDesired map[string]interface{}
-	if len(path) == 0 {
-		var err error
-		if workDesired, err = gitClient.Read(desiredFile); err != nil {
-			return nil, nil, err
-		}
-	} else {
+	workDesired := desired
+	if len(path) > 0 {
 		var err error
 		if workCurrent, err = drillIn(logger.WithFields(map[string]interface{}{
 			"purpose": "navigate to root",

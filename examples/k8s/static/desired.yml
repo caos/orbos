@@ -1,14 +1,14 @@
 kind: orbiter.caos.ch/Orbiter
-version: v1
+version: v0
+spec:
+  orbiter: v0.4.1
+  boom: v0.2.14
 deps:
   t01:
     kind: orbiter.caos.ch/KubernetesCluster
-    version: v1
+    version: v0
     spec:
-      versions:
-        kubernetes: v1.16.0
-        orbiter: v0.1.3
-        boom: v0.2.14
+      kubernetes: v1.16.0
       networking:
         dnsDomain: cluster.inhouse
         network: calico
@@ -28,7 +28,7 @@ deps:
     deps:
       dc1:
         kind: orbiter.caos.ch/StaticProvider
-        version: v1
+        version: v0
         spec:
           remoteuser: orbiter
           remotePublicKeyPath: /home/orbiter/.ssh/authorized_keys
@@ -62,7 +62,7 @@ deps:
         deps:
           dynamic:
             kind: orbiter.caos.ch/DynamicLoadBalancer
-            version: v1
+            version: v0
             spec:
               masters:
               - ip: "10.73.244.69"

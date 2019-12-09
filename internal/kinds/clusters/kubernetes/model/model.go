@@ -1,19 +1,15 @@
 package model
 
 import (
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/logging"
 )
 
 type UserSpec struct {
-	Destroyed bool
-	Verbose   bool
-	Versions  struct {
-		Kubernetes string
-		Orbiter    string
-		Boom       string
-	}
+	Destroyed  bool
+	Verbose    bool
+	Kubernetes string
 	Networking struct {
 		DNSDomain   string
 		Network     string

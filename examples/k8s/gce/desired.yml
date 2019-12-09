@@ -1,14 +1,14 @@
 kind: orbiter.caos.ch/Orbiter
-version: v1
+version: v0
+spec:
+  orbiter: v0.4.1
+  boom: v0.2.14
 deps:
   t01:
     kind: orbiter.caos.ch/KubernetesCluster
-    version: v1
+    version: v0
     spec:
-      versions:
-        kubernetes: v1.16.0
-        orbiter: v0.3.2
-        boom: v0.3.0
+      kubernetes: v1.16.0
       networking:
         dnsDomain: cluster.inhouse
         network: calico
@@ -27,7 +27,7 @@ deps:
           pool: workers
     deps:
       gce:
-        version: v1
+        version: v0
         kind: orbiter.caos.ch/GCEProvider
         desired:
           project: caos-240809

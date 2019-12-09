@@ -3,6 +3,11 @@ package main
 import (
 	"strings"
 
+	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
+
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/edge/executables"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
@@ -10,9 +15,6 @@ import (
 	"github.com/caos/orbiter/internal/kinds/orbiter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
 	"github.com/caos/orbiter/internal/kinds/orbiter/model"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func takeoffCommand(rv rootValues) *cobra.Command {
@@ -77,6 +79,30 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				SecretsFile:      secretsFile,
 				Masterkey:        masterkey,
 			})),
+			BeforeIteration: func(desired map[string]interface{}, secrets *operator.Secrets) error {
+				var deserialized struct {
+					Spec struct {
+						Orbiter string
+						Boom    string
+					}
+					Deps map[string]struct {
+						Kind string
+					}
+				}
+
+				if err := mapstructure.Decode(desired, &deserialized); err != nil {
+					return err
+				}
+
+				for clusterName, cluster := range deserialized.Deps {
+					if strings.Contains(cluster.Kind, "Kubernetes") {
+						if err := ensureArtifacts(logger, secrets, configID+clusterName, repoURL, repokey, masterkey, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
+							return err
+						}
+					}
+				}
+				return nil
+			},
 		})
 
 		iterations := make(chan *operator.IterationDone)

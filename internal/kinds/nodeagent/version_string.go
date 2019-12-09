@@ -9,10 +9,10 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[unknown-0]
-	_ = x[v1-1]
+	_ = x[v0-1]
 }
 
-const _Version_name = "unknownv1"
+const _Version_name = "unknownv0"
 
 var _Version_index = [...]uint8{0, 7, 9}
 

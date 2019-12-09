@@ -1,7 +1,6 @@
-package v1
+package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/caos/orbiter/internal/core/operator"
@@ -65,67 +64,69 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	}
 
-	created, err := client.ApplyDeployment(&apps.Deployment{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "orbiter",
-			Namespace: "caos-system",
-		},
-		Spec: apps.DeploymentSpec{
-			Replicas: int32Ptr(1),
-			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "orbiter",
-				},
+	if orbiterversion != "" {
+		created, err := client.ApplyDeployment(&apps.Deployment{
+			ObjectMeta: mach.ObjectMeta{
+				Name:      "orbiter",
+				Namespace: "caos-system",
 			},
-			Template: core.PodTemplateSpec{
-				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
+			Spec: apps.DeploymentSpec{
+				Replicas: int32Ptr(1),
+				Selector: &mach.LabelSelector{
+					MatchLabels: map[string]string{
 						"app": "orbiter",
 					},
 				},
-				Spec: core.PodSpec{
-					NodeSelector: map[string]string{
-						"node-role.kubernetes.io/master": "",
-					},
-					Tolerations: []core.Toleration{{
-						Key:      "node-role.kubernetes.io/master",
-						Operator: "Equal",
-						Value:    "",
-						Effect:   "NoSchedule",
-					}},
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
-					Containers: []core.Container{{
-						Name:            "orbiter",
-						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbiter/orbiter:%s", orbiterversion),
-						Command:         []string{"/artifacts/orbiter", "--recur", "--repourl", repourl},
-						VolumeMounts: []core.VolumeMount{{
-							Name:      "keys",
-							ReadOnly:  true,
-							MountPath: "/etc/orbiter",
-						}},
-					}},
-					Volumes: []core.Volume{{
-						Name: "keys",
-						VolumeSource: core.VolumeSource{
-							Secret: &core.SecretVolumeSource{
-								SecretName: "caos",
-								Optional:   boolPtr(false),
-							},
+				Template: core.PodTemplateSpec{
+					ObjectMeta: mach.ObjectMeta{
+						Labels: map[string]string{
+							"app": "orbiter",
 						},
-					}},
+					},
+					Spec: core.PodSpec{
+						NodeSelector: map[string]string{
+							"node-role.kubernetes.io/master": "",
+						},
+						Tolerations: []core.Toleration{{
+							Key:      "node-role.kubernetes.io/master",
+							Operator: "Equal",
+							Value:    "",
+							Effect:   "NoSchedule",
+						}},
+						ImagePullSecrets: []core.LocalObjectReference{{
+							Name: "public-github-packages",
+						}},
+						Containers: []core.Container{{
+							Name:            "orbiter",
+							ImagePullPolicy: core.PullIfNotPresent,
+							Image:           "docker.pkg.github.com/caos/orbiter/orbiter:" + orbiterversion,
+							Command:         []string{"/orbctl", "--repourl", repourl, "--repokey-file", "/etc/orbiter/repokey", "--masterkey-file", "/etc/orbiter/masterkey", "takeoff", "--recur"},
+							VolumeMounts: []core.VolumeMount{{
+								Name:      "keys",
+								ReadOnly:  true,
+								MountPath: "/etc/orbiter",
+							}},
+						}},
+						Volumes: []core.Volume{{
+							Name: "keys",
+							VolumeSource: core.VolumeSource{
+								Secret: &core.SecretVolumeSource{
+									SecretName: "caos",
+									Optional:   boolPtr(false),
+								},
+							},
+						}},
+					},
 				},
 			},
-		},
-	})
-	if err != nil {
-		return err
-	}
+		})
+		if err != nil {
+			return err
+		}
 
-	if created {
-		os.Exit(0)
+		if created {
+			os.Exit(0)
+		}
 	}
 
 	return nil
@@ -174,3 +175,6 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	*/
 }
+
+func int32Ptr(i int32) *int32 { return &i }
+func boolPtr(b bool) *bool    { return &b }

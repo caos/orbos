@@ -1,4 +1,4 @@
-package v1
+package v0
 
 import (
 	"fmt"
@@ -58,7 +58,7 @@ func init() {
 						RepoURL:          cfg.NodeagentRepoURL,
 						RepoKey:          cfg.NodeagentRepoKey,
 						MasterKey:        cfg.Masterkey,
-						OrbiterVersion:    cfg.OrbiterVersion,
+						OrbiterVersion:   cfg.OrbiterVersion,
 						CurrentFile:      cfg.CurrentFile,
 						SecretsFile:      cfg.SecretsFile,
 					}))

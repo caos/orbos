@@ -12,16 +12,17 @@ import (
 )
 
 type Arguments struct {
-	Ctx           context.Context
-	Logger        logging.Logger
-	GitClient     *git.Client
-	MasterKey     string
-	DesiredFile   string
-	CurrentFile   string
-	SecretsFile   string
-	RootAssembler Assembler
-	Watchers      []Watcher
-	Stop          chan struct{}
+	Ctx             context.Context
+	Logger          logging.Logger
+	GitClient       *git.Client
+	MasterKey       string
+	DesiredFile     string
+	CurrentFile     string
+	SecretsFile     string
+	RootAssembler   Assembler
+	Watchers        []Watcher
+	Stop            chan struct{}
+	BeforeIteration func(desired map[string]interface{}, secrets *Secrets) error
 }
 
 type Watcher interface {
@@ -90,7 +91,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		return &IterationDone{Error: errors.Wrap(err, "pulling repository before iterating failed")}
 	}
 
-	current, err := i.args.GitClient.Read(i.args.CurrentFile)
+	desired, err := i.args.GitClient.Read(i.args.DesiredFile)
 	if err != nil {
 		return &IterationDone{Error: err}
 	}
@@ -98,12 +99,6 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 	i.secrets, err = i.args.GitClient.Read(i.args.SecretsFile)
 	if err != nil {
 		return &IterationDone{Error: err}
-	}
-
-	rootPath, _ := i.args.RootAssembler.BuildContext()
-	workDesired, workCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, i.args.DesiredFile, current)
-	if err != nil {
-		return &IterationDone{Error: errors.Wrap(err, "navigating to nested root failed")}
 	}
 
 	curriedSecrets := currySecrets(i.args.Logger, func(newSecrets map[string]interface{}) error {
@@ -118,6 +113,23 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 	}, i.secrets, i.args.MasterKey)
 
 	secrets := &Secrets{curriedSecrets.read, curriedSecrets.write, curriedSecrets.delete}
+
+	if i.args.BeforeIteration != nil {
+		if err := i.args.BeforeIteration(desired, secrets); err != nil {
+			return &IterationDone{Error: err}
+		}
+	}
+
+	current, err := i.args.GitClient.Read(i.args.CurrentFile)
+	if err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	rootPath, _ := i.args.RootAssembler.BuildContext()
+	workDesired, workCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, desired, current)
+	if err != nil {
+		return &IterationDone{Error: errors.Wrap(err, "navigating to nested root failed")}
+	}
 
 	select {
 	case <-i.args.Ctx.Done():
@@ -137,7 +149,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 
 	i.latestCurrent, err = i.args.GitClient.UpdateRemoteUntilItWorks(
 		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent map[string]interface{}) ([]byte, error) {
-			_, reloadedWorkCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, i.args.DesiredFile, reloadedCurrent)
+			_, reloadedWorkCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, desired, reloadedCurrent)
 			if err != nil {
 				return nil, errors.Wrap(err, "navigating to reloaded nested root failed")
 			}
