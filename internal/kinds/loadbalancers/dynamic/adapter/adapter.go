@@ -5,7 +5,6 @@ package adapter
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"sync"
 	"text/template"
 
@@ -53,11 +52,14 @@ func New(remoteUser string) Builder {
 			}
 
 			sourcePools := make(map[string][]string)
-			addresses := make(map[string]string)
+			addresses := make(map[string]infra.Address)
 			for _, pool := range spec {
 				for _, vip := range pool {
 					for _, src := range vip.Transport {
-						addresses[src.Name] = fmt.Sprintf("%s:%d", vip.IP, src.SourcePort)
+						addresses[src.Name] = infra.Address{
+							Location: vip.IP,
+							Port:     uint16(src.SourcePort),
+						}
 					destinations:
 						for _, dest := range src.Destinations {
 							if _, ok := sourcePools[dest.Pool]; !ok {

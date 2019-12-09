@@ -1,12 +1,11 @@
 package model
 
-type UserSpec struct {
-	Host string
-	Port uint16
-}
+import "github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+
+type UserSpec infra.Address
 
 type Config struct{}
 
 type Current struct {
-	Address string
+	Address infra.Address
 }

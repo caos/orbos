@@ -20,7 +20,7 @@ func ensureCluster(
 	cfg *model.Config,
 	curr *model.Current,
 	providerPools map[string]map[string]infra.Pool,
-	kubeAPIAddress string,
+	kubeAPIAddress infra.Address,
 	secrets *operator.Secrets,
 	k8sClient *k8s.Client) (err error) {
 

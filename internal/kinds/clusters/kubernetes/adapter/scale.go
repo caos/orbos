@@ -2,8 +2,6 @@ package adapter
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -28,7 +26,7 @@ func ensureScale(
 	kubeConfigKey string,
 	controlplanePool *scaleablePool,
 	workerPools []*scaleablePool,
-	kubeAPIAddress string,
+	kubeAPI infra.Address,
 	k8sVersion k8s.KubernetesVersion,
 	k8sClient *k8s.Client) (done bool, err error) {
 
@@ -143,11 +141,6 @@ nodes:
 		current := curr.Computes[id]
 		software := k8sVersion.DefineSoftware()
 
-		kubeapiPort, err := strconv.ParseInt(strings.Split(kubeAPIAddress, ":")[1], 10, 16)
-		if err != nil {
-			return false, errors.Wrapf(err, "parsing port from kubeapi address %s failed", kubeAPIAddress)
-		}
-
 		fw := map[string]operator.Allowed{
 			"kubelet": operator.Allowed{
 				Port:     fmt.Sprintf("%d", 10250),
@@ -164,7 +157,7 @@ nodes:
 
 		if current.Metadata.Tier == model.Controlplane {
 			fw["kubeapi"] = operator.Allowed{
-				Port:     fmt.Sprintf("%d", kubeapiPort),
+				Port:     fmt.Sprintf("%d", kubeAPI.Port),
 				Protocol: "tcp",
 			}
 			fw["etcd"] = operator.Allowed{
@@ -279,14 +272,14 @@ nodes:
 		}
 
 		joinKubeconfig, err := join(
+			joinCP,
+			certsCP,
 			cfg,
-			kubeAPIAddress,
+			kubeAPI,
 			jointoken,
 			k8sVersion,
 			string(certKey),
-			joinCP,
-			true,
-			doKubeadmInit)
+			true)
 
 		if joinKubeconfig == nil || err != nil {
 			return false, err
@@ -304,13 +297,13 @@ nodes:
 		wg.Add(1)
 		go func(w infra.Compute) {
 			_, goErr := join(
+				w,
+				certsCP,
 				cfg,
-				kubeAPIAddress,
+				kubeAPI,
 				string(jointoken),
 				k8sVersion,
 				"",
-				w,
-				false,
 				false)
 			synchronizer.Done(errors.Wrapf(goErr, "joining worker %s failed", w.ID()))
 		}(worker)
