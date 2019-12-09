@@ -10,11 +10,14 @@ Orbiter boostraps, lifecycles and destroys clustered software and other cluster 
 
 ## Bootstrap a new static cluster on firecracker VMs using ignite
 
-Download orbctl from https://github.com/caos/orbiter/releases
-
 Create a new repository (e.g. git@github.com:caos/my-orb.git)  
 
 ```bash
+# Download latest orbctl
+curl -s https://api.github.com/repos/caos/orbiter/releases/latest | grep "browser_download_url.*orbctl-linux-amd64" | cut -d '"' -f 4 | sudo wget -i - -O /usr/local/bin/orbctl -
+sudo chmod +x /usr/local/bin/orbctl
+sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
+
 # Set some environment variables in order to avoid too much retyping.
 ORB_NAME=myorb # Set ORB_NAME to your repositorys name without dashes
 ORB_REPOKEY_PATH="~/.ssh/${ORB_NAME}_bootstrap"
