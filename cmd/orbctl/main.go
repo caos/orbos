@@ -54,13 +54,6 @@ var (
 		Short: "Launch an orbiter",
 		Long:  "Ensures a desired state",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			defer func() {
-				if r := recover(); r != nil {
-					os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
-					os.Exit(1)
-				}
-			}()
-
 			if recur && destroy {
 				return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 			}
@@ -166,15 +159,18 @@ var (
 			}
 
 			if err := gitClient.Clone(); err != nil {
-				return err
+				panic(err)
 			}
 
 			sec, err := gitClient.Read("secrets.yml")
 			if err != nil {
-				return err
+				panic(err)
 			}
 
-			return secret.New(logger, sec, args[0], mk).Read(os.Stdout)
+			if err := secret.New(logger, sec, args[0], mk).Read(os.Stdout); err != nil {
+				panic(err)
+			}
+			return nil
 		},
 	}
 
@@ -203,36 +199,29 @@ var (
 			}
 
 			if err := gitClient.Clone(); err != nil {
-				return err
+				panic(err)
 			}
 
 			sec, err := gitClient.Read("secrets.yml")
 			if err != nil {
-				return err
+				panic(err)
 			}
 
 			if err := secret.New(logger, sec, args[0], mk).Write([]byte(s)); err != nil {
-				return err
+				panic(err)
 			}
 
-			gitClient.UpdateRemoteUntilItWorks(&git.File{
+			if _, err := gitClient.UpdateRemoteUntilItWorks(&git.File{
 				Path: "secrets.yml",
 				Overwrite: func(o map[string]interface{}) ([]byte, error) {
 					o[args[0]] = sec[args[0]]
 					return yaml.Marshal(o)
 				},
 				Force: true,
-			})
+			}); err != nil {
+				panic(err)
+			}
 			return nil
-		},
-	}
-
-	// kubeconfig
-	kubeconfigCmd = &cobra.Command{
-		Use:   "kubeconfig",
-		Short: "Ensure your ~/.kube/config contains the orbs kubeconfig",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("kubeconfigcmd")
 		},
 	}
 )
@@ -258,12 +247,19 @@ func key(value string, file string, stdin bool) (string, error) {
 		return value, nil
 	}
 
+	readFunc := func() ([]byte, error) {
+		return ioutil.ReadFile(file)
+	}
 	if stdin {
-		key, err := ioutil.ReadAll(os.Stdin)
-		return string(key), err
+		readFunc = func() ([]byte, error) {
+			return ioutil.ReadAll(os.Stdin)
+		}
 	}
 
-	key, err := ioutil.ReadFile(file)
+	key, err := readFunc()
+	if err != nil {
+		panic(err)
+	}
 	return string(key), err
 }
 
@@ -283,7 +279,7 @@ func commonValues() (context.Context, logging.Logger, *git.Client, string, strin
 	ctx := context.Background()
 	gitClient := git.New(ctx, logger, "Orbiter", repoURL)
 	if err := gitClient.Init([]byte(rk)); err != nil {
-		return nil, nil, nil, "", "", err
+		panic(err)
 	}
 
 	return ctx, logger, gitClient, rk, mk, nil
@@ -304,7 +300,7 @@ func keys() (string, string, error) {
 
 func init() {
 	rootCmd.Version = fmt.Sprintf("%s %s\n", gitTag, gitCommit)
-	rootCmd.PersistentFlags().StringVarP(&repoURL, "repourl", "", "g", "Use this orbs Git repo")
+	rootCmd.PersistentFlags().StringVarP(&repoURL, "repourl", "g", "", "Use this orbs Git repo")
 	rootCmd.MarkPersistentFlagRequired("repourl")
 	rootCmd.PersistentFlags().StringVar(&repokey, "repokey", "", "SSH private key value for authenticating to orbs git repo")
 	rootCmd.PersistentFlags().StringVarP(&repokeyFile, "repokey-file", "r", "", "SSH private key file for authenticating to orbs git repo")
@@ -321,11 +317,20 @@ func init() {
 	writeSecretCmd.Flags().StringVarP(&file, "file", "f", "", "Secret phrase file used for encrypting and decrypting secrets")
 	writeSecretCmd.Flags().BoolVar(&stdin, "stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
 
-	rootCmd.AddCommand(takeoffCmd, readSecretCmd, writeSecretCmd, kubeconfigCmd)
+	rootCmd.AddCommand(takeoffCmd, readSecretCmd, writeSecretCmd)
 }
 
 func main() {
-	rootCmd.Execute()
+	defer func() {
+		if r := recover(); r != nil {
+			os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
+			os.Exit(1)
+		}
+	}()
+
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
 
 /*
