@@ -18,6 +18,12 @@ import (
 
 var executables map[string][]byte
 
+var populate = func() {}
+
+func Populate() {
+	populate()
+}
+
 func PreBuilt(mainDir string) ([]byte, error) {
 	executable, ok := executables[mainDir]
 	if !ok {
@@ -44,7 +50,8 @@ func PreBuild(builds <-chan BuiltTuple) (err error) {
 	if _, err = prebuilt.WriteString(`package executables
 
 func init() {
-	executables = map[string][]byte{`); err != nil {
+	populate = func(){
+		executables = map[string][]byte{`); err != nil {
 		return err
 	}
 
@@ -67,6 +74,7 @@ func init() {
 	}
 
 	_, err = prebuilt.WriteString(`
+		}
 	}
 }
 `)
