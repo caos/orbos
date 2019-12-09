@@ -3,7 +3,6 @@ package main
 import (
 	"strings"
 
-	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -31,7 +30,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 	)
 
 	flags := cmd.Flags()
-	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&destroy, "destroy", false, "Destroy everything and clean up")
 
@@ -40,7 +38,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, logger, gitClient, repoURL, repokey, masterkey, err := rv(verbose)
+		ctx, logger, gitClient, repoURL, repokey, masterkey, err := rv()
 		if err != nil {
 			return err
 		}
@@ -79,7 +77,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				SecretsFile:      secretsFile,
 				Masterkey:        masterkey,
 			})),
-			BeforeIteration: func(desired map[string]interface{}, secrets *operator.Secrets) error {
+			BeforeIteration: func(desired []byte, secrets *operator.Secrets) error {
 				var deserialized struct {
 					Spec struct {
 						Orbiter string
@@ -90,7 +88,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 					}
 				}
 
-				if err := mapstructure.Decode(desired, &deserialized); err != nil {
+				if err := yaml.Unmarshal(desired, &deserialized); err != nil {
 					return err
 				}
 

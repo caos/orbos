@@ -20,7 +20,6 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
-	"gopkg.in/yaml.v2"
 )
 
 type Client struct {
@@ -90,27 +89,7 @@ func (g *Client) Clone() error {
 	return nil
 }
 
-/*
-func (g *Client) Pull() error {
-	g.logger.Debug("Pulling")
-
-	err := g.workTree.PullContext(g.ctx, &gogit.PullOptions{
-		//			Depth:        1,
-		SingleBranch: true,
-		RemoteName:   "origin",
-		Auth:         g.auth,
-		Progress:     g.progress,
-		Force:        true,
-	})
-	if err != nil && !strings.Contains(err.Error(), gogit.NoErrAlreadyUpToDate.Error()) {
-		return errors.Wrap(err, "pulling repository failed")
-	}
-
-	g.logger.Debug("Repository pulled to worktree")
-	return nil
-}
-*/
-func (g *Client) Read(path string) (map[string]interface{}, error) {
+func (g *Client) Read(path string) ([]byte, error) {
 	readLogger := g.logger.WithFields(map[string]interface{}{
 		"path": path,
 	})
@@ -118,7 +97,7 @@ func (g *Client) Read(path string) (map[string]interface{}, error) {
 	file, err := g.fs.Open(path)
 	if err != nil {
 		if os.IsNotExist(errors.Cause(err)) {
-			return make(map[string]interface{}), nil
+			return make([]byte, 0), nil
 		}
 		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
 	}
@@ -131,24 +110,13 @@ func (g *Client) Read(path string) (map[string]interface{}, error) {
 		readLogger.Debug("File read")
 		fmt.Println(string(fileBytes))
 	}
-	unmarshalled := make(map[string]interface{})
-	if err := yaml.Unmarshal(fileBytes, unmarshalled); err != nil {
-		fmt.Println(string(fileBytes))
-		return nil, errors.Wrapf(err, "unmarshalling %s from worktree failed", path)
-	}
-	readLogger.Debug("File parsed")
-	return unmarshalled, nil
+	return fileBytes, nil
 }
 
 type File struct {
 	Path      string
-	Overwrite func(map[string]interface{}) ([]byte, error)
+	Overwrite func([]byte) ([]byte, error)
 	Force     bool
-}
-
-type LatestFile struct {
-	Path    string
-	Content []byte
 }
 
 func (g *Client) UpdateRemoteUntilItWorks(file *File) ([]byte, error) {

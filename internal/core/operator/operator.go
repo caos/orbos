@@ -22,7 +22,7 @@ type Arguments struct {
 	RootAssembler   Assembler
 	Watchers        []Watcher
 	Stop            chan struct{}
-	BeforeIteration func(desired map[string]interface{}, secrets *Secrets) error
+	BeforeIteration func(desired []byte, secrets *Secrets) error
 }
 
 type Watcher interface {
@@ -91,21 +91,25 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		return &IterationDone{Error: errors.Wrap(err, "pulling repository before iterating failed")}
 	}
 
-	desired, err := i.args.GitClient.Read(i.args.DesiredFile)
+	desiredBytes, err := i.args.GitClient.Read(i.args.DesiredFile)
 	if err != nil {
 		return &IterationDone{Error: err}
 	}
 
-	i.secrets, err = i.args.GitClient.Read(i.args.SecretsFile)
+	secretsBytes, err := i.args.GitClient.Read(i.args.SecretsFile)
 	if err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	if err := yaml.Unmarshal(secretsBytes, i.secrets); err != nil {
 		return &IterationDone{Error: err}
 	}
 
 	curriedSecrets := currySecrets(i.args.Logger, func(newSecrets map[string]interface{}) error {
 		_, err := i.args.GitClient.UpdateRemoteUntilItWorks(&git.File{
 			Path: i.args.SecretsFile,
-			Overwrite: func(map[string]interface{}) ([]byte, error) {
-				return yaml.Marshal(newSecrets)
+			Overwrite: func([]byte) ([]byte, error) {
+				return Marshal(newSecrets)
 			},
 			Force: true,
 		})
@@ -115,13 +119,26 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 	secrets := &Secrets{curriedSecrets.read, curriedSecrets.write, curriedSecrets.delete}
 
 	if i.args.BeforeIteration != nil {
-		if err := i.args.BeforeIteration(desired, secrets); err != nil {
+		if err := i.args.BeforeIteration(desiredBytes, secrets); err != nil {
 			return &IterationDone{Error: err}
 		}
 	}
 
-	current, err := i.args.GitClient.Read(i.args.CurrentFile)
+	currentBytes, err := i.args.GitClient.Read(i.args.CurrentFile)
 	if err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	var (
+		desired map[string]interface{}
+		current map[string]interface{}
+	)
+
+	if err := yaml.Unmarshal(desiredBytes, desired); err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	if err := yaml.Unmarshal(currentBytes, current); err != nil {
 		return &IterationDone{Error: err}
 	}
 
@@ -148,8 +165,14 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 	}
 
 	i.latestCurrent, err = i.args.GitClient.UpdateRemoteUntilItWorks(
-		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent map[string]interface{}) ([]byte, error) {
-			_, reloadedWorkCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, desired, reloadedCurrent)
+		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent []byte) ([]byte, error) {
+
+			var reloadedCurrentMap map[string]interface{}
+			if err := yaml.Unmarshal(currentBytes, current); err != nil {
+				return nil, err
+			}
+
+			_, reloadedWorkCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, desired, reloadedCurrentMap)
 			if err != nil {
 				return nil, errors.Wrap(err, "navigating to reloaded nested root failed")
 			}
@@ -158,7 +181,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 				return nil, errors.Wrap(err, "overwriting current state failed")
 			}
 
-			return marshal(reloadedCurrent)
+			return Marshal(reloadedCurrentMap)
 		}})
 	if err != nil {
 		return &IterationDone{Error: err}

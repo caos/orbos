@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/AppsFlyer/go-sundheit v0.1.0
+	github.com/Azure/go-autorest v11.1.2+incompatible // indirect
 	github.com/awalterschulze/goderive v0.0.0-20190728081913-2613afbe1240 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
@@ -18,8 +19,9 @@ require (
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.7
-	k8s.io/api v0.0.0-20191121015604-11707872ac1c
-	k8s.io/apimachinery v0.0.0-20191123233150-4c4803ed55e3
-	k8s.io/client-go v0.0.0-20190620085101-78d2af792bab
+	k8s.io/api v0.0.0-20191206001707-7edad22604e1
+	k8s.io/apimachinery v0.0.0-20191203211716-adc6f4cd9e7d
+	k8s.io/client-go v0.0.0-20191204082520-bc9b51d240b2
+	k8s.io/kubectl v0.0.0-20191206204826-b909fcb4a071
 	k8s.io/utils v0.0.0-20191114200735-6ca3b61696b6 // indirect
 )

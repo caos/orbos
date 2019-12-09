@@ -25,6 +25,7 @@ func main() {
 		takeoffCommand(rootValues),
 		readSecretCommand(rootValues),
 		writeSecretCommand(rootValues),
+		editCommand(rootValues),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

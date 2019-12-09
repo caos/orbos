@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func marshal(content map[string]interface{}) ([]byte, error) {
+func Marshal(content map[string]interface{}) ([]byte, error) {
 	unorderedSerialized, err := yaml.Marshal(content)
 	if err != nil {
 		return nil, err

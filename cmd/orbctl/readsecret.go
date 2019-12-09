@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/caos/orbiter/internal/core/secret"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 func readSecretCommand(rv rootValues) *cobra.Command {
@@ -20,7 +22,7 @@ orbctl --repourl git@github.com:example/my-orb.git \
        readsecret myorbk8s_kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			_, logger, gitClient, _, _, mk, err := rv(false)
+			_, logger, gitClient, _, _, mk, err := rv()
 			if err != nil {
 				return err
 			}
@@ -34,7 +36,12 @@ orbctl --repourl git@github.com:example/my-orb.git \
 				panic(err)
 			}
 
-			if err := secret.New(logger, sec, args[0], mk).Read(os.Stdout); err != nil {
+			var secsMap map[string]interface{}
+			if err := yaml.Unmarshal(sec, &secsMap); err != nil {
+				panic(errors.Wrap(err, "Unmarshalling failed"))
+			}
+
+			if err := secret.New(logger, secsMap, args[0], mk).Read(os.Stdout); err != nil {
 				panic(err)
 			}
 			return nil

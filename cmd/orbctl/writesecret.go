@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/caos/orbiter/internal/edge/git"
 	"github.com/spf13/cobra"
@@ -49,7 +50,7 @@ myorb writesecret myorbsomeclustergceprovider_google_application_credentials_val
 			return err
 		}
 
-		_, logger, gitClient, _, _, mk, err := rv(false)
+		_, logger, gitClient, _, _, mk, err := rv()
 		if err != nil {
 			return err
 		}
@@ -63,15 +64,24 @@ myorb writesecret myorbsomeclustergceprovider_google_application_credentials_val
 			panic(err)
 		}
 
-		if err := secret.New(logger, sec, args[0], mk).Write([]byte(s)); err != nil {
+		var secsMap map[string]interface{}
+		if err := yaml.Unmarshal(sec, &secsMap); err != nil {
+			panic(err)
+		}
+
+		if err := secret.New(logger, secsMap, args[0], mk).Write([]byte(s)); err != nil {
 			panic(err)
 		}
 
 		if _, err := gitClient.UpdateRemoteUntilItWorks(&git.File{
 			Path: "secrets.yml",
-			Overwrite: func(o map[string]interface{}) ([]byte, error) {
-				o[args[0]] = sec[args[0]]
-				return yaml.Marshal(o)
+			Overwrite: func(o []byte) ([]byte, error) {
+				var newSecsMap map[string]interface{}
+				if err := yaml.Unmarshal(o, &newSecsMap); err != nil {
+					panic(err)
+				}
+				newSecsMap[args[0]] = secsMap[args[0]]
+				return operator.Marshal(newSecsMap)
 			},
 			Force: true,
 		}); err != nil {

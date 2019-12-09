@@ -13,13 +13,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type rootValues func(verboseLogger bool) (context.Context, logging.Logger, *git.Client, string, string, string, error)
+type rootValues func() (context.Context, logging.Logger, *git.Client, string, string, string, error)
 
 var errMultipleStdinKeys = errors.New("Reading multiple keys from standard input does not work")
 
 func rootCommand() (*cobra.Command, rootValues) {
 
 	var (
+		verbose        bool
 		repoURL        string
 		repokey        string
 		repokeyFile    string
@@ -46,8 +47,9 @@ or visit our website at https://caos.ch`,
 	flags.StringVar(&masterkey, "masterkey", "", "Secret phrase value used for encrypting and decrypting secrets")
 	flags.StringVarP(&masterkeyFile, "masterkey-file", "m", "", "Secret phrase file used for encrypting and decrypting secrets")
 	flags.BoolVar(&masterkeyStdin, "masterkey-stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
+	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func(verboseLogger bool) (context.Context, logging.Logger, *git.Client, string, string, string, error) {
+	return cmd, func() (context.Context, logging.Logger, *git.Client, string, string, string, error) {
 
 		if masterkeyStdin && repokeyStdin {
 			return nil, nil, nil, "", "", "", errMultipleStdinKeys
@@ -57,6 +59,7 @@ or visit our website at https://caos.ch`,
 		if err != nil {
 			return nil, nil, nil, "", "", "", errors.Wrap(err, "repokey")
 		}
+
 		mk, err := key(masterkey, masterkeyFile, masterkeyStdin)
 		if err != nil {
 			return nil, nil, nil, "", "", "", errors.Wrap(err, "masterkey")
@@ -65,7 +68,7 @@ or visit our website at https://caos.ch`,
 		ctx := context.Background()
 
 		l := logcontext.Add(stdlib.New(os.Stdout))
-		if verboseLogger {
+		if verbose {
 			l = l.Verbose()
 		}
 
