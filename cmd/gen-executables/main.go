@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/caos/orbiter/internal/edge/executables"
 )
@@ -50,15 +51,10 @@ func main() {
 
 	orbctlMain := path("orbctl")
 	orbctls := executables.Build(*debug, *commit, *tag,
-		orbctlBin(orbctlMain, *orbctldir, "darwin", "386"),
 		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "freebsd", "386"),
 		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "linux", "386"),
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "openbsd", "386"),
 		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "windows", "386"),
 		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
 	)
 
@@ -79,7 +75,16 @@ func main() {
 
 func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
 
-	outdir := filepath.Join(outPath, fmt.Sprintf("orbctl-%s-%s", goos, goarch))
+	arch := "x86_64"
+	os := strings.ToUpper(goos[0:1]) + goos[1:]
+	switch goos {
+	case "freebsd":
+		os = "FreeBSD"
+	case "openbsd":
+		os = "OpenBSD"
+	}
+
+	outdir := filepath.Join(outPath, fmt.Sprintf("orbctl-%s-%s", os, arch))
 	if goos == "windows" {
 		outdir += ".exe"
 	}
