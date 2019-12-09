@@ -38,8 +38,9 @@ type Iterator struct {
 
 func New(args *Arguments) *Iterator {
 	return &Iterator{
-		args:  args,
-		fired: make(chan struct{}),
+		args:    args,
+		fired:   make(chan struct{}),
+		secrets: make(map[string]interface{}),
 	}
 }
 
@@ -129,10 +130,8 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		return &IterationDone{Error: err}
 	}
 
-	var (
-		desired map[string]interface{}
-		current map[string]interface{}
-	)
+	desired := make(map[string]interface{})
+	current := make(map[string]interface{})
 
 	if err := yaml.Unmarshal(desiredBytes, &desired); err != nil {
 		return &IterationDone{Error: err}
