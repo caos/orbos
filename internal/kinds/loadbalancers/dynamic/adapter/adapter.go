@@ -137,7 +137,7 @@ vrrp_sync_group VG1 {
 {{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ $vip.IP }} {
     script       "{{ healthcmd $vip.Transport }}"
     interval 2   # check every 2 seconds
-    fall 2       # require 2 failures for KO
+    fall 15      # require 2 failures for KO
     rise 2       # require 2 successes for OK
 }
 

@@ -9,7 +9,7 @@ module.exports = {
               {"path": "./artifacts/orbctl-FreeBSD-x86_64", "label": "FreeBSD x86_64"},
               {"path": "./artifacts/orbctl-Linux-x86_64", "label": "Linux x86_64"},
               {"path": "./artifacts/orbctl-OpenBSD-x86_64", "label": "OpenBSD x86_64"},
-              {"path": "./artifacts/orbctl-Windows-x86_64", "label": "Windows x86_64"}
+              {"path": "./artifacts/orbctl-Windows-x86_64.exe", "label": "Windows x86_64"}
             ]
         }]
     ]
