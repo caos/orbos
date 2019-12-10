@@ -55,6 +55,35 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		secretsFile := "secrets.yml"
 		configID := strings.ReplaceAll(strings.TrimSuffix(orb.URL[strings.LastIndex(orb.URL, "/")+1:], ".git"), "-", "")
 
+		var before func(desired []byte, secrets *operator.Secrets) error
+
+		if !destroy {
+			before = func(desired []byte, secrets *operator.Secrets) error {
+				var deserialized struct {
+					Spec struct {
+						Orbiter string
+						Boom    string
+					}
+					Deps map[string]struct {
+						Kind string
+					}
+				}
+
+				if err := yaml.Unmarshal(desired, &deserialized); err != nil {
+					return err
+				}
+
+				for clusterName, cluster := range deserialized.Deps {
+					if strings.Contains(cluster.Kind, "Kubernetes") {
+						if err := ensureArtifacts(logger, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
+							return err
+						}
+					}
+				}
+				return nil
+			}
+		}
+
 		op := operator.New(&operator.Arguments{
 			Ctx:         ctx,
 			Logger:      logger,
@@ -77,30 +106,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				SecretsFile:      secretsFile,
 				Masterkey:        orb.Masterkey,
 			})),
-			BeforeIteration: func(desired []byte, secrets *operator.Secrets) error {
-				var deserialized struct {
-					Spec struct {
-						Orbiter string
-						Boom    string
-					}
-					Deps map[string]struct {
-						Kind string
-					}
-				}
-
-				if err := yaml.Unmarshal(desired, &deserialized); err != nil {
-					return err
-				}
-
-				for clusterName, cluster := range deserialized.Deps {
-					if strings.Contains(cluster.Kind, "Kubernetes") {
-						if err := ensureArtifacts(logger, secrets, configID+clusterName, orb.URL, orb.Repokey, orb.Masterkey, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
-							return err
-						}
-					}
-				}
-				return nil
-			},
+			BeforeIteration: before,
 		})
 
 		iterations := make(chan *operator.IterationDone)

@@ -49,9 +49,9 @@ or visit our website at https://caos.ch`,
 		Example: `$ mkdir -p ~/.orb
 $ cat > ~/.orb/myorb << EOF
 > url: git@github.com:me/my-orb.git
+> masterkey: "$(gopass my-secrets/orbs/myorb/masterkey)"
 > repokey: |
 > $(cat ~/.ssh/myorbrepo | sed s/^/\ \ /g)
-> masterkey: $(gopass my-secrets/orbs/myorb/masterkey)
 > EOF
 $ orbctl -f ~/.orb/myorb [command]
 `,

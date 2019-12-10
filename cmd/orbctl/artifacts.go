@@ -3,15 +3,17 @@ package main
 import (
 	"os"
 
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"gopkg.in/yaml.v2"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/logging"
 )
 
-func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNamespace, repourl, repokey, masterkey, orbiterversion string, boomversion string) error {
+func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb, oneoff bool, secretsNamespace, orbiterversion string, boomversion string) error {
 
 	kc, err := secrets.Read(secretsNamespace + "_kubeconfig")
 	if err != nil {
@@ -21,7 +23,12 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 	kcStr := string(kc)
 	client := k8s.New(logger, &kcStr)
 
-	if _, err := client.ApplyNamespace(&core.Namespace{
+	orbfile, err := yaml.Marshal(orb)
+	if err != nil {
+		return err
+	}
+
+	if err := client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
@@ -32,20 +39,19 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		return err
 	}
 
-	if _, err := client.ApplySecret(&core.Secret{
+	if err := client.ApplySecret(&core.Secret{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "caos",
 			Namespace: "caos-system",
 		},
 		StringData: map[string]string{
-			"repokey":   repokey,
-			"masterkey": masterkey,
+			"orbconfig": string(orbfile),
 		},
 	}); err != nil {
 		return err
 	}
 
-	if _, err := client.ApplySecret(&core.Secret{
+	if err := client.ApplySecret(&core.Secret{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "public-github-packages",
 			Namespace: "caos-system",
@@ -65,7 +71,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 	}
 
 	if orbiterversion != "" {
-		created, err := client.ApplyDeployment(&apps.Deployment{
+		err := client.ApplyDeployment(&apps.Deployment{
 			ObjectMeta: mach.ObjectMeta{
 				Name:      "orbiter",
 				Namespace: "caos-system",
@@ -100,7 +106,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 							Name:            "orbiter",
 							ImagePullPolicy: core.PullIfNotPresent,
 							Image:           "docker.pkg.github.com/caos/orbiter/orbiter:" + orbiterversion,
-							Command:         []string{"/orbctl", "--repourl", repourl, "--repokey-file", "/etc/orbiter/repokey", "--masterkey-file", "/etc/orbiter/masterkey", "takeoff", "--recur"},
+							Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur"},
 							VolumeMounts: []core.VolumeMount{{
 								Name:      "keys",
 								ReadOnly:  true,
@@ -123,8 +129,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, secretsNa
 		if err != nil {
 			return err
 		}
-
-		if created {
+		if oneoff {
 			os.Exit(0)
 		}
 	}

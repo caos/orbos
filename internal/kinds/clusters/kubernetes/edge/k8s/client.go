@@ -68,7 +68,8 @@ type File struct {
 	Content []byte
 }
 
-func (c *Client) ApplyNamespace(ns *core.Namespace) (bool, error) {
+func (c *Client) ApplyNamespace(ns *core.Namespace) error {
+
 	return c.apply("namespace", ns.GetName(), func() error {
 		_, err := c.set.CoreV1().Namespaces().Create(ns)
 		return err
@@ -78,7 +79,7 @@ func (c *Client) ApplyNamespace(ns *core.Namespace) (bool, error) {
 	})
 }
 
-func (c *Client) ApplyDeployment(depl *apps.Deployment) (bool, error) {
+func (c *Client) ApplyDeployment(depl *apps.Deployment) error {
 	return c.apply("deployment", depl.GetName(), func() error {
 		_, err := c.set.AppsV1().Deployments(depl.GetNamespace()).Create(depl)
 		return err
@@ -88,7 +89,7 @@ func (c *Client) ApplyDeployment(depl *apps.Deployment) (bool, error) {
 	})
 }
 
-func (c *Client) ApplySecret(sec *core.Secret) (bool, error) {
+func (c *Client) ApplySecret(sec *core.Secret) error {
 	return c.apply("secret", sec.GetName(), func() error {
 		_, err := c.set.CoreV1().Secrets(sec.GetNamespace()).Create(sec)
 		return err
@@ -98,20 +99,20 @@ func (c *Client) ApplySecret(sec *core.Secret) (bool, error) {
 	})
 }
 
-func (c *Client) apply(object, name string, create func() error, update func() error) (created bool, err error) {
+func (c *Client) apply(object, name string, create func() error, update func() error) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
 	}()
 
 	if c.set == nil {
-		return false, &NotAvailableError{}
+		return &NotAvailableError{}
 	}
 
 	err = update()
 	if err == nil || !macherrs.IsNotFound(err) {
-		return false, err
+		return err
 	}
-	return true, create()
+	return create()
 }
 
 func (c *Client) Refresh(kubeconfig *string) (err error) {
@@ -149,43 +150,6 @@ func (c *Client) GetNode(id string) (node *core.Node, err error) {
 	}
 	return api.Get(id, mach.GetOptions{})
 }
-
-/*
-func (c *Client) WatchNode(id string) (nodes chan *core.Node, close func(), err error) {
-	close = func() {}
-	api, err := c.nodeApi()
-	if err != nil {
-		return
-	}
-	watcher, err := api.Watch(mach.ListOptions{
-		LabelSelector: fmt.Sprintf("name=%s", id),
-	})
-	close = watcher.Stop
-
-	events := watcher.ResultChan()
-	nodes = make(chan *core.Node, 1)
-	var node *core.Node
-	select {
-	case event := <-events:
-		c.logger.Debug("KUBERNETES WATCHER SENDS IMMEDIATELY")
-		nodes <- event.Object.(*core.Node)
-	default:
-		c.logger.Debug("KUBERNETES WATCHER DOESN'T SEND IMMEDIATELY")
-		node, err = c.GetNode(id)
-		if err != nil {
-			return
-		}
-		nodes <- node
-	}
-
-	go func() {
-		for event := range events {
-			nodes <- event.Object.(*core.Node)
-		}
-	}()
-	return
-}
-*/
 
 func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 	defer func() {

@@ -18,13 +18,10 @@ import (
 
 func editCommand(rv rootValues) *cobra.Command {
 	return &cobra.Command{
-		Use:   "edit [file]",
-		Short: "Edit a file and push changes to the remote orb repository",
-		Args:  cobra.ExactArgs(1),
-		Example: `
-orbctl --repourl git@github.com:example/my-orb.git \
-       --repokey-file ~/.ssh/my-orb --masterkey 'my very secret key'
-       edit desired.yml`,
+		Use:     "edit [file]",
+		Short:   "Edit a file and push changes to the remote orb repository",
+		Args:    cobra.ExactArgs(1),
+		Example: `orbctl edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			_, logger, gitClient, _, errFunc := rv()

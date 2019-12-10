@@ -12,14 +12,10 @@ import (
 func readSecretCommand(rv rootValues) *cobra.Command {
 
 	return &cobra.Command{
-		Use:   "readsecret [name]",
-		Short: "Decrypt and print to stdout",
-		Args:  cobra.ExactArgs(1),
-		Example: `
-mkdir -p ~/.kube
-orbctl --repourl git@github.com:example/my-orb.git \
-       --repokey-file ~/.ssh/my-orb --masterkey 'my very secret key'
-	   readsecret myorbk8s_kubeconfig > ~/.kube/config`,
+		Use:     "readsecret [name]",
+		Short:   "Decrypt and print to stdout",
+		Args:    cobra.ExactArgs(1),
+		Example: `orbctl readsecret myorbk8s_kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			_, logger, gitClient, orb, errFunc := rv()

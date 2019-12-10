@@ -22,16 +22,15 @@ func writeSecretCommand(rv rootValues) *cobra.Command {
 			Use:   "writesecret [name]",
 			Short: "Encrypt and push",
 			Args:  cobra.ExactArgs(1),
-			Example: `alias myorb="orbctl --repourl git@github.com:example/my-orb.git --repokey-file ~/.ssh/my-orb-repo --masterkey 'my very secret key'"
-myorb writesecret myorbsomeclusterstaticprovider_bootstrapkey --file ~/.ssh/my-orb-bootstrap
-myorb writesecret myorbsomeclusterstaticprovider_bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
-myorb writesecret myorbsomeclustergceprovider_google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
+			Example: `orbctl writesecret myorbsomeclusterstaticprovider_bootstrapkey --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret myorbsomeclusterstaticprovider_bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
+orbctl writesecret myorbsomeclustergceprovider_google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
 		}
 	)
 
 	flags := cmd.Flags()
 	flags.StringVar(&value, "value", "", "Secret phrase value used for encrypting and decrypting secrets")
-	flags.StringVarP(&file, "file", "f", "", "Secret phrase file used for encrypting and decrypting secrets")
+	flags.StringVarP(&file, "file", "s", "", "Secret phrase file used for encrypting and decrypting secrets")
 	flags.BoolVar(&stdin, "stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
