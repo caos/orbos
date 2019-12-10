@@ -18,27 +18,31 @@ curl -s https://api.github.com/repos/caos/orbiter/releases/latest | grep "browse
 sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 
-# Set some environment variables in order to avoid too much retyping.
-ORB_NAME=myorb # Set ORB_NAME to your repositorys name without dashes
-ORB_REPOKEY_PATH="~/.ssh/${ORB_NAME}_bootstrap"
-alias myorb="orbctl --repourl git@github.com:caos/my-orb.git --repokey-file ${ORB_REPOKEY_PATH} --masterkey 'a very secret key'"
-
 # Create a new ssh key pair.
-ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f $ORB_REPOKEY_PATH -q && ssh-add $ORB_REPOKEY_PATH
+ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f "~/.ssh/myorb_bootstrap" -q && ssh-add "~/.ssh/myorb_bootstrap"
+
+# Create a new orbconfig
+mkdir -p ~/.orb
+cat > ~/.orb/config << EOF
+url: git@github.com:me/my-orb.git
+masterkey: a very secret key
+repokey: |
+$(cat ~/.ssh/myorb_bootstrap | sed s/^/\ \ /g)
+EOF
 ```
 
 Add the public part to the git repositories trusted deploy keys.  
 
 ```bash
 # Add the bootstrap key pair to the remote secrets file. For simplicity, we use the repokey here.
-cat ${ORB_REPOKEY_PATH} | myorb addsecret ${ORB_NAME}prodstatic_bootstrapkey --stdin
-cat ${ORB_REPOKEY_PATH}.pub | myorb addsecret ${ORB_NAME}prodstatic_bootstrapkey_pub --stdin
+orbctl addsecret myorbprodstatic_bootstrapkey --stdin
+orbctl addsecret myorbprodstatic_bootstrapkey_pub --stdin
 
 # Create four firecracker VMs
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name first
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name second
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name third
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=${ORB_REPOKEY_PATH}.pub --ports 5000:5000 --ports 6443:6443 --name fourth
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name first
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name second
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name third
+sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name fourth
 ```
 
 Make sure your orb repo contains a desired.yml file similar to [this example](examples/dayone/desired.yml). Show your VMs IPs with `sudo ignite ps -a`  
@@ -48,7 +52,7 @@ Make sure your orb repo contains a desired.yml file similar to [this example](ex
 myorb takeoff
 
 # When the orbiter exits, overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && myorb readsecret ${ORB_NAME}prod_kubeconfig > ~/.kube/config
+mkdir -p ~/.kube && myorb readsecret myorbprod_kubeconfig > ~/.kube/config
 
 # TODO: Not needed anymore when docker registry is anonymously pullable #39
 kubectl -n kube-system create secret docker-registry orbiterregistry --docker-server=docker.pkg.github.com --docker-username=
@@ -61,7 +65,7 @@ kubectl get nodes --watch
 kubectl get pods --all-namespaces --watch
 
 # [Optional] Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore. 
-myorb readsecret ${ORB_NAME}prodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
+myorb readsecret myorbprodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
 
 # Cleanup your environment
 sudo ignite rm -f $(sudo ignite ps -aq)

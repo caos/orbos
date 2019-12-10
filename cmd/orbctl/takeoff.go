@@ -38,9 +38,9 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, logger, gitClient, repoURL, repokey, masterkey, err := rv()
-		if err != nil {
-			return err
+		ctx, logger, gitClient, orb, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
 		}
 
 		logger.WithFields(map[string]interface{}{
@@ -48,18 +48,18 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"commit":  gitCommit,
 			"destroy": destroy,
 			"verbose": verbose,
-			"repoURL": repoURL,
+			"repoURL": orb.URL,
 		}).Info("Orbiter is taking off")
 
 		currentFile := "current.yml"
 		secretsFile := "secrets.yml"
-		configID := strings.ReplaceAll(strings.TrimSuffix(repoURL[strings.LastIndex(repoURL, "/")+1:], ".git"), "-", "")
+		configID := strings.ReplaceAll(strings.TrimSuffix(orb.URL[strings.LastIndex(orb.URL, "/")+1:], ".git"), "-", "")
 
 		op := operator.New(&operator.Arguments{
 			Ctx:         ctx,
 			Logger:      logger,
 			GitClient:   gitClient,
-			MasterKey:   masterkey,
+			MasterKey:   orb.Masterkey,
 			DesiredFile: "desired.yml",
 			CurrentFile: currentFile,
 			SecretsFile: secretsFile,
@@ -71,11 +71,11 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				Logger:           logger,
 				ConfigID:         configID,
 				OrbiterVersion:   gitTag,
-				NodeagentRepoURL: repoURL,
-				NodeagentRepoKey: repokey,
+				NodeagentRepoURL: orb.URL,
+				NodeagentRepoKey: orb.Repokey,
 				CurrentFile:      currentFile,
 				SecretsFile:      secretsFile,
-				Masterkey:        masterkey,
+				Masterkey:        orb.Masterkey,
 			})),
 			BeforeIteration: func(desired []byte, secrets *operator.Secrets) error {
 				var deserialized struct {
@@ -94,7 +94,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 				for clusterName, cluster := range deserialized.Deps {
 					if strings.Contains(cluster.Kind, "Kubernetes") {
-						if err := ensureArtifacts(logger, secrets, configID+clusterName, repoURL, repokey, masterkey, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
+						if err := ensureArtifacts(logger, secrets, configID+clusterName, orb.URL, orb.Repokey, orb.Masterkey, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
 							return err
 						}
 					}

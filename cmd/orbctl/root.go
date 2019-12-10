@@ -11,58 +11,78 @@ import (
 	"github.com/caos/orbiter/logging/stdlib"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
-type rootValues func() (context.Context, logging.Logger, *git.Client, string, string, string, error)
+type Orb struct {
+	URL       string
+	Repokey   string
+	Masterkey string
+}
 
-var errMultipleStdinKeys = errors.New("Reading multiple keys from standard input does not work")
+type rootValues func() (context.Context, logging.Logger, *git.Client, *Orb, errFunc)
+
+type errFunc func(cmd *cobra.Command) error
+
+func curryErrFunc(rootCmd *cobra.Command, err error) errFunc {
+	return func(cmd *cobra.Command) error {
+		cmd.SetUsageFunc(func(_ *cobra.Command) error {
+			return rootCmd.Usage()
+		})
+		return err
+	}
+}
 
 func rootCommand() (*cobra.Command, rootValues) {
 
 	var (
-		verbose        bool
-		repoURL        string
-		repokey        string
-		repokeyFile    string
-		repokeyStdin   bool
-		masterkey      string
-		masterkeyFile  string
-		masterkeyStdin bool
+		verbose   bool
+		orbconfig string
 	)
 
 	cmd := &cobra.Command{
-		Use:   "orbctl",
+		Use:   "orbctl [flags]",
 		Short: "Interact with your orbs",
 		Long: `orbctl launches orbiters and simplifies common tasks such as updating your kubeconfig.
 Participate in our community on https://github.com/caos/orbiter
 or visit our website at https://caos.ch`,
+		Example: `$ mkdir -p ~/.orb
+$ cat > ~/.orb/myorb << EOF
+> url: git@github.com:me/my-orb.git
+> repokey: |
+> $(cat ~/.ssh/myorbrepo | sed s/^/\ \ /g)
+> masterkey: $(gopass my-secrets/orbs/myorb/masterkey)
+> EOF
+$ orbctl -f ~/.orb/myorb [command]
+`,
 	}
 
 	flags := cmd.PersistentFlags()
-	flags.StringVarP(&repoURL, "repourl", "g", "", "Use this orbs Git repo")
-	cmd.MarkPersistentFlagRequired("repourl")
-	flags.StringVar(&repokey, "repokey", "", "SSH private key value for authenticating to orbs git repo")
-	flags.StringVarP(&repokeyFile, "repokey-file", "r", "", "SSH private key file for authenticating to orbs git repo")
-	flags.BoolVar(&repokeyStdin, "repokey-stdin", false, "Read SSH private key for authenticating to orbs git repo from standard input")
-	flags.StringVar(&masterkey, "masterkey", "", "Secret phrase value used for encrypting and decrypting secrets")
-	flags.StringVarP(&masterkeyFile, "masterkey-file", "m", "", "Secret phrase file used for encrypting and decrypting secrets")
-	flags.BoolVar(&masterkeyStdin, "masterkey-stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
+	flags.StringVarP(&orbconfig, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, logging.Logger, *git.Client, string, string, string, error) {
+	return cmd, func() (context.Context, logging.Logger, *git.Client, *Orb, errFunc) {
 
-		if masterkeyStdin && repokeyStdin {
-			return nil, nil, nil, "", "", "", errMultipleStdinKeys
+		content, err := ioutil.ReadFile(orbconfig)
+		if err != nil {
+			return nil, nil, nil, nil, curryErrFunc(cmd, err)
 		}
 
-		rk, err := key(repokey, repokeyFile, repokeyStdin)
-		if err != nil {
-			return nil, nil, nil, "", "", "", errors.Wrap(err, "repokey")
+		orb := &Orb{}
+		if err := yaml.Unmarshal(content, orb); err != nil {
+			return nil, nil, nil, nil, curryErrFunc(cmd, err)
 		}
 
-		mk, err := key(masterkey, masterkeyFile, masterkeyStdin)
-		if err != nil {
-			return nil, nil, nil, "", "", "", errors.Wrap(err, "masterkey")
+		if orb.URL == "" {
+			return nil, nil, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no URL configured"))
+		}
+
+		if orb.Repokey == "" {
+			return nil, nil, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no repokey configured"))
+		}
+
+		if orb.Masterkey == "" {
+			return nil, nil, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no masterkey configured"))
 		}
 
 		ctx := context.Background()
@@ -72,48 +92,11 @@ or visit our website at https://caos.ch`,
 			l = l.Verbose()
 		}
 
-		gitClient := git.New(ctx, l, "Orbiter", repoURL)
-		if err := gitClient.Init([]byte(rk)); err != nil {
+		gitClient := git.New(ctx, l, "Orbiter", orb.URL)
+		if err := gitClient.Init([]byte(orb.Repokey)); err != nil {
 			panic(err)
 		}
 
-		return ctx, l, gitClient, repoURL, rk, mk, nil
+		return ctx, l, gitClient, orb, nil
 	}
-}
-
-func key(value string, file string, stdin bool) (string, error) {
-
-	channels := 0
-	if value != "" {
-		channels++
-	}
-	if file != "" {
-		channels++
-	}
-	if stdin {
-		channels++
-	}
-
-	if channels != 1 {
-		return "", errors.New("Key must be provided eighter by value or by file path or by standard input")
-	}
-
-	if value != "" {
-		return value, nil
-	}
-
-	readFunc := func() ([]byte, error) {
-		return ioutil.ReadFile(file)
-	}
-	if stdin {
-		readFunc = func() ([]byte, error) {
-			return ioutil.ReadAll(os.Stdin)
-		}
-	}
-
-	key, err := readFunc()
-	if err != nil {
-		panic(err)
-	}
-	return string(key), err
 }

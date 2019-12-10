@@ -1,6 +1,6 @@
 // +build test unit
 
-package logger_test
+package test
 
 import (
 	"bytes"

@@ -27,9 +27,9 @@ orbctl --repourl git@github.com:example/my-orb.git \
        edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			_, logger, gitClient, _, _, _, err := rv()
-			if err != nil {
-				return err
+			_, logger, gitClient, _, errFunc := rv()
+			if errFunc != nil {
+				return errFunc(cmd)
 			}
 
 			if err := gitClient.Clone(); err != nil {

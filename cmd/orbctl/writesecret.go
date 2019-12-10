@@ -1,9 +1,13 @@
 package main
 
 import (
+	"io/ioutil"
+	"os"
+
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -32,27 +36,14 @@ myorb writesecret myorbsomeclustergceprovider_google_application_credentials_val
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
-		rootFlags := cmd.InheritedFlags()
-		mustGetBool := func(flag string) bool {
-			v, err := rootFlags.GetBool(flag)
-			if err != nil {
-				panic(err)
-			}
-			return v
-		}
-
-		if stdin && (mustGetBool("masterkey-stdin") || mustGetBool("repokey-stdin")) {
-			return errMultipleStdinKeys
-		}
-
 		s, err := key(value, file, stdin)
 		if err != nil {
 			return err
 		}
 
-		_, logger, gitClient, _, _, mk, err := rv()
-		if err != nil {
-			return err
+		_, logger, gitClient, orb, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
 		}
 
 		if err := gitClient.Clone(); err != nil {
@@ -69,7 +60,7 @@ myorb writesecret myorbsomeclustergceprovider_google_application_credentials_val
 			panic(err)
 		}
 
-		if err := secret.New(logger, secsMap, args[0], mk).Write([]byte(s)); err != nil {
+		if err := secret.New(logger, secsMap, args[0], orb.Masterkey).Write([]byte(s)); err != nil {
 			panic(err)
 		}
 
@@ -90,4 +81,41 @@ myorb writesecret myorbsomeclustergceprovider_google_application_credentials_val
 		return nil
 	}
 	return cmd
+}
+
+func key(value string, file string, stdin bool) (string, error) {
+
+	channels := 0
+	if value != "" {
+		channels++
+	}
+	if file != "" {
+		channels++
+	}
+	if stdin {
+		channels++
+	}
+
+	if channels != 1 {
+		return "", errors.New("Key must be provided eighter by value or by file path or by standard input")
+	}
+
+	if value != "" {
+		return value, nil
+	}
+
+	readFunc := func() ([]byte, error) {
+		return ioutil.ReadFile(file)
+	}
+	if stdin {
+		readFunc = func() ([]byte, error) {
+			return ioutil.ReadAll(os.Stdin)
+		}
+	}
+
+	key, err := readFunc()
+	if err != nil {
+		panic(err)
+	}
+	return string(key), err
 }
