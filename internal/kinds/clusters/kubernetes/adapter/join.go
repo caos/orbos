@@ -84,6 +84,8 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
+  extraArgs:
+    bind-address: %s
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: %s
@@ -120,6 +122,7 @@ nodeRegistration:
 		*intIP,
 		kubeAPI.Port,
 		joining.ID(),
+		*intIP,
 		kubeAPI,
 		kubernetesVersion,
 		cfg.Spec.Networking.DNSDomain,
