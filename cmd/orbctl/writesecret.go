@@ -54,7 +54,7 @@ orbctl writesecret myorbsomeclustergceprovider_google_application_credentials_va
 			panic(err)
 		}
 
-		var secsMap map[string]interface{}
+		secsMap := make(map[string]interface{})
 		if err := yaml.Unmarshal(sec, &secsMap); err != nil {
 			panic(err)
 		}
@@ -66,7 +66,7 @@ orbctl writesecret myorbsomeclustergceprovider_google_application_credentials_va
 		if _, err := gitClient.UpdateRemoteUntilItWorks(&git.File{
 			Path: "secrets.yml",
 			Overwrite: func(o []byte) ([]byte, error) {
-				var newSecsMap map[string]interface{}
+				newSecsMap := make(map[string]interface{})
 				if err := yaml.Unmarshal(o, &newSecsMap); err != nil {
 					panic(err)
 				}
