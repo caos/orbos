@@ -170,8 +170,18 @@ vrrp_instance VI_{{ $idx }} {
     }
     server {
         listen {{ $vip.IP }}:{{ $src.SourcePort }};
-        proxy_pass {{ $src.Name }};
+		proxy_pass {{ $src.Name }};
+		health_check;
+	}
+
+    server {
+		listen 29999;
+		
+		location /ready {
+			return 200;
+		}
     }
+	
 {{ end }}{{ end }}}
 `))
 

@@ -16,9 +16,9 @@ func vrrpHealthCheckArgs(transport []model.Source) []string {
 	if deriveAny(func(src model.Source) bool {
 		return len(src.Destinations) > 0
 	}, transport) {
-		return []string{stringifyVRRPHealthChecksArg(model.Port(30000), model.HealthChecks{
+		return []string{stringifyVRRPHealthChecksArg(model.Port(29999), model.HealthChecks{
 			Protocol: "http",
-			Path:     "/healthz",
+			Path:     "/ready",
 			Code:     200,
 		})}
 	}
