@@ -164,25 +164,29 @@ vrrp_instance VI_{{ $idx }} {
 {{ end }}
 `))
 
-					nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-    upstream {{ $src.Name }} {		{{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
+					nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+    worker_connections  4096;  ## Default: 1024
+}
+
+stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
+    upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
         server {{ $compute.InternalIP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
     }
     server {
         listen {{ $vip.IP }}:{{ $src.SourcePort }};
-		proxy_pass {{ $src.Name }};
-		health_check;
-	}
-
-    server {
-		listen 29999;
-		
-		location /ready {
-			return 200;
-		}
+        proxy_pass {{ $src.Name }};
     }
-	
 {{ end }}{{ end }}}
+
+http {
+    server {
+        listen 29999;
+
+        location /ready {
+            return 200;
+        }
+    }
+}
 `))
 
 					var wg sync.WaitGroup
