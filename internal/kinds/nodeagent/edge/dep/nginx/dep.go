@@ -37,6 +37,11 @@ func (*nginxDep) Equals(other adapter.Installer) bool {
 	return ok
 }
 
+const (
+	ipForwardCfg    = "/proc/sys/net/ipv4/ip_forward"
+	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
+)
+
 func (s *nginxDep) Current() (pkg operator.Package, err error) {
 	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
 	if os.IsNotExist(err) {
@@ -46,6 +51,25 @@ func (s *nginxDep) Current() (pkg operator.Package, err error) {
 	pkg.Config = map[string]string{
 		"nginx.conf": string(config),
 	}
+
+	enabled, err := isEnabled(ipForwardCfg)
+	if err != nil {
+		return pkg, err
+	}
+
+	if !enabled {
+		pkg.Config[ipForwardCfg] = "1"
+	}
+
+	enabled, err = isEnabled(nonlocalbindCfg)
+	if err != nil {
+		return pkg, err
+	}
+
+	if !enabled {
+		pkg.Config[nonlocalbindCfg] = "1"
+	}
+
 	return pkg, err
 }
 
@@ -69,15 +93,36 @@ func (s *nginxDep) Ensure(remove operator.Package, ensure operator.Package) (boo
 		if err := os.MkdirAll("/etc/nginx", 0700); err != nil {
 			return false, err
 		}
-
-		if err := ioutil.WriteFile("/proc/sys/net/ipv4/ip_forward", []byte("1"), 0600); err != nil {
-			return false, err
-		}
 	}
 
 	if err := ioutil.WriteFile("/etc/nginx/nginx.conf", []byte(ensureCfg), 0600); err != nil {
 		return false, err
 	}
 
-	return false, s.systemd.Enable("nginx")
+	if err := dep.ManipulateFile("/etc/sysctl.conf", []string{
+		"net.ipv4.ip_forward",
+		"net.ipv4.ip_nonlocal_bind",
+	}, []string{
+		"net.ipv4.ip_forward = 1",
+		"net.ipv4.ip_nonlocal_bind = 1",
+	}, nil); err != nil {
+		return false, err
+	}
+
+	if _, ok := remove.Config[ipForwardCfg]; ok {
+		return true, nil
+	}
+
+	_, ok = remove.Config[nonlocalbindCfg]
+
+	return ok, s.systemd.Enable("nginx")
+}
+
+func isEnabled(cfg string) (bool, error) {
+	enabled, err := ioutil.ReadFile(cfg)
+	if err != nil {
+		return false, err
+	}
+
+	return string(enabled) == "1\n", nil
 }

@@ -164,21 +164,21 @@ vrrp_instance VI_{{ $idx }} {
 {{ end }}
 `))
 
-					//					nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-					//	upstream {{ $src.Name }} {		{{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool }}
-					//		server {{ $compute.InternalIP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
-					//	}
-					//	server {
-					//		listen {{ $vip.IP }}:{{ $src.SourcePort }};
-					//		proxy_pass {{ $src.Name }};
-					//	}
-					//{{ end }}{{ end }}}`))
+					nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
+						upstream {{ $src.Name }} {		{{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool }}
+							server {{ $compute.InternalIP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
+						}
+						server {
+							listen {{ $vip.IP }}:{{ $src.SourcePort }};
+							proxy_pass {{ $src.Name }};
+						}
+					{{ end }}{{ end }}}`))
 
 					var wg sync.WaitGroup
 					synchronizer := helpers.NewSynchronizer(&wg)
 
 					for _, d := range computesData {
-						wg.Add(1)
+						wg.Add(2)
 
 						go parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) {
 							pkg := operator.Package{Config: map[string]string{"keepalived.conf": result}}
@@ -187,13 +187,14 @@ vrrp_instance VI_{{ $idx }} {
 							}
 							na.DesireSoftware(&operator.Software{KeepaliveD: pkg})
 						})
-						//						go parse(synchronizer, nginxTemplate, d, func(cfg string) {
-						//							key := "nginx.conf"
-						//							if na.Software.Nginx.Config == nil || na.Software.Nginx.Config[key] != cfg {
-						//								na.AllowChanges()
-						//							}
-						//							na.DesireSoftware(&operator.Software{Nginx: operator.Package{Config: map[string]string{key: cfg}}})
-						//						})
+
+						go parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) {
+							pkg := operator.Package{Config: map[string]string{"nginx.conf": result}}
+							if changesAllowed && !na.Software.Nginx.Equals(&pkg) {
+								na.AllowChanges()
+							}
+							na.DesireSoftware(&operator.Software{Nginx: pkg})
+						})
 					}
 
 					wg.Wait()
