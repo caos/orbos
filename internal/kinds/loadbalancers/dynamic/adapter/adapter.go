@@ -5,6 +5,7 @@ package adapter
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 	"text/template"
 
@@ -195,20 +196,52 @@ http {
 					for _, d := range computesData {
 						wg.Add(2)
 
-						go parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) {
+						go parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
 							pkg := operator.Package{Config: map[string]string{"keepalived.conf": result}}
 							if changesAllowed && !na.Software.KeepaliveD.Equals(&pkg) {
 								na.AllowChanges()
 							}
+							for _, vip := range d.VIPs {
+								for _, transport := range vip.Transport {
+									for _, compute := range computes {
+										nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
+											fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): operator.Allowed{
+												Port:     fmt.Sprintf("%d", transport.SourcePort),
+												Protocol: "tcp",
+											},
+										})
+									}
+								}
+							}
 							na.DesireSoftware(&operator.Software{KeepaliveD: pkg})
+							return nil
 						})
 
-						go parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) {
+						go parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
 							pkg := operator.Package{Config: map[string]string{"nginx.conf": result}}
 							if changesAllowed && !na.Software.Nginx.Equals(&pkg) {
 								na.AllowChanges()
 							}
+							for _, vip := range d.VIPs {
+								for _, transport := range vip.Transport {
+									for _, dest := range transport.Destinations {
+										destComputes, err := svc.List(dest.Pool, true)
+										if err != nil {
+											return err
+										}
+										for _, compute := range destComputes {
+											nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
+												fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): operator.Allowed{
+													Port:     fmt.Sprintf("%d", dest.Port),
+													Protocol: "tcp",
+												},
+											})
+										}
+									}
+								}
+							}
 							na.DesireSoftware(&operator.Software{Nginx: pkg})
+							return nil
 						})
 					}
 
@@ -224,7 +257,7 @@ http {
 	})
 }
 
-func parse(synchronizer *helpers.Synchronizer, parsedTemplate *template.Template, computesData Data, na *operator.NodeAgentCurrent, then func(string, *operator.NodeAgentCurrent)) {
+func parse(synchronizer *helpers.Synchronizer, parsedTemplate *template.Template, computesData Data, na *operator.NodeAgentCurrent, then func(string, *operator.NodeAgentCurrent) error) {
 
 	var buf bytes.Buffer
 	err := parsedTemplate.Execute(&buf, computesData)
@@ -233,9 +266,7 @@ func parse(synchronizer *helpers.Synchronizer, parsedTemplate *template.Template
 		return
 	}
 
-	then(buf.String(), na)
-
-	synchronizer.Done(nil)
+	synchronizer.Done(then(buf.String(), na))
 }
 
 func toChan(templates []*template.Template) <-chan *template.Template {

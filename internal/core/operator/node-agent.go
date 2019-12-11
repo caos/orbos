@@ -70,7 +70,12 @@ func (n *NodeAgentCurrent) AllowChanges() {
 
 func (n *NodeAgentCurrent) DesireFirewall(fw Firewall) {
 	n.changer.desire(func(spec *NodeAgentSpec) {
-		spec.Firewall = fw
+		if spec.Firewall == nil {
+			spec.Firewall = make(map[string]Allowed)
+		}
+		for key, value := range fw {
+			spec.Firewall[key] = value
+		}
 	})
 }
 
