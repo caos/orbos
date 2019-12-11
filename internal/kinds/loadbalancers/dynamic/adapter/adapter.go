@@ -165,14 +165,15 @@ vrrp_instance VI_{{ $idx }} {
 `))
 
 					nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-						upstream {{ $src.Name }} {		{{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool }}
-							server {{ $compute.InternalIP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
-						}
-						server {
-							listen {{ $vip.IP }}:{{ $src.SourcePort }};
-							proxy_pass {{ $src.Name }};
-						}
-					{{ end }}{{ end }}}`))
+    upstream {{ $src.Name }} {		{{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
+        server {{ $compute.InternalIP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
+    }
+    server {
+        listen {{ $vip.IP }}:{{ $src.SourcePort }};
+        proxy_pass {{ $src.Name }};
+    }
+{{ end }}{{ end }}}
+`))
 
 					var wg sync.WaitGroup
 					synchronizer := helpers.NewSynchronizer(&wg)
