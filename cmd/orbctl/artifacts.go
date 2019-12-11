@@ -1,12 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v2"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
@@ -71,7 +74,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 	}
 
 	if orbiterversion != "" {
-		err := client.ApplyDeployment(&apps.Deployment{
+		if err := client.ApplyDeployment(&apps.Deployment{
 			ObjectMeta: mach.ObjectMeta{
 				Name:      "orbiter",
 				Namespace: "caos-system",
@@ -125,8 +128,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 					},
 				},
 			},
-		})
-		if err != nil {
+		}); err != nil {
 			return err
 		}
 		if oneoff {
@@ -134,52 +136,267 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		}
 	}
 
-	return nil
-	/*
-		if boomversion == "" {
-			return nil
-		}
+	if boomversion == "" {
+		return nil
+	}
 
-		_, err = client.ApplyDeployment(&apps.Deployment{
-			ObjectMeta: mach.ObjectMeta{
-				Name:      "boom",
-				Namespace: "caos-system",
+	if err := client.ApplyRole(&rbac.Role{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "boom-leader-election-role",
+			Namespace: "caos-system",
+		},
+		Rules: []rbac.PolicyRule{{
+			APIGroups: []string{""},
+			Resources: []string{"configmaps"},
+			Verbs: []string{
+				"get",
+				"list",
+				"watch",
+				"create",
+				"update",
+				"patch",
+				"delete",
 			},
-			Spec: apps.DeploymentSpec{
-				Replicas: int32Ptr(1),
-				Selector: &mach.LabelSelector{
-					MatchLabels: map[string]string{
+		}, {
+			APIGroups: []string{""},
+			Resources: []string{"configmaps/status"},
+			Verbs: []string{
+				"get",
+				"update",
+				"patch",
+			},
+		}, {
+			APIGroups: []string{""},
+			Resources: []string{"events"},
+			Verbs:     []string{"create"},
+		}},
+	}); err != nil {
+		return nil
+	}
+
+	if err := client.ApplyClusterRole(&rbac.ClusterRole{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "boom-manager-role",
+		},
+		Rules: []rbac.PolicyRule{{
+			APIGroups: []string{""},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"admissionregistration.k8s.io"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"apiextensions.k8s.io"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"apiregistration.k8s.io"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"apps"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"batch"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"extensions"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"logging.banzaicloud.io"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"monitoring.coreos.com"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"policy"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"rbac.authorization.k8s.io"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
+			APIGroups: []string{"toolsets.boom.caos.ch"},
+			Resources: []string{"toolsets"},
+			Verbs: []string{
+				"create",
+				"delete",
+				"get",
+				"list",
+				"patch",
+				"update",
+				"watch",
+			},
+		}, {
+			APIGroups: []string{"toolsets.boom.caos.ch"},
+			Resources: []string{"toolsets/status"},
+			Verbs: []string{
+				"get",
+				"patch",
+				"update",
+			},
+		}},
+	}); err != nil {
+		return nil
+	}
+
+	if err := client.ApplyClusterRole(&rbac.ClusterRole{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "boom-proxy-role",
+		},
+		Rules: []rbac.PolicyRule{{
+			APIGroups: []string{"authentication.k8s.io"},
+			Resources: []string{"tokenreviews"},
+			Verbs:     []string{"create"},
+		}, {
+			APIGroups: []string{"authorization.k8s.io"},
+			Resources: []string{"subjectaccessreviews"},
+			Verbs:     []string{"create"},
+		}},
+	}); err != nil {
+		return nil
+	}
+
+	if err := client.ApplyRoleBinding(&rbac.RoleBinding{
+		ObjectMeta: mach.ObjectMeta{
+			Namespace: "caos-system",
+			Name:      "boom-leader-election-rolebinding",
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "Role",
+			Name:     "boom-leader-election-role",
+		},
+		Subjects: []rbac.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "default",
+			Namespace: "caos-system",
+		}},
+	}); err != nil {
+		return nil
+	}
+	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "boom-manager-rolebinding",
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "boom-manager-role",
+		},
+		Subjects: []rbac.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "default",
+			Namespace: "caos-system",
+		}},
+	}); err != nil {
+		return nil
+	}
+	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "boom-proxy-rolebinding",
+		},
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "boom-proxy-role",
+		},
+		Subjects: []rbac.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "default",
+			Namespace: "caos-system",
+		}},
+	}); err != nil {
+		return nil
+	}
+
+	if err := client.ApplyService(&core.Service{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "boom-metrics",
+			Labels: map[string]string{
+				"app": "boom",
+			},
+			Namespace: "caos-system",
+		},
+		Spec: core.ServiceSpec{
+			Ports: []core.ServicePort{{
+				Name:       "https",
+				Port:       8443,
+				TargetPort: intstr.FromString("https"),
+			}},
+			Selector: map[string]string{
+				"app": "boom",
+			},
+		},
+	}); err != nil {
+		return nil
+	}
+
+	return client.ApplyDeployment(&apps.Deployment{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "boom",
+			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app": "boom",
+			},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &mach.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "boom",
+				},
+			},
+			Template: core.PodTemplateSpec{
+				ObjectMeta: mach.ObjectMeta{
+					Labels: map[string]string{
 						"app": "boom",
 					},
 				},
-				Template: core.PodTemplateSpec{
-					ObjectMeta: mach.ObjectMeta{
-						Labels: map[string]string{
-							"app": "boom",
+				Spec: core.PodSpec{
+					ImagePullSecrets: []core.LocalObjectReference{{
+						Name: "public-github-packages",
+					}},
+					Containers: []core.Container{{
+						Name:            "boom",
+						ImagePullPolicy: core.PullIfNotPresent,
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
+						Command:         []string{"/boom"},
+						Args: []string{
+							"--metrics-addr", "127.0.0.1:8080",
+							"--enable-leader-election",
+							"--git-crd-secret", "/secrets/tools-secret/orbconfig",
+							"--git-crd-url", orb.URL,
+							"--git-crd-path", "crd/boom.yml",
 						},
-					},
-					Spec: core.PodSpec{
-						ImagePullSecrets: []core.LocalObjectReference{{
-							Name: "public-github-packages",
+						VolumeMounts: []core.VolumeMount{{
+							Name:      "tools-secret",
+							ReadOnly:  true,
+							MountPath: "/secrets/tools-secret",
 						}},
-						Containers: []core.Container{{
-							Name:            "boom",
-							ImagePullPolicy: core.PullIfNotPresent,
-							Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
-							Command:         []string{"/boom"},
-							Args: []string{
-								"--metrics-addr", "127.0.0.1:8080",
-								"--enable-leader-election",
-								// "--git-crd-secret", "/secrets/tools-secret/id_rsa-toolsop-tools-read",
+					}},
+					TerminationGracePeriodSeconds: int64Ptr(10),
+					Volumes: []core.Volume{{
+						Name: "tools-secret",
+						VolumeSource: core.VolumeSource{
+							Secret: &core.SecretVolumeSource{
+								SecretName: "caos",
 							},
-						}},
-					},
+						},
+					}},
 				},
 			},
-		})
-		return err
-	*/
+		},
+	})
 }
 
 func int32Ptr(i int32) *int32 { return &i }
+func int64Ptr(i int64) *int64 { return &i }
 func boolPtr(b bool) *bool    { return &b }

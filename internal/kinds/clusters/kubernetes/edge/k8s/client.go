@@ -16,6 +16,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
+	rbac "k8s.io/api/rbac/v1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -68,33 +69,90 @@ type File struct {
 	Content []byte
 }
 
-func (c *Client) ApplyNamespace(ns *core.Namespace) error {
-
-	return c.apply("namespace", ns.GetName(), func() error {
-		_, err := c.set.CoreV1().Namespaces().Create(ns)
+func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
+	resources := c.set.CoreV1().Namespaces()
+	return c.apply("namespace", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := c.set.CoreV1().Namespaces().Update(ns)
+		_, err := resources.Update(rsc)
 		return err
 	})
 }
 
-func (c *Client) ApplyDeployment(depl *apps.Deployment) error {
-	return c.apply("deployment", depl.GetName(), func() error {
-		_, err := c.set.AppsV1().Deployments(depl.GetNamespace()).Create(depl)
+func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
+	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
+	return c.apply("deployment", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := c.set.AppsV1().Deployments(depl.GetNamespace()).Update(depl)
+		_, err := resources.Update(rsc)
 		return err
 	})
 }
 
-func (c *Client) ApplySecret(sec *core.Secret) error {
-	return c.apply("secret", sec.GetName(), func() error {
-		_, err := c.set.CoreV1().Secrets(sec.GetNamespace()).Create(sec)
+func (c *Client) ApplyService(sec *core.Service) error {
+	resources := c.set.CoreV1().Services(sec.GetNamespace())
+	return c.apply("service", sec.GetName(), func() error {
+		_, err := resources.Create(sec)
 		return err
 	}, func() error {
-		_, err := c.set.CoreV1().Secrets(sec.GetNamespace()).Update(sec)
+		_, err := resources.Update(sec)
+		return err
+	})
+}
+
+func (c *Client) ApplySecret(rsc *core.Secret) error {
+	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
+	return c.apply("secret", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyRole(rsc *rbac.Role) error {
+	resources := c.set.RbacV1().Roles(rsc.Namespace)
+	return c.apply("role", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
+	resources := c.set.RbacV1().ClusterRoles()
+	return c.apply("clusterrole", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
+	resources := c.set.RbacV1().RoleBindings(rsc.Namespace)
+	return c.apply("rolebinding", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
+	resources := c.set.RbacV1().ClusterRoleBindings()
+	return c.apply("clusterrolebinding", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
 		return err
 	})
 }

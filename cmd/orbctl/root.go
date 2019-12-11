@@ -45,7 +45,7 @@ func rootCommand() (*cobra.Command, rootValues) {
 		Short: "Interact with your orbs",
 		Long: `orbctl launches orbiters and simplifies common tasks such as updating your kubeconfig.
 Participate in our community on https://github.com/caos/orbiter
-or visit our website at https://caos.ch`,
+and visit our website at https://caos.ch`,
 		Example: `$ mkdir -p ~/.orb
 $ cat > ~/.orb/myorb << EOF
 > url: git@github.com:me/my-orb.git
