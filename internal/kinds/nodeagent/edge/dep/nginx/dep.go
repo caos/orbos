@@ -83,6 +83,17 @@ func (s *nginxDep) Ensure(remove operator.Package, ensure operator.Package) (boo
 	}
 
 	if _, ok := remove.Config["nginx.conf"]; !ok {
+
+		if err := ioutil.WriteFile("/etc/yum.repos.d/nginx.repo", []byte(`[nginx-stable]
+name=nginx stable repo
+baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
+gpgcheck=1
+enabled=1
+gpgkey=https://nginx.org/keys/nginx_signing.key
+module_hotfixes=true`), 0600); err != nil {
+			return false, err
+		}
+
 		if err := s.manager.Install(&dep.Software{
 			Package: "nginx",
 			Version: ensure.Version,
@@ -109,13 +120,16 @@ func (s *nginxDep) Ensure(remove operator.Package, ensure operator.Package) (boo
 		return false, err
 	}
 
+	if err := s.systemd.Enable("nginx"); err != nil {
+		return false, err
+	}
+
 	if _, ok := remove.Config[ipForwardCfg]; ok {
 		return true, nil
 	}
 
 	_, ok = remove.Config[nonlocalbindCfg]
-
-	return ok, s.systemd.Enable("nginx")
+	return ok, nil
 }
 
 func isEnabled(cfg string) (bool, error) {
