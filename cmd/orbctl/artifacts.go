@@ -372,8 +372,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 						Args: []string{
 							"--metrics-addr", "127.0.0.1:8080",
 							"--enable-leader-election",
-							"--git-crd-secret", "/secrets/tools-secret/orbconfig",
-							"--git-crd-url", orb.URL,
+							"--git-orbconfig", "/secrets/tools-secret/orbconfig",
 							"--git-crd-path", "crd/boom.yml",
 						},
 						VolumeMounts: []core.VolumeMount{{
