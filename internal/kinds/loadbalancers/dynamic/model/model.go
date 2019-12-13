@@ -89,7 +89,6 @@ func (h *HealthChecks) validate() error {
 type Source struct {
 	Name         string
 	SourcePort   Port
-	HealthChecks *HealthChecks
 	Destinations []Destination
 }
 
@@ -100,18 +99,6 @@ func (s *Source) validate() error {
 
 	if err := s.SourcePort.validate(); err != nil {
 		return errors.Wrapf(err, "configuring port for source %s failed", s.Name)
-	}
-
-	destinations := len(s.Destinations)
-
-	if s.HealthChecks == nil && destinations == 0 || s.HealthChecks != nil && destinations > 0 {
-		return errors.Errorf("source %s should eighter have a healthcheck or more than one upstream destinations configured", s.Name)
-	}
-
-	if s.HealthChecks != nil {
-		if err := s.HealthChecks.validate(); err != nil {
-			return errors.Wrapf(err, "configuring healthchecks for source %s failed", s.Name)
-		}
 	}
 
 	for _, dest := range s.Destinations {

@@ -1,5 +1,6 @@
 package adapter
 
+/*
 import (
 	"fmt"
 	"strings"
@@ -37,3 +38,4 @@ func vrrpHealthCheckArgs(selfIP string, transport []model.Source) []string {
 func stringifyVRRPHealthChecksArg(ip string, port model.Port, hc model.HealthChecks) string {
 	return fmt.Sprintf(`%d@%s://%s:%d%s`, hc.Code, ip, hc.Protocol, port, hc.Path)
 }
+*/

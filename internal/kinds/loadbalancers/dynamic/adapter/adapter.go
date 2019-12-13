@@ -113,7 +113,7 @@ func New(remoteUser string) Builder {
 						"add": func(i, y int) int {
 							return i + y
 						},
-						"healthcmd": vrrpHealthChecksScript,
+						//						"healthcmd": vrrpHealthChecksScript,
 						//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
 						//							return deriveFmap(func(src model.Source) []string {
 						//
@@ -136,7 +136,7 @@ vrrp_sync_group VG1 {
 }
 
 {{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ $vip.IP }} {
-    script       "{{ healthcmd $root.Self $vip.Transport }}"
+    script       "/usr/local/bin/health 200@http://127.0.0.1:29999/ready"
     interval 2   # check every 2 seconds
     fall 15      # require 2 failures for KO
     rise 2       # require 2 successes for OK
