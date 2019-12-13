@@ -136,7 +136,7 @@ vrrp_sync_group VG1 {
 }
 
 {{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ $vip.IP }} {
-    script       "{{ healthcmd $vip.Transport }}"
+    script       "{{ healthcmd $root.Self $vip.Transport }}"
     interval 2   # check every 2 seconds
     fall 15      # require 2 failures for KO
     rise 2       # require 2 successes for OK
@@ -196,7 +196,7 @@ http {
 					for _, d := range computesData {
 						wg.Add(2)
 
-						go parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
+						parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
 							pkg := operator.Package{Config: map[string]string{"keepalived.conf": result}}
 							if changesAllowed && !na.Software.KeepaliveD.Equals(&pkg) {
 								na.AllowChanges()
@@ -217,7 +217,7 @@ http {
 							return nil
 						})
 
-						go parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
+						parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
 							pkg := operator.Package{Config: map[string]string{"nginx.conf": result}}
 							if changesAllowed && !na.Software.Nginx.Equals(&pkg) {
 								na.AllowChanges()
