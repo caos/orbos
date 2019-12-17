@@ -16,8 +16,7 @@ import (
 
 type ProvidedCompute interface {
 	ID() string
-	InternalIP() (*string, error)
-	ExternalIP() (*string, error)
+	DomainName() string
 	Remove() error
 }
 
@@ -38,16 +37,12 @@ func NewCompute(logger logging.Logger, comp ProvidedCompute, remoteUser string) 
 	}
 }
 
-func (c *compute) InternalIP() (*string, error) {
-	return c.compute.InternalIP()
-}
-
-func (c *compute) ExternalIP() (*string, error) {
-	return c.compute.ExternalIP()
-}
-
 func (c *compute) ID() string {
 	return c.compute.ID()
+}
+
+func (c *compute) DomainName() string {
+	return c.compute.DomainName()
 }
 
 func (c *compute) Remove() error {
@@ -169,12 +164,9 @@ func (c *compute) open() (sess *sshlib.Session, close func() error, err error) {
 		return nil, close, errors.New("no ssh key passed via infra.Compute.UseKey")
 	}
 
-	ip, err := c.compute.ExternalIP()
-	if err != nil {
-		return nil, close, errors.Wrap(err, "getting external IP failed")
-	}
+	ip := c.compute.DomainName()
 
-	address := fmt.Sprintf("%s:%d", *ip, 22)
+	address := fmt.Sprintf("%s:%d", ip, 22)
 	conn, err := sshlib.Dial("tcp", address, c.sshCfg)
 	if err != nil {
 		return nil, close, errors.Wrapf(err, "dialling tcp %s failed", address)

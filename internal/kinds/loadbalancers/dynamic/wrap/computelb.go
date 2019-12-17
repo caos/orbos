@@ -22,12 +22,10 @@ func compute(compute infra.Compute, desire func() error) infra.Compute {
 func (c *cmpLB) ID() string {
 	return c.original.ID()
 }
-func (c *cmpLB) InternalIP() (*string, error) {
-	return c.original.InternalIP()
+func (c *cmpLB) DomainName() string {
+	return c.original.DomainName()
 }
-func (c *cmpLB) ExternalIP() (*string, error) {
-	return c.original.ExternalIP()
-}
+
 func (c *cmpLB) Remove() error {
 	err := c.original.Remove()
 	if err != nil {

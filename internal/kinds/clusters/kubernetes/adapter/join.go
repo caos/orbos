@@ -49,10 +49,7 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", cfg.Spec.Networking.Network)
 	}
 
-	intIP, err := joining.InternalIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "reading internal ip failed")
-	}
+	intIP := joining.DomainName()
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
@@ -119,10 +116,10 @@ nodeRegistration:
 #   taints: null
 `,
 		joinToken,
-		*intIP,
+		intIP,
 		kubeAPI.Port,
 		joining.ID(),
-		*intIP,
+		intIP,
 		kubeAPI,
 		kubernetesVersion,
 		cfg.Spec.Networking.DNSDomain,
@@ -139,10 +136,10 @@ nodeRegistration:
     advertiseAddress: %s
     bindPort: %d
   certificateKey: %s
-`, *intIP, kubeAPI.Port, certKey)
+`, intIP, kubeAPI.Port, certKey)
 	}
 
-	if err = try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+	if err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
 		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
 	}); err != nil {
 		return nil, err
@@ -161,12 +158,12 @@ nodeRegistration:
 	}).Debug("Cleaned up compute")
 
 	if joinAt != nil {
-		joinAtIP, err := joinAt.InternalIP()
+		joinAtIP := joinAt.DomainName()
 		if err != nil {
 			return nil, err
 		}
 
-		cmd := fmt.Sprintf("sudo kubeadm join %s:%d --config %s", *joinAtIP, kubeAPI.Port, kubeadmCfgPath)
+		cmd := fmt.Sprintf("sudo kubeadm join %s:%d --config %s", joinAtIP, kubeAPI.Port, kubeadmCfgPath)
 		joinStdout, err := joining.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)

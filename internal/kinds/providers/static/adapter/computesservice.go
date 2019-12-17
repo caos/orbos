@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 	"github.com/caos/orbiter/internal/kinds/providers/static/model"
+	"github.com/caos/orbiter/logging"
 )
 
 type computesService struct {
@@ -68,7 +68,7 @@ func (c *computesService) List(poolName string, active bool) (infra.Computes, er
 	computes := make([]infra.Compute, 0)
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
-		compute := newCompute(c.logger, c.statusFile, c.spec.RemoteUser, &cmp.ID, &cmp.InternalIP, &cmp.ExternalIP)
+		compute := newCompute(c.logger, c.statusFile, c.spec.RemoteUser, &cmp.ID, cmp.DomainName)
 		if err := compute.UseKeys(c.secrets, c.dynamicKeyProperty, c.bootstrapKeyProperty); err != nil {
 			return nil, err
 		}
@@ -89,7 +89,7 @@ func (c *computesService) Create(poolName string) (infra.Compute, error) {
 
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
-		compute := newCompute(c.logger, c.statusFile, c.spec.RemoteUser, &cmp.ID, &cmp.InternalIP, &cmp.ExternalIP)
+		compute := newCompute(c.logger, c.statusFile, c.spec.RemoteUser, &cmp.ID, cmp.DomainName)
 		if err := compute.UseKeys(c.secrets, c.dynamicKeyProperty, c.bootstrapKeyProperty); err != nil {
 			return nil, err
 		}

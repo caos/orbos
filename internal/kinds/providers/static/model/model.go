@@ -1,15 +1,14 @@
 package model
 
 import (
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/logging"
 )
 
 type Compute struct {
 	ID         string
 	Hostname   string
-	InternalIP string
-	ExternalIP string
+	DomainName string
 }
 
 type UserSpec struct {

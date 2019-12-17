@@ -35,8 +35,7 @@ type Pool interface {
 
 type Compute interface {
 	ID() string
-	InternalIP() (*string, error)
-	ExternalIP() (*string, error)
+	DomainName() string
 	Remove() error
 	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
 	WriteFile(path string, data io.Reader, permissions uint16) error
