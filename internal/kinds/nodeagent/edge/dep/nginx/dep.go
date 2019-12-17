@@ -1,13 +1,20 @@
 package nginx
 
 import (
+	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/logging"
 )
 
 type Installer interface {
@@ -17,10 +24,11 @@ type Installer interface {
 type nginxDep struct {
 	manager *dep.PackageManager
 	systemd *dep.SystemD
+	logger  logging.Logger
 }
 
-func New(manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &nginxDep{manager, systemd}
+func New(logger logging.Logger, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
+	return &nginxDep{manager, systemd, logger}
 }
 
 func (nginxDep) isNgninx() {}
@@ -52,25 +60,25 @@ func (s *nginxDep) Current() (pkg operator.Package, err error) {
 		"nginx.conf": string(config),
 	}
 
-	enabled, err := isEnabled(ipForwardCfg)
+	enabled, err := s.currentSysctlConfig("net.ipv4.ip_nonlocal_bind")
 	if err != nil {
 		return pkg, err
 	}
 
 	if !enabled {
-		pkg.Config[ipForwardCfg] = "1"
+		pkg.Config[nonlocalbindCfg] = "0"
 	}
 
-	enabled, err = isEnabled(nonlocalbindCfg)
+	enabled, err = s.currentSysctlConfig("net.ipv4.ip_forward")
 	if err != nil {
 		return pkg, err
 	}
 
 	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "1"
+		pkg.Config[ipForwardCfg] = "0"
 	}
 
-	return pkg, err
+	return pkg, nil
 }
 
 func (s *nginxDep) Ensure(remove operator.Package, ensure operator.Package) (bool, error) {
@@ -132,11 +140,23 @@ module_hotfixes=true`), 0600); err != nil {
 	return ok, nil
 }
 
-func isEnabled(cfg string) (bool, error) {
-	enabled, err := ioutil.ReadFile(cfg)
-	if err != nil {
-		return false, err
+func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {
+
+	var (
+		outBuf bytes.Buffer
+		errBuf bytes.Buffer
+	)
+
+	cmd := exec.Command("sysctl", property)
+	cmd.Stderr = &errBuf
+	cmd.Stderr = &outBuf
+
+	fullCmd := strings.Join(cmd.Args, " ")
+	n.logger.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
+
+	if err := cmd.Run(); err != nil {
+		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
 	}
 
-	return string(enabled) == "1\n", nil
+	return outBuf.String() == fmt.Sprintf("%s = 1\n", property), nil
 }

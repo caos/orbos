@@ -103,7 +103,7 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 								changesAllowed = false
 							}
 						}
-						if err := lb.Desire(pool, changesAllowed, computesSvc, mapNodeAgent); err != nil {
+						if err := lb.Desire(pool, changesAllowed, computesSvc, mapNodeAgent, ""); err != nil {
 							return nil, err
 						}
 					}

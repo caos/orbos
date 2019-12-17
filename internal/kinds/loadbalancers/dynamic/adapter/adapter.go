@@ -23,12 +23,13 @@ type Overwriter interface {
 }
 
 type Data struct {
-	VIPs       []model.VIP
-	RemoteUser string
-	State      string
-	RouterID   int
-	Self       infra.Compute
-	Peers      []infra.Compute
+	VIPs                 []model.VIP
+	RemoteUser           string
+	State                string
+	RouterID             int
+	Self                 infra.Compute
+	Peers                []infra.Compute
+	CustomMasterNotifyer bool
 }
 
 func New(remoteUser string) Builder {
@@ -80,7 +81,7 @@ func New(remoteUser string) Builder {
 			return &model.Current{
 				Addresses:   addresses,
 				SourcePools: sourcePools,
-				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent) error {
+				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent, customMasterNofifyer string) error {
 
 					vips, ok := spec[pool]
 					if !ok {
@@ -101,7 +102,8 @@ func New(remoteUser string) Builder {
 							Peers: deriveFilter(func(cmp infra.Compute) bool {
 								return cmp.ID() != compute.ID()
 							}, append([]infra.Compute(nil), []infra.Compute(computes)...)),
-							State: "BACKUP",
+							State:                "BACKUP",
+							CustomMasterNotifyer: customMasterNofifyer != "",
 						}
 						if idx == 0 {
 							computesData[idx].State = "MASTER"
@@ -155,12 +157,15 @@ vrrp_instance VI_{{ $idx }} {
         auth_type PASS
         auth_pass [ REDACTED ]
     }
-    virtual_ipaddress {
-        {{ $vip.IP }}
-    }
     track_script {
         chk_{{ $vip.IP }}
-    }
+	}
+
+{{ if $root.CustomMasterNotifyer }}	notify_master /etc/keepalived/notifymaster.sh
+{{ else }}	virtual_ipaddress {
+		{{ $vip.IP }}
+	}
+{{ end }}
 }
 {{ end }}
 `))
@@ -198,6 +203,9 @@ http {
 
 						parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
 							pkg := operator.Package{Config: map[string]string{"keepalived.conf": result}}
+							if d.CustomMasterNotifyer {
+								pkg.Config["notifymaster.sh"] = customMasterNofifyer
+							}
 							if changesAllowed && !na.Software.KeepaliveD.Equals(&pkg) {
 								na.AllowChanges()
 							}

@@ -2,14 +2,19 @@ package keepalived
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/logging"
 )
 
 type Installer interface {
@@ -17,13 +22,14 @@ type Installer interface {
 	adapter.Installer
 }
 type keepaliveDDep struct {
+	logger   logging.Logger
 	manager  *dep.PackageManager
 	systemd  *dep.SystemD
 	peerAuth string
 }
 
-func New(manager *dep.PackageManager, systemd *dep.SystemD, cipher string) Installer {
-	return &keepaliveDDep{manager, systemd, cipher[:8]}
+func New(logger logging.Logger, manager *dep.PackageManager, systemd *dep.SystemD, cipher string) Installer {
+	return &keepaliveDDep{logger, manager, systemd, cipher[:8]}
 }
 
 func (keepaliveDDep) isKeepalived() {}
@@ -62,26 +68,31 @@ func (s *keepaliveDDep) Current() (pkg operator.Package, err error) {
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
 	}
-
-	enabled, err := isEnabled(ipForwardCfg)
+	enabled, err := s.currentSysctlConfig("net.ipv4.ip_nonlocal_bind")
 	if err != nil {
 		return pkg, err
 	}
 
 	if !enabled {
-		pkg.Config[ipForwardCfg] = "1"
+		pkg.Config[nonlocalbindCfg] = "0"
 	}
 
-	enabled, err = isEnabled(nonlocalbindCfg)
+	enabled, err = s.currentSysctlConfig("net.ipv4.ip_forward")
 	if err != nil {
 		return pkg, err
 	}
 
 	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "1"
+		pkg.Config[ipForwardCfg] = "0"
 	}
 
-	return pkg, err
+	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")
+	if os.IsNotExist(err) {
+		return pkg, nil
+	}
+	pkg.Config["notifymaster.sh"] = string(notifymaster)
+
+	return pkg, nil
 }
 
 func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package) (bool, error) {
@@ -109,6 +120,12 @@ func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package)
 		return false, err
 	}
 
+	if notifyMaster, ok := ensure.Config["notifymaster.sh"]; ok {
+		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0700); err != nil {
+			return false, err
+		}
+	}
+
 	if err := s.systemd.Enable("keepalived"); err != nil {
 		return false, err
 	}
@@ -131,11 +148,23 @@ func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package)
 	return ok, nil
 }
 
-func isEnabled(cfg string) (bool, error) {
-	enabled, err := ioutil.ReadFile(cfg)
-	if err != nil {
-		return false, err
+func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {
+
+	var (
+		outBuf bytes.Buffer
+		errBuf bytes.Buffer
+	)
+
+	cmd := exec.Command("sysctl", property)
+	cmd.Stderr = &errBuf
+	cmd.Stdout = &outBuf
+
+	fullCmd := strings.Join(cmd.Args, " ")
+	k.logger.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
+
+	if err := cmd.Run(); err != nil {
+		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
 	}
 
-	return string(enabled) == "1\n", nil
+	return outBuf.String() == fmt.Sprintf("%s = 1\n", property), nil
 }
