@@ -59,6 +59,7 @@ func init() {
 						RepoKey:          cfg.NodeagentRepoKey,
 						MasterKey:        cfg.Masterkey,
 						OrbiterVersion:   cfg.OrbiterVersion,
+						OrbiterCommit:    cfg.OrbiterCommit,
 						CurrentFile:      cfg.CurrentFile,
 						SecretsFile:      cfg.SecretsFile,
 					}))

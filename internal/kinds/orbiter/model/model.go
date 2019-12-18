@@ -10,7 +10,8 @@ type UserSpec struct {
 type Config struct {
 	Logger           logging.Logger
 	ConfigID         string
-	OrbiterVersion    string
+	OrbiterVersion   string
+	OrbiterCommit    string
 	NodeagentRepoURL string
 	NodeagentRepoKey string
 	CurrentFile      string

@@ -3,7 +3,6 @@ package adapter
 import (
 	"fmt"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -238,7 +237,7 @@ func ensureK8sVersion(
 				"response": string(response),
 			}).Debug("Executed command")
 
-			if err != nil || strings.Split(string(response), " ")[0] != cfg.Params.OrbiterVersion {
+			if err != nil || string(response) != fmt.Sprintf("%s %s\n", cfg.Params.OrbiterVersion, cfg.Params.OrbiterCommit) {
 				return ensureNodeagent, nil
 			}
 		}

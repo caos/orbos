@@ -27,6 +27,7 @@ type Parameters struct {
 	RepoKey          string
 	MasterKey        string
 	OrbiterVersion   string
+	OrbiterCommit    string
 	CurrentFile      string
 	SecretsFile      string
 	SelfAbsolutePath []string

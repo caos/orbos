@@ -44,7 +44,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		}
 
 		logger.WithFields(map[string]interface{}{
-			"version": gitTag,
+			"version": version,
 			"commit":  gitCommit,
 			"destroy": destroy,
 			"verbose": verbose,
@@ -99,7 +99,8 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			RootAssembler: orbiter.New(nil, nil, adapter.New(&model.Config{
 				Logger:           logger,
 				ConfigID:         configID,
-				OrbiterVersion:   gitTag,
+				OrbiterVersion:   version,
+				OrbiterCommit:    gitCommit,
 				NodeagentRepoURL: orb.URL,
 				NodeagentRepoKey: orb.Repokey,
 				CurrentFile:      currentFile,
