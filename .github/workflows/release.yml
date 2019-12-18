@@ -48,7 +48,7 @@ jobs:
     - name: Dev Release
       id: dev_release
       uses: actions/create-release@v1
-      if: ${{ steps.release.outputs.relbranch }} != null
+      if: steps.release.outputs.relbranch != null
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
