@@ -41,8 +41,8 @@ jobs:
         echo "Publishing Orbiter version $VERSION"
         docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
         docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} .
-        docker push ${TAG_LATEST}
         docker push ${TAG_VERSION}
+        [[ "$BRANCH" == "master" ]] && docker push ${TAG_LATEST}
         [[ "$BRANCH" == "master" ]] && npx semantic-release && exit 0
         echo "##[set-output name=relbranch;]$(echo ${BRANCH})"
     - name: Dev Release
@@ -66,7 +66,7 @@ jobs:
       with:
         upload_url: ${{ steps.dev_release.outputs.upload_url }}
         asset_path: ./artifacts/orbctl-Darwin-x86_64
-        asset_name: Darwin x86_64
+        asset_name: orbctl Darwin x86_64
         asset_content_type: application/octet-stream
     - name: Upload FreeBSD Dev Release Asset
       uses: actions/upload-release-asset@v1.0.1
@@ -75,7 +75,7 @@ jobs:
       with:
         upload_url: ${{ steps.dev_release.outputs.upload_url }}
         asset_path: ./artifacts/orbctl-FreeBSD-x86_64
-        asset_name: FreeBSD x86_64
+        asset_name: orbctl FreeBSD x86_64
         asset_content_type: application/octet-stream
     - name: Upload Linux Dev Release Asset
       uses: actions/upload-release-asset@v1.0.1
@@ -84,7 +84,7 @@ jobs:
       with:
         upload_url: ${{ steps.dev_release.outputs.upload_url }}
         asset_path: ./artifacts/orbctl-Linux-x86_64
-        asset_name: Linux x86_64
+        asset_name: orbctl Linux x86_64
         asset_content_type: application/octet-stream
     - name: Upload OpenBSD Dev Release Asset
       uses: actions/upload-release-asset@v1.0.1
@@ -93,7 +93,7 @@ jobs:
       with:
         upload_url: ${{ steps.dev_release.outputs.upload_url }}
         asset_path: ./artifacts/orbctl-OpenBSD-x86_64
-        asset_name: OpenBSD x86_64
+        asset_name: orbctl OpenBSD x86_64
         asset_content_type: application/octet-stream
     - name: Upload Windows Dev Release Asset
       uses: actions/upload-release-asset@v1.0.1
@@ -102,5 +102,5 @@ jobs:
       with:
         upload_url: ${{ steps.dev_release.outputs.upload_url }}
         asset_path: ./artifacts/orbctl-Windows-x86_64.exe
-        asset_name: Windows x86_64
+        asset_name: orbctl Windows x86_64
         asset_content_type: application/octet-stream
