@@ -7,7 +7,7 @@ import (
 )
 
 func Destroy(providers map[string]interface{}) (err error) {
-
+ 
 	cleanupping := make([]<-chan error, 0)
 
 	var wg sync.WaitGroup

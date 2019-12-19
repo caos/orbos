@@ -49,7 +49,7 @@ func authenticatedService(ctx context.Context, googleApplicationCredentialsValue
 	return compute.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
 }
 
-func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string) Builder {
+func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string, connectFromOutside bool) Builder {
 	return builderFunc(func(spec model.UserSpec, _ operator.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{}
@@ -103,7 +103,7 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 				privateKeyProperty = dynamicKeyProperty
 			}
 
-			instancesSvc := instance.NewInstanceService(ctx, logger, id, svc, &spec, caller, secrets, publicKey, privateKeyProperty)
+			instancesSvc := instance.NewInstanceService(ctx, logger, id, svc, &spec, caller, secrets, publicKey, privateKeyProperty, connectFromOutside)
 
 			configuredPools := make([]string, 0)
 			for poolName := range spec.Pools {

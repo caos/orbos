@@ -21,16 +21,17 @@ type UserSpec struct {
 }
 
 type Parameters struct {
-	Logger           logging.Logger
-	ID               string
-	RepoURL          string
-	RepoKey          string
-	MasterKey        string
-	OrbiterVersion   string
-	OrbiterCommit    string
-	CurrentFile      string
-	SecretsFile      string
-	SelfAbsolutePath []string
+	Logger             logging.Logger
+	ID                 string
+	RepoURL            string
+	RepoKey            string
+	MasterKey          string
+	OrbiterVersion     string
+	OrbiterCommit      string
+	CurrentFile        string
+	SecretsFile        string
+	SelfAbsolutePath   []string
+	ConnectFromOutside bool
 }
 
 type Config struct {
