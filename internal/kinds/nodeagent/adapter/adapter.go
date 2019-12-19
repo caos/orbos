@@ -8,9 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/model"
+	"github.com/caos/orbiter/logging"
 )
 
 func init() {
@@ -188,19 +188,18 @@ func is(this *Dependency, that *Dependency) bool {
 
 func persistReadyness(ready bool) {
 	if ready {
-		if err := ioutil.WriteFile("/var/node-agent/ready", nil, 600); err != nil {
+		if err := ioutil.WriteFile("/var/orbiter/ready", nil, 600); err != nil {
 			panic(err)
 		}
 		return
 	}
-	err := os.RemoveAll("/var/node-agent/ready")
-	if err != nil && !os.IsNotExist(err) {
+	if err := os.RemoveAll("/var/orbiter/ready"); err != nil && !os.IsNotExist(err) {
 		panic(err)
 	}
 }
 
 func isReady() bool {
-	_, err := os.Stat("/var/node-agent/ready")
+	_, err := os.Stat("/var/orbiter/ready")
 	if err != nil && !os.IsNotExist(err) {
 		panic(err)
 	}

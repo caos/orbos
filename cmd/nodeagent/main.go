@@ -54,8 +54,10 @@ func main() {
 
 	flag.Parse()
 
+	fullVersion := fmt.Sprintf("%s %s", version, gitCommit)
+
 	if *printVersion {
-		fmt.Printf("%s %s\n", version, gitCommit)
+		fmt.Println(fullVersion)
 		os.Exit(0)
 	}
 
@@ -109,7 +111,7 @@ func main() {
 			cron.New(logger, "@every 30s"),
 		},
 		RootAssembler: nodeagent.New(strings.Split(*configPath, "."), nil,
-			adapter.New(version, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
+			adapter.New(fullVersion, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
 	})
 
 	iterations := make(chan *operator.IterationDone)
