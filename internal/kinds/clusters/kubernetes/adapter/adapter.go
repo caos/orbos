@@ -50,10 +50,7 @@ func New(params model.Parameters) Builder {
 				if cloudPools[providerName] == nil {
 					cloudPools[providerName] = make(map[string]infra.Pool)
 				}
-				prov, ok := provider.(infra.ProviderCurrent)
-				if !ok {
-					return curr, errors.New("dependency is not of type infra.ProviderCurrent")
-				}
+				prov := provider.(infra.ProviderCurrent)
 				providerPools := prov.Pools()
 				providerIngresses := prov.Ingresses()
 				providerCleanupped := prov.Cleanupped()
@@ -61,10 +58,7 @@ func New(params model.Parameters) Builder {
 				for providerPoolName, providerPool := range providerPools {
 					cloudPools[providerName][providerPoolName] = providerPool
 					if spec.ControlPlane.Provider == providerName && spec.ControlPlane.Pool == providerPoolName {
-						kubeAPIAddress, ok = providerIngresses["kubeapi"]
-						if !ok && !spec.Destroyed {
-							return curr, errors.Errorf("%s does not provide a loadbalancer named kubeapi", providerName)
-						}
+						kubeAPIAddress = providerIngresses["kubeapi"]
 						cfg.Params.Logger.WithFields(map[string]interface{}{
 							"address": kubeAPIAddress,
 						}).Debug("Found kubernetes api address")
