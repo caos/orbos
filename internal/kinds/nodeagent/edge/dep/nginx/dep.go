@@ -136,8 +136,11 @@ module_hotfixes=true`), 0600); err != nil {
 		return true, nil
 	}
 
-	_, ok = remove.Config[nonlocalbindCfg]
-	return ok, nil
+	if _, ok = remove.Config[nonlocalbindCfg]; ok {
+		return true, nil
+	}
+
+	return false, s.systemd.Start("nginx")
 }
 
 func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {

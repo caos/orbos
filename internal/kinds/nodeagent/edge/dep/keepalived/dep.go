@@ -126,10 +126,6 @@ func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package)
 		}
 	}
 
-	if err := s.systemd.Enable("keepalived"); err != nil {
-		return false, err
-	}
-
 	if err := dep.ManipulateFile("/etc/sysctl.conf", []string{
 		"net.ipv4.ip_forward",
 		"net.ipv4.ip_nonlocal_bind",
@@ -140,12 +136,18 @@ func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package)
 		return false, err
 	}
 
+	if err := s.systemd.Enable("keepalived"); err != nil {
+		return false, err
+	}
 	if _, ok := remove.Config[ipForwardCfg]; ok {
 		return true, nil
 	}
 
-	_, ok = remove.Config[nonlocalbindCfg]
-	return ok, nil
+	if _, ok = remove.Config[nonlocalbindCfg]; ok {
+		return true, nil
+	}
+
+	return false, s.systemd.Start("keepalived")
 }
 
 func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {
