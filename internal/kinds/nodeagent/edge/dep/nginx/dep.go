@@ -152,7 +152,7 @@ func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {
 
 	cmd := exec.Command("sysctl", property)
 	cmd.Stderr = &errBuf
-	cmd.Stderr = &outBuf
+	cmd.Stdout = &outBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
 	n.logger.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
