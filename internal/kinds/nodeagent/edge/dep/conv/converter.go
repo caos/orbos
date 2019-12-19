@@ -67,7 +67,7 @@ func (d *dependencies) ToDependencies(sw operator.Software) []*adapter.Dependenc
 		},
 		&adapter.Dependency{
 			Desired:   sw.Containerruntime,
-			Installer: cri.New(d.logger, d.os, d.pm),
+			Installer: cri.New(d.logger, d.os, d.pm, d.sysd),
 		},
 		&adapter.Dependency{
 			Desired:   sw.Kubelet,
