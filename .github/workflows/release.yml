@@ -44,8 +44,8 @@ jobs:
         docker push ${TAG_VERSION}
         [[ "$BRANCH" == "master" ]] && docker push ${TAG_LATEST}
         [[ "$BRANCH" == "master" ]] && npx semantic-release && exit 0
-        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbiter/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbiter/releases/tags/$BRANCH | jq .id))
         echo "##[set-output name=relbranch;]$(echo ${BRANCH})"
+        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbiter/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbiter/releases/tags/$BRANCH | jq .id))
     - name: Dev Release
       id: dev_release
       uses: actions/create-release@v1
