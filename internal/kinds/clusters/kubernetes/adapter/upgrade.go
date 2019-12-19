@@ -224,7 +224,8 @@ func ensureK8sVersion(
 			return ensureNodeagent, nil
 		}
 
-		if node.current.Version != cfg.Params.OrbiterVersion {
+		expectedVersion := fmt.Sprintf("%s %s\n", cfg.Params.OrbiterVersion, cfg.Params.OrbiterCommit)
+		if node.current.Version != expectedVersion {
 			showVersion := "node-agent --version"
 
 			err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, node.compute, func(cmp infra.Compute) error {
@@ -237,7 +238,7 @@ func ensureK8sVersion(
 				"response": string(response),
 			}).Debug("Executed command")
 
-			if err != nil || string(response) != fmt.Sprintf("%s %s\n", cfg.Params.OrbiterVersion, cfg.Params.OrbiterCommit) {
+			if err != nil || string(response) != expectedVersion {
 				return ensureNodeagent, nil
 			}
 		}
