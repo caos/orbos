@@ -8,7 +8,6 @@ import (
 )
 
 func Marshal(content map[string]interface{}) ([]byte, error) {
-	return yaml.Marshal(content)
 	unorderedSerialized, err := yaml.Marshal(content)
 	if err != nil {
 		return nil, err
