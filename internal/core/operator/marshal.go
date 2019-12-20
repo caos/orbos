@@ -1,26 +1,27 @@
 package operator
 
 import (
-	"gopkg.in/yaml.v3"
+	"sort"
+
+	"github.com/caos/orbiter/internal/core/helpers"
+	"gopkg.in/yaml.v2"
 )
 
 func Marshal(content map[string]interface{}) ([]byte, error) {
 	return yaml.Marshal(content)
-	/*
-		unorderedSerialized, err := yaml.Marshal(content)
-		if err != nil {
-			return nil, err
-		}
+	unorderedSerialized, err := yaml.Marshal(content)
+	if err != nil {
+		return nil, err
+	}
 
-		interfacesMap := make(map[string]interface{})
-		if err = yaml.Unmarshal(unorderedSerialized, interfacesMap); err != nil {
-			return nil, err
-		}
+	interfacesMap := make(map[string]interface{})
+	if err = yaml.Unmarshal(unorderedSerialized, interfacesMap); err != nil {
+		return nil, err
+	}
 
-		return yaml.Marshal(deeplyConvert(interfacesMap))*/
+	return yaml.Marshal(deeplyConvert(interfacesMap))
 }
 
-/*
 type node map[string]interface{}
 
 func (n *node) MarshalYAML() ([]byte, error) {
@@ -57,4 +58,3 @@ func deeplyConvert(tree map[string]interface{}) node {
 
 	return node(tree)
 }
-*/

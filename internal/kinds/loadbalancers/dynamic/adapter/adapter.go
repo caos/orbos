@@ -193,6 +193,7 @@ http {
         }
     }
 }
+
 `))
 
 					var wg sync.WaitGroup
