@@ -3,6 +3,7 @@
 package operator
 
 import (
+	"regexp"
 	"sync"
 
 	"github.com/mitchellh/mapstructure"
@@ -36,12 +37,46 @@ type Package struct {
 	Config  map[string]string `yaml:",omitempty"`
 }
 
-func (p *Package) Equals(other *Package) bool {
-	return deriveEqualPkg(p, other)
+var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
+
+func configEquals(this, that map[string]string) bool {
+	if this == nil || that == nil {
+		return this == nil && that == nil
+	}
+	if len(this) != len(that) {
+		return false
+	}
+	for k, v := range this {
+		thatv, ok := that[k]
+		if !ok {
+			return false
+		}
+
+		if prune.ReplaceAllString(v, "") != prune.ReplaceAllString(thatv, "") {
+			return false
+		}
+	}
+	return true
 }
 
-func (s *Software) Equals(other *Software) bool {
-	return deriveEqualSoftware(s, other)
+func packageEquals(this, that Package) bool {
+	return this.Version == that.Version &&
+		configEquals(this.Config, that.Config)
+}
+
+func (p Package) Equals(other Package) bool {
+	return packageEquals(p, other)
+}
+
+func (this *Software) Equals(that Software) bool {
+	return packageEquals(this.Swap, that.Swap) &&
+		packageEquals(this.Kubelet, that.Kubelet) &&
+		packageEquals(this.Kubeadm, that.Kubeadm) &&
+		packageEquals(this.Kubectl, that.Kubectl) &&
+		packageEquals(this.Containerruntime, that.Containerruntime) &&
+		packageEquals(this.KeepaliveD, that.KeepaliveD) &&
+		packageEquals(this.Nginx, that.Nginx) &&
+		packageEquals(this.Hostname, that.Hostname)
 }
 
 type Firewall map[string]Allowed
@@ -88,13 +123,13 @@ func (n *NodeAgentCurrent) DesireFirewall(fw Firewall) {
 	})
 }
 
-func (n *NodeAgentCurrent) DesireSoftware(sw *Software) {
+func (n *NodeAgentCurrent) DesireSoftware(sw Software) {
 	n.changer.desire(func(spec *NodeAgentSpec) {
-		if spec.Software == nil && sw != nil {
+		if spec.Software == nil {
 			spec.Software = &Software{}
 		}
 
-		zeroPkg := &Package{}
+		zeroPkg := Package{}
 
 		if !sw.Containerruntime.Equals(zeroPkg) {
 			spec.Software.Containerruntime = sw.Containerruntime

@@ -28,10 +28,11 @@ func ensureK8sVersion(
 	controlplane infra.Computes,
 	workers infra.Computes) (bool, error) {
 
-	findPath := func(computes infra.Computes) (*operator.Software, *operator.Software, error) {
+	findPath := func(computes infra.Computes) (operator.Software, operator.Software, error) {
 
 		var overallLowKubelet k8s.KubernetesVersion
 		var overallLowKubeletMinor int
+		zeroSW := operator.Software{}
 
 		for _, cp := range computes {
 			node, err := k8sClient.GetNode(cp.ID())
@@ -47,12 +48,12 @@ func ensureK8sVersion(
 			}).Debug("Found kubelet version from node info")
 			kubelet := k8s.ParseString(nodeinfoKubelet)
 			if kubelet == k8s.Unknown {
-				return nil, nil, errors.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, cp.ID())
+				return zeroSW, zeroSW, errors.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, cp.ID())
 			}
 
 			kubeletMinor, err := kubelet.ExtractMinor()
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "extracting minor from kubelet version %s from nodes %s info failed", nodeinfoKubelet, cp.ID())
+				return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from kubelet version %s from nodes %s info failed", nodeinfoKubelet, cp.ID())
 			}
 
 			if overallLowKubelet == k8s.Unknown {
@@ -63,15 +64,15 @@ func ensureK8sVersion(
 
 			kubeletPatch, err := kubelet.ExtractPatch()
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "extracting patch from kubelet version %s from nodes %s info failed", nodeinfoKubelet, cp.ID())
+				return zeroSW, zeroSW, errors.Wrapf(err, "extracting patch from kubelet version %s from nodes %s info failed", nodeinfoKubelet, cp.ID())
 			}
 			overallLowKubeletMinor, err := overallLowKubelet.ExtractMinor()
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "extracting minor from overall kubelet version %s failed", overallLowKubelet)
+				return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from overall kubelet version %s failed", overallLowKubelet)
 			}
 			overallLowKubeletPatch, err := overallLowKubelet.ExtractPatch()
 			if err != nil {
-				return nil, nil, errors.Wrapf(err, "extracting patch from overall kubelet version %s failed", overallLowKubelet)
+				return zeroSW, zeroSW, errors.Wrapf(err, "extracting patch from overall kubelet version %s failed", overallLowKubelet)
 			}
 
 			if kubeletMinor < overallLowKubeletMinor ||
@@ -92,11 +93,11 @@ func ensureK8sVersion(
 
 		targetMinor, err := target.ExtractMinor()
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "extracting minor from target version %s failed", target)
+			return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from target version %s failed", target)
 		}
 
 		if targetMinor < overallLowKubeletMinor {
-			return nil, nil, errors.Errorf("downgrading from %s to %s is not possible as they are on different minors", overallLowKubelet, target)
+			return zeroSW, zeroSW, errors.Errorf("downgrading from %s to %s is not possible as they are on different minors", overallLowKubelet, target)
 		}
 
 		overallLowKubeletSoftware := overallLowKubelet.DefineSoftware()
@@ -135,7 +136,7 @@ func ensureK8sVersion(
 		}
 
 		ensureKubeadm := func() error {
-			node.current.DesireSoftware(&operator.Software{
+			node.current.DesireSoftware(operator.Software{
 				Kubeadm: operator.Package{
 					Version: to.Kubeadm.Version,
 				},
@@ -192,7 +193,7 @@ func ensureK8sVersion(
 				}).Info("Ensuring kubelet")
 
 				node.current.AllowChanges()
-				node.current.DesireSoftware(&to)
+				node.current.DesireSoftware(to)
 				return nil
 			}
 		}
@@ -285,9 +286,9 @@ func ensureK8sVersion(
 	}
 
 	cfg.Params.Logger.WithFields(map[string]interface{}{
-		"currentSoftware":   *from,
+		"currentSoftware":   from,
 		"currentKubernetes": from.Kubelet,
-		"desiredSofware":    *to,
+		"desiredSofware":    to,
 		"desiredKubernetes": to.Kubelet,
 	}).Debug("Ensuring kubernetes version")
 
@@ -299,7 +300,7 @@ func ensureK8sVersion(
 		next, err := plan(node{
 			compute: compute,
 			current: curr,
-		}, idx == 0, *to)
+		}, idx == 0, to)
 		if err != nil {
 			return false, errors.Wrapf(err, "planning compute %s failed", compute.ID())
 		}

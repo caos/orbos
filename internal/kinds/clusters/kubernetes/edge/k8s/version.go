@@ -29,8 +29,8 @@ func (k KubernetesVersion) String() string {
 	return kubernetesVersions[k]
 }
 
-func (k KubernetesVersion) DefineSoftware() *operator.Software {
-	return &operator.Software{
+func (k KubernetesVersion) DefineSoftware() operator.Software {
+	return operator.Software{
 		Swap:             operator.Package{Version: "disabled"},
 		Containerruntime: operator.Package{Version: "docker-ce v18.09.6"},
 		Kubelet:          operator.Package{Version: k.String()},

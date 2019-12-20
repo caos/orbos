@@ -37,10 +37,10 @@ func deriveCurryCommit(f func(gitCommit string, version string, bin Bin) BuiltTu
 }
 
 // deriveCurryTag returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryTag(f func(gitTag string, bin Bin) BuiltTuple) func(gitTag string) func(bin Bin) BuiltTuple {
-	return func(gitTag string) func(bin Bin) BuiltTuple {
+func deriveCurryTag(f func(version string, bin Bin) BuiltTuple) func(version string) func(bin Bin) BuiltTuple {
+	return func(version string) func(bin Bin) BuiltTuple {
 		return func(bin Bin) BuiltTuple {
-			return f(gitTag, bin)
+			return f(version, bin)
 		}
 	}
 }
