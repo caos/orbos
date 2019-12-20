@@ -207,7 +207,7 @@ http {
 							if d.CustomMasterNotifyer {
 								pkg.Config["notifymaster.sh"] = customMasterNofifyer
 							}
-							if changesAllowed && !na.Software.KeepaliveD.Equals(&pkg) {
+							if changesAllowed && !na.Software.KeepaliveD.Equals(pkg) {
 								na.AllowChanges()
 							}
 							for _, vip := range d.VIPs {
@@ -222,13 +222,13 @@ http {
 									}
 								}
 							}
-							na.DesireSoftware(&operator.Software{KeepaliveD: pkg})
+							na.DesireSoftware(operator.Software{KeepaliveD: pkg})
 							return nil
 						})
 
 						parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
 							pkg := operator.Package{Config: map[string]string{"nginx.conf": result}}
-							if changesAllowed && !na.Software.Nginx.Equals(&pkg) {
+							if changesAllowed && !na.Software.Nginx.Equals(pkg) {
 								na.AllowChanges()
 							}
 							for _, vip := range d.VIPs {
@@ -249,7 +249,7 @@ http {
 									}
 								}
 							}
-							na.DesireSoftware(&operator.Software{Nginx: pkg})
+							na.DesireSoftware(operator.Software{Nginx: pkg})
 							return nil
 						})
 					}
