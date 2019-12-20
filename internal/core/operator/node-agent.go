@@ -46,8 +46,17 @@ func (s *Software) Equals(other *Software) bool {
 
 type Firewall map[string]Allowed
 
-func (f Firewall) Equals(other Firewall) bool {
-	return deriveEqualFirewall(f, other)
+func (f Firewall) Contains(other Firewall) bool {
+	for name, port := range other {
+		found, ok := f[name]
+		if !ok {
+			return false
+		}
+		if !deriveEqualPort(port, found) {
+			return false
+		}
+	}
+	return true
 }
 
 type Allowed struct {

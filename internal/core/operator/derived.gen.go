@@ -2,6 +2,11 @@
 
 package operator
 
+// deriveEqualPort returns whether this and that are equal.
+func deriveEqualPort(this, that Allowed) bool {
+	return this == that
+}
+
 // deriveEqualPkg returns whether this and that are equal.
 func deriveEqualPkg(this, that *Package) bool {
 	return (this == nil && that == nil) ||
@@ -22,26 +27,6 @@ func deriveEqualSoftware(this, that *Software) bool {
 			deriveEqualPkg(&this.KeepaliveD, &that.KeepaliveD) &&
 			deriveEqualPkg(&this.Nginx, &that.Nginx) &&
 			deriveEqualPkg(&this.Hostname, &that.Hostname)
-}
-
-// deriveEqualFirewall returns whether this and that are equal.
-func deriveEqualFirewall(this, that Firewall) bool {
-	if this == nil || that == nil {
-		return this == nil && that == nil
-	}
-	if len(this) != len(that) {
-		return false
-	}
-	for k, v := range this {
-		thatv, ok := that[k]
-		if !ok {
-			return false
-		}
-		if !(v == thatv) {
-			return false
-		}
-	}
-	return true
 }
 
 // deriveEqual returns whether this and that are equal.

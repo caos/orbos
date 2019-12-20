@@ -217,11 +217,17 @@ nodes:
 			logger.Info("Node is not ready yet")
 		}
 
-		if !current.Nodeagent.NodeIsReady &&
-			!software.Equals(&current.Nodeagent.Software) ||
-			!firewall.Equals(current.Nodeagent.Open) {
+		nodeIsReady := current.Nodeagent.NodeIsReady
+		softwareIsReady := software.Equals(&current.Nodeagent.Software)
+		firewallIsReady := current.Nodeagent.Open.Contains(firewall)
+		if !nodeIsReady || !softwareIsReady || !firewallIsReady {
+			// TODO: Changes are allowed by users
 			current.Nodeagent.AllowChanges()
-			logger.Info("Compute is not ready to join yet")
+			logger.WithFields(map[string]interface{}{
+				"node":     nodeIsReady,
+				"software": softwareIsReady,
+				"firewall": firewallIsReady,
+			}).Info("Compute is not ready to join yet")
 			continue nodes
 		}
 
