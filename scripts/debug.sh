@@ -4,8 +4,6 @@ set -e
 
 JUMPHOST=$1
 
-git add .
-git cz
 mkdir -p /tmp/orbctldev
 go run ./cmd/gen-executables/*.go --debug --version $(git rev-parse --abbrev-ref HEAD | sed -e "s/heads\///") --commit $(git rev-parse HEAD) --orbctl /tmp/orbctldev
 scp /tmp/orbctldev/orbctl-Linux-x86_64 ubuntu@${JUMPHOST}:/usr/local/bin/orbctl

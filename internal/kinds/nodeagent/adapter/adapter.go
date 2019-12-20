@@ -141,7 +141,7 @@ func installed(dep *Dependency) (*Dependency, error) {
 }
 
 func divergent(dep *Dependency) bool {
-	return !dep.Desired.Equals(&dep.Current)
+	return !dep.Desired.Equals(dep.Current)
 }
 
 func ensureFunc(logger logging.Logger) func(dep *Dependency) (*Dependency, error) {
