@@ -163,7 +163,7 @@ nodeRegistration:
 			return nil, err
 		}
 
-		cmd := fmt.Sprintf("sudo kubeadm join %s:%d --config %s", joinAtIP, kubeAPI.Port, kubeadmCfgPath)
+		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAtIP, kubeAPI.Port, kubeadmCfgPath)
 		joinStdout, err := joining.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
@@ -175,7 +175,7 @@ nodeRegistration:
 	}
 
 	var kubeconfig bytes.Buffer
-	initCmd := fmt.Sprintf("sudo kubeadm init --config %s", kubeadmCfgPath)
+	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
 	initStdout, err := joining.Execute(nil, nil, initCmd)
 	if err != nil {
 		return nil, err

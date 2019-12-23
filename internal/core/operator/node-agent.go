@@ -65,7 +65,7 @@ func packageEquals(this, that Package) bool {
 		configEquals(this.Config, that.Config)
 }
 
-func equalsIfDefined(this, that Package) bool {
+func contains(this, that Package) bool {
 	return that.Version == "" && that.Config == nil || packageEquals(this, that)
 }
 
@@ -74,14 +74,14 @@ func (p Package) Equals(other Package) bool {
 }
 
 func (this *Software) Contains(that Software) bool {
-	return equalsIfDefined(this.Swap, that.Swap) &&
-		equalsIfDefined(this.Kubelet, that.Kubelet) &&
-		equalsIfDefined(this.Kubeadm, that.Kubeadm) &&
-		equalsIfDefined(this.Kubectl, that.Kubectl) &&
-		equalsIfDefined(this.Containerruntime, that.Containerruntime) &&
-		equalsIfDefined(this.KeepaliveD, that.KeepaliveD) &&
-		equalsIfDefined(this.Nginx, that.Nginx) &&
-		equalsIfDefined(this.Hostname, that.Hostname)
+	return contains(this.Swap, that.Swap) &&
+		contains(this.Kubelet, that.Kubelet) &&
+		contains(this.Kubeadm, that.Kubeadm) &&
+		contains(this.Kubectl, that.Kubectl) &&
+		contains(this.Containerruntime, that.Containerruntime) &&
+		contains(this.KeepaliveD, that.KeepaliveD) &&
+		contains(this.Nginx, that.Nginx) &&
+		contains(this.Hostname, that.Hostname)
 }
 
 type Firewall map[string]Allowed
