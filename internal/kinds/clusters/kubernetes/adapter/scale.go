@@ -218,7 +218,7 @@ nodes:
 		}
 
 		nodeIsReady := current.Nodeagent.NodeIsReady
-		softwareIsReady := software.Equals(current.Nodeagent.Software)
+		softwareIsReady := current.Nodeagent.Software.Contains(software)
 		firewallIsReady := current.Nodeagent.Open.Contains(firewall)
 		if !nodeIsReady || !softwareIsReady || !firewallIsReady {
 			// TODO: Changes are allowed by users

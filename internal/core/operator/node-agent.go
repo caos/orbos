@@ -41,7 +41,8 @@ var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func configEquals(this, that map[string]string) bool {
 	if this == nil || that == nil {
-		return this == nil && that == nil
+		equal := this == nil && that == nil
+		return equal
 	}
 	if len(this) != len(that) {
 		return false
@@ -64,19 +65,23 @@ func packageEquals(this, that Package) bool {
 		configEquals(this.Config, that.Config)
 }
 
+func equalsIfDefined(this, that Package) bool {
+	return that.Version == "" && that.Config == nil || packageEquals(this, that)
+}
+
 func (p Package) Equals(other Package) bool {
 	return packageEquals(p, other)
 }
 
-func (this *Software) Equals(that Software) bool {
-	return packageEquals(this.Swap, that.Swap) &&
-		packageEquals(this.Kubelet, that.Kubelet) &&
-		packageEquals(this.Kubeadm, that.Kubeadm) &&
-		packageEquals(this.Kubectl, that.Kubectl) &&
-		packageEquals(this.Containerruntime, that.Containerruntime) &&
-		packageEquals(this.KeepaliveD, that.KeepaliveD) &&
-		packageEquals(this.Nginx, that.Nginx) &&
-		packageEquals(this.Hostname, that.Hostname)
+func (this *Software) Contains(that Software) bool {
+	return equalsIfDefined(this.Swap, that.Swap) &&
+		equalsIfDefined(this.Kubelet, that.Kubelet) &&
+		equalsIfDefined(this.Kubeadm, that.Kubeadm) &&
+		equalsIfDefined(this.Kubectl, that.Kubectl) &&
+		equalsIfDefined(this.Containerruntime, that.Containerruntime) &&
+		equalsIfDefined(this.KeepaliveD, that.KeepaliveD) &&
+		equalsIfDefined(this.Nginx, that.Nginx) &&
+		equalsIfDefined(this.Hostname, that.Hostname)
 }
 
 type Firewall map[string]Allowed
