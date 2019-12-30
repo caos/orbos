@@ -157,9 +157,9 @@ vrrp_instance VI_{{ $idx }} {
     }
     track_script {
         chk_{{ $vip.IP }}
-	}
+    }
 
-{{ if $root.CustomMasterNotifyer }}	notify_master /etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ $vip.IP }}
+{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ $vip.IP }}"
 {{ else }}	virtual_ipaddress {
 		{{ $vip.IP }}
 	}
