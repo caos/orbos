@@ -52,18 +52,9 @@ func (k *kubeletDep) Current() (operator.Package, error) {
 }
 
 func (k *kubeletDep) Ensure(remove operator.Package, install operator.Package) (bool, error) {
-	// TODO: Idempotency: defer uninstall command if an error occurs
-
-	if err := k.common.Ensure(remove, install); err != nil {
-		return false, err
-	}
-
-	if err := k.systemd.Enable("kubelet"); err != nil {
-		return false, err
-	}
 
 	if k.os != dep.CentOS {
-		return false, k.systemd.Start("kubelet")
+		return false, k.ensurePackage(remove, install)
 	}
 
 	var errBuf bytes.Buffer
@@ -125,5 +116,17 @@ net.bridge.bridge-nf-call-iptables = 1
 		return false, errors.Wrapf(err, "running sysctl --system in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed with stderr %s", errBuf.String())
 	}
 
-	return false, k.systemd.Start("kubelet")
+	return false, k.ensurePackage(remove, install)
+}
+
+func (k *kubeletDep) ensurePackage(remove operator.Package, install operator.Package) error {
+	if err := k.common.Ensure(remove, install); err != nil {
+		return err
+	}
+
+	if err := k.systemd.Enable("kubelet"); err != nil {
+		return err
+	}
+
+	return k.systemd.Start("kubelet")
 }
