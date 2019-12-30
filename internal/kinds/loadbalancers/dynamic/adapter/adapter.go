@@ -6,12 +6,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
 	"text/template"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
@@ -196,95 +194,76 @@ http {
 
 `))
 
-					var wg sync.WaitGroup
-					synchronizer := helpers.NewSynchronizer(&wg)
+					var (
+						notifyTemplate string
+						buf            bytes.Buffer
+					)
 
 					for _, d := range computesData {
-						wg.Add(2)
 
-						parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
-							pkg := operator.Package{Config: map[string]string{"keepalived.conf": result}}
-							if d.CustomMasterNotifyer {
-								pkg.Config["notifymaster.sh"] = customMasterNofifyer
+						na := nodeagent(d.Self)
+						if err := keepaliveDTemplate.Execute(&buf, d); err != nil {
+							return err
+						}
+						kaPkg := operator.Package{Config: map[string]string{"keepalived.conf": buf.String()}}
+
+						if d.CustomMasterNotifyer {
+							if notifyTemplate == "" {
+								if err := template.Must(template.New("").Funcs(templateFuncs).Parse(customMasterNofifyer)).Execute(&buf, d); err != nil {
+									return err
+								}
+								notifyTemplate = buf.String()
 							}
-							if changesAllowed && !na.Software.KeepaliveD.Equals(pkg) {
-								na.AllowChanges()
+							kaPkg.Config["notifymaster.sh"] = notifyTemplate
+						}
+
+						if changesAllowed && !na.Software.KeepaliveD.Equals(kaPkg) {
+							na.AllowChanges()
+						}
+						for _, vip := range d.VIPs {
+							for _, transport := range vip.Transport {
+								for _, compute := range computes {
+									nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
+										fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): operator.Allowed{
+											Port:     fmt.Sprintf("%d", transport.SourcePort),
+											Protocol: "tcp",
+										},
+									})
+								}
 							}
-							for _, vip := range d.VIPs {
-								for _, transport := range vip.Transport {
-									for _, compute := range computes {
+						}
+						na.DesireSoftware(operator.Software{KeepaliveD: kaPkg})
+
+						if nginxTemplate.Execute(&buf, d); err != nil {
+							return err
+						}
+						ngxPkg := operator.Package{Config: map[string]string{"nginx.conf": buf.String()}}
+						if changesAllowed && !na.Software.Nginx.Equals(ngxPkg) {
+							na.AllowChanges()
+						}
+						for _, vip := range d.VIPs {
+							for _, transport := range vip.Transport {
+								for _, dest := range transport.Destinations {
+									destComputes, err := svc.List(dest.Pool, true)
+									if err != nil {
+										return err
+									}
+									for _, compute := range destComputes {
 										nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
-											fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): operator.Allowed{
-												Port:     fmt.Sprintf("%d", transport.SourcePort),
+											fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): operator.Allowed{
+												Port:     fmt.Sprintf("%d", dest.Port),
 												Protocol: "tcp",
 											},
 										})
 									}
 								}
 							}
-							na.DesireSoftware(operator.Software{KeepaliveD: pkg})
-							return nil
-						})
-
-						parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
-							pkg := operator.Package{Config: map[string]string{"nginx.conf": result}}
-							if changesAllowed && !na.Software.Nginx.Equals(pkg) {
-								na.AllowChanges()
-							}
-							for _, vip := range d.VIPs {
-								for _, transport := range vip.Transport {
-									for _, dest := range transport.Destinations {
-										destComputes, err := svc.List(dest.Pool, true)
-										if err != nil {
-											return err
-										}
-										for _, compute := range destComputes {
-											nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
-												fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): operator.Allowed{
-													Port:     fmt.Sprintf("%d", dest.Port),
-													Protocol: "tcp",
-												},
-											})
-										}
-									}
-								}
-							}
-							na.DesireSoftware(operator.Software{Nginx: pkg})
-							return nil
-						})
-					}
-
-					wg.Wait()
-
-					if synchronizer.IsError() {
-						return synchronizer
+						}
+						na.DesireSoftware(operator.Software{Nginx: ngxPkg})
 					}
 					return nil
 				},
 			}, nil
 		}), nil
 	})
-}
-
-func parse(synchronizer *helpers.Synchronizer, parsedTemplate *template.Template, computesData Data, na *operator.NodeAgentCurrent, then func(string, *operator.NodeAgentCurrent) error) {
-
-	var buf bytes.Buffer
-	err := parsedTemplate.Execute(&buf, computesData)
-	if err != nil {
-		synchronizer.Done(err)
-		return
-	}
-
-	synchronizer.Done(then(buf.String(), na))
-}
-
-func toChan(templates []*template.Template) <-chan *template.Template {
-	ch := make(chan *template.Template)
-	go func() {
-		for _, template := range templates {
-			ch <- template
-		}
-		close(ch)
-	}()
-	return ch
 }
