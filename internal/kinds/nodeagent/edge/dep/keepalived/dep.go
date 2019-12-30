@@ -120,7 +120,7 @@ func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package)
 	}
 
 	if notifyMaster, ok := ensure.Config["notifymaster.sh"]; ok {
-		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0700); err != nil {
+		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0777); err != nil {
 			return false, err
 		}
 	}
