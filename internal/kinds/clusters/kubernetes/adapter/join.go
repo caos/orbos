@@ -49,7 +49,7 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", cfg.Spec.Networking.Network)
 	}
 
-	intIP := joining.DomainName()
+	intIP := joining.IP()
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
@@ -158,7 +158,7 @@ nodeRegistration:
 	}).Debug("Cleaned up compute")
 
 	if joinAt != nil {
-		joinAtIP := joinAt.DomainName()
+		joinAtIP := joinAt.IP()
 		if err != nil {
 			return nil, err
 		}

@@ -146,9 +146,9 @@ vrrp_sync_group VG1 {
 
 vrrp_instance VI_{{ $idx }} {
     state {{ $root.State }}
-    unicast_src_ip {{ $root.Self.DomainName }}
+    unicast_src_ip {{ $root.Self.IP }}
     unicast_peer {
-        {{ range $peer := $root.Peers }}{{ $peer.DomainName }}
+        {{ range $peer := $root.Peers }}{{ $peer.IP }}
         {{ end }}    }
     interface eth0
     virtual_router_id {{ add 55 $idx }}
@@ -176,7 +176,7 @@ vrrp_instance VI_{{ $idx }} {
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
     upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
-        server {{ $compute.DomainName }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
+        server {{ $compute.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
     }
     server {
         listen {{ $vip.IP }}:{{ $src.SourcePort }};

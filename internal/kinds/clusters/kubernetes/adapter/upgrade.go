@@ -3,6 +3,7 @@ package adapter
 import (
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -221,7 +222,7 @@ func ensureK8sVersion(
 			"command":  isActive,
 			"response": string(response),
 		}).Debug("Executed command")
-		if err != nil {
+		if err != nil && !strings.Contains(string(response), "activating") {
 			return ensureNodeagent, nil
 		}
 

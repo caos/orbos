@@ -9,14 +9,14 @@ import (
 )
 
 type compute struct {
-	poolFile   string
-	id         *string
-	domainName string
-	ssh        infra.Compute
+	poolFile string
+	id       *string
+	ip       string
+	ssh      infra.Compute
 }
 
-func newCompute(logger logging.Logger, poolFile string, remoteUser string, id *string, domainName string) infra.Compute {
-	cmp := &compute{poolFile: poolFile, id: id, domainName: domainName}
+func newCompute(logger logging.Logger, poolFile string, remoteUser string, id *string, IP string) infra.Compute {
+	cmp := &compute{poolFile: poolFile, id: id, ip: IP}
 	cmp.ssh = ssh.NewCompute(logger, cmp, remoteUser)
 	return cmp.ssh
 }
@@ -25,8 +25,8 @@ func (c *compute) ID() string {
 	return *c.id
 }
 
-func (c *compute) DomainName() string {
-	return c.domainName
+func (c *compute) IP() string {
+	return c.ip
 }
 
 func (c *compute) Remove() error {

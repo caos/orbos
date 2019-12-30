@@ -6,9 +6,9 @@ import (
 )
 
 type Compute struct {
-	ID         string
-	Hostname   string
-	DomainName string
+	ID       string
+	Hostname string
+	IP       string
 }
 
 type UserSpec struct {

@@ -22,8 +22,8 @@ func compute(compute infra.Compute, desire func() error) infra.Compute {
 func (c *cmpLB) ID() string {
 	return c.original.ID()
 }
-func (c *cmpLB) DomainName() string {
-	return c.original.DomainName()
+func (c *cmpLB) IP() string {
+	return c.original.IP()
 }
 
 func (c *cmpLB) Remove() error {

@@ -17,19 +17,19 @@ type Instance interface {
 type instance struct {
 	logger logging.Logger
 	infra.Compute
-	spec       *model.UserSpec
-	caller     *api.Caller
-	svc        *compute.InstancesService
-	id         string
-	domainName string
-	url        string
+	spec   *model.UserSpec
+	caller *api.Caller
+	svc    *compute.InstancesService
+	id     string
+	ip     string
+	url    string
 }
 
-func newInstance(logger logging.Logger, caller *api.Caller, spec *model.UserSpec, svc *compute.InstancesService, id, url, remoteUser, domainName string) Instance {
+func newInstance(logger logging.Logger, caller *api.Caller, spec *model.UserSpec, svc *compute.InstancesService, id, url, remoteUser, IP string) Instance {
 	i := &instance{logger.WithFields(map[string]interface{}{
 		"type": "instance",
 		"name": id,
-	}), nil, spec, caller, svc, id, domainName, url}
+	}), nil, spec, caller, svc, id, IP, url}
 	i.Compute = ssh.NewCompute(logger, i, remoteUser)
 	return i
 }
@@ -50,6 +50,6 @@ func (m *instance) ID() string {
 	return m.id
 }
 
-func (m *instance) DomainName() string {
-	return m.domainName
+func (m *instance) IP() string {
+	return m.ip
 }

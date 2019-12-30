@@ -16,7 +16,7 @@ import (
 
 type ProvidedCompute interface {
 	ID() string
-	DomainName() string
+	IP() string
 	Remove() error
 }
 
@@ -41,8 +41,8 @@ func (c *compute) ID() string {
 	return c.compute.ID()
 }
 
-func (c *compute) DomainName() string {
-	return c.compute.DomainName()
+func (c *compute) IP() string {
+	return c.compute.IP()
 }
 
 func (c *compute) Remove() error {
@@ -164,7 +164,7 @@ func (c *compute) open() (sess *sshlib.Session, close func() error, err error) {
 		return nil, close, errors.New("no ssh key passed via infra.Compute.UseKey")
 	}
 
-	ip := c.compute.DomainName()
+	ip := c.compute.IP()
 
 	address := fmt.Sprintf("%s:%d", ip, 22)
 	conn, err := sshlib.Dial("tcp", address, c.sshCfg)
