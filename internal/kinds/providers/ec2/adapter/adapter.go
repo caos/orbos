@@ -46,6 +46,10 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 
 func NotifyMaster() string {
 	return `#!/bin/bash
-aws ec2 disassociate-address --public-ip {{ $vip.IP }}
-aws ec2 associate-address --public-ip {{ $vip.IP }} --instance-id {{ $root.Self.ID }}`
+
+INSTANCE_ID=$1
+EIP=$2
+
+aws ec2 disassociate-address --public-ip ${EIP}
+aws ec2 associate-address --public-ip ${EIP} --instance-id ${INSTANCE_ID}`
 }

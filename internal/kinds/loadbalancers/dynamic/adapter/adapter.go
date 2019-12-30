@@ -159,7 +159,7 @@ vrrp_instance VI_{{ $idx }} {
         chk_{{ $vip.IP }}
 	}
 
-{{ if $root.CustomMasterNotifyer }}	notify_master /etc/keepalived/notifymaster.sh
+{{ if $root.CustomMasterNotifyer }}	notify_master /etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ $vip.IP }}
 {{ else }}	virtual_ipaddress {
 		{{ $vip.IP }}
 	}
@@ -194,27 +194,17 @@ http {
 
 `))
 
-					var (
-						notifyTemplate string
-						buf            bytes.Buffer
-					)
-
 					for _, d := range computesData {
 
+						var kaBuf bytes.Buffer
 						na := nodeagent(d.Self)
-						if err := keepaliveDTemplate.Execute(&buf, d); err != nil {
+						if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
 							return err
 						}
-						kaPkg := operator.Package{Config: map[string]string{"keepalived.conf": buf.String()}}
+						kaPkg := operator.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 
 						if d.CustomMasterNotifyer {
-							if notifyTemplate == "" {
-								if err := template.Must(template.New("").Funcs(templateFuncs).Parse(customMasterNofifyer)).Execute(&buf, d); err != nil {
-									return err
-								}
-								notifyTemplate = buf.String()
-							}
-							kaPkg.Config["notifymaster.sh"] = notifyTemplate
+							kaPkg.Config["notifymaster.sh"] = customMasterNofifyer
 						}
 
 						if changesAllowed && !na.Software.KeepaliveD.Equals(kaPkg) {
@@ -234,10 +224,11 @@ http {
 						}
 						na.DesireSoftware(operator.Software{KeepaliveD: kaPkg})
 
-						if nginxTemplate.Execute(&buf, d); err != nil {
+						var ngxBuf bytes.Buffer
+						if nginxTemplate.Execute(&ngxBuf, d); err != nil {
 							return err
 						}
-						ngxPkg := operator.Package{Config: map[string]string{"nginx.conf": buf.String()}}
+						ngxPkg := operator.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 						if changesAllowed && !na.Software.Nginx.Equals(ngxPkg) {
 							na.AllowChanges()
 						}
