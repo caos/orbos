@@ -91,8 +91,7 @@ func (s *keepaliveDDep) Current() (pkg operator.Package, err error) {
 		return pkg, nil
 	}
 	pkg.Config["notifymaster.sh"] = string(notifymaster)
-
-	return pkg, nil
+	return pkg, err
 }
 
 func (s *keepaliveDDep) Ensure(remove operator.Package, ensure operator.Package) (bool, error) {

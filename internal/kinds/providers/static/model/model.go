@@ -16,6 +16,7 @@ type UserSpec struct {
 	RemoteUser          string
 	RemotePublicKeyPath string
 	Pools               map[string][]*Compute
+	Hoster              string
 }
 
 type Config struct {

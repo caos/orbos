@@ -12,6 +12,7 @@ import (
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/wrap"
 	externallbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/external/model"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
+	aws "github.com/caos/orbiter/internal/kinds/providers/ec2/adapter"
 	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
 	"github.com/caos/orbiter/internal/kinds/providers/static/model"
 	"github.com/caos/orbiter/logging"
@@ -90,6 +91,11 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 				}
 			}
 
+			notifyMaster := ""
+			if spec.Hoster == "AWS" {
+				notifyMaster = aws.NotifyMaster()
+			}
+
 			for depName, dep := range deps {
 				switch lb := dep.(type) {
 				case *dynamiclbmodel.Current:
@@ -103,7 +109,7 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 								changesAllowed = false
 							}
 						}
-						if err := lb.Desire(pool, changesAllowed, computesSvc, mapNodeAgent, ""); err != nil {
+						if err := lb.Desire(pool, changesAllowed, computesSvc, mapNodeAgent, notifyMaster); err != nil {
 							return nil, err
 						}
 					}

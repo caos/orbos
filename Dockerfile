@@ -13,3 +13,4 @@ COPY --chown=65534:65534 artifacts/orbctl-Linux-x86_64 /orbctl
 USER nobody
 
 ENTRYPOINT [ "/orbctl" ]
+CMD [ "--help" ]
