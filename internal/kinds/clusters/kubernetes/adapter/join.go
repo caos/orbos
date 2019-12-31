@@ -107,14 +107,11 @@ discovery:
     unsafeSkipCAVerification: true
   timeout: 5m0s
 nodeRegistration:
-#	criSocket: /var/run/dockershim.sock
   name: %s
-#   taints: null
 `,
 		joinToken,
 		intIP,
 		joining.ID(),
-		intIP,
 		kubeAPI,
 		kubernetesVersion,
 		cfg.Spec.Networking.DNSDomain,
@@ -128,9 +125,9 @@ nodeRegistration:
 		kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
     advertiseAddress: %s
-    bindPort: %d
+    bindPort: 6666
   certificateKey: %s
-`, intIP, kubeAPI.Port, certKey)
+`, intIP, certKey)
 	}
 
 	if err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
