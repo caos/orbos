@@ -47,6 +47,8 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 func NotifyMaster() string {
 	return `#!/bin/bash
 
+set -e
+
 INSTANCE_ID=$1
 EIP=$2
 
