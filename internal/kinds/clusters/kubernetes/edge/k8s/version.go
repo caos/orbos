@@ -18,12 +18,18 @@ const (
 	V1x15x3
 	V1x15x4
 	V1x16x0
+	V1x16x1
+	V1x16x2
+	V1x16x3
+	V1x16x4
+	V1x17x0
 )
 
 var kubernetesVersions = []string{
 	"unknown",
 	"v1.15.0", "v1.15.1", "v1.15.2", "v1.15.3", "v1.15.4",
-	"v1.16.0"}
+	"v1.16.0", "v1.16.1", "v1.16.2", "v1.16.3", "v1.16.4",
+	"v1.17.0"}
 
 func (k KubernetesVersion) String() string {
 	return kubernetesVersions[k]
