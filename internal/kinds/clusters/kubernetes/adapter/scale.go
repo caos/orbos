@@ -156,8 +156,12 @@ nodes:
 		}
 
 		if current.Metadata.Tier == model.Controlplane {
-			fw["kubeapi"] = operator.Allowed{
+			fw["kubeapi-external"] = operator.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPI.Port),
+				Protocol: "tcp",
+			}
+			fw["kubeapi-internal"] = operator.Allowed{
+				Port:     fmt.Sprintf("%d", 6666),
 				Protocol: "tcp",
 			}
 			fw["etcd"] = operator.Allowed{
