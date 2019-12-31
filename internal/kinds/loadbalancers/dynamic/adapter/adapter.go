@@ -174,7 +174,7 @@ vrrp_instance VI_{{ $idx }} {
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
     upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
-        server {{ $compute.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
+        server {{ $compute.IP }}:{{ if eq $src.Name  "kubeapi" }}6666{{ else }}{{ $dest.Port }}{{ end }}; # {{ $dest.Pool }}{{end}}{{ end }}
     }
     server {
         listen {{ $vip.IP }}:{{ $src.SourcePort }};

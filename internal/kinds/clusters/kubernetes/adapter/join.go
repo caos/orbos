@@ -64,14 +64,13 @@ bootstrapTokens:
   - authentication
 localAPIEndpoint:
   advertiseAddress: %s
-  bindPort: %d
+  bindPort: 6666
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
   name: %s
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
-#certificateKey: #s
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -81,8 +80,6 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
-  extraArgs:
-    bind-address: %s
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: %s
@@ -109,7 +106,6 @@ discovery:
     token: %s
     unsafeSkipCAVerification: true
   timeout: 5m0s
-#  tlsBootstrapToken: %s
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
   name: %s
@@ -117,7 +113,6 @@ nodeRegistration:
 `,
 		joinToken,
 		intIP,
-		kubeAPI.Port,
 		joining.ID(),
 		intIP,
 		kubeAPI,
@@ -126,7 +121,6 @@ nodeRegistration:
 		cfg.Spec.Networking.PodCidr,
 		cfg.Spec.Networking.ServiceCidr,
 		kubeAPI,
-		joinToken,
 		joinToken,
 		joining.ID())
 
