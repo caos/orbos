@@ -9,7 +9,6 @@ import (
 	core "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
@@ -329,29 +328,6 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Name:      "default",
 			Namespace: "caos-system",
 		}},
-	}); err != nil {
-		return err
-	}
-
-	if err := client.ApplyService(&core.Service{
-		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-metrics",
-			Labels: map[string]string{
-				"app": "boom",
-			},
-			Namespace: "caos-system",
-		},
-		Spec: core.ServiceSpec{
-			ClusterIP: "None",
-			Ports: []core.ServicePort{{
-				Name:       "https",
-				Port:       8443,
-				TargetPort: intstr.FromString("https"),
-			}},
-			Selector: map[string]string{
-				"app": "boom",
-			},
-		},
 	}); err != nil {
 		return err
 	}

@@ -91,17 +91,6 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	})
 }
 
-func (c *Client) ApplyService(rsc *core.Service) error {
-	resources := c.set.CoreV1().Services(rsc.GetNamespace())
-	return c.apply("service", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
-		return err
-	}, func() error {
-		_, err := resources.Update(rsc)
-		return err
-	})
-}
-
 func (c *Client) ApplySecret(rsc *core.Secret) error {
 	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {
