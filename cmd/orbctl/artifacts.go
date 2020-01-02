@@ -187,7 +187,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Verbs:     []string{"create"},
 		}},
 	}); err != nil {
-		return nil
+		return err
 	}
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
@@ -260,7 +260,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			},
 		}},
 	}); err != nil {
-		return nil
+		return err
 	}
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
@@ -277,7 +277,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Verbs:     []string{"create"},
 		}},
 	}); err != nil {
-		return nil
+		return err
 	}
 
 	if err := client.ApplyRoleBinding(&rbac.RoleBinding{
@@ -296,7 +296,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
-		return nil
+		return err
 	}
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
@@ -313,7 +313,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
-		return nil
+		return err
 	}
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
@@ -330,7 +330,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
-		return nil
+		return err
 	}
 
 	if err := client.ApplyService(&core.Service{
@@ -352,7 +352,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			},
 		},
 	}); err != nil {
-		return nil
+		return err
 	}
 
 	err = client.ApplyDeployment(&apps.Deployment{
