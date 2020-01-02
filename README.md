@@ -14,7 +14,7 @@ Create a new repository (e.g. git@github.com:caos/my-orb.git)
 
 ```bash
 # Download latest orbctl
-curl -s https://api.github.com/repos/caos/orbiter/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d '"' -f 4 | sudo wget -i - -O /usr/local/bin/orbctl -
+curl -s https://api.github.com/repos/caos/orbiter/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d '"' -f 4 | sudo wget -i -O /usr/local/bin/orbctl -
 sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 
