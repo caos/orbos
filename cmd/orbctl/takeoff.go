@@ -63,6 +63,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 					Spec struct {
 						Orbiter string
 						Boom    string
+						Verbose bool
 					}
 					Deps map[string]struct {
 						Kind string
@@ -71,6 +72,10 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 				if err := yaml.Unmarshal(desired, &deserialized); err != nil {
 					return err
+				}
+
+				if deserialized.Spec.Verbose {
+					logger = logger.Verbose()
 				}
 
 				for clusterName, cluster := range deserialized.Deps {

@@ -18,6 +18,11 @@ import (
 
 func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb, oneoff bool, secretsNamespace, orbiterversion string, boomversion string) error {
 
+	logger.WithFields(map[string]interface{}{
+		"Orbiter": orbiterversion,
+		"Boom":    boomversion,
+	}).Debug("Ensuring artifacts")
+
 	if orbiterversion == "" && boomversion == "" {
 		return nil
 	}
@@ -140,7 +145,8 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		}
 		l.WithFields(map[string]interface{}{
 			"version": orbiterversion,
-		}).Info("Ensured Orbiter deployment")
+		}).Debug("Orbiter deployment ensured")
+
 		if oneoff {
 			os.Exit(0)
 		}
@@ -407,7 +413,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 	if err == nil {
 		l.WithFields(map[string]interface{}{
 			"version": boomversion,
-		}).Info("Ensured Boom deployment")
+		}).Debug("Boom deployment ensured")
 	}
 	return err
 }
