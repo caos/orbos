@@ -74,13 +74,14 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 					return err
 				}
 
+				l := logger
 				if deserialized.Spec.Verbose {
-					logger = logger.Verbose()
+					l = logger.Verbose()
 				}
 
 				for clusterName, cluster := range deserialized.Deps {
 					if strings.Contains(cluster.Kind, "Kubernetes") {
-						if err := ensureArtifacts(logger, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
+						if err := ensureArtifacts(l, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
 							return err
 						}
 					}

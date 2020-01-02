@@ -18,9 +18,13 @@ import (
 
 func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb, oneoff bool, secretsNamespace, orbiterversion string, boomversion string) error {
 
+	l := logger.WithFields(map[string]interface{}{
+		"cluster": secretsNamespace,
+	})
+
 	logger.WithFields(map[string]interface{}{
-		"Orbiter": orbiterversion,
-		"Boom":    boomversion,
+		"orbiter": orbiterversion,
+		"boom":    boomversion,
 	}).Debug("Ensuring artifacts")
 
 	if orbiterversion == "" && boomversion == "" {
@@ -81,10 +85,6 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 	}); err != nil {
 		return err
 	}
-
-	l := logger.WithFields(map[string]interface{}{
-		"cluster": secretsNamespace,
-	})
 	if orbiterversion != "" {
 		if err := client.ApplyDeployment(&apps.Deployment{
 			ObjectMeta: mach.ObjectMeta{

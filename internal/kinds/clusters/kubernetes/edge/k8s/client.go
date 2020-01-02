@@ -98,6 +98,9 @@ func (c *Client) ApplyService(sec *core.Service) error {
 		return err
 	}, func() error {
 		_, err := resources.Update(sec)
+		if err == nil || macherrs.IsInvalid(err) && (strings.Contains(err.Error(), "spec.clusterIP") || strings.Contains(err.Error(), "metadata.resourceVersion")) {
+			return nil
+		}
 		return err
 	})
 }
