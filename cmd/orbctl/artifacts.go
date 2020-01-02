@@ -342,6 +342,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			Namespace: "caos-system",
 		},
 		Spec: core.ServiceSpec{
+			ClusterIP: "None",
 			Ports: []core.ServicePort{{
 				Name:       "https",
 				Port:       8443,

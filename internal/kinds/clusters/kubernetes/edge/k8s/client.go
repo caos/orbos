@@ -91,16 +91,13 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	})
 }
 
-func (c *Client) ApplyService(sec *core.Service) error {
-	resources := c.set.CoreV1().Services(sec.GetNamespace())
-	return c.apply("service", sec.GetName(), func() error {
-		_, err := resources.Create(sec)
+func (c *Client) ApplyService(rsc *core.Service) error {
+	resources := c.set.CoreV1().Services(rsc.GetNamespace())
+	return c.apply("service", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := resources.Update(sec)
-		if err == nil || macherrs.IsInvalid(err) && (strings.Contains(err.Error(), "spec.clusterIP") || strings.Contains(err.Error(), "metadata.resourceVersion")) {
-			return nil
-		}
+		_, err := resources.Update(rsc)
 		return err
 	})
 }
