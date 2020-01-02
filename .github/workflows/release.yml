@@ -62,6 +62,7 @@ jobs:
         prerelease: true
     - name: Upload Darwin Dev Release Asset
       uses: actions/upload-release-asset@v1.0.1
+      if: steps.release.outputs.relbranch != null
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -70,6 +71,7 @@ jobs:
         asset_name: orbctl Darwin x86_64
         asset_content_type: application/octet-stream
     - name: Upload FreeBSD Dev Release Asset
+      if: steps.release.outputs.relbranch != null
       uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -79,6 +81,7 @@ jobs:
         asset_name: orbctl FreeBSD x86_64
         asset_content_type: application/octet-stream
     - name: Upload Linux Dev Release Asset
+      if: steps.release.outputs.relbranch != null
       uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,6 +91,7 @@ jobs:
         asset_name: orbctl Linux x86_64
         asset_content_type: application/octet-stream
     - name: Upload OpenBSD Dev Release Asset
+      if: steps.release.outputs.relbranch != null
       uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -97,6 +101,7 @@ jobs:
         asset_name: orbctl OpenBSD x86_64
         asset_content_type: application/octet-stream
     - name: Upload Windows Dev Release Asset
+      if: steps.release.outputs.relbranch != null
       uses: actions/upload-release-asset@v1.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
