@@ -19,7 +19,7 @@ sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 
 # Create a new ssh key pair.
-ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f "~/.ssh/myorb_bootstrap" -q && ssh-add "~/.ssh/myorb_bootstrap"
+mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f "~/.ssh/myorb_bootstrap" -q && ssh-add "~/.ssh/myorb_bootstrap"
 
 # Create a new orbconfig
 mkdir -p ~/.orb
