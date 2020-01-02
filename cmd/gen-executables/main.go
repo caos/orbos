@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	tag := flag.String("tag", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	version := flag.String("version", "none", "Path to the git repositorys path to the file containing orbiters current state")
 	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing orbiters current state")
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
@@ -35,7 +35,7 @@ func main() {
 	path := curryJoinPath(cmdPath)
 
 	if err := executables.PreBuild(executables.Build(
-		*debug, *commit, *tag,
+		*debug, *commit, *version,
 		executables.Bin{MainDir: path("nodeagent")},
 		executables.Bin{MainDir: path("health")},
 	)); err != nil {
@@ -50,7 +50,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	orbctlMain := path("orbctl")
-	orbctls := executables.Build(*debug, *commit, *tag,
+	orbctls := executables.Build(*debug, *commit, *version,
 		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),

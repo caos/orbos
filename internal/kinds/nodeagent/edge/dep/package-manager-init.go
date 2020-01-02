@@ -41,5 +41,9 @@ func (p *PackageManager) remSpecificInit() error {
 		return errors.Wrapf(err, "updating yum packages failed with stderr %s", errBuf.String())
 	}
 
-	return p.rembasedInstall(&Software{Package: "yum-utils"}, &Software{Package: "yum-versionlock"})
+	return p.rembasedInstall(
+		&Software{Package: "yum-utils"},
+		&Software{Package: "yum-versionlock"},
+		&Software{Package: "firewalld"},
+	)
 }

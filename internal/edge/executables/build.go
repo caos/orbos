@@ -22,14 +22,14 @@ type Bin struct {
 
 type BuiltTuple func() (bin Bin, err error)
 
-func Build(debug bool, gitCommit, gitTag string, bins ...Bin) <-chan BuiltTuple {
-	return deriveFmap(curryBuild(debug, gitCommit, gitTag), toChan(bins))
+func Build(debug bool, gitCommit, version string, bins ...Bin) <-chan BuiltTuple {
+	return deriveFmap(curryBuild(debug, gitCommit, version), toChan(bins))
 }
 
-func curryBuild(debug bool, gitCommit, gitTag string) func(bin Bin) BuiltTuple {
+func curryBuild(debug bool, gitCommit, version string) func(bin Bin) BuiltTuple {
 	debugCurried := deriveCurryDebug(build)(debug)
 	commitCurried := deriveCurryCommit(debugCurried)(gitCommit)
-	tagCurried := deriveCurryTag(commitCurried)(gitTag)
+	tagCurried := deriveCurryTag(commitCurried)(version)
 	return tagCurried
 }
 
@@ -44,7 +44,7 @@ func toChan(bins []Bin) <-chan Bin {
 	return binChan
 }
 
-func build(debug bool, gitCommit, gitTag string, bin Bin) BuiltTuple {
+func build(debug bool, gitCommit, version string, bin Bin) BuiltTuple {
 
 	if bin.OutDir == "" {
 		bin.OutDir = filepath.Join(os.TempDir(), filepath.Base(bin.MainDir))
@@ -62,7 +62,7 @@ func build(debug bool, gitCommit, gitTag string, bin Bin) BuiltTuple {
 			"all=-N -l")
 	}
 
-	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.gitTag=%s", gitCommit, gitTag)
+	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s", gitCommit, version)
 
 	cmdEnv := os.Environ()
 	for k, v := range bin.Env {

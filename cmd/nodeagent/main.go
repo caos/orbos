@@ -25,7 +25,7 @@ import (
 )
 
 var gitCommit string
-var gitTag string
+var version string
 
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -45,7 +45,7 @@ func main() {
 	}()
 
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
-	version := flag.Bool("version", false, "Print build information")
+	printVersion := flag.Bool("version", false, "Print build information")
 	repoURL := flag.String("repourl", "", "Repository URL")
 	computeID := flag.String("id", "", "The managed computes ID")
 	configPath := flag.String("yamlbasepath", "", "Point separated yaml path to the node agent kind")
@@ -54,8 +54,10 @@ func main() {
 
 	flag.Parse()
 
-	if *version {
-		fmt.Printf("%s %s\n", gitTag, gitCommit)
+	fullVersion := fmt.Sprintf("%s %s", version, gitCommit)
+
+	if *printVersion {
+		fmt.Println(fullVersion)
 		os.Exit(0)
 	}
 
@@ -64,7 +66,7 @@ func main() {
 		logger = logger.Verbose()
 	}
 	logger.WithFields(map[string]interface{}{
-		"version":    gitTag,
+		"version":    version,
 		"commit":     gitCommit,
 		"verbose":    *verbose,
 		"repourl":    *repoURL,
@@ -109,7 +111,7 @@ func main() {
 			cron.New(logger, "@every 30s"),
 		},
 		RootAssembler: nodeagent.New(strings.Split(*configPath, "."), nil,
-			adapter.New(gitTag, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
+			adapter.New(fullVersion, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
 	})
 
 	iterations := make(chan *operator.IterationDone)

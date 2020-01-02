@@ -49,10 +49,7 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", cfg.Spec.Networking.Network)
 	}
 
-	intIP, err := joining.InternalIP()
-	if err != nil {
-		return nil, errors.Wrap(err, "reading internal ip failed")
-	}
+	intIP := joining.IP()
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
@@ -67,14 +64,13 @@ bootstrapTokens:
   - authentication
 localAPIEndpoint:
   advertiseAddress: %s
-  bindPort: %d
+  bindPort: 6666
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
   name: %s
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
-#certificateKey: #s
 ---
 apiVersion: kubelet.config.k8s.io/v1beta1
 kind: KubeletConfiguration
@@ -84,8 +80,6 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
-  extraArgs:
-    bind-address: %s
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
 controlPlaneEndpoint: %s
@@ -112,17 +106,12 @@ discovery:
     token: %s
     unsafeSkipCAVerification: true
   timeout: 5m0s
-#  tlsBootstrapToken: %s
 nodeRegistration:
-#	criSocket: /var/run/dockershim.sock
   name: %s
-#   taints: null
 `,
 		joinToken,
-		*intIP,
-		kubeAPI.Port,
+		intIP,
 		joining.ID(),
-		*intIP,
 		kubeAPI,
 		kubernetesVersion,
 		cfg.Spec.Networking.DNSDomain,
@@ -130,19 +119,18 @@ nodeRegistration:
 		cfg.Spec.Networking.ServiceCidr,
 		kubeAPI,
 		joinToken,
-		joinToken,
 		joining.ID())
 
 	if isControlPlane {
 		kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
     advertiseAddress: %s
-    bindPort: %d
+    bindPort: 6666
   certificateKey: %s
-`, *intIP, kubeAPI.Port, certKey)
+`, intIP, certKey)
 	}
 
-	if err = try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+	if err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
 		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
 	}); err != nil {
 		return nil, err
@@ -161,12 +149,12 @@ nodeRegistration:
 	}).Debug("Cleaned up compute")
 
 	if joinAt != nil {
-		joinAtIP, err := joinAt.InternalIP()
+		joinAtIP := joinAt.IP()
 		if err != nil {
 			return nil, err
 		}
 
-		cmd := fmt.Sprintf("sudo kubeadm join %s:%d --config %s", *joinAtIP, kubeAPI.Port, kubeadmCfgPath)
+		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAtIP, kubeAPI.Port, kubeadmCfgPath)
 		joinStdout, err := joining.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
@@ -178,7 +166,7 @@ nodeRegistration:
 	}
 
 	var kubeconfig bytes.Buffer
-	initCmd := fmt.Sprintf("sudo kubeadm init --config %s", kubeadmCfgPath)
+	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
 	initStdout, err := joining.Execute(nil, nil, initCmd)
 	if err != nil {
 		return nil, err

@@ -8,13 +8,13 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
+	"github.com/caos/orbiter/logging"
 	"google.golang.org/api/compute/v1"
 )
 
@@ -28,6 +28,7 @@ type instanceService struct {
 	secrets             *operator.Secrets
 	newComputePublicKey []byte
 	dynamicKeyProperty  string
+	fromOutside         bool
 }
 
 func NewInstanceService(
@@ -39,7 +40,8 @@ func NewInstanceService(
 	caller *api.Caller,
 	secrets *operator.Secrets,
 	newComputePublicKey []byte,
-	dynamicKeyProperty string) core.ComputesService {
+	dynamicKeyProperty string,
+	fromOutside bool) core.ComputesService {
 	return &instanceService{
 		id,
 		spec,
@@ -48,7 +50,8 @@ func NewInstanceService(
 		caller,
 		secrets,
 		newComputePublicKey,
-		dynamicKeyProperty}
+		dynamicKeyProperty,
+		fromOutside}
 }
 
 func (i *instanceService) ListPools() ([]string, error) {
@@ -98,11 +101,15 @@ func (i *instanceService) List(poolName string, active bool) (infra.Computes, er
 
 	instances := make([]infra.Compute, len(list.Items))
 	for idx, inst := range list.Items {
-		instance := newInstance(i.logger, i.caller, i.spec, i.svc, inst.Name, inst.SelfLink, i.spec.RemoteUser)
+		connect := inst.NetworkInterfaces[0].NetworkIP
+		if i.fromOutside {
+			connect = inst.NetworkInterfaces[0].AccessConfigs[0].NatIP
+		}
+
+		instance := newInstance(i.logger, i.caller, i.spec, i.svc, inst.Name, inst.SelfLink, i.spec.RemoteUser, connect)
 		if err := instance.UseKeys(i.secrets, i.dynamicKeyProperty); err != nil && errors.Cause(err) != secret.ErrNotExist {
 			return nil, err
 		}
-		instance.cacheIPs(inst.NetworkInterfaces[0].NetworkIP, inst.NetworkInterfaces[0].AccessConfigs[0].NatIP)
 		instances[idx] = instance
 	}
 	return instances, nil
@@ -184,6 +191,21 @@ func (i *instanceService) Create(poolName string) (infra.Compute, error) {
 	if err != nil {
 		return nil, err
 	}
-	inst := newInstance(i.logger, i.caller, i.spec, i.svc, name, op.TargetLink, i.spec.RemoteUser)
+
+	interf, err := i.caller.GetResource(name, "networkInterfaces(networkIP,accessConfigs(natIP))", []interface{}{
+		i.svc.Get(i.spec.Project, i.spec.Zone, name),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	instance := interf.(*compute.Instance)
+
+	connect := instance.NetworkInterfaces[0].NetworkIP
+	if i.fromOutside {
+		connect = instance.NetworkInterfaces[0].AccessConfigs[0].NatIP
+	}
+
+	inst := newInstance(i.logger, i.caller, i.spec, i.svc, name, op.TargetLink, i.spec.RemoteUser, connect)
 	return inst, inst.UseKeys(i.secrets, i.dynamicKeyProperty)
 }

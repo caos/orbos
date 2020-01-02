@@ -44,7 +44,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		}
 
 		logger.WithFields(map[string]interface{}{
-			"version": gitTag,
+			"version": version,
 			"commit":  gitCommit,
 			"destroy": destroy,
 			"verbose": verbose,
@@ -97,14 +97,16 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				cron.New(logger, "@every 30s"),
 			},
 			RootAssembler: orbiter.New(nil, nil, adapter.New(&model.Config{
-				Logger:           logger,
-				ConfigID:         configID,
-				OrbiterVersion:   gitTag,
-				NodeagentRepoURL: orb.URL,
-				NodeagentRepoKey: orb.Repokey,
-				CurrentFile:      currentFile,
-				SecretsFile:      secretsFile,
-				Masterkey:        orb.Masterkey,
+				Logger:             logger,
+				ConfigID:           configID,
+				OrbiterVersion:     version,
+				OrbiterCommit:      gitCommit,
+				NodeagentRepoURL:   orb.URL,
+				NodeagentRepoKey:   orb.Repokey,
+				CurrentFile:        currentFile,
+				SecretsFile:        secretsFile,
+				Masterkey:          orb.Masterkey,
+				ConnectFromOutside: !recur,
 			})),
 			BeforeIteration: before,
 		})

@@ -47,6 +47,13 @@ func (s *SystemD) Disable(binary string) error {
 	return nil
 }
 
+func (s *SystemD) Start(binary string) error {
+	var errBuf bytes.Buffer
+	cmd := exec.Command("systemctl", "restart", binary)
+	cmd.Stderr = &errBuf
+	return errors.Wrapf(cmd.Run(), "restarting %s from systemd failed with stderr %s", binary, errBuf.String())
+}
+
 func (s *SystemD) Enable(binary string) error {
 
 	var errBuf bytes.Buffer
@@ -67,15 +74,5 @@ func (s *SystemD) Enable(binary string) error {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "configuring systemd to manage %s failed with stderr %s", binary, errBuf.String())
-	}
-
-	errBuf.Reset()
-	cmd = exec.Command("systemctl", "restart", binary)
-	cmd.Stderr = &errBuf
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "restarting %s from systemd failed with stderr %s", binary, errBuf.String())
-	}
-	return nil
+	return errors.Wrapf(cmd.Run(), "configuring systemd to manage %s failed with stderr %s", binary, errBuf.String())
 }

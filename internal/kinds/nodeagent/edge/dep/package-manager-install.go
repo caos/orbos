@@ -33,7 +33,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		}
 		errBuf.Reset()
 
-		cmd = exec.Command("yum", "versionlock", "add", pkgs[idx])
+		cmd = exec.Command("yum", "versionlock", "add", "-y", pkgs[idx])
 		cmd.Stderr = &errBuf
 		if p.logger.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))

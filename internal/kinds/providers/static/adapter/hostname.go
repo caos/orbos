@@ -12,7 +12,7 @@ func desireHostname(poolsSpec map[string][]*model.Compute, mapNodeAgent func(cmp
 	return func(compute infra.Compute, pool string) error {
 		for _, computeSpec := range poolsSpec[pool] {
 			if computeSpec.ID == compute.ID() {
-				mapNodeAgent(compute).DesireSoftware(&operator.Software{
+				mapNodeAgent(compute).DesireSoftware(operator.Software{
 					Hostname: operator.Package{Config: map[string]string{"hostname": computeSpec.Hostname}},
 				})
 				return nil

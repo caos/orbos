@@ -19,28 +19,28 @@ func deriveTuplePacked(v0 Bin, v1 *string, v2 error) func() (Bin, *string, error
 }
 
 // deriveCurryDebug returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryDebug(f func(debug bool, gitCommit string, gitTag string, bin Bin) BuiltTuple) func(debug bool) func(gitCommit string, gitTag string, bin Bin) BuiltTuple {
-	return func(debug bool) func(gitCommit string, gitTag string, bin Bin) BuiltTuple {
-		return func(gitCommit string, gitTag string, bin Bin) BuiltTuple {
-			return f(debug, gitCommit, gitTag, bin)
+func deriveCurryDebug(f func(debug bool, gitCommit string, version string, bin Bin) BuiltTuple) func(debug bool) func(gitCommit string, version string, bin Bin) BuiltTuple {
+	return func(debug bool) func(gitCommit string, version string, bin Bin) BuiltTuple {
+		return func(gitCommit string, version string, bin Bin) BuiltTuple {
+			return f(debug, gitCommit, version, bin)
 		}
 	}
 }
 
 // deriveCurryCommit returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryCommit(f func(gitCommit string, gitTag string, bin Bin) BuiltTuple) func(gitCommit string) func(gitTag string, bin Bin) BuiltTuple {
-	return func(gitCommit string) func(gitTag string, bin Bin) BuiltTuple {
-		return func(gitTag string, bin Bin) BuiltTuple {
-			return f(gitCommit, gitTag, bin)
+func deriveCurryCommit(f func(gitCommit string, version string, bin Bin) BuiltTuple) func(gitCommit string) func(version string, bin Bin) BuiltTuple {
+	return func(gitCommit string) func(version string, bin Bin) BuiltTuple {
+		return func(version string, bin Bin) BuiltTuple {
+			return f(gitCommit, version, bin)
 		}
 	}
 }
 
 // deriveCurryTag returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryTag(f func(gitTag string, bin Bin) BuiltTuple) func(gitTag string) func(bin Bin) BuiltTuple {
-	return func(gitTag string) func(bin Bin) BuiltTuple {
+func deriveCurryTag(f func(version string, bin Bin) BuiltTuple) func(version string) func(bin Bin) BuiltTuple {
+	return func(version string) func(bin Bin) BuiltTuple {
 		return func(bin Bin) BuiltTuple {
-			return f(gitTag, bin)
+			return f(version, bin)
 		}
 	}
 }

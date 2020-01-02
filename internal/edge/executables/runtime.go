@@ -27,7 +27,7 @@ func Populate() {
 func PreBuilt(mainDir string) ([]byte, error) {
 	executable, ok := executables[mainDir]
 	if !ok {
-		return nil, errors.Errorf("%s was notnot prebuilt", mainDir)
+		return nil, errors.Errorf("%s was not prebuilt", mainDir)
 	}
 	return executable, nil
 }

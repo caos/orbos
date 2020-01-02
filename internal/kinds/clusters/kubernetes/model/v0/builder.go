@@ -69,7 +69,7 @@ func init() {
 							},
 						}
 					}
-					subassemblers[providerName] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providerlogger, providerID, lbs, nil, ""))
+					subassemblers[providerName] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providerlogger, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
 				case "orbiter.caos.ch/StaticProvider":
 					updatesDisabled := make([]string, 0)
 					for _, pool := range spec.Workers {

@@ -53,14 +53,16 @@ func init() {
 						Logger: cfg.Logger.WithFields(map[string]interface{}{
 							"cluster": clusterName,
 						}),
-						ID:               cfg.ConfigID + clusterName,
-						SelfAbsolutePath: path,
-						RepoURL:          cfg.NodeagentRepoURL,
-						RepoKey:          cfg.NodeagentRepoKey,
-						MasterKey:        cfg.Masterkey,
-						OrbiterVersion:   cfg.OrbiterVersion,
-						CurrentFile:      cfg.CurrentFile,
-						SecretsFile:      cfg.SecretsFile,
+						ID:                 cfg.ConfigID + clusterName,
+						SelfAbsolutePath:   path,
+						RepoURL:            cfg.NodeagentRepoURL,
+						RepoKey:            cfg.NodeagentRepoKey,
+						MasterKey:          cfg.Masterkey,
+						OrbiterVersion:     cfg.OrbiterVersion,
+						OrbiterCommit:      cfg.OrbiterCommit,
+						CurrentFile:        cfg.CurrentFile,
+						SecretsFile:        cfg.SecretsFile,
+						ConnectFromOutside: cfg.ConnectFromOutside,
 					}))
 				default:
 					return nil, fmt.Errorf("Unknown cluster kind %s", kindStr)

@@ -6,12 +6,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"sync"
 	"text/template"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
@@ -23,12 +21,13 @@ type Overwriter interface {
 }
 
 type Data struct {
-	VIPs       []model.VIP
-	RemoteUser string
-	State      string
-	RouterID   int
-	Self       infra.Compute
-	Peers      []infra.Compute
+	VIPs                 []model.VIP
+	RemoteUser           string
+	State                string
+	RouterID             int
+	Self                 infra.Compute
+	Peers                []infra.Compute
+	CustomMasterNotifyer bool
 }
 
 func New(remoteUser string) Builder {
@@ -80,7 +79,7 @@ func New(remoteUser string) Builder {
 			return &model.Current{
 				Addresses:   addresses,
 				SourcePools: sourcePools,
-				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent) error {
+				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent, customMasterNofifyer string) error {
 
 					vips, ok := spec[pool]
 					if !ok {
@@ -101,7 +100,8 @@ func New(remoteUser string) Builder {
 							Peers: deriveFilter(func(cmp infra.Compute) bool {
 								return cmp.ID() != compute.ID()
 							}, append([]infra.Compute(nil), []infra.Compute(computes)...)),
-							State: "BACKUP",
+							State:                "BACKUP",
+							CustomMasterNotifyer: customMasterNofifyer != "",
 						}
 						if idx == 0 {
 							computesData[idx].State = "MASTER"
@@ -144,9 +144,9 @@ vrrp_sync_group VG1 {
 
 vrrp_instance VI_{{ $idx }} {
     state {{ $root.State }}
-    unicast_src_ip {{ $root.Self.InternalIP }}
+    unicast_src_ip {{ $root.Self.IP }}
     unicast_peer {
-        {{ range $peer := $root.Peers }}{{ $peer.InternalIP }}
+        {{ range $peer := $root.Peers }}{{ $peer.IP }}
         {{ end }}    }
     interface eth0
     virtual_router_id {{ add 55 $idx }}
@@ -155,12 +155,15 @@ vrrp_instance VI_{{ $idx }} {
         auth_type PASS
         auth_pass [ REDACTED ]
     }
-    virtual_ipaddress {
-        {{ $vip.IP }}
-    }
     track_script {
         chk_{{ $vip.IP }}
     }
+
+{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ $vip.IP }}"
+{{ else }}	virtual_ipaddress {
+		{{ $vip.IP }}
+	}
+{{ end }}
 }
 {{ end }}
 `))
@@ -171,7 +174,7 @@ vrrp_instance VI_{{ $idx }} {
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
     upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
-        server {{ $compute.InternalIP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
+        server {{ $compute.IP }}:{{ if eq $src.Name  "kubeapi" }}6666{{ else }}{{ $dest.Port }}{{ end }}; # {{ $dest.Pool }}{{end}}{{ end }}
     }
     server {
         listen {{ $vip.IP }}:{{ $src.SourcePort }};
@@ -188,94 +191,70 @@ http {
         }
     }
 }
+
 `))
 
-					var wg sync.WaitGroup
-					synchronizer := helpers.NewSynchronizer(&wg)
-
 					for _, d := range computesData {
-						wg.Add(2)
 
-						parse(synchronizer, keepaliveDTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
-							pkg := operator.Package{Config: map[string]string{"keepalived.conf": result}}
-							if changesAllowed && !na.Software.KeepaliveD.Equals(&pkg) {
-								na.AllowChanges()
+						var kaBuf bytes.Buffer
+						na := nodeagent(d.Self)
+						if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
+							return err
+						}
+						kaPkg := operator.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+
+						if d.CustomMasterNotifyer {
+							kaPkg.Config["notifymaster.sh"] = customMasterNofifyer
+						}
+
+						if changesAllowed && !na.Software.KeepaliveD.Equals(kaPkg) {
+							na.AllowChanges()
+						}
+						for _, vip := range d.VIPs {
+							for _, transport := range vip.Transport {
+								for _, compute := range computes {
+									nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
+										fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): operator.Allowed{
+											Port:     fmt.Sprintf("%d", transport.SourcePort),
+											Protocol: "tcp",
+										},
+									})
+								}
 							}
-							for _, vip := range d.VIPs {
-								for _, transport := range vip.Transport {
-									for _, compute := range computes {
+						}
+						na.DesireSoftware(operator.Software{KeepaliveD: kaPkg})
+
+						var ngxBuf bytes.Buffer
+						if nginxTemplate.Execute(&ngxBuf, d); err != nil {
+							return err
+						}
+						ngxPkg := operator.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						if changesAllowed && !na.Software.Nginx.Equals(ngxPkg) {
+							na.AllowChanges()
+						}
+						for _, vip := range d.VIPs {
+							for _, transport := range vip.Transport {
+								for _, dest := range transport.Destinations {
+									destComputes, err := svc.List(dest.Pool, true)
+									if err != nil {
+										return err
+									}
+									for _, compute := range destComputes {
 										nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
-											fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): operator.Allowed{
-												Port:     fmt.Sprintf("%d", transport.SourcePort),
+											fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): operator.Allowed{
+												Port:     fmt.Sprintf("%d", dest.Port),
 												Protocol: "tcp",
 											},
 										})
 									}
 								}
 							}
-							na.DesireSoftware(&operator.Software{KeepaliveD: pkg})
-							return nil
-						})
-
-						parse(synchronizer, nginxTemplate, d, nodeagent(d.Self), func(result string, na *operator.NodeAgentCurrent) error {
-							pkg := operator.Package{Config: map[string]string{"nginx.conf": result}}
-							if changesAllowed && !na.Software.Nginx.Equals(&pkg) {
-								na.AllowChanges()
-							}
-							for _, vip := range d.VIPs {
-								for _, transport := range vip.Transport {
-									for _, dest := range transport.Destinations {
-										destComputes, err := svc.List(dest.Pool, true)
-										if err != nil {
-											return err
-										}
-										for _, compute := range destComputes {
-											nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
-												fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): operator.Allowed{
-													Port:     fmt.Sprintf("%d", dest.Port),
-													Protocol: "tcp",
-												},
-											})
-										}
-									}
-								}
-							}
-							na.DesireSoftware(&operator.Software{Nginx: pkg})
-							return nil
-						})
-					}
-
-					wg.Wait()
-
-					if synchronizer.IsError() {
-						return synchronizer
+						}
+						na.DesireSoftware(operator.Software{Nginx: ngxPkg})
 					}
 					return nil
 				},
 			}, nil
 		}), nil
 	})
-}
-
-func parse(synchronizer *helpers.Synchronizer, parsedTemplate *template.Template, computesData Data, na *operator.NodeAgentCurrent, then func(string, *operator.NodeAgentCurrent) error) {
-
-	var buf bytes.Buffer
-	err := parsedTemplate.Execute(&buf, computesData)
-	if err != nil {
-		synchronizer.Done(err)
-		return
-	}
-
-	synchronizer.Done(then(buf.String(), na))
-}
-
-func toChan(templates []*template.Template) <-chan *template.Template {
-	ch := make(chan *template.Template)
-	go func() {
-		for _, template := range templates {
-			ch <- template
-		}
-		close(ch)
-	}()
-	return ch
 }

@@ -8,14 +8,16 @@ type UserSpec struct {
 }
 
 type Config struct {
-	Logger           logging.Logger
-	ConfigID         string
-	OrbiterVersion    string
-	NodeagentRepoURL string
-	NodeagentRepoKey string
-	CurrentFile      string
-	SecretsFile      string
-	Masterkey        string
+	Logger             logging.Logger
+	ConfigID           string
+	OrbiterVersion     string
+	OrbiterCommit      string
+	NodeagentRepoURL   string
+	NodeagentRepoKey   string
+	CurrentFile        string
+	SecretsFile        string
+	Masterkey          string
+	ConnectFromOutside bool
 }
 
 type Current struct{}

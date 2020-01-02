@@ -8,7 +8,7 @@ import (
 var (
 	// Build arguments
 	gitCommit = "none"
-	gitTag    = "none"
+	version   = "none"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 	}()
 
 	rootCmd, rootValues := rootCommand()
-	rootCmd.Version = fmt.Sprintf("%s %s\n", gitTag, gitCommit)
+	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 	rootCmd.AddCommand(
 		takeoffCommand(rootValues),
 		readSecretCommand(rootValues),
