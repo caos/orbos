@@ -94,7 +94,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			SecretsFile: secretsFile,
 			Watchers: []operator.Watcher{
 				immediate.New(logger),
-				cron.New(logger, "@every 30s"),
+				cron.New(logger, "@every 10s"),
 			},
 			RootAssembler: orbiter.New(nil, nil, adapter.New(&model.Config{
 				Logger:             logger,

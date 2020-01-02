@@ -18,6 +18,10 @@ import (
 
 func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb, oneoff bool, secretsNamespace, orbiterversion string, boomversion string) error {
 
+	if orbiterversion == "" && boomversion == "" {
+		return nil
+	}
+
 	kc, err := secrets.Read(secretsNamespace + "_kubeconfig")
 	if err != nil {
 		return nil
@@ -73,6 +77,9 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		return err
 	}
 
+	l := logger.WithFields(map[string]interface{}{
+		"cluster": secretsNamespace,
+	})
 	if orbiterversion != "" {
 		if err := client.ApplyDeployment(&apps.Deployment{
 			ObjectMeta: mach.ObjectMeta{
@@ -131,6 +138,9 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		}); err != nil {
 			return err
 		}
+		l.WithFields(map[string]interface{}{
+			"version": orbiterversion,
+		}).Info("Ensured Orbiter deployment")
 		if oneoff {
 			os.Exit(0)
 		}
@@ -339,7 +349,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		return nil
 	}
 
-	return client.ApplyDeployment(&apps.Deployment{
+	err = client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom",
 			Namespace: "caos-system",
@@ -394,6 +404,12 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 			},
 		},
 	})
+	if err == nil {
+		l.WithFields(map[string]interface{}{
+			"version": boomversion,
+		}).Info("Ensured Boom deployment")
+	}
+	return err
 }
 
 func int32Ptr(i int32) *int32 { return &i }
