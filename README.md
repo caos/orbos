@@ -5,14 +5,31 @@
 
 > This project is in alpha state. The API will continue breaking until version 1.0.0 is released
 
-Orbiter boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
+## What is it
 
-## The name
+`orbiter` boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
 
-Wikipedia defines a `orbiter` as follows `An object that orbits another, especially a spacecraft that orbits a planet etc. without landing on it.`
-We think this definition is greatly applicable to a tool, that manages clustered software from afar, whithout directly touching it.
+It is important to mention that the focus of `orbiter` applies not to bootstrap a cluster but instead to focus on the lifecycle part. In our opinion optimization and automation in the "day2" operations can gain more for a business.
 
-## Bootstrap a new static cluster on firecracker VMs using ignite
+## How does it work
+
+An Orbiter instance runs in a Kubernetes Pod managing n configured clusters, typically including the one it is running in. It scales the clusters nodes and instructs Node Agents over the kube-apiserver which software to install on the node they run on. The Node Agents run as native system processes which are managed by systemd.
+
+For more details, take a look at the [design docs](./docs/design.md).
+
+## Why another cluster manager
+
+We observe a universal trend of increasing system distribution. Key drivers are cloud native engineering, microservices architectures, global competition among hyperscalers and so on.
+
+We embrace this trend but counteract its biggest downside, the associated increase of complexity in managing all these distributed systems. Our goal is to enable players of any size to run clusters of any type using infrastructure from any provider. Orbiter is a tool to do this in a reliable, secure, auditable, cost efficient way, preventing vendor lock-in, monoliths consisting of microservices and human failure doing repetitive tasks.
+
+What makes Orbiter special is that it ships with a nice **Launchpad UI** providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting day two operations, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. All managed software can be configured to be **self updating** according to special policies, including Orbiter itself. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given tool can eventually run on any desired provider.
+
+## How to use it
+
+In the following example we will create a `kubernetes` cluster on a "static provider". A "static provider" is a provider which has no or little API for automation, e.g legacy VM's or Bare Metal scenarios.
+
+### Bootstrap a new static cluster on firecracker VMs using ignite
 
 Create a new repository (e.g. git@github.com:caos/orbiter-tmp.git), clone it and change directory to its root and export according environment variables.
 
@@ -96,96 +113,29 @@ Cleanup your environment
 sudo ignite rm -f $(sudo ignite ps -aq)
 ```
 
-## Why another cluster manager
+## Supported Clusters
 
-We observe a universal trend of increasing system distribution. Key drivers are cloud native engineering, microservices architectures, global competition among hyperscalers and so on.
-
-We embrace this trend but counteract its biggest downside, the associated increase of complexity in managing all these distributed systems. Our goal is to enable players of any size to run clusters of any type using infrastructure from any provider. Orbiter is a tool to do this in a reliable, secure, auditable, cost efficient way, preventing vendor lock-in, monoliths consisting of microservices and human failure doing repetitive tasks.
-
-What makes Orbiter special is that it ships with a nice **Launchpad UI** providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting day two operations, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. All managed software can be configured to be **self updating** according to special policies, including Orbiter itself. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given tool can eventually run on any desired provider.
-
-## Supported cluster
-
-- Kubernetes (vanilla)
-
-### More clusterd software to come
-
-- Other cluster managers
-  - Nomad
-  - Mesos
-- Databases
-  - etcd
-  - CockroachDB
-- Message Brokers
-  - Kafka
-  - RabbitMQ
-  - NATS
-
-If you desire an explicit implementation, file an issue. Also, pull requests are welcome and appreciated.
+See [Clusters](./docs/clusters.md) for details.
 
 ## Supported providers
 
-- Google Compute Engine
-- Static provider (orbiter only manages clusters, infrastructure is already existing and managed manually)
-
-### More providers to come
-
-- Hyperscalers
-  - Amazon Web Services
-  - Alibaba Cloud
-  - Microsoft Azure
-- Virtualization software
-  - VMWare
-  - KubeVirt
-  - Ignite
-- Bare Metal
-  - PXE Boot
-
-If you desire an explicit implementation, file an issue. Also, pull requests are welcome and appreciated.
-
-## How does it work
-
-An Orbiter instance runs in a Kubernetes Pod managing n configured clusters, typically including the one it is running in. It scales the clusters nodes and instructs Node Agents over the kube-apiserver which software to install on the node they run on. The Node Agents run as native system processes which are managed by systemd.
-
-For more details, take a look at the [technical docs](./docs/README.md).
+See [Clusters](./docs/clusters.md) for details.
 
 ## How to develop
 
-Configure your tooling to use certain environment variables. E.g. in VSCode, add the following to your settings.json.
-
-```json
-{
-    "go.testEnvVars": {
-        "MODE": "DEBUG",
-        "ORBITER_ROOT": "/home/elio/Code/src/github.com/caos/orbiter"
-    },
-    "go.testTimeout": "40m",
-}
-```
-
-Run the tests you find in internal/kinds/clusters/kubernetes/test/kubernetes_test.go in debug mode
-
-For debugging node agents, use a configuration similar to the following VSCode launch.json, adjusting the host IP
-
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "name": "nodeagent",
-            "type": "go",
-            "request": "attach",
-            "apiVersion": 2,
-            "mode": "remote",
-            "port": 5000,
-            "host": "10.61.0.127"
-        },
-    ]
-}
-```
+See [develop](./docs/develop.md) for details
 
 ## License
 
 The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using Orbiter for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
 
 See the exact licensing terms [here](./LICENSE)
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+## Inspiration
+
+### Name
+
+Wikipedia defines a `orbiter` as follows `An object that orbits another, especially a spacecraft that orbits a planet etc. without landing on it.`
+We think this definition is greatly applicable to a tool, that manages clustered software from afar, whithout directly touching it.
