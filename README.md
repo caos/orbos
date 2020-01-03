@@ -1,4 +1,4 @@
-# Orbiter the Meta Cluster Manager
+# Orbiter the meta cluster manager
 
 ![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)
 ![Github Release Badge](https://github.com/caos/orbiter/workflows/Release/badge.svg)
@@ -27,7 +27,7 @@ What makes Orbiter special is that it ships with a nice **Launchpad UI** providi
 
 ## How to use it
 
-In the following example we will create a `kubernetes` cluster on a "static provider". A "static provider" is a provider which has no or little API for automation, e.g legacy VM's or Bare Metal scenarios.
+In the following example we will create a `kubernetes` cluster on a `static provider`. A `static provider` is a provider, which has no or little API for automation, e.g legacy VM's or Bare Metal scenarios.
 
 ### Bootstrap a new static cluster on firecracker VMs using ignite
 
