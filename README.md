@@ -9,13 +9,11 @@
 
 ## What is it
 
-`Orbiter` boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
-
-It is important to mention that the focus of `Orbiter` applies not only to bootstrap a cluster but instead to focus on the lifecycle part. In our opinion, optimization and automation in the `day two` operations can gain more for a business.
+`Orbiter` boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers. Its focus is laid on automating away all `day two` operations, as we consider them to have much bigger impacts than `day one` operations from a business perspective.
 
 ## How does it work
 
-An Orbiter instance runs in a Kubernetes Pod managing the configured cluster(s), typically including the one it is running in. It scales the clusters nodes and instructs `Node Agents` over the Git Repo which software to install on the node they run on. The `Node Agents` run as native system processes which are managed by `systemd`.
+An Orbiter instance runs as a Kubernetes Pod managing the configured clusters (i.e. an Orb), typically including the one it is running on. It scales the clusters nodes and has `Node Agents` install software packages on their operating systems. `Node Agents` run as native system processes managed by `systemd`. An Orbs Git repository is the only source of truth for desired state. Also, the current Orbs state is continously pushed to its Git repository, so not only changes to the desired state is always tracked but also the most important changes to the actual systems state.
 
 For more details, take a look at the [design docs](./docs/design.md).
 
@@ -25,7 +23,7 @@ We observe a universal trend of increasing system distribution. Key drivers are 
 
 We embrace this trend but counteract its biggest downside, the associated increase of complexity in managing all these distributed systems. Our goal is to enable players of any size to run clusters of any type using infrastructure from any provider. Orbiter is a tool to do this in a reliable, secure, auditable, cost efficient way, preventing vendor lock-in, monoliths consisting of microservices and human failure doing repetitive tasks.
 
-What makes Orbiter special is that it ships with a nice **Mission Control UI** (currently in closed alpha) providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting `day two operations`, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. All managed software can be configured to be **self updating** according to special policies, including Orbiter itself. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given tool can eventually run on any desired provider.
+What makes Orbiter special is that it ships with a nice **Mission Control UI** (currently in closed alpha) providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting `day two operations`, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given cluster type can eventually run on any desired provider.
 
 ## How to use it
 
@@ -108,11 +106,11 @@ See [Clusters](./docs/clusters.md) for details.
 
 ## Supported providers
 
-See [Clusters](./docs/clusters.md) for details.
+See [Providers](./docs/providers.md) for details.
 
-## How to develop
+## How to contribute
 
-See [develop](./docs/develop.md) for details
+See [contribute](./docs/contribute.md) for details
 
 ## License
 
@@ -121,10 +119,3 @@ The full functionality of the operator is and stays open source and free to use 
 See the exact licensing terms [here](./LICENSE)
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
-
-## Inspiration
-
-### Name
-
-Wikipedia defines a `orbiter` as follows `An object that orbits another, especially a spacecraft that orbits a planet etc. without landing on it.`
-We think this definition is greatly applicable to a tool, that manages clustered software from afar, whithout directly touching it.
