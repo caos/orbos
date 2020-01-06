@@ -1,11 +1,10 @@
-# Providers
-
-## Supported providers
+# Supported providers
 
 - Google Compute Engine
-- Static provider (orbiter only manages clusters, infrastructure is already existing and managed manually)
+- Static provider
+  - orbiter only manages clusters, infrastructure is already existing and managed manually
 
-### More providers to come
+## More providers to come
 
 - Hyperscalers
   - Amazon Web Services

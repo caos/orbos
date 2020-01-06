@@ -1,10 +1,8 @@
-# Clusters
+# Supported cluster
 
-## Supported cluster
+- Kubernetes with kubeadm
 
-- Kubernetes (vanilla)
-
-### More clusterd software to come
+## More possible use-cases
 
 - Other cluster managers
   - Nomad

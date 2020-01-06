@@ -7,13 +7,13 @@
 
 ## What is it
 
-`orbiter` boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
+`Orbiter` boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers.
 
-It is important to mention that the focus of `orbiter` applies not to bootstrap a cluster but instead to focus on the lifecycle part. In our opinion optimization and automation in the "day2" operations can gain more for a business.
+It is important to mention that the focus of `Orbiter` applies not only to bootstrap a cluster but instead to focus on the lifecycle part. In our opinion, optimization and automation in the `day two` operations can gain more for a business.
 
 ## How does it work
 
-An Orbiter instance runs in a Kubernetes Pod managing n configured clusters, typically including the one it is running in. It scales the clusters nodes and instructs Node Agents over the kube-apiserver which software to install on the node they run on. The Node Agents run as native system processes which are managed by systemd.
+An Orbiter instance runs in a Kubernetes Pod managing the configured cluster(s), typically including the one it is running in. It scales the clusters nodes and instructs `Node Agents` over the Git Repo which software to install on the node they run on. The `Node Agents` run as native system processes which are managed by `systemd`.
 
 For more details, take a look at the [design docs](./docs/design.md).
 
@@ -23,7 +23,7 @@ We observe a universal trend of increasing system distribution. Key drivers are 
 
 We embrace this trend but counteract its biggest downside, the associated increase of complexity in managing all these distributed systems. Our goal is to enable players of any size to run clusters of any type using infrastructure from any provider. Orbiter is a tool to do this in a reliable, secure, auditable, cost efficient way, preventing vendor lock-in, monoliths consisting of microservices and human failure doing repetitive tasks.
 
-What makes Orbiter special is that it ships with a nice **Launchpad UI** providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting day two operations, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. All managed software can be configured to be **self updating** according to special policies, including Orbiter itself. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given tool can eventually run on any desired provider.
+What makes Orbiter special is that it ships with a nice **Mission Control UI** providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting `day two operations`, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. All managed software can be configured to be **self updating** according to special policies, including Orbiter itself. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given tool can eventually run on any desired provider.
 
 ## How to use it
 
