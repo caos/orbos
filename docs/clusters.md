@@ -1,8 +1,8 @@
-# Supported cluster
+# Supported Cluster
 
 - Kubernetes with kubeadm
 
-## More possible use-cases
+## More Possible Use Cases
 
 - Other cluster managers
   - Nomad
