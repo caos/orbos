@@ -3,6 +3,7 @@
 package operator
 
 import (
+	"regexp"
 	"sync"
 
 	"github.com/mitchellh/mapstructure"
@@ -36,18 +37,66 @@ type Package struct {
 	Config  map[string]string `yaml:",omitempty"`
 }
 
-func (p *Package) Equals(other *Package) bool {
-	return deriveEqualPkg(p, other)
+var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
+
+func configEquals(this, that map[string]string) bool {
+	if this == nil || that == nil {
+		equal := this == nil && that == nil
+		return equal
+	}
+	if len(this) != len(that) {
+		return false
+	}
+	for k, v := range this {
+		thatv, ok := that[k]
+		if !ok {
+			return false
+		}
+
+		if prune.ReplaceAllString(v, "") != prune.ReplaceAllString(thatv, "") {
+			return false
+		}
+	}
+	return true
 }
 
-func (s *Software) Equals(other *Software) bool {
-	return deriveEqualSoftware(s, other)
+func packageEquals(this, that Package) bool {
+	return this.Version == that.Version &&
+		configEquals(this.Config, that.Config)
+}
+
+func contains(this, that Package) bool {
+	return that.Version == "" && that.Config == nil || packageEquals(this, that)
+}
+
+func (p Package) Equals(other Package) bool {
+	return packageEquals(p, other)
+}
+
+func (this *Software) Contains(that Software) bool {
+	return contains(this.Swap, that.Swap) &&
+		contains(this.Kubelet, that.Kubelet) &&
+		contains(this.Kubeadm, that.Kubeadm) &&
+		contains(this.Kubectl, that.Kubectl) &&
+		contains(this.Containerruntime, that.Containerruntime) &&
+		contains(this.KeepaliveD, that.KeepaliveD) &&
+		contains(this.Nginx, that.Nginx) &&
+		contains(this.Hostname, that.Hostname)
 }
 
 type Firewall map[string]Allowed
 
-func (f Firewall) Equals(other Firewall) bool {
-	return deriveEqualFirewall(f, other)
+func (f Firewall) Contains(other Firewall) bool {
+	for name, port := range other {
+		found, ok := f[name]
+		if !ok {
+			return false
+		}
+		if !deriveEqualPort(port, found) {
+			return false
+		}
+	}
+	return true
 }
 
 type Allowed struct {
@@ -70,17 +119,22 @@ func (n *NodeAgentCurrent) AllowChanges() {
 
 func (n *NodeAgentCurrent) DesireFirewall(fw Firewall) {
 	n.changer.desire(func(spec *NodeAgentSpec) {
-		spec.Firewall = fw
+		if spec.Firewall == nil {
+			spec.Firewall = make(map[string]Allowed)
+		}
+		for key, value := range fw {
+			spec.Firewall[key] = value
+		}
 	})
 }
 
-func (n *NodeAgentCurrent) DesireSoftware(sw *Software) {
+func (n *NodeAgentCurrent) DesireSoftware(sw Software) {
 	n.changer.desire(func(spec *NodeAgentSpec) {
-		if spec.Software == nil && sw != nil {
+		if spec.Software == nil {
 			spec.Software = &Software{}
 		}
 
-		zeroPkg := &Package{}
+		zeroPkg := Package{}
 
 		if !sw.Containerruntime.Equals(zeroPkg) {
 			spec.Software.Containerruntime = sw.Containerruntime
@@ -170,7 +224,7 @@ func newNodeAgentCurrent(logger logging.Logger, path []string, nodeAgentSource m
 	}
 
 	switch kind.Current.Version {
-	case "v1":
+	case "v0":
 		kind.Current.State.changer = changer
 		return kind.Current.State
 	default:

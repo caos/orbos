@@ -8,14 +8,16 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/caos/orbiter/internal/edge/executables"
 )
 
 func main() {
 
-	tag := flag.String("tag", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	version := flag.String("version", "none", "Path to the git repositorys path to the file containing orbiters current state")
 	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 
 	flag.Parse()
@@ -30,24 +32,72 @@ func main() {
 
 	_, selfPath, _, _ := runtime.Caller(0)
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
-
 	path := curryJoinPath(cmdPath)
 
 	if err := executables.PreBuild(executables.Build(
-		*debug, *commit, *tag,
-		path("nodeagent"),
-		path("health"),
+		*debug, *commit, *version,
+		executables.Bin{MainDir: path("nodeagent")},
+		executables.Bin{MainDir: path("health")},
 	)); err != nil {
 		panic(err)
 	}
+
+	if *orbctldir == "" {
+		return
+	}
+
+	// Use all available CPUs from now on
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	orbctlMain := path("orbctl")
+	orbctls := executables.Build(*debug, *commit, *version,
+		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
+	)
+
+	var hasErr bool
+	for orbctl := range orbctls {
+		bin, err := orbctl()
+		if err != nil {
+			hasErr = true
+			fmt.Printf("Building %s failed\n", bin.OutDir)
+			continue
+		}
+		fmt.Printf("Successfully built %s\n", bin.OutDir)
+	}
+	if hasErr {
+		panic("Building orbctl failed")
+	}
 }
 
-func joinPath(cmdPath string, dir string) string {
-	return filepath.Join(cmdPath, dir)
+func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
+
+	arch := "x86_64"
+	os := strings.ToUpper(goos[0:1]) + goos[1:]
+	switch goos {
+	case "freebsd":
+		os = "FreeBSD"
+	case "openbsd":
+		os = "OpenBSD"
+	}
+
+	outdir := filepath.Join(outPath, fmt.Sprintf("orbctl-%s-%s", os, arch))
+	if goos == "windows" {
+		outdir += ".exe"
+	}
+
+	return executables.Bin{
+		MainDir: mainPath,
+		OutDir:  outdir,
+		Env:     map[string]string{"GOOS": goos, "GOARCH": goarch},
+	}
 }
 
 func curryJoinPath(cmdPath string) func(dir string) string {
 	return func(dir string) string {
-		return joinPath(cmdPath, dir)
+		return filepath.Join(cmdPath, dir)
 	}
 }

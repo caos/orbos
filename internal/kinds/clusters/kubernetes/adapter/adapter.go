@@ -2,7 +2,6 @@ package adapter
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/pkg/errors"
 
@@ -45,16 +44,13 @@ func New(params model.Parameters) Builder {
 
 			cloudPools := make(map[string]map[string]infra.Pool)
 			providersCleanupped := make([]<-chan error, 0)
-			var kubeAPIAddress string
+			var kubeAPIAddress infra.Address
 
 			for providerName, provider := range ensuredDependencies {
 				if cloudPools[providerName] == nil {
 					cloudPools[providerName] = make(map[string]infra.Pool)
 				}
-				prov, ok := provider.(infra.ProviderCurrent)
-				if !ok {
-					return curr, errors.New("dependency is not of type infra.ProviderCurrent")
-				}
+				prov := provider.(infra.ProviderCurrent)
 				providerPools := prov.Pools()
 				providerIngresses := prov.Ingresses()
 				providerCleanupped := prov.Cleanupped()
@@ -62,10 +58,7 @@ func New(params model.Parameters) Builder {
 				for providerPoolName, providerPool := range providerPools {
 					cloudPools[providerName][providerPoolName] = providerPool
 					if spec.ControlPlane.Provider == providerName && spec.ControlPlane.Pool == providerPoolName {
-						kubeAPIAddress, ok = providerIngresses["kubeapi"]
-						if !ok && !spec.Destroyed {
-							return curr, errors.Errorf("%s does not provide a loadbalancer named kubeapi", providerName)
-						}
+						kubeAPIAddress = providerIngresses["kubeapi"]
 						cfg.Params.Logger.WithFields(map[string]interface{}{
 							"address": kubeAPIAddress,
 						}).Debug("Found kubernetes api address")
@@ -84,23 +77,12 @@ func New(params model.Parameters) Builder {
 			}
 
 			k8sClient := k8s.New(cfg.Params.Logger, nil)
-			kubeconfig, err := ensureCluster(&cfg, curr, cloudPools, kubeAPIAddress, secrets, k8sClient)
-			if err != nil {
+			if err := ensureCluster(&cfg, curr, cloudPools, kubeAPIAddress, secrets, k8sClient); err != nil {
 				return curr, errors.Wrap(err, "ensuring cluster failed")
 			}
 
 			if spec.Destroyed {
 				return nil, infra.Destroy(ensuredDependencies)
-			}
-
-			if kubeconfig != nil {
-				fmt.Println()
-				fmt.Println()
-				fmt.Println("# Copy the following and paste it into your terminal, hit enter and enjoy.")
-				fmt.Println()
-				fmt.Printf("mkdir -p ~/.kube && git pull && docker run --rm --user $(id -u):$(id -g) --volume $(pwd):/secrets --volume /etc/orbiter:/etc/orbiter:ro --workdir /secrets --interactive docker.pkg.github.com/caos/orbiter/orbiter:%s --readsecret %s_kubeconfig > ~/.kube/config && kubectl get pods --all-namespaces --watch\n", cfg.Spec.Versions.Orbiter, cfg.Params.ID)
-				fmt.Println()
-				fmt.Println()
 			}
 
 			for _, cleanupped := range providersCleanupped {

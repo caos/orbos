@@ -18,10 +18,16 @@ import (
 
 var executables map[string][]byte
 
+var populate = func() {}
+
+func Populate() {
+	populate()
+}
+
 func PreBuilt(mainDir string) ([]byte, error) {
 	executable, ok := executables[mainDir]
 	if !ok {
-		return nil, errors.Errorf("%s was notnot prebuilt", mainDir)
+		return nil, errors.Errorf("%s was not prebuilt", mainDir)
 	}
 	return executable, nil
 }
@@ -44,22 +50,22 @@ func PreBuild(builds <-chan BuiltTuple) (err error) {
 	if _, err = prebuilt.WriteString(`package executables
 
 func init() {
-	executables = map[string][]byte{`); err != nil {
+	populate = func(){
+		executables = map[string][]byte{`); err != nil {
 		return err
 	}
 
 	for pt := range deriveFmapPack(pack, builds) {
-		mainDir, packed, packErr := pt()
+		bin, packed, packErr := pt()
 		err = helpers.Concat(err, packErr)
 		if err != nil {
 			continue
 		}
 
 		if _, err = prebuilt.WriteString(fmt.Sprintf(`
-		"%s": unpack("%s"),`, filepath.Base(mainDir), *packed)); err != nil {
+		"%s": unpack("%s"),`, filepath.Base(bin.MainDir), *packed)); err != nil {
 			continue
 		}
-
 	}
 
 	if err != nil {
@@ -68,25 +74,35 @@ func init() {
 	}
 
 	_, err = prebuilt.WriteString(`
+		}
 	}
 }
 `)
 	return err
 }
 
-func packedTupleFunc(mainDir string) func(*string, error) packedTuple {
+func packedTupleFunc(bin Bin) func(*string, error) packedTuple {
 	return func(packed *string, err error) packedTuple {
-		return deriveTuplePacked(mainDir, packed, err)
+		return deriveTuplePacked(bin, packed, err)
 	}
 }
 
-type packedTuple func() (string, *string, error)
+type packedTuple func() (Bin, *string, error)
 
 func pack(built BuiltTuple) packedTuple {
 
-	mainDir, executable, close, err := built()
-	defer close()
-	packedTuple := packedTupleFunc(mainDir)
+	bin, err := built()
+	packedTuple := packedTupleFunc(bin)
+
+	defer func() {
+		os.Remove(bin.OutDir)
+	}()
+
+	if err != nil {
+		return packedTuple(nil, err)
+	}
+
+	executable, err := os.Open(bin.OutDir)
 	if err != nil {
 		return packedTuple(nil, err)
 	}

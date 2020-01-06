@@ -206,7 +206,7 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 			return errors.Wrapf(err, "navigating to assembler %s's node agent current at %v in the remote yaml in order to restore it failed", tree.node, nodeAgentCurrentPath)
 		}
 		nodeAgent["kind"] = "nodeagent.caos.ch/NodeAgent"
-		nodeAgent["version"] = "v1"
+		nodeAgent["version"] = "v0"
 		nodeAgent["spec"] = newNodeAgent.spec
 		nodeAgent["current"] = nodeAgentCurrent["current"]
 

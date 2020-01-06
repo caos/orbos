@@ -9,12 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/k8s"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/logging"
 )
 
 type Installer interface {
@@ -52,18 +52,9 @@ func (k *kubeletDep) Current() (operator.Package, error) {
 }
 
 func (k *kubeletDep) Ensure(remove operator.Package, install operator.Package) (bool, error) {
-	// TODO: Idempotency: defer uninstall command if an error occurs
-
-	if err := k.common.Ensure(remove, install); err != nil {
-		return false, err
-	}
-
-	if err := k.systemd.Enable("kubelet"); err != nil {
-		return false, err
-	}
 
 	if k.os != dep.CentOS {
-		return false, nil
+		return false, k.ensurePackage(remove, install)
 	}
 
 	var errBuf bytes.Buffer
@@ -124,14 +115,18 @@ net.bridge.bridge-nf-call-iptables = 1
 	if err := cmd.Run(); err != nil {
 		return false, errors.Wrapf(err, "running sysctl --system in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed with stderr %s", errBuf.String())
 	}
-	errBuf.Reset()
 
-	cmd = exec.Command("bash", "-c", "echo 1 > /proc/sys/net/ipv4/ip_forward")
-	cmd.Stderr = &errBuf
-	if k.logger.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
+	return false, k.ensurePackage(remove, install)
+}
+
+func (k *kubeletDep) ensurePackage(remove operator.Package, install operator.Package) error {
+	if err := k.common.Ensure(remove, install); err != nil {
+		return err
 	}
 
-	return false, errors.Wrapf(cmd.Run(), "enabling ip forwarding by writing 1 to /proc/sys/net/ipv4/ip_forward failed with stderr %s", errBuf.String())
+	if err := k.systemd.Enable("kubelet"); err != nil {
+		return err
+	}
+
+	return k.systemd.Start("kubelet")
 }

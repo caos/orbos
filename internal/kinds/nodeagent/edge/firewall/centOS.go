@@ -9,9 +9,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/logging"
 )
 
 func centosEnsurer(logger logging.Logger) adapter.FirewallEnsurer {
@@ -22,7 +22,35 @@ func centosEnsurer(logger logging.Logger) adapter.FirewallEnsurer {
 			errBuf bytes.Buffer
 		)
 
-		cmd := exec.Command("firewall-cmd", "--list-ports")
+		errBuf.Reset()
+		cmd := exec.Command("systemctl", "enable", "firewalld")
+		cmd.Stderr = &errBuf
+
+		fullCmd := strings.Join(cmd.Args, " ")
+		if logger.IsVerbose() {
+			fmt.Println(fullCmd)
+			cmd.Stdout = os.Stdout
+		}
+
+		if err := cmd.Run(); err != nil {
+			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+		}
+
+		errBuf.Reset()
+		cmd = exec.Command("systemctl", "start", "firewalld")
+		cmd.Stderr = &errBuf
+
+		fullCmd = strings.Join(cmd.Args, " ")
+		if logger.IsVerbose() {
+			fmt.Println(fullCmd)
+			cmd.Stdout = os.Stdout
+		}
+
+		if err := cmd.Run(); err != nil {
+			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+		}
+
+		cmd = exec.Command("firewall-cmd", "--list-ports")
 		cmd.Stderr = &errBuf
 		cmd.Stdout = &outBuf
 

@@ -1,9 +1,12 @@
 kind: orbiter.caos.ch/Orbiter
-version: v1
+version: v0
+spec:
+  orbiter: v0.4.1
+  boom: v0.2.14
 deps:
   t01:
     kind: orbiter.caos.ch/KubernetesCluster
-    version: v1
+    version: v0
     spec:
       versions:
         kubernetes: v1.17.0
@@ -28,7 +31,7 @@ deps:
     deps:
       dc1:
         kind: orbiter.caos.ch/StaticProvider
-        version: v1
+        version: v0
         spec:
           remoteuser: orbiter
           remotePublicKeyPath: /home/orbiter/.ssh/authorized_keys
@@ -62,36 +65,39 @@ deps:
         deps:
           dynamic:
             kind: orbiter.caos.ch/DynamicLoadBalancer
-            version: v1
+            version: v0
             spec:
               masters:
               - ip: "10.73.244.69"
                 transport:
-                - name: kubelet
-                  sourcePort: 10248
-                  healthchecks:
-                    protocol: http
-                    path: /healthz
-                    code: 200
                 - name: kubeapi
                   sourcePort: 6443
-                  healthchecks:
-                    protocol: https
-                    path: /healthz
-                    code: 200
+                  destinations:
+                  - pool: masters
+                    port: 6443
+                    healthchecks:
+                      code: 200
+                      path: /healthz
+                      protocol: https                    
               workers:
               - ip: "10.73.244.70"
                 transport:
                 - name: httpsingress
                   sourcePort: 443
-                  healthchecks:
-                    protocol: https
-                    path: /healthz
-                    code: 200
+                  destinations:
+                  - pool: workers
+                    port: 30443
+                    healthchecks:
+                      code: 200
+                      path: /ambassador/v0/check_ready
+                      protocol: https
                 - name: httpingress
                   sourcePort: 80
-                  healthchecks:
-                    protocol: http
-                    path: /healthz
-                    code: 200
+                  destinations:
+                  - pool: workers
+                    port: 30080
+                    healthchecks:
+                      code: 200
+                      path: /ambassador/v0/check_ready
+                      protocol: http
 

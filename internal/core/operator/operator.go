@@ -5,24 +5,24 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/logging"
 )
 
 type Arguments struct {
-	Ctx           context.Context
-	Logger        logging.Logger
-	MasterKey     string
-	RepoURL       string
-	DesiredFile   string
-	CurrentFile   string
-	SecretsFile   string
-	DeploymentKey string
-	RepoCommitter string
-	RootAssembler Assembler
-	Watchers      []Watcher
-	Stop          chan struct{}
+	Ctx             context.Context
+	Logger          logging.Logger
+	GitClient       *git.Client
+	MasterKey       string
+	DesiredFile     string
+	CurrentFile     string
+	SecretsFile     string
+	RootAssembler   Assembler
+	Watchers        []Watcher
+	Stop            chan struct{}
+	BeforeIteration func(desired []byte, secrets *Secrets) error
 }
 
 type Watcher interface {
@@ -31,7 +31,6 @@ type Watcher interface {
 
 type Iterator struct {
 	args          *Arguments
-	git           *git.Client
 	fired         chan struct{}
 	latestCurrent []byte
 	secrets       map[string]interface{}
@@ -39,9 +38,9 @@ type Iterator struct {
 
 func New(args *Arguments) *Iterator {
 	return &Iterator{
-		args:  args,
-		fired: make(chan struct{}),
-		git:   nil,
+		args:    args,
+		fired:   make(chan struct{}),
+		secrets: make(map[string]interface{}),
 	}
 }
 
@@ -52,12 +51,6 @@ type IterationDone struct {
 }
 
 func (i *Iterator) Initialize() error {
-
-	i.git = git.New(i.args.Ctx, i.args.Logger, i.args.RepoCommitter, i.args.RepoURL)
-
-	if err := i.git.Init([]byte(i.args.DeploymentKey)); err != nil {
-		return errors.Wrap(err, "initializing git failed")
-	}
 
 	for _, watcher := range i.args.Watchers {
 		if err := watcher.Watch(i.fired); err != nil {
@@ -95,31 +88,33 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		}).Info("Iteration done")
 	}()
 
-	if err := i.git.Clone(); err != nil {
+	if err := i.args.GitClient.Clone(); err != nil {
 		return &IterationDone{Error: errors.Wrap(err, "pulling repository before iterating failed")}
 	}
 
-	current, err := i.git.Read(i.args.CurrentFile)
+	desiredBytes := make([]byte, 0)
+	if i.args.DesiredFile != "" {
+		var err error
+		desiredBytes, err = i.args.GitClient.Read(i.args.DesiredFile)
+		if err != nil {
+			return &IterationDone{Error: err}
+		}
+	}
+
+	secretsBytes, err := i.args.GitClient.Read(i.args.SecretsFile)
 	if err != nil {
 		return &IterationDone{Error: err}
 	}
 
-	i.secrets, err = i.git.Read(i.args.SecretsFile)
-	if err != nil {
+	if err := yaml.Unmarshal(secretsBytes, &i.secrets); err != nil {
 		return &IterationDone{Error: err}
 	}
 
-	rootPath, _ := i.args.RootAssembler.BuildContext()
-	workDesired, workCurrent, err := toNestedRoot(i.args.Logger, i.git, rootPath, i.args.DesiredFile, current)
-	if err != nil {
-		return &IterationDone{Error: errors.Wrap(err, "navigating to nested root failed")}
-	}
-
-	curriedSecrets := currySecrets(i.args.Logger, func(newSecrets []byte) error {
-		_, err := i.git.UpdateRemoteUntilItWorks(&git.File{
+	curriedSecrets := currySecrets(i.args.Logger, func(newSecrets map[string]interface{}) error {
+		_, err := i.args.GitClient.UpdateRemoteUntilItWorks(&git.File{
 			Path: i.args.SecretsFile,
-			Overwrite: func(map[string]interface{}) ([]byte, error) {
-				return newSecrets, nil
+			Overwrite: func([]byte) ([]byte, error) {
+				return Marshal(newSecrets)
 			},
 			Force: true,
 		})
@@ -127,6 +122,34 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 	}, i.secrets, i.args.MasterKey)
 
 	secrets := &Secrets{curriedSecrets.read, curriedSecrets.write, curriedSecrets.delete}
+
+	if i.args.BeforeIteration != nil {
+		if err := i.args.BeforeIteration(desiredBytes, secrets); err != nil {
+			return &IterationDone{Error: err}
+		}
+	}
+
+	currentBytes, err := i.args.GitClient.Read(i.args.CurrentFile)
+	if err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	desired := make(map[string]interface{})
+	current := make(map[string]interface{})
+
+	if err := yaml.Unmarshal(desiredBytes, &desired); err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	if err := yaml.Unmarshal(currentBytes, &current); err != nil {
+		return &IterationDone{Error: err}
+	}
+
+	rootPath, _ := i.args.RootAssembler.BuildContext()
+	workDesired, workCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, desired, current)
+	if err != nil {
+		return &IterationDone{Error: errors.Wrap(err, "navigating to nested root failed")}
+	}
 
 	select {
 	case <-i.args.Ctx.Done():
@@ -144,9 +167,15 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 		return &IterationDone{Error: err}
 	}
 
-	i.latestCurrent, err = i.git.UpdateRemoteUntilItWorks(
-		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent map[string]interface{}) ([]byte, error) {
-			_, reloadedWorkCurrent, err := toNestedRoot(i.args.Logger, i.git, rootPath, i.args.DesiredFile, reloadedCurrent)
+	i.latestCurrent, err = i.args.GitClient.UpdateRemoteUntilItWorks(
+		&git.File{Path: i.args.CurrentFile, Overwrite: func(reloadedCurrent []byte) ([]byte, error) {
+
+			reloadedCurrentMap := make(map[string]interface{})
+			if err := yaml.Unmarshal(reloadedCurrent, &reloadedCurrentMap); err != nil {
+				return nil, err
+			}
+
+			_, reloadedWorkCurrent, err := toNestedRoot(i.args.Logger, i.args.GitClient, rootPath, desired, reloadedCurrentMap)
 			if err != nil {
 				return nil, errors.Wrap(err, "navigating to reloaded nested root failed")
 			}
@@ -155,7 +184,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 				return nil, errors.Wrap(err, "overwriting current state failed")
 			}
 
-			return marshal(reloadedCurrent)
+			return Marshal(reloadedCurrentMap)
 		}})
 	if err != nil {
 		return &IterationDone{Error: err}

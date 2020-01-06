@@ -1,8 +1,2 @@
 *
-!cmd
-!internal
-!pkg
-!logging
-!go.mod
-!go.sum
-*secrets.y*ml
+!artifacts/orbctl-Linux-x86_64

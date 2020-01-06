@@ -2,6 +2,7 @@
 *secrets.y*ml
 *kubeconfig
 .vscode
+/artifacts
 /*.go
 
 # Binaries for programs and plugins
@@ -16,4 +17,3 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-

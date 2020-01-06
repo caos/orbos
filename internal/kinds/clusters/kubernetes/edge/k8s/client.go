@@ -16,6 +16,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
+	rbac "k8s.io/api/rbac/v1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
@@ -68,50 +69,97 @@ type File struct {
 	Content []byte
 }
 
-func (c *Client) ApplyNamespace(ns *core.Namespace) (bool, error) {
-	return c.apply("namespace", ns.GetName(), func() error {
-		_, err := c.set.CoreV1().Namespaces().Create(ns)
+func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
+	resources := c.set.CoreV1().Namespaces()
+	return c.apply("namespace", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := c.set.CoreV1().Namespaces().Update(ns)
+		_, err := resources.Update(rsc)
 		return err
 	})
 }
 
-func (c *Client) ApplyDeployment(depl *apps.Deployment) (bool, error) {
-	return c.apply("deployment", depl.GetName(), func() error {
-		_, err := c.set.AppsV1().Deployments(depl.GetNamespace()).Create(depl)
+func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
+	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
+	return c.apply("deployment", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := c.set.AppsV1().Deployments(depl.GetNamespace()).Update(depl)
+		_, err := resources.Update(rsc)
 		return err
 	})
 }
 
-func (c *Client) ApplySecret(sec *core.Secret) (bool, error) {
-	return c.apply("secret", sec.GetName(), func() error {
-		_, err := c.set.CoreV1().Secrets(sec.GetNamespace()).Create(sec)
+func (c *Client) ApplySecret(rsc *core.Secret) error {
+	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
+	return c.apply("secret", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := c.set.CoreV1().Secrets(sec.GetNamespace()).Update(sec)
+		_, err := resources.Update(rsc)
 		return err
 	})
 }
 
-func (c *Client) apply(object, name string, create func() error, update func() error) (created bool, err error) {
+func (c *Client) ApplyRole(rsc *rbac.Role) error {
+	resources := c.set.RbacV1().Roles(rsc.Namespace)
+	return c.apply("role", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
+	resources := c.set.RbacV1().ClusterRoles()
+	return c.apply("clusterrole", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
+	resources := c.set.RbacV1().RoleBindings(rsc.Namespace)
+	return c.apply("rolebinding", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
+	resources := c.set.RbacV1().ClusterRoleBindings()
+	return c.apply("clusterrolebinding", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) apply(object, name string, create func() error, update func() error) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
 	}()
 
 	if c.set == nil {
-		return false, &NotAvailableError{}
+		return &NotAvailableError{}
 	}
 
 	err = update()
 	if err == nil || !macherrs.IsNotFound(err) {
-		return false, err
+		return err
 	}
-	return true, create()
+	return create()
 }
 
 func (c *Client) Refresh(kubeconfig *string) (err error) {
@@ -149,43 +197,6 @@ func (c *Client) GetNode(id string) (node *core.Node, err error) {
 	}
 	return api.Get(id, mach.GetOptions{})
 }
-
-/*
-func (c *Client) WatchNode(id string) (nodes chan *core.Node, close func(), err error) {
-	close = func() {}
-	api, err := c.nodeApi()
-	if err != nil {
-		return
-	}
-	watcher, err := api.Watch(mach.ListOptions{
-		LabelSelector: fmt.Sprintf("name=%s", id),
-	})
-	close = watcher.Stop
-
-	events := watcher.ResultChan()
-	nodes = make(chan *core.Node, 1)
-	var node *core.Node
-	select {
-	case event := <-events:
-		c.logger.Debug("KUBERNETES WATCHER SENDS IMMEDIATELY")
-		nodes <- event.Object.(*core.Node)
-	default:
-		c.logger.Debug("KUBERNETES WATCHER DOESN'T SEND IMMEDIATELY")
-		node, err = c.GetNode(id)
-		if err != nil {
-			return
-		}
-		nodes <- node
-	}
-
-	go func() {
-		for event := range events {
-			nodes <- event.Object.(*core.Node)
-		}
-	}()
-	return
-}
-*/
 
 func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 	defer func() {

@@ -1,14 +1,24 @@
 package infra
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/caos/orbiter/internal/core/operator"
 )
 
+type Address struct {
+	Location string
+	Port     uint16
+}
+
+func (a Address) String() string {
+	return fmt.Sprintf("%s:%d", a.Location, a.Port)
+}
+
 type ProviderCurrent interface {
 	Pools() map[string]Pool
-	Ingresses() map[string]string
+	Ingresses() map[string]Address
 	Cleanupped() <-chan error
 }
 
@@ -25,8 +35,7 @@ type Pool interface {
 
 type Compute interface {
 	ID() string
-	InternalIP() (*string, error)
-	ExternalIP() (*string, error)
+	IP() string
 	Remove() error
 	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
 	WriteFile(path string, data io.Reader, permissions uint16) error

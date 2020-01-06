@@ -6,20 +6,21 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/wrap"
 	externallbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/external/model"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
+	aws "github.com/caos/orbiter/internal/kinds/providers/ec2/adapter"
 	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
 	"github.com/caos/orbiter/internal/kinds/providers/static/model"
+	"github.com/caos/orbiter/logging"
 )
 
 type infraCurrent struct {
 	pools map[string]infra.Pool
-	ing   map[string]string
+	ing   map[string]infra.Address
 	cu    <-chan error
 }
 
@@ -27,7 +28,7 @@ func (i *infraCurrent) Pools() map[string]infra.Pool {
 	return i.pools
 }
 
-func (i *infraCurrent) Ingresses() map[string]string {
+func (i *infraCurrent) Ingresses() map[string]infra.Address {
 	return i.ing
 }
 
@@ -52,7 +53,7 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 
 			currentProvider := &infraCurrent{
 				pools: make(map[string]infra.Pool),
-				ing:   make(map[string]string),
+				ing:   make(map[string]infra.Address),
 			}
 
 			current := &model.Current{
@@ -90,6 +91,11 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 				}
 			}
 
+			notifyMaster := ""
+			if spec.Hoster == "AWS" {
+				notifyMaster = aws.NotifyMaster()
+			}
+
 			for depName, dep := range deps {
 				switch lb := dep.(type) {
 				case *dynamiclbmodel.Current:
@@ -103,7 +109,7 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 								changesAllowed = false
 							}
 						}
-						if err := lb.Desire(pool, changesAllowed, computesSvc, mapNodeAgent); err != nil {
+						if err := lb.Desire(pool, changesAllowed, computesSvc, mapNodeAgent, notifyMaster); err != nil {
 							return nil, err
 						}
 					}

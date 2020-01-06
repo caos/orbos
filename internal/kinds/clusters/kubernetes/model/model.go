@@ -1,19 +1,15 @@
 package model
 
 import (
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/logging"
 )
 
 type UserSpec struct {
-	Destroyed bool
-	Verbose   bool
-	Versions  struct {
-		Kubernetes string
-		Orbiter    string
-		Boom       string
-	}
+	Destroyed  bool
+	Verbose    bool
+	Kubernetes string
 	Networking struct {
 		DNSDomain   string
 		Network     string
@@ -25,15 +21,17 @@ type UserSpec struct {
 }
 
 type Parameters struct {
-	Logger           logging.Logger
-	ID               string
-	RepoURL          string
-	RepoKey          string
-	MasterKey        string
-	OrbiterVersion   string
-	CurrentFile      string
-	SecretsFile      string
-	SelfAbsolutePath []string
+	Logger             logging.Logger
+	ID                 string
+	RepoURL            string
+	RepoKey            string
+	MasterKey          string
+	OrbiterVersion     string
+	OrbiterCommit      string
+	CurrentFile        string
+	SecretsFile        string
+	SelfAbsolutePath   []string
+	ConnectFromOutside bool
 }
 
 type Config struct {

@@ -1,9 +1,12 @@
 kind: orbiter.caos.ch/Orbiter
-version: v1
+version: v0
+spec:
+  orbiter: v0.4.1
+  boom: v0.2.14
 deps:
   t01:
     kind: orbiter.caos.ch/KubernetesCluster
-    version: v1
+    version: v0
     spec:
       versions:
         kubernetes: v1.17.0
@@ -27,12 +30,12 @@ deps:
           pool: workers
     deps:
       gce:
-        apiVersion: orbiter.caos.ch/v1
-        kind: GCEProvider
+        version: v0
+        kind: orbiter.caos.ch/GCEProvider
         desired:
           project: caos-240809
-          region: europe-west1
-          zone: europe-west1-b
+          region: europe-west6
+          zone: europe-west6-b
           pools:
             standard:
               minCPUCores: 2

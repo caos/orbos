@@ -4,7 +4,6 @@ package executables
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,37 +14,45 @@ import (
 
 var Unpack func(string)
 
-type BuiltTuple func() (mainDir string, executable io.Reader, close func(), err error)
-
-func Build(debug bool, gitCommit string, gitTag string, mainDir ...string) <-chan BuiltTuple {
-	return deriveFmap(curryBuild(debug, gitCommit, gitTag), toChan(mainDir))
+type Bin struct {
+	MainDir string
+	OutDir  string
+	Env     map[string]string
 }
 
-func curryBuild(debug bool, gitCommit string, gitTag string) func(mainDir string) BuiltTuple {
+type BuiltTuple func() (bin Bin, err error)
+
+func Build(debug bool, gitCommit, version string, bins ...Bin) <-chan BuiltTuple {
+	return deriveFmap(curryBuild(debug, gitCommit, version), toChan(bins))
+}
+
+func curryBuild(debug bool, gitCommit, version string) func(bin Bin) BuiltTuple {
 	debugCurried := deriveCurryDebug(build)(debug)
 	commitCurried := deriveCurryCommit(debugCurried)(gitCommit)
-	tagCurried := deriveCurryTag(commitCurried)(gitTag)
+	tagCurried := deriveCurryTag(commitCurried)(version)
 	return tagCurried
 }
 
-func toChan(strs []string) <-chan string {
-	strChan := make(chan string, 0)
+func toChan(bins []Bin) <-chan Bin {
+	binChan := make(chan Bin, 0)
 	go func() {
-		for _, str := range strs {
-			strChan <- str
+		for _, bin := range bins {
+			binChan <- bin
 		}
-		close(strChan)
+		close(binChan)
 	}()
-	return strChan
+	return binChan
 }
 
-func build(debug bool, gitCommit, gitTag, mainDir string) BuiltTuple {
+func build(debug bool, gitCommit, version string, bin Bin) BuiltTuple {
 
-	base := filepath.Base(mainDir)
-	ext := filepath.Ext(base)
-	bf := filepath.Join(os.TempDir(), base[0:len(base)-len(ext)]) + ".build"
+	if bin.OutDir == "" {
+		bin.OutDir = filepath.Join(os.TempDir(), filepath.Base(bin.MainDir))
+	}
 
-	args := []string{"build", "-o", bf}
+	builtTuple := builtTupleFunc(bin)
+
+	args := []string{"build", "-o", bin.OutDir}
 
 	ldflags := "-s -w "
 	if debug {
@@ -55,30 +62,24 @@ func build(debug bool, gitCommit, gitTag, mainDir string) BuiltTuple {
 			"all=-N -l")
 	}
 
-	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.gitTag=%s", gitCommit, gitTag)
+	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s", gitCommit, version)
 
-	cmd := exec.Command("go", append(args, "-ldflags", ldflags, mainDir)...)
+	cmdEnv := os.Environ()
+	for k, v := range bin.Env {
+		cmdEnv = append(cmdEnv, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	cmd := exec.Command("go", append(args, "-ldflags", ldflags, bin.MainDir)...)
+	cmd.Env = cmdEnv
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	builtTuple := builtTupleFunc(mainDir)
-
-	if err := cmd.Run(); err != nil {
-		return builtTuple(nil, func() {}, errors.Wrapf(cmd.Run(), "building %s failed", bf))
-	}
-
-	openFile, err := os.Open(bf)
-	return builtTuple(openFile, func(f *os.File) func() {
-		return func() {
-			f.Close()
-			os.Remove(f.Name())
-		}
-	}(openFile), errors.Wrapf(err, "opening %s failed", bf))
+	return builtTuple(errors.Wrapf(cmd.Run(), "building %s failed", bin.OutDir))
 }
 
-func builtTupleFunc(mainDir string) func(io.Reader, func(), error) BuiltTuple {
-	return func(executable io.Reader, close func(), err error) BuiltTuple {
-		return deriveTupleBuilt(mainDir, executable, close, err)
+func builtTupleFunc(bin Bin) func(error) BuiltTuple {
+	return func(err error) BuiltTuple {
+		return deriveTupleBuilt(bin, err)
 	}
 }
 

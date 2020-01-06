@@ -53,6 +53,18 @@ enabled=1
 gpgcheck=1
 repo_gpgcheck=1
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg`), 0600)
+
+		//		var errBuf bytes.Buffer
+		//		cmd := exec.Command("yum-config-manager", "--save", "--setopt=kubernetes.skip_if_unavailable=true")
+		//		cmd.Stderr = &errBuf
+		//		if c.logger.IsVerbose() {
+		//			fmt.Println(strings.Join(cmd.Args, " "))
+		//			cmd.Stdout = os.Stdout
+		//		}
+		//		if err := cmd.Run(); err != nil {
+		//			return errors.Wrapf(err, "unholding installed package failed with stderr %s", errBuf.String())
+		//		}
+
 	}
 
 	pkgVersion := strings.TrimLeft(install.Version, "v") + "-0"

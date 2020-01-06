@@ -60,7 +60,10 @@ func (c *criDep) ensureCentOS(runtime string, version string) (bool, error) {
 		return false, errors.Wrap(err, "installing container runtime failed")
 	}
 
-	return false, c.handOverToSystemd("docker")
+	if err := c.systemd.Enable("docker"); err != nil {
+		return false, err
+	}
+	return false, c.systemd.Start("docker")
 }
 
 func (c *criDep) ensureUbuntu(runtime string, version string) (bool, error) {
@@ -118,27 +121,8 @@ func (c *criDep) ensureUbuntu(runtime string, version string) (bool, error) {
 		return false, errors.Wrap(err, "installing container runtime failed")
 	}
 
-	return false, c.handOverToSystemd("docker")
-}
-
-func (c *criDep) handOverToSystemd(binary string) error {
-	var errBuf bytes.Buffer
-	cmd := exec.Command("systemctl", "enable", binary)
-	cmd.Stderr = &errBuf
-	if c.logger.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
+	if err := c.systemd.Enable("docker"); err != nil {
+		return false, err
 	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "configuring systemd to autostart %s after booting failed with stderr %s", binary, errBuf.String())
-	}
-
-	cmd = exec.Command("systemctl", "start", binary)
-	cmd.Stderr = &errBuf
-	if c.logger.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-
-	return errors.Wrapf(cmd.Run(), "starting %s by systemd failed with stderr %s", binary, errBuf.String())
+	return false, c.systemd.Start("docker")
 }

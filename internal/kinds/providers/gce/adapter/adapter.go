@@ -10,7 +10,6 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -25,11 +24,12 @@ import (
 	"github.com/caos/orbiter/internal/kinds/providers/gce/adapter/resourceservices/targetproxy"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
+	"github.com/caos/orbiter/logging"
 )
 
 type infraCurrent struct {
 	pools map[string]infra.Pool
-	ing   map[string]string
+	ing   map[string]infra.Address
 	cu    <-chan error
 }
 
@@ -37,7 +37,7 @@ func (i *infraCurrent) Pools() map[string]infra.Pool {
 	return i.pools
 }
 
-func (i *infraCurrent) Ingresses() map[string]string {
+func (i *infraCurrent) Ingresses() map[string]infra.Address {
 	return i.ing
 }
 
@@ -49,7 +49,7 @@ func authenticatedService(ctx context.Context, googleApplicationCredentialsValue
 	return compute.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
 }
 
-func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string) Builder {
+func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string, connectFromOutside bool) Builder {
 	return builderFunc(func(spec model.UserSpec, _ operator.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{}
@@ -103,7 +103,7 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 				privateKeyProperty = dynamicKeyProperty
 			}
 
-			instancesSvc := instance.NewInstanceService(ctx, logger, id, svc, &spec, caller, secrets, publicKey, privateKeyProperty)
+			instancesSvc := instance.NewInstanceService(ctx, logger, id, svc, &spec, caller, secrets, publicKey, privateKeyProperty, connectFromOutside)
 
 			configuredPools := make([]string, 0)
 			for poolName := range spec.Pools {
@@ -143,7 +143,7 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 
 			var mux sync.RWMutex
 			groups := make(map[string][]core.EnsuredGroup)
-			currentProvider.ing = make(map[string]string)
+			currentProvider.ing = make(map[string]infra.Address)
 
 			groupCB := func(poolName string, group core.EnsuredGroup) {
 				mux.Lock()
@@ -160,7 +160,10 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 				ipCB := func(ensuredLB string, ip string) {
 					mux.Lock()
 					defer mux.Unlock()
-					currentProvider.ing[ensuredLB] = fmt.Sprintf("%s:%d", ip, 700 /*lbCfg.Port*/)
+					currentProvider.ing[ensuredLB] = infra.Address{
+						Location: ip,
+						Port:     700,
+					}
 				}
 
 				cfg := &concepts.Config{

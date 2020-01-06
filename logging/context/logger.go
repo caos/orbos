@@ -80,7 +80,7 @@ framesLoop:
 			receiver = frame.Function[receiverStart+1 : receiverEnd]
 		}
 
-		if receiver != "context.logger" && receiver != "stdlib.logger" {
+		if !strings.Contains(receiver, ".logger") {
 			if seenCaller {
 				return map[string]interface{}{
 					"file": fmt.Sprintf("%s:%d", frame.File, frame.Line),

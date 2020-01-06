@@ -3,7 +3,6 @@ package conv
 import (
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
@@ -16,6 +15,7 @@ import (
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/nginx"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/swap"
+	"github.com/caos/orbiter/logging"
 )
 
 type Converter interface {
@@ -59,15 +59,15 @@ func (d *dependencies) ToDependencies(sw operator.Software) []*adapter.Dependenc
 		},
 		&adapter.Dependency{
 			Desired:   sw.KeepaliveD,
-			Installer: keepalived.New(d.pm, d.sysd, d.cipher),
+			Installer: keepalived.New(d.logger, d.pm, d.sysd, d.cipher),
 		},
 		&adapter.Dependency{
 			Desired:   sw.Nginx,
-			Installer: nginx.New(d.pm, d.sysd),
+			Installer: nginx.New(d.logger, d.pm, d.sysd),
 		},
 		&adapter.Dependency{
 			Desired:   sw.Containerruntime,
-			Installer: cri.New(d.logger, d.os, d.pm),
+			Installer: cri.New(d.logger, d.os, d.pm, d.sysd),
 		},
 		&adapter.Dependency{
 			Desired:   sw.Kubelet,

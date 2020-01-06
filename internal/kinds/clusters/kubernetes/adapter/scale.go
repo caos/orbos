@@ -2,8 +2,6 @@ package adapter
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -28,9 +26,9 @@ func ensureScale(
 	kubeConfigKey string,
 	controlplanePool *scaleablePool,
 	workerPools []*scaleablePool,
-	kubeAPIAddress string,
+	kubeAPI infra.Address,
 	k8sVersion k8s.KubernetesVersion,
-	k8sClient *k8s.Client) (kubeconfig *string, done bool, err error) {
+	k8sClient *k8s.Client) (done bool, err error) {
 
 	newCurrentComputeCallback := func(tier model.Tier, poolSpec *poolSpec) func(infra.Compute) {
 		return func(newCompute infra.Compute) {
@@ -119,7 +117,7 @@ func ensureScale(
 	wg.Wait()
 
 	if synchronizer.IsError() {
-		return nil, false, errors.Wrap(synchronizer, "failed to scale computes")
+		return false, errors.Wrap(synchronizer, "failed to scale computes")
 	}
 
 	var joinCP infra.Compute
@@ -143,11 +141,6 @@ nodes:
 		current := curr.Computes[id]
 		software := k8sVersion.DefineSoftware()
 
-		kubeapiPort, err := strconv.ParseInt(strings.Split(kubeAPIAddress, ":")[1], 10, 16)
-		if err != nil {
-			return nil, false, errors.Wrapf(err, "parsing port from kubeapi address %s failed", kubeAPIAddress)
-		}
-
 		fw := map[string]operator.Allowed{
 			"kubelet": operator.Allowed{
 				Port:     fmt.Sprintf("%d", 10250),
@@ -163,8 +156,12 @@ nodes:
 		}
 
 		if current.Metadata.Tier == model.Controlplane {
-			fw["kubeapi"] = operator.Allowed{
-				Port:     fmt.Sprintf("%d", kubeapiPort),
+			fw["kubeapi-external"] = operator.Allowed{
+				Port:     fmt.Sprintf("%d", kubeAPI.Port),
+				Protocol: "tcp",
+			}
+			fw["kubeapi-internal"] = operator.Allowed{
+				Port:     fmt.Sprintf("%d", 6666),
 				Protocol: "tcp",
 			}
 			fw["etcd"] = operator.Allowed{
@@ -224,11 +221,17 @@ nodes:
 			logger.Info("Node is not ready yet")
 		}
 
-		if !current.Nodeagent.NodeIsReady &&
-			!software.Equals(&current.Nodeagent.Software) ||
-			!firewall.Equals(current.Nodeagent.Open) {
+		nodeIsReady := current.Nodeagent.NodeIsReady
+		softwareIsReady := current.Nodeagent.Software.Contains(software)
+		firewallIsReady := current.Nodeagent.Open.Contains(firewall)
+		if !nodeIsReady || !softwareIsReady || !firewallIsReady {
+			// TODO: Changes are allowed by users
 			current.Nodeagent.AllowChanges()
-			logger.Info("Compute is not ready to join yet")
+			logger.WithFields(map[string]interface{}{
+				"node":     nodeIsReady,
+				"software": softwareIsReady,
+				"firewall": firewallIsReady,
+			}).Info("Compute is not ready to join yet")
 			continue nodes
 		}
 
@@ -245,7 +248,7 @@ nodes:
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
 		}).Debug("Scale is ensured")
-		return nil, true, nil
+		return true, nil
 	}
 
 	var jointoken string
@@ -254,7 +257,7 @@ nodes:
 		runes := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 		jointoken = fmt.Sprintf("%s.%s", helpers.RandomStringRunes(6, runes), helpers.RandomStringRunes(16, runes))
 		if _, err := certsCP.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
-			return nil, false, errors.Wrap(err, "creating new join token failed")
+			return false, errors.Wrap(err, "creating new join token failed")
 		}
 
 		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
@@ -266,51 +269,51 @@ nodes:
 	if joinCP != nil {
 
 		if !doKubeadmInit && !cpIsReady {
-			return nil, false, nil
+			return false, nil
 		}
 
 		if !doKubeadmInit && certKey == nil {
 			var err error
 			certKey, err = certsCP.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
 			if err != nil {
-				return nil, false, errors.Wrap(err, "uploading certs failed")
+				return false, errors.Wrap(err, "uploading certs failed")
 			}
 			cfg.Params.Logger.Info("Refreshed certs")
 		}
 
 		joinKubeconfig, err := join(
+			joinCP,
+			certsCP,
 			cfg,
-			kubeAPIAddress,
+			kubeAPI,
 			jointoken,
 			k8sVersion,
 			string(certKey),
-			joinCP,
-			true,
-			doKubeadmInit)
+			true)
 
 		if joinKubeconfig == nil || err != nil {
-			return nil, false, err
+			return false, err
 		}
 
-		return joinKubeconfig, false, secrets.Write(kubeConfigKey, []byte(*joinKubeconfig))
+		return false, secrets.Write(kubeConfigKey, []byte(*joinKubeconfig))
 	}
 
 	if certsCP == nil {
 		cfg.Params.Logger.Info("Awaiting controlplane initialization")
-		return nil, false, nil
+		return false, nil
 	}
 
 	for _, worker := range joinWorkers {
 		wg.Add(1)
 		go func(w infra.Compute) {
 			_, goErr := join(
+				w,
+				certsCP,
 				cfg,
-				kubeAPIAddress,
+				kubeAPI,
 				string(jointoken),
 				k8sVersion,
 				"",
-				w,
-				false,
 				false)
 			synchronizer.Done(errors.Wrapf(goErr, "joining worker %s failed", w.ID()))
 		}(worker)
@@ -319,13 +322,13 @@ nodes:
 	wg.Wait()
 
 	if synchronizer.IsError() {
-		return nil, false, errors.Wrap(synchronizer, "failed joining computes")
+		return false, errors.Wrap(synchronizer, "failed joining computes")
 	}
 
 	for _, down := range scaleDownWorkers {
 		for _, cmp := range down.computes {
 			if err := k8sClient.DeleteNode(cmp.ID(), cmp, true); err != nil {
-				return nil, false, errors.Wrapf(err, "failed deleting node %s from pool %s", cmp.ID(), down.pool.poolSpec.group)
+				return false, errors.Wrapf(err, "failed deleting node %s from pool %s", cmp.ID(), down.pool.poolSpec.group)
 			}
 			//			defer func() {
 			//				if err != nil {
@@ -334,9 +337,9 @@ nodes:
 			//			}()
 		}
 		if err := down.pool.cleanupComputes(); err != nil {
-			return nil, false, errors.Wrapf(err, "failed cleaning up computes %s from pool %s", infra.Computes(down.computes), down.pool.poolSpec.group)
+			return false, errors.Wrapf(err, "failed cleaning up computes %s from pool %s", infra.Computes(down.computes), down.pool.poolSpec.group)
 		}
 	}
 
-	return nil, false, nil
+	return false, nil
 }

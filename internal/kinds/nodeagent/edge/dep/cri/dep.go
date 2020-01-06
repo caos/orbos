@@ -7,11 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/middleware"
+	"github.com/caos/orbiter/logging"
 )
 
 type Installer interface {
@@ -25,11 +25,12 @@ type criDep struct {
 	os                        dep.OperatingSystemMajor
 	manager                   *dep.PackageManager
 	dockerVersionPrunerRegexp *regexp.Regexp
+	systemd                   *dep.SystemD
 }
 
 // New returns a dependency that implements the kubernetes container runtime interface
-func New(logger logging.Logger, os dep.OperatingSystemMajor, manager *dep.PackageManager) Installer {
-	return &criDep{logger, os, manager, regexp.MustCompile(`\d+\.\d+\.\d+`)}
+func New(logger logging.Logger, os dep.OperatingSystemMajor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
+	return &criDep{logger, os, manager, regexp.MustCompile(`\d+\.\d+\.\d+`), systemd}
 }
 
 func (criDep) Is(other adapter.Installer) bool {

@@ -21,7 +21,7 @@ func desire(selfPool string, changesAllowed bool, dynamic model.Current, svc cor
 		}
 
 		for _, pool := range update {
-			if err := dynamic.Desire(pool, changesAllowed, svc, nodeagent); err != nil {
+			if err := dynamic.Desire(pool, changesAllowed, svc, nodeagent, ""); err != nil {
 				return err
 			}
 		}

@@ -20,9 +20,9 @@ func ensureCluster(
 	cfg *model.Config,
 	curr *model.Current,
 	providerPools map[string]map[string]infra.Pool,
-	kubeAPIAddress string,
+	kubeAPIAddress infra.Address,
 	secrets *operator.Secrets,
-	k8sClient *k8s.Client) (kubeconfig *string, err error) {
+	k8sClient *k8s.Client) (err error) {
 
 	nodeagentFullPath := nodeagentFullPath(cfg.Params.SelfAbsolutePath)
 	kubeConfigKey := cfg.Params.ID + "_kubeconfig"
@@ -30,7 +30,7 @@ func ensureCluster(
 
 	if !cfg.Spec.Destroyed && cfg.Spec.ControlPlane.Nodes != 1 && cfg.Spec.ControlPlane.Nodes != 3 && cfg.Spec.ControlPlane.Nodes != 5 {
 		err = errors.New("Controlplane nodes can only be scaled to 1, 3 or 5")
-		return nil, err
+		return err
 	}
 
 	var controlplanePool *scaleablePool
@@ -51,7 +51,7 @@ func ensureCluster(
 				}).Debug("Using for pool")
 				cpPoolComputes, err = cpPool.GetComputes(true)
 				if err != nil {
-					return nil, err
+					return err
 				}
 				for _, comp := range cpPoolComputes {
 					newCurrentCompute(cfg, curr, comp, &model.ComputeMetadata{
@@ -104,7 +104,7 @@ func ensureCluster(
 			var wPoolComputes []infra.Compute
 			wPoolComputes, err = wPool.GetComputes(true)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			workerPools = append(workerPools, &scaleablePool{
 				pool: newPool(
@@ -157,10 +157,10 @@ func ensureCluster(
 		if synchronizer.IsError() {
 			cfg.Params.Logger.Info(synchronizer.Error())
 		}
-		return nil, nil
+		return nil
 	}
 
-	targetVersion := k8s.ParseString(cfg.Spec.Versions.Kubernetes)
+	targetVersion := k8s.ParseString(cfg.Spec.Kubernetes)
 	upgradingDone, err := ensureK8sVersion(
 		cfg,
 		nodeagentFullPath,
@@ -171,11 +171,11 @@ func ensureCluster(
 		workerComputes)
 	if err != nil || !upgradingDone {
 		cfg.Params.Logger.Debug("Upgrading is not done yet")
-		return nil, err
+		return err
 	}
 
 	var scalingDone bool
-	kubeconfig, scalingDone, err = ensureScale(
+	scalingDone, err = ensureScale(
 		cfg,
 		curr,
 		secrets,
@@ -186,20 +186,14 @@ func ensureCluster(
 		targetVersion,
 		k8sClient)
 	if err != nil {
-		return kubeconfig, err
-	}
-
-	if kubeconfig != nil {
-		if err := k8sClient.Refresh(kubeconfig); err != nil {
-			return kubeconfig, err
-		}
+		return err
 	}
 
 	if scalingDone {
 		curr.Status = "running"
 	}
 
-	return kubeconfig, nil
+	return nil
 }
 
 func newCurrentCompute(cfg *model.Config, curr *model.Current, compute infra.Compute, meta *model.ComputeMetadata) {
