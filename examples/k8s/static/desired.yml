@@ -6,9 +6,9 @@ deps:
     version: v1
     spec:
       versions:
-        kubernetes: v1.16.0
-        orbiter: v0.3.2
-        boom: v0.2.14
+        kubernetes: v1.17.0
+        orbiter: v0.8.4
+        boom: v0.6.1
       networking:
         dnsDomain: cluster.inhouse
         network: calico
