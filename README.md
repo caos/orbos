@@ -1,4 +1,4 @@
-# Orbiter the meta cluster manager
+# Orbiter The Meta Cluster Manager
 
 ![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)
 ![Github Release Badge](https://github.com/caos/orbiter/workflows/Release/badge.svg)
@@ -7,17 +7,17 @@
 
 > This project is in alpha state. The API will continue breaking until version 1.0.0 is released
 
-## What is it
+## What Is It
 
 `Orbiter` boostraps, lifecycles and destroys clustered software and other cluster managers whereas each can be configured to span over a wide range of infrastructure providers. Its focus is laid on automating away all `day two` operations, as we consider them to have much bigger impacts than `day one` operations from a business perspective.
 
-## How does it work
+## How Does It Work
 
 An Orbiter instance runs as a Kubernetes Pod managing the configured clusters (i.e. an Orb), typically including the one it is running on. It scales the clusters nodes and has `Node Agents` install software packages on their operating systems. `Node Agents` run as native system processes managed by `systemd`. An Orbs Git repository is the only source of truth for desired state. Also, the current Orbs state is continously pushed to its Git repository, so not only changes to the desired state is always tracked but also the most important changes to the actual systems state.
 
 For more details, take a look at the [design docs](./docs/design.md).
 
-## Why another cluster manager
+## Why Another Cluster Manager
 
 We observe a universal trend of increasing system distribution. Key drivers are cloud native engineering, microservices architectures, global competition among hyperscalers and so on.
 
@@ -25,7 +25,7 @@ We embrace this trend but counteract its biggest downside, the associated increa
 
 What makes Orbiter special is that it ships with a nice **Mission Control UI** (currently in closed alpha) providing useful tools to interact intuitively with the operator. Also, the operational design follows the **GitOps pattern**, highlighting `day two operations`, sticking to a distinct source of truth for declarative system configuration and maintaining a consistent audit log, everything out-of-the-box. Then, the Orbiter code base is designed to be **highly extendable**, which ensures that any given cluster type can eventually run on any desired provider.
 
-## How to use it
+## How To Use It
 
 In the following example we will create a `kubernetes` cluster on a `static provider`. A `static provider` is a provider, which has no or little API for automation, e.g legacy VM's or Bare Metal scenarios.
 
@@ -38,7 +38,7 @@ sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 ```
 
-### Create Config and Secrets
+### Create Config And Secrets
 
 ```bash
 # Create a new ssh key pair.
@@ -62,7 +62,7 @@ orbctl addsecret myorbprodstatic_bootstrapkey --stdin
 orbctl addsecret myorbprodstatic_bootstrapkey_pub --stdin
 ```
 
-### Bootstrap a new static cluster on firecracker VMs using ignite
+### Bootstrap A New Static Cluster On Firecracker VMs Using Ignite
 
 ```bash
 # Create four firecracker VMs
@@ -76,14 +76,10 @@ Make sure your orb repo contains a desired.yml file similar to [this example](./
 
 ```bash
 # Your environment is ready now, finally we can do some actual work. Launch a local orbiter that bootstraps your orb
-myorb takeoff
+orbctl takeoff
 
 # When the orbiter exits, overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && myorb readsecret myorbprod_kubeconfig > ~/.kube/config
-
-# TODO: Not needed anymore when docker registry is anonymously pullable #39
-kubectl -n kube-system create secret docker-registry orbiterregistry --docker-server=docker.pkg.github.com --docker-username=
-${GITHUB_USERNAME} --docker-password=${GITHUB_ACCESS_TOKEN}
+mkdir -p ~/.kube && orbctl readsecret myorbprod_kubeconfig > ~/.kube/config
 
 # Watch your nodes become ready
 kubectl get nodes --watch
@@ -92,7 +88,7 @@ kubectl get nodes --watch
 kubectl get pods --all-namespaces --watch
 
 # [Optional] Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore.
-myorb readsecret myorbprodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
+orbctl readsecret myorbprodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
 
 # Cleanup your environment
 sudo ignite rm -f $(sudo ignite ps -aq)
@@ -104,11 +100,11 @@ sudo ignite rm -f $(sudo ignite ps -aq)
 
 See [Clusters](./docs/clusters.md) for details.
 
-## Supported providers
+## Supported Providers
 
 See [Providers](./docs/providers.md) for details.
 
-## How to contribute
+## How To Contribute
 
 See [contribute](./docs/contribute.md) for details
 
