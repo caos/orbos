@@ -22,6 +22,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		verbose bool
 		recur   bool
 		destroy bool
+		deploy  bool
 		cmd     = &cobra.Command{
 			Use:   "takeoff",
 			Short: "Launch an orbiter",
@@ -32,6 +33,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&destroy, "destroy", false, "Destroy everything and clean up")
+	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if recur && destroy {
@@ -57,7 +59,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 		var before func(desired []byte, secrets *operator.Secrets) error
 
-		if !destroy {
+		if deploy && !destroy {
 			before = func(desired []byte, secrets *operator.Secrets) error {
 				var deserialized struct {
 					Spec struct {
