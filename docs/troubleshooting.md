@@ -47,3 +47,47 @@ If you see this error {WRONGKEY_MASTER_Key} you want to make sure that:
 
 - That the secret mounted to the `Orbiter` deployment contains the correct Master key,
   - This key is used to decrypt the `secrect` provided with the Repo
+
+### Timeout Errors
+
+As the `Orbiter` pod is hosted on the `controlplane` nodes it under certain conditions it can happen that it will recieve a timeout either to the `nodes` or the `kube-api`. If you only see this happen rarely (less then once a hour) it is uncritical. This because the `reconciler` loop is `idempotent`.
+
+## Debug Infos
+
+### Orbiter
+
+{TODO Docs}
+
+### Node Agent
+
+As the `node agent` runs a `systemd` process you can show it's log's with the following command:
+
+```bash
+journalctl -u node-agentd.service -xe
+```
+
+The binary is located under and the `/usr/local/bin/node-agent` and the config is passed as `arguments`.
+{TODO check arg}
+
+The `node agent` can be started and stopped with `systemd` but keep in mind to set the flag `updatesDisabled: true` within the `pool`. Otherwise `Orbiter` will restart the process in it's next loop.
+
+Example:
+
+```yaml
+kind: orbiter.caos.ch/Orbiter
+version: v0
+spec:
+  orbiter: v0.8.4
+  boom: v0.6.1
+deps:
+  t01:
+    kind: orbiter.caos.ch/KubernetesCluster
+    version: v0
+    spec:
+      controlplane:
+        nodes: 3
+        pool: masters
+        provider: abxnet
+        updatesDisabled: true
+## omited
+```
