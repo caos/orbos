@@ -70,10 +70,11 @@ const (
 )
 
 type Kind struct {
+	ID 			   string
 	Kind           string
 	Version 	   string
 	Spec           map[string]interface{}
-	Deps           map[string]map[string]interface{}
+	Deps           []map[string]interface{}
 }
 
 type assembler struct {
@@ -106,7 +107,7 @@ func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater op
 	}
 
 	var spec model.UserSpec
-	var subassemblersBuilder func(model.Config, map[string]map[string]interface{}) (map[string]operator.Assembler, error)
+	var subassemblersBuilder func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)
 	switch kind.Version {
 	{{ range .Versions }}case {{ . }}.String():
 		spec, subassemblersBuilder = {{ . }}builder.Build(kind.Spec, secrets, dependant){{end}}
@@ -184,13 +185,13 @@ import (
 	"{{ .QualifiedPackage }}/model"
 )
 
-var build func(map[string]interface{}, *operator.Secrets, interface{}) (model.UserSpec, func(model.Config, map[string]map[string]interface{}) (map[string]operator.Assembler, error))
+var build func(map[string]interface{}, *operator.Secrets, interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error))
 
-func Build(spec map[string]interface{}, secrets *operator.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config, deps map[string]map[string]interface{}) (map[string]operator.Assembler, error)) {
+func Build(spec map[string]interface{}, secrets *operator.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error)) {
 	if build != nil {
 		return build(spec, secrets, dependant)
 	}
-	return model.UserSpec{}, func(_ model.Config, _ map[string]map[string]interface{}) (map[string]operator.Assembler, error){
+	return model.UserSpec{}, func(_ model.Config, _ []map[string]interface{}) (map[string]operator.Assembler, error){
 		return nil, errors.New("Version {{ .Package }} for kind {{ .Kind }} is not yet supported")
 	}
 }

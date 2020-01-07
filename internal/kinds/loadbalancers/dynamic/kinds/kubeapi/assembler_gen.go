@@ -23,10 +23,11 @@ const (
 )
 
 type Kind struct {
+	ID      string
 	Kind    string
 	Version string
 	Spec    map[string]interface{}
-	Deps    map[string]map[string]interface{}
+	Deps    []map[string]interface{}
 }
 
 type assembler struct {
@@ -59,7 +60,7 @@ func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater op
 	}
 
 	var spec model.UserSpec
-	var subassemblersBuilder func(model.Config, map[string]map[string]interface{}) (map[string]operator.Assembler, error)
+	var subassemblersBuilder func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)
 	switch kind.Version {
 	case v1.String():
 		spec, subassemblersBuilder = v1builder.Build(kind.Spec, secrets, dependant)

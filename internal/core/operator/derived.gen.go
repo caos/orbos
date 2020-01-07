@@ -2,49 +2,7 @@
 
 package operator
 
-// deriveEqualSoftware returns whether this and that are equal.
-func deriveEqualSoftware(this, that *Software) bool {
-	return (this == nil && that == nil) ||
-		this != nil && that != nil &&
-			deriveEqual(&this.Swap, &that.Swap) &&
-			deriveEqual(&this.Kubelet, &that.Kubelet) &&
-			deriveEqual(&this.Kubeadm, &that.Kubeadm) &&
-			deriveEqual(&this.Kubectl, &that.Kubectl) &&
-			deriveEqual(&this.Containerruntime, &that.Containerruntime) &&
-			deriveEqual(&this.KeepaliveD, &that.KeepaliveD) &&
-			deriveEqual(&this.Nginx, &that.Nginx) &&
-			deriveEqual(&this.Hostname, &that.Hostname)
-}
-
 // deriveEqualPort returns whether this and that are equal.
 func deriveEqualPort(this, that Allowed) bool {
 	return this == that
-}
-
-// deriveEqual returns whether this and that are equal.
-func deriveEqual(this, that *Package) bool {
-	return (this == nil && that == nil) ||
-		this != nil && that != nil &&
-			this.Version == that.Version &&
-			deriveEqual_(this.Config, that.Config)
-}
-
-// deriveEqual_ returns whether this and that are equal.
-func deriveEqual_(this, that map[string]string) bool {
-	if this == nil || that == nil {
-		return this == nil && that == nil
-	}
-	if len(this) != len(that) {
-		return false
-	}
-	for k, v := range this {
-		thatv, ok := that[k]
-		if !ok {
-			return false
-		}
-		if !(v == thatv) {
-			return false
-		}
-	}
-	return true
 }

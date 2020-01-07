@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
@@ -21,32 +22,37 @@ type subBuilder struct {
 }
 
 func init() {
-	build = func(desired map[string]interface{}, secrets *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config, map[string]map[string]interface{}) (map[string]operator.Assembler, error)) {
+	build = func(desired map[string]interface{}, secrets *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)) {
 
 		spec := model.UserSpec{}
 		err := mapstructure.Decode(desired, &spec)
 
-		return spec, func(cfg model.Config, deps map[string]map[string]interface{}) (map[string]operator.Assembler, error) {
+		return spec, func(cfg model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error) {
 
 			if err != nil {
 				return nil, err
 			}
 
 			subassemblers := make(map[string]operator.Assembler)
-			for providerName, providerConfig := range deps {
+			for _, depValue := range deps {
 
-				providerPath := []string{"deps", providerName}
-				generalOverwriteSpec := func(providerName string) func(des map[string]interface{}) {
-					return func(des map[string]interface{}) {
-						if spec.Verbose {
-							des["verbose"] = true
-						}
-					}
-				}(providerName)
-
-				kind, ok := providerConfig["kind"]
+				depIDIface, ok := depValue["id"]
 				if !ok {
-					return nil, fmt.Errorf("Spec provider %+v has no kind field", providerName)
+					return nil, errors.Errorf("dependency %+v has no id", depValue)
+				}
+
+				depID := fmt.Sprintf("%v", depIDIface)
+
+				providerPath := []string{"deps", depID}
+				generalOverwriteSpec := func(des map[string]interface{}) {
+					if spec.Verbose {
+						des["verbose"] = true
+					}
+				}
+
+				kind, ok := depValue["kind"]
+				if !ok {
+					return nil, fmt.Errorf("Spec provider %+v has no kind field", depID)
 				}
 				kindStr, ok := kind.(string)
 				if !ok {
@@ -54,14 +60,14 @@ func init() {
 				}
 
 				providerlogger := cfg.Params.Logger.WithFields(map[string]interface{}{
-					"provider": providerName,
+					"provider": depID,
 				})
-				providerID := cfg.Params.ID + providerName
+				providerID := cfg.Params.ID + depID
 				switch kindStr {
 				case "orbiter.caos.ch/GCEProvider":
 					var lbs map[string]*infra.Ingress
 
-					if !spec.Destroyed && spec.ControlPlane.Provider == providerName {
+					if !spec.Destroyed && spec.ControlPlane.Provider == depID {
 						lbs = map[string]*infra.Ingress{
 							"kubeapi": &infra.Ingress{
 								Pools:            []string{spec.ControlPlane.Pool},
@@ -69,7 +75,7 @@ func init() {
 							},
 						}
 					}
-					subassemblers[providerName] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providerlogger, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
+					subassemblers[depID] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providerlogger, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
 				case "orbiter.caos.ch/StaticProvider":
 					updatesDisabled := make([]string, 0)
 					for _, pool := range spec.Workers {
@@ -82,7 +88,7 @@ func init() {
 						updatesDisabled = append(updatesDisabled, spec.ControlPlane.Pool)
 					}
 
-					subassemblers[providerName] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
+					subassemblers[depID] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 				default:
 					return nil, fmt.Errorf("Provider of kind %s is unknown", kindStr)
 				}
