@@ -9,12 +9,12 @@ import (
 )
 
 func init() {
-	build = func(desired map[string]interface{}, _ *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config, map[string]map[string]interface{}) (map[string]operator.Assembler, error)) {
+	build = func(desired map[string]interface{}, _ *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)) {
 
 		userSpec := model.UserSpec{}
 		err := mapstructure.Decode(desired, &userSpec)
 
-		return userSpec, func(_ model.Config, deps map[string]map[string]interface{}) (map[string]operator.Assembler, error) {
+		return userSpec, func(_ model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error) {
 
 			if err != nil {
 				return nil, err
