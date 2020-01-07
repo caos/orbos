@@ -11,9 +11,9 @@ import (
 	"github.com/caos/orbiter/internal/edge/executables"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	"github.com/caos/orbiter/internal/kinds/orbiter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/model"
+	orbassembler "github.com/caos/orbiter/internal/kinds/orb"
+	"github.com/caos/orbiter/internal/kinds/orb/adapter"
+	"github.com/caos/orbiter/internal/kinds/orb/model"
 )
 
 func takeoffCommand(rv rootValues) *cobra.Command {
@@ -104,7 +104,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				immediate.New(logger),
 				cron.New(logger, "@every 10s"),
 			},
-			RootAssembler: orbiter.New(nil, nil, adapter.New(&model.Config{
+			RootAssembler: orbassembler.New(nil, nil, adapter.New(&model.Config{
 				Logger:             logger,
 				ConfigID:           configID,
 				OrbiterVersion:     version,

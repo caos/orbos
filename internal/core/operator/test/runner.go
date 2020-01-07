@@ -18,9 +18,9 @@ import (
 	"github.com/caos/orbiter/logging/stdlib"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	"github.com/caos/orbiter/internal/kinds/orbiter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/model"
+	"github.com/caos/orbiter/internal/kinds/orb"
+	"github.com/caos/orbiter/internal/kinds/orb/adapter"
+	"github.com/caos/orbiter/internal/kinds/orb/model"
 )
 
 const testRepoURL = "git@github.com:caos/orbiter-test.git"

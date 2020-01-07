@@ -10,7 +10,7 @@ import (
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/adapter"
 	k8s "github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
-	"github.com/caos/orbiter/internal/kinds/orbiter/model"
+	"github.com/caos/orbiter/internal/kinds/orb/model"
 )
 
 func init() {

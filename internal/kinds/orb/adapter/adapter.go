@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/kinds/orbiter/model"
+	"github.com/caos/orbiter/internal/kinds/orb/model"
 )
 
 func New(cfg *model.Config) Builder {

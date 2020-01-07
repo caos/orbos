@@ -6,7 +6,7 @@ import (
 	"github.com/caos/orbiter/internal/core/operator/test"
 )
 
-func TestOrbiterEmptyNodeAgent(t *testing.T) {
+func TestOrbEmptyNodeAgent(t *testing.T) {
 
 	t.SkipNow()
 
@@ -21,7 +21,7 @@ func TestOrbiterEmptyNodeAgent(t *testing.T) {
 
 	stop := make(chan struct{})
 
-	iterations, cleanup, _, err := test.Run(stop, "test empty nodeagent", t, `kind: orbiter.caos.ch/Orbiter
+	iterations, cleanup, _, err := test.Run(stop, "test empty nodeagent", t, `kind: orbiter.caos.ch/Orb
 version: v1
 `, desire)
 	defer cleanup()
