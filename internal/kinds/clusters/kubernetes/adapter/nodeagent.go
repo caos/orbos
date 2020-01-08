@@ -14,17 +14,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func currentStatePath(selfAbsolutePath []string) []string {
-	return append(selfAbsolutePath, "current")
-}
-
 func nodeagentPath(compute infra.Compute) []string {
-	return []string{"computes", compute.ID(), "software"}
+	return []string{"current", "computes", compute.ID(), "software"}
 }
 
-func nodeagentFullPath(selfAbsolutePath []string) func(compute infra.Compute) []string {
+func nodeagentFullPathFunc(selfAbsolutePath []string) func(compute infra.Compute) []string {
 	return func(compute infra.Compute) []string {
-		return append(currentStatePath(selfAbsolutePath), nodeagentPath(compute)...)
+		return append(selfAbsolutePath, nodeagentPath(compute)...)
 	}
 }
 

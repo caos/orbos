@@ -24,7 +24,7 @@ func ensureCluster(
 	secrets *operator.Secrets,
 	k8sClient *k8s.Client) (err error) {
 
-	nodeagentFullPath := nodeagentFullPath(cfg.Params.SelfAbsolutePath)
+	nodeagentFullPath := nodeagentFullPathFunc(cfg.Params.SelfAbsolutePath)
 	kubeConfigKey := cfg.Params.ID + "_kubeconfig"
 	joinTokenKey := cfg.Params.ID + "_jointoken"
 
