@@ -15,12 +15,12 @@ import (
 )
 
 func nodeagentPath(compute infra.Compute) []string {
-	return []string{"current", "computes", compute.ID(), "software"}
+	return []string{"computes", compute.ID(), "software"}
 }
 
 func nodeagentFullPathFunc(selfAbsolutePath []string) func(compute infra.Compute) []string {
 	return func(compute infra.Compute) []string {
-		return append(selfAbsolutePath, nodeagentPath(compute)...)
+		return append(selfAbsolutePath, append([]string{"current"}, nodeagentPath(compute)...)...)
 	}
 }
 
