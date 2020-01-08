@@ -22,14 +22,6 @@ const (
 	v0
 )
 
-type Kind struct {
-	ID      string
-	Kind    string
-	Version string
-	Spec    map[string]interface{}
-	Deps    []map[string]interface{}
-}
-
 type assembler struct {
 	path      []string
 	overwrite func(map[string]interface{})
@@ -48,40 +40,40 @@ func (a *assembler) BuildContext() ([]string, func(map[string]interface{})) {
 func (a *assembler) Ensure(ctx context.Context, secrets *operator.Secrets, ensuredDependencies map[string]interface{}) (interface{}, error) {
 	return a.built.Ensure(ctx, secrets, ensuredDependencies)
 }
-func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater operator.NodeAgentUpdater, secrets *operator.Secrets, dependant interface{}) (string, string, interface{}, map[string]operator.Assembler, error) {
+func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater operator.NodeAgentUpdater, secrets *operator.Secrets, dependant interface{}) (operator.Kind, interface{}, []operator.Assembler, error) {
 
-	kind := &Kind{}
-	if err := mapstructure.Decode(serialized, kind); err != nil {
-		return "", "", nil, nil, err
+	kind := operator.Kind{}
+	if err := mapstructure.Decode(serialized, &kind); err != nil {
+		return kind, nil, nil, err
 	}
 
 	if kind.Kind != "orbiter.caos.ch/EC2Provider" {
-		return "", "", nil, nil, fmt.Errorf("Kind %s must be \"orbiter.caos.ch/EC2Provider\"", kind.Kind)
+		return kind, nil, nil, fmt.Errorf("Kind %s must be \"orbiter.caos.ch/EC2Provider\"", kind.Kind)
 	}
 
 	var spec model.UserSpec
-	var subassemblersBuilder func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)
+	var subassemblersBuilder func(model.Config) ([]operator.Assembler, error)
 	switch kind.Version {
 	case v0.String():
-		spec, subassemblersBuilder = v0builder.Build(kind.Spec, secrets, dependant)
+		spec, subassemblersBuilder = v0builder.Build(serialized, secrets, dependant)
 	default:
-		return "", "", nil, nil, fmt.Errorf("Unknown version %s", kind.Version)
+		return kind, nil, nil, fmt.Errorf("Unknown version %s", kind.Version)
 	}
 
 	cfg, adapter, err := a.builder.Build(spec, nodeagentupdater)
 	if err != nil {
-		return "", "", nil, nil, err
+		return kind, nil, nil, err
 	}
 	a.built = adapter
 
 	if subassemblersBuilder == nil {
-		return kind.Kind, kind.Version, cfg, nil, nil
+		return kind, cfg, nil, nil
 	}
 
-	subassemblers, err := subassemblersBuilder(cfg, kind.Deps)
+	subassemblers, err := subassemblersBuilder(cfg)
 	if err != nil {
-		return "", "", nil, nil, err
+		return kind, nil, nil, err
 	}
 
-	return kind.Kind, kind.Version, cfg, subassemblers, nil
+	return kind, cfg, subassemblers, nil
 }

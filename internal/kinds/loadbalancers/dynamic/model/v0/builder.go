@@ -8,11 +8,10 @@ import (
 )
 
 func init() {
-	build = func(desired map[string]interface{}, _ *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)) {
-		spec := model.UserSpec{}
-		err := mapstructure.Decode(desired, &spec)
-
-		return spec, func(cfg model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error) {
+	build = func(serialized map[string]interface{}, _ *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error)) {
+		kind := struct{ Spec model.UserSpec }{}
+		err := mapstructure.Decode(serialized, &kind)
+		return kind.Spec, func(model.Config) ([]operator.Assembler, error) {
 			return nil, err
 		}
 	}

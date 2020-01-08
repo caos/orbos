@@ -9,13 +9,13 @@ import (
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 )
 
-var build func(map[string]interface{}, *operator.Secrets, interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error))
+var build func(map[string]interface{}, *operator.Secrets, interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error))
 
-func Build(spec map[string]interface{}, secrets *operator.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error)) {
+func Build(spec map[string]interface{}, secrets *operator.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config) ([]operator.Assembler, error)) {
 	if build != nil {
 		return build(spec, secrets, dependant)
 	}
-	return model.UserSpec{}, func(_ model.Config, _ []map[string]interface{}) (map[string]operator.Assembler, error) {
+	return model.UserSpec{}, func(_ model.Config) ([]operator.Assembler, error) {
 		return nil, errors.New("Version v0 for kind orbiter.caos.ch/KubernetesCluster is not yet supported")
 	}
 }

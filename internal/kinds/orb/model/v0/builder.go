@@ -14,18 +14,24 @@ import (
 )
 
 func init() {
-	build = func(desired map[string]interface{}, _ *operator.Secrets, dependant interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)) {
+	build = func(serialized map[string]interface{}, _ *operator.Secrets, dependant interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error)) {
 
-		spec := model.UserSpec{}
-		err := mapstructure.Decode(desired, &spec)
+		kind := struct {
+			Spec model.UserSpec
+			Deps struct {
+				Clusters  []map[string]interface{}
+				Providers []map[string]interface{}
+			}
+		}{}
+		err := mapstructure.Decode(serialized, &kind)
 
-		return spec, func(cfg model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error) {
+		return kind.Spec, func(cfg model.Config) ([]operator.Assembler, error) {
 
 			if err != nil {
 				return nil, err
 			}
-			subassemblers := make(map[string]operator.Assembler)
-			for _, depValue := range deps {
+			subassemblers := make([]operator.Assembler, 0)
+			for _, depValue := range kind.Deps.Clusters {
 
 				depIDIface, ok := depValue["id"]
 				if !ok {
@@ -35,10 +41,10 @@ func init() {
 				depID := fmt.Sprintf("%v", depIDIface)
 
 				overwriteDesired := func(des map[string]interface{}) {
-					if spec.Verbose {
+					if kind.Spec.Verbose {
 						des["verbose"] = true
 					}
-					if spec.Destroyed {
+					if kind.Spec.Destroyed {
 						des["destroyed"] = true
 					}
 				}
@@ -55,7 +61,7 @@ func init() {
 				path := []string{"deps", depID}
 				switch kindStr {
 				case "orbiter.caos.ch/KubernetesCluster":
-					subassemblers[depID] = kubernetes.New(path, overwriteDesired, adapter.New(k8s.Parameters{
+					subassemblers = append(subassemblers, kubernetes.New(path, overwriteDesired, adapter.New(k8s.Parameters{
 						Logger: cfg.Logger.WithFields(map[string]interface{}{
 							"cluster": depID,
 						}),
@@ -69,7 +75,7 @@ func init() {
 						CurrentFile:        cfg.CurrentFile,
 						SecretsFile:        cfg.SecretsFile,
 						ConnectFromOutside: cfg.ConnectFromOutside,
-					}))
+					})))
 				default:
 					return nil, fmt.Errorf("Unknown cluster kind %s", kindStr)
 				}

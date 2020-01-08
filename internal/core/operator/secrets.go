@@ -8,6 +8,21 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
+type Secret struct {
+}
+
+func (s *Secret) ID() string {
+	return ""
+}
+
+func (s *Secret) Read() string {
+	return ""
+}
+
+func (s *Secret) Write(string) error {
+	return nil
+}
+
 type curriedSecrets struct {
 	logger           logging.Logger
 	encryptedSecrets map[string]interface{}

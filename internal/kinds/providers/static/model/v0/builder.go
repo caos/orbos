@@ -1,8 +1,6 @@
 package v0
 
 import (
-	"fmt"
-
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
@@ -15,54 +13,39 @@ import (
 )
 
 func init() {
-	build = func(desired map[string]interface{}, _ *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config, []map[string]interface{}) (map[string]operator.Assembler, error)) {
+	build = func(desired map[string]interface{}, _ *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error)) {
 
-		spec := model.UserSpec{}
-		err := mapstructure.Decode(desired, &spec)
+		kind := struct {
+			Spec model.UserSpec
+			Deps struct {
+				Loadbalancing map[string]interface{}
+			}
+		}{}
+		err := mapstructure.Decode(desired, &kind)
 
-		return spec, func(cfg model.Config, deps []map[string]interface{}) (map[string]operator.Assembler, error) {
+		return kind.Spec, func(cfg model.Config) ([]operator.Assembler, error) {
 
 			if err != nil {
 				return nil, err
 			}
 
-			subassemblers := make(map[string]operator.Assembler)
-			for _, depValue := range deps {
-				depIDIface, ok := depValue["id"]
-				if !ok {
-					return nil, errors.Errorf("dependency %+v has no id", depValue)
-				}
-
-				depID := fmt.Sprintf("%v", depIDIface)
-
-				generalOverwriteSpec := func(des map[string]interface{}) {
-					if spec.Verbose {
-						des["verbose"] = true
-					}
-				}
-				/*
-					lbLogger := cfg.Logger.WithFields(map[string]interface{}{
-						"lb": depKey,
-					})
-				*/
-				depPath := []string{"deps", depID}
-				depKind := depValue["kind"]
-				/*				ingress, ok := cfg.Ingresses[depKey]
-								if !ok {
-									continue
-								}
-				*/
-				switch depKind {
-				case "orbiter.caos.ch/ExternalLoadBalancer":
-					subassemblers[depID] = external.New(depPath, generalOverwriteSpec, externallbadapter.New())
-				case "orbiter.caos.ch/DynamicLoadBalancer":
-					subassemblers[depID] = dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(spec.RemoteUser))
-				default:
-					return subassemblers, errors.Errorf("unknown dependency type %s", depKind)
+			generalOverwriteSpec := func(des map[string]interface{}) {
+				if kind.Spec.Verbose {
+					des["verbose"] = true
 				}
 			}
 
-			return subassemblers, nil
+			depPath := []string{"deps", kind.Deps.Loadbalancing["id"].(string)}
+			depKind := kind.Deps.Loadbalancing["kind"]
+
+			switch depKind {
+			case "orbiter.caos.ch/ExternalLoadBalancer":
+				return []operator.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
+			case "orbiter.caos.ch/DynamicLoadBalancer":
+				return []operator.Assembler{dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(kind.Spec.RemoteUser))}, nil
+			default:
+				return nil, errors.Errorf("unknown dependency type %s", depKind)
+			}
 		}
 	}
 }

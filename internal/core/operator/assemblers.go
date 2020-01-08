@@ -11,9 +11,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Kind struct {
+	Kind    string
+	Version string
+	ID      string
+}
+
 type Assembler interface {
 	BuildContext() ([]string, func(map[string]interface{}))
-	Build(spec map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (string, string, interface{}, map[string]Assembler, error)
+	Build(spec map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (Kind, interface{}, []Assembler, error)
 	Ensure(ctx context.Context, secrets *Secrets, ensuredDependencies map[string]interface{}) (interface{}, error)
 }
 
@@ -47,9 +53,8 @@ type assemblerTree struct {
 	path             []string
 	node             Assembler
 	currentState     interface{}
-	version          string
-	kind             string
-	children         map[string]*assemblerTree
+	kind             Kind
+	children         []*assemblerTree
 	nodeAgentChanges chan *nodeAgentChange
 }
 
@@ -103,7 +108,7 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 
 	debugLogger.Debug("Building assembler")
 	nodeAgentChanges := make(chan *nodeAgentChange, 1000)
-	kind, version, builtConfig, subassemblers, err := assembler.Build(deepDesiredSource, func(p []string) *NodeAgentCurrent {
+	kind, builtConfig, subassemblers, err := assembler.Build(deepDesiredSource, func(p []string) *NodeAgentCurrent {
 		return newNodeAgentCurrent(assemblerLogger, p, deepCurrentSource, nodeAgentChanges)
 	}, secrets, dependantConfig)
 	if err != nil {
@@ -115,17 +120,16 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 		node:             assembler,
 		path:             path,
 		kind:             kind,
-		version:          version,
 		nodeAgentChanges: nodeAgentChanges,
 	}
 
-	tree.children = make(map[string]*assemblerTree)
-	for id, subassembler := range subassemblers {
+	tree.children = make([]*assemblerTree, len(subassemblers))
+	for idx, subassembler := range subassemblers {
 		subTree, err := build(logger, subassembler, deepDesiredSource, deepCurrentSource, secrets, builtConfig, false)
 		if err != nil {
 			return nil, err
 		}
-		tree.children[id] = subTree
+		tree.children[idx] = subTree
 	}
 	return tree, nil
 }
@@ -139,12 +143,12 @@ func ensure(ctx context.Context, logger logging.Logger, tree *assemblerTree, sec
 	})
 	debugLogger.Debug("Ensuring")
 	ensuredChildren := make(map[string]interface{})
-	for idx, subassembler := range tree.children {
+	for _, subassembler := range tree.children {
 		ensured, err := ensure(ctx, logger, subassembler, secrets)
 		if err != nil {
 			return nil, err
 		}
-		ensuredChildren[idx] = ensured
+		ensuredChildren[subassembler.kind.ID] = ensured
 	}
 
 	current, err := tree.node.Ensure(ctx, secrets, ensuredChildren)
@@ -222,15 +226,10 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 
 	tree.nodeAgentChanges = changesCopy
 
-	deepCurrent["current"] = &struct {
-		Kind    string
-		Version string
-		State   map[string]interface{}
-	}{
-		tree.kind,
-		tree.version,
-		currentState,
-	}
+	deepCurrent["kind"] = tree.kind.Kind
+	deepCurrent["version"] = tree.kind.Version
+	deepCurrent["id"] = tree.kind.ID
+	deepCurrent["current"] = currentState
 
 	if debugLogger.IsVerbose() {
 		debugLogger.Debug("Done overwriting current")
