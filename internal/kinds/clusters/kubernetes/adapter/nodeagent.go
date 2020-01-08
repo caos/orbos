@@ -15,7 +15,7 @@ import (
 )
 
 func currentStatePath(selfAbsolutePath []string) []string {
-	return append(selfAbsolutePath, "current", "state")
+	return append(selfAbsolutePath, "current")
 }
 
 func nodeagentPath(compute infra.Compute) []string {
