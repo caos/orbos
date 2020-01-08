@@ -35,7 +35,7 @@ func init() {
 				}
 			}
 
-			depPath := []string{"deps", kind.Deps.Loadbalancing["id"].(string)}
+			depPath := []string{"deps", "loadbalancing"}
 			depKind := kind.Deps.Loadbalancing["kind"]
 
 			switch depKind {

@@ -58,7 +58,7 @@ func init() {
 					return nil, fmt.Errorf("Desired cluster kind %v must be of type string", kind)
 				}
 
-				path := []string{"deps", depID}
+				path := []string{"deps", "clusters", depID}
 				switch kindStr {
 				case "orbiter.caos.ch/KubernetesCluster":
 					subassemblers = append(subassemblers, kubernetes.New(path, overwriteDesired, adapter.New(k8s.Parameters{

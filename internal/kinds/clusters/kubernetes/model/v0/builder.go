@@ -48,7 +48,7 @@ func init() {
 
 				depID := fmt.Sprintf("%v", depIDIface)
 
-				providerPath := []string{"deps", depID}
+				providerPath := []string{"deps", "providers", depID}
 				generalOverwriteSpec := func(des map[string]interface{}) {
 					if kind.Spec.Verbose {
 						des["verbose"] = true
