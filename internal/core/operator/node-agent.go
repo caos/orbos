@@ -199,12 +199,12 @@ type muxMap struct {
 	data map[string]interface{}
 }
 
-func newNodeAgentCurrent(logger logging.Logger, path []string, nodeAgentSource map[string]interface{}, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
+func newNodeAgentCurrent(logger logging.Logger, path []string, nodeAgentCurrent map[string]interface{}, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
 
 	naKind, err := drillIn(logger.WithFields(map[string]interface{}{
 		"purpose": "find node agent",
 		"config":  "current",
-	}), nodeAgentSource, append([]string{"current"}, path...), true)
+	}), nodeAgentCurrent, path, true)
 	if err != nil {
 		panic(err)
 	}

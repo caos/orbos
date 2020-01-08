@@ -19,7 +19,7 @@ type Kind struct {
 
 type Assembler interface {
 	BuildContext() ([]string, func(map[string]interface{}))
-	Build(spec map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (Kind, interface{}, []Assembler, error)
+	Build(kind map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (Kind, interface{}, []Assembler, error)
 	Ensure(ctx context.Context, secrets *Secrets, ensuredDependencies map[string]interface{}) (interface{}, error)
 }
 
@@ -67,20 +67,20 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 		"path": path,
 	})
 	var (
-		deepDesiredSource map[string]interface{}
-		deepCurrentSource map[string]interface{}
-		err               error
+		deepDesiredKind map[string]interface{}
+		deepCurrentKind map[string]interface{}
+		err             error
 	)
 	if isRoot {
-		deepDesiredSource = desiredSource
-		deepCurrentSource = currentSource
+		deepDesiredKind = desiredSource
+		deepCurrentKind = currentSource
 		if err != nil {
 			return nil, err
 		}
 		path = make([]string, 0)
 	} else {
 		debugLogger.Debug("Navigating to desiredSource assembler")
-		deepDesiredSource, err = drillIn(logger.WithFields(map[string]interface{}{
+		deepDesiredKind, err = drillIn(logger.WithFields(map[string]interface{}{
 			"purpose": "build",
 			"config":  "spec",
 		}), desiredSource, path, false)
@@ -88,7 +88,7 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 			return nil, errors.Wrapf(err, "navigating to %s's desired source at path %v failed", assembler, path)
 		}
 		debugLogger.Debug("Navigating to assembler current state")
-		deepCurrentSource, err = drillIn(logger.WithFields(map[string]interface{}{
+		deepCurrentKind, err = drillIn(logger.WithFields(map[string]interface{}{
 			"purpose": "build",
 			"config":  "spec",
 		}), currentSource, path, true)
@@ -98,19 +98,21 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 	}
 
 	if overwrite != nil {
-		realDesired, err := helpers.ToStringKeyedMap(deepDesiredSource["spec"])
+		realDesired, err := helpers.ToStringKeyedMap(deepDesiredKind["spec"])
 		if err != nil {
-			return nil, errors.Wrapf(err, "converting %s's desired spec %+v to a string keyed map failed", assembler, deepDesiredSource["spec"])
+			return nil, errors.Wrapf(err, "converting %s's desired spec %+v to a string keyed map failed", assembler, deepDesiredKind["spec"])
 		}
 		overwrite(realDesired)
-		deepDesiredSource["spec"] = realDesired
+		deepDesiredKind["spec"] = realDesired
 	}
 
 	debugLogger.Debug("Building assembler")
 	nodeAgentChanges := make(chan *nodeAgentChange, 1000)
-	kind, builtConfig, subassemblers, err := assembler.Build(deepDesiredSource, func(p []string) *NodeAgentCurrent {
-		return newNodeAgentCurrent(assemblerLogger, p, deepCurrentSource, nodeAgentChanges)
-	}, secrets, dependantConfig)
+	kind, builtConfig, subassemblers, err := assembler.Build(deepDesiredKind, func(dck map[string]interface{}, naCh chan *nodeAgentChange) func(p []string) *NodeAgentCurrent {
+		return func(p []string) *NodeAgentCurrent {
+			return newNodeAgentCurrent(assemblerLogger, append([]string{"current"}, p...), dck, naCh)
+		}
+	}(deepCurrentKind, nodeAgentChanges), secrets, dependantConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "building assembler %s failed", assembler)
 	}
@@ -125,7 +127,7 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 
 	tree.children = make([]*assemblerTree, len(subassemblers))
 	for idx, subassembler := range subassemblers {
-		subTree, err := build(logger, subassembler, deepDesiredSource, deepCurrentSource, secrets, builtConfig, false)
+		subTree, err := build(logger, subassembler, deepDesiredKind, deepCurrentKind, secrets, builtConfig, false)
 		if err != nil {
 			return nil, err
 		}
