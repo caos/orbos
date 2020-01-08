@@ -204,7 +204,7 @@ func newNodeAgentCurrent(logger logging.Logger, path []string, nodeAgentSource m
 	naKind, err := drillIn(logger.WithFields(map[string]interface{}{
 		"purpose": "find node agent",
 		"config":  "current",
-	}), nodeAgentSource, path, true)
+	}), nodeAgentSource, append([]string{"current"}, path...), true)
 	if err != nil {
 		panic(err)
 	}
