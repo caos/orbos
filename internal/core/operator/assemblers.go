@@ -204,10 +204,9 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 		if err != nil {
 			return errors.Wrapf(err, "navigating to assembler %s's node agent spec at %v in the assemblers current state in order to overwrite it failed", tree.node, newNodeAgent.path)
 		}
-		nodeAgentCurrentPath := append([]string{"current", "state"}, newNodeAgent.path...)
-		nodeAgentCurrent, err := drillIn(logger, deepCurrent, nodeAgentCurrentPath, true)
+		nodeAgentCurrent, err := drillIn(logger, deepCurrent, newNodeAgent.path, true)
 		if err != nil {
-			return errors.Wrapf(err, "navigating to assembler %s's node agent current at %v in the remote yaml in order to restore it failed", tree.node, nodeAgentCurrentPath)
+			return errors.Wrapf(err, "navigating to assembler %s's node agent current at %v in the remote yaml in order to restore it failed", tree.node, newNodeAgent.path)
 		}
 		nodeAgent["kind"] = "nodeagent.caos.ch/NodeAgent"
 		nodeAgent["version"] = "v0"
