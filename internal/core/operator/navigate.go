@@ -43,7 +43,7 @@ func drillIn(logger logging.Logger, cfg map[string]interface{}, path []string, f
 		return cfg, nil
 	}
 	prop := path[0]
-	if prop == "deps" {
+	if prop == "clusters" || prop == "providers" {
 		return drillInSlice(logger, cfg, path, force)
 	}
 
