@@ -191,12 +191,7 @@ type NodeAgentKind struct {
 	Kind    string
 	Version string
 	Spec    interface{}
-	Current *CurrentNodeAgentKind `yaml:",omitempty"`
-}
-
-type CurrentNodeAgentKind struct {
-	Version string
-	State   *NodeAgentCurrent
+	Current *NodeAgentCurrent `yaml:",omitempty"`
 }
 
 type muxMap struct {
@@ -223,10 +218,10 @@ func newNodeAgentCurrent(logger logging.Logger, path []string, nodeAgentSource m
 		return fallbackCurrent
 	}
 
-	switch kind.Current.Version {
+	switch kind.Version {
 	case "v0":
-		kind.Current.State.changer = changer
-		return kind.Current.State
+		kind.Current.changer = changer
+		return kind.Current
 	default:
 		return fallbackCurrent
 	}
