@@ -160,14 +160,14 @@ func ensure(ctx context.Context, logger logging.Logger, tree *assemblerTree, sec
 	return current, nil
 }
 
-func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree *assemblerTree) error {
+func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *assemblerTree) error {
 	debugLogger := logger.WithFields(map[string]interface{}{
 		"assembler": tree.node,
 		"path":      tree.path,
 	})
 	debugLogger.Debug("Overwriting current model")
 
-	deepCurrent, err := drillIn(logger, current, append(tree.path, "current"), true)
+	deepKind, err := drillIn(logger, kind, tree.path, true)
 	if err != nil {
 		return errors.Wrapf(err, "navigating to assembler %s at %v in order to overwrite its current state failed", tree.node, tree.path)
 	}
@@ -176,7 +176,7 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 	for _, subtree := range tree.children {
 		//		subtree.currentState
 
-		if err := rebuildCurrent(logger, deepCurrent, subtree); err != nil {
+		if err := rebuildCurrent(logger, deepKind, subtree); err != nil {
 			return err
 		}
 	}
@@ -205,7 +205,7 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 			return errors.Wrapf(err, "navigating to assembler %s's node agent spec at %v in the assemblers current state in order to overwrite it failed", tree.node, newNodeAgent.path)
 		}
 		nodeAgentCurrentPath := append([]string{"current"}, newNodeAgent.path...)
-		nodeAgentCurrent, err := drillIn(logger, deepCurrent, nodeAgentCurrentPath, true)
+		nodeAgentCurrent, err := drillIn(logger, deepKind, nodeAgentCurrentPath, true)
 		if err != nil {
 			return errors.Wrapf(err, "navigating to assembler %s's node agent current at %v in the remote yaml in order to restore it failed", tree.node, nodeAgentCurrentPath)
 		}
@@ -216,7 +216,7 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 
 		if debugLogger.IsVerbose() {
 			debugLogger.Debug("Node Agent kind overwritten")
-			overwritten, err := yaml.Marshal(deepCurrent)
+			overwritten, err := yaml.Marshal(deepKind)
 			if err != nil {
 				panic(err)
 			}
@@ -226,14 +226,14 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 
 	tree.nodeAgentChanges = changesCopy
 
-	deepCurrent["kind"] = tree.kind.Kind
-	deepCurrent["version"] = tree.kind.Version
-	deepCurrent["id"] = tree.kind.ID
-	deepCurrent["current"] = currentState
+	deepKind["kind"] = tree.kind.Kind
+	deepKind["version"] = tree.kind.Version
+	deepKind["id"] = tree.kind.ID
+	deepKind["current"] = currentState
 
 	if debugLogger.IsVerbose() {
 		debugLogger.Debug("Done overwriting current")
-		done, err := yaml.Marshal(deepCurrent)
+		done, err := yaml.Marshal(deepKind)
 		if err != nil {
 			panic(err)
 		}
