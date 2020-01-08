@@ -110,7 +110,7 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 	nodeAgentChanges := make(chan *nodeAgentChange, 1000)
 	kind, builtConfig, subassemblers, err := assembler.Build(deepDesiredKind, func(dck map[string]interface{}, naCh chan *nodeAgentChange) func(p []string) *NodeAgentCurrent {
 		return func(p []string) *NodeAgentCurrent {
-			return newNodeAgentCurrent(assemblerLogger, append([]string{"current"}, p...), dck, naCh)
+			return newNodeAgentCurrent(assemblerLogger, p, dck, naCh)
 		}
 	}(deepCurrentKind, nodeAgentChanges), secrets, dependantConfig)
 	if err != nil {
