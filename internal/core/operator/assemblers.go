@@ -167,7 +167,7 @@ func rebuildCurrent(logger logging.Logger, current map[string]interface{}, tree 
 	})
 	debugLogger.Debug("Overwriting current model")
 
-	deepCurrent, err := drillIn(logger, current, tree.path, true)
+	deepCurrent, err := drillIn(logger, current, append(tree.path, "current"), true)
 	if err != nil {
 		return errors.Wrapf(err, "navigating to assembler %s at %v in order to overwrite its current state failed", tree.node, tree.path)
 	}
