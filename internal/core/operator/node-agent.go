@@ -105,8 +105,8 @@ type Allowed struct {
 }
 
 type NodeAgentSpec struct {
-	NodeAgentCommit string
-	ChangesAllowed  bool
+	Commit         string
+	ChangesAllowed bool
 	//	RebootEnabled  bool
 	Software *Software
 	Firewall Firewall

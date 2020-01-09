@@ -204,7 +204,7 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	close(tree.nodeAgentChanges)
 	for newNodeAgent := range tree.nodeAgentChanges {
 		if orbiterCommit != "" {
-			newNodeAgent.spec.NodeAgentCommit = orbiterCommit
+			newNodeAgent.spec.Commit = orbiterCommit
 		}
 		changesCopy <- newNodeAgent
 		nodeAgent, err := drillIn(logger, currentState, newNodeAgent.path, true)
