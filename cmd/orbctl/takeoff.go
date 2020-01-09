@@ -107,7 +107,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			RootAssembler: orbassembler.New(nil, nil, adapter.New(&model.Config{
 				Logger:             logger,
 				ConfigID:           configID,
-				OrbiterVersion:     version,
 				OrbiterCommit:      gitCommit,
 				NodeagentRepoURL:   orb.URL,
 				NodeagentRepoKey:   orb.Repokey,
