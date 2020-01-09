@@ -17,7 +17,7 @@ type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
 	Open        Firewall
-	Version     string
+	Commit      string
 	changer     *changer
 }
 
@@ -105,7 +105,8 @@ type Allowed struct {
 }
 
 type NodeAgentSpec struct {
-	ChangesAllowed bool
+	NodeAgentCommit string
+	ChangesAllowed  bool
 	//	RebootEnabled  bool
 	Software *Software
 	Firewall Firewall
@@ -209,20 +210,10 @@ func newNodeAgentCurrent(logger logging.Logger, path []string, containingKind ma
 		panic(err)
 	}
 
-	changer := &changer{path, naKind, changes}
-	fallbackCurrent := &NodeAgentCurrent{changer: changer}
-
 	kind := &NodeAgentKind{}
 	mapstructure.Decode(naKind, kind)
-	if kind.Current == nil {
-		return fallbackCurrent
+	if kind.Current != nil {
+		kind.Current.changer = &changer{path, naKind, changes}
 	}
-
-	switch kind.Version {
-	case "v0":
-		kind.Current.changer = changer
-		return kind.Current
-	default:
-		return fallbackCurrent
-	}
+	return kind.Current
 }

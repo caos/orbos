@@ -12,6 +12,8 @@ import (
 
 type Config struct{}
 
+var CurrentVersion = "v0"
+
 type Current struct {
 	SourcePools map[string][]string
 	Addresses   map[string]infra.Address

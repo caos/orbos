@@ -129,8 +129,8 @@ func ensureK8sVersion(
 		ensureNodeagent := func() error {
 			cfg.Params.Logger.WithFields(map[string]interface{}{
 				"compute": node.compute.ID(),
-				"from":    node.current.Version,
-				"to":      cfg.Params.OrbiterVersion,
+				"from":    node.current.Commit,
+				"to":      cfg.Params.OrbiterCommit,
 			}).Info("Ensuring node agent")
 
 			return errors.Wrap(installNodeAgent(cfg, node.compute, nodeagentFullPath), "upgrading node agent failed")
@@ -226,8 +226,7 @@ func ensureK8sVersion(
 			return ensureNodeagent, nil
 		}
 
-		expectedVersion := fmt.Sprintf("%s %s\n", cfg.Params.OrbiterVersion, cfg.Params.OrbiterCommit)
-		if node.current.Version != expectedVersion {
+		if node.current.Commit != cfg.Params.OrbiterCommit {
 			showVersion := "node-agent --version"
 
 			err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, node.compute, func(cmp infra.Compute) error {
@@ -240,7 +239,8 @@ func ensureK8sVersion(
 				"response": string(response),
 			}).Debug("Executed command")
 
-			if err != nil || string(response) != expectedVersion {
+			fields := strings.Fields(string(response))
+			if err != nil || len(fields) != 1 || fields[0] != cfg.Params.OrbiterCommit {
 				return ensureNodeagent, nil
 			}
 		}

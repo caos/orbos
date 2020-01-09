@@ -54,10 +54,8 @@ func main() {
 
 	flag.Parse()
 
-	fullVersion := fmt.Sprintf("%s %s", version, gitCommit)
-
 	if *printVersion {
-		fmt.Println(fullVersion)
+		fmt.Println(fmt.Sprintf("%s %s", version, gitCommit))
 		os.Exit(0)
 	}
 
@@ -108,10 +106,10 @@ func main() {
 		SecretsFile: *secretsFile,
 		Watchers: []operator.Watcher{
 			immediate.New(logger),
-			cron.New(logger, "@every 30s"),
+			cron.New(logger, "@every 10s"),
 		},
 		RootAssembler: nodeagent.New(strings.Split(*configPath, "."), nil,
-			adapter.New(fullVersion, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
+			adapter.New(gitCommit, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
 	})
 
 	iterations := make(chan *operator.IterationDone)

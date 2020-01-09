@@ -40,15 +40,15 @@ func (a *assembler) BuildContext() ([]string, func(map[string]interface{})) {
 func (a *assembler) Ensure(ctx context.Context, secrets *operator.Secrets, ensuredDependencies map[string]interface{}) (interface{}, error) {
 	return a.built.Ensure(ctx, secrets, ensuredDependencies)
 }
-func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater operator.NodeAgentUpdater, secrets *operator.Secrets, dependant interface{}) (operator.Kind, interface{}, []operator.Assembler, error) {
+func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater operator.NodeAgentUpdater, secrets *operator.Secrets, dependant interface{}) (operator.Kind, interface{}, []operator.Assembler, string, error) {
 
 	kind := operator.Kind{}
 	if err := mapstructure.Decode(serialized, &kind); err != nil {
-		return kind, nil, nil, err
+		return kind, nil, nil, model.CurrentVersion, err
 	}
 
 	if kind.Kind != "orbiter.caos.ch/StaticProvider" {
-		return kind, nil, nil, fmt.Errorf("Kind %s must be \"orbiter.caos.ch/StaticProvider\"", kind.Kind)
+		return kind, nil, nil, model.CurrentVersion, fmt.Errorf("Kind %s must be \"orbiter.caos.ch/StaticProvider\"", kind.Kind)
 	}
 
 	var spec model.UserSpec
@@ -57,23 +57,23 @@ func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater op
 	case v0.String():
 		spec, subassemblersBuilder = v0builder.Build(serialized, secrets, dependant)
 	default:
-		return kind, nil, nil, fmt.Errorf("Unknown version %s", kind.Version)
+		return kind, nil, nil, model.CurrentVersion, fmt.Errorf("Unknown version %s", kind.Version)
 	}
 
 	cfg, adapter, err := a.builder.Build(spec, nodeagentupdater)
 	if err != nil {
-		return kind, nil, nil, err
+		return kind, nil, nil, model.CurrentVersion, err
 	}
 	a.built = adapter
 
 	if subassemblersBuilder == nil {
-		return kind, cfg, nil, nil
+		return kind, cfg, nil, model.CurrentVersion, nil
 	}
 
 	subassemblers, err := subassemblersBuilder(cfg)
 	if err != nil {
-		return kind, nil, nil, err
+		return kind, nil, nil, model.CurrentVersion, err
 	}
 
-	return kind, cfg, subassemblers, nil
+	return kind, cfg, subassemblers, model.CurrentVersion, nil
 }

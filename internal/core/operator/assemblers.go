@@ -19,7 +19,7 @@ type Kind struct {
 
 type Assembler interface {
 	BuildContext() ([]string, func(map[string]interface{}))
-	Build(kind map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (Kind, interface{}, []Assembler, error)
+	Build(kind map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (serialized Kind, built interface{}, subassemblers []Assembler, apiVersionCurrent string, err error)
 	Ensure(ctx context.Context, secrets *Secrets, ensuredDependencies map[string]interface{}) (interface{}, error)
 }
 
@@ -50,12 +50,13 @@ type nodeAgentChange struct {
 }
 
 type assemblerTree struct {
-	path             []string
-	node             Assembler
-	currentState     interface{}
-	kind             Kind
-	children         []*assemblerTree
-	nodeAgentChanges chan *nodeAgentChange
+	path              []string
+	node              Assembler
+	currentState      interface{}
+	currentAPIVersion string
+	kind              Kind
+	children          []*assemblerTree
+	nodeAgentChanges  chan *nodeAgentChange
 }
 
 func build(logger logging.Logger, assembler Assembler, desiredSource map[string]interface{}, currentSource map[string]interface{}, secrets *Secrets, dependantConfig interface{}, isRoot bool) (*assemblerTree, error) {
@@ -108,7 +109,7 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 
 	debugLogger.Debug("Building assembler")
 	nodeAgentChanges := make(chan *nodeAgentChange, 1000)
-	kind, builtConfig, subassemblers, err := assembler.Build(deepDesiredKind, func(dck map[string]interface{}, naCh chan *nodeAgentChange) func(p []string) *NodeAgentCurrent {
+	kind, builtConfig, subassemblers, builtAPIVersion, err := assembler.Build(deepDesiredKind, func(dck map[string]interface{}, naCh chan *nodeAgentChange) func(p []string) *NodeAgentCurrent {
 		return func(p []string) *NodeAgentCurrent {
 			return newNodeAgentCurrent(assemblerLogger, p, dck, naCh)
 		}
@@ -119,10 +120,11 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 	assemblerLogger.Debug("Assembler built")
 
 	tree := &assemblerTree{
-		node:             assembler,
-		path:             path,
-		kind:             kind,
-		nodeAgentChanges: nodeAgentChanges,
+		node:              assembler,
+		path:              path,
+		kind:              kind,
+		currentAPIVersion: builtAPIVersion,
+		nodeAgentChanges:  nodeAgentChanges,
 	}
 
 	tree.children = make([]*assemblerTree, len(subassemblers))
@@ -162,7 +164,7 @@ func ensure(ctx context.Context, logger logging.Logger, tree *assemblerTree, sec
 	return current, nil
 }
 
-func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *assemblerTree) error {
+func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *assemblerTree, orbiterCommit string) error {
 	debugLogger := logger.WithFields(map[string]interface{}{
 		"assembler": tree.node,
 		"path":      tree.path,
@@ -178,7 +180,7 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	for _, subtree := range tree.children {
 		//		subtree.currentState
 
-		if err := rebuildCurrent(logger, deepKind, subtree); err != nil {
+		if err := rebuildCurrent(logger, deepKind, subtree, orbiterCommit); err != nil {
 			return err
 		}
 	}
@@ -201,6 +203,9 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	changesCopy := make(chan *nodeAgentChange, len(tree.nodeAgentChanges))
 	close(tree.nodeAgentChanges)
 	for newNodeAgent := range tree.nodeAgentChanges {
+		if orbiterCommit != "" {
+			newNodeAgent.spec.NodeAgentCommit = orbiterCommit
+		}
 		changesCopy <- newNodeAgent
 		nodeAgent, err := drillIn(logger, currentState, newNodeAgent.path, true)
 		if err != nil {
@@ -229,7 +234,8 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	tree.nodeAgentChanges = changesCopy
 
 	deepKind["kind"] = tree.kind.Kind
-	deepKind["version"] = tree.kind.Version
+	deepKind["apiVersion"] = tree.kind.Version
+	deepKind["currentVersion"] = tree.currentAPIVersion
 	if tree.kind.ID != "" {
 		deepKind["id"] = tree.kind.ID
 	}

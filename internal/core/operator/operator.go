@@ -16,6 +16,7 @@ type Arguments struct {
 	Logger          logging.Logger
 	GitClient       *git.Client
 	MasterKey       string
+	OrbiterCommit   string
 	DesiredFile     string
 	CurrentFile     string
 	SecretsFile     string
@@ -180,7 +181,7 @@ func (i *Iterator) iterate(stop <-chan struct{}) *IterationDone {
 				return nil, errors.Wrap(err, "navigating to reloaded nested root failed")
 			}
 
-			if err := rebuildCurrent(i.args.Logger, reloadedWorkCurrent, tree); err != nil {
+			if err := rebuildCurrent(i.args.Logger, reloadedWorkCurrent, tree, i.args.OrbiterCommit); err != nil {
 				return nil, errors.Wrap(err, "overwriting current state failed")
 			}
 

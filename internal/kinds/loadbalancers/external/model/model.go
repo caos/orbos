@@ -6,6 +6,8 @@ type UserSpec infra.Address
 
 type Config struct{}
 
+var CurrentVersion = "v0"
+
 type Current struct {
 	Address infra.Address
 }

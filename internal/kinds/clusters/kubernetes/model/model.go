@@ -26,7 +26,6 @@ type Parameters struct {
 	RepoURL            string
 	RepoKey            string
 	MasterKey          string
-	OrbiterVersion     string
 	OrbiterCommit      string
 	CurrentFile        string
 	SecretsFile        string
@@ -46,6 +45,8 @@ type Pool struct {
 	Nodes           int
 	Pool            string
 }
+
+var CurrentVersion = "v0"
 
 type Current struct {
 	Status   string

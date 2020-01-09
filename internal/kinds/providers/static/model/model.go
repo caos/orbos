@@ -25,6 +25,8 @@ type Config struct {
 	Healthchecks string
 }
 
+var CurrentVersion = "v0"
+
 type Current struct {
 	infra.ProviderCurrent
 }

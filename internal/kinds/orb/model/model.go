@@ -20,4 +20,6 @@ type Config struct {
 	ConnectFromOutside bool
 }
 
+var CurrentVersion = "v0"
+
 type Current struct{}

@@ -11,4 +11,6 @@ type UserSpec struct {
 
 type Config struct{}
 
+var CurrentVersion = "v0"
+
 type Current operator.NodeAgentCurrent

@@ -45,6 +45,8 @@ type UserSpec struct {
 type Config struct {
 }
 
+var CurrentVersion = "v0"
+
 type Current struct {
 	infra.ProviderCurrent
 }

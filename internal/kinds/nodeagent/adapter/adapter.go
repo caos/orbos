@@ -55,7 +55,7 @@ type Installer interface {
 
 type Callback func() error
 
-func New(version string, logger logging.Logger, rebooter Rebooter, firewallEnsurer FirewallEnsurer, conv Converter, before Callback, after Callback) Builder {
+func New(commit string, logger logging.Logger, rebooter Rebooter, firewallEnsurer FirewallEnsurer, conv Converter, before Callback, after Callback) Builder {
 	return builderFunc(func(userSpec model.UserSpec, nodeagentUpdater operator.NodeAgentUpdater) (model.Config, Adapter, error) {
 		if userSpec.Verbose && !logger.IsVerbose() {
 			logger = logger.Verbose()
@@ -69,7 +69,7 @@ func New(version string, logger logging.Logger, rebooter Rebooter, firewallEnsur
 			}
 
 			curr = &model.Current{
-				Version:     version,
+				Commit:      commit,
 				NodeIsReady: isReady(),
 			}
 
