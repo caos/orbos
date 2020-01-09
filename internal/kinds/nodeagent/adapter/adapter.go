@@ -60,7 +60,12 @@ func New(commit string, logger logging.Logger, rebooter Rebooter, firewallEnsure
 		if userSpec.Verbose && !logger.IsVerbose() {
 			logger = logger.Verbose()
 		}
-		return model.Config{}, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, deps map[string]interface{}) (curr *model.Current, err error) {
+		cfg := model.Config{}
+		if userSpec.Commit != commit {
+			return cfg, nil, fmt.Errorf("nodeagent is outdated: running build commit %s does not match requested build commit %s", commit, userSpec.Commit)
+		}
+
+		return cfg, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, deps map[string]interface{}) (curr *model.Current, err error) {
 
 			if before != nil {
 				if err := before(); err != nil {

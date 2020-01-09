@@ -93,13 +93,14 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		}
 
 		op := operator.New(&operator.Arguments{
-			Ctx:         ctx,
-			Logger:      logger,
-			GitClient:   gitClient,
-			MasterKey:   orb.Masterkey,
-			DesiredFile: "desired.yml",
-			CurrentFile: currentFile,
-			SecretsFile: secretsFile,
+			Ctx:           ctx,
+			Logger:        logger,
+			GitClient:     gitClient,
+			MasterKey:     orb.Masterkey,
+			OrbiterCommit: gitCommit,
+			DesiredFile:   "desired.yml",
+			CurrentFile:   currentFile,
+			SecretsFile:   secretsFile,
 			Watchers: []operator.Watcher{
 				immediate.New(logger),
 				cron.New(logger, "@every 10s"),
