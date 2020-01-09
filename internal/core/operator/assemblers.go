@@ -234,7 +234,6 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	tree.nodeAgentChanges = changesCopy
 
 	deepKind["kind"] = tree.kind.Kind
-	deepKind["apiVersion"] = tree.kind.Version
 	deepKind["currentVersion"] = tree.currentAPIVersion
 	if tree.kind.ID != "" {
 		deepKind["id"] = tree.kind.ID
