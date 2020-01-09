@@ -230,8 +230,12 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 
 	deepKind["kind"] = tree.kind.Kind
 	deepKind["version"] = tree.kind.Version
-	deepKind["id"] = tree.kind.ID
-	deepKind["current"] = currentState
+	if tree.kind.ID != "" {
+		deepKind["id"] = tree.kind.ID
+	}
+	if currentState != nil {
+		deepKind["current"] = currentState
+	}
 
 	if debugLogger.IsVerbose() {
 		debugLogger.Debug("Done overwriting current")
