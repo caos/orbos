@@ -212,8 +212,9 @@ func newNodeAgentCurrent(logger logging.Logger, path []string, containingKind ma
 
 	kind := &NodeAgentKind{}
 	mapstructure.Decode(naKind, kind)
-	if kind.Current != nil {
-		kind.Current.changer = &changer{path, naKind, changes}
+	if kind.Current == nil {
+		kind.Current = &NodeAgentCurrent{}
 	}
+	kind.Current.changer = &changer{path, naKind, changes}
 	return kind.Current
 }
