@@ -24,7 +24,6 @@ func ensureCluster(
 	secrets *operator.Secrets,
 	k8sClient *k8s.Client) (err error) {
 
-	nodeagentFullPath := nodeagentFullPathFunc(cfg.Params.SelfAbsolutePath)
 	kubeConfigKey := cfg.Params.ID + "_kubeconfig"
 	joinTokenKey := cfg.Params.ID + "_jointoken"
 
@@ -64,7 +63,6 @@ func ensureCluster(
 				controlplanePool = &scaleablePool{
 					pool: newPool(
 						cfg,
-						nodeagentFullPath,
 						&poolSpec{group: "", spec: cpDesired},
 						cpPool,
 						k8sClient,
@@ -109,7 +107,6 @@ func ensureCluster(
 			workerPools = append(workerPools, &scaleablePool{
 				pool: newPool(
 					cfg,
-					nodeagentFullPath,
 					&poolSpec{group: group, spec: wDesired},
 					wPool,
 					k8sClient,
@@ -163,7 +160,6 @@ func ensureCluster(
 	targetVersion := k8s.ParseString(cfg.Spec.Kubernetes)
 	upgradingDone, err := ensureK8sVersion(
 		cfg,
-		nodeagentFullPath,
 		targetVersion,
 		k8sClient,
 		curr.Computes,

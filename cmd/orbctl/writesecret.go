@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/caos/orbiter/internal/edge/git"
 	"github.com/pkg/errors"
@@ -71,7 +71,7 @@ orbctl writesecret myorbsomeclustergceprovider_google_application_credentials_va
 					panic(err)
 				}
 				newSecsMap[args[0]] = secsMap[args[0]]
-				return operator.Marshal(newSecsMap)
+				return orbiter.Marshal(newSecsMap)
 			},
 			Force: true,
 		}); err != nil {

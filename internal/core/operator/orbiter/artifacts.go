@@ -1,5 +1,6 @@
-package main
+package orbiter
 
+/*
 import (
 	"fmt"
 	"os"
@@ -400,3 +401,4 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 func int32Ptr(i int32) *int32 { return &i }
 func int64Ptr(i int64) *int64 { return &i }
 func boolPtr(b bool) *bool    { return &b }
+*/

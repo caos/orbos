@@ -22,7 +22,6 @@ type node struct {
 
 func ensureK8sVersion(
 	cfg *model.Config,
-	nodeagentFullPath func(compute infra.Compute) []string,
 	target k8s.KubernetesVersion,
 	k8sClient *k8s.Client,
 	currentComputes map[string]*model.Compute,
@@ -126,14 +125,16 @@ func ensureK8sVersion(
 		isFirstControlplane bool,
 		to operator.Software) (func() error, error) {
 
-		ensureNodeagent := func() error {
-			cfg.Params.Logger.WithFields(map[string]interface{}{
-				"compute": node.compute.ID(),
-				"from":    node.current.Commit,
-				"to":      cfg.Params.OrbiterCommit,
-			}).Info("Ensuring node agent")
+		ensureNodeagent := func(from string) func() error {
+			return func() error {
+				cfg.Params.Logger.WithFields(map[string]interface{}{
+					"compute": node.compute.ID(),
+					"from":    from,
+					"to":      cfg.Params.OrbiterCommit,
+				}).Info("Ensuring node agent")
 
-			return errors.Wrap(installNodeAgent(cfg, node.compute, nodeagentFullPath), "upgrading node agent failed")
+				return errors.Wrap(installNodeAgent(cfg, node.compute), "upgrading node agent failed")
+			}
 		}
 
 		ensureKubeadm := func() error {
@@ -223,7 +224,7 @@ func ensureK8sVersion(
 			"response": string(response),
 		}).Debug("Executed command")
 		if err != nil && !strings.Contains(string(response), "activating") {
-			return ensureNodeagent, nil
+			return ensureNodeagent("not running"), nil
 		}
 
 		if node.current.Commit != cfg.Params.OrbiterCommit {
@@ -241,7 +242,7 @@ func ensureK8sVersion(
 
 			fields := strings.Fields(string(response))
 			if err != nil || len(fields) != 1 || fields[0] != cfg.Params.OrbiterCommit {
-				return ensureNodeagent, nil
+				return ensureNodeagent(fields[0]), nil
 			}
 		}
 

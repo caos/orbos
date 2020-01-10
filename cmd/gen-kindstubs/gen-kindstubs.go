@@ -53,7 +53,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 
 	"{{ .QualifiedPackage }}/adapter"
 	"{{ .QualifiedPackage }}/model"
@@ -76,7 +76,7 @@ type assembler struct {
 	built     adapter.Adapter
 }
 
-func New(configPath []string, overwrite func(map[string]interface{}), builder adapter.Builder) operator.Assembler {
+func New(configPath []string, overwrite func(map[string]interface{}), builder adapter.Builder) orbiter.Assembler {
 	return &assembler{configPath, overwrite, builder, nil}
 }
 
@@ -84,12 +84,12 @@ func (a *assembler) String() string { return "{{ .Kind }}" }
 func (a *assembler) BuildContext() ([]string, func(map[string]interface{})) {
 	return a.path, a.overwrite
 }
-func (a *assembler) Ensure(ctx context.Context, secrets *operator.Secrets, ensuredDependencies map[string]interface{}) (interface{}, error) {
+func (a *assembler) Ensure(ctx context.Context, secrets *orbiter.Secrets, ensuredDependencies map[string]interface{}) (interface{}, error) {
 	return a.built.Ensure(ctx, secrets, ensuredDependencies)
 }
-func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater operator.NodeAgentUpdater, secrets *operator.Secrets, dependant interface{}) (operator.Kind, interface{}, []operator.Assembler, string, error) {
+func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater orbiter.NodeAgentUpdater, secrets *orbiter.Secrets, dependant interface{}) (orbiter.Kind, interface{}, []orbiter.Assembler, string, error) {
 
-	kind := operator.Kind{}
+	kind := orbiter.Kind{}
 	if err := mapstructure.Decode(serialized, &kind); err != nil {
 		return kind, nil, nil, model.CurrentVersion, err
 	}
@@ -99,7 +99,7 @@ func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater op
 	}
 
 	var spec model.UserSpec
-	var subassemblersBuilder func(model.Config) ([]operator.Assembler, error)
+	var subassemblersBuilder func(model.Config) ([]orbiter.Assembler, error)
 	switch kind.Version {
 	{{ range .Versions }}case {{ . }}.String():
 		spec, subassemblersBuilder = {{ . }}builder.Build(serialized, secrets, dependant){{end}}
@@ -137,27 +137,27 @@ package adapter
 import (
 	"context"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"{{ .QualifiedPackage }}/model"
 )
 
 type Builder interface {
-	Build(model.UserSpec, operator.NodeAgentUpdater) (model.Config, Adapter, error)
+	Build(model.UserSpec, orbiter.NodeAgentUpdater) (model.Config, Adapter, error)
 }
 
-type builderFunc func(model.UserSpec, operator.NodeAgentUpdater) (model.Config, Adapter, error)
+type builderFunc func(model.UserSpec, orbiter.NodeAgentUpdater) (model.Config, Adapter, error)
 
-func (b builderFunc) Build(spec model.UserSpec, nodeagent operator.NodeAgentUpdater) (model.Config, Adapter, error) {
+func (b builderFunc) Build(spec model.UserSpec, nodeagent orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 	return b(spec, nodeagent)
 }
 
 type Adapter interface {
-	Ensure(context.Context, *operator.Secrets, map[string]interface{}) (*model.Current, error)
+	Ensure(context.Context, *orbiter.Secrets, map[string]interface{}) (*model.Current, error)
 }
 
-type adapterFunc func(context.Context, *operator.Secrets, map[string]interface{}) (*model.Current, error)
+type adapterFunc func(context.Context, *orbiter.Secrets, map[string]interface{}) (*model.Current, error)
 
-func (a adapterFunc) Ensure(ctx context.Context, secrets *operator.Secrets, ensuredDependencies map[string]interface{}) (*model.Current, error) {
+func (a adapterFunc) Ensure(ctx context.Context, secrets *orbiter.Secrets, ensuredDependencies map[string]interface{}) (*model.Current, error) {
 	return a(ctx, secrets, ensuredDependencies)
 }
 `
@@ -173,17 +173,17 @@ package {{ .Package }}
 import (
 	"errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"{{ .QualifiedPackage }}/model"
 )
 
-var build func(map[string]interface{}, *operator.Secrets, interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error))
+var build func(map[string]interface{}, *orbiter.Secrets, interface{}) (model.UserSpec, func(model.Config) ([]orbiter.Assembler, error))
 
-func Build(spec map[string]interface{}, secrets *operator.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config) ([]operator.Assembler, error)) {
+func Build(spec map[string]interface{}, secrets *orbiter.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config) ([]orbiter.Assembler, error)) {
 	if build != nil {
 		return build(spec, secrets, dependant)
 	}
-	return model.UserSpec{}, func(_ model.Config) ([]operator.Assembler, error){
+	return model.UserSpec{}, func(_ model.Config) ([]orbiter.Assembler, error){
 		return nil, errors.New("Version {{ .Package }} for kind {{ .Kind }} is not yet supported")
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 	"github.com/caos/orbiter/internal/kinds/providers/gce"
@@ -16,13 +16,13 @@ import (
 )
 
 type subBuilder struct {
-	assembler operator.Assembler
+	assembler orbiter.Assembler
 	desired   map[string]interface{}
 	current   map[string]interface{}
 }
 
 func init() {
-	build = func(serialized map[string]interface{}, secrets *operator.Secrets, _ interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error)) {
+	build = func(serialized map[string]interface{}, secrets *orbiter.Secrets, _ interface{}) (model.UserSpec, func(model.Config) ([]orbiter.Assembler, error)) {
 
 		kind := struct {
 			Spec model.UserSpec
@@ -32,14 +32,14 @@ func init() {
 		}{}
 		err := mapstructure.Decode(serialized, &kind)
 
-		return kind.Spec, func(cfg model.Config) ([]operator.Assembler, error) {
+		return kind.Spec, func(cfg model.Config) ([]orbiter.Assembler, error) {
 
 			if err != nil {
 				return nil, err
 			}
 
-			subassemblers := make([]operator.Assembler, len(kind.Deps.Providers))
-			for provIdx, depValue := range kind.Deps.Providers {
+			subassemblers := make([]orbiter.Assembler, len(kind.Deps.Providers))
+			for _, depValue := range kind.Deps.Providers {
 
 				depIDIface, ok := depValue["id"]
 				if !ok {

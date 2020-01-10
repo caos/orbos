@@ -6,7 +6,7 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/adapter"
 	k8s "github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	build = func(serialized map[string]interface{}, _ *operator.Secrets, dependant interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error)) {
+	build = func(serialized map[string]interface{}, _ *orbiter.Secrets, dependant interface{}) (model.UserSpec, func(model.Config) ([]orbiter.Assembler, error)) {
 
 		kind := struct {
 			Spec model.UserSpec
@@ -25,12 +25,12 @@ func init() {
 		}{}
 		err := mapstructure.Decode(serialized, &kind)
 
-		return kind.Spec, func(cfg model.Config) ([]operator.Assembler, error) {
+		return kind.Spec, func(cfg model.Config) ([]orbiter.Assembler, error) {
 
 			if err != nil {
 				return nil, err
 			}
-			subassemblers := make([]operator.Assembler, 0)
+			subassemblers := make([]orbiter.Assembler, 0)
 			for _, depValue := range kind.Deps.Clusters {
 
 				depIDIface, ok := depValue["id"]

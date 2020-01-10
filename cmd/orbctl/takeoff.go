@@ -5,13 +5,13 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
 	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/edge/executables"
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	orbassembler "github.com/caos/orbiter/internal/kinds/orb"
+	"github.com/caos/orbiter/internal/kinds/orb"
 	"github.com/caos/orbiter/internal/kinds/orb/adapter"
 	"github.com/caos/orbiter/internal/kinds/orb/model"
 )
@@ -40,7 +40,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, logger, gitClient, orb, errFunc := rv()
+		ctx, logger, gitClient, orbFile, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -50,120 +50,71 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"commit":  gitCommit,
 			"destroy": destroy,
 			"verbose": verbose,
-			"repoURL": orb.URL,
+			"repoURL": orbFile.URL,
 		}).Info("Orbiter is taking off")
 
 		currentFile := "current.yml"
 		secretsFile := "secrets.yml"
-		configID := strings.ReplaceAll(strings.TrimSuffix(orb.URL[strings.LastIndex(orb.URL, "/")+1:], ".git"), "-", "")
+		configID := strings.ReplaceAll(strings.TrimSuffix(orbFile.URL[strings.LastIndex(orbFile.URL, "/")+1:], ".git"), "-", "")
+		/*
+			var before func(desired []byte, secrets *operator.Secrets) error
 
-		var before func(desired []byte, secrets *operator.Secrets) error
-
-		if deploy && !destroy {
-			before = func(desired []byte, secrets *operator.Secrets) error {
-				var deserialized struct {
-					Spec struct {
-						Orbiter string
-						Boom    string
-						Verbose bool
-					}
-					Deps map[string]struct {
-						Kind string
-					}
-				}
-
-				if err := yaml.Unmarshal(desired, &deserialized); err != nil {
-					return err
-				}
-
-				l := logger
-				if deserialized.Spec.Verbose {
-					l = logger.Verbose()
-				}
-
-				for clusterName, cluster := range deserialized.Deps {
-					if strings.Contains(cluster.Kind, "Kubernetes") {
-						if err := ensureArtifacts(l, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
-							return err
+			if deploy && !destroy {
+				before = func(desired []byte, secrets *operator.Secrets) error {
+					var deserialized struct {
+						Spec struct {
+							Orbiter string
+							Boom    string
+							Verbose bool
+						}
+						Deps map[string]struct {
+							Kind string
 						}
 					}
-				}
-				return nil
-			}
-		}
 
-		op := operator.New(&operator.Arguments{
-			Ctx:           ctx,
-			Logger:        logger,
-			GitClient:     gitClient,
-			MasterKey:     orb.Masterkey,
-			OrbiterCommit: gitCommit,
-			DesiredFile:   "desired.yml",
-			CurrentFile:   currentFile,
-			SecretsFile:   secretsFile,
-			Watchers: []operator.Watcher{
-				immediate.New(logger),
-				cron.New(logger, "@every 10s"),
-			},
-			RootAssembler: orbassembler.New(nil, nil, adapter.New(&model.Config{
-				Logger:             logger,
-				ConfigID:           configID,
-				OrbiterCommit:      gitCommit,
-				NodeagentRepoURL:   orb.URL,
-				NodeagentRepoKey:   orb.Repokey,
-				CurrentFile:        currentFile,
-				SecretsFile:        secretsFile,
-				Masterkey:          orb.Masterkey,
-				ConnectFromOutside: !recur,
-			})),
-			BeforeIteration: before,
+					if err := yaml.Unmarshal(desired, &deserialized); err != nil {
+						return err
+					}
+
+					l := logger
+					if deserialized.Spec.Verbose {
+						l = logger.Verbose()
+					}
+
+					for clusterName, cluster := range deserialized.Deps {
+						if strings.Contains(cluster.Kind, "Kubernetes") {
+							if err := ensureArtifacts(l, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
+								return err
+							}
+						}
+					}
+					return nil
+				}
+			}
+		*/
+		op := operator.New(ctx, logger, orbiter.Iterator(ctx, logger, gitClient, gitCommit, orbFile.Masterkey, recur, destroy, orb.New(nil, nil, adapter.New(&model.Config{
+			Logger:             logger,
+			ConfigID:           configID,
+			OrbiterCommit:      gitCommit,
+			NodeagentRepoURL:   orbFile.URL,
+			NodeagentRepoKey:   orbFile.Repokey,
+			CurrentFile:        currentFile,
+			SecretsFile:        secretsFile,
+			Masterkey:          orbFile.Masterkey,
+			ConnectFromOutside: !recur,
+		}))), []operator.Watcher{
+			immediate.New(logger),
+			cron.New(logger, "@every 10s"),
 		})
 
-		iterations := make(chan *operator.IterationDone)
 		if err := op.Initialize(); err != nil {
 			panic(err)
 		}
 
 		executables.Populate()
 
-		go op.Run(iterations)
+		go op.Run()
 
-	outer:
-		for it := range iterations {
-			if destroy {
-				if it.Error != nil {
-					panic(it.Error)
-				}
-				return nil
-			}
-
-			if recur {
-				if it.Error != nil {
-					logger.Error(it.Error)
-				}
-				continue
-			}
-
-			if it.Error != nil {
-				panic(it.Error)
-			}
-			statusReader := struct {
-				Deps map[string]struct {
-					Current struct {
-						State struct {
-							Status string
-						}
-					}
-				}
-			}{}
-			yaml.Unmarshal(it.Current, &statusReader)
-			for _, cluster := range statusReader.Deps {
-				if cluster.Current.State.Status != "running" {
-					continue outer
-				}
-			}
-			break
-		}
 		return nil
 	}
 	return cmd

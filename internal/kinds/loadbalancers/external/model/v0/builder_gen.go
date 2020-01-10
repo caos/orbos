@@ -5,17 +5,17 @@ package v0
 import (
 	"errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/external/model"
 )
 
-var build func(map[string]interface{}, *operator.Secrets, interface{}) (model.UserSpec, func(model.Config) ([]operator.Assembler, error))
+var build func(map[string]interface{}, *orbiter.Secrets, interface{}) (model.UserSpec, func(model.Config) ([]orbiter.Assembler, error))
 
-func Build(spec map[string]interface{}, secrets *operator.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config) ([]operator.Assembler, error)) {
+func Build(spec map[string]interface{}, secrets *orbiter.Secrets, dependant interface{}) (model.UserSpec, func(cfg model.Config) ([]orbiter.Assembler, error)) {
 	if build != nil {
 		return build(spec, secrets, dependant)
 	}
-	return model.UserSpec{}, func(_ model.Config) ([]operator.Assembler, error) {
+	return model.UserSpec{}, func(_ model.Config) ([]orbiter.Assembler, error) {
 		return nil, errors.New("Version v0 for kind orbiter.caos.ch/ExternalLoadBalancer is not yet supported")
 	}
 }

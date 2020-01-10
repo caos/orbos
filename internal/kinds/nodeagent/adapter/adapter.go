@@ -65,7 +65,7 @@ func New(commit string, logger logging.Logger, rebooter Rebooter, firewallEnsure
 			return cfg, nil, fmt.Errorf("nodeagent is outdated: running build commit %s does not match requested build commit %s", commit, userSpec.Commit)
 		}
 
-		return cfg, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, deps map[string]interface{}) (curr *model.Current, err error) {
+		return cfg, adapterFunc(func(_ context.Context, _ *operator.Secrets, _ map[string]interface{}) (curr *model.Current, err error) {
 
 			if before != nil {
 				if err := before(); err != nil {

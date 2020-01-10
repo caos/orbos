@@ -1,4 +1,4 @@
-package operator
+package orbiter
 
 import (
 	"context"
@@ -23,7 +23,7 @@ type Assembler interface {
 	Ensure(ctx context.Context, secrets *Secrets, ensuredDependencies map[string]interface{}) (interface{}, error)
 }
 
-type NodeAgentUpdater func(path []string) *NodeAgentCurrent
+type NodeAgentUpdater func(id string) *NodeAgentCurrent
 
 type Secrets struct {
 	read   func(property string) ([]byte, error)
@@ -44,9 +44,8 @@ func (s *Secrets) Delete(property string) error {
 }
 
 type nodeAgentChange struct {
-	path []string
-	spec *NodeAgentSpec
-	curr interface{}
+	id     string
+	mutate func(*NodeAgentSpec)
 }
 
 type assemblerTree struct {
@@ -59,7 +58,15 @@ type assemblerTree struct {
 	nodeAgentChanges  chan *nodeAgentChange
 }
 
-func build(logger logging.Logger, assembler Assembler, desiredSource map[string]interface{}, currentSource map[string]interface{}, secrets *Secrets, dependantConfig interface{}, isRoot bool) (*assemblerTree, error) {
+func build(
+	logger logging.Logger,
+	assembler Assembler,
+	desiredSource map[string]interface{},
+	secrets *Secrets,
+	dependantConfig interface{},
+	isRoot bool,
+	nodeAgentFunc func(id string, changes chan<- *nodeAgentChange) *NodeAgentCurrent) (*assemblerTree, error) {
+
 	path, overwrite := assembler.BuildContext()
 	assemblerLogger := logger.WithFields(map[string]interface{}{
 		"assembler": assembler,
@@ -69,12 +76,10 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 	})
 	var (
 		deepDesiredKind map[string]interface{}
-		deepCurrentKind map[string]interface{}
 		err             error
 	)
 	if isRoot {
 		deepDesiredKind = desiredSource
-		deepCurrentKind = currentSource
 		if err != nil {
 			return nil, err
 		}
@@ -88,14 +93,6 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 		if err != nil {
 			return nil, errors.Wrapf(err, "navigating to %s's desired source at path %v failed", assembler, path)
 		}
-		debugLogger.Debug("Navigating to assembler current state")
-		deepCurrentKind, err = drillIn(logger.WithFields(map[string]interface{}{
-			"purpose": "build",
-			"config":  "spec",
-		}), currentSource, path, true)
-		if err != nil {
-			return nil, errors.Wrapf(err, "navigating to %s's current source at path %v failed", assembler, path)
-		}
 	}
 
 	if overwrite != nil {
@@ -108,12 +105,11 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 	}
 
 	debugLogger.Debug("Building assembler")
-	nodeAgentChanges := make(chan *nodeAgentChange, 1000)
-	kind, builtConfig, subassemblers, builtAPIVersion, err := assembler.Build(deepDesiredKind, func(dck map[string]interface{}, naCh chan *nodeAgentChange) func(p []string) *NodeAgentCurrent {
-		return func(p []string) *NodeAgentCurrent {
-			return newNodeAgentCurrent(assemblerLogger, p, dck, naCh)
-		}
-	}(deepCurrentKind, nodeAgentChanges), secrets, dependantConfig)
+	nodeAgentChanges := make(chan *nodeAgentChange)
+
+	kind, builtConfig, subassemblers, builtAPIVersion, err := assembler.Build(deepDesiredKind, func(id string) *NodeAgentCurrent {
+		return nodeAgentFunc(id, nodeAgentChanges)
+	}, secrets, dependantConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "building assembler %s failed", assembler)
 	}
@@ -129,7 +125,7 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 
 	tree.children = make([]*assemblerTree, len(subassemblers))
 	for idx, subassembler := range subassemblers {
-		subTree, err := build(logger, subassembler, deepDesiredKind, deepCurrentKind, secrets, builtConfig, false)
+		subTree, err := build(logger, subassembler, deepDesiredKind, secrets, builtConfig, false, nodeAgentFunc)
 		if err != nil {
 			return nil, err
 		}
@@ -138,7 +134,12 @@ func build(logger logging.Logger, assembler Assembler, desiredSource map[string]
 	return tree, nil
 }
 
-func ensure(ctx context.Context, logger logging.Logger, tree *assemblerTree, secrets *Secrets) (interface{}, error) {
+func ensure(
+	ctx context.Context,
+	logger logging.Logger,
+	tree *assemblerTree,
+	secrets *Secrets) (interface{}, error) {
+
 	assemblerLogger := logger.WithFields(map[string]interface{}{
 		"assembler": tree.node,
 	})
@@ -164,7 +165,51 @@ func ensure(ctx context.Context, logger logging.Logger, tree *assemblerTree, sec
 	return current, nil
 }
 
-func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *assemblerTree, orbiterCommit string) error {
+func desireNodeAgentsFromTree(logger logging.Logger, spec map[string]*NodeAgentSpec, tree *assemblerTree) error {
+	debugLogger := logger.WithFields(map[string]interface{}{
+		"assembler": tree.node,
+		"path":      tree.path,
+	})
+	debugLogger.Debug("Desiring Node Agents from assembler")
+
+	for change := range tree.nodeAgentChanges {
+		nodeagent, ok := spec[change.id]
+		if !ok {
+			nodeagent = &NodeAgentSpec{}
+			spec[change.id] = nodeagent
+		}
+		change.mutate(nodeagent)
+	}
+
+	for _, child := range tree.children {
+		if err := desireNodeAgentsFromTree(logger, spec, child); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func buildDesiredNodeAgents(logger logging.Logger, orbiterCommit string, tree *assemblerTree) ([]byte, error) {
+
+	nodeagents := make(map[string]*NodeAgentSpec)
+	if err := desireNodeAgentsFromTree(logger, nodeagents, tree); err != nil {
+		return nil, err
+	}
+
+	return yaml.Marshal(NodeAgentsDesiredKind{
+		NodeAgentsKind: NodeAgentsKind{
+			Kind:    "orbiter.caos.ch/NodeAgents",
+			Version: "v0",
+		},
+		Spec: NodeAgentsSpec{
+			Commit:     orbiterCommit,
+			NodeAgents: nodeagents,
+		},
+	})
+}
+
+func buildCurrent(logger logging.Logger, kind map[string]interface{}, tree *assemblerTree, orbiterCommit string) error {
 	debugLogger := logger.WithFields(map[string]interface{}{
 		"assembler": tree.node,
 		"path":      tree.path,
@@ -180,7 +225,7 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	for _, subtree := range tree.children {
 		//		subtree.currentState
 
-		if err := rebuildCurrent(logger, deepKind, subtree, orbiterCommit); err != nil {
+		if err := buildCurrent(logger, deepKind, subtree, orbiterCommit); err != nil {
 			return err
 		}
 	}
@@ -194,44 +239,6 @@ func rebuildCurrent(logger logging.Logger, kind map[string]interface{}, tree *as
 	if err := yaml.Unmarshal(intermediate, currentState); err != nil {
 		return errors.Wrapf(err, "unmarshalling assembler %s's current state %s in order to overwrite it failed", tree.node, string(intermediate))
 	}
-
-	if debugLogger.IsVerbose() {
-		debugLogger.Debug("Mapping node agent specs to current state")
-		fmt.Println(string(intermediate))
-	}
-
-	changesCopy := make(chan *nodeAgentChange, len(tree.nodeAgentChanges))
-	close(tree.nodeAgentChanges)
-	for newNodeAgent := range tree.nodeAgentChanges {
-		if orbiterCommit != "" {
-			newNodeAgent.spec.Commit = orbiterCommit
-		}
-		changesCopy <- newNodeAgent
-		nodeAgent, err := drillIn(logger, currentState, newNodeAgent.path, true)
-		if err != nil {
-			return errors.Wrapf(err, "navigating to assembler %s's node agent spec at %v in the assemblers current state in order to overwrite it failed", tree.node, newNodeAgent.path)
-		}
-		nodeAgentCurrentPath := append([]string{"current"}, newNodeAgent.path...)
-		nodeAgentCurrent, err := drillIn(logger, deepKind, nodeAgentCurrentPath, true)
-		if err != nil {
-			return errors.Wrapf(err, "navigating to assembler %s's node agent current at %v in the remote yaml in order to restore it failed", tree.node, nodeAgentCurrentPath)
-		}
-		nodeAgent["kind"] = "nodeagent.caos.ch/NodeAgent"
-		nodeAgent["version"] = "v0"
-		nodeAgent["spec"] = newNodeAgent.spec
-		nodeAgent["current"] = nodeAgentCurrent["current"]
-
-		if debugLogger.IsVerbose() {
-			debugLogger.Debug("Node Agent kind overwritten")
-			overwritten, err := yaml.Marshal(deepKind)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println(string(overwritten))
-		}
-	}
-
-	tree.nodeAgentChanges = changesCopy
 
 	deepKind["kind"] = tree.kind.Kind
 	deepKind["currentVersion"] = tree.currentAPIVersion

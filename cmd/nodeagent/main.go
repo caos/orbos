@@ -16,8 +16,7 @@ import (
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
 
-	"github.com/caos/orbiter/internal/kinds/nodeagent"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
+	"github.com/caos/orbiter/internal/operators/nodeagent"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/conv"
 	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
@@ -96,15 +95,11 @@ func main() {
 	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *computeID), *repoURL)
 	if err := gitClient.Init(repoKey); err != nil {
 		panic(err)
-	}
+	} 
 
-	op := operator.New(&operator.Arguments{
-		Ctx:         ctx,
-		GitClient:   gitClient,
-		Logger:      logger,
-		CurrentFile: *currentFile,
-		SecretsFile: *secretsFile,
-		Watchers: []operator.Watcher{
+	op := operator.New(ctx, logger, gitClient,
+		nodeagent.New(nodeagent.Iterator()),
+		[]operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),
 		},

@@ -13,13 +13,12 @@ import (
 )
 
 type pool struct {
-	cfg               *model.Config
-	nodeagentFullPath func(compute infra.Compute) []string
-	poolSpec          *poolSpec
-	cloud             infra.Pool
-	k8s               *k8s.Client
-	cmps              []infra.Compute
-	mux               sync.Mutex
+	cfg      *model.Config
+	poolSpec *poolSpec
+	cloud    infra.Pool
+	k8s      *k8s.Client
+	cmps     []infra.Compute
+	mux      sync.Mutex
 }
 
 type poolSpec struct {
@@ -29,14 +28,12 @@ type poolSpec struct {
 
 func newPool(
 	cfg *model.Config,
-	nodeagentFullPath func(compute infra.Compute) []string,
 	poolSpec *poolSpec,
 	cloudPool infra.Pool,
 	k8s *k8s.Client,
 	initialComputes []infra.Compute) *pool {
 	return &pool{
 		cfg,
-		nodeagentFullPath,
 		poolSpec,
 		cloudPool,
 		k8s,
@@ -144,7 +141,7 @@ func (p *pool) newCompute(callback func(infra.Compute)) (err error) {
 		}
 	}()
 
-	if err := installNodeAgent(p.cfg, compute, p.nodeagentFullPath); err != nil {
+	if err := installNodeAgent(p.cfg, compute); err != nil {
 		return err
 	}
 

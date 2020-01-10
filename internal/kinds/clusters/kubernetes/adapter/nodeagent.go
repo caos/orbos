@@ -7,30 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbiter/internal/core/operator"
 	"github.com/caos/orbiter/internal/edge/executables"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 	"github.com/pkg/errors"
 )
 
-func nodeagentPath(compute infra.Compute) []string {
-	return []string{"computes", compute.ID(), "software"}
-}
-
-func nodeagentFullPathFunc(selfAbsolutePath []string) func(compute infra.Compute) []string {
-	return func(compute infra.Compute) []string {
-		return append(selfAbsolutePath, append([]string{"current"}, nodeagentPath(compute)...)...)
-	}
-}
-
-func nodeagent(updater operator.NodeAgentUpdater) func(compute infra.Compute) *operator.NodeAgentCurrent {
-	return func(compute infra.Compute) *operator.NodeAgentCurrent {
-		return updater(nodeagentPath(compute))
-	}
-}
-
-func installNodeAgent(cfg *model.Config, compute infra.Compute, nodeagentFullPath func(compute infra.Compute) []string) error {
+func installNodeAgent(cfg *model.Config, compute infra.Compute) error {
 
 	var user string
 	whoami := "whoami"
@@ -94,13 +77,13 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=%s --repourl "%s" --yamlbasepath "%s" --id "%s" --currentfile "%s" --secretsfile "%s"
+ExecStart=%s --repourl "%s" --id "%s" --currentfile "%s" --secretsfile "%s"
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-`, binary, cfg.Params.RepoURL, strings.Join(nodeagentFullPath(compute), "."), compute.ID(), cfg.Params.CurrentFile, cfg.Params.SecretsFile)), 600), "creating remote file %s failed", systemdPath)
+`, binary, cfg.Params.RepoURL, compute.ID(), cfg.Params.CurrentFile, cfg.Params.SecretsFile)), 600), "creating remote file %s failed", systemdPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 	}

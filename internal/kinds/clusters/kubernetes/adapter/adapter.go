@@ -15,9 +15,8 @@ func New(params model.Parameters) Builder {
 	return builderFunc(func(spec model.UserSpec, nodeAgentUpdater operator.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{
-			NodeAgent: nodeagent(nodeAgentUpdater),
-			Spec:      spec,
-			Params:    params,
+			Spec:   spec,
+			Params: params,
 		}
 
 		if cfg.Spec.Verbose && !cfg.Params.Logger.IsVerbose() {

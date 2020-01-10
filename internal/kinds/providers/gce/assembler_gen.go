@@ -8,7 +8,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 
 	"github.com/caos/orbiter/internal/kinds/providers/gce/adapter"
 	"github.com/caos/orbiter/internal/kinds/providers/gce/model"
@@ -29,7 +29,7 @@ type assembler struct {
 	built     adapter.Adapter
 }
 
-func New(configPath []string, overwrite func(map[string]interface{}), builder adapter.Builder) operator.Assembler {
+func New(configPath []string, overwrite func(map[string]interface{}), builder adapter.Builder) orbiter.Assembler {
 	return &assembler{configPath, overwrite, builder, nil}
 }
 
@@ -37,12 +37,12 @@ func (a *assembler) String() string { return "orbiter.caos.ch/GCEProvider" }
 func (a *assembler) BuildContext() ([]string, func(map[string]interface{})) {
 	return a.path, a.overwrite
 }
-func (a *assembler) Ensure(ctx context.Context, secrets *operator.Secrets, ensuredDependencies map[string]interface{}) (interface{}, error) {
+func (a *assembler) Ensure(ctx context.Context, secrets *orbiter.Secrets, ensuredDependencies map[string]interface{}) (interface{}, error) {
 	return a.built.Ensure(ctx, secrets, ensuredDependencies)
 }
-func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater operator.NodeAgentUpdater, secrets *operator.Secrets, dependant interface{}) (operator.Kind, interface{}, []operator.Assembler, string, error) {
+func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater orbiter.NodeAgentUpdater, secrets *orbiter.Secrets, dependant interface{}) (orbiter.Kind, interface{}, []orbiter.Assembler, string, error) {
 
-	kind := operator.Kind{}
+	kind := orbiter.Kind{}
 	if err := mapstructure.Decode(serialized, &kind); err != nil {
 		return kind, nil, nil, model.CurrentVersion, err
 	}
@@ -52,7 +52,7 @@ func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater op
 	}
 
 	var spec model.UserSpec
-	var subassemblersBuilder func(model.Config) ([]operator.Assembler, error)
+	var subassemblersBuilder func(model.Config) ([]orbiter.Assembler, error)
 	switch kind.Version {
 	case v0.String():
 		spec, subassemblersBuilder = v0builder.Build(serialized, secrets, dependant)

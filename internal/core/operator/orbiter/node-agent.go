@@ -1,14 +1,13 @@
 //go:generate goderive -autoname -dedup .
 
-package operator
+package orbiter
 
 import (
 	"regexp"
 	"sync"
 
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/caos/orbiter/logging"
+	"gopkg.in/yaml.v2"
 )
 
 var nodeagentBytesGZIPBase64 string
@@ -105,7 +104,6 @@ type Allowed struct {
 }
 
 type NodeAgentSpec struct {
-	Commit         string
 	ChangesAllowed bool
 	//	RebootEnabled  bool
 	Software *Software
@@ -188,27 +186,35 @@ func (n *NodeAgentCurrent) DesireSoftware(sw Software) {
 }
 
 type changer struct {
-	path    []string
-	kind    map[string]interface{}
+	id      string
 	changes chan<- *nodeAgentChange
 }
 
 func (c *changer) desire(mutate func(*NodeAgentSpec)) {
-	newSpec := &NodeAgentSpec{}
-	mapstructure.Decode(c.kind["spec"], newSpec)
-	mutate(newSpec)
-	c.kind["spec"] = newSpec
 	c.changes <- &nodeAgentChange{
-		path: c.path,
-		spec: newSpec,
+		id:     c.id,
+		mutate: mutate,
 	}
 }
 
-type NodeAgentKind struct {
+type NodeAgentsKind struct {
 	Kind    string
 	Version string
-	Spec    interface{}
-	Current *NodeAgentCurrent `yaml:",omitempty"`
+}
+
+type NodeAgentsCurrentKind struct {
+	NodeAgentsKind `yaml:",inline"`
+	Current        map[string]*NodeAgentCurrent `yaml:",omitempty"`
+}
+
+type NodeAgentsSpec struct {
+	Commit     string
+	NodeAgents map[string]*NodeAgentSpec
+}
+
+type NodeAgentsDesiredKind struct {
+	NodeAgentsKind `yaml:",inline"`
+	Spec           NodeAgentsSpec `yaml:",omitempty"`
 }
 
 type muxMap struct {
@@ -216,21 +222,21 @@ type muxMap struct {
 	data map[string]interface{}
 }
 
-func newNodeAgentCurrent(logger logging.Logger, path []string, containingKind map[string]interface{}, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
+func newNodeAgentCurrentFunc(
+	logger logging.Logger,
+	current []byte) func(id string, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
 
-	naKind, err := drillIn(logger.WithFields(map[string]interface{}{
-		"purpose": "find node agent",
-		"config":  "current",
-	}), containingKind, append([]string{"current"}, path...), true)
-	if err != nil {
-		panic(err)
-	}
+	nodeagents := NodeAgentsCurrentKind{}
+	yaml.Unmarshal(current, &nodeagents)
 
-	kind := &NodeAgentKind{}
-	mapstructure.Decode(naKind, kind)
-	if kind.Current == nil {
-		kind.Current = &NodeAgentCurrent{}
+	return func(id string, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
+
+		curr, ok := nodeagents.Current[id]
+		if !ok {
+			curr = &NodeAgentCurrent{}
+		}
+
+		curr.changer = &changer{id, changes}
+		return curr
 	}
-	kind.Current.changer = &changer{path, naKind, changes}
-	return kind.Current
 }
