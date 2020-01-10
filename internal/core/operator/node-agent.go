@@ -139,34 +139,50 @@ func (n *NodeAgentCurrent) DesireSoftware(sw Software) {
 
 		if !sw.Containerruntime.Equals(zeroPkg) {
 			spec.Software.Containerruntime = sw.Containerruntime
+		} else if !n.Software.Containerruntime.Equals(zeroPkg) {
+			spec.Software.Containerruntime = n.Software.Containerruntime
 		}
 
 		if !sw.KeepaliveD.Equals(zeroPkg) {
 			spec.Software.KeepaliveD = sw.KeepaliveD
+		} else if !n.Software.KeepaliveD.Equals(zeroPkg) {
+			spec.Software.KeepaliveD = n.Software.KeepaliveD
 		}
 
 		if !sw.Nginx.Equals(zeroPkg) {
 			spec.Software.Nginx = sw.Nginx
+		} else if !n.Software.Nginx.Equals(zeroPkg) {
+			spec.Software.Nginx = n.Software.Nginx
 		}
 
 		if !sw.Kubeadm.Equals(zeroPkg) {
 			spec.Software.Kubeadm = sw.Kubeadm
+		} else if !n.Software.Kubeadm.Equals(zeroPkg) {
+			spec.Software.Kubeadm = n.Software.Kubeadm
 		}
 
 		if !sw.Kubelet.Equals(zeroPkg) {
 			spec.Software.Kubelet = sw.Kubelet
+		} else if !n.Software.Kubelet.Equals(zeroPkg) {
+			spec.Software.Kubelet = n.Software.Kubelet
 		}
 
 		if !sw.Kubectl.Equals(zeroPkg) {
 			spec.Software.Kubectl = sw.Kubectl
+		} else if !n.Software.Kubectl.Equals(zeroPkg) {
+			spec.Software.Kubectl = n.Software.Kubectl
 		}
 
 		if !sw.Swap.Equals(zeroPkg) {
 			spec.Software.Swap = sw.Swap
+		} else if !n.Software.Swap.Equals(zeroPkg) {
+			spec.Software.Swap = n.Software.Swap
 		}
 
 		if !sw.Hostname.Equals(zeroPkg) {
 			spec.Software.Hostname = sw.Hostname
+		} else if !n.Software.Hostname.Equals(zeroPkg) {
+			spec.Software.Hostname = n.Software.Hostname
 		}
 	})
 }
