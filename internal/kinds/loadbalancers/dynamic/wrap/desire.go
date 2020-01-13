@@ -1,13 +1,13 @@
 package wrap
 
 import (
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
 
-func desire(selfPool string, changesAllowed bool, dynamic model.Current, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent) func() error {
+func desire(selfPool string, changesAllowed bool, dynamic model.Current, svc core.ComputesService, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent) func() error {
 	return func() error {
 		update := []string{selfPool}
 	sources:

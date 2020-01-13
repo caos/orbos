@@ -2,6 +2,7 @@
 
 package kubernetes
 
+/*
 import "strconv"
 
 func _() {
@@ -22,3 +23,4 @@ func (i Version) String() string {
 	}
 	return _Version_name[_Version_index[i]:_Version_index[i+1]]
 }
+*/

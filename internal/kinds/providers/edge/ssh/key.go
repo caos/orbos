@@ -7,13 +7,13 @@ import (
 	"encoding/pem"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/pkg/errors"
 	sshlib "golang.org/x/crypto/ssh"
 )
 
-func EnsureKeyPair(sec *operator.Secrets, keyProperty string, pubKeyProperty string) ([]byte, error) {
+func EnsureKeyPair(sec *orbiter.Secrets, keyProperty string, pubKeyProperty string) ([]byte, error) {
 
 	existing, err := sec.Read(pubKeyProperty)
 	if err != nil && errors.Cause(err) != secret.ErrNotExist {

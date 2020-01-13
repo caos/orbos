@@ -7,7 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
@@ -22,7 +22,7 @@ type scaleablePool struct {
 func ensureScale(
 	cfg *model.Config,
 	curr *model.Current,
-	secrets *operator.Secrets,
+	secrets *orbiter.Secrets,
 	kubeConfigKey string,
 	controlplanePool *scaleablePool,
 	workerPools []*scaleablePool,
@@ -141,51 +141,51 @@ nodes:
 		current := curr.Computes[id]
 		software := k8sVersion.DefineSoftware()
 
-		fw := map[string]operator.Allowed{
-			"kubelet": operator.Allowed{
+		fw := map[string]orbiter.Allowed{
+			"kubelet": orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", 10250),
 				Protocol: "tcp",
 			},
 		}
 
 		if current.Metadata.Tier == model.Workers {
-			fw["node-ports"] = operator.Allowed{
+			fw["node-ports"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
 		if current.Metadata.Tier == model.Controlplane {
-			fw["kubeapi-external"] = operator.Allowed{
+			fw["kubeapi-external"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPI.Port),
 				Protocol: "tcp",
 			}
-			fw["kubeapi-internal"] = operator.Allowed{
+			fw["kubeapi-internal"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", 6666),
 				Protocol: "tcp",
 			}
-			fw["etcd"] = operator.Allowed{
+			fw["etcd"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 2379, 2380),
 				Protocol: "tcp",
 			}
-			fw["kube-scheduler"] = operator.Allowed{
+			fw["kube-scheduler"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", 10251),
 				Protocol: "tcp",
 			}
-			fw["kube-controller"] = operator.Allowed{
+			fw["kube-controller"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", 10252),
 				Protocol: "tcp",
 			}
 		}
 
 		if cfg.Spec.Networking.Network == "calico" {
-			fw["calico-bgp"] = operator.Allowed{
+			fw["calico-bgp"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", 179),
 				Protocol: "tcp",
 			}
 		}
 
-		firewall := operator.Firewall(fw)
+		firewall := orbiter.Firewall(fw)
 
 		current.Nodeagent.DesireSoftware(software)
 		current.Nodeagent.DesireFirewall(firewall)

@@ -16,11 +16,11 @@ import (
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
 
-	"github.com/caos/orbiter/internal/operators/nodeagent"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/conv"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/node"
+	"github.com/caos/orbiter/internal/core/operator/nodeagent"
+	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
+	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/conv"
+	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/firewall"
+	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/rebooter/node"
 )
 
 var gitCommit string
@@ -48,8 +48,6 @@ func main() {
 	repoURL := flag.String("repourl", "", "Repository URL")
 	computeID := flag.String("id", "", "The managed computes ID")
 	configPath := flag.String("yamlbasepath", "", "Point separated yaml path to the node agent kind")
-	currentFile := flag.String("currentfile", "", "git path to the yaml file containing the current state")
-	secretsFile := flag.String("secretsfile", "", "git path to the yaml file containing secrets")
 
 	flag.Parse()
 
@@ -95,28 +93,23 @@ func main() {
 	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *computeID), *repoURL)
 	if err := gitClient.Init(repoKey); err != nil {
 		panic(err)
-	} 
+	}
 
-	op := operator.New(ctx, logger, gitClient,
-		nodeagent.New(nodeagent.Iterator()),
+	op := operator.New(
+		ctx,
+		logger,
+		nodeagent.Iterator(
+			logger,
+			gitClient,
+			node.New(),
+			gitCommit,
+			firewall.Ensurer(logger, os.OperatingSystem),
+			converter,
+			before),
 		[]operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),
-		},
-		RootAssembler: nodeagent.New(strings.Split(*configPath, "."), nil,
-			adapter.New(gitCommit, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
-	})
+		})
 
-	iterations := make(chan *operator.IterationDone)
-	if err := op.Initialize(); err != nil {
-		panic(err)
-	}
-
-	go op.Run(iterations)
-
-	for it := range iterations {
-		if it.Error != nil {
-			logger.Error(it.Error)
-		}
-	}
+	go op.Run()
 }

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
@@ -50,7 +50,7 @@ func authenticatedService(ctx context.Context, googleApplicationCredentialsValue
 }
 
 func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string, connectFromOutside bool) Builder {
-	return builderFunc(func(spec model.UserSpec, _ operator.NodeAgentUpdater) (model.Config, Adapter, error) {
+	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{}
 
@@ -67,7 +67,7 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 			return cfg, nil, err
 		}
 
-		return cfg, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, deps map[string]interface{}) (*model.Current, error) {
+		return cfg, adapterFunc(func(ctx context.Context, secrets *orbiter.Secrets, deps map[string]interface{}) (*model.Current, error) {
 
 			currentProvider := &infraCurrent{
 				pools: make(map[string]infra.Pool),

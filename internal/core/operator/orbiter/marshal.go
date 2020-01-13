@@ -1,5 +1,6 @@
 package orbiter
 
+/*
 import (
 	"sort"
 
@@ -57,3 +58,4 @@ func deeplyConvert(tree map[string]interface{}) node {
 
 	return node(tree)
 }
+*/

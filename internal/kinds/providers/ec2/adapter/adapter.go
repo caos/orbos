@@ -8,7 +8,7 @@ import (
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/ec2/model"
 	"github.com/caos/orbiter/logging"
@@ -37,8 +37,8 @@ func authenticatedService(ctx context.Context, googleApplicationCredentialsValue
 }
 
 func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string) Builder {
-	return builderFunc(func(spec model.UserSpec, _ operator.NodeAgentUpdater) (model.Config, Adapter, error) {
-		return model.Config{}, adapterFunc(func(context.Context, *operator.Secrets, map[string]interface{}) (*model.Current, error) {
+	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
+		return model.Config{}, adapterFunc(func(context.Context, *orbiter.Secrets, map[string]interface{}) (*model.Current, error) {
 			return &model.Current{}, errors.New("Not yet implemented")
 		}), errors.New("Not yet implemented")
 	})

@@ -4,84 +4,106 @@ import (
 	"context"
 	"os"
 
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbiter/internal/edge/git"
 	"github.com/caos/orbiter/logging"
 )
 
-func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, destroy bool, orbAssembler Assembler) func() {
+type EnsureFunc func(context.Context) (interface{}, interface{}, error)
+
+type AdaptFunc func(desired *Tree, secrets *Tree, nodeAgentsCurrent map[string]*NodeAgentCurrent) (EnsureFunc, error)
+
+type Common struct {
+	Kind    string
+	Version string
+}
+
+type Tree struct {
+	Common   *Common `yaml:",inline"`
+	Original *yaml.Node
+	Parsed   interface{} `yaml:",inline"`
+}
+
+func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
+	c.Original = node
+	err := node.Decode(&c.Common)
+	return err
+}
+
+func (c *Tree) MarshalYAML() (interface{}, error) {
+	return c.Parsed, nil
+}
+
+func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, destroy bool, adapt AdaptFunc) func() {
 
 	return func() {
 		if err := gitClient.Clone(); err != nil {
 			panic(err)
 		}
 
-		desiredBytes, err := gitClient.Read("desired.yml")
+		rawDesired, err := gitClient.Read("desired.yml")
 		if err != nil {
 			logger.Error(err)
 			return
 		}
-
-		desired := make(map[string]interface{})
-		if err := yaml.Unmarshal(desiredBytes, &desired); err != nil {
-			logger.Error(err)
-			return
-		}
-		/*
-			if i.args.BeforeIteration != nil {
-				if err := i.args.BeforeIteration(desiredBytes, secrets); err != nil {
-					return err
-				}
-			}
-		*/
-		secretsBytes, err := gitClient.Read("secrets.yml")
-		if err != nil {
-			logger.Error(err)
-			return
-		}
-
-		secretsMap := make(map[string]interface{})
-		if err := yaml.Unmarshal(secretsBytes, &secretsMap); err != nil {
+		treeDesired := &Tree{}
+		if err := yaml.Unmarshal([]byte(rawDesired), treeDesired); err != nil {
 			panic(err)
 		}
 
-		curriedSecrets := currySecrets(logger, func(newSecrets map[string]interface{}) error {
-			_, err := gitClient.UpdateRemoteUntilItWorks(&git.File{
-				Path: "secrets.yml",
-				Overwrite: func([]byte) ([]byte, error) {
-					return Marshal(newSecrets)
-				},
-				Force: true,
-			})
-			return err
-		}, secretsMap, masterkey)
+		rawSecrets, err := gitClient.Read("secrets.yml")
+		if err != nil {
+			logger.Error(err)
+			return
+		}
+		treeSecrets := &Tree{}
+		if err := yaml.Unmarshal([]byte(rawSecrets), treeSecrets); err != nil {
+			panic(err)
+		}
 
-		secrets := &Secrets{curriedSecrets.read, curriedSecrets.write, curriedSecrets.delete}
+		currentNodeAgents := make(map[string]*NodeAgentCurrent)
+		rawCurrentNodeAgents, _ := gitClient.Read("internal/node-agents-current.yml")
+		if rawCurrentNodeAgents != nil {
+			yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
+		}
 
-		currentNodeAgentBytes, _ := gitClient.Read("internal/node-agents-current.yml")
-		tree, err := build(logger, orbAssembler, desired, secrets, nil, true, newNodeAgentCurrentFunc(logger, currentNodeAgentBytes))
+		ensure, err := adapt(treeDesired, treeSecrets, currentNodeAgents)
 		if err != nil {
 			logger.Error(err)
 			return
 		}
 
-		if _, err := ensure(ctx, logger, tree, secrets); err != nil {
+		treeCurrent, nodeagentsDesired, err := ensure(ctx)
+		if err != nil {
 			logger.Error(err)
 			return
 		}
 
+		if _, err := gitClient.UpdateRemoteUntilItWorks(
+			&git.File{Path: "desired.yml", Overwrite: func([]byte) ([]byte, error) {
+				return yaml.Marshal(treeDesired)
+			}}); err != nil {
+			panic(err)
+		}
+
+		if _, err := gitClient.UpdateRemoteUntilItWorks(
+			&git.File{Path: "secrets.yml", Overwrite: func([]byte) ([]byte, error) {
+				return yaml.Marshal(treeSecrets)
+			}}); err != nil {
+			panic(err)
+		}
+
+		if _, err := gitClient.UpdateRemoteUntilItWorks(
+			&git.File{Path: "internal/node-agents-desired.yml", Overwrite: func([]byte) ([]byte, error) {
+				return yaml.Marshal(nodeagentsDesired)
+			}}); err != nil {
+			panic(err)
+		}
+
 		newCurrent, err := gitClient.UpdateRemoteUntilItWorks(
-			&git.File{Path: "current.yml", Overwrite: func(reloadedCurrent []byte) ([]byte, error) {
-
-				curr := make(map[string]interface{})
-
-				if err := buildCurrent(logger, curr, tree, orbiterCommit); err != nil {
-					return nil, errors.Wrap(err, "overwriting current state failed")
-				}
-
-				return Marshal(curr)
+			&git.File{Path: "current.yml", Overwrite: func([]byte) ([]byte, error) {
+				return yaml.Marshal(treeCurrent)
 			}})
 
 		if err != nil {

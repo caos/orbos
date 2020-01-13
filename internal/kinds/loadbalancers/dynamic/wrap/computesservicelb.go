@@ -1,7 +1,7 @@
 package wrap
 
 import (
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -10,10 +10,10 @@ import (
 type cmpSvcLB struct {
 	original  core.ComputesService
 	dynamic   model.Current
-	nodeagent func(infra.Compute) *operator.NodeAgentCurrent
+	nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent
 }
 
-func ComputesService(svc core.ComputesService, dynamic model.Current, nodeagent func(infra.Compute) *operator.NodeAgentCurrent) core.ComputesService {
+func ComputesService(svc core.ComputesService, dynamic model.Current, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent) core.ComputesService {
 	return &cmpSvcLB{
 		original:  svc,
 		dynamic:   dynamic,

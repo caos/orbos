@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 )
 
 type KubernetesVersion int
@@ -35,13 +35,13 @@ func (k KubernetesVersion) String() string {
 	return kubernetesVersions[k]
 }
 
-func (k KubernetesVersion) DefineSoftware() operator.Software {
-	return operator.Software{
-		Swap:             operator.Package{Version: "disabled"},
-		Containerruntime: operator.Package{Version: "docker-ce v18.09.6"},
-		Kubelet:          operator.Package{Version: k.String()},
-		Kubeadm:          operator.Package{Version: k.String()},
-		Kubectl:          operator.Package{Version: k.String()},
+func (k KubernetesVersion) DefineSoftware() orbiter.Software {
+	return orbiter.Software{
+		Swap:             orbiter.Package{Version: "disabled"},
+		Containerruntime: orbiter.Package{Version: "docker-ce v18.09.6"},
+		Kubelet:          orbiter.Package{Version: k.String()},
+		Kubeadm:          orbiter.Package{Version: k.String()},
+		Kubectl:          orbiter.Package{Version: k.String()},
 	}
 }
 

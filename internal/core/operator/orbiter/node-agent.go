@@ -4,20 +4,20 @@ package orbiter
 
 import (
 	"regexp"
-	"sync"
-
-	"github.com/caos/orbiter/logging"
-	"gopkg.in/yaml.v2"
 )
 
-var nodeagentBytesGZIPBase64 string
+type NodeAgentSpec struct {
+	ChangesAllowed bool
+	//	RebootEnabled  bool
+	Software *Software
+	Firewall Firewall
+}
 
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
 	Open        Firewall
 	Commit      string
-	changer     *changer
 }
 
 type Software struct {
@@ -85,6 +85,11 @@ func (this *Software) Contains(that Software) bool {
 
 type Firewall map[string]Allowed
 
+type Allowed struct {
+	Port     string
+	Protocol string
+}
+
 func (f Firewall) Contains(other Firewall) bool {
 	for name, port := range other {
 		found, ok := f[name]
@@ -98,18 +103,7 @@ func (f Firewall) Contains(other Firewall) bool {
 	return true
 }
 
-type Allowed struct {
-	Port     string
-	Protocol string
-}
-
-type NodeAgentSpec struct {
-	ChangesAllowed bool
-	//	RebootEnabled  bool
-	Software *Software
-	Firewall Firewall
-}
-
+/*
 func (n *NodeAgentCurrent) AllowChanges() {
 	n.changer.desire(func(spec *NodeAgentSpec) {
 		spec.ChangesAllowed = true
@@ -196,7 +190,7 @@ func (c *changer) desire(mutate func(*NodeAgentSpec)) {
 		mutate: mutate,
 	}
 }
-
+*/
 type NodeAgentsKind struct {
 	Kind    string
 	Version string
@@ -217,6 +211,7 @@ type NodeAgentsDesiredKind struct {
 	Spec           NodeAgentsSpec `yaml:",omitempty"`
 }
 
+/*
 type muxMap struct {
 	mux  sync.Mutex
 	data map[string]interface{}
@@ -240,3 +235,4 @@ func newNodeAgentCurrentFunc(
 		return curr
 	}
 }
+*/

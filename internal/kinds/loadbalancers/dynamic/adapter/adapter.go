@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -31,11 +31,11 @@ type Data struct {
 }
 
 func New(remoteUser string) Builder {
-	return builderFunc(func(spec model.UserSpec, _ operator.NodeAgentUpdater) (model.Config, Adapter, error) {
+	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{}
 
-		return cfg, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, deps map[string]interface{}) (*model.Current, error) {
+		return cfg, adapterFunc(func(ctx context.Context, secrets *orbiter.Secrets, deps map[string]interface{}) (*model.Current, error) {
 
 			for depName, dep := range deps {
 				overwriter, ok := dep.(Overwriter)
@@ -79,7 +79,7 @@ func New(remoteUser string) Builder {
 			return &model.Current{
 				Addresses:   addresses,
 				SourcePools: sourcePools,
-				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent, customMasterNofifyer string) error {
+				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent, customMasterNofifyer string) error {
 
 					vips, ok := spec[pool]
 					if !ok {
@@ -201,7 +201,7 @@ http {
 						if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
 							return err
 						}
-						kaPkg := operator.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaPkg := orbiter.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 
 						if d.CustomMasterNotifyer {
 							kaPkg.Config["notifymaster.sh"] = customMasterNofifyer
@@ -213,8 +213,8 @@ http {
 						for _, vip := range d.VIPs {
 							for _, transport := range vip.Transport {
 								for _, compute := range computes {
-									nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
-										fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): operator.Allowed{
+									nodeagent(compute).DesireFirewall(map[string]orbiter.Allowed{
+										fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): orbiter.Allowed{
 											Port:     fmt.Sprintf("%d", transport.SourcePort),
 											Protocol: "tcp",
 										},
@@ -222,13 +222,13 @@ http {
 								}
 							}
 						}
-						na.DesireSoftware(operator.Software{KeepaliveD: kaPkg})
+						na.DesireSoftware(orbiter.Software{KeepaliveD: kaPkg})
 
 						var ngxBuf bytes.Buffer
 						if nginxTemplate.Execute(&ngxBuf, d); err != nil {
 							return err
 						}
-						ngxPkg := operator.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := orbiter.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 						if changesAllowed && !na.Software.Nginx.Equals(ngxPkg) {
 							na.AllowChanges()
 						}
@@ -240,8 +240,8 @@ http {
 										return err
 									}
 									for _, compute := range destComputes {
-										nodeagent(compute).DesireFirewall(map[string]operator.Allowed{
-											fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): operator.Allowed{
+										nodeagent(compute).DesireFirewall(map[string]orbiter.Allowed{
+											fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): orbiter.Allowed{
 												Port:     fmt.Sprintf("%d", dest.Port),
 												Protocol: "tcp",
 											},
@@ -250,7 +250,7 @@ http {
 								}
 							}
 						}
-						na.DesireSoftware(operator.Software{Nginx: ngxPkg})
+						na.DesireSoftware(orbiter.Software{Nginx: ngxPkg})
 					}
 					return nil
 				},

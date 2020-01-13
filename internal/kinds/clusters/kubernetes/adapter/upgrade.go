@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
@@ -17,7 +17,7 @@ import (
 
 type node struct {
 	compute infra.Compute
-	current *operator.NodeAgentCurrent
+	current *orbiter.NodeAgentCurrent
 }
 
 func ensureK8sVersion(
@@ -28,11 +28,11 @@ func ensureK8sVersion(
 	controlplane infra.Computes,
 	workers infra.Computes) (bool, error) {
 
-	findPath := func(computes infra.Computes) (operator.Software, operator.Software, error) {
+	findPath := func(computes infra.Computes) (orbiter.Software, orbiter.Software, error) {
 
 		var overallLowKubelet k8s.KubernetesVersion
 		var overallLowKubeletMinor int
-		zeroSW := operator.Software{}
+		zeroSW := orbiter.Software{}
 
 		for _, cp := range computes {
 			node, err := k8sClient.GetNode(cp.ID())
@@ -123,7 +123,7 @@ func ensureK8sVersion(
 	plan := func(
 		node node,
 		isFirstControlplane bool,
-		to operator.Software) (func() error, error) {
+		to orbiter.Software) (func() error, error) {
 
 		ensureNodeagent := func(from string) func() error {
 			return func() error {
@@ -138,8 +138,8 @@ func ensureK8sVersion(
 		}
 
 		ensureKubeadm := func() error {
-			node.current.DesireSoftware(operator.Software{
-				Kubeadm: operator.Package{
+			node.current.DesireSoftware(orbiter.Software{
+				Kubeadm: orbiter.Package{
 					Version: to.Kubeadm.Version,
 				},
 			})

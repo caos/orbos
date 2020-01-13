@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 )
 
 type Address struct {
@@ -40,7 +40,7 @@ type Compute interface {
 	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
-	UseKeys(sec *operator.Secrets, privateKeyPaths ...string) error
+	UseKeys(sec *orbiter.Secrets, privateKeyPaths ...string) error
 }
 
 type Computes []Compute

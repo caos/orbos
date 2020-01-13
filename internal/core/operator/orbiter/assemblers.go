@@ -1,5 +1,6 @@
 package orbiter
 
+/*
 import (
 	"context"
 	"fmt"
@@ -11,12 +12,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Kind struct {
-	Kind    string
-	Version string
-	ID      string
-}
-
 type Assembler interface {
 	BuildContext() ([]string, func(map[string]interface{}))
 	Build(kind map[string]interface{}, nodagentUpdater NodeAgentUpdater, secrets *Secrets, dependantConfig interface{}) (serialized Kind, built interface{}, subassemblers []Assembler, apiVersionCurrent string, err error)
@@ -25,44 +20,29 @@ type Assembler interface {
 
 type NodeAgentUpdater func(id string) *NodeAgentCurrent
 
-type Secrets struct {
-	read   func(property string) ([]byte, error)
-	write  func(property string, value []byte) error
-	delete func(property string) error
-}
-
-func (s *Secrets) Read(property string) ([]byte, error) {
-	return s.read(property)
-}
-
-func (s *Secrets) Write(property string, value []byte) error {
-	return s.write(property, value)
-}
-
-func (s *Secrets) Delete(property string) error {
-	return s.delete(property)
-}
-
 type nodeAgentChange struct {
 	id     string
 	mutate func(*NodeAgentSpec)
 }
 
-type assemblerTree struct {
-	path              []string
-	node              Assembler
-	currentState      interface{}
-	currentAPIVersion string
-	kind              Kind
-	children          []*assemblerTree
-	nodeAgentChanges  chan *nodeAgentChange
+type Desired struct {
+	Kind     string
+	Version  string
+	Spec     interface{} `yaml:",inline"`
+	Children []*Desired  `yaml:"deps"`
+	ensurer  Assembler   `yaml:"-"`
+}
+
+type Secrets struct {
+	Node    Node           `yaml:",inline"`
+	Secrets yaml.Marshaler `yaml:",inline"`
 }
 
 func build(
 	logger logging.Logger,
 	assembler Assembler,
-	desiredSource map[string]interface{},
-	secrets *Secrets,
+	desired map[string]interface{},
+	secrets map[string]interface{},
 	dependantConfig interface{},
 	isRoot bool,
 	nodeAgentFunc func(id string, changes chan<- *nodeAgentChange) *NodeAgentCurrent) (*assemblerTree, error) {
@@ -79,17 +59,17 @@ func build(
 		err             error
 	)
 	if isRoot {
-		deepDesiredKind = desiredSource
+		deepDesiredKind = desired
 		if err != nil {
 			return nil, err
 		}
 		path = make([]string, 0)
 	} else {
-		debugLogger.Debug("Navigating to desiredSource assembler")
+		debugLogger.Debug("Navigating to desired assembler")
 		deepDesiredKind, err = drillIn(logger.WithFields(map[string]interface{}{
 			"purpose": "build",
 			"config":  "spec",
-		}), desiredSource, path, false)
+		}), desired, path, false)
 		if err != nil {
 			return nil, errors.Wrapf(err, "navigating to %s's desired source at path %v failed", assembler, path)
 		}
@@ -260,3 +240,4 @@ func buildCurrent(logger logging.Logger, kind map[string]interface{}, tree *asse
 
 	return nil
 }
+*/

@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/logging"
 	"github.com/pkg/errors"
@@ -184,7 +184,7 @@ func (c *compute) open() (sess *sshlib.Session, close func() error, err error) {
 	}, nil
 }
 
-func (c *compute) UseKeys(sec *operator.Secrets, privateKeyPaths ...string) error {
+func (c *compute) UseKeys(sec *orbiter.Secrets, privateKeyPaths ...string) error {
 
 	var signers []sshlib.Signer
 	for _, privateKeyPath := range privateKeyPaths {

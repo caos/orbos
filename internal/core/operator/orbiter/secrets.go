@@ -1,5 +1,6 @@
 package orbiter
 
+/*
 import (
 	"bytes"
 	"sync"
@@ -62,3 +63,4 @@ func (c *curriedSecrets) delete(property string) error {
 	delete(c.encryptedSecrets, property)
 	return c.updateRemote(c.encryptedSecrets)
 }
+*/

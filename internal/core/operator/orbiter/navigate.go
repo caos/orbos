@@ -1,5 +1,6 @@
 package orbiter
 
+/*
 import (
 	"fmt"
 
@@ -102,3 +103,4 @@ func drillInSlice(logger logging.Logger, cfg map[string]interface{}, path []stri
 
 	return nil, errors.Errorf("config %+v has no slice with an item of id %s at property %s", cfg, id, prop)
 }
+*/

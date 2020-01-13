@@ -5,14 +5,14 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
 )
 
 func New(params model.Parameters) Builder {
-	return builderFunc(func(spec model.UserSpec, nodeAgentUpdater operator.NodeAgentUpdater) (model.Config, Adapter, error) {
+	return builderFunc(func(spec model.UserSpec, nodeAgentUpdater orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{
 			Spec:   spec,
@@ -23,7 +23,7 @@ func New(params model.Parameters) Builder {
 			cfg.Params.Logger = cfg.Params.Logger.Verbose()
 		}
 
-		return cfg, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, ensuredDependencies map[string]interface{}) (*model.Current, error) {
+		return cfg, adapterFunc(func(ctx context.Context, secrets *orbiter.Secrets, ensuredDependencies map[string]interface{}) (*model.Current, error) {
 
 			poolIsConfigured := func(poolSpec *model.Pool, infra map[string]map[string]infra.Pool) error {
 				prov, ok := infra[poolSpec.Provider]

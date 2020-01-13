@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/core/secret"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -25,7 +25,7 @@ type instanceService struct {
 	ctx                 context.Context
 	svc                 *compute.InstancesService
 	caller              *api.Caller
-	secrets             *operator.Secrets
+	secrets             *orbiter.Secrets
 	newComputePublicKey []byte
 	dynamicKeyProperty  string
 	fromOutside         bool
@@ -38,7 +38,7 @@ func NewInstanceService(
 	svc *compute.Service,
 	spec *model.UserSpec,
 	caller *api.Caller,
-	secrets *operator.Secrets,
+	secrets *orbiter.Secrets,
 	newComputePublicKey []byte,
 	dynamicKeyProperty string,
 	fromOutside bool) core.ComputesService {

@@ -3,7 +3,7 @@ package wrap
 import (
 	"io"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 )
 
@@ -42,6 +42,6 @@ func (c *cmpLB) WriteFile(path string, data io.Reader, permissions uint16) error
 func (c *cmpLB) ReadFile(path string, data io.Writer) error {
 	return c.original.ReadFile(path, data)
 }
-func (c *cmpLB) UseKeys(sec *operator.Secrets, privateKeyPaths ...string) error {
+func (c *cmpLB) UseKeys(sec *orbiter.Secrets, privateKeyPaths ...string) error {
 	return c.original.UseKeys(sec, privateKeyPaths...)
 }

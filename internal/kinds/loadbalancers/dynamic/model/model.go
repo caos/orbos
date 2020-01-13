@@ -3,7 +3,7 @@
 package model
 
 import (
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 
@@ -17,7 +17,7 @@ var CurrentVersion = "v0"
 type Current struct {
 	SourcePools map[string][]string
 	Addresses   map[string]infra.Address
-	Desire      func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *operator.NodeAgentCurrent, notifyMaster string) error `yaml:"-"`
+	Desire      func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent, notifyMaster string) error `yaml:"-"`
 }
 
 type UserSpec map[string][]VIP

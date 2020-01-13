@@ -6,7 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
@@ -21,7 +21,7 @@ func ensureCluster(
 	curr *model.Current,
 	providerPools map[string]map[string]infra.Pool,
 	kubeAPIAddress infra.Address,
-	secrets *operator.Secrets,
+	secrets *orbiter.Secrets,
 	k8sClient *k8s.Client) (err error) {
 
 	kubeConfigKey := cfg.Params.ID + "_kubeconfig"

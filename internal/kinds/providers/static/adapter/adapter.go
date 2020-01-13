@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/wrap"
@@ -36,8 +36,8 @@ func (i *infraCurrent) Cleanupped() <-chan error {
 	return i.cu
 }
 
-func New(logger logging.Logger, id string, healthchecks string, changesDisallowed []string, mapNodeAgent func(cmp infra.Compute) *operator.NodeAgentCurrent) Builder {
-	return builderFunc(func(spec model.UserSpec, _ operator.NodeAgentUpdater) (model.Config, Adapter, error) {
+func New(logger logging.Logger, id string, healthchecks string, changesDisallowed []string, mapNodeAgent func(cmp infra.Compute) *orbiter.NodeAgentCurrent) Builder {
+	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{
 			Logger:       logger,
@@ -49,7 +49,7 @@ func New(logger logging.Logger, id string, healthchecks string, changesDisallowe
 			logger = logger.Verbose()
 		}
 
-		return cfg, adapterFunc(func(ctx context.Context, secrets *operator.Secrets, deps map[string]interface{}) (*model.Current, error) {
+		return cfg, adapterFunc(func(ctx context.Context, secrets *orbiter.Secrets, deps map[string]interface{}) (*model.Current, error) {
 
 			currentProvider := &infraCurrent{
 				pools: make(map[string]infra.Pool),

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 	"github.com/caos/orbiter/internal/kinds/providers/static/model"
@@ -21,7 +21,7 @@ type computesService struct {
 	bootstrapKeyProperty string
 	dynamicKeyProperty   string
 	dynamicPublicKey     []byte
-	secrets              *operator.Secrets
+	secrets              *orbiter.Secrets
 	desireHostname       func(compute infra.Compute, pool string) error
 }
 
@@ -33,7 +33,7 @@ func NewComputesService(
 	bootstrapKeyProperty string,
 	dynamicKeyProperty string,
 	dynamicPublicKey []byte,
-	secrets *operator.Secrets,
+	secrets *orbiter.Secrets,
 	desireHostname func(compute infra.Compute, pool string) error) core.ComputesService {
 	return &computesService{
 		logger,
