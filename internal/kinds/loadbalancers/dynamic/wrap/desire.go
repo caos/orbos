@@ -2,16 +2,15 @@ package wrap
 
 import (
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
-	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
 
-func desire(selfPool string, changesAllowed bool, dynamic model.Current, svc core.ComputesService, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent) func() error {
+func desire(selfPool string, changesAllowed bool, curr dynamic.Current, svc core.ComputesService, nodeagents map[string]*orbiter.NodeAgentSpec, notifymasters string) func() error {
 	return func() error {
 		update := []string{selfPool}
 	sources:
-		for _, source := range dynamic.SourcePools[selfPool] {
+		for _, source := range curr.Current.SourcePools[selfPool] {
 			for _, existing := range update {
 				if source == existing {
 					continue sources
@@ -21,7 +20,7 @@ func desire(selfPool string, changesAllowed bool, dynamic model.Current, svc cor
 		}
 
 		for _, pool := range update {
-			if err := dynamic.Desire(pool, changesAllowed, svc, nodeagent, ""); err != nil {
+			if err := curr.Current.Desire(pool, svc, nodeagents, notifymasters); err != nil {
 				return err
 			}
 		}

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -12,8 +10,6 @@ import (
 	"github.com/caos/orbiter/internal/edge/watcher/cron"
 	"github.com/caos/orbiter/internal/edge/watcher/immediate"
 	"github.com/caos/orbiter/internal/kinds/orb"
-	"github.com/caos/orbiter/internal/kinds/orb/adapter"
-	"github.com/caos/orbiter/internal/kinds/orb/model"
 )
 
 func takeoffCommand(rv rootValues) *cobra.Command {
@@ -53,9 +49,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter is taking off")
 
-		currentFile := "current.yml"
-		secretsFile := "secrets.yml"
-		configID := strings.ReplaceAll(strings.TrimSuffix(orbFile.URL[strings.LastIndex(orbFile.URL, "/")+1:], ".git"), "-", "")
+		//		configID := strings.ReplaceAll(strings.TrimSuffix(orbFile.URL[strings.LastIndex(orbFile.URL, "/")+1:], ".git"), "-", "")
 		/*
 			var before func(desired []byte, secrets *operator.Secrets) error
 
@@ -92,17 +86,21 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				}
 			}
 		*/
-		op := operator.New(ctx, logger, orbiter.Iterator(ctx, logger, gitClient, gitCommit, orbFile.Masterkey, recur, destroy, orb.New(nil, nil, adapter.New(&model.Config{
-			Logger:             logger,
-			ConfigID:           configID,
-			OrbiterCommit:      gitCommit,
-			NodeagentRepoURL:   orbFile.URL,
-			NodeagentRepoKey:   orbFile.Repokey,
-			CurrentFile:        currentFile,
-			SecretsFile:        secretsFile,
-			Masterkey:          orbFile.Masterkey,
-			ConnectFromOutside: !recur,
-		}))), []operator.Watcher{
+		op := operator.New(ctx, logger, orbiter.Iterator(
+			ctx,
+			logger,
+			gitClient,
+			gitCommit,
+			orbFile.Masterkey,
+			recur,
+			destroy,
+			orb.AdaptFunc(
+				logger,
+				orbFile.URL,
+				orbFile.Repokey,
+				orbFile.Masterkey,
+				gitCommit),
+		), []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),
 		})

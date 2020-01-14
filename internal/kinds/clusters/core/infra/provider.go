@@ -3,8 +3,6 @@ package infra
 import (
 	"fmt"
 	"io"
-
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
 )
 
 type Address struct {
@@ -40,7 +38,7 @@ type Compute interface {
 	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
-	UseKeys(sec *orbiter.Secrets, privateKeyPaths ...string) error
+	UseKey(keys ...[]byte) error
 }
 
 type Computes []Compute

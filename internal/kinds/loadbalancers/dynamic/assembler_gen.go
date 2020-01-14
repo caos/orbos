@@ -2,6 +2,7 @@
 
 package dynamic
 
+/*
 import (
 	"context"
 	"fmt"
@@ -77,3 +78,4 @@ func (a *assembler) Build(serialized map[string]interface{}, nodeagentupdater or
 
 	return kind, cfg, subassemblers, model.CurrentVersion, nil
 }
+*/

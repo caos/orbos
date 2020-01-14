@@ -191,14 +191,9 @@ func (c *changer) desire(mutate func(*NodeAgentSpec)) {
 	}
 }
 */
-type NodeAgentsKind struct {
-	Kind    string
-	Version string
-}
-
 type NodeAgentsCurrentKind struct {
-	NodeAgentsKind `yaml:",inline"`
-	Current        map[string]*NodeAgentCurrent `yaml:",omitempty"`
+	Common  `yaml:",inline"`
+	Current map[string]*NodeAgentCurrent `yaml:",omitempty"`
 }
 
 type NodeAgentsSpec struct {
@@ -207,8 +202,8 @@ type NodeAgentsSpec struct {
 }
 
 type NodeAgentsDesiredKind struct {
-	NodeAgentsKind `yaml:",inline"`
-	Spec           NodeAgentsSpec `yaml:",omitempty"`
+	Common `yaml:",inline"`
+	Spec   NodeAgentsSpec `yaml:",omitempty"`
 }
 
 /*

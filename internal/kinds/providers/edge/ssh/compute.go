@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/logging"
 	"github.com/pkg/errors"
@@ -184,16 +183,11 @@ func (c *compute) open() (sess *sshlib.Session, close func() error, err error) {
 	}, nil
 }
 
-func (c *compute) UseKeys(sec *orbiter.Secrets, privateKeyPaths ...string) error {
+func (c *compute) UseKey(keys ...[]byte) error {
 
 	var signers []sshlib.Signer
-	for _, privateKeyPath := range privateKeyPaths {
-		privateKey, err := sec.Read(privateKeyPath)
-		if err != nil {
-			return err
-		}
-
-		signer, err := sshlib.ParsePrivateKey(privateKey)
+	for _, key := range keys {
+		signer, err := sshlib.ParsePrivateKey(key)
 		if err != nil {
 			return errors.Wrap(err, "parsing private key failed")
 		}

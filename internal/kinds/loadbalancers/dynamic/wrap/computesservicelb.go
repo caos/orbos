@@ -3,21 +3,22 @@ package wrap
 import (
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
+	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
 
 type cmpSvcLB struct {
-	original  core.ComputesService
-	dynamic   model.Current
-	nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent
+	original      core.ComputesService
+	dynamic       dynamic.Current
+	nodeagents    map[string]*orbiter.NodeAgentSpec
+	notifymasters string
 }
 
-func ComputesService(svc core.ComputesService, dynamic model.Current, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent) core.ComputesService {
+func ComputesService(svc core.ComputesService, curr dynamic.Current, nodeagents map[string]*orbiter.NodeAgentSpec, notifymasters string) core.ComputesService {
 	return &cmpSvcLB{
-		original:  svc,
-		dynamic:   dynamic,
-		nodeagent: nodeagent,
+		original:   svc,
+		dynamic:    curr,
+		nodeagents: nodeagents,
 	}
 }
 
@@ -35,6 +36,6 @@ func (i *cmpSvcLB) Create(poolName string) (infra.Compute, error) {
 		return nil, err
 	}
 
-	desireFunc := desire(poolName, true, i.dynamic, i.original, i.nodeagent)
+	desireFunc := desire(poolName, true, i.dynamic, i.original, i.nodeagents, i.notifymasters)
 	return compute(cmp, desireFunc), desireFunc()
 }
