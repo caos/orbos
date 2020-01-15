@@ -2,6 +2,8 @@ package operator
 
 import (
 	"context"
+	"fmt"
+	"runtime/debug"
 	"time"
 
 	"github.com/pkg/errors"
@@ -57,11 +59,21 @@ loop:
 				i.logger.Info("Skipping iteration")
 				continue loop
 			}
-			started := time.Now()
-			i.iterate()
-			i.logger.WithFields(map[string]interface{}{
-				"took": time.Now().Sub(started),
-			}).Info("Iteration done")
+			i.iterateWrapped()
 		}
 	}
+}
+
+func (i *Iterator) iterateWrapped() {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println(string(debug.Stack()))
+			panic(r)
+		}
+	}()
+	started := time.Now()
+	i.iterate()
+	i.logger.WithFields(map[string]interface{}{
+		"took": time.Now().Sub(started),
+	}).Info("Iteration done")
 }

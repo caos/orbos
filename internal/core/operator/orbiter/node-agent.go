@@ -10,7 +10,7 @@ type NodeAgentSpec struct {
 	ChangesAllowed bool
 	//	RebootEnabled  bool
 	Software *Software
-	Firewall Firewall
+	Firewall *Firewall
 }
 
 type NodeAgentCurrent struct {
@@ -29,6 +29,43 @@ type Software struct {
 	KeepaliveD       Package `yaml:",omitempty"`
 	Nginx            Package `yaml:",omitempty"`
 	Hostname         Package `yaml:",omitempty"`
+}
+
+func (s *Software) Merge(sw Software) {
+
+	zeroPkg := Package{}
+
+	if !sw.Containerruntime.Equals(zeroPkg) {
+		s.Containerruntime = sw.Containerruntime
+	}
+
+	if !sw.KeepaliveD.Equals(zeroPkg) {
+		s.KeepaliveD = sw.KeepaliveD
+	}
+
+	if !sw.Nginx.Equals(zeroPkg) {
+		s.Nginx = sw.Nginx
+	}
+
+	if !sw.Kubeadm.Equals(zeroPkg) {
+		s.Kubeadm = sw.Kubeadm
+	}
+
+	if !sw.Kubelet.Equals(zeroPkg) {
+		s.Kubelet = sw.Kubelet
+	}
+
+	if !sw.Kubectl.Equals(zeroPkg) {
+		s.Kubectl = sw.Kubectl
+	}
+
+	if !sw.Swap.Equals(zeroPkg) {
+		s.Swap = sw.Swap
+	}
+
+	if !sw.Hostname.Equals(zeroPkg) {
+		s.Hostname = sw.Hostname
+	}
 }
 
 type Package struct {
@@ -84,6 +121,13 @@ func (this *Software) Contains(that Software) bool {
 }
 
 type Firewall map[string]Allowed
+
+func (f *Firewall) Merge(fw Firewall) {
+	for key, value := range fw {
+		m := *f
+		m[key] = value
+	}
+}
 
 type Allowed struct {
 	Port     string

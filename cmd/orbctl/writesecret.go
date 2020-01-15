@@ -1,5 +1,6 @@
 package main
 
+/*
 import (
 	"io/ioutil"
 	"os"
@@ -118,3 +119,4 @@ func key(value string, file string, stdin bool) (string, error) {
 	}
 	return string(key), err
 }
+*/

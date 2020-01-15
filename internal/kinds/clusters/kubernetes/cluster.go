@@ -1,4 +1,4 @@
-package adapter
+package kubernetes
 
 import (
 	"sync"
@@ -9,7 +9,7 @@ import (
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
+	"github.com/caos/orbiter/logging"
 )
 
 // TODO per pool:
@@ -17,17 +17,21 @@ import (
 // 2. Migrate
 // 3. Upscale if desired > current
 func ensureCluster(
-	cfg *model.Config,
-	curr *model.Current,
+	logger logging.Logger,
+	desired DesiredV0,
+	curr *CurrentCluster,
+	nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
 	providerPools map[string]map[string]infra.Pool,
 	kubeAPIAddress infra.Address,
-	secrets *orbiter.Secrets,
-	k8sClient *k8s.Client) (err error) {
+	kubeconfig *orbiter.Secret,
+	k8sClient *k8s.Client,
+	repoURL string,
+	repoKey string,
+	orbiterCommit string,
+	destroy bool) (err error) {
 
-	kubeConfigKey := cfg.Params.ID + "_kubeconfig"
-	joinTokenKey := cfg.Params.ID + "_jointoken"
-
-	if !cfg.Spec.Destroyed && cfg.Spec.ControlPlane.Nodes != 1 && cfg.Spec.ControlPlane.Nodes != 3 && cfg.Spec.ControlPlane.Nodes != 5 {
+	if !destroy && desired.Spec.ControlPlane.Nodes != 1 && desired.Spec.ControlPlane.Nodes != 3 && desired.Spec.ControlPlane.Nodes != 5 {
 		err = errors.New("Controlplane nodes can only be scaled to 1, 3 or 5")
 		return err
 	}
@@ -38,11 +42,11 @@ func ensureCluster(
 	workerComputes := make([]infra.Compute, 0)
 	for providerName, provider := range providerPools {
 		for poolName, wPool := range provider {
-			if cfg.Spec.ControlPlane.Provider == providerName && cfg.Spec.ControlPlane.Pool == poolName {
+			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == poolName {
 
-				cpDesired := cfg.Spec.ControlPlane
+				cpDesired := desired.Spec.ControlPlane
 				cpPool := providerPools[cpDesired.Provider][cpDesired.Pool]
-				cfg.Params.Logger.WithFields(map[string]interface{}{
+				logger.WithFields(map[string]interface{}{
 					"provider": cpDesired.Provider,
 					"pool":     cpDesired.Pool,
 					"tier":     "controlplane",
@@ -53,16 +57,20 @@ func ensureCluster(
 					return err
 				}
 				for _, comp := range cpPoolComputes {
-					newCurrentCompute(cfg, curr, comp, &model.ComputeMetadata{
-						Tier:     model.Controlplane,
-						Provider: cpDesired.Provider,
-						Pool:     cpDesired.Pool,
-						Group:    "",
-					})
+					curr.Computes[comp.ID()] = &Compute{
+						Status: "maintaining",
+						Metadata: ComputeMetadata{
+							Tier:     Controlplane,
+							Provider: cpDesired.Provider,
+							Pool:     cpDesired.Pool,
+						},
+					}
 				}
 				controlplanePool = &scaleablePool{
 					pool: newPool(
-						cfg,
+						logger,
+						repoURL,
+						repoKey,
 						&poolSpec{group: "", spec: cpDesired},
 						cpPool,
 						k8sClient,
@@ -73,10 +81,10 @@ func ensureCluster(
 				continue
 			}
 			var (
-				wDesired *model.Pool
+				wDesired *Pool
 				group    string
 			)
-			for g, w := range cfg.Spec.Workers {
+			for g, w := range desired.Spec.Workers {
 				if providerName == w.Provider && poolName == w.Pool {
 					group = g
 					wDesired = w
@@ -85,7 +93,7 @@ func ensureCluster(
 			}
 
 			if wDesired == nil {
-				wDesired = &model.Pool{
+				wDesired = &Pool{
 					Provider:        providerName,
 					UpdatesDisabled: true,
 					Nodes:           0,
@@ -93,7 +101,7 @@ func ensureCluster(
 				}
 			}
 
-			cfg.Params.Logger.WithFields(map[string]interface{}{
+			logger.WithFields(map[string]interface{}{
 				"provider": wDesired.Provider,
 				"pool":     wDesired.Pool,
 				"tier":     "workers",
@@ -106,8 +114,10 @@ func ensureCluster(
 			}
 			workerPools = append(workerPools, &scaleablePool{
 				pool: newPool(
-					cfg,
-					&poolSpec{group: group, spec: wDesired},
+					logger,
+					repoURL,
+					repoKey,
+					&poolSpec{group: group, spec: *wDesired},
 					wPool,
 					k8sClient,
 					wPoolComputes),
@@ -115,30 +125,28 @@ func ensureCluster(
 			})
 			workerComputes = append(workerComputes, wPoolComputes...)
 			for _, comp := range wPoolComputes {
-				newCurrentCompute(cfg, curr, comp, &model.ComputeMetadata{
-					Tier:     model.Workers,
-					Provider: wDesired.Provider,
-					Pool:     wDesired.Pool,
-					Group:    group,
-				})
+				curr.Computes[comp.ID()] = &Compute{
+					Status: "maintaining",
+					Metadata: ComputeMetadata{
+						Tier:     Workers,
+						Provider: wDesired.Provider,
+						Pool:     wDesired.Pool,
+						Group:    group,
+					},
+				}
 			}
 		}
 	}
 
 	if curr.Computes == nil {
-		curr.Computes = make(map[string]*model.Compute)
+		curr.Computes = make(map[string]*Compute)
 	}
 
-	if len(cpPoolComputes) == 0 {
-		_ = secrets.Delete(kubeConfigKey)
-		_ = secrets.Delete(joinTokenKey)
-	} else {
-		kc, _ := secrets.Read(kubeConfigKey)
-		kcStrCast := string(kc)
-		k8sClient.Refresh(&kcStrCast)
+	if kubeconfig.Value != "" {
+		k8sClient.Refresh(&kubeconfig.Value)
 	}
 
-	if cfg.Spec.Destroyed {
+	if destroy {
 		var wg sync.WaitGroup
 		synchronizer := helpers.NewSynchronizer(&wg)
 		for _, compute := range append(cpPoolComputes, workerComputes...) {
@@ -152,30 +160,37 @@ func ensureCluster(
 		}
 		wg.Wait()
 		if synchronizer.IsError() {
-			cfg.Params.Logger.Info(synchronizer.Error())
+			logger.Info(synchronizer.Error())
 		}
 		return nil
 	}
 
-	targetVersion := k8s.ParseString(cfg.Spec.Kubernetes)
+	targetVersion := k8s.ParseString(desired.Spec.Kubernetes)
 	upgradingDone, err := ensureK8sVersion(
-		cfg,
+		logger,
+		orbiterCommit,
+		repoURL,
+		repoKey,
 		targetVersion,
 		k8sClient,
 		curr.Computes,
+		nodeAgentsCurrent,
+		nodeAgentsDesired,
 		cpPoolComputes,
 		workerComputes)
 	if err != nil || !upgradingDone {
-		cfg.Params.Logger.Debug("Upgrading is not done yet")
+		logger.Debug("Upgrading is not done yet")
 		return err
 	}
 
 	var scalingDone bool
 	scalingDone, err = ensureScale(
-		cfg,
-		curr,
-		secrets,
-		kubeConfigKey,
+		logger,
+		desired,
+		curr.Computes,
+		nodeAgentsCurrent,
+		nodeAgentsDesired,
+		kubeconfig,
 		controlplanePool,
 		workerPools,
 		kubeAPIAddress,
@@ -190,13 +205,4 @@ func ensureCluster(
 	}
 
 	return nil
-}
-
-func newCurrentCompute(cfg *model.Config, curr *model.Current, compute infra.Compute, meta *model.ComputeMetadata) {
-	nodeagent := cfg.NodeAgent(compute)
-	curr.Computes[compute.ID()] = &model.Compute{
-		Status:    "maintaining",
-		Metadata:  meta,
-		Nodeagent: nodeagent,
-	}
 }

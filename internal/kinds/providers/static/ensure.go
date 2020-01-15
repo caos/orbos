@@ -10,7 +10,6 @@ import (
 
 	//	externallbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/external"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
-	aws "github.com/caos/orbiter/internal/kinds/providers/ec2/adapter"
 	"github.com/caos/orbiter/internal/kinds/providers/edge/ssh"
 	"github.com/caos/orbiter/logging"
 )
@@ -26,7 +25,7 @@ func ensure(
 
 	logger logging.Logger,
 	id string,
-) error {
+) (err error) {
 
 	if sec.Secrets.Maintenance.Private == nil && sec.Secrets.Maintenance.Public == nil {
 		priv, pub, err := ssh.Generate()
@@ -57,24 +56,18 @@ func ensure(
 		}
 	}
 
-	notifyMaster := ""
-	if desired.Spec.Hoster == "AWS" {
-		notifyMaster = aws.NotifyMaster()
-	}
-
 	current.Current.Ingresses = make(map[string]infra.Address)
-
 	switch lbCurrent := lb.(type) {
 	case *dynamiclbmodel.Current:
 		for name, address := range lbCurrent.Current.Addresses {
 			current.Current.Ingresses[name] = address
 		}
 		for _, pool := range pools {
-			if err := lbCurrent.Current.Desire(pool, computesSvc, nodeAgentsDesired, notifyMaster); err != nil {
+			if err := lbCurrent.Current.Desire(pool, computesSvc, nodeAgentsDesired, ""); err != nil {
 				return err
 			}
 		}
-		computesSvc = wrap.ComputesService(computesSvc, *lbCurrent, nodeAgentsDesired, notifyMaster)
+		computesSvc = wrap.ComputesService(computesSvc, *lbCurrent, nodeAgentsDesired, "")
 		//	case *externallbmodel.Current:
 		//		for name, address := range lbCurrent.Current.Addresses {
 		//			current.Current.Ingresses[name] = address
@@ -83,6 +76,7 @@ func ensure(
 		return errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
+	current.Current.Pools = make(map[string]infra.Pool)
 	for pool := range desired.Spec.Pools {
 		current.Current.Pools[pool] = core.NewPool(pool, nil, computesSvc)
 	}
@@ -101,6 +95,6 @@ func ensure(
 	go func() {
 		cu <- nil
 	}()
-	current.Current.Cleanupped = cu
+	current.Current.cleanupped = cu
 	return nil
 }

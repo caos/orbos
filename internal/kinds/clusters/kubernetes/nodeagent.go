@@ -9,14 +9,19 @@ import (
 
 	"github.com/caos/orbiter/internal/edge/executables"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/logging"
 	"github.com/pkg/errors"
 )
 
-func installNodeAgent(cfg *model.Config, compute infra.Compute) error {
+func installNodeAgent(
+	logger logging.Logger,
+	compute infra.Compute,
+	repoURL string,
+	repoKey string) error {
 
 	var user string
 	whoami := "whoami"
-	if err := try(cfg.Params.Logger, time.NewTimer(1*time.Minute), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(1*time.Minute), 2*time.Second, compute, func(cmp infra.Compute) error {
 		var cbErr error
 		stdout, cbErr := cmp.Execute(nil, nil, whoami)
 		if cbErr != nil {
@@ -27,7 +32,7 @@ func installNodeAgent(cfg *model.Config, compute infra.Compute) error {
 	}); err != nil {
 		return errors.Wrap(err, "checking")
 	}
-	logger := cfg.Params.Logger.WithFields(map[string]interface{}{
+	logger = logger.WithFields(map[string]interface{}{
 		"user":    user,
 		"compute": compute.ID(),
 	})
@@ -36,7 +41,7 @@ func installNodeAgent(cfg *model.Config, compute infra.Compute) error {
 	}).Debug("Executed command")
 
 	dockerCfg := "/etc/docker/daemon.json"
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		return errors.Wrapf(cmp.WriteFile(dockerCfg, strings.NewReader(`{
   "exec-opts": ["native.cgroupdriver=systemd"],
   "log-driver": "json-file",
@@ -68,7 +73,7 @@ func installNodeAgent(cfg *model.Config, compute infra.Compute) error {
 
 		binary = fmt.Sprintf("dlv exec %s --api-version 2 --headless --listen 0.0.0.0:5000 --continue --accept-multiclient --", nodeAgentPath)
 	}
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		return errors.Wrapf(cmp.WriteFile(systemdPath, strings.NewReader(fmt.Sprintf(`[Unit]
 Description=Node Agent
 After=network.target
@@ -76,13 +81,13 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=%s --repourl "%s" --id "%s" --currentfile "%s" --secretsfile "%s"
+ExecStart=%s --repourl "%s" --id "%s"
 Restart=always
 RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-`, binary, cfg.Params.RepoURL, compute.ID(), cfg.Params.CurrentFile, cfg.Params.SecretsFile)), 600), "creating remote file %s failed", systemdPath)
+`, binary, repoURL, compute.ID())), 600), "creating remote file %s failed", systemdPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 	}
@@ -91,8 +96,8 @@ WantedBy=multi-user.target
 	}).Debug("Written file")
 
 	keyPath := "/etc/nodeagent/repokey"
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
-		return errors.Wrapf(cmp.WriteFile(keyPath, strings.NewReader(cfg.Params.RepoKey), 400), "creating remote file %s failed", keyPath)
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+		return errors.Wrapf(cmp.WriteFile(keyPath, strings.NewReader(repoKey), 400), "creating remote file %s failed", keyPath)
 	}); err != nil {
 		return errors.Wrap(err, "writing repokey failed")
 	}
@@ -101,7 +106,7 @@ WantedBy=multi-user.target
 	}).Debug("Written file")
 
 	daemonReload := "sudo systemctl daemon-reload"
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		_, cbErr := cmp.Execute(nil, nil, daemonReload)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", daemonReload)
 	}); err != nil {
@@ -112,7 +117,7 @@ WantedBy=multi-user.target
 	}).Debug("Executed command")
 
 	stopSystemd := fmt.Sprintf("if sudo systemctl is-active %s; then sudo systemctl stop %s;fi", systemdEntry, systemdEntry)
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		_, cbErr := cmp.Execute(nil, nil, stopSystemd)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", stopSystemd)
 	}); err != nil {
@@ -126,7 +131,7 @@ WantedBy=multi-user.target
 	if err != nil {
 		return err
 	}
-	if err := try(cfg.Params.Logger, time.NewTimer(20*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(20*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		return errors.Wrapf(cmp.WriteFile(nodeAgentPath, bytes.NewReader(nodeagent), 700), "creating remote file %s failed", nodeAgentPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely installing Node Agent failed")
@@ -139,7 +144,7 @@ WantedBy=multi-user.target
 	if err != nil {
 		return err
 	}
-	if err := try(cfg.Params.Logger, time.NewTimer(20*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(20*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		return errors.Wrapf(cmp.WriteFile(healthPath, bytes.NewReader(health), 711), "creating remote file %s failed", healthPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely installing health executable failed")
@@ -149,7 +154,7 @@ WantedBy=multi-user.target
 	}).Debug("Written file")
 
 	enableSystemd := fmt.Sprintf("sudo systemctl enable %s", systemdPath)
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		_, cbErr := cmp.Execute(nil, nil, enableSystemd)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", enableSystemd)
 	}); err != nil {
@@ -160,7 +165,7 @@ WantedBy=multi-user.target
 	}).Debug("Executed command")
 
 	startSystemd := fmt.Sprintf("sudo systemctl restart %s", systemdEntry)
-	if err := try(cfg.Params.Logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
 		_, cbErr := cmp.Execute(nil, nil, startSystemd)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", startSystemd)
 	}); err != nil {

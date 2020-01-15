@@ -16,7 +16,8 @@ func AdaptFunc(
 	repoKey string,
 	masterKey string,
 	orbiterCommit string,
-	id string) orbiter.AdaptFunc {
+	id string,
+	destroy bool) orbiter.AdaptFunc {
 	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -29,7 +30,10 @@ func AdaptFunc(
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
-		secretsKind := &SecretsV0{Common: *secretsTree.Common}
+		secretsKind := &SecretsV0{
+			Common:  *secretsTree.Common,
+			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: masterKey}},
+		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
 			return nil, errors.Wrap(err, "parsing secrets failed")
 		}
@@ -116,10 +120,17 @@ func AdaptFunc(
 			}
 
 			return ensure(
+				logger,
+				*desiredKind,
 				current,
 				providers,
 				nodeAgentsCurrent,
-				nodeAgentsDesired)
+				nodeAgentsDesired,
+				secretsKind.Secrets.Kubeconfig,
+				repoURL,
+				repoKey,
+				orbiterCommit,
+				destroy)
 
 		}, nil
 	}

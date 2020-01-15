@@ -197,8 +197,11 @@ http {
 								deepNa = &orbiter.NodeAgentSpec{}
 								nodeagents[compute.ID()] = deepNa
 							}
-
-							deepNa.Firewall[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = orbiter.Allowed{
+							if deepNa.Firewall == nil {
+								deepNa.Firewall = &orbiter.Firewall{}
+							}
+							fw := *deepNa.Firewall
+							fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = orbiter.Allowed{
 								Port:     fmt.Sprintf("%d", transport.SourcePort),
 								Protocol: "tcp",
 							}
@@ -234,8 +237,11 @@ http {
 									deepNa = &orbiter.NodeAgentSpec{}
 									nodeagents[compute.ID()] = deepNa
 								}
-
-								deepNa.Firewall[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = orbiter.Allowed{
+								if deepNa.Firewall == nil {
+									deepNa.Firewall = &orbiter.Firewall{}
+								}
+								fw := *deepNa.Firewall
+								fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = orbiter.Allowed{
 									Port:     fmt.Sprintf("%d", dest.Port),
 									Protocol: "tcp",
 								}

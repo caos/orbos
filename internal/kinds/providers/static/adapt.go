@@ -20,7 +20,19 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
-		secretsKind := &SecretsV0{Common: secretsTree.Common}
+		secretsKind := &SecretsV0{
+			Common: secretsTree.Common,
+			Secrets: Secrets{
+				Bootstrap: Key{
+					Public:  &orbiter.Secret{Masterkey: masterkey},
+					Private: &orbiter.Secret{Masterkey: masterkey},
+				},
+				Maintenance: Key{
+					Public:  &orbiter.Secret{Masterkey: masterkey},
+					Private: &orbiter.Secret{Masterkey: masterkey},
+				},
+			},
+		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
 			return nil, errors.Wrap(err, "parsing secrets failed")
 		}
@@ -28,12 +40,11 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		secretsTree.Parsed = secretsKind
 
 		lbCurrent := &orbiter.Tree{}
-		var lbEnsurer orbiter.EnsureFunc
 		switch desiredKind.Deps.Common.Kind {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			if lbEnsurer, err = dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Deps, nil, lbCurrent); err != nil {
+			if _, err = dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Deps, nil, lbCurrent); err != nil {
 				return nil, err
 			}
 			//		return []orbiter.Assembler{dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(kind.Spec.RemoteUser))}, nil
@@ -51,13 +62,7 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		currentTree.Parsed = current
 
 		return func(nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent, nodeAgentsDesired map[string]*orbiter.NodeAgentSpec) (err error) {
-			defer func() {
-				err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
-			}()
-			if err := lbEnsurer(nodeAgentsCurrent, nodeAgentsDesired); err != nil {
-				return err
-			}
-			return ensure(desiredKind, current, secretsKind, nodeAgentsDesired, lbCurrent, masterkey, logger, id)
+			return errors.Wrapf(ensure(desiredKind, current, secretsKind, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
 		}, nil
 	}
 }

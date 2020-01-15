@@ -10,12 +10,14 @@ import (
 
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/logging"
 )
 
 func join(
+	logger logging.Logger,
 	joining infra.Compute,
 	joinAt infra.Compute,
-	cfg *model.Config,
+	desired DesiredV0,
 	kubeAPI infra.Address,
 	joinToken string,
 	kubernetesVersion k8s.KubernetesVersion,
@@ -23,12 +25,12 @@ func join(
 	isControlPlane bool) (*string, error) {
 
 	var installNetwork func() error
-	switch cfg.Spec.Networking.Network {
+	switch desired.Spec.Networking.Network {
 	case "cilium":
 		installNetwork = func() error {
-			return try(cfg.Params.Logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml")
-				cfg.Params.Logger.WithFields(map[string]interface{}{
+				logger.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
 				}).Debug("Applied cilium network")
 				return applyErr
@@ -36,16 +38,16 @@ func join(
 		}
 	case "calico":
 		installNetwork = func() error {
-			return try(cfg.Params.Logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
-				applyStdout, applyErr := cmp.Execute(nil, nil, fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, cfg.Spec.Networking.PodCidr))
-				cfg.Params.Logger.WithFields(map[string]interface{}{
+			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+				applyStdout, applyErr := cmp.Execute(nil, nil, fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr))
+				logger.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
 				}).Debug("Applied calico network")
 				return applyErr
 			})
 		}
 	default:
-		return nil, errors.Errorf("Unknown network implementation %s", cfg.Spec.Networking.Network)
+		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
 
 	intIP := joining.IP()
@@ -113,9 +115,9 @@ nodeRegistration:
 		joining.ID(),
 		kubeAPI,
 		kubernetesVersion,
-		cfg.Spec.Networking.DNSDomain,
-		cfg.Spec.Networking.PodCidr,
-		cfg.Spec.Networking.ServiceCidr,
+		desired.Spec.Networking.DNSDomain,
+		desired.Spec.Networking.PodCidr,
+		desired.Spec.Networking.ServiceCidr,
 		kubeAPI,
 		joinToken,
 		joining.ID())
@@ -129,12 +131,12 @@ nodeRegistration:
 `, intIP, certKey)
 	}
 
-	if err := try(cfg.Params.Logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
 		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
 	}); err != nil {
 		return nil, err
 	}
-	cfg.Params.Logger.WithFields(map[string]interface{}{
+	logger.WithFields(map[string]interface{}{
 		"path": kubeadmCfgPath,
 	}).Debug("Written file")
 
@@ -143,7 +145,7 @@ nodeRegistration:
 	if err != nil {
 		return nil, errors.Wrapf(err, "executing %s failed", cmd)
 	}
-	cfg.Params.Logger.WithFields(map[string]interface{}{
+	logger.WithFields(map[string]interface{}{
 		"stdout": string(resetStdout),
 	}).Debug("Cleaned up compute")
 
@@ -158,7 +160,7 @@ nodeRegistration:
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
 		}
-		cfg.Params.Logger.WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"stdout": string(joinStdout),
 		}).Debug("Executed kubeadm join")
 		return nil, nil
@@ -170,12 +172,12 @@ nodeRegistration:
 	if err != nil {
 		return nil, err
 	}
-	cfg.Params.Logger.WithFields(map[string]interface{}{
+	logger.WithFields(map[string]interface{}{
 		"stdout": string(initStdout),
 	}).Debug("Executed kubeadm init")
 
 	copyKubeconfigStdout, err := joining.Execute(nil, nil, fmt.Sprintf("mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config"))
-	cfg.Params.Logger.WithFields(map[string]interface{}{
+	logger.WithFields(map[string]interface{}{
 		"stdout": string(copyKubeconfigStdout),
 	}).Debug("Moved kubeconfig")
 	if err != nil {

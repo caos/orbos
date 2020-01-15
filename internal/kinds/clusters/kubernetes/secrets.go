@@ -6,8 +6,10 @@ import (
 
 type SecretsV0 struct {
 	Common  orbiter.Common `yaml:",inline"`
-	Secrets struct {
-		Kubeconfig orbiter.Secret
-	}
-	Deps map[string]*orbiter.Tree
+	Secrets Secrets
+	Deps    map[string]*orbiter.Tree
+}
+
+type Secrets struct {
+	Kubeconfig *orbiter.Secret `yaml:",omitempty"`
 }

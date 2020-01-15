@@ -24,7 +24,7 @@ func main() {
 	rootCmd.AddCommand(
 		takeoffCommand(rootValues),
 		readSecretCommand(rootValues),
-		writeSecretCommand(rootValues),
+		//		writeSecretCommand(rootValues),
 		editCommand(rootValues),
 	)
 

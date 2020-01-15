@@ -8,7 +8,6 @@ type DesiredV0 struct {
 	Common orbiter.Common `yaml:",inline"`
 	Deps   map[string]*orbiter.Tree
 	Spec   struct {
-		Destroyed  bool
 		Verbose    bool
 		Kubernetes string
 		Networking struct {

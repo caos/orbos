@@ -5,14 +5,16 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
-
 	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
+	"github.com/caos/orbiter/logging"
 )
 
 type pool struct {
-	cfg      *model.Config
+	logger   logging.Logger
+	repoURL  string
+	repoKey  string
 	poolSpec *poolSpec
 	cloud    infra.Pool
 	k8s      *k8s.Client
@@ -22,17 +24,21 @@ type pool struct {
 
 type poolSpec struct {
 	group string
-	spec  *model.Pool
+	spec  Pool
 }
 
 func newPool(
-	cfg *model.Config,
+	logger logging.Logger,
+	repoURL string,
+	repoKey string,
 	poolSpec *poolSpec,
 	cloudPool infra.Pool,
 	k8s *k8s.Client,
 	initialComputes []infra.Compute) *pool {
 	return &pool{
-		cfg,
+		logger,
+		repoURL,
+		repoKey,
 		poolSpec,
 		cloudPool,
 		k8s,
@@ -61,7 +67,7 @@ func (p *pool) cleanupComputes() (err error) {
 		return err
 	}
 
-	p.cfg.Params.Logger.WithFields(map[string]interface{}{
+	p.logger.WithFields(map[string]interface{}{
 		"computes": len(p.cmps),
 		"nodes":    len(nodes),
 	}).Debug("Aligning computes to nodes")
@@ -99,7 +105,7 @@ func (p *pool) newComputes(number int, callback func(infra.Compute)) (err error)
 
 	defer func() {
 		if err != nil {
-			p.cfg.Params.Logger.WithFields(map[string]interface{}{
+			p.logger.WithFields(map[string]interface{}{
 				"message": err.Error(),
 			}).Debug("New computes retured error")
 		}
@@ -140,7 +146,7 @@ func (p *pool) newCompute(callback func(infra.Compute)) (err error) {
 		}
 	}()
 
-	if err := installNodeAgent(p.cfg, compute); err != nil {
+	if err := installNodeAgent(p.logger, compute, p.repoURL, p.repoKey); err != nil {
 		return err
 	}
 

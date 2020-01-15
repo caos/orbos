@@ -99,7 +99,8 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				orbFile.URL,
 				orbFile.Repokey,
 				orbFile.Masterkey,
-				gitCommit),
+				gitCommit,
+				destroy),
 		), []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),
@@ -111,7 +112,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 		executables.Populate()
 
-		go op.Run()
+		op.Run()
 
 		return nil
 	}

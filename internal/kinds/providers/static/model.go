@@ -12,7 +12,6 @@ type DesiredV0 struct {
 		RemoteUser          string
 		RemotePublicKeyPath string
 		Pools               map[string][]*Compute
-		Hoster              string
 	}
 	Deps *orbiter.Tree
 }
@@ -24,17 +23,18 @@ type Compute struct {
 }
 
 type Key struct {
-	Public  *orbiter.Secret
-	Private *orbiter.Secret
+	Public  *orbiter.Secret `yaml:",omitempty"`
+	Private *orbiter.Secret `yaml:",omitempty"`
 }
 
 type SecretsV0 struct {
 	Common  *orbiter.Common `yaml:",inline"`
-	Deps    *orbiter.Tree
-	Secrets struct {
-		Bootstrap   Key
-		Maintenance Key
-	}
+	Secrets Secrets
+}
+
+type Secrets struct {
+	Bootstrap   Key
+	Maintenance Key
 }
 
 type Current struct {
@@ -43,6 +43,16 @@ type Current struct {
 	Current struct {
 		Pools      map[string]infra.Pool
 		Ingresses  map[string]infra.Address
-		Cleanupped <-chan error `yaml:"-"`
+		cleanupped <-chan error `yaml:"-"`
 	}
+}
+
+func (c *Current) Pools() map[string]infra.Pool {
+	return c.Current.Pools
+}
+func (c *Current) Ingresses() map[string]infra.Address {
+	return c.Current.Ingresses
+}
+func (c *Current) Cleanupped() <-chan error {
+	return c.Current.cleanupped
 }

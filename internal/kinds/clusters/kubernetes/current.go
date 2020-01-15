@@ -16,9 +16,8 @@ type Current struct {
 }
 
 type Compute struct {
-	Status    string
-	Metadata  ComputeMetadata
-	Nodeagent orbiter.NodeAgentCurrent `yaml:"-"`
+	Status   string
+	Metadata ComputeMetadata `yaml:",inline"`
 }
 
 type ComputeMetadata struct {

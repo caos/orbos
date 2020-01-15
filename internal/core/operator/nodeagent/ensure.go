@@ -54,10 +54,10 @@ func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsure
 
 	defer persistReadyness(curr.NodeIsReady)
 
-	if err := firewallEnsurer.Ensure(desired.Firewall); err != nil {
+	if err := firewallEnsurer.Ensure(*desired.Firewall); err != nil {
 		return nil, false, err
 	}
-	curr.Open = desired.Firewall
+	curr.Open = *desired.Firewall
 
 	installedSw, err := deriveTraverse(installed, conv.ToDependencies(*desired.Software))
 	if err != nil {

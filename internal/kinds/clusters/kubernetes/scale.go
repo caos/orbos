@@ -5,12 +5,13 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
-	v1 "k8s.io/api/core/v1"
+	"github.com/caos/orbiter/logging"
 )
 
 type scaleablePool struct {
@@ -19,24 +20,29 @@ type scaleablePool struct {
 }
 
 func ensureScale(
-	cfg *model.Config,
-	curr *model.Current,
-	secrets *orbiter.Secrets,
-	kubeConfigKey string,
+	logger logging.Logger,
+	desired DesiredV0,
+	currentComputes map[string]*Compute,
+	nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
+	kubeconfig *orbiter.Secret,
 	controlplanePool *scaleablePool,
 	workerPools []*scaleablePool,
 	kubeAPI infra.Address,
 	k8sVersion k8s.KubernetesVersion,
 	k8sClient *k8s.Client) (done bool, err error) {
 
-	newCurrentComputeCallback := func(tier model.Tier, poolSpec *poolSpec) func(infra.Compute) {
+	newCurrentComputeCallback := func(tier Tier, poolSpec *poolSpec) func(infra.Compute) {
 		return func(newCompute infra.Compute) {
-			newCurrentCompute(cfg, curr, newCompute, &model.ComputeMetadata{
-				Tier:     tier,
-				Provider: poolSpec.spec.Provider,
-				Pool:     poolSpec.spec.Pool,
-				Group:    poolSpec.group,
-			})
+			currentComputes[newCompute.ID()] = &Compute{
+				Status: "maintaining",
+				Metadata: ComputeMetadata{
+					Tier:     tier,
+					Provider: poolSpec.spec.Provider,
+					Pool:     poolSpec.spec.Pool,
+					Group:    poolSpec.group,
+				},
+			}
 		}
 	}
 
@@ -46,7 +52,7 @@ func ensureScale(
 	for _, w := range workerPools {
 		wCount += w.desiredScale
 	}
-	cfg.Params.Logger.WithFields(map[string]interface{}{
+	logger.WithFields(map[string]interface{}{
 		"control_plane_nodes": controlplanePool.desiredScale,
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
@@ -60,7 +66,7 @@ func ensureScale(
 			synchronizer.Done(controlplanePool.pool.newComputes(
 				delta,
 				newCurrentComputeCallback(
-					model.Controlplane,
+					Controlplane,
 					controlplanePool.pool.poolSpec)))
 			return
 		}
@@ -97,7 +103,7 @@ func ensureScale(
 			if delta >= 0 {
 				synchronizer.Done(workerPool.pool.newComputes(
 					delta, newCurrentComputeCallback(
-						model.Workers,
+						Workers,
 						workerPool.pool.poolSpec)))
 				return
 			}
@@ -137,8 +143,23 @@ nodes:
 	for _, compute := range computes {
 
 		id := compute.ID()
-		current := curr.Computes[id]
+		current := currentComputes[id]
+
+		naDesired, ok := nodeAgentsDesired[compute.ID()]
+		if !ok {
+			naDesired = &orbiter.NodeAgentSpec{}
+		}
+
+		if naDesired.Software == nil {
+			naDesired.Software = &orbiter.Software{}
+		}
+
+		if naDesired.Firewall == nil {
+			naDesired.Firewall = &orbiter.Firewall{}
+		}
+
 		software := k8sVersion.DefineSoftware()
+		naDesired.Software.Merge(software)
 
 		fw := map[string]orbiter.Allowed{
 			"kubelet": orbiter.Allowed{
@@ -147,14 +168,14 @@ nodes:
 			},
 		}
 
-		if current.Metadata.Tier == model.Workers {
+		if current.Metadata.Tier == Workers {
 			fw["node-ports"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
-		if current.Metadata.Tier == model.Controlplane {
+		if current.Metadata.Tier == Controlplane {
 			fw["kubeapi-external"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPI.Port),
 				Protocol: "tcp",
@@ -177,7 +198,7 @@ nodes:
 			}
 		}
 
-		if cfg.Spec.Networking.Network == "calico" {
+		if desired.Spec.Networking.Network == "calico" {
 			fw["calico-bgp"] = orbiter.Allowed{
 				Port:     fmt.Sprintf("%d", 179),
 				Protocol: "tcp",
@@ -185,9 +206,7 @@ nodes:
 		}
 
 		firewall := orbiter.Firewall(fw)
-
-		current.Nodeagent.DesireSoftware(software)
-		current.Nodeagent.DesireFirewall(firewall)
+		naDesired.Firewall.Merge(firewall)
 
 		nodeIsJoining := false
 		node, getNodeErr := k8sClient.GetNode(id)
@@ -197,7 +216,7 @@ nodes:
 				if cond.Type == v1.NodeReady {
 					nodeIsJoining = false
 					current.Status = "running"
-					if current.Metadata.Tier == model.Controlplane {
+					if current.Metadata.Tier == Controlplane {
 						certsCP = compute
 					}
 					continue nodes
@@ -205,13 +224,13 @@ nodes:
 			}
 		}
 
-		if current.Metadata.Tier == model.Controlplane && nodeIsJoining {
+		if current.Metadata.Tier == Controlplane && nodeIsJoining {
 			cpIsReady = false
 		}
 
 		current.Status = "maintaining"
 		done = false
-		logger := cfg.Params.Logger.WithFields(map[string]interface{}{
+		logger := logger.WithFields(map[string]interface{}{
 			"compute": id,
 			"tier":    current.Metadata.Tier,
 		})
@@ -220,12 +239,15 @@ nodes:
 			logger.Info("Node is not ready yet")
 		}
 
-		nodeIsReady := current.Nodeagent.NodeIsReady
-		softwareIsReady := current.Nodeagent.Software.Contains(software)
-		firewallIsReady := current.Nodeagent.Open.Contains(firewall)
+		naCurrent, ok := nodeAgentsCurrent[compute.ID()]
+		if !ok {
+			naCurrent = &orbiter.NodeAgentCurrent{} // Avoid many nil checks
+		}
+
+		nodeIsReady := naCurrent.NodeIsReady
+		softwareIsReady := naCurrent.Software.Contains(software)
+		firewallIsReady := naCurrent.Open.Contains(firewall)
 		if !nodeIsReady || !softwareIsReady || !firewallIsReady {
-			// TODO: Changes are allowed by users
-			current.Nodeagent.AllowChanges()
 			logger.WithFields(map[string]interface{}{
 				"node":     nodeIsReady,
 				"software": softwareIsReady,
@@ -235,7 +257,7 @@ nodes:
 		}
 
 		logger.Info("Compute is ready to join now")
-		if current.Metadata.Tier == model.Controlplane && joinCP == nil {
+		if current.Metadata.Tier == Controlplane && joinCP == nil {
 			joinCP = compute
 			continue nodes
 		}
@@ -243,7 +265,7 @@ nodes:
 	}
 
 	if done {
-		cfg.Params.Logger.WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
 		}).Debug("Scale is ensured")
@@ -277,13 +299,14 @@ nodes:
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
-			cfg.Params.Logger.Info("Refreshed certs")
+			logger.Info("Refreshed certs")
 		}
 
 		joinKubeconfig, err := join(
+			logger,
 			joinCP,
 			certsCP,
-			cfg,
+			desired,
 			kubeAPI,
 			jointoken,
 			k8sVersion,
@@ -293,12 +316,12 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-
-		return false, secrets.Write(kubeConfigKey, []byte(*joinKubeconfig))
+		kubeconfig.Value = *joinKubeconfig
+		return false, nil
 	}
 
 	if certsCP == nil {
-		cfg.Params.Logger.Info("Awaiting controlplane initialization")
+		logger.Info("Awaiting controlplane initialization")
 		return false, nil
 	}
 
@@ -306,9 +329,10 @@ nodes:
 		wg.Add(1)
 		go func(w infra.Compute) {
 			_, goErr := join(
+				logger,
 				w,
 				certsCP,
-				cfg,
+				desired,
 				kubeAPI,
 				string(jointoken),
 				k8sVersion,

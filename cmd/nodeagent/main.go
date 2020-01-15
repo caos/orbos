@@ -95,7 +95,7 @@ func main() {
 		panic(err)
 	}
 
-	op := operator.New(
+	operator.New(
 		ctx,
 		logger,
 		nodeagent.Iterator(
@@ -109,7 +109,5 @@ func main() {
 		[]operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),
-		})
-
-	go op.Run()
+		}).Run()
 }
