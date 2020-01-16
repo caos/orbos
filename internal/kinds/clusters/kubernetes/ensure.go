@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"github.com/pkg/errors"
 
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
-"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"

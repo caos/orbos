@@ -6,8 +6,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
-"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
@@ -65,6 +65,11 @@ func ensureCluster(
 							Provider: cpDesired.Provider,
 							Pool:     cpDesired.Pool,
 						},
+					}
+					nodeAgentsDesired[comp.ID()] = &common.NodeAgentSpec{
+						ChangesAllowed: !cpDesired.UpdatesDisabled,
+						Software:       &common.Software{},
+						Firewall:       &common.Firewall{},
 					}
 				}
 				controlplanePool = &scaleablePool{
@@ -134,6 +139,11 @@ func ensureCluster(
 						Pool:     wDesired.Pool,
 						Group:    group,
 					},
+				}
+				nodeAgentsDesired[comp.ID()] = &common.NodeAgentSpec{
+					ChangesAllowed: !wDesired.UpdatesDisabled,
+					Software:       &common.Software{},
+					Firewall:       &common.Firewall{},
 				}
 			}
 		}

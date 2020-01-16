@@ -145,19 +145,7 @@ nodes:
 
 		id := compute.ID()
 		current := currentComputes[id]
-
-		naDesired, ok := nodeAgentsDesired[compute.ID()]
-		if !ok {
-			naDesired = &common.NodeAgentSpec{}
-		}
-
-		if naDesired.Software == nil {
-			naDesired.Software = &common.Software{}
-		}
-
-		if naDesired.Firewall == nil {
-			naDesired.Firewall = &common.Firewall{}
-		}
+		naDesired := nodeAgentsDesired[compute.ID()]
 
 		software := k8sVersion.DefineSoftware()
 		naDesired.Software.Merge(software)

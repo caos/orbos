@@ -125,16 +125,7 @@ func ensureK8sVersion(
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
-		desNa, ok := nodeAgentsDesired[compute.ID()]
-		if !ok {
-			desNa = &common.NodeAgentSpec{}
-		}
-
-		if desNa.Software == nil {
-			desNa.Software = &common.Software{}
-		}
-
-		desiredSoftware := desNa.Software
+		desiredSoftware := nodeAgentsDesired[compute.ID()].Software
 
 		naCurrent, ok := nodeAgentsCurrent[compute.ID()]
 		if !ok {

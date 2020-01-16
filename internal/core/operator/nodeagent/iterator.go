@@ -34,20 +34,28 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			return
 		}
 
-		desired := common.NodeAgentsSpec{}
+		desired := common.NodeAgentsDesiredKind{}
 		if err := yaml.Unmarshal(desiredBytes, desired); err != nil {
 			logger.Error(err)
 			return
 		}
 
-		if desired.NodeAgents == nil {
+		if desired.Spec.NodeAgents == nil {
 			logger.Error(errors.New("No desired node agents found"))
 			return
 		}
 
-		naDesired, ok := desired.NodeAgents[id]
+		naDesired, ok := desired.Spec.NodeAgents[id]
 		if !ok {
 			logger.Error(fmt.Errorf("No desired state for node agent with id %s found", id))
+			return
+		}
+
+		if desired.Spec.Commit != commit {
+			logger.WithFields(map[string]interface{}{
+				"desired": desired.Spec.Commit,
+				"current": commit,
+			}).Info("Node Agent is on the wrong commit")
 			return
 		}
 
