@@ -60,59 +60,42 @@ func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client,
 			return
 		}
 
-		if _, err := gitClient.UpdateRemoteUntilItWorks(
-			&git.File{Path: "desired.yml", Overwrite: func([]byte) ([]byte, error) {
-				return common.MarshalYAML(treeDesired), nil
-			}}); err != nil {
-			panic(err)
-		}
+		current := common.MarshalYAML(treeCurrent)
 
-		if _, err := gitClient.UpdateRemoteUntilItWorks(
-			&git.File{Path: "secrets.yml", Overwrite: func([]byte) ([]byte, error) {
-				return common.MarshalYAML(treeSecrets), nil
-			}}); err != nil {
-			panic(err)
-		}
-
-		if _, err := gitClient.UpdateRemoteUntilItWorks(
-			&git.File{Path: "internal/node-agents-desired.yml", Overwrite: func([]byte) ([]byte, error) {
-				return common.MarshalYAML(&common.NodeAgentsDesiredKind{
-					Kind:    "nodeagent.caos.ch/NodeAgent",
-					Version: "v0",
-					Spec: common.NodeAgentsSpec{
-						Commit:     orbiterCommit,
-						NodeAgents: desiredNodeAgents,
-					},
-				}), nil
-			}}); err != nil {
-			panic(err)
-		}
-
-		newCurrent, err := gitClient.UpdateRemoteUntilItWorks(
-			&git.File{Path: "current.yml", Overwrite: func([]byte) ([]byte, error) {
-				return common.MarshalYAML(treeCurrent), nil
-			}})
-
-		if err != nil {
+		if err := gitClient.UpdateRemote(git.File{
+			Path:    "desired.yml",
+			Content: common.MarshalYAML(treeDesired),
+		}, git.File{
+			Path:    "current.yml",
+			Content: current,
+		}, git.File{
+			Path: "internal/node-agents-desired.yml",
+			Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
+				Kind:    "nodeagent.caos.ch/NodeAgent",
+				Version: "v0",
+				Spec: common.NodeAgentsSpec{
+					Commit:     orbiterCommit,
+					NodeAgents: desiredNodeAgents,
+				},
+			}),
+		}); err != nil {
 			panic(err)
 		}
 
 		statusReader := struct {
-			Deps struct {
-				Clusters map[string]struct {
-					Current struct {
-						State struct {
-							Status string
-						}
+			Deps map[string]struct {
+				Current struct {
+					State struct {
+						Status string
 					}
 				}
 			}
 		}{}
-		if err := yaml.Unmarshal(newCurrent, &statusReader); err != nil {
+		if err := yaml.Unmarshal(current, &statusReader); err != nil {
 			panic(err)
 		}
-		for _, cluster := range statusReader.Deps.Clusters {
-			if destroy && cluster.Current.State.Status != "destroyed" ||
+		for _, cluster := range statusReader.Deps {
+			if destroy && cluster.Current.State.Status == "destroyed" ||
 				!destroy && !recur && cluster.Current.State.Status == "running" {
 				os.Exit(0)
 			}

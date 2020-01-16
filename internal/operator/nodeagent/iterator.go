@@ -8,8 +8,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -65,21 +65,20 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			return
 		}
 
-		if _, err := gitClient.UpdateRemoteUntilItWorks(
-			&git.File{Path: "internal/node-agents-current.yml", Overwrite: func(nodeagents []byte) ([]byte, error) {
-				current := common.NodeAgentsCurrentKind{}
-				if err := yaml.Unmarshal(nodeagents, &current); err != nil {
-					return nil, err
-				}
-				current.Kind = "nodeagent.caos.ch/NodeAgent"
-				current.Version = "v0"
-				if current.Current == nil {
-					current.Current = make(map[string]*common.NodeAgentCurrent)
-				}
-				current.Current[id] = curr
+		if _, err := gitClient.UpdateRemoteUntilItWorks("internal/node-agents-current.yml", func(nodeagents []byte) ([]byte, error) {
+			current := common.NodeAgentsCurrentKind{}
+			if err := yaml.Unmarshal(nodeagents, &current); err != nil {
+				return nil, err
+			}
+			current.Kind = "nodeagent.caos.ch/NodeAgent"
+			current.Version = "v0"
+			if current.Current == nil {
+				current.Current = make(map[string]*common.NodeAgentCurrent)
+			}
+			current.Current[id] = curr
 
-				return common.MarshalYAML(current), nil
-			}}); err != nil {
+			return common.MarshalYAML(current), nil
+		}, true); err != nil {
 			logger.Error(err)
 			return
 		}

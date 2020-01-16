@@ -114,37 +114,54 @@ func (g *Client) Read(path string) ([]byte, error) {
 }
 
 type File struct {
-	Path      string
-	Overwrite func([]byte) ([]byte, error)
-	Force     bool
+	Path    string
+	Content []byte
 }
 
-func (g *Client) UpdateRemoteUntilItWorks(file *File) ([]byte, error) {
+func (g *Client) UpdateRemote(files ...File) error {
+	if err := g.Clone(); err != nil {
+		return errors.Wrap(err, "recloning before committing changes failed")
+	}
+
+	clean, err := g.stage(files...)
+	if err != nil {
+		return err
+	}
+
+	if clean {
+		g.logger.Info("No changes")
+		return nil
+	}
+
+	if err := g.commit(); err != nil {
+		return err
+	}
+
+	return g.push()
+}
+
+func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([]byte, error), force bool) ([]byte, error) {
 
 	if err := g.Clone(); err != nil {
 		return nil, errors.Wrap(err, "recloning before committing changes failed")
 	}
 
-	newContent, err := g.Read(file.Path)
-	if err != nil && !file.Force {
+	newContent, err := g.Read(path)
+	if err != nil && !force {
 		return nil, errors.Wrap(err, "reloading file before committing changes failed")
 	}
 
-	overwritten, err := file.Overwrite(newContent)
+	overwritten, err := overwrite(newContent)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := g.updateAndStage(file.Path, overwritten); err != nil {
+	clean, err := g.stage(File{Path: path, Content: overwritten})
+	if err != nil {
 		return nil, err
 	}
 
-	status, err := g.workTree.Status()
-	if err != nil {
-		return nil, errors.Wrap(err, "querying worktree status failed")
-	}
-
-	if status.IsClean() {
+	if clean {
 		g.logger.Info("No changes")
 		return overwritten, nil
 	}
@@ -161,34 +178,58 @@ func (g *Client) UpdateRemoteUntilItWorks(file *File) ([]byte, error) {
 			return overwritten, errors.Wrap(resetErr, "undoing the latest commit failed")
 		}
 
-		newLatestFiles, err := g.UpdateRemoteUntilItWorks(file)
+		newLatestFiles, err := g.UpdateRemoteUntilItWorks(path, overwrite, force)
 		return newLatestFiles, errors.Wrap(err, "pushing failed")
 	}
 	return overwritten, nil
 }
 
-func (g *Client) updateAndStage(path string, content []byte) error {
-	updateLogger := g.logger.WithFields(map[string]interface{}{
-		"path": path,
-	})
+func (g *Client) stage(files ...File) (bool, error) {
+	for _, f := range files {
+		updateLogger := g.logger.WithFields(map[string]interface{}{
+			"path": f.Path,
+		})
 
-	updateLogger.Debug("Overwriting local index")
+		updateLogger.Debug("Overwriting local index")
 
-	file, err := g.fs.Create(path)
+		file, err := g.fs.Create(f.Path)
+		if err != nil {
+			return true, errors.Wrapf(err, "creating file %s in worktree failed", f.Path)
+		}
+		defer file.Close()
+
+		if _, err := io.Copy(file, bytes.NewReader(f.Content)); err != nil {
+			return true, errors.Wrapf(err, "writing file %s in worktree failed", f.Path)
+		}
+
+		_, err = g.workTree.Add(f.Path)
+		if err != nil {
+			updateLogger.Debug("Changes staged")
+		}
+		return true, errors.Wrapf(err, "staging worktree changes in file %s failed", f.Path)
+	}
+
+	status, err := g.workTree.Status()
 	if err != nil {
-		return errors.Wrapf(err, "creating file %s in worktree failed", path)
-	}
-	defer file.Close()
-
-	if _, err := io.Copy(file, bytes.NewReader(content)); err != nil {
-		return errors.Wrapf(err, "writing file %s in worktree failed", path)
+		return true, errors.Wrap(err, "querying worktree status failed")
 	}
 
-	_, err = g.workTree.Add(path)
-	if err != nil {
-		updateLogger.Debug("Changes staged")
+	return status.IsClean(), nil
+}
+
+func (g *Client) commit() error {
+
+	if _, err := g.workTree.Commit("update current state or secrets", &gogit.CommitOptions{
+		Author: &object.Signature{
+			Name:  g.committer,
+			Email: "hi@caos.ch",
+			When:  time.Now(),
+		},
+	}); err != nil {
+		return errors.Wrap(err, "committing changes failed")
 	}
-	return errors.Wrapf(err, "staging worktree changes in file %s failed", path)
+	g.logger.Debug("Changes commited")
+	return nil
 }
 
 func (g *Client) push() error {
@@ -204,19 +245,5 @@ func (g *Client) push() error {
 	}
 
 	g.logger.Info("Repository pushed")
-	return nil
-}
-
-func (g *Client) commit() error {
-	if _, err := g.workTree.Commit("update current state or secrets", &gogit.CommitOptions{
-		Author: &object.Signature{
-			Name:  g.committer,
-			Email: "hi@caos.ch",
-			When:  time.Now(),
-		},
-	}); err != nil {
-		return errors.Wrap(err, "committing changes failed")
-	}
-	g.logger.Debug("Changes commited")
 	return nil
 }
