@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/wrap"
@@ -19,7 +20,7 @@ func ensure(
 	current *Current,
 	sec *SecretsV0,
 
-	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	lb interface{},
 	masterkey string,
 

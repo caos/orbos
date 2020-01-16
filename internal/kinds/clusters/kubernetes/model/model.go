@@ -2,6 +2,7 @@ package model
 
 import (
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/logging"
 )
@@ -36,7 +37,7 @@ type Parameters struct {
 type Config struct {
 	Spec      UserSpec
 	Params    Parameters
-	NodeAgent func(cmp infra.Compute) *orbiter.NodeAgentCurrent
+	NodeAgent func(cmp infra.Compute) *common.NodeAgentCurrent
 }
 
 type Pool struct {
@@ -56,7 +57,7 @@ type Current struct {
 type Compute struct {
 	Status    string
 	Metadata  *ComputeMetadata
-	Nodeagent *orbiter.NodeAgentCurrent `yaml:"-"`
+	Nodeagent *common.NodeAgentCurrent `yaml:"-"`
 }
 
 type ComputeMetadata struct {

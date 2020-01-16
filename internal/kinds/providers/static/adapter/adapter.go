@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/wrap"
@@ -35,7 +36,7 @@ func (i *infraCurrent) Cleanupped() <-chan error {
 	return i.cu
 }
 
-func New(logger logging.Logger, id string, healthchecks string, changesDisallowed []string, mapNodeAgent func(cmp infra.Compute) *orbiter.NodeAgentCurrent) Builder {
+func New(logger logging.Logger, id string, healthchecks string, changesDisallowed []string, mapNodeAgent func(cmp infra.Compute) *common.NodeAgentCurrent) Builder {
 	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{

@@ -1,18 +1,17 @@
 package orbiter
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/edge/git"
 	"github.com/caos/orbiter/logging"
 )
 
-type EnsureFunc func(nodeAgentsCurrent map[string]*NodeAgentCurrent, nodeAgentsDesired map[string]*NodeAgentSpec) (err error)
+type EnsureFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error)
 
 type AdaptFunc func(desired *Tree, secrets *Tree, current *Tree) (EnsureFunc, error)
 
@@ -51,8 +50,8 @@ func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client,
 			return
 		}
 
-		desiredNodeAgents := make(map[string]*NodeAgentSpec)
-		currentNodeAgents := NodeAgentsCurrentKind{}
+		desiredNodeAgents := make(map[string]*common.NodeAgentSpec)
+		currentNodeAgents := common.NodeAgentsCurrentKind{}
 		rawCurrentNodeAgents, _ := gitClient.Read("internal/node-agents-current.yml")
 		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
 
@@ -61,42 +60,37 @@ func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client,
 			return
 		}
 
-		fmt.Println(string(marshal(treeDesired)))
-		fmt.Println(string(marshal(treeSecrets)))
-
 		if _, err := gitClient.UpdateRemoteUntilItWorks(
 			&git.File{Path: "desired.yml", Overwrite: func([]byte) ([]byte, error) {
-				return yaml.Marshal(treeDesired)
+				return common.MarshalYAML(treeDesired), nil
 			}}); err != nil {
 			panic(err)
 		}
 
 		if _, err := gitClient.UpdateRemoteUntilItWorks(
 			&git.File{Path: "secrets.yml", Overwrite: func([]byte) ([]byte, error) {
-				return yaml.Marshal(treeSecrets)
+				return common.MarshalYAML(treeSecrets), nil
 			}}); err != nil {
 			panic(err)
 		}
 
 		if _, err := gitClient.UpdateRemoteUntilItWorks(
 			&git.File{Path: "internal/node-agents-desired.yml", Overwrite: func([]byte) ([]byte, error) {
-				return yaml.Marshal(&NodeAgentsDesiredKind{
-					Common: Common{
-						Kind:    "nodeagent.caos.ch/NodeAgent",
-						Version: "v0",
-					},
-					Spec: NodeAgentsSpec{
+				return common.MarshalYAML(&common.NodeAgentsDesiredKind{
+					Kind:    "nodeagent.caos.ch/NodeAgent",
+					Version: "v0",
+					Spec: common.NodeAgentsSpec{
 						Commit:     orbiterCommit,
 						NodeAgents: desiredNodeAgents,
 					},
-				})
+				}), nil
 			}}); err != nil {
 			panic(err)
 		}
 
 		newCurrent, err := gitClient.UpdateRemoteUntilItWorks(
 			&git.File{Path: "current.yml", Overwrite: func([]byte) ([]byte, error) {
-				return yaml.Marshal(treeCurrent)
+				return common.MarshalYAML(treeCurrent), nil
 			}})
 
 		if err != nil {
@@ -125,14 +119,4 @@ func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client,
 		}
 	}
 
-}
-
-func marshal(sth interface{}) []byte {
-	var buf bytes.Buffer
-	encoder := yaml.NewEncoder(&buf)
-	encoder.SetIndent(2)
-	if err := encoder.Encode(sth); err != nil {
-		panic(err)
-	}
-	return buf.Bytes()
 }

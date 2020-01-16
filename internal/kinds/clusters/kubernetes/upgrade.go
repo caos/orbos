@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
@@ -23,16 +23,16 @@ func ensureK8sVersion(
 	target k8s.KubernetesVersion,
 	k8sClient *k8s.Client,
 	currentComputes map[string]*Compute,
-	nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
+	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	controlplane infra.Computes,
 	workers infra.Computes) (bool, error) {
 
-	findPath := func(computes infra.Computes) (orbiter.Software, orbiter.Software, error) {
+	findPath := func(computes infra.Computes) (common.Software, common.Software, error) {
 
 		var overallLowKubelet k8s.KubernetesVersion
 		var overallLowKubeletMinor int
-		zeroSW := orbiter.Software{}
+		zeroSW := common.Software{}
 
 		for _, cp := range computes {
 			node, err := k8sClient.GetNode(cp.ID())
@@ -123,23 +123,22 @@ func ensureK8sVersion(
 	plan := func(
 		compute infra.Compute,
 		isFirstControlplane bool,
-		to orbiter.Software) (func() error, error) {
+		to common.Software) (func() error, error) {
 
 		desNa, ok := nodeAgentsDesired[compute.ID()]
 		if !ok {
-			desNa = &orbiter.NodeAgentSpec{}
+			desNa = &common.NodeAgentSpec{}
 		}
 
 		if desNa.Software == nil {
-			desNa.Software = &orbiter.Software{}
+			desNa.Software = &common.Software{}
 		}
 
 		desiredSoftware := desNa.Software
 
-		currentSoftware := orbiter.Software{}
 		naCurrent, ok := nodeAgentsCurrent[compute.ID()]
-		if ok {
-			currentSoftware = naCurrent.Software
+		if !ok {
+			naCurrent = &common.NodeAgentCurrent{} // avoid many nil checks
 		}
 
 		ensureNodeagent := func(from string) func() error {
@@ -155,12 +154,12 @@ func ensureK8sVersion(
 		}
 
 		ensureKubeadm := func() error {
-			desiredSoftware.Kubeadm = orbiter.Package{
+			desiredSoftware.Kubeadm = common.Package{
 				Version: to.Kubeadm.Version,
 			}
 			logger.WithFields(map[string]interface{}{
 				"compute": compute.ID(),
-				"from":    currentSoftware.Kubeadm.Version,
+				"from":    naCurrent.Software.Kubeadm.Version,
 				"to":      to.Kubeadm.Version,
 			}).Info("Ensuring kubeadm")
 			return nil
@@ -204,7 +203,7 @@ func ensureK8sVersion(
 
 				logger.WithFields(map[string]interface{}{
 					"compute": id,
-					"from":    currentSoftware.Kubelet.Version,
+					"from":    naCurrent.Software.Kubelet.Version,
 					"to":      to.Kubelet.Version,
 				}).Info("Ensuring kubelet")
 
@@ -253,8 +252,8 @@ func ensureK8sVersion(
 			}).Debug("Executed command")
 
 			fields := strings.Fields(string(response))
-			if err != nil || len(fields) != 1 || fields[0] != orbiterCommit {
-				return ensureNodeagent(fields[0]), nil
+			if err != nil || len(fields) != 2 || fields[1] != orbiterCommit {
+				return ensureNodeagent(fields[1]), nil
 			}
 		}
 
@@ -276,7 +275,7 @@ func ensureK8sVersion(
 			return nil, nil
 		}
 
-		if currentSoftware.Kubeadm.Version != to.Kubeadm.Version {
+		if naCurrent.Software.Kubeadm.Version != to.Kubeadm.Version {
 			return ensureKubeadm, nil
 		}
 

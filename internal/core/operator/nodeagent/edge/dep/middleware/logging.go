@@ -4,7 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/logging"
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 )
 
@@ -24,7 +24,7 @@ func AddLogging(logger logging.Logger, original nodeagent.Installer) Installer {
 	}
 }
 
-func (l *loggedDep) Current() (orbiter.Package, error) {
+func (l *loggedDep) Current() (common.Package, error) {
 	current, err := l.unwrapped.Current()
 	if err == nil {
 		l.logger.WithFields(map[string]interface{}{
@@ -34,7 +34,7 @@ func (l *loggedDep) Current() (orbiter.Package, error) {
 	return current, errors.Wrapf(err, "querying installed package for dependency %s failed", l.String())
 }
 
-func (l *loggedDep) Ensure(remove orbiter.Package, install orbiter.Package) (bool, error) {
+func (l *loggedDep) Ensure(remove common.Package, install common.Package) (bool, error) {
 	reboot, err := l.unwrapped.Ensure(remove, install)
 	if err == nil {
 		l.logger.WithFields(map[string]interface{}{

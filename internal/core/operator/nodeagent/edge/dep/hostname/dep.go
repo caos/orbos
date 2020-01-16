@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
 )
@@ -39,7 +39,7 @@ func (*hostnameDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (s *hostnameDep) Current() (pkg orbiter.Package, err error) {
+func (s *hostnameDep) Current() (pkg common.Package, err error) {
 
 	var buf bytes.Buffer
 	cmd := exec.Command("hostname")
@@ -52,7 +52,7 @@ func (s *hostnameDep) Current() (pkg orbiter.Package, err error) {
 	return pkg, nil
 }
 
-func (s *hostnameDep) Ensure(remove orbiter.Package, ensure orbiter.Package) (bool, error) {
+func (s *hostnameDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
 
 	oldHostname := remove.Config["hostname"]
 	newHostname := ensure.Config["hostname"]

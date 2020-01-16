@@ -1,7 +1,7 @@
 package wrap
 
 import (
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -10,11 +10,11 @@ import (
 type cmpSvcLB struct {
 	original      core.ComputesService
 	dynamic       dynamic.Current
-	nodeagents    map[string]*orbiter.NodeAgentSpec
+	nodeagents    map[string]*common.NodeAgentSpec
 	notifymasters string
 }
 
-func ComputesService(svc core.ComputesService, curr dynamic.Current, nodeagents map[string]*orbiter.NodeAgentSpec, notifymasters string) core.ComputesService {
+func ComputesService(svc core.ComputesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) core.ComputesService {
 	return &cmpSvcLB{
 		original:   svc,
 		dynamic:    curr,

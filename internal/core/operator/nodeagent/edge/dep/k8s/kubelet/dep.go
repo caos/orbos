@@ -13,7 +13,7 @@ import (
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/k8s"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -47,11 +47,11 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (k *kubeletDep) Current() (orbiter.Package, error) {
+func (k *kubeletDep) Current() (common.Package, error) {
 	return k.common.Current()
 }
 
-func (k *kubeletDep) Ensure(remove orbiter.Package, install orbiter.Package) (bool, error) {
+func (k *kubeletDep) Ensure(remove common.Package, install common.Package) (bool, error) {
 
 	if k.os != dep.CentOS {
 		return false, k.ensurePackage(remove, install)
@@ -119,7 +119,7 @@ net.bridge.bridge-nf-call-iptables = 1
 	return false, k.ensurePackage(remove, install)
 }
 
-func (k *kubeletDep) ensurePackage(remove orbiter.Package, install orbiter.Package) error {
+func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package) error {
 	if err := k.common.Ensure(remove, install); err != nil {
 		return err
 	}

@@ -8,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 )
 
 type Common struct {
@@ -22,7 +22,7 @@ func New(os dep.OperatingSystem, manager *dep.PackageManager, pkg string) *Commo
 	return &Common{manager, os, regexp.MustCompile(`\d+\.\d+\.\d+`), pkg}
 }
 
-func (c *Common) Current() (pkg orbiter.Package, err error) {
+func (c *Common) Current() (pkg common.Package, err error) {
 	installed, err := c.manager.CurrentVersions(c.pkg)
 	if err != nil {
 		return pkg, errors.Wrapf(err, "getting current %s version failed", c.pkg)
@@ -34,7 +34,7 @@ func (c *Common) Current() (pkg orbiter.Package, err error) {
 	return pkg, nil
 }
 
-func (c *Common) Ensure(remove orbiter.Package, install orbiter.Package) error {
+func (c *Common) Ensure(remove common.Package, install common.Package) error {
 
 	switch c.os {
 	case dep.Ubuntu:

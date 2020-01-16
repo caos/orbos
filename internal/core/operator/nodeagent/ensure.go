@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -16,38 +16,38 @@ func init() {
 }
 
 type FirewallEnsurer interface {
-	Ensure(orbiter.Firewall) error
+	Ensure(common.Firewall) error
 }
 
-type FirewallEnsurerFunc func(orbiter.Firewall) error
+type FirewallEnsurerFunc func(common.Firewall) error
 
-func (f FirewallEnsurerFunc) Ensure(fw orbiter.Firewall) error {
+func (f FirewallEnsurerFunc) Ensure(fw common.Firewall) error {
 	return f(fw)
 }
 
 type Dependency struct {
 	Installer Installer
-	Desired   orbiter.Package
-	Current   orbiter.Package
+	Desired   common.Package
+	Current   common.Package
 	reboot    bool
 }
 
 type Converter interface {
-	ToDependencies(orbiter.Software) []*Dependency
-	ToSoftware([]*Dependency) orbiter.Software
+	ToDependencies(common.Software) []*Dependency
+	ToSoftware([]*Dependency) common.Software
 }
 
 type Installer interface {
-	Current() (orbiter.Package, error)
-	Ensure(uninstall orbiter.Package, install orbiter.Package) (bool, error)
+	Current() (common.Package, error)
+	Ensure(uninstall common.Package, install common.Package) (bool, error)
 	Equals(other Installer) bool
 	Is(other Installer) bool
 	fmt.Stringer
 }
 
-func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired orbiter.NodeAgentSpec) (*orbiter.NodeAgentCurrent, bool, error) {
+func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec) (*common.NodeAgentCurrent, bool, error) {
 
-	curr := &orbiter.NodeAgentCurrent{
+	curr := &common.NodeAgentCurrent{
 		Commit:      commit,
 		NodeIsReady: isReady(),
 	}

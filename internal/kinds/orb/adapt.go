@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes"
 	"github.com/caos/orbiter/logging"
 )
@@ -68,7 +69,7 @@ func AdaptFunc(
 			Deps: clusterCurrents,
 		}
 
-		return func(nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent, nodeAgentsDesired map[string]*orbiter.NodeAgentSpec) (err error) {
+		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
 			defer func() {
 				err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 			}()

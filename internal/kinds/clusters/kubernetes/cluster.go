@@ -7,6 +7,7 @@ import (
 
 	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
@@ -20,8 +21,8 @@ func ensureCluster(
 	logger logging.Logger,
 	desired DesiredV0,
 	curr *CurrentCluster,
-	nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
+	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	providerPools map[string]map[string]infra.Pool,
 	kubeAPIAddress infra.Address,
 	kubeconfig *orbiter.Secret,

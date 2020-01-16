@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
@@ -51,7 +51,7 @@ const (
 	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
 )
 
-func (s *keepaliveDDep) Current() (pkg orbiter.Package, err error) {
+func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	config, err := ioutil.ReadFile("/etc/keepalived/keepalived.conf")
 	if os.IsNotExist(err) {
 		return pkg, nil
@@ -94,7 +94,7 @@ func (s *keepaliveDDep) Current() (pkg orbiter.Package, err error) {
 	return pkg, err
 }
 
-func (s *keepaliveDDep) Ensure(remove orbiter.Package, ensure orbiter.Package) (bool, error) {
+func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
 
 	ensureCfg, ok := ensure.Config["keepalived.conf"]
 	if !ok {

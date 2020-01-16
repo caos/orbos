@@ -46,8 +46,7 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")
 	repoURL := flag.String("repourl", "", "Repository URL")
-	computeID := flag.String("id", "", "The managed computes ID")
-	configPath := flag.String("yamlbasepath", "", "Point separated yaml path to the node agent kind")
+	nodeAgentID := flag.String("id", "", "The managed computes ID")
 
 	flag.Parse()
 
@@ -56,17 +55,20 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *repoURL == "" || *nodeAgentID == "" {
+		panic("flags --repourl and --id are required")
+	}
+
 	logger := logcontext.Add(stdlib.New(os.Stderr))
 	if *verbose {
 		logger = logger.Verbose()
 	}
 	logger.WithFields(map[string]interface{}{
-		"version":    version,
-		"commit":     gitCommit,
-		"verbose":    *verbose,
-		"repourl":    *repoURL,
-		"computeId":  *computeID,
-		"configPath": *configPath,
+		"version":     version,
+		"commit":      gitCommit,
+		"verbose":     *verbose,
+		"repourl":     *repoURL,
+		"nodeAgentID": *nodeAgentID,
 	}).Info("Node Agent is starting")
 
 	os, err := dep.GetOperatingSystem()
@@ -90,7 +92,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *computeID), *repoURL)
+	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *nodeAgentID), *repoURL)
 	if err := gitClient.Init(repoKey); err != nil {
 		panic(err)
 	}
@@ -103,6 +105,7 @@ func main() {
 			gitClient,
 			node.New(),
 			gitCommit,
+			*nodeAgentID,
 			firewall.Ensurer(logger, os.OperatingSystem),
 			converter,
 			before),

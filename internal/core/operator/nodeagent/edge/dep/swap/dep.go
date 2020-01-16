@@ -6,13 +6,13 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
 )
 
-type Installer interface {
+type Installer interface { 
 	isSwap()
 	nodeagent.Installer
 }
@@ -39,7 +39,7 @@ func (*swapDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (s *swapDep) Current() (pkg orbiter.Package, err error) {
+func (s *swapDep) Current() (pkg common.Package, err error) {
 
 	var buf bytes.Buffer
 	swapon := exec.Command("swapon", "--summary")
@@ -69,7 +69,7 @@ func (s *swapDep) Current() (pkg orbiter.Package, err error) {
 	}
 }
 
-func (s *swapDep) Ensure(remove orbiter.Package, ensure orbiter.Package) (bool, error) {
+func (s *swapDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
 
 	return remove.Version != ensure.Version, dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) string {
 		if !strings.Contains(line, "swap") {

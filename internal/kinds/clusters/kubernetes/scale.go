@@ -8,6 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
@@ -23,8 +24,8 @@ func ensureScale(
 	logger logging.Logger,
 	desired DesiredV0,
 	currentComputes map[string]*Compute,
-	nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
+	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	kubeconfig *orbiter.Secret,
 	controlplanePool *scaleablePool,
 	workerPools []*scaleablePool,
@@ -147,65 +148,65 @@ nodes:
 
 		naDesired, ok := nodeAgentsDesired[compute.ID()]
 		if !ok {
-			naDesired = &orbiter.NodeAgentSpec{}
+			naDesired = &common.NodeAgentSpec{}
 		}
 
 		if naDesired.Software == nil {
-			naDesired.Software = &orbiter.Software{}
+			naDesired.Software = &common.Software{}
 		}
 
 		if naDesired.Firewall == nil {
-			naDesired.Firewall = &orbiter.Firewall{}
+			naDesired.Firewall = &common.Firewall{}
 		}
 
 		software := k8sVersion.DefineSoftware()
 		naDesired.Software.Merge(software)
 
-		fw := map[string]orbiter.Allowed{
-			"kubelet": orbiter.Allowed{
+		fw := map[string]common.Allowed{
+			"kubelet": common.Allowed{
 				Port:     fmt.Sprintf("%d", 10250),
 				Protocol: "tcp",
 			},
 		}
 
 		if current.Metadata.Tier == Workers {
-			fw["node-ports"] = orbiter.Allowed{
+			fw["node-ports"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
 		if current.Metadata.Tier == Controlplane {
-			fw["kubeapi-external"] = orbiter.Allowed{
+			fw["kubeapi-external"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPI.Port),
 				Protocol: "tcp",
 			}
-			fw["kubeapi-internal"] = orbiter.Allowed{
+			fw["kubeapi-internal"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 6666),
 				Protocol: "tcp",
 			}
-			fw["etcd"] = orbiter.Allowed{
+			fw["etcd"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 2379, 2380),
 				Protocol: "tcp",
 			}
-			fw["kube-scheduler"] = orbiter.Allowed{
+			fw["kube-scheduler"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 10251),
 				Protocol: "tcp",
 			}
-			fw["kube-controller"] = orbiter.Allowed{
+			fw["kube-controller"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 10252),
 				Protocol: "tcp",
 			}
 		}
 
 		if desired.Spec.Networking.Network == "calico" {
-			fw["calico-bgp"] = orbiter.Allowed{
+			fw["calico-bgp"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 179),
 				Protocol: "tcp",
 			}
 		}
 
-		firewall := orbiter.Firewall(fw)
+		firewall := common.Firewall(fw)
 		naDesired.Firewall.Merge(firewall)
 
 		nodeIsJoining := false
@@ -241,7 +242,7 @@ nodes:
 
 		naCurrent, ok := nodeAgentsCurrent[compute.ID()]
 		if !ok {
-			naCurrent = &orbiter.NodeAgentCurrent{} // Avoid many nil checks
+			naCurrent = &common.NodeAgentCurrent{} // Avoid many nil checks
 		}
 
 		nodeIsReady := naCurrent.NodeIsReady

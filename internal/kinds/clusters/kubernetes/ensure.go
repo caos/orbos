@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
@@ -14,8 +15,8 @@ func ensure(
 	desired DesiredV0,
 	current *CurrentCluster,
 	providerCurrents map[string]interface{},
-	nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*orbiter.NodeAgentSpec,
+	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	kubeconfig *orbiter.Secret,
 	repoURL string,
 	repoKey string,

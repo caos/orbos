@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
@@ -50,7 +50,7 @@ const (
 	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
 )
 
-func (s *nginxDep) Current() (pkg orbiter.Package, err error) {
+func (s *nginxDep) Current() (pkg common.Package, err error) {
 	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
 	if os.IsNotExist(err) {
 		return pkg, nil
@@ -81,7 +81,7 @@ func (s *nginxDep) Current() (pkg orbiter.Package, err error) {
 	return pkg, nil
 }
 
-func (s *nginxDep) Ensure(remove orbiter.Package, ensure orbiter.Package) (bool, error) {
+func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
 
 	ensureCfg, ok := ensure.Config["nginx.conf"]
 	if !ok {

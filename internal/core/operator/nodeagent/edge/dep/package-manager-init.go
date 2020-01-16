@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (p *PackageManager) debSpecificInit() error {
+func (p *PackageManager) debSpecificUpdatePackages() error {
 
 	var errBuf bytes.Buffer
 	cmd := exec.Command("apt-get", "--assume-yes", "update")
@@ -29,7 +29,7 @@ func (p *PackageManager) debSpecificInit() error {
 		&Software{Package: "software-properties-common"})
 }
 
-func (p *PackageManager) remSpecificInit() error {
+func (p *PackageManager) remSpecificUpdatePackages() error {
 	var errBuf bytes.Buffer
 	cmd := exec.Command("yum", "update", "-y")
 	cmd.Stderr = &errBuf

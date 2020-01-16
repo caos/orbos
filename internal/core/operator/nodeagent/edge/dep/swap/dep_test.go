@@ -41,7 +41,7 @@ UUID=2be0c56f-32f4-4155-af7a-1db773af5ff0 /boot                   xfs     defaul
 		t.Fatal(err)
 	}
 
-	if _, err = swap.New(testFile).Ensure(orbiter.Package{Version: "enabled"}, orbiter.Package{Version: "disabled"}); err != nil {
+	if _, err = swap.New(testFile).Ensure(common.Package{Version: "enabled"}, common.Package{Version: "disabled"}); err != nil {
 		t.Fatal(err)
 	}
 

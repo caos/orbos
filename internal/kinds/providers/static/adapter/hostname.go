@@ -4,16 +4,17 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/static/model"
 )
 
-func desireHostname(poolsSpec map[string][]*model.Compute, mapNodeAgent func(cmp infra.Compute) *orbiter.NodeAgentCurrent) func(compute infra.Compute, pool string) error {
+func desireHostname(poolsSpec map[string][]*model.Compute, mapNodeAgent func(cmp infra.Compute) *common.NodeAgentCurrent) func(compute infra.Compute, pool string) error {
 	return func(compute infra.Compute, pool string) error {
 		for _, computeSpec := range poolsSpec[pool] {
 			if computeSpec.ID == compute.ID() {
-				mapNodeAgent(compute).DesireSoftware(orbiter.Software{
-					Hostname: orbiter.Package{Config: map[string]string{"hostname": computeSpec.Hostname}},
+				mapNodeAgent(compute).DesireSoftware(common.Software{
+					Hostname: common.Package{Config: map[string]string{"hostname": computeSpec.Hostname}},
 				})
 				return nil
 			}

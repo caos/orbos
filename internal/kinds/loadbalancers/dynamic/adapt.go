@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -62,7 +63,7 @@ func AdaptFunc(remoteUser string) orbiter.AdaptFunc {
 
 		current.Current.SourcePools = sourcePools
 		current.Current.Addresses = addresses
-		current.Current.Desire = func(pool string, svc core.ComputesService, nodeagents map[string]*orbiter.NodeAgentSpec, notifyMaster string) error {
+		current.Current.Desire = func(pool string, svc core.ComputesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
 
 			vips, ok := desiredKind.Spec[pool]
 			if !ok {
@@ -174,7 +175,6 @@ http {
 		}
 	}
 }
-
 `))
 
 			for _, d := range computesData {
@@ -183,7 +183,7 @@ http {
 				if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
 					return err
 				}
-				kaPkg := orbiter.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+				kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 
 				if d.CustomMasterNotifyer {
 					kaPkg.Config["notifymaster.sh"] = notifyMaster
@@ -194,14 +194,14 @@ http {
 						for _, compute := range computes {
 							deepNa, ok := nodeagents[compute.ID()]
 							if !ok {
-								deepNa = &orbiter.NodeAgentSpec{}
+								deepNa = &common.NodeAgentSpec{}
 								nodeagents[compute.ID()] = deepNa
 							}
 							if deepNa.Firewall == nil {
-								deepNa.Firewall = &orbiter.Firewall{}
+								deepNa.Firewall = &common.Firewall{}
 							}
 							fw := *deepNa.Firewall
-							fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = orbiter.Allowed{
+							fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = common.Allowed{
 								Port:     fmt.Sprintf("%d", transport.SourcePort),
 								Protocol: "tcp",
 							}
@@ -210,11 +210,11 @@ http {
 				}
 				na, ok := nodeagents[d.Self.ID()]
 				if !ok {
-					na = &orbiter.NodeAgentSpec{}
+					na = &common.NodeAgentSpec{}
 					nodeagents[d.Self.ID()] = na
 				}
 				if na.Software == nil {
-					na.Software = &orbiter.Software{}
+					na.Software = &common.Software{}
 				}
 				na.Software.KeepaliveD = kaPkg
 
@@ -222,7 +222,7 @@ http {
 				if nginxTemplate.Execute(&ngxBuf, d); err != nil {
 					return err
 				}
-				ngxPkg := orbiter.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+				ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 				for _, vip := range d.VIPs {
 					for _, transport := range vip.Transport {
 						for _, dest := range transport.Destinations {
@@ -234,14 +234,14 @@ http {
 
 								deepNa, ok := nodeagents[compute.ID()]
 								if !ok {
-									deepNa = &orbiter.NodeAgentSpec{}
+									deepNa = &common.NodeAgentSpec{}
 									nodeagents[compute.ID()] = deepNa
 								}
 								if deepNa.Firewall == nil {
-									deepNa.Firewall = &orbiter.Firewall{}
+									deepNa.Firewall = &common.Firewall{}
 								}
 								fw := *deepNa.Firewall
-								fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = orbiter.Allowed{
+								fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = common.Allowed{
 									Port:     fmt.Sprintf("%d", dest.Port),
 									Protocol: "tcp",
 								}

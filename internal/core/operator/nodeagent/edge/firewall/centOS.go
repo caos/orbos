@@ -9,13 +9,13 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/logging"
 )
 
 func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired orbiter.Firewall) error {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) error {
 
 		var (
 			outBuf bytes.Buffer

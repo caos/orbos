@@ -4,6 +4,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/logging"
 )
@@ -61,7 +62,7 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		}
 		currentTree.Parsed = current
 
-		return func(nodeAgentsCurrent map[string]*orbiter.NodeAgentCurrent, nodeAgentsDesired map[string]*orbiter.NodeAgentSpec) (err error) {
+		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
 			return errors.Wrapf(ensure(desiredKind, current, secretsKind, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
 		}, nil
 	}

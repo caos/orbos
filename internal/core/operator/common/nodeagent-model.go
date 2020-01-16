@@ -1,6 +1,6 @@
 //go:generate goderive -autoname -dedup .
 
-package orbiter
+package common
 
 import (
 	"regexp"
@@ -236,7 +236,8 @@ func (c *changer) desire(mutate func(*NodeAgentSpec)) {
 }
 */
 type NodeAgentsCurrentKind struct {
-	Common  `yaml:",inline"`
+	Kind    string
+	Version string
 	Current map[string]*NodeAgentCurrent `yaml:",omitempty"`
 }
 
@@ -246,32 +247,7 @@ type NodeAgentsSpec struct {
 }
 
 type NodeAgentsDesiredKind struct {
-	Common `yaml:",inline"`
-	Spec   NodeAgentsSpec `yaml:",omitempty"`
+	Kind    string
+	Version string
+	Spec    NodeAgentsSpec `yaml:",omitempty"`
 }
-
-/*
-type muxMap struct {
-	mux  sync.Mutex
-	data map[string]interface{}
-}
-
-func newNodeAgentCurrentFunc(
-	logger logging.Logger,
-	current []byte) func(id string, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
-
-	nodeagents := NodeAgentsCurrentKind{}
-	yaml.Unmarshal(current, &nodeagents)
-
-	return func(id string, changes chan<- *nodeAgentChange) *NodeAgentCurrent {
-
-		curr, ok := nodeagents.Current[id]
-		if !ok {
-			curr = &NodeAgentCurrent{}
-		}
-
-		curr.changer = &changer{id, changes}
-		return curr
-	}
-}
-*/

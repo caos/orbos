@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic/model"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
@@ -79,7 +80,7 @@ func New(remoteUser string) Builder {
 			return &model.Current{
 				Addresses:   addresses,
 				SourcePools: sourcePools,
-				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *orbiter.NodeAgentCurrent, customMasterNofifyer string) error {
+				Desire: func(pool string, changesAllowed bool, svc core.ComputesService, nodeagent func(infra.Compute) *common.NodeAgentCurrent, customMasterNofifyer string) error {
 
 					vips, ok := spec[pool]
 					if !ok {
@@ -201,7 +202,7 @@ http {
 						if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
 							return err
 						}
-						kaPkg := orbiter.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 
 						if d.CustomMasterNotifyer {
 							kaPkg.Config["notifymaster.sh"] = customMasterNofifyer
@@ -213,8 +214,8 @@ http {
 						for _, vip := range d.VIPs {
 							for _, transport := range vip.Transport {
 								for _, compute := range computes {
-									nodeagent(compute).DesireFirewall(map[string]orbiter.Allowed{
-										fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): orbiter.Allowed{
+									nodeagent(compute).DesireFirewall(map[string]common.Allowed{
+										fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): common.Allowed{
 											Port:     fmt.Sprintf("%d", transport.SourcePort),
 											Protocol: "tcp",
 										},
@@ -222,13 +223,13 @@ http {
 								}
 							}
 						}
-						na.DesireSoftware(orbiter.Software{KeepaliveD: kaPkg})
+						na.DesireSoftware(common.Software{KeepaliveD: kaPkg})
 
 						var ngxBuf bytes.Buffer
 						if nginxTemplate.Execute(&ngxBuf, d); err != nil {
 							return err
 						}
-						ngxPkg := orbiter.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 						if changesAllowed && !na.Software.Nginx.Equals(ngxPkg) {
 							na.AllowChanges()
 						}
@@ -240,8 +241,8 @@ http {
 										return err
 									}
 									for _, compute := range destComputes {
-										nodeagent(compute).DesireFirewall(map[string]orbiter.Allowed{
-											fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): orbiter.Allowed{
+										nodeagent(compute).DesireFirewall(map[string]common.Allowed{
+											fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): common.Allowed{
 												Port:     fmt.Sprintf("%d", dest.Port),
 												Protocol: "tcp",
 											},
@@ -250,7 +251,7 @@ http {
 								}
 							}
 						}
-						na.DesireSoftware(orbiter.Software{Nginx: ngxPkg})
+						na.DesireSoftware(common.Software{Nginx: ngxPkg})
 					}
 					return nil
 				},

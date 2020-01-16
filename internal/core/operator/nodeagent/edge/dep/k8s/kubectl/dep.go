@@ -1,7 +1,7 @@
 package kubectl
 
 import (
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/k8s"
@@ -35,10 +35,10 @@ func (*kubectlDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (k *kubectlDep) Current() (orbiter.Package, error) {
+func (k *kubectlDep) Current() (common.Package, error) {
 	return k.common.Current()
 }
 
-func (k *kubectlDep) Ensure(remove orbiter.Package, install orbiter.Package) (bool, error) {
+func (k *kubectlDep) Ensure(remove common.Package, install common.Package) (bool, error) {
 	return false, k.common.Ensure(remove, install)
 }

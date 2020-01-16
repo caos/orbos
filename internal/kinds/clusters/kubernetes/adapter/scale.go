@@ -8,6 +8,7 @@ import (
 
 	"github.com/caos/orbiter/internal/core/helpers"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes/model"
@@ -141,51 +142,51 @@ nodes:
 		current := curr.Computes[id]
 		software := k8sVersion.DefineSoftware()
 
-		fw := map[string]orbiter.Allowed{
-			"kubelet": orbiter.Allowed{
+		fw := map[string]common.Allowed{
+			"kubelet": common.Allowed{
 				Port:     fmt.Sprintf("%d", 10250),
 				Protocol: "tcp",
 			},
 		}
 
 		if current.Metadata.Tier == model.Workers {
-			fw["node-ports"] = orbiter.Allowed{
+			fw["node-ports"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
 		if current.Metadata.Tier == model.Controlplane {
-			fw["kubeapi-external"] = orbiter.Allowed{
+			fw["kubeapi-external"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPI.Port),
 				Protocol: "tcp",
 			}
-			fw["kubeapi-internal"] = orbiter.Allowed{
+			fw["kubeapi-internal"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 6666),
 				Protocol: "tcp",
 			}
-			fw["etcd"] = orbiter.Allowed{
+			fw["etcd"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 2379, 2380),
 				Protocol: "tcp",
 			}
-			fw["kube-scheduler"] = orbiter.Allowed{
+			fw["kube-scheduler"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 10251),
 				Protocol: "tcp",
 			}
-			fw["kube-controller"] = orbiter.Allowed{
+			fw["kube-controller"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 10252),
 				Protocol: "tcp",
 			}
 		}
 
 		if cfg.Spec.Networking.Network == "calico" {
-			fw["calico-bgp"] = orbiter.Allowed{
+			fw["calico-bgp"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", 179),
 				Protocol: "tcp",
 			}
 		}
 
-		firewall := orbiter.Firewall(fw)
+		firewall := common.Firewall(fw)
 
 		current.Nodeagent.DesireSoftware(software)
 		current.Nodeagent.DesireFirewall(firewall)

@@ -1,12 +1,12 @@
 package wrap
 
 import (
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
 
-func desire(selfPool string, changesAllowed bool, curr dynamic.Current, svc core.ComputesService, nodeagents map[string]*orbiter.NodeAgentSpec, notifymasters string) func() error {
+func desire(selfPool string, changesAllowed bool, curr dynamic.Current, svc core.ComputesService, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) func() error {
 	return func() error {
 		update := []string{selfPool}
 	sources:

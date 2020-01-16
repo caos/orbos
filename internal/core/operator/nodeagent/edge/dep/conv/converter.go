@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/nginx"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/swap"
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -46,7 +46,7 @@ func (d *dependencies) Init() (func() error, error) {
 	return d.pm.RefreshInstalled, nil
 }
 
-func (d *dependencies) ToDependencies(sw orbiter.Software) []*nodeagent.Dependency {
+func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
 
 	dependencies := []*nodeagent.Dependency{
 		&nodeagent.Dependency{
@@ -91,7 +91,7 @@ func (d *dependencies) ToDependencies(sw orbiter.Software) []*nodeagent.Dependen
 	return dependencies
 }
 
-func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency) (sw orbiter.Software) {
+func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency) (sw common.Software) {
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {

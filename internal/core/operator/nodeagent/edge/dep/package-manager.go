@@ -47,19 +47,24 @@ func (p *PackageManager) RefreshInstalled() error {
 
 func (p *PackageManager) Init() error {
 
+	p.logger.Info("Updating packages")
+
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
-		err = p.debSpecificInit()
+		err = p.debSpecificUpdatePackages()
 	case REMBased:
-		err = p.remSpecificInit()
+		err = p.remSpecificUpdatePackages()
+	}
+
+	if err != nil {
+		return errors.Wrapf(err, "updaging packages faield", p.os.Packages)
 	}
 
 	p.logger.WithFields(map[string]interface{}{
-		"packages": len(p.installed),
-	}).Debug("Found installed packages")
-
-	return errors.Wrapf(err, "initializing package manager specific system of type %s failed", p.os.Packages)
+		"number": len(p.installed),
+	}).Info("Packages are updated")
+	return nil
 }
 
 func NewPackageManager(logger logging.Logger, os OperatingSystem) *PackageManager {

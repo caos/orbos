@@ -6,6 +6,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
+"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/kinds/providers/core"
 )
@@ -15,7 +16,7 @@ type Current struct {
 	Current struct {
 		SourcePools map[string][]string
 		Addresses   map[string]infra.Address
-		Desire      func(pool string, svc core.ComputesService, nodeagents map[string]*orbiter.NodeAgentSpec, notifyMaster string) error
+		Desire      func(pool string, svc core.ComputesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error
 	} `yaml:"-"`
 }
 

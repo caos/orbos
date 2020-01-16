@@ -3,7 +3,7 @@ package kubeadm
 import (
 	"regexp"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
@@ -40,10 +40,10 @@ func (*kubeadmDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (k *kubeadmDep) Current() (orbiter.Package, error) {
+func (k *kubeadmDep) Current() (common.Package, error) {
 	return k.common.Current()
 }
 
-func (k *kubeadmDep) Ensure(remove orbiter.Package, install orbiter.Package) (bool, error) {
+func (k *kubeadmDep) Ensure(remove common.Package, install common.Package) (bool, error) {
 	return false, k.common.Ensure(remove, install)
 }

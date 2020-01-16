@@ -7,7 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
 	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/middleware"
@@ -47,7 +47,7 @@ func (s *criDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (c *criDep) Current() (pkg orbiter.Package, err error) {
+func (c *criDep) Current() (pkg common.Package, err error) {
 	installed, err := c.manager.CurrentVersions("docker-ce")
 	if err != nil {
 		return pkg, err
@@ -60,7 +60,7 @@ func (c *criDep) Current() (pkg orbiter.Package, err error) {
 	return pkg, nil
 }
 
-func (c *criDep) Ensure(uninstall orbiter.Package, install orbiter.Package) (bool, error) {
+func (c *criDep) Ensure(uninstall common.Package, install common.Package) (bool, error) {
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {
