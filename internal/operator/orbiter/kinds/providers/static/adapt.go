@@ -24,14 +24,10 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		secretsKind := &SecretsV0{
 			Common: secretsTree.Common,
 			Secrets: Secrets{
-				Bootstrap: Key{
-					Public:  &orbiter.Secret{Masterkey: masterkey},
-					Private: &orbiter.Secret{Masterkey: masterkey},
-				},
-				Maintenance: Key{
-					Public:  &orbiter.Secret{Masterkey: masterkey},
-					Private: &orbiter.Secret{Masterkey: masterkey},
-				},
+				BootstrapKeyPrivate:   &orbiter.Secret{Masterkey: masterkey},
+				BootstrapKeyPublic:    &orbiter.Secret{Masterkey: masterkey},
+				MaintenanceKeyPrivate: &orbiter.Secret{Masterkey: masterkey},
+				MaintenanceKeyPublic:  &orbiter.Secret{Masterkey: masterkey},
 			},
 		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {

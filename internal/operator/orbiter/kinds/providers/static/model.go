@@ -22,19 +22,16 @@ type Compute struct {
 	IP       string
 }
 
-type Key struct {
-	Public  *orbiter.Secret `yaml:",omitempty"`
-	Private *orbiter.Secret `yaml:",omitempty"`
-}
-
 type SecretsV0 struct {
 	Common  *orbiter.Common `yaml:",inline"`
 	Secrets Secrets
 }
 
 type Secrets struct {
-	Bootstrap   Key
-	Maintenance Key
+	BootstrapKeyPrivate   *orbiter.Secret `yaml:",omitempty"`
+	BootstrapKeyPublic    *orbiter.Secret `yaml:",omitempty"`
+	MaintenanceKeyPrivate *orbiter.Secret `yaml:",omitempty"`
+	MaintenanceKeyPublic  *orbiter.Secret `yaml:",omitempty"`
 }
 
 type Current struct {

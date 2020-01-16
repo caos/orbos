@@ -29,13 +29,13 @@ func ensure(
 	id string,
 ) (err error) {
 
-	if sec.Secrets.Maintenance.Private == nil && sec.Secrets.Maintenance.Public == nil {
+	if sec.Secrets.MaintenanceKeyPrivate == nil && sec.Secrets.MaintenanceKeyPublic == nil {
 		priv, pub, err := ssh.Generate()
 		if err != nil {
 			return err
 		}
-		sec.Secrets.Maintenance.Private = &orbiter.Secret{Value: priv}
-		sec.Secrets.Maintenance.Public = &orbiter.Secret{Value: pub}
+		sec.Secrets.MaintenanceKeyPrivate = &orbiter.Secret{Value: priv}
+		sec.Secrets.BootstrapKeyPublic = &orbiter.Secret{Value: pub}
 		if err := psf(); err != nil {
 			return err
 		}
@@ -44,7 +44,7 @@ func ensure(
 	// TODO: Allow Changes
 	desireHostnameFunc := desireHostname(desired.Spec.Pools, nodeAgentsDesired)
 
-	computesSvc := NewComputesService(logger, desired, []byte(sec.Secrets.Bootstrap.Private.Value), []byte(sec.Secrets.Maintenance.Private.Value), []byte(sec.Secrets.Maintenance.Public.Value), id, desireHostnameFunc)
+	computesSvc := NewComputesService(logger, desired, []byte(sec.Secrets.BootstrapKeyPrivate.Value), []byte(sec.Secrets.MaintenanceKeyPrivate.Value), []byte(sec.Secrets.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
 	pools, err := computesSvc.ListPools()
 	if err != nil {
 		return err
