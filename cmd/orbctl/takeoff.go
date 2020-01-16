@@ -49,7 +49,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter is taking off")
 
-		op := operator.New(ctx, logger, orbiter.Iterator(
+		op := operator.New(ctx, logger, orbiter.Takeoff(
 			ctx,
 			logger,
 			gitClient,
@@ -59,13 +59,10 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			destroy,
 			orb.AdaptFunc(
 				logger,
-				orbFile.URL,
-				orbFile.Repokey,
-				orbFile.Masterkey,
+				orbFile,
 				gitCommit,
 				destroy,
-				!recur,
-				orbFile),
+				!recur),
 		), []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),

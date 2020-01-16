@@ -13,44 +13,43 @@ import (
 
 func AdaptFunc(
 	logger logging.Logger,
-	repoURL string,
-	repoKey string,
-	masterKey string,
+	orb *orbiter.Orb,
 	orbiterCommit string,
 	id string,
 	destroy bool,
-	takeoff bool,
-	orb *orbiter.Orb) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, err error) {
+	takeoff bool) orbiter.AdaptFunc {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, readSecretFunc orbiter.ReadSecretFunc, writeSecretFunc orbiter.WriteSecretFunc, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind := &DesiredV0{Common: *desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		secretsKind := &SecretsV0{
 			Common:  *secretsTree.Common,
-			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: masterKey}},
+			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
 		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, errors.Wrap(err, "parsing secrets failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
 		}
 		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
 
 		if secretsKind.Secrets.Kubeconfig != nil && secretsKind.Secrets.Kubeconfig.Value != "" {
 			if err := ensureArtifacts(logger, secretsKind.Secrets.Kubeconfig, orb, takeoff, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
-				return nil, err
+				return nil, nil, nil, err
 			}
 		}
 
 		providerCurrents := make(map[string]*orbiter.Tree)
 		providerEnsurers := make([]orbiter.EnsureFunc, 0)
+		providerSecretReaders := make(map[string]orbiter.ReadSecretFunc)
+		providerSecretWriters := make(map[string]orbiter.WriteSecretFunc)
 		for provID, providerTree := range desiredKind.Deps {
 
 			providerCurrent := &orbiter.Tree{}
@@ -62,7 +61,7 @@ func AdaptFunc(
 
 			providerSecretsTree, ok := secretsKind.Deps[provID]
 			if !ok {
-				return nil, errors.Errorf("no secrets found for provider %s", provID)
+				secretsKind.Deps[provID] = &orbiter.Tree{}
 			}
 
 			//			providerID := id + provID
@@ -91,15 +90,16 @@ func AdaptFunc(
 					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				}
 
-				providerEnsurer, err := static.AdaptFunc(logger, masterKey, fmt.Sprintf("%s:%s", id, provID))(providerTree, providerSecretsTree, providerCurrent)
+				providerEnsurer, providerSecretReader, providerSecretWriter, err := static.AdaptFunc(logger, orb.Masterkey, fmt.Sprintf("%s:%s", id, provID))(providerTree, providerSecretsTree, providerCurrent)
 				if err != nil {
-					return nil, err
+					return nil, nil, nil, err
 				}
 				providerEnsurers = append(providerEnsurers, providerEnsurer)
-
+				providerSecretReaders[provID] = providerSecretReader
+				providerSecretWriters[provID] = providerSecretWriter
 				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 			default:
-				return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+				return nil, nil, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 			}
 		}
 
@@ -113,35 +113,42 @@ func AdaptFunc(
 			Current: *current,
 		}
 
+		secretsMap := map[string]*orbiter.Secret{
+			"kubeconfig": secretsKind.Secrets.Kubeconfig,
+		}
+
 		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
-			defer func() {
-				err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
-			}()
-			for _, ensurer := range providerEnsurers {
-				if err := ensurer(psf, nodeAgentsCurrent, nodeAgentsDesired); err != nil {
-					return err
+				defer func() {
+					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+				}()
+				for _, ensurer := range providerEnsurers {
+					if err := ensurer(psf, nodeAgentsCurrent, nodeAgentsDesired); err != nil {
+						return err
+					}
 				}
-			}
 
-			providers := make(map[string]interface{})
-			for provID, providerCurrent := range providerCurrents {
-				providers[provID] = providerCurrent.Parsed
-			}
+				providers := make(map[string]interface{})
+				for provID, providerCurrent := range providerCurrents {
+					providers[provID] = providerCurrent.Parsed
+				}
 
-			return ensure(
-				logger,
-				*desiredKind,
-				current,
-				providers,
-				nodeAgentsCurrent,
-				nodeAgentsDesired,
-				psf,
-				secretsKind.Secrets.Kubeconfig,
-				repoURL,
-				repoKey,
-				orbiterCommit,
-				destroy)
-
-		}, nil
+				return ensure(
+					logger,
+					*desiredKind,
+					current,
+					providers,
+					nodeAgentsCurrent,
+					nodeAgentsDesired,
+					psf,
+					secretsKind.Secrets.Kubeconfig,
+					orb.URL,
+					orb.Repokey,
+					orbiterCommit,
+					destroy)
+			}, func(path []string) (string, error) {
+				return orbiter.AdaptReadSecret(path, providerSecretReaders, secretsMap)
+			}, func(path []string, value string) error {
+				return orbiter.AdaptWriteSecret(path, value, providerSecretWriters, secretsMap)
+			}, nil
 	}
 }

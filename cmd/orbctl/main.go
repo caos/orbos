@@ -23,8 +23,8 @@ func main() {
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 	rootCmd.AddCommand(
 		takeoffCommand(rootValues),
-		//		readSecretCommand(rootValues),
-		//		writeSecretCommand(rootValues),
+		readSecretCommand(rootValues),
+		writeSecretCommand(rootValues),
 		editCommand(rootValues),
 	)
 
