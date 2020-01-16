@@ -15,7 +15,9 @@ func AdaptFunc(
 	repoKey string,
 	masterKey string,
 	orbiterCommit string,
-	destroy bool) orbiter.AdaptFunc {
+	destroy bool,
+	oneoff bool,
+	orb *orbiter.Orb) orbiter.AdaptFunc {
 	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -49,7 +51,7 @@ func AdaptFunc(
 
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterEnsurer, err := kubernetes.AdaptFunc(logger, repoURL, repoKey, masterKey, orbiterCommit, clusterID, destroy)(clusterTree, clusterSecretsTree, clusterCurrent)
+				clusterEnsurer, err := kubernetes.AdaptFunc(logger, repoURL, repoKey, masterKey, orbiterCommit, clusterID, destroy, oneoff, orb)(clusterTree, clusterSecretsTree, clusterCurrent)
 				if err != nil {
 					return nil, err
 				}

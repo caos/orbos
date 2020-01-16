@@ -177,7 +177,7 @@ func ensureCluster(
 		return nil
 	}
 
-	targetVersion := k8s.ParseString(desired.Spec.Kubernetes)
+	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)
 	upgradingDone, err := ensureK8sVersion(
 		logger,
 		orbiterCommit,

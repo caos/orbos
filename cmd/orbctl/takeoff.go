@@ -4,12 +4,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	"github.com/caos/orbiter/internal/executables"
 	"github.com/caos/orbiter/internal/operator"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/executables"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbiter/internal/watcher/cron"
 	"github.com/caos/orbiter/internal/watcher/immediate"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
 )
 
 func takeoffCommand(rv rootValues) *cobra.Command {
@@ -49,43 +49,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter is taking off")
 
-		//		configID := strings.ReplaceAll(strings.TrimSuffix(orbFile.URL[strings.LastIndex(orbFile.URL, "/")+1:], ".git"), "-", "")
-		/*
-			var before func(desired []byte, secrets *operator.Secrets) error
-
-			if deploy && !destroy {
-				before = func(desired []byte, secrets *operator.Secrets) error {
-					var deserialized struct {
-						Spec struct {
-							Orbiter string
-							Boom    string
-							Verbose bool
-						}
-						Deps map[string]struct {
-							Kind string
-						}
-					}
-
-					if err := yaml.Unmarshal(desired, &deserialized); err != nil {
-						return err
-					}
-
-					l := logger
-					if deserialized.Spec.Verbose {
-						l = logger.Verbose()
-					}
-
-					for clusterName, cluster := range deserialized.Deps {
-						if strings.Contains(cluster.Kind, "Kubernetes") {
-							if err := ensureArtifacts(l, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
-								return err
-							}
-						}
-					}
-					return nil
-				}
-			}
-		*/
 		op := operator.New(ctx, logger, orbiter.Iterator(
 			ctx,
 			logger,
@@ -100,7 +63,9 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				orbFile.Repokey,
 				orbFile.Masterkey,
 				gitCommit,
-				destroy),
+				destroy,
+				!recur,
+				orbFile),
 		), []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),

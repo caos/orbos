@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/logging"
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
@@ -14,13 +15,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type Orb struct {
-	URL       string
-	Repokey   string
-	Masterkey string
-}
-
-type rootValues func() (context.Context, logging.Logger, *git.Client, *Orb, errFunc)
+type rootValues func() (context.Context, logging.Logger, *git.Client, *orbiter.Orb, errFunc)
 
 type errFunc func(cmd *cobra.Command) error
 
@@ -61,14 +56,14 @@ $ orbctl -f ~/.orb/myorb [command]
 	flags.StringVarP(&orbconfig, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, logging.Logger, *git.Client, *Orb, errFunc) {
+	return cmd, func() (context.Context, logging.Logger, *git.Client, *orbiter.Orb, errFunc) {
 
 		content, err := ioutil.ReadFile(orbconfig)
 		if err != nil {
 			return nil, nil, nil, nil, curryErrFunc(cmd, err)
 		}
 
-		orb := &Orb{}
+		orb := &orbiter.Orb{}
 		if err := yaml.Unmarshal(content, orb); err != nil {
 			return nil, nil, nil, nil, curryErrFunc(cmd, err)
 		}

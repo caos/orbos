@@ -8,8 +8,12 @@ type DesiredV0 struct {
 	Common orbiter.Common `yaml:",inline"`
 	Deps   map[string]*orbiter.Tree
 	Spec   struct {
-		Verbose    bool
-		Kubernetes string
+		Verbose  bool
+		Versions struct {
+			Kubernetes string
+			Orbiter    string
+			Boom       string
+		}
 		Networking struct {
 			DNSDomain   string
 			Network     string

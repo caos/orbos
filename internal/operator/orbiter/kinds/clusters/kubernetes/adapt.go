@@ -18,7 +18,9 @@ func AdaptFunc(
 	masterKey string,
 	orbiterCommit string,
 	id string,
-	destroy bool) orbiter.AdaptFunc {
+	destroy bool,
+	takeoff bool,
+	orb *orbiter.Orb) orbiter.AdaptFunc {
 	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -40,6 +42,12 @@ func AdaptFunc(
 		}
 		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
+
+		if secretsKind.Secrets.Kubeconfig != nil && secretsKind.Secrets.Kubeconfig.Value != "" {
+			if err := ensureArtifacts(logger, secretsKind.Secrets.Kubeconfig, orb, takeoff, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
+				return nil, err
+			}
+		}
 
 		providerCurrents := make(map[string]*orbiter.Tree)
 		providerEnsurers := make([]orbiter.EnsureFunc, 0)

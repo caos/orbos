@@ -1,6 +1,5 @@
-package orbiter
+package kubernetes
 
-/*
 import (
 	"fmt"
 	"os"
@@ -11,33 +10,23 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/caos/orbiter/internal/operator"
+	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
-func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb, oneoff bool, secretsNamespace, orbiterversion string, boomversion string) error {
-
-	l := logger.WithFields(map[string]interface{}{
-		"cluster": secretsNamespace,
-	})
+func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orbiter.Orb, oneoff bool, orbiterversion string, boomversion string) error {
 
 	logger.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,
 		"boom":    boomversion,
 	}).Debug("Ensuring artifacts")
 
-	if orbiterversion == "" && boomversion == "" {
+	if orbiterversion == "" && boomversion == "" || kubeconfig == nil || kubeconfig.Value == "" {
 		return nil
 	}
 
-	kc, err := secrets.Read(secretsNamespace + "_kubeconfig")
-	if err != nil {
-		return nil
-	}
-
-	kcStr := string(kc)
-	client := k8s.New(logger, &kcStr)
+	client := k8s.New(logger, &kubeconfig.Value)
 
 	orbfile, err := yaml.Marshal(orb)
 	if err != nil {
@@ -144,13 +133,15 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		}); err != nil {
 			return err
 		}
-		l.WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"version": orbiterversion,
 		}).Debug("Orbiter deployment ensured")
 
 		if oneoff {
+			logger.Info("Deployed Orbiter takes over control")
 			os.Exit(0)
 		}
+
 	}
 
 	if boomversion == "" {
@@ -391,7 +382,7 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 		},
 	})
 	if err == nil {
-		l.WithFields(map[string]interface{}{
+		logger.WithFields(map[string]interface{}{
 			"version": boomversion,
 		}).Debug("Boom deployment ensured")
 	}
@@ -401,4 +392,3 @@ func ensureArtifacts(logger logging.Logger, secrets *operator.Secrets, orb *Orb,
 func int32Ptr(i int32) *int32 { return &i }
 func int64Ptr(i int64) *int64 { return &i }
 func boolPtr(b bool) *bool    { return &b }
-*/
