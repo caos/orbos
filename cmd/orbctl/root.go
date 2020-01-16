@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/logging"
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"

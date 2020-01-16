@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
-	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/internal/git"
 )
 
 func editCommand(rv rootValues) *cobra.Command {

@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
-	"github.com/caos/orbiter/internal/core/secret"
-	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbiter/internal/git"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"

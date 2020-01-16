@@ -7,7 +7,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/caos/orbiter/internal/core/helpers"
+	"github.com/caos/orbiter/internal/helpers"
 )
 
 type resultTuple func() (interface{}, error)

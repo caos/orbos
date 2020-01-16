@@ -4,12 +4,12 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/core/operator/orbiter"
-	"github.com/caos/orbiter/internal/edge/executables"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	"github.com/caos/orbiter/internal/kinds/orb"
+	"github.com/caos/orbiter/internal/operator"
+	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/executables"
+	"github.com/caos/orbiter/internal/watcher/cron"
+	"github.com/caos/orbiter/internal/watcher/immediate"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
 )
 
 func takeoffCommand(rv rootValues) *cobra.Command {

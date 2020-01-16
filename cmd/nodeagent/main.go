@@ -9,18 +9,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/edge/git"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	"github.com/caos/orbiter/internal/operator"
+	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/watcher/cron"
+	"github.com/caos/orbiter/internal/watcher/immediate"
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
 
-	"github.com/caos/orbiter/internal/core/operator/nodeagent"
-	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep"
-	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/dep/conv"
-	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/firewall"
-	"github.com/caos/orbiter/internal/core/operator/nodeagent/edge/rebooter/node"
+	"github.com/caos/orbiter/internal/operator/nodeagent"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/conv"
+	"github.com/caos/orbiter/internal/operator/nodeagent/firewall"
+	"github.com/caos/orbiter/internal/operator/nodeagent/rebooter/node"
 )
 
 var gitCommit string

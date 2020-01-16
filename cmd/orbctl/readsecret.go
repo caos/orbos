@@ -1,9 +1,9 @@
 package main
-
+/*
 import (
 	"os"
 
-	"github.com/caos/orbiter/internal/core/secret"
+	"github.com/caos/orbiter/internal/secret"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -44,3 +44,4 @@ func readSecretCommand(rv rootValues) *cobra.Command {
 		},
 	}
 }
+*/
