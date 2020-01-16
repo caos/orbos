@@ -62,8 +62,8 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		}
 		currentTree.Parsed = current
 
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
-			return errors.Wrapf(ensure(desiredKind, current, secretsKind, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
+		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
+			return errors.Wrapf(ensure(desiredKind, current, secretsKind, psf, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
 		}, nil
 	}
 }

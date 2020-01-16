@@ -20,6 +20,7 @@ func ensure(
 	current *Current,
 	sec *SecretsV0,
 
+	psf orbiter.PushSecretsFunc,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	lb interface{},
 	masterkey string,
@@ -35,6 +36,9 @@ func ensure(
 		}
 		sec.Secrets.Maintenance.Private = &orbiter.Secret{Value: priv}
 		sec.Secrets.Maintenance.Public = &orbiter.Secret{Value: pub}
+		if err := psf(); err != nil {
+			return err
+		}
 	}
 
 	// TODO: Allow Changes

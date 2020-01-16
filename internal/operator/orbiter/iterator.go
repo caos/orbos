@@ -11,7 +11,9 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-type EnsureFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error)
+type PushSecretsFunc func() error
+
+type EnsureFunc func(psf PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error)
 
 type AdaptFunc func(desired *Tree, secrets *Tree, current *Tree) (EnsureFunc, error)
 
@@ -55,7 +57,12 @@ func Iterator(ctx context.Context, logger logging.Logger, gitClient *git.Client,
 		rawCurrentNodeAgents, _ := gitClient.Read("internal/node-agents-current.yml")
 		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
 
-		if err := ensure(currentNodeAgents.Current, desiredNodeAgents); err != nil {
+		if err := ensure(func() error {
+			return gitClient.UpdateRemote(git.File{
+				Path:    "secrets.yml",
+				Content: common.MarshalYAML(treeSecrets),
+			})
+		}, currentNodeAgents.Current, desiredNodeAgents); err != nil {
 			logger.Error(err)
 			return
 		}

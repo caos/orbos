@@ -69,12 +69,12 @@ func AdaptFunc(
 			Deps: clusterCurrents,
 		}
 
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
+		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
 			defer func() {
 				err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 			}()
 			for _, ensurer := range clusterEnsurers {
-				if err := ensurer(nodeAgentsCurrent, nodeAgentsDesired); err != nil {
+				if err := ensurer(psf, nodeAgentsCurrent, nodeAgentsDesired); err != nil {
 					return err
 				}
 			}

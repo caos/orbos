@@ -27,6 +27,7 @@ func ensureScale(
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	kubeconfig *orbiter.Secret,
+	psf orbiter.PushSecretsFunc,
 	controlplanePool *scaleablePool,
 	workerPools []*scaleablePool,
 	kubeAPI infra.Address,
@@ -306,7 +307,7 @@ nodes:
 			return false, err
 		}
 		kubeconfig.Value = *joinKubeconfig
-		return false, nil
+		return false, psf()
 	}
 
 	if certsCP == nil {
