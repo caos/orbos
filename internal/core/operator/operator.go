@@ -71,6 +71,7 @@ func (i *Iterator) iterateWrapped() {
 			panic(r)
 		}
 	}()
+	i.logger.Debug("Starting iteration")
 	started := time.Now()
 	i.iterate()
 	i.logger.WithFields(map[string]interface{}{

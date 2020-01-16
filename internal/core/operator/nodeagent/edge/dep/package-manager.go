@@ -58,12 +58,10 @@ func (p *PackageManager) Init() error {
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "updaging packages faield", p.os.Packages)
+		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
 	}
 
-	p.logger.WithFields(map[string]interface{}{
-		"number": len(p.installed),
-	}).Info("Packages are updated")
+	p.logger.Info("Packages are updated")
 	return nil
 }
 
