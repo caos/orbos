@@ -35,7 +35,7 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 		}
 
 		desired := common.NodeAgentsDesiredKind{}
-		if err := yaml.Unmarshal(desiredBytes, desired); err != nil {
+		if err := yaml.Unmarshal(desiredBytes, &desired); err != nil {
 			logger.Error(err)
 			return
 		}
