@@ -67,7 +67,10 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 
 		if _, err := gitClient.UpdateRemoteUntilItWorks(
 			&git.File{Path: "internal/node-agents-current.yml", Overwrite: func(nodeagents []byte) ([]byte, error) {
-				current := common.NodeAgentsCurrentKind{}
+				current := common.NodeAgentsCurrentKind{
+					Kind:    "nodeagent.caos.ch/NodeAgent",
+					Version: "v0",
+				}
 				if err := yaml.Unmarshal(nodeagents, &current); err != nil {
 					return nil, err
 				}

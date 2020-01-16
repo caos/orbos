@@ -125,12 +125,16 @@ func ensureK8sVersion(
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
-		desiredSoftware := nodeAgentsDesired[compute.ID()].Software
-
 		naCurrent, ok := nodeAgentsCurrent[compute.ID()]
 		if !ok {
 			naCurrent = &common.NodeAgentCurrent{} // avoid many nil checks
 		}
+
+		naDesired := nodeAgentsDesired[compute.ID()]
+		desiredSoftware := naDesired.Software
+
+		desiredSoftware.Merge(naCurrent.Software)
+		naDesired.Firewall.Merge(naCurrent.Open)
 
 		ensureNodeagent := func(from string) func() error {
 			return func() error {
