@@ -3,8 +3,8 @@ package orb
 import (
 	"github.com/pkg/errors"
 
+	"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/core/operator/orbiter"
-"github.com/caos/orbiter/internal/core/operator/common"
 	"github.com/caos/orbiter/internal/kinds/clusters/kubernetes"
 	"github.com/caos/orbiter/logging"
 )

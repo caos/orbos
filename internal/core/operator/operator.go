@@ -47,7 +47,6 @@ func (i *Iterator) Initialize() error {
 }
 
 func (i *Iterator) Run() {
-	//	refspecs := []config.RefSpec{config.RefSpec("+refs/heads/master:refs/remotes/origin/master")}
 
 loop:
 	for {
