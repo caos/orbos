@@ -1,21 +1,36 @@
 # Userguides
 
-## Reset Cluster
+## Kubernetes
+
+### Create Cluster
+
+1. Create `orb`
+2. Create `orbiter.yml`
+3. Write `secrets.yml`
+4. Takeoff
+
+(Re)Create the cluster:
+
+```bash
+orbctl -f {orbfile} takeoff
+```
+
+### Reset Cluster
 
 If you would like to reset a cluster, in this example `kubernetes`, just follow this steps.
 
+First we need to `destroy` it and afterwards we start over.
+
 > !!! Danger Zone !!! This will reset all nodes including the `master` and `etcd` ones.
 
-Delete on-cluster `Orbiter`:
+Destroy the cluster:
 
 ```bash
-kubectl -n caos-system delete deployment orbiter
+orbctl -f {orbfile} destroy
 ```
 
-Delete the secret `kubeconfig` from you git project
-
-Start Orbiter localy:
+(Re)Create the cluster:
 
 ```bash
-orbctl -f [path to orb file] takeoff
+orbctl -f {orbfile} takeoff
 ```
