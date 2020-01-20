@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator"
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/operator"
 	"github.com/caos/orbiter/internal/watcher/cron"
 	"github.com/caos/orbiter/internal/watcher/immediate"
 	logcontext "github.com/caos/orbiter/logging/context"
@@ -92,7 +92,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *nodeAgentID), *repoURL)
+	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
 	if err := gitClient.Init(repoKey); err != nil {
 		panic(err)
 	}

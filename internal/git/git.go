@@ -26,6 +26,7 @@ type Client struct {
 	logger    logging.Logger
 	ctx       context.Context
 	committer string
+	email     string
 	auth      *gitssh.PublicKeys
 	repo      *gogit.Repository
 	fs        billy.Filesystem
@@ -34,7 +35,7 @@ type Client struct {
 	repoURL   string
 }
 
-func New(ctx context.Context, logger logging.Logger, committer string, repoURL string) *Client {
+func New(ctx context.Context, logger logging.Logger, committer, email, repoURL string) *Client {
 	newClient := &Client{
 		ctx:       ctx,
 		logger:    logger,
@@ -221,7 +222,7 @@ func (g *Client) commit() error {
 	if _, err := g.workTree.Commit("update current state or secrets", &gogit.CommitOptions{
 		Author: &object.Signature{
 			Name:  g.committer,
-			Email: "hi@caos.ch",
+			Email: g.email,
 			When:  time.Now(),
 		},
 	}); err != nil {

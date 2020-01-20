@@ -87,7 +87,7 @@ $ orbctl -f ~/.orb/myorb [command]
 			l = l.Verbose()
 		}
 
-		gitClient := git.New(ctx, l, "Orbiter", orb.URL)
+		gitClient := git.New(ctx, l, "Orbiter", "orbiter@caos.ch", orb.URL)
 		if err := gitClient.Init([]byte(orb.Repokey)); err != nil {
 			panic(err)
 		}
