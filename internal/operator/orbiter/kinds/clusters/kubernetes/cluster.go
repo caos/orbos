@@ -1,11 +1,8 @@
 package kubernetes
 
 import (
-	"sync"
-
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -30,10 +27,9 @@ func ensureCluster(
 	k8sClient *k8s.Client,
 	repoURL string,
 	repoKey string,
-	orbiterCommit string,
-	destroy bool) (err error) {
+	orbiterCommit string) (err error) {
 
-	if !destroy && desired.Spec.ControlPlane.Nodes != 1 && desired.Spec.ControlPlane.Nodes != 3 && desired.Spec.ControlPlane.Nodes != 5 {
+	if desired.Spec.ControlPlane.Nodes != 1 && desired.Spec.ControlPlane.Nodes != 3 && desired.Spec.ControlPlane.Nodes != 5 {
 		err = errors.New("Controlplane nodes can only be scaled to 1, 3 or 5")
 		return err
 	}
@@ -154,27 +150,8 @@ func ensureCluster(
 		curr.Computes = make(map[string]*Compute)
 	}
 
-	if kubeconfig.Value != "" {
+	if kubeconfig != nil && kubeconfig.Value != "" {
 		k8sClient.Refresh(&kubeconfig.Value)
-	}
-
-	if destroy {
-		var wg sync.WaitGroup
-		synchronizer := helpers.NewSynchronizer(&wg)
-		for _, compute := range append(cpPoolComputes, workerComputes...) {
-			wg.Add(2)
-			go func(cmp infra.Compute) {
-				_, resetErr := cmp.Execute(nil, nil, "sudo kubeadm reset -f")
-				_, rmErr := cmp.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
-				synchronizer.Done(resetErr)
-				synchronizer.Done(rmErr)
-			}(compute)
-		}
-		wg.Wait()
-		if synchronizer.IsError() {
-			logger.Info(synchronizer.Error())
-		}
-		return nil
 	}
 
 	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)

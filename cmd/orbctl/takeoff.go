@@ -60,8 +60,8 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				logger,
 				orbFile,
 				gitCommit,
-				destroy,
-				!recur),
+				!recur,
+				true),
 		), []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),

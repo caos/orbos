@@ -17,7 +17,6 @@ func (a Address) String() string {
 type ProviderCurrent interface {
 	Pools() map[string]Pool
 	Ingresses() map[string]Address
-	Cleanupped() <-chan error
 }
 
 type Ingress struct {

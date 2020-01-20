@@ -10,7 +10,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 
 	//	externallbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/ssh"
 	"github.com/caos/orbiter/logging"
 )
@@ -81,25 +81,5 @@ func ensure(
 		return errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
-	current.Current.Pools = make(map[string]infra.Pool)
-	for pool := range desired.Spec.Pools {
-		current.Current.Pools[pool] = core.NewPool(pool, nil, computesSvc)
-	}
-
-	unconfiguredPools, err := computesSvc.ListPools()
-	if err != nil {
-		return nil
-	}
-	for _, unconfiguredPool := range unconfiguredPools {
-		if _, ok := current.Current.Pools[unconfiguredPool]; !ok {
-			current.Current.Pools[unconfiguredPool] = core.NewPool(unconfiguredPool, nil, computesSvc)
-		}
-	}
-
-	cu := make(chan error)
-	go func() {
-		cu <- nil
-	}()
-	current.Current.cleanupped = cu
-	return nil
+	return addPools(current, desired, computesSvc)
 }

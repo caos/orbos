@@ -7,8 +7,6 @@ import (
 )
 
 func Destroy(providers map[string]interface{}) (err error) {
- 
-	cleanupping := make([]<-chan error, 0)
 
 	var wg sync.WaitGroup
 	synchronizer := helpers.NewSynchronizer(&wg)
@@ -19,8 +17,6 @@ func Destroy(providers map[string]interface{}) (err error) {
 			continue
 		}
 		pools := prov.Pools()
-		cu := prov.Cleanupped()
-		cleanupping = append(cleanupping, cu)
 		for _, pool := range pools {
 			comps, gcErr := pool.GetComputes(true)
 			if gcErr != nil {
@@ -37,12 +33,6 @@ func Destroy(providers map[string]interface{}) (err error) {
 					synchronizer.Done(nil)
 				}(comp)
 			}
-		}
-	}
-
-	for _, cu := range cleanupping {
-		if cuErr := <-cu; cuErr != nil {
-			err = cuErr
 		}
 	}
 
