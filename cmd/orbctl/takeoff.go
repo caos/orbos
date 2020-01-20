@@ -56,7 +56,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			gitCommit,
 			orbFile.Masterkey,
 			recur,
-			destroy,
 			orb.AdaptFunc(
 				logger,
 				orbFile,

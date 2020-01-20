@@ -23,7 +23,7 @@ type ReadSecretFunc func(path []string) (string, error)
 
 type WriteSecretFunc func(path []string, value string) error
 
-func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, destroy bool, adapt AdaptFunc) func() {
+func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
 
 	return func() {
 
@@ -85,8 +85,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			panic(err)
 		}
 		for _, cluster := range statusReader.Deps {
-			if destroy && cluster.Current.State.Status == "destroyed" ||
-				!destroy && !recur && cluster.Current.State.Status == "running" {
+			if !recur && cluster.Current.State.Status == "running" {
 				os.Exit(0)
 			}
 		}
@@ -106,11 +105,11 @@ func AdaptReadSecret(path []string, deps map[string]ReadSecretFunc, mapping map[
 			return "", errors.New("kind does not need or support secrets")
 		}
 
-		value, ok := mapping[key]
+		secret, ok := mapping[key]
 		if !ok {
 			return "", errors.Errorf("unknown secret %s", key)
 		}
-		return value.Value, nil
+		return secret.Value, nil
 	}
 
 	if len(deps) == 0 {
@@ -138,7 +137,7 @@ func AdaptWriteSecret(path []string, value string, deps map[string]WriteSecretFu
 
 	key := path[0]
 
-	if len(path) == 0 {
+	if len(path) == 1 {
 		if len(mapping) == 0 {
 			return errors.New("kind does not need or support secrets")
 		}

@@ -204,9 +204,8 @@ func (g *Client) stage(files ...File) (bool, error) {
 
 		_, err = g.workTree.Add(f.Path)
 		if err != nil {
-			updateLogger.Debug("Changes staged")
+			return true, errors.Wrapf(err, "staging worktree changes in file %s failed", f.Path)
 		}
-		return true, errors.Wrapf(err, "staging worktree changes in file %s failed", f.Path)
 	}
 
 	status, err := g.workTree.Status()
