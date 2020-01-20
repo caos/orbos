@@ -28,7 +28,7 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			panic(err)
 		}
 
-		desiredBytes, err := gitClient.Read("internal/node-agents-desired.yml")
+		desiredBytes, err := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
 		if err != nil {
 			logger.Error(err)
 			return
@@ -65,12 +65,12 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			return
 		}
 
-		if _, err := gitClient.UpdateRemoteUntilItWorks("internal/node-agents-current.yml", func(nodeagents []byte) ([]byte, error) {
+		if _, err := gitClient.UpdateRemoteUntilItWorks("caos-internal/orbiter/node-agents-current.yml", func(nodeagents []byte) ([]byte, error) {
 			current := common.NodeAgentsCurrentKind{}
 			if err := yaml.Unmarshal(nodeagents, &current); err != nil {
 				return nil, err
 			}
-			current.Kind = "nodeagent.caos.ch/NodeAgent"
+			current.Kind = "nodeagent.caos.ch/NodeAgents"
 			current.Version = "v0"
 			if current.Current == nil {
 				current.Current = make(map[string]*common.NodeAgentCurrent)

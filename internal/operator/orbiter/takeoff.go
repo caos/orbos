@@ -32,7 +32,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 
 		desiredNodeAgents := make(map[string]*common.NodeAgentSpec)
 		currentNodeAgents := common.NodeAgentsCurrentKind{}
-		rawCurrentNodeAgents, _ := gitClient.Read("internal/node-agents-current.yml")
+		rawCurrentNodeAgents, _ := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
 		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
 
 		if err := ensure(pushSecretsFunc(gitClient, treeSecrets), currentNodeAgents.Current, desiredNodeAgents); err != nil {
@@ -43,15 +43,15 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 		current := common.MarshalYAML(treeCurrent)
 
 		if err := gitClient.UpdateRemote(git.File{
-			Path:    "desired.yml",
+			Path:    "orbiter.yml",
 			Content: common.MarshalYAML(treeDesired),
 		}, git.File{
-			Path:    "current.yml",
+			Path:    "caos-internal/orbiter/current.yml",
 			Content: current,
 		}, git.File{
-			Path: "internal/node-agents-desired.yml",
+			Path: "caos-internal/orbiter/node-agents-desired.yml",
 			Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
-				Kind:    "nodeagent.caos.ch/NodeAgent",
+				Kind:    "nodeagent.caos.ch/NodeAgents",
 				Version: "v0",
 				Spec: common.NodeAgentsSpec{
 					Commit:     orbiterCommit,

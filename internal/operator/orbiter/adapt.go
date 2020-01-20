@@ -14,7 +14,7 @@ func parse(gitClient *git.Client) (desired *Tree, secrets *Tree, err error) {
 		panic(err)
 	}
 
-	rawDesired, err := gitClient.Read("desired.yml")
+	rawDesired, err := gitClient.Read("orbiter.yml")
 	if err != nil {
 		return nil, nil, err
 	}
