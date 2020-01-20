@@ -17,7 +17,7 @@ orbctl -f {orbfile} takeoff
 
 ### Reset Cluster
 
-If you would like to reset a cluster, in this example `kubernetes`, just follow this steps.
+If you would like to reset a cluster, in this example `kubernetes`, follow these steps.
 
 First we need to `destroy` it and afterwards we start over.
 
