@@ -39,7 +39,11 @@ func AdaptFunc(
 		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
 
-		if deployOrbiterAndBoom && secretsKind.Secrets.Kubeconfig != nil && secretsKind.Secrets.Kubeconfig.Value != "" {
+		if secretsKind.Secrets.Kubeconfig == nil {
+			secretsKind.Secrets.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
+		}
+
+		if deployOrbiterAndBoom && secretsKind.Secrets.Kubeconfig.Value != "" {
 			if err := ensureArtifacts(logger, secretsKind.Secrets.Kubeconfig, orb, takeoff, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
 				return nil, nil, nil, nil, err
 			}

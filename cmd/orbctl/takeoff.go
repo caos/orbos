@@ -28,7 +28,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
-	flags.BoolVar(&destroy, "destroy", false, "Destroy everything and clean up")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -61,7 +60,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 				orbFile,
 				gitCommit,
 				!recur,
-				true),
+				deploy),
 		), []operator.Watcher{
 			immediate.New(logger),
 			cron.New(logger, "@every 10s"),

@@ -14,12 +14,8 @@ func destroy(providerCurrents map[string]interface{}, kubeconfig *orbiter.Secret
 				return err
 			}
 			for _, compute := range computes {
-				if _, err := compute.Execute(nil, nil, "sudo kubeadm reset -f"); err != nil {
-					return err
-				}
-				if _, err := compute.Execute(nil, nil, "sudo rm -rf /var/lib/etcd"); err != nil {
-					return err
-				}
+				compute.Execute(nil, nil, "sudo kubeadm reset -f")
+				compute.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
 			}
 		}
 	}

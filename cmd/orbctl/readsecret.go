@@ -12,7 +12,7 @@ import (
 func readSecretCommand(rv rootValues) *cobra.Command {
 
 	return &cobra.Command{
-		Use:     "readsecret [name]",
+		Use:     "readsecret [path]",
 		Short:   "Decrypt and print to stdout",
 		Args:    cobra.ExactArgs(1),
 		Example: `orbctl readsecret myorbk8s_kubeconfig > ~/.kube/config`,

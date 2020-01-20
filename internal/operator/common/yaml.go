@@ -7,6 +7,9 @@ import (
 )
 
 func MarshalYAML(sth interface{}) []byte {
+	if sth == nil {
+		return nil
+	}
 	var buf bytes.Buffer
 	encoder := yaml.NewEncoder(&buf)
 	encoder.SetIndent(2)

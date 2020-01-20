@@ -10,13 +10,34 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
 )
 
-func shootCommand(rv rootValues) *cobra.Command {
+func teardownCommand(rv rootValues) *cobra.Command {
 
 	var (
 		cmd = &cobra.Command{
-			Use:   "shoot",
-			Short: "Shoot an Orbiter",
+			Use:   "teardown",
+			Short: "Tear down an Orb",
 			Long:  "Destroys a whole Orb",
+			Aliases: []string{
+				"shoot",
+				"destroy",
+				"devastate",
+				"annihilate",
+				"crush",
+				"bulldoze",
+				"total",
+				"smash",
+				"decimate",
+				"kill",
+				"trash",
+				"wipe-off-the-map",
+				"pulverize",
+				"take-apart",
+				"destruct",
+				"obliterate",
+				"disassemble",
+				"explode",
+				"blow-up",
+			},
 		}
 	)
 
