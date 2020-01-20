@@ -12,7 +12,6 @@ type CurrentCluster struct {
 type Current struct {
 	Common  orbiter.Common `yaml:",inline"`
 	Current CurrentCluster
-	Deps    map[string]*orbiter.Tree
 }
 
 type Compute struct {
