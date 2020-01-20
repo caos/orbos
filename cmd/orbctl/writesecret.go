@@ -4,12 +4,10 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/core/secret"
-	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
 func writeSecretCommand(rv rootValues) *cobra.Command {
@@ -22,9 +20,9 @@ func writeSecretCommand(rv rootValues) *cobra.Command {
 			Use:   "writesecret [name]",
 			Short: "Encrypt and push",
 			Args:  cobra.ExactArgs(1),
-			Example: `orbctl writesecret myorbsomeclusterstaticprovider_bootstrapkey --file ~/.ssh/my-orb-bootstrap
-orbctl writesecret myorbsomeclusterstaticprovider_bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
-orbctl writesecret myorbsomeclustergceprovider_google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
+			Example: `orbctl writesecret mystaticprovider.bootstrapkey --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret mystaticprovider.bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
+orbctl writesecret mygceprovider.google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
 		}
 	)
 
@@ -40,41 +38,20 @@ orbctl writesecret myorbsomeclustergceprovider_google_application_credentials_va
 			return err
 		}
 
-		_, logger, gitClient, orb, errFunc := rv()
+		_, logger, gitClient, orbconfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		if err := gitClient.Clone(); err != nil {
-			panic(err)
-		}
-
-		sec, err := gitClient.Read("secrets.yml")
-		if err != nil {
-			panic(err)
-		}
-
-		secsMap := make(map[string]interface{})
-		if err := yaml.Unmarshal(sec, &secsMap); err != nil {
-			panic(err)
-		}
-
-		if err := secret.New(logger, secsMap, args[0], orb.Masterkey).Write([]byte(s)); err != nil {
-			panic(err)
-		}
-
-		if _, err := gitClient.UpdateRemoteUntilItWorks(&git.File{
-			Path: "secrets.yml",
-			Overwrite: func(o []byte) ([]byte, error) {
-				newSecsMap := make(map[string]interface{})
-				if err := yaml.Unmarshal(o, &newSecsMap); err != nil {
-					panic(err)
-				}
-				newSecsMap[args[0]] = secsMap[args[0]]
-				return operator.Marshal(newSecsMap)
-			},
-			Force: true,
-		}); err != nil {
+		if err := orbiter.WriteSecret(
+			gitClient,
+			orb.AdaptFunc(logger,
+				orbconfig,
+				gitCommit,
+				false,
+				false),
+			args[0],
+			s); err != nil {
 			panic(err)
 		}
 		return nil

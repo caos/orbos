@@ -9,19 +9,18 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/edge/git"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
+	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/operator"
+	"github.com/caos/orbiter/internal/watcher/cron"
+	"github.com/caos/orbiter/internal/watcher/immediate"
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
 
-	"github.com/caos/orbiter/internal/kinds/nodeagent"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/adapter"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/dep/conv"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/firewall"
-	"github.com/caos/orbiter/internal/kinds/nodeagent/edge/rebooter/node"
+	"github.com/caos/orbiter/internal/operator/nodeagent"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/conv"
+	"github.com/caos/orbiter/internal/operator/nodeagent/firewall"
+	"github.com/caos/orbiter/internal/operator/nodeagent/rebooter/node"
 )
 
 var gitCommit string
@@ -47,18 +46,17 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")
 	repoURL := flag.String("repourl", "", "Repository URL")
-	computeID := flag.String("id", "", "The managed computes ID")
-	configPath := flag.String("yamlbasepath", "", "Point separated yaml path to the node agent kind")
-	currentFile := flag.String("currentfile", "", "git path to the yaml file containing the current state")
-	secretsFile := flag.String("secretsfile", "", "git path to the yaml file containing secrets")
+	nodeAgentID := flag.String("id", "", "The managed computes ID")
 
 	flag.Parse()
 
-	fullVersion := fmt.Sprintf("%s %s", version, gitCommit)
-
 	if *printVersion {
-		fmt.Println(fullVersion)
+		fmt.Println(fmt.Sprintf("%s %s", version, gitCommit))
 		os.Exit(0)
+	}
+
+	if *repoURL == "" || *nodeAgentID == "" {
+		panic("flags --repourl and --id are required")
 	}
 
 	logger := logcontext.Add(stdlib.New(os.Stderr))
@@ -66,12 +64,11 @@ func main() {
 		logger = logger.Verbose()
 	}
 	logger.WithFields(map[string]interface{}{
-		"version":    version,
-		"commit":     gitCommit,
-		"verbose":    *verbose,
-		"repourl":    *repoURL,
-		"computeId":  *computeID,
-		"configPath": *configPath,
+		"version":     version,
+		"commit":      gitCommit,
+		"verbose":     *verbose,
+		"repourl":     *repoURL,
+		"nodeAgentID": *nodeAgentID,
 	}).Info("Node Agent is starting")
 
 	os, err := dep.GetOperatingSystem()
@@ -95,35 +92,30 @@ func main() {
 	}
 
 	ctx := context.Background()
-	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *computeID), *repoURL)
+	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
 	if err := gitClient.Init(repoKey); err != nil {
 		panic(err)
 	}
 
-	op := operator.New(&operator.Arguments{
-		Ctx:         ctx,
-		GitClient:   gitClient,
-		Logger:      logger,
-		CurrentFile: *currentFile,
-		SecretsFile: *secretsFile,
-		Watchers: []operator.Watcher{
+	op := operator.New(
+		ctx,
+		logger,
+		nodeagent.Iterator(
+			logger,
+			gitClient,
+			node.New(),
+			gitCommit,
+			*nodeAgentID,
+			firewall.Ensurer(logger, os.OperatingSystem),
+			converter,
+			before),
+		[]operator.Watcher{
 			immediate.New(logger),
-			cron.New(logger, "@every 30s"),
-		},
-		RootAssembler: nodeagent.New(strings.Split(*configPath, "."), nil,
-			adapter.New(fullVersion, logger, node.New(), firewall.Ensurer(logger, os.OperatingSystem), converter, before, nil)),
-	})
+			cron.New(logger, "@every 10s"),
+		})
 
-	iterations := make(chan *operator.IterationDone)
 	if err := op.Initialize(); err != nil {
 		panic(err)
 	}
-
-	go op.Run(iterations)
-
-	for it := range iterations {
-		if it.Error != nil {
-			logger.Error(it.Error)
-		}
-	}
+	op.Run()
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
-	"github.com/caos/orbiter/internal/edge/git"
+	"github.com/caos/orbiter/internal/git"
 )
 
 func editCommand(rv rootValues) *cobra.Command {
@@ -24,7 +24,7 @@ func editCommand(rv rootValues) *cobra.Command {
 		Example: `orbctl edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			_, logger, gitClient, _, errFunc := rv()
+			_, _, gitClient, _, errFunc := rv()
 			if errFunc != nil {
 				return errFunc(cmd)
 			}
@@ -43,19 +43,10 @@ func editCommand(rv rootValues) *cobra.Command {
 				panic(err)
 			}
 
-			if bytes.Compare(file, edited) == 0 {
-				logger.Info("No changes")
-				return nil
-			}
-
-			_, err = gitClient.UpdateRemoteUntilItWorks(&git.File{
-				Path: args[0],
-				Overwrite: func(_ []byte) ([]byte, error) {
-					return edited, nil
-				},
-				Force: true,
+			return gitClient.UpdateRemote(git.File{
+				Path:    args[0],
+				Content: edited,
 			})
-			return err
 		},
 	}
 }

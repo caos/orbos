@@ -1,19 +1,15 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
-	"github.com/caos/orbiter/internal/core/operator"
-	"github.com/caos/orbiter/internal/edge/executables"
-	"github.com/caos/orbiter/internal/edge/watcher/cron"
-	"github.com/caos/orbiter/internal/edge/watcher/immediate"
-	"github.com/caos/orbiter/internal/kinds/orbiter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/adapter"
-	"github.com/caos/orbiter/internal/kinds/orbiter/model"
+	"github.com/caos/orbiter/internal/executables"
+	"github.com/caos/orbiter/internal/operator"
+	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbiter/internal/watcher/cron"
+	"github.com/caos/orbiter/internal/watcher/immediate"
 )
 
 func takeoffCommand(rv rootValues) *cobra.Command {
@@ -32,7 +28,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
-	flags.BoolVar(&destroy, "destroy", false, "Destroy everything and clean up")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -40,7 +35,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, logger, gitClient, orb, errFunc := rv()
+		ctx, logger, gitClient, orbFile, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -50,120 +45,35 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"commit":  gitCommit,
 			"destroy": destroy,
 			"verbose": verbose,
-			"repoURL": orb.URL,
+			"repoURL": orbFile.URL,
 		}).Info("Orbiter is taking off")
 
-		currentFile := "current.yml"
-		secretsFile := "secrets.yml"
-		configID := strings.ReplaceAll(strings.TrimSuffix(orb.URL[strings.LastIndex(orb.URL, "/")+1:], ".git"), "-", "")
-
-		var before func(desired []byte, secrets *operator.Secrets) error
-
-		if deploy && !destroy {
-			before = func(desired []byte, secrets *operator.Secrets) error {
-				var deserialized struct {
-					Spec struct {
-						Orbiter string
-						Boom    string
-						Verbose bool
-					}
-					Deps map[string]struct {
-						Kind string
-					}
-				}
-
-				if err := yaml.Unmarshal(desired, &deserialized); err != nil {
-					return err
-				}
-
-				l := logger
-				if deserialized.Spec.Verbose {
-					l = logger.Verbose()
-				}
-
-				for clusterName, cluster := range deserialized.Deps {
-					if strings.Contains(cluster.Kind, "Kubernetes") {
-						if err := ensureArtifacts(l, secrets, orb, !recur, configID+clusterName, deserialized.Spec.Orbiter, deserialized.Spec.Boom); err != nil {
-							return err
-						}
-					}
-				}
-				return nil
-			}
-		}
-
-		op := operator.New(&operator.Arguments{
-			Ctx:         ctx,
-			Logger:      logger,
-			GitClient:   gitClient,
-			MasterKey:   orb.Masterkey,
-			DesiredFile: "desired.yml",
-			CurrentFile: currentFile,
-			SecretsFile: secretsFile,
-			Watchers: []operator.Watcher{
-				immediate.New(logger),
-				cron.New(logger, "@every 10s"),
-			},
-			RootAssembler: orbiter.New(nil, nil, adapter.New(&model.Config{
-				Logger:             logger,
-				ConfigID:           configID,
-				OrbiterVersion:     version,
-				OrbiterCommit:      gitCommit,
-				NodeagentRepoURL:   orb.URL,
-				NodeagentRepoKey:   orb.Repokey,
-				CurrentFile:        currentFile,
-				SecretsFile:        secretsFile,
-				Masterkey:          orb.Masterkey,
-				ConnectFromOutside: !recur,
-			})),
-			BeforeIteration: before,
+		op := operator.New(ctx, logger, orbiter.Takeoff(
+			ctx,
+			logger,
+			gitClient,
+			gitCommit,
+			orbFile.Masterkey,
+			recur,
+			orb.AdaptFunc(
+				logger,
+				orbFile,
+				gitCommit,
+				!recur,
+				deploy),
+		), []operator.Watcher{
+			immediate.New(logger),
+			cron.New(logger, "@every 10s"),
 		})
 
-		iterations := make(chan *operator.IterationDone)
 		if err := op.Initialize(); err != nil {
 			panic(err)
 		}
 
 		executables.Populate()
 
-		go op.Run(iterations)
+		op.Run()
 
-	outer:
-		for it := range iterations {
-			if destroy {
-				if it.Error != nil {
-					panic(it.Error)
-				}
-				return nil
-			}
-
-			if recur {
-				if it.Error != nil {
-					logger.Error(it.Error)
-				}
-				continue
-			}
-
-			if it.Error != nil {
-				panic(it.Error)
-			}
-			statusReader := struct {
-				Deps map[string]struct {
-					Current struct {
-						State struct {
-							Status string
-						}
-					}
-				}
-			}{}
-			yaml.Unmarshal(it.Current, &statusReader)
-			for _, cluster := range statusReader.Deps {
-				if cluster.Current.State.Status != "running" {
-					continue outer
-				}
-			}
-			break
-		}
 		return nil
 	}
 	return cmd

@@ -1,20 +1,8 @@
 # Develop
 
-Configure your tooling to use certain environment variables. E.g. in VSCode, add the following to your settings.json.
-
-```json
-{
-    "go.testEnvVars": {
-        "MODE": "DEBUG",
-        "ORBITER_ROOT": "/home/elio/Code/src/github.com/caos/orbiter"
-    },
-    "go.testTimeout": "40m",
-}
-```
-
-Run the tests you find in internal/kinds/clusters/kubernetes/test/kubernetes_test.go in debug mode
-
-For debugging node agents, use a configuration similar to the following VSCode launch.json, adjusting the host IP
+1. Commit your local changes using Commitizen
+1. Run a local Orbiter in debug mode by invoking `./scripts/debug.sh ~/.orb/config`
+1. In VSCode, use the following launch.json configuration and start a debug session
 
 ```json
 {
@@ -27,8 +15,12 @@ For debugging node agents, use a configuration similar to the following VSCode l
             "apiVersion": 2,
             "mode": "remote",
             "port": 5000,
-            "host": "10.61.0.127"
+            "host": "127.0.0.1"
         },
     ]
 }
 ```
+
+# Architecture
+
+See [](docs/kind.md)
