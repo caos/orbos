@@ -225,6 +225,15 @@ http {
 				ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 				for _, vip := range d.VIPs {
 					for _, transport := range vip.Transport {
+
+						if transport.SourcePort == 22 {
+							self := nodeagents[d.Self.ID()]
+							if self.Software == nil {
+								self.Software = &common.Software{}
+							}
+							self.Software.SSHD.Config = map[string]string{"listenaddress": d.Self.IP()}
+						}
+
 						for _, dest := range transport.Destinations {
 							destComputes, err := svc.List(dest.Pool, true)
 							if err != nil {

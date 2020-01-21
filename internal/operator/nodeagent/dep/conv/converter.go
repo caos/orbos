@@ -3,6 +3,7 @@ package conv
 import (
 	"github.com/pkg/errors"
 
+	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/cri"
@@ -13,8 +14,8 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/keepalived"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/nginx"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sshd"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/swap"
-	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -60,6 +61,10 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		&nodeagent.Dependency{
 			Desired:   sw.KeepaliveD,
 			Installer: keepalived.New(d.logger, d.pm, d.sysd, d.cipher),
+		},
+		&nodeagent.Dependency{
+			Desired:   sw.SSHD,
+			Installer: sshd.New(d.sysd),
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.Nginx,
@@ -111,6 +116,8 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency) (sw comm
 			sw.KeepaliveD = dependency.Current
 		case nginx.Installer:
 			sw.Nginx = dependency.Current
+		case sshd.Installer:
+			sw.SSHD = dependency.Current
 		default:
 			panic(errors.Errorf("No installer type for dependency %s found", i))
 		}
