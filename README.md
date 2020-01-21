@@ -58,8 +58,8 @@ EOF
 
 ```bash
 # Add the bootstrap key pair to the remote secrets file. For simplicity, we use the repokey here.
-orbctl addsecret myorbprodstatic_bootstrapkey --stdin
-orbctl addsecret myorbprodstatic_bootstrapkey_pub --stdin
+orbctl addsecret mystaticprovider.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
+orbctl addsecret mystaticprovider.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
 ```
 
 ### Bootstrap A New Static Cluster On Firecracker VMs Using Ignite
@@ -79,7 +79,7 @@ Make sure your orb repo contains a desired.yml file similar to [this example](./
 orbctl takeoff
 
 # When the orbiter exits, overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && orbctl readsecret myorbprod_kubeconfig > ~/.kube/config
+mkdir -p ~/.kube && orbctl readsecret myk8s.kubeconfig > ~/.kube/config
 
 # Watch your nodes become ready
 kubectl get nodes --watch
@@ -88,7 +88,7 @@ kubectl get nodes --watch
 kubectl get pods --all-namespaces --watch
 
 # [Optional] Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore.
-orbctl readsecret myorbprodstatic_maintenancekey > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
+orbctl readsecret mystaticprovider.maintenancekeyprivate > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
 
 # Cleanup your environment
 sudo ignite rm -f $(sudo ignite ps -aq)
