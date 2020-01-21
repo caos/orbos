@@ -4,18 +4,25 @@
 
 ### Create Cluster
 
-1. Create `orb`
-2. Create `orbiter.yml`
-3. Write `secrets.yml`
-4. Takeoff
+#### Create orb.yml
 
-(Re)Create the cluster:
+[orb.yml](../examples/k8s/orb.yml)
+
+#### Create orbiter.yml
+
+[orbiter.yml](../examples/k8s/static/orbiter.yml)
+
+#### Write Secrets
+
+`orbctl -f orb.yml writesecret`
+
+#### Takeoff
 
 ```bash
 orbctl -f {orbfile} takeoff
 ```
 
-### Reset Cluster
+### Tear down Cluster
 
 If you would like to reset a cluster, in this example `kubernetes`, follow these steps.
 
@@ -29,8 +36,3 @@ Destroy the cluster:
 orbctl -f {orbfile} destroy
 ```
 
-(Re)Create the cluster:
-
-```bash
-orbctl -f {orbfile} takeoff
-```

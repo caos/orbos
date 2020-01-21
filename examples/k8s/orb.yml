@@ -1,0 +1,8 @@
+url: git@github.com:caos/demo-orbiter-boom.git
+repokey: |
+  -----BEGIN RSA PRIVATE KEY-----
+  ...
+  Some private key
+  ...
+  -----END RSA PRIVATE KEY-----
+masterkey: "Some master key"
