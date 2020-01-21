@@ -13,14 +13,20 @@ func readSecretCommand(rv rootValues) *cobra.Command {
 
 	return &cobra.Command{
 		Use:     "readsecret [path]",
-		Short:   "Decrypt and print to stdout",
-		Args:    cobra.ExactArgs(1),
+		Short:   "Print a secrets decrypted value to stdout",
+		Long:    "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
+		Args:    cobra.MaximumNArgs(1),
 		Example: `orbctl readsecret k8s.kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			_, logger, gitClient, orbconfig, errFunc := rv()
 			if errFunc != nil {
 				return errFunc(cmd)
+			}
+
+			path := ""
+			if len(args) > 0 {
+				path = args[0]
 			}
 
 			value, err := orbiter.ReadSecret(
@@ -30,7 +36,7 @@ func readSecretCommand(rv rootValues) *cobra.Command {
 					gitCommit,
 					false,
 					false),
-				args[0])
+				path)
 			if err != nil {
 				panic(err)
 			}

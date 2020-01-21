@@ -6,7 +6,6 @@ import (
 
 type DesiredV0 struct {
 	Common orbiter.Common `yaml:",inline"`
-	Deps   map[string]*orbiter.Tree
 	Spec   struct {
 		Verbose  bool
 		Versions struct {

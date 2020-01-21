@@ -1,121 +1,89 @@
 package orbiter
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/manifoldco/promptui"
 
 	"github.com/caos/orbiter/internal/git"
 )
 
-type ReadSecretFunc func(path []string) (string, error)
-
-type WriteSecretFunc func(path []string, value string) error
-
-func AdaptReadSecret(path []string, deps map[string]ReadSecretFunc, mapping map[string]*Secret) (string, error) {
-
-	if len(path) == 0 {
-		return "", errors.New("no path provided")
+func JoinPath(base string, append ...string) string {
+	for _, item := range append {
+		base = fmt.Sprintf("%s.%s", base, item)
 	}
-
-	key := path[0]
-
-	if len(path) == 1 {
-		if len(mapping) == 0 {
-			return "", errors.New("kind does not need or support secrets")
-		}
-
-		secret, ok := mapping[key]
-		if !ok {
-			return "", errors.Errorf("unknown secret %s", key)
-		}
-		return secret.Value, nil
-	}
-
-	if len(deps) == 0 {
-		return "", errors.Errorf("kind does not need or support dependencies")
-	}
-
-	read, ok := deps[key]
-	if !ok {
-		return "", errors.Errorf("dependency %s not found", key)
-	}
-
-	if read == nil {
-		return "", errors.Errorf("dependency %s does not need or support secrets", key)
-	}
-
-	val, err := read(path[1:])
-	return val, errors.Wrapf(err, "reading secret from dependency %s failed", key)
-}
-
-func AdaptWriteSecret(path []string, value string, deps map[string]WriteSecretFunc, mapping map[string]*Secret) error {
-
-	if len(path) == 0 {
-		return errors.New("no path provided")
-	}
-
-	key := path[0]
-
-	if len(path) == 1 {
-		if len(mapping) == 0 {
-			return errors.New("kind does not need or support secrets")
-		}
-
-		secret, ok := mapping[key]
-		if !ok {
-			return errors.Errorf("unknown secret %s", key)
-		}
-		secret.Value = value
-		return nil
-	}
-
-	if len(deps) == 0 {
-		return errors.Errorf("kind does not need or support dependencies")
-	}
-
-	write, ok := deps[key]
-	if !ok {
-		return errors.Errorf("dependency %s not found", key)
-	}
-
-	if write == nil {
-		return errors.Errorf("dependency %s does not need or support secrets", key)
-	}
-
-	return errors.Wrapf(write(path[1:], value), "reading secret from dependency %s failed", key)
+	return base
 }
 
 func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
 
-	treeDesired, treeSecrets, err := parse(gitClient)
+	secret, _, err := findSecret(gitClient, adapt, path)
 	if err != nil {
 		return "", err
 	}
 
-	_, _, read, _, err := adapt(treeDesired, treeSecrets, &Tree{})
-	if err != nil {
-		return "", err
-	}
-
-	return read(strings.Split(path, "."))
+	return secret.Value, nil
 }
 
 func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) error {
 
+	secret, tree, err := findSecret(gitClient, adapt, path)
+	if err != nil {
+		return err
+	}
+
+	secret.Value = value
+
+	return pushSecretsFunc(gitClient, tree)()
+}
+
+func findSecret(gitClient *git.Client, adapt AdaptFunc, path string) (*Secret, *Tree, error) {
 	treeDesired, treeSecrets, err := parse(gitClient)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	_, _, _, write, err := adapt(treeDesired, treeSecrets, &Tree{})
+	_, _, secrets, err := adapt(treeDesired, treeSecrets, &Tree{})
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 
-	if err := write(strings.Split(path, "."), value); err != nil {
-		return err
+	if path != "" {
+		sec, err := exactSecret(secrets, path)
+		return sec, treeSecrets, err
 	}
 
-	return pushSecretsFunc(gitClient, treeSecrets)()
+	items := make([]string, 0, len(secrets))
+	for key := range secrets {
+		items = append(items, key)
+	}
+
+	sort.Slice(items, func(i, j int) bool {
+		iDots := strings.Count(items[i], ".")
+		jDots := strings.Count(items[j], ".")
+		return iDots < jDots || iDots == jDots && items[i] < items[j]
+	})
+
+	prompt := promptui.Select{
+		Label: "Select Secret",
+		Items: items,
+	}
+
+	_, result, err := prompt.Run()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sec, err := exactSecret(secrets, result)
+	return sec, treeSecrets, err
+}
+
+func exactSecret(secrets map[string]*Secret, path string) (*Secret, error) {
+	secret, ok := secrets[path]
+	if !ok {
+		return nil, fmt.Errorf("Secret %s not found", path)
+	}
+	return secret, nil
 }
