@@ -60,6 +60,9 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 			if len(fields) > 1 {
 				value = fields[1]
 			}
+			if pkg.Config == nil {
+				pkg.Config = make(map[string]string)
+			}
 			pkg.Config["listenaddress"] = value
 			return pkg, nil
 		}
