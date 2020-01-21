@@ -17,8 +17,9 @@ func writeSecretCommand(rv rootValues) *cobra.Command {
 		file  string
 		stdin bool
 		cmd   = &cobra.Command{
-			Use:   "writesecret [name]",
-			Short: "Encrypt and push",
+			Use:   "writesecret [path]",
+			Short: "Encrypt a secret and push it to the repository",
+			Long:  "Encrypt a secret and push it to the repository.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 			Args:  cobra.MaximumNArgs(1),
 			Example: `orbctl writesecret mystaticprovider.bootstrapkey --file ~/.ssh/my-orb-bootstrap
 orbctl writesecret mystaticprovider.bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
@@ -27,9 +28,9 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 	)
 
 	flags := cmd.Flags()
-	flags.StringVar(&value, "value", "", "Secret phrase value used for encrypting and decrypting secrets")
-	flags.StringVarP(&file, "file", "s", "", "Secret phrase file used for encrypting and decrypting secrets")
-	flags.BoolVar(&stdin, "stdin", false, "Read Secret phrase used for encrypting and decrypting secrets from standard input")
+	flags.StringVar(&value, "value", "", "Secret value to encrypt")
+	flags.StringVarP(&file, "file", "s", "", "File containing the value to encrypt")
+	flags.BoolVar(&stdin, "stdin", false, "Value to encrypt is read from standard input")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
