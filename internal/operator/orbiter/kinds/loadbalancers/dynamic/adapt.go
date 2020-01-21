@@ -210,7 +210,7 @@ http {
 								if deepNa.Software == nil {
 									deepNa.Software = &common.Software{}
 								}
-								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": d.Self.IP()}
+								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": compute.IP()}
 							}
 						}
 					}

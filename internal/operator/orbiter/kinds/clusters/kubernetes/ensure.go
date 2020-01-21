@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -22,6 +24,15 @@ func ensure(
 	repoURL string,
 	repoKey string,
 	orbiterCommit string) error {
+
+	for id, na := range nodeAgentsDesired {
+		if na.Software == nil {
+			continue
+		}
+		for key, value := range na.Software.SSHD.Config {
+			fmt.Println(id, key, value)
+		}
+	}
 
 	current.Status = "maintaining"
 	current.Computes = make(map[string]*Compute)

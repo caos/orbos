@@ -64,7 +64,8 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 				},
 			}),
 		}); err != nil {
-			panic(err)
+			logger.Error(err)
+			return
 		}
 
 		statusReader := struct {
