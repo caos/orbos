@@ -9,7 +9,10 @@ type Deps struct {
 
 type DesiredV0 struct {
 	Common *orbiter.Common `yaml:",inline"`
-	Deps   Deps
+	Spec   struct {
+		Verbose bool
+	}
+	Deps Deps
 }
 
 type SecretsV0 struct {

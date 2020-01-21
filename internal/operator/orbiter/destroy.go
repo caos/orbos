@@ -15,7 +15,7 @@ func Destroy(gitClient *git.Client, adapt AdaptFunc) error {
 	}
 
 	treeCurrent := &Tree{}
-	_, destroy, _, _, err := adapt(treeDesired, treeSecrets, treeCurrent)
+	_, destroy, _, err := adapt(treeDesired, treeSecrets, treeCurrent)
 	if err != nil {
 		return err
 	}

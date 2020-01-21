@@ -24,7 +24,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 		}
 
 		treeCurrent := &Tree{}
-		ensure, _, _, _, err := adapt(treeDesired, treeSecrets, treeCurrent)
+		ensure, _, _, err := adapt(treeDesired, treeSecrets, treeCurrent)
 		if err != nil {
 			logger.Error(err)
 			return

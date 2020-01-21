@@ -19,7 +19,7 @@ func writeSecretCommand(rv rootValues) *cobra.Command {
 		cmd   = &cobra.Command{
 			Use:   "writesecret [name]",
 			Short: "Encrypt and push",
-			Args:  cobra.ExactArgs(1),
+			Args:  cobra.MaximumNArgs(1),
 			Example: `orbctl writesecret mystaticprovider.bootstrapkey --file ~/.ssh/my-orb-bootstrap
 orbctl writesecret mystaticprovider.bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
 orbctl writesecret mygceprovider.google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
@@ -43,6 +43,11 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return errFunc(cmd)
 		}
 
+		path := ""
+		if len(args) > 0 {
+			path = args[0]
+		}
+
 		if err := orbiter.WriteSecret(
 			gitClient,
 			orb.AdaptFunc(logger,
@@ -50,7 +55,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 				gitCommit,
 				false,
 				false),
-			args[0],
+			path,
 			s); err != nil {
 			panic(err)
 		}

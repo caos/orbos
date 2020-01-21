@@ -16,21 +16,25 @@ func AdaptFunc(
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, readSecretFunc orbiter.ReadSecretFunc, writeSecretFunc orbiter.WriteSecretFunc, err error) {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind := &DesiredV0{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
+		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
+			logger = logger.Verbose()
+		}
+
 		secretsKind := &SecretsV0{Common: secretsTree.Common}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
 		}
 		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
@@ -38,8 +42,8 @@ func AdaptFunc(
 		providerCurrents := make(map[string]*orbiter.Tree)
 		providerEnsurers := make([]orbiter.EnsureFunc, 0)
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
-		depSecretReaders := make(map[string]orbiter.ReadSecretFunc)
-		depSecretWriters := make(map[string]orbiter.WriteSecretFunc)
+		secrets = make(map[string]*orbiter.Secret)
+
 		for provID, providerTree := range desiredKind.Deps.Providers {
 
 			providerCurrent := &orbiter.Tree{}
@@ -80,17 +84,17 @@ func AdaptFunc(
 				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				//				}
 
-				providerEnsurer, providerDestroyer, providerSecretReader, providerSecretWriter, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerSecretsTree, providerCurrent)
+				providerEnsurer, providerDestroyer, providerSecrets, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerSecretsTree, providerCurrent)
 				if err != nil {
-					return nil, nil, nil, nil, err
+					return nil, nil, nil, err
 				}
 				providerEnsurers = append(providerEnsurers, providerEnsurer)
 				providerDestroyers = append(providerDestroyers, providerDestroyer)
-				depSecretReaders[provID] = providerSecretReader
-				depSecretWriters[provID] = providerSecretWriter
-				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
+				for path, secret := range providerSecrets {
+					secrets[orbiter.JoinPath(provID, path)] = secret
+				}
 			default:
-				return nil, nil, nil, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+				return nil, nil, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 			}
 		}
 
@@ -141,23 +145,24 @@ func AdaptFunc(
 
 			clusterSecretsTree, ok := secretsKind.Deps.Clusters[clusterID]
 			if !ok {
-				return nil, nil, nil, nil, errors.Errorf("no secrets found for cluster %s", clusterID)
+				return nil, nil, nil, errors.Errorf("no secrets found for cluster %s", clusterID)
 			}
 
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterEnsurer, clusterDestroyer, clusterSecretReader, clusterSecretWriter, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterSecretsTree, clusterCurrent)
+				clusterEnsurer, clusterDestroyer, clusterSecrets, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterSecretsTree, clusterCurrent)
 				if err != nil {
-					return nil, nil, nil, nil, err
+					return nil, nil, nil, err
 				}
 				clusterEnsurers = append(clusterEnsurers, clusterEnsurer)
 				clusterDestroyers = append(clusterDestroyers, clusterDestroyer)
-				depSecretReaders[clusterID] = clusterSecretReader
-				depSecretWriters[clusterID] = clusterSecretWriter
+				for path, secret := range clusterSecrets {
+					secrets[orbiter.JoinPath(clusterID, path)] = secret
+				}
 
 				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 			default:
-				return nil, nil, nil, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+				return nil, nil, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 			}
 		}
 
@@ -194,10 +199,6 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, func(path []string) (string, error) {
-				return orbiter.AdaptReadSecret(path, depSecretReaders, nil)
-			}, func(path []string, value string) error {
-				return orbiter.AdaptWriteSecret(path, value, depSecretWriters, nil)
-			}, nil
+			}, secrets, nil
 	}
 }
