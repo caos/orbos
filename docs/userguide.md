@@ -35,4 +35,3 @@ Destroy the cluster:
 ```bash
 orbctl -f {orbfile} destroy
 ```
-

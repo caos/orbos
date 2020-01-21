@@ -72,7 +72,7 @@ sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh
 sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name fourth
 ```
 
-Make sure your orb repo contains a desired.yml file similar to [this example](./examples/k8s/static/desired.yml). Show your VMs IPs with `sudo ignite ps -a`  
+Make sure your orb repo contains a orbiter.yml file similar to [this example](./examples/k8s/static/orbiter.yml). Show your VMs IPs with `sudo ignite ps -a`  
 
 ```bash
 # Your environment is ready now, finally we can do some actual work. Launch a local orbiter that bootstraps your orb

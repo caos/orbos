@@ -20,7 +20,7 @@ An `Orbs` Git repository contains all relevant information consumed and produced
 
 #### Desired State
 
-The `desired` state is the `Orbs` target state defined by humans. It holds all information the `Orbiter` needs to create the `current` state. All and only human interaction with an `Orbiter` is manifested by changes to its corresponding `desired.yml` file.
+The `desired` state is the `Orbs` target state defined by humans. It holds all information the `Orbiter` needs to create the `current` state. All and only human interaction with an `Orbiter` is manifested by changes to its corresponding `orbiter.yml` file.
 
 #### Current State
 
