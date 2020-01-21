@@ -34,6 +34,10 @@ func ensureCluster(
 		return err
 	}
 
+	if curr.Computes == nil {
+		curr.Computes = make(map[string]*Compute)
+	}
+
 	var controlplanePool *scaleablePool
 	var cpPoolComputes infra.Computes
 	workerPools := make([]*scaleablePool, 0)
@@ -63,11 +67,12 @@ func ensureCluster(
 							Pool:     cpDesired.Pool,
 						},
 					}
-					nodeAgentsDesired[comp.ID()] = &common.NodeAgentSpec{
-						ChangesAllowed: !cpDesired.UpdatesDisabled,
-						Software:       &common.Software{},
-						Firewall:       &common.Firewall{},
+					naSpec, ok := nodeAgentsDesired[comp.ID()]
+					if !ok {
+						naSpec = &common.NodeAgentSpec{}
+						nodeAgentsDesired[comp.ID()] = naSpec
 					}
+					naSpec.ChangesAllowed = !cpDesired.UpdatesDisabled
 				}
 				controlplanePool = &scaleablePool{
 					pool: newPool(
@@ -137,21 +142,29 @@ func ensureCluster(
 						Group:    group,
 					},
 				}
-				nodeAgentsDesired[comp.ID()] = &common.NodeAgentSpec{
-					ChangesAllowed: !wDesired.UpdatesDisabled,
-					Software:       &common.Software{},
-					Firewall:       &common.Firewall{},
+				naSpec, ok := nodeAgentsDesired[comp.ID()]
+				if !ok {
+					naSpec = &common.NodeAgentSpec{}
+					nodeAgentsDesired[comp.ID()] = naSpec
 				}
+				naSpec.ChangesAllowed = !wDesired.UpdatesDisabled
 			}
 		}
 	}
 
-	if curr.Computes == nil {
-		curr.Computes = make(map[string]*Compute)
-	}
-
 	if kubeconfig != nil && kubeconfig.Value != "" {
 		k8sClient.Refresh(&kubeconfig.Value)
+	}
+
+	firewallDone, err := ensureFirewall(
+		curr.Computes,
+		nodeAgentsDesired,
+		nodeAgentsCurrent,
+		desired,
+		kubeAPIAddress.Port)
+	if err != nil || !firewallDone {
+		logger.Debug("Firewall is not ready yet")
+		return err
 	}
 
 	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)
@@ -187,6 +200,7 @@ func ensureCluster(
 		targetVersion,
 		k8sClient)
 	if err != nil {
+		logger.Debug("Scaling is not done yet")
 		return err
 	}
 

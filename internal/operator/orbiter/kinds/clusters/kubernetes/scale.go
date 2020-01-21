@@ -151,53 +151,6 @@ nodes:
 		software := k8sVersion.DefineSoftware()
 		naDesired.Software.Merge(software)
 
-		fw := map[string]common.Allowed{
-			"kubelet": common.Allowed{
-				Port:     fmt.Sprintf("%d", 10250),
-				Protocol: "tcp",
-			},
-		}
-
-		if current.Metadata.Tier == Workers {
-			fw["node-ports"] = common.Allowed{
-				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
-				Protocol: "tcp",
-			}
-		}
-
-		if current.Metadata.Tier == Controlplane {
-			fw["kubeapi-external"] = common.Allowed{
-				Port:     fmt.Sprintf("%d", kubeAPI.Port),
-				Protocol: "tcp",
-			}
-			fw["kubeapi-internal"] = common.Allowed{
-				Port:     fmt.Sprintf("%d", 6666),
-				Protocol: "tcp",
-			}
-			fw["etcd"] = common.Allowed{
-				Port:     fmt.Sprintf("%d-%d", 2379, 2380),
-				Protocol: "tcp",
-			}
-			fw["kube-scheduler"] = common.Allowed{
-				Port:     fmt.Sprintf("%d", 10251),
-				Protocol: "tcp",
-			}
-			fw["kube-controller"] = common.Allowed{
-				Port:     fmt.Sprintf("%d", 10252),
-				Protocol: "tcp",
-			}
-		}
-
-		if desired.Spec.Networking.Network == "calico" {
-			fw["calico-bgp"] = common.Allowed{
-				Port:     fmt.Sprintf("%d", 179),
-				Protocol: "tcp",
-			}
-		}
-
-		firewall := common.Firewall(fw)
-		naDesired.Firewall.Merge(firewall)
-
 		nodeIsJoining := false
 		node, getNodeErr := k8sClient.GetNode(id)
 		if getNodeErr == nil {
@@ -236,12 +189,10 @@ nodes:
 
 		nodeIsReady := naCurrent.NodeIsReady
 		softwareIsReady := naCurrent.Software.Contains(software)
-		firewallIsReady := naCurrent.Open.Contains(firewall)
-		if !nodeIsReady || !softwareIsReady || !firewallIsReady {
+		if !nodeIsReady || !softwareIsReady {
 			logger.WithFields(map[string]interface{}{
 				"node":     nodeIsReady,
 				"software": softwareIsReady,
-				"firewall": firewallIsReady,
 			}).Info("Compute is not ready to join yet")
 			continue nodes
 		}
