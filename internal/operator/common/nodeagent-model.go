@@ -8,6 +8,7 @@ import (
 
 type NodeAgentSpec struct {
 	ChangesAllowed bool
+	BindIP         string
 	//	RebootEnabled  bool
 	Software *Software
 	Firewall *Firewall
