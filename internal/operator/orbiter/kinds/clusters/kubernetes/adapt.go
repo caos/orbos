@@ -17,24 +17,28 @@ func AdaptFunc(
 	deployOrbiterAndBoom bool,
 	ensureProviders func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (map[string]interface{}, error),
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, readSecretFunc orbiter.ReadSecretFunc, writeSecretFunc orbiter.WriteSecretFunc, err error) {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind := &DesiredV0{Common: *desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
+
+		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
+			logger = logger.Verbose()
+		}
 
 		secretsKind := &SecretsV0{
 			Common:  *secretsTree.Common,
 			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
 		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
 		}
 		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
@@ -45,7 +49,7 @@ func AdaptFunc(
 
 		if deployOrbiterAndBoom && secretsKind.Secrets.Kubeconfig.Value != "" {
 			if err := ensureArtifacts(logger, secretsKind.Secrets.Kubeconfig, orb, takeoff, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
-				return nil, nil, nil, nil, err
+				return nil, nil, nil, err
 			}
 		}
 
@@ -56,10 +60,6 @@ func AdaptFunc(
 				Version: "v0",
 			},
 			Current: *current,
-		}
-
-		secretsMap := map[string]*orbiter.Secret{
-			"kubeconfig": secretsKind.Secrets.Kubeconfig,
 		}
 
 		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
@@ -95,10 +95,8 @@ func AdaptFunc(
 				}
 
 				return destroy(providers, secretsKind.Secrets.Kubeconfig)
-			}, func(path []string) (string, error) {
-				return orbiter.AdaptReadSecret(path, nil, secretsMap)
-			}, func(path []string, value string) error {
-				return orbiter.AdaptWriteSecret(path, value, nil, secretsMap)
+			}, map[string]*orbiter.Secret{
+				"kubeconfig": secretsKind.Secrets.Kubeconfig,
 			}, nil
 	}
 }

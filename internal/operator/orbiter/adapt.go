@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(desired *Tree, secrets *Tree, current *Tree) (EnsureFunc, DestroyFunc, ReadSecretFunc, WriteSecretFunc, error)
+type AdaptFunc func(desired *Tree, secrets *Tree, current *Tree) (EnsureFunc, DestroyFunc, map[string]*Secret, error)
 
 func parse(gitClient *git.Client) (desired *Tree, secrets *Tree, err error) {
 
