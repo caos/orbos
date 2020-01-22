@@ -27,7 +27,6 @@ func (p *PackageManager) debbasedInstalled() error {
 }
 
 func (p *PackageManager) rembasedInstalled() error {
-	p.logger = p.logger.Verbose()
 	return p.listAndParse(exec.Command("yum", "list", "installed"), "Installed Packages", func(line string) (string, string, error) {
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
