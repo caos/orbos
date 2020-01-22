@@ -10,6 +10,48 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
+func initializeCurrents(
+	curr *CurrentCluster,
+	desired DesiredV0,
+	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	compute infra.Compute) {
+
+}
+
+func initializeCurrent(
+	curr *CurrentCluster,
+	desired DesiredV0,
+	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	compute infra.Compute,
+	workerPool string) error {
+
+	pool := desired.Spec.ControlPlane
+	if workerPool != "" {
+		wPool, ok = desired.Spec.Workers[workerPool]
+		if !ok {
+			return errors.Errorf("Pool %s is not configured")
+		}
+	}
+
+	curr.Computes[compute.ID()] = &Compute{
+		Status: "maintaining",
+		Metadata: ComputeMetadata{
+			Tier:     Controlplane,
+			Provider: desired.Spec.ControlPlane.Provider,
+			Pool:     desired.Spec.ControlPlane.Pool,
+		},
+	}
+
+	naSpec, ok := nodeAgentsDesired[compute.ID()]
+	if !ok {
+		naSpec = &common.NodeAgentSpec{}
+		nodeAgentsDesired[compute.ID()] = naSpec
+	}
+	naSpec.ChangesAllowed = !desired.Spec.ControlPlane.UpdatesDisabled
+}
+
 // TODO per pool:
 // 1. Downscale if desired < current
 // 2. Migrate
