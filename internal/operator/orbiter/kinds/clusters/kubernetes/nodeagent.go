@@ -8,10 +8,82 @@ import (
 	"time"
 
 	"github.com/caos/orbiter/internal/executables"
+	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/logging"
 	"github.com/pkg/errors"
 )
+
+func ensureNodeAgents(
+	logger logging.Logger,
+	orbiterCommit string,
+	repoURL string,
+	repoKey string,
+	computes infra.Computes,
+	naCurrent map[string]*common.NodeAgentCurrent) (bool, error) {
+
+	ready := true
+	for _, compute := range computes {
+		ok, err := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute, naCurrent[compute.ID()])
+		if err != nil {
+			return false, err
+		}
+		if !ok {
+			ready = false
+		}
+	}
+	return ready, nil
+}
+
+func ensureNodeAgent(
+	logger logging.Logger,
+	orbiterCommit string,
+	repoURL string,
+	repoKey string,
+	compute infra.Compute,
+	naCurrent *common.NodeAgentCurrent) (bool, error) {
+
+	var response []byte
+	isActive := "sudo systemctl is-active node-agentd"
+	err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+		var cbErr error
+		response, cbErr = cmp.Execute(nil, nil, isActive)
+		return errors.Wrapf(cbErr, "remote command %s returned an unsuccessful exit code", isActive)
+	})
+	logger.WithFields(map[string]interface{}{
+		"command":  isActive,
+		"response": string(response),
+	}).Debug("Executed command")
+	if err != nil && !strings.Contains(string(response), "activating") {
+		return false, loggedInstallNodeAgent(logger, "inactive", orbiterCommit, repoURL, repoKey, compute)
+	}
+
+	if naCurrent != nil && naCurrent.Commit == orbiterCommit {
+		return true, nil
+	}
+	showVersion := "node-agent --version"
+
+	err = try(logger, time.NewTimer(7*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
+		var cbErr error
+		response, cbErr = cmp.Execute(nil, nil, showVersion)
+		return errors.Wrapf(cbErr, "running command %s remotely failed", showVersion)
+	})
+	logger.WithFields(map[string]interface{}{
+		"command":  showVersion,
+		"response": string(response),
+	}).Debug("Executed command")
+
+	fields := strings.Fields(string(response))
+	if err == nil && len(fields) > 1 && fields[1] == orbiterCommit {
+		return true, nil
+	}
+
+	from := ""
+	if len(fields) > 1 {
+		from = fields[1]
+	}
+	return false, loggedInstallNodeAgent(logger, from, orbiterCommit, repoURL, repoKey, compute)
+}
 
 func installNodeAgent(
 	logger logging.Logger,
@@ -182,4 +254,21 @@ WantedBy=multi-user.target
 
 	return nil
 
+}
+
+func loggedInstallNodeAgent(
+	logger logging.Logger,
+	from,
+	orbiterCommit,
+	repoURL,
+	repoKey string,
+	compute infra.Compute) error {
+
+	logger.WithFields(map[string]interface{}{
+		"compute": compute.ID(),
+		"from":    from,
+		"to":      orbiterCommit,
+	}).Info("Ensuring node agent")
+
+	return installNodeAgent(logger, compute, repoURL, repoKey)
 }

@@ -58,8 +58,9 @@ func ensureFirewall(currentComputes map[string]*Compute, nodeAgentsDesired map[s
 		firewall := common.Firewall(fw)
 		nodeAgentsDesired[id].Firewall.Merge(firewall)
 
-		if ready {
-			ready = nodeAgentsCurrent[id].Open.Contains(firewall)
+		curr, ok := nodeAgentsCurrent[id]
+		if ready && ok {
+			ready = curr.Open.Contains(firewall)
 		}
 	}
 

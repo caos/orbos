@@ -156,6 +156,19 @@ func ensureCluster(
 		k8sClient.Refresh(&kubeconfig.Value)
 	}
 
+	nodeagentsDone, err := ensureNodeAgents(
+		logger,
+		orbiterCommit,
+		repoURL,
+		repoKey,
+		append(cpPoolComputes, workerComputes...),
+		nodeAgentsCurrent,
+	)
+	if err != nil || !nodeagentsDone {
+		logger.Debug("Node Agents are not ready yet")
+		return err
+	}
+
 	firewallDone, err := ensureFirewall(
 		curr.Computes,
 		nodeAgentsDesired,
@@ -170,9 +183,6 @@ func ensureCluster(
 	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)
 	upgradingDone, err := ensureK8sVersion(
 		logger,
-		orbiterCommit,
-		repoURL,
-		repoKey,
 		targetVersion,
 		k8sClient,
 		curr.Computes,

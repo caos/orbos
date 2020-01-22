@@ -3,8 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"sort"
-	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -17,9 +15,6 @@ import (
 
 func ensureK8sVersion(
 	logger logging.Logger,
-	orbiterCommit string,
-	repoURL string,
-	repoKey string,
 	target k8s.KubernetesVersion,
 	k8sClient *k8s.Client,
 	currentComputes map[string]*Compute,
@@ -136,18 +131,6 @@ func ensureK8sVersion(
 		desiredSoftware.Merge(naCurrent.Software)
 		naDesired.Firewall.Merge(naCurrent.Open)
 
-		ensureNodeagent := func(from string) func() error {
-			return func() error {
-				logger.WithFields(map[string]interface{}{
-					"compute": compute.ID(),
-					"from":    from,
-					"to":      orbiterCommit,
-				}).Info("Ensuring node agent")
-
-				return errors.Wrap(installNodeAgent(logger, compute, repoURL, repoKey), "upgrading node agent failed")
-			}
-		}
-
 		ensureKubeadm := func() error {
 			desiredSoftware.Kubeadm = common.Package{
 				Version: to.Kubeadm.Version,
@@ -217,40 +200,6 @@ func ensureK8sVersion(
 		}
 
 		id := compute.ID()
-
-		var response []byte
-		isActive := "sudo systemctl is-active node-agentd"
-		err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
-			var cbErr error
-			response, cbErr = cmp.Execute(nil, nil, isActive)
-			return errors.Wrapf(cbErr, "remote command %s returned an unsuccessful exit code", isActive)
-		})
-		logger.WithFields(map[string]interface{}{
-			"command":  isActive,
-			"response": string(response),
-		}).Debug("Executed command")
-		if err != nil && !strings.Contains(string(response), "activating") {
-			return ensureNodeagent("not running"), nil
-		}
-
-		if naCurrent.Commit != orbiterCommit {
-			showVersion := "node-agent --version"
-
-			err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, compute, func(cmp infra.Compute) error {
-				var cbErr error
-				response, cbErr = cmp.Execute(nil, nil, showVersion)
-				return errors.Wrapf(cbErr, "running command %s remotely failed", showVersion)
-			})
-			logger.WithFields(map[string]interface{}{
-				"command":  showVersion,
-				"response": string(response),
-			}).Debug("Executed command")
-
-			fields := strings.Fields(string(response))
-			if err != nil || len(fields) != 2 || fields[1] != orbiterCommit {
-				return ensureNodeagent(fields[1]), nil
-			}
-		}
 
 		k8sNode, err := k8sClient.GetNode(id)
 		if k8sNode == nil || err != nil {
