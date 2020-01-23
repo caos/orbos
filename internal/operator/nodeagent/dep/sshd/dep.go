@@ -14,7 +14,7 @@ import (
 )
 
 type Installer interface {
-	isSwap()
+	isSSHD()
 	nodeagent.Installer
 }
 
@@ -31,9 +31,9 @@ func (sshdDep) Is(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (sshdDep) isSwap() {}
+func (sshdDep) isSSHD() {}
 
-func (sshdDep) String() string { return "Swap" }
+func (sshdDep) String() string { return "SSHD" }
 
 func (*sshdDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*sshdDep)
@@ -54,7 +54,7 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 			return pkg, err
 		}
 		line, err := buf.ReadString('\n')
-		if strings.Contains("listenaddress", line) {
+		if strings.Contains(line, "listenaddress") {
 			fields := strings.Fields(line)
 			value := ""
 			if len(fields) > 1 {
