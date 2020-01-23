@@ -1,37 +1,29 @@
 package kubernetes
 
 import (
-	"sync"
-
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
+	"github.com/pkg/errors"
 )
 
+/*
 type pool struct {
-	logger   logging.Logger
-	repoURL  string
-	repoKey  string
-	poolSpec *poolSpec
-	cloud    infra.Pool
-	k8s      *k8s.Client
-	cmps     []infra.Compute
-	mux      sync.Mutex
-}
-
-type poolSpec struct {
-	group string
-	spec  Pool
+	logger  logging.Logger
+	repoURL string
+	repoKey string
+	desired Pool
+	cloud   infra.Pool
+	k8s     *k8s.Client
+	cmps    []infra.Compute
+	mux     sync.Mutex
 }
 
 func newPool(
 	logger logging.Logger,
 	repoURL string,
 	repoKey string,
-	poolSpec *poolSpec,
+	desired Pool,
 	cloudPool infra.Pool,
 	k8s *k8s.Client,
 	initialComputes []infra.Compute) *pool {
@@ -39,17 +31,13 @@ func newPool(
 		logger,
 		repoURL,
 		repoKey,
-		poolSpec,
+		desired,
 		cloudPool,
 		k8s,
 		initialComputes,
 		sync.Mutex{},
 	}
-}
-
-func (p *pool) computes() []infra.Compute {
-	return p.cmps
-}
+}*/
 
 // TODO: Implement
 /*func (p *pool) deleteComputes(number int) error {
@@ -59,99 +47,59 @@ func (p *pool) computes() []infra.Compute {
 }
 */
 
-func (p *pool) cleanupComputes() (err error) {
+func cleanupComputes(logger logging.Logger, pool infra.Pool, k8s *k8s.Client) (err error) {
 
-	remainingComputes := make([]infra.Compute, 0)
-	nodes, err := p.k8s.ListNodes()
+	nodes, err := k8s.ListNodes()
 	if err != nil {
 		return err
 	}
 
-	p.logger.WithFields(map[string]interface{}{
-		"computes": len(p.cmps),
+	computes, err := pool.GetComputes(true)
+	if err != nil {
+		return err
+	}
+	logger.WithFields(map[string]interface{}{
+		"computes": len(computes),
 		"nodes":    len(nodes),
 	}).Debug("Aligning computes to nodes")
 
-	var wg sync.WaitGroup
-	synchronizer := helpers.NewSynchronizer(&wg)
-
 keepCompute:
-	for _, comp := range p.cmps {
+	for _, comp := range computes {
 		for _, node := range nodes {
 			if node.GetName() == comp.ID() {
-				remainingComputes = append(remainingComputes, comp)
 				continue keepCompute
 			}
 		}
-		wg.Add(1)
-		go func(compute infra.Compute) {
-			synchronizer.Done(compute.Remove())
-		}(comp)
-	}
-
-	wg.Wait()
-	if synchronizer.IsError() {
-		return synchronizer
-	}
-
-	p.mux.Lock()
-	p.cmps = remainingComputes
-	p.mux.Unlock()
-
-	return nil
-}
-
-func (p *pool) newComputes(number int, callback func(infra.Compute)) (err error) {
-
-	defer func() {
-		if err != nil {
-			p.logger.WithFields(map[string]interface{}{
-				"message": err.Error(),
-			}).Debug("New computes retured error")
+		if err := comp.Remove(); err != nil {
+			return err
 		}
-	}()
+	}
 
-	var wg sync.WaitGroup
-	synchronizer := helpers.NewSynchronizer(&wg)
-	for it := 0; it < number; it++ {
-		wg.Add(1)
-		go func() {
-			synchronizer.Done(p.newCompute(callback))
-		}()
-	}
-	wg.Wait()
-	if synchronizer.IsError() {
-		return errors.Wrap(synchronizer, "creating new computes failed")
-	}
 	return nil
 }
 
-func (p *pool) newCompute(callback func(infra.Compute)) (err error) {
+func newComputes(pool infra.Pool, number int) (computes []infra.Compute, err error) {
 
-	p.mux.Lock()
-	defer p.mux.Unlock()
-	compute, err := p.cloud.AddCompute()
-	if err != nil {
-		return err
-	}
-	p.mux.Unlock()
+	computes = make([]infra.Compute, number)
 
-	//TODO: Remove. Instead try again later
-	defer func() {
+	var it int
+	for it = 0; it < number; it++ {
+		var compute infra.Compute
+		compute, err = pool.AddCompute()
 		if err != nil {
-			err = errors.Wrapf(err, "creating new compute %s failed", compute.ID())
+			break
+		}
+		computes = append(computes, compute)
+	}
+
+	if err != nil {
+		for _, compute := range computes {
 			if rmErr := compute.Remove(); rmErr != nil {
-				panic(errors.Errorf("Error cleaning up after error creating new compute. Please remove compute %s manually. Original error: %s. Cleanup error: %s", compute.ID(), err.Error(), rmErr.Error()))
+				err = errors.Wrapf(rmErr, "cleaning up compute failed. original error: %s", err)
 			}
 		}
-	}()
-
-	if err := installNodeAgent(p.logger, compute, p.repoURL, p.repoKey); err != nil {
-		return err
+		return nil, err
 	}
 
-	p.mux.Lock()
-	p.cmps = append(p.cmps, compute)
-	callback(compute)
-	return nil
+	return computes, nil
 }

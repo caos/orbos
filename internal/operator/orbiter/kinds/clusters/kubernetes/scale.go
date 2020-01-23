@@ -2,154 +2,100 @@ package kubernetes
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
-type scaleablePool struct {
-	pool         *pool
-	desiredScale int
-}
-
 func ensureScale(
 	logger logging.Logger,
 	desired DesiredV0,
-	currentComputes map[string]*Compute,
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	kubeconfig *orbiter.Secret,
 	psf orbiter.PushSecretsFunc,
-	controlplanePool *scaleablePool,
-	workerPools []*scaleablePool,
+	controlplanePool initializedPool,
+	workerPools []initializedPool,
 	kubeAPI infra.Address,
 	k8sVersion k8s.KubernetesVersion,
-	k8sClient *k8s.Client) (done bool, err error) {
-
-	newCurrentComputeCallback := func(tier Tier, poolSpec *poolSpec) func(infra.Compute) {
-		return func(newCompute infra.Compute) {
-			currentComputes[newCompute.ID()] = &Compute{
-				Status: "maintaining",
-				Metadata: ComputeMetadata{
-					Tier:     tier,
-					Provider: poolSpec.spec.Provider,
-					Pool:     poolSpec.spec.Pool,
-					Group:    poolSpec.group,
-				},
-			}
-		}
-	}
-
-	done = true
+	k8sClient *k8s.Client,
+	initializeCompute func(infra.Compute, initializedPool) (initializedCompute, error)) (bool, error) {
 
 	wCount := 0
 	for _, w := range workerPools {
-		wCount += w.desiredScale
+		wCount += w.desired.Nodes
 	}
 	logger.WithFields(map[string]interface{}{
-		"control_plane_nodes": controlplanePool.desiredScale,
+		"control_plane_nodes": controlplanePool.desired.Nodes,
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
 
-	var wg sync.WaitGroup
-	synchronizer := helpers.NewSynchronizer(&wg)
-	wg.Add(1)
-	go func() {
-		delta := controlplanePool.desiredScale - len(controlplanePool.pool.computes())
-		if delta >= 0 {
-			synchronizer.Done(controlplanePool.pool.newComputes(
-				delta,
-				newCurrentComputeCallback(
-					Controlplane,
-					controlplanePool.pool.poolSpec)))
-			return
+	alignComputes := func(pool initializedPool) (err error) {
+
+		existing, err := pool.computes()
+		if err != nil {
+			return err
 		}
-
-		//synchronizer.Done(errors.New("scaling down controlplane is not supported yet"))
-		//return
-
-		for _, compute := range controlplanePool.pool.computes()[controlplanePool.desiredScale:] {
-			if goErr := k8sClient.DeleteNode(compute.ID(), compute, false); goErr != nil {
-				synchronizer.Done(goErr)
-				return
+		delta := pool.desired.Nodes - len(existing)
+		if delta > 0 {
+			computes, err := newComputes(pool.infra, delta)
+			if err != nil {
+				return err
 			}
-		}
-		synchronizer.Done(controlplanePool.pool.cleanupComputes())
-	}()
-
-	var mux sync.Mutex
-	type downScaler struct {
-		pool     pool
-		computes []infra.Compute
-	}
-	scaleDownWorkers := make([]downScaler, 0)
-	for _, wp := range workerPools {
-		wg.Add(1)
-		go func(workerPool *scaleablePool) {
-			if k8sClient.Available() {
-				if goErr := workerPool.pool.cleanupComputes(); err != nil {
-					synchronizer.Done(goErr)
-					return
+			for _, compute := range computes {
+				_, err := initializeCompute(compute, pool)
+				if err != nil {
+					return err
 				}
 			}
-
-			delta := workerPool.desiredScale - len(workerPool.pool.computes())
-			if delta >= 0 {
-				synchronizer.Done(workerPool.pool.newComputes(
-					delta, newCurrentComputeCallback(
-						Workers,
-						workerPool.pool.poolSpec)))
-				return
+		} else {
+			for _, compute := range existing[pool.desired.Nodes:] {
+				if err := k8sClient.EnsureDeleted(compute.infra.ID(), compute.infra, false); err != nil {
+					return err
+				}
+				if err := compute.infra.Remove(); err != nil {
+					return err
+				}
 			}
-
-			done = false
-			mux.Lock()
-			defer mux.Unlock()
-			scaleDownWorkers = append(scaleDownWorkers, downScaler{
-				pool:     *workerPool.pool,
-				computes: workerPool.pool.computes()[workerPool.desiredScale:],
-			})
-			synchronizer.Done(nil)
-		}(wp)
+		}
+		return nil
 	}
 
-	wg.Wait()
-
-	if synchronizer.IsError() {
-		return false, errors.Wrap(synchronizer, "failed to scale computes")
+	if err := alignComputes(controlplanePool); err != nil {
+		return false, err
 	}
 
-	var joinCP infra.Compute
-	var certsCP infra.Compute
-	var joinWorkers infra.Computes
+	var joinCP *initializedCompute
+	var certsCP *initializedCompute
+	var joinWorkers []initializedCompute
 
-	computes := controlplanePool.pool.computes()
-	var ensuredWorkers int
+	computes, err := controlplanePool.computes()
+	if err != nil {
+		return false, err
+	}
+
 	ensuredControlplane := len(computes)
+	var ensuredWorkers int
 	for _, workerPool := range workerPools {
-		workerComputes := workerPool.pool.computes()
-		computes = append(computes, workerComputes...)
+		workerComputes, err := workerPool.computes()
+		if err != nil {
+			return false, err
+		}
 		ensuredWorkers += len(workerComputes)
+		computes = append(computes, workerComputes...)
 	}
 
 	cpIsReady := true
+	done := true
+
 nodes:
 	for _, compute := range computes {
 
-		id := compute.ID()
-		current := currentComputes[id]
-		naDesired := nodeAgentsDesired[compute.ID()]
-
-		software := k8sVersion.DefineSoftware()
-		naDesired.Software.Merge(software)
+		id := compute.infra.ID()
 
 		nodeIsJoining := false
 		node, getNodeErr := k8sClient.GetNode(id)
@@ -158,48 +104,31 @@ nodes:
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					nodeIsJoining = false
-					current.Status = "running"
-					if current.Metadata.Tier == Controlplane {
-						certsCP = compute
+					compute.markAsRunning()
+					if compute.tier == Controlplane {
+						certsCP = &compute
 					}
 					continue nodes
 				}
 			}
 		}
 
-		if current.Metadata.Tier == Controlplane && nodeIsJoining {
+		if compute.tier == Controlplane && nodeIsJoining {
 			cpIsReady = false
 		}
 
-		current.Status = "maintaining"
 		done = false
 		logger := logger.WithFields(map[string]interface{}{
 			"compute": id,
-			"tier":    current.Metadata.Tier,
+			"tier":    compute.tier,
 		})
 
 		if nodeIsJoining {
 			logger.Info("Node is not ready yet")
 		}
 
-		naCurrent, ok := nodeAgentsCurrent[compute.ID()]
-		if !ok {
-			naCurrent = &common.NodeAgentCurrent{} // Avoid many nil checks
-		}
-
-		nodeIsReady := naCurrent.NodeIsReady
-		softwareIsReady := naCurrent.Software.Contains(software)
-		if !nodeIsReady || !softwareIsReady {
-			logger.WithFields(map[string]interface{}{
-				"node":     nodeIsReady,
-				"software": softwareIsReady,
-			}).Info("Compute is not ready to join yet")
-			continue nodes
-		}
-
-		logger.Info("Compute is ready to join now")
-		if current.Metadata.Tier == Controlplane && joinCP == nil {
-			joinCP = compute
+		if compute.tier == Controlplane && joinCP == nil {
+			joinCP = &compute
 			continue nodes
 		}
 		joinWorkers = append(joinWorkers, compute)
@@ -218,11 +147,11 @@ nodes:
 	if certsCP != nil && (joinCP != nil || len(joinWorkers) > 0) {
 		runes := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 		jointoken = fmt.Sprintf("%s.%s", helpers.RandomStringRunes(6, runes), helpers.RandomStringRunes(16, runes))
-		if _, err := certsCP.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
+		if _, err := certsCP.infra.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
 			return false, errors.Wrap(err, "creating new join token failed")
 		}
 
-		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
+		defer certsCP.infra.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
 	}
 
 	var certKey []byte
@@ -236,7 +165,7 @@ nodes:
 
 		if !doKubeadmInit && certKey == nil {
 			var err error
-			certKey, err = certsCP.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
+			certKey, err = certsCP.infra.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
@@ -245,8 +174,8 @@ nodes:
 
 		joinKubeconfig, err := join(
 			logger,
-			joinCP,
-			certsCP,
+			joinCP.infra,
+			certsCP.infra,
 			desired,
 			kubeAPI,
 			jointoken,
@@ -267,41 +196,17 @@ nodes:
 	}
 
 	for _, worker := range joinWorkers {
-		wg.Add(1)
-		go func(w infra.Compute) {
-			_, goErr := join(
-				logger,
-				w,
-				certsCP,
-				desired,
-				kubeAPI,
-				string(jointoken),
-				k8sVersion,
-				"",
-				false)
-			synchronizer.Done(errors.Wrapf(goErr, "joining worker %s failed", w.ID()))
-		}(worker)
-	}
-
-	wg.Wait()
-
-	if synchronizer.IsError() {
-		return false, errors.Wrap(synchronizer, "failed joining computes")
-	}
-
-	for _, down := range scaleDownWorkers {
-		for _, cmp := range down.computes {
-			if err := k8sClient.DeleteNode(cmp.ID(), cmp, true); err != nil {
-				return false, errors.Wrapf(err, "failed deleting node %s from pool %s", cmp.ID(), down.pool.poolSpec.group)
-			}
-			//			defer func() {
-			//				if err != nil {
-			//					delete(curr.Computes, cmp.ID())
-			//				}
-			//			}()
-		}
-		if err := down.pool.cleanupComputes(); err != nil {
-			return false, errors.Wrapf(err, "failed cleaning up computes %s from pool %s", infra.Computes(down.computes), down.pool.poolSpec.group)
+		if _, err := join(
+			logger,
+			worker.infra,
+			certsCP.infra,
+			desired,
+			kubeAPI,
+			string(jointoken),
+			k8sVersion,
+			"",
+			false); err != nil {
+			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}
 

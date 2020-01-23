@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/caos/orbiter/internal/operator/orbiter"
 )
 
@@ -22,6 +24,14 @@ type DesiredV0 struct {
 		ControlPlane Pool
 		Workers      map[string]*Pool
 	}
+}
+
+func (d *DesiredV0) validate() error {
+
+	if d.Spec.ControlPlane.Nodes != 1 && d.Spec.ControlPlane.Nodes != 3 && d.Spec.ControlPlane.Nodes != 5 {
+		return errors.Errorf("Controlplane nodes can only be scaled to 1, 3 or 5 but desired are %d", d.Spec.ControlPlane.Nodes)
+	}
+	return nil
 }
 
 type Pool struct {

@@ -6,10 +6,9 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 )
 
-func ensureFirewall(currentComputes map[string]*Compute, nodeAgentsDesired map[string]*common.NodeAgentSpec, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, desired DesiredV0, kubeAPIPort uint16) (bool, error) {
+func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute initializedCompute), ensure func(computes []initializedCompute) bool) {
 
-	ready := true
-	for id, current := range currentComputes {
+	desireFirewall := func(compute initializedCompute) common.Firewall {
 
 		fw := map[string]common.Allowed{
 			"kubelet": common.Allowed{
@@ -18,14 +17,14 @@ func ensureFirewall(currentComputes map[string]*Compute, nodeAgentsDesired map[s
 			},
 		}
 
-		if current.Metadata.Tier == Workers {
+		if compute.tier == Workers {
 			fw["node-ports"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
-		if current.Metadata.Tier == Controlplane {
+		if compute.tier == Controlplane {
 			fw["kubeapi-external"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPIPort),
 				Protocol: "tcp",
@@ -55,14 +54,28 @@ func ensureFirewall(currentComputes map[string]*Compute, nodeAgentsDesired map[s
 			}
 		}
 
-		firewall := common.Firewall(fw)
-		nodeAgentsDesired[id].Firewall.Merge(firewall)
-
-		curr, ok := nodeAgentsCurrent[id]
-		if ready && ok {
-			ready = curr.Open.Contains(firewall)
+		if compute.desiredNodeagent.Firewall == nil {
+			compute.desiredNodeagent.Firewall = &common.Firewall{}
 		}
+		firewall := common.Firewall(fw)
+		compute.desiredNodeagent.Firewall.Merge(firewall)
+		return firewall
 	}
 
-	return ready, nil
+	return func(compute initializedCompute) {
+			desireFirewall(compute)
+		}, func(computes []initializedCompute) bool {
+			ready := true
+			for _, compute := range computes {
+
+				firewall := desireFirewall(compute)
+
+				if compute.currentNodeagent == nil {
+					ready = false
+				} else if ready {
+					ready = compute.currentNodeagent.Open.Contains(firewall)
+				}
+			}
+			return ready
+		}
 }
