@@ -13,7 +13,7 @@ func AdaptFunc(
 	orb *orbiter.Orb,
 	orbiterCommit string,
 	id string,
-	takeoff bool,
+	oneoff bool,
 	deployOrbiterAndBoom bool,
 	ensureProviders func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (map[string]interface{}, error),
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
@@ -54,7 +54,7 @@ func AdaptFunc(
 		}
 
 		if deployOrbiterAndBoom && secretsKind.Secrets.Kubeconfig.Value != "" {
-			if err := ensureArtifacts(logger, secretsKind.Secrets.Kubeconfig, orb, takeoff, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
+			if err := ensureArtifacts(logger, secretsKind.Secrets.Kubeconfig, orb, oneoff, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
 				deployErrors++
 				logger.WithFields(map[string]interface{}{
 					"count": deployErrors,
@@ -96,7 +96,8 @@ func AdaptFunc(
 					secretsKind.Secrets.Kubeconfig,
 					orb.URL,
 					orb.Repokey,
-					orbiterCommit)
+					orbiterCommit,
+					oneoff)
 			}, func() error {
 				defer func() {
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)

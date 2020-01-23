@@ -23,6 +23,7 @@ func ensureScale(
 	kubeAPI infra.Address,
 	k8sVersion k8s.KubernetesVersion,
 	k8sClient *k8s.Client,
+	oneoff bool,
 	initializeCompute func(infra.Compute, initializedPool) (initializedCompute, error)) (bool, error) {
 
 	wCount := 0
@@ -158,6 +159,10 @@ nodes:
 	doKubeadmInit := certsCP == nil
 
 	if joinCP != nil {
+
+		if doKubeadmInit && !oneoff {
+			return false, errors.New("initializing a cluster is not supported when flag --recur is passed")
+		}
 
 		if !doKubeadmInit && !cpIsReady {
 			return false, nil

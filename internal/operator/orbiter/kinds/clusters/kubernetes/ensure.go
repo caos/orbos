@@ -21,7 +21,8 @@ func ensure(
 	kubeconfig *orbiter.Secret,
 	repoURL string,
 	repoKey string,
-	orbiterCommit string) error {
+	orbiterCommit string,
+	oneoff bool) error {
 
 	current.Status = "maintaining"
 	current.Computes = make(map[string]*Compute)
@@ -71,7 +72,8 @@ func ensure(
 		k8sClient,
 		repoURL,
 		repoKey,
-		orbiterCommit); err != nil {
+		orbiterCommit,
+		oneoff); err != nil {
 		return errors.Wrap(err, "ensuring cluster failed")
 	}
 

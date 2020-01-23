@@ -21,7 +21,8 @@ func ensureCluster(
 	k8sClient *k8s.Client,
 	repoURL string,
 	repoKey string,
-	orbiterCommit string) (err error) {
+	orbiterCommit string,
+	oneoff bool) (err error) {
 
 	if kubeconfig != nil && kubeconfig.Value != "" {
 		k8sClient.Refresh(&kubeconfig.Value)
