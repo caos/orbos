@@ -228,9 +228,6 @@ func ensureSoftware(
 			return func() error {
 				logger.WithFields(map[string]interface{}{
 					"compute": compute.infra.ID(),
-					"from":    compute.currentNodeagent.Software,
-					"to":      to,
-					"ready":   compute.currentNodeagent.NodeIsReady,
 				}).Info("Waiting for software to be ensured")
 				return nil
 			}, nil

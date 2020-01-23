@@ -103,6 +103,7 @@ func ensureCluster(
 		kubeAPIAddress,
 		targetVersion,
 		k8sClient,
+		oneoff,
 		func(created infra.Compute, pool initializedPool) (initializedCompute, error) {
 			compute := initializeCompute(created, pool)
 			target := targetVersion.DefineSoftware()

@@ -70,8 +70,8 @@ func ensureScale(
 		return false, err
 	}
 
-	var joinCP *initializedCompute
-	var certsCP *initializedCompute
+	var joinCP infra.Compute
+	var certsCP infra.Compute
 	var joinWorkers []initializedCompute
 
 	computes, err := controlplanePool.computes()
@@ -107,7 +107,7 @@ nodes:
 					nodeIsJoining = false
 					compute.markAsRunning()
 					if compute.tier == Controlplane {
-						certsCP = &compute
+						certsCP = compute.infra
 					}
 					continue nodes
 				}
@@ -129,7 +129,7 @@ nodes:
 		}
 
 		if compute.tier == Controlplane && joinCP == nil {
-			joinCP = &compute
+			joinCP = compute.infra
 			continue nodes
 		}
 		joinWorkers = append(joinWorkers, compute)
@@ -148,11 +148,11 @@ nodes:
 	if certsCP != nil && (joinCP != nil || len(joinWorkers) > 0) {
 		runes := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 		jointoken = fmt.Sprintf("%s.%s", helpers.RandomStringRunes(6, runes), helpers.RandomStringRunes(16, runes))
-		if _, err := certsCP.infra.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
+		if _, err := certsCP.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
 			return false, errors.Wrap(err, "creating new join token failed")
 		}
 
-		defer certsCP.infra.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
+		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
 	}
 
 	var certKey []byte
@@ -170,7 +170,7 @@ nodes:
 
 		if !doKubeadmInit && certKey == nil {
 			var err error
-			certKey, err = certsCP.infra.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
+			certKey, err = certsCP.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
@@ -179,8 +179,8 @@ nodes:
 
 		joinKubeconfig, err := join(
 			logger,
-			joinCP.infra,
-			certsCP.infra,
+			joinCP,
+			certsCP,
 			desired,
 			kubeAPI,
 			jointoken,
@@ -204,7 +204,7 @@ nodes:
 		if _, err := join(
 			logger,
 			worker.infra,
-			certsCP.infra,
+			certsCP,
 			desired,
 			kubeAPI,
 			string(jointoken),
