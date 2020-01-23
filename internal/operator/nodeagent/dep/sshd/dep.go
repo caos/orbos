@@ -60,10 +60,12 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 			if len(fields) > 1 {
 				value = fields[1]
 			}
-			if pkg.Config == nil {
-				pkg.Config = make(map[string]string)
+			if value != "[::]:22" && value != "0.0.0.0:22" {
+				if pkg.Config == nil {
+					pkg.Config = make(map[string]string)
+				}
+				pkg.Config["listenaddress"] = value
 			}
-			pkg.Config["listenaddress"] = value
 			return pkg, nil
 		}
 		if err == io.EOF {
