@@ -162,8 +162,8 @@ nodes:
 
 	if joinCP != nil {
 
-		if doKubeadmInit && !oneoff {
-			return false, errors.New("initializing a cluster is not supported when flag --recur is passed")
+		if doKubeadmInit || kubeconfig.Value != "" || !oneoff {
+			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is true")
 		}
 
 		if !doKubeadmInit && !cpIsReady {
