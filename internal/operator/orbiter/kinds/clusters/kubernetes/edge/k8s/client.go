@@ -102,6 +102,17 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 	})
 }
 
+func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
+	resources := c.set.CoreV1().ServiceAccounts(rsc.Namespace)
+	return c.apply("serviceaccount", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
 	resources := c.set.RbacV1().Roles(rsc.Namespace)
 	return c.apply("role", rsc.GetName(), func() error {

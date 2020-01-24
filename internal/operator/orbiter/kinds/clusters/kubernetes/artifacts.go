@@ -147,6 +147,15 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 		return nil
 	}
 
+	if err := client.ApplyServiceAccount(&core.ServiceAccount{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "boom",
+			Namespace: "caos-system",
+		},
+	}); err != nil {
+		return err
+	}
+
 	if err := client.ApplyRole(&rbac.Role{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom-leader-election-role",
@@ -222,6 +231,10 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 			Resources: []string{"*"},
 			Verbs:     []string{"*"},
 		}, {
+			APIGroups: []string{"getambassador.io"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}, {
 			APIGroups: []string{"policy"},
 			Resources: []string{"*"},
 			Verbs:     []string{"*"},
@@ -254,23 +267,6 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 		return err
 	}
 
-	if err := client.ApplyClusterRole(&rbac.ClusterRole{
-		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-proxy-role",
-		},
-		Rules: []rbac.PolicyRule{{
-			APIGroups: []string{"authentication.k8s.io"},
-			Resources: []string{"tokenreviews"},
-			Verbs:     []string{"create"},
-		}, {
-			APIGroups: []string{"authorization.k8s.io"},
-			Resources: []string{"subjectaccessreviews"},
-			Verbs:     []string{"create"},
-		}},
-	}); err != nil {
-		return err
-	}
-
 	if err := client.ApplyRoleBinding(&rbac.RoleBinding{
 		ObjectMeta: mach.ObjectMeta{
 			Namespace: "caos-system",
@@ -283,7 +279,7 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "default",
+			Name:      "boom",
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
@@ -300,24 +296,7 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "default",
-			Namespace: "caos-system",
-		}},
-	}); err != nil {
-		return err
-	}
-	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
-		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-proxy-rolebinding",
-		},
-		RoleRef: rbac.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "ClusterRole",
-			Name:     "boom-proxy-role",
-		},
-		Subjects: []rbac.Subject{{
-			Kind:      "ServiceAccount",
-			Name:      "default",
+			Name:      "boom",
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
