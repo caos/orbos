@@ -123,6 +123,16 @@ func ensureSoftware(
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
+		ensureJoinSoftware := func() error {
+			logger.WithFields(map[string]interface{}{
+				"compute": compute.infra.ID(),
+				"from":    compute.desiredNodeagent.Software.Kubeadm.Version,
+				"to":      to.Kubeadm.Version,
+			}).Info("Ensuring join software")
+			compute.desiredNodeagent.Software.Merge(to)
+			return nil
+		}
+
 		ensureKubeadm := func() error {
 			compute.desiredNodeagent.Software.Kubeadm = common.Package{
 				Version: to.Kubeadm.Version,
@@ -195,8 +205,10 @@ func ensureSoftware(
 
 		k8sNode, err := k8sClient.GetNode(id)
 		if k8sNode == nil || err != nil {
-			// This is a joiners case and treated as up-to-date here
-			return nil, nil
+			if compute.currentNodeagent.Software.Contains(to) {
+				return nil, nil
+			}
+			return ensureJoinSoftware, nil
 		}
 
 		k8sNodeIsReady := false
