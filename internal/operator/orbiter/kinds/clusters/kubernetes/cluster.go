@@ -71,12 +71,12 @@ func ensureCluster(
 		append(controlplaneComputes, initializedComputes...),
 	)
 	if err != nil || !nodeagentsDone {
-		logger.Debug("Node Agents are not ready yet")
+		logger.Info("Node Agents are not ready yet")
 		return err
 	}
 
 	if !ensureFirewall(initializedComputes) {
-		logger.Debug("Firewall is not ready yet")
+		logger.Info("Firewall is not ready yet")
 		return err
 	}
 
@@ -88,7 +88,7 @@ func ensureCluster(
 		controlplaneComputes,
 		workerComputes)
 	if err != nil || !upgradingDone {
-		logger.Debug("Upgrading is not done yet")
+		logger.Info("Upgrading is not done yet")
 		return err
 	}
 

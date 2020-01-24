@@ -43,6 +43,10 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 		rawCurrentNodeAgents, _ := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
 		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
 
+		if currentNodeAgents.Current == nil {
+			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
+		}
+
 		if err := ensure(pushSecretsFunc(gitClient, treeSecrets), currentNodeAgents.Current, desiredNodeAgents); err != nil {
 			logger.Error(err)
 			return
