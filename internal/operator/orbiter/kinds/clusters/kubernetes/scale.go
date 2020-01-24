@@ -48,8 +48,7 @@ func ensureScale(
 				return err
 			}
 			for _, compute := range computes {
-				_, err := initializeCompute(compute, pool)
-				if err != nil {
+				if _, err := initializeCompute(compute, pool); err != nil {
 					return err
 				}
 			}
@@ -70,10 +69,6 @@ func ensureScale(
 		return false, err
 	}
 
-	var joinCP infra.Compute
-	var certsCP infra.Compute
-	var joinWorkers []initializedCompute
-
 	computes, err := controlplanePool.computes()
 	if err != nil {
 		return false, err
@@ -82,6 +77,10 @@ func ensureScale(
 	ensuredControlplane := len(computes)
 	var ensuredWorkers int
 	for _, workerPool := range workerPools {
+		if err := alignComputes(workerPool); err != nil {
+			return false, err
+		}
+
 		workerComputes, err := workerPool.computes()
 		if err != nil {
 			return false, err
@@ -90,6 +89,9 @@ func ensureScale(
 		computes = append(computes, workerComputes...)
 	}
 
+	var joinCP infra.Compute
+	var certsCP infra.Compute
+	var joinWorkers []initializedCompute
 	cpIsReady := true
 	done := true
 

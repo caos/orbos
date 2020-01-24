@@ -111,13 +111,12 @@ func ensureCluster(
 			return compute, installNodeAgent(compute)
 		})
 	if err != nil {
-		logger.Debug("Scaling is not done yet")
 		return err
 	}
 
 	if scalingDone {
 		curr.Status = "running"
 	}
-
+	logger.Debug("Scaling is not done yet")
 	return nil
 }

@@ -99,8 +99,7 @@ func initialize(
 		}
 
 		naSpec.Software.Merge(k8s.ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
-		naSpec.Software.Merge(naCurr.Software)
-		naSpec.Firewall.Merge(naCurr.Open)
+		naSpec.Software.Merge(k8s.Current(naCurr.Software))
 
 		return initializedCompute{
 			infra: compute,

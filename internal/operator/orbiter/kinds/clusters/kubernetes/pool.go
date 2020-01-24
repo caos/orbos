@@ -80,7 +80,7 @@ keepCompute:
 
 func newComputes(pool infra.Pool, number int) (computes []infra.Compute, err error) {
 
-	computes = make([]infra.Compute, number)
+	computes = make([]infra.Compute, 0)
 
 	var it int
 	for it = 0; it < number; it++ {

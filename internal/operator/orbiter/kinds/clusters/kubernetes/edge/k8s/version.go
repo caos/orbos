@@ -45,6 +45,16 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	}
 }
 
+func Current(current common.Software) common.Software {
+	return common.Software{
+		Swap:             current.Swap,
+		Containerruntime: current.Containerruntime,
+		Kubelet:          current.Kubelet,
+		Kubeadm:          current.Kubeadm,
+		Kubectl:          current.Kubectl,
+	}
+}
+
 func ParseString(version string) KubernetesVersion {
 	for idx, k8sVersion := range kubernetesVersions {
 		if k8sVersion == version {
