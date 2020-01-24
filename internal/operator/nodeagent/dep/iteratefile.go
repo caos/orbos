@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Manipulate(from io.Reader, to io.Writer, removeContaining, append []string, eachLine func(string) string) error {
+func Manipulate(from io.Reader, to io.Writer, removeContaining, append []string, eachLine func(string) *string) error {
 
 	scanner := bufio.NewScanner(from)
 
@@ -22,7 +22,11 @@ outer:
 			}
 		}
 		if eachLine != nil {
-			line = eachLine(line)
+			editLine := eachLine(line)
+			if editLine == nil {
+				continue
+			}
+			line = *editLine
 		}
 
 		if _, err := to.Write([]byte(line + "\n")); err != nil {
@@ -38,7 +42,7 @@ outer:
 	return err
 }
 
-func ManipulateFile(path string, removeContaining, append []string, eachLine func(string) string) (err error) {
+func ManipulateFile(path string, removeContaining, append []string, eachLine func(string) *string) (err error) {
 	tmpPath := path + ".tmp"
 
 	if err := createTmpFile(path, tmpPath, removeContaining, append, eachLine); err != nil {
@@ -48,7 +52,7 @@ func ManipulateFile(path string, removeContaining, append []string, eachLine fun
 	return os.Rename(tmpPath, path)
 }
 
-func createTmpFile(path string, tmpPath string, removeContaining, append []string, eachLine func(string) string) (err error) {
+func createTmpFile(path string, tmpPath string, removeContaining, append []string, eachLine func(string) *string) (err error) {
 
 	closeFile := func(file *os.File) {
 		closeErr := errors.Wrap(file.Close(), "closing file failed")

@@ -82,11 +82,11 @@ func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) (bool, er
 		appendLines = append(appendLines, fmt.Sprintf("ListenAddress %s", listenAddress))
 	}
 
-	if err := dep.ManipulateFile("/etc/ssh/sshd_config", nil, appendLines, func(line string) string {
+	if err := dep.ManipulateFile("/etc/ssh/sshd_config", nil, appendLines, func(line string) *string {
 		if strings.HasPrefix(line, "ListenAddress") {
-			return ""
+			return nil
 		}
-		return line
+		return &line
 	}); err != nil {
 		return false, err
 	}

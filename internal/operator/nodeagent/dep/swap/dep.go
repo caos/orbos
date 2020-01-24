@@ -12,7 +12,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
 )
 
-type Installer interface { 
+type Installer interface {
 	isSwap()
 	nodeagent.Installer
 }
@@ -71,16 +71,16 @@ func (s *swapDep) Current() (pkg common.Package, err error) {
 
 func (s *swapDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
 
-	return remove.Version != ensure.Version, dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) string {
+	return remove.Version != ensure.Version, dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) *string {
 		if !strings.Contains(line, "swap") {
-			return line
+			return &line
 		}
 		switch {
 		case strings.HasPrefix(line, "#") && ensure.Version == "enabled" && remove.Version == "disabled":
-			return strings.Replace(line, "#", "", 1)
+			line = strings.Replace(line, "#", "", 1)
 		case !strings.HasPrefix(line, "#") && ensure.Version == "disabled" && remove.Version == "enabled":
-			return "#" + line
+			line = "#" + line
 		}
-		return line
+		return &line
 	})
 }
