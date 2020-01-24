@@ -30,10 +30,22 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			return
 		}
 
+		if err := gitClient.UpdateRemote(git.File{
+			Path:    "orbiter.yml",
+			Content: common.MarshalYAML(treeDesired),
+		}); err != nil {
+			logger.Error(err)
+			return
+		}
+
 		desiredNodeAgents := make(map[string]*common.NodeAgentSpec)
 		currentNodeAgents := common.NodeAgentsCurrentKind{}
 		rawCurrentNodeAgents, _ := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
 		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
+
+		if currentNodeAgents.Current == nil {
+			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
+		}
 
 		if err := ensure(pushSecretsFunc(gitClient, treeSecrets), currentNodeAgents.Current, desiredNodeAgents); err != nil {
 			logger.Error(err)
@@ -43,9 +55,6 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 		current := common.MarshalYAML(treeCurrent)
 
 		if err := gitClient.UpdateRemote(git.File{
-			Path:    "orbiter.yml",
-			Content: common.MarshalYAML(treeDesired),
-		}, git.File{
 			Path:    "caos-internal/orbiter/current.yml",
 			Content: current,
 		}, git.File{
@@ -59,7 +68,8 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 				},
 			}),
 		}); err != nil {
-			panic(err)
+			logger.Error(err)
+			return
 		}
 
 		statusReader := struct {

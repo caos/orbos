@@ -205,6 +205,13 @@ http {
 								Port:     fmt.Sprintf("%d", transport.SourcePort),
 								Protocol: "tcp",
 							}
+
+							if transport.SourcePort == 22 {
+								if deepNa.Software == nil {
+									deepNa.Software = &common.Software{}
+								}
+								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": compute.IP()}
+							}
 						}
 					}
 				}
@@ -225,6 +232,7 @@ http {
 				ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 				for _, vip := range d.VIPs {
 					for _, transport := range vip.Transport {
+
 						for _, dest := range transport.Destinations {
 							destComputes, err := svc.List(dest.Pool, true)
 							if err != nil {

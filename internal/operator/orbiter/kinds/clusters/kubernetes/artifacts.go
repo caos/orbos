@@ -126,7 +126,6 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 							Value:    "",
 							Effect:   "NoSchedule",
 						}},
-						PriorityClassName: "system-cluster-critical",
 					},
 				},
 			},
@@ -358,17 +357,17 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 						Args: []string{
 							"--metrics-addr", "127.0.0.1:8080",
 							"--enable-leader-election",
-							"--git-orbconfig", "/secrets/tools-secret/orbconfig",
-							"--git-crd-path", "crd/boom.yml",
+							"--git-orbconfig", "/secrets/orbconfig",
+							"--git-crd-path", "boom.yml",
 						},
 						VolumeMounts: []core.VolumeMount{{
-							Name:      "tools-secret",
+							Name:      "orbconfig",
 							ReadOnly:  true,
-							MountPath: "/secrets/tools-secret",
+							MountPath: "/secrets",
 						}},
 					}},
 					Volumes: []core.Volume{{
-						Name: "tools-secret",
+						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{
 							Secret: &core.SecretVolumeSource{
 								SecretName: "caos",
@@ -376,7 +375,6 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 						},
 					}},
 					TerminationGracePeriodSeconds: int64Ptr(10),
-					PriorityClassName:             "system-cluster-critical",
 				},
 			},
 		},

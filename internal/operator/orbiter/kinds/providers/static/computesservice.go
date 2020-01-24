@@ -72,6 +72,7 @@ func (c *computesService) List(poolName string, active bool) (infra.Computes, er
 		if active && isActive || !active && !isActive {
 			computes = append(computes, compute)
 		}
+		buf.Reset()
 	}
 	return computes, nil
 }

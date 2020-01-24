@@ -27,7 +27,6 @@ func (p *PackageManager) debbasedInstalled() error {
 }
 
 func (p *PackageManager) rembasedInstalled() error {
-	p.logger = p.logger.Verbose()
 	return p.listAndParse(exec.Command("yum", "list", "installed"), "Installed Packages", func(line string) (string, string, error) {
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
@@ -77,12 +76,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 			continue
 		}
 
-		pkg, version, err := parse(line)
-		if err != nil {
-			p.logger.WithFields(map[string]interface{}{
-				"cause": err.Error(),
-			}).Info("Failed to parse line of installed packages")
-		}
+		pkg, version, _ := parse(line)
 		p.installed[pkg] = version
 		p.logger.WithFields(map[string]interface{}{
 			"package": pkg,

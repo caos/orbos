@@ -269,7 +269,7 @@ func (c *Client) Drain(node *core.Node) (err error) {
 	return c.evictPods(node)
 }
 
-func (c *Client) DeleteNode(name string, node NodeWithKubeadm, drain bool) (err error) {
+func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "deleting node %s failed", name)

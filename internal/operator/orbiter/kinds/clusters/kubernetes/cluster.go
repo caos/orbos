@@ -1,8 +1,6 @@
 package kubernetes
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -10,10 +8,6 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-// TODO per pool:
-// 1. Downscale if desired < current
-// 2. Migrate
-// 3. Upscale if desired > current
 func ensureCluster(
 	logger logging.Logger,
 	desired DesiredV0,
@@ -27,148 +21,74 @@ func ensureCluster(
 	k8sClient *k8s.Client,
 	repoURL string,
 	repoKey string,
-	orbiterCommit string) (err error) {
-
-	if desired.Spec.ControlPlane.Nodes != 1 && desired.Spec.ControlPlane.Nodes != 3 && desired.Spec.ControlPlane.Nodes != 5 {
-		err = errors.New("Controlplane nodes can only be scaled to 1, 3 or 5")
-		return err
-	}
-
-	var controlplanePool *scaleablePool
-	var cpPoolComputes infra.Computes
-	workerPools := make([]*scaleablePool, 0)
-	workerComputes := make([]infra.Compute, 0)
-	for providerName, provider := range providerPools {
-		for poolName, wPool := range provider {
-			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == poolName {
-
-				cpDesired := desired.Spec.ControlPlane
-				cpPool := providerPools[cpDesired.Provider][cpDesired.Pool]
-				logger.WithFields(map[string]interface{}{
-					"provider": cpDesired.Provider,
-					"pool":     cpDesired.Pool,
-					"tier":     "controlplane",
-					"address":  cpPool,
-				}).Debug("Using for pool")
-				cpPoolComputes, err = cpPool.GetComputes(true)
-				if err != nil {
-					return err
-				}
-				for _, comp := range cpPoolComputes {
-					curr.Computes[comp.ID()] = &Compute{
-						Status: "maintaining",
-						Metadata: ComputeMetadata{
-							Tier:     Controlplane,
-							Provider: cpDesired.Provider,
-							Pool:     cpDesired.Pool,
-						},
-					}
-					nodeAgentsDesired[comp.ID()] = &common.NodeAgentSpec{
-						ChangesAllowed: !cpDesired.UpdatesDisabled,
-						Software:       &common.Software{},
-						Firewall:       &common.Firewall{},
-					}
-				}
-				controlplanePool = &scaleablePool{
-					pool: newPool(
-						logger,
-						repoURL,
-						repoKey,
-						&poolSpec{group: "", spec: cpDesired},
-						cpPool,
-						k8sClient,
-						cpPoolComputes),
-					desiredScale: cpDesired.Nodes,
-				}
-
-				continue
-			}
-			var (
-				wDesired *Pool
-				group    string
-			)
-			for g, w := range desired.Spec.Workers {
-				if providerName == w.Provider && poolName == w.Pool {
-					group = g
-					wDesired = w
-					break
-				}
-			}
-
-			if wDesired == nil {
-				wDesired = &Pool{
-					Provider:        providerName,
-					UpdatesDisabled: true,
-					Nodes:           0,
-					Pool:            poolName,
-				}
-			}
-
-			logger.WithFields(map[string]interface{}{
-				"provider": wDesired.Provider,
-				"pool":     wDesired.Pool,
-				"tier":     "workers",
-				"address":  wPool,
-			}).Debug("Searching for pool")
-			var wPoolComputes []infra.Compute
-			wPoolComputes, err = wPool.GetComputes(true)
-			if err != nil {
-				return err
-			}
-			workerPools = append(workerPools, &scaleablePool{
-				pool: newPool(
-					logger,
-					repoURL,
-					repoKey,
-					&poolSpec{group: group, spec: *wDesired},
-					wPool,
-					k8sClient,
-					wPoolComputes),
-				desiredScale: wDesired.Nodes,
-			})
-			workerComputes = append(workerComputes, wPoolComputes...)
-			for _, comp := range wPoolComputes {
-				curr.Computes[comp.ID()] = &Compute{
-					Status: "maintaining",
-					Metadata: ComputeMetadata{
-						Tier:     Workers,
-						Provider: wDesired.Provider,
-						Pool:     wDesired.Pool,
-						Group:    group,
-					},
-				}
-				nodeAgentsDesired[comp.ID()] = &common.NodeAgentSpec{
-					ChangesAllowed: !wDesired.UpdatesDisabled,
-					Software:       &common.Software{},
-					Firewall:       &common.Firewall{},
-				}
-			}
-		}
-	}
-
-	if curr.Computes == nil {
-		curr.Computes = make(map[string]*Compute)
-	}
+	orbiterCommit string,
+	oneoff bool) (err error) {
 
 	if kubeconfig != nil && kubeconfig.Value != "" {
 		k8sClient.Refresh(&kubeconfig.Value)
 	}
 
-	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)
-	upgradingDone, err := ensureK8sVersion(
+	controlplane, workers, initializeCompute, err := initialize(
+		logger,
+		curr,
+		desired,
+		nodeAgentsCurrent,
+		nodeAgentsDesired,
+		providerPools)
+	if err != nil {
+		return err
+	}
+
+	desireFirewall, ensureFirewall := firewallFuncs(desired, kubeAPIAddress.Port)
+	initializeFirewall := func(_ initializedPool, computes []initializedCompute) error {
+		for _, compute := range computes {
+			desireFirewall(compute)
+		}
+		return nil
+	}
+	controlplane.enhance(initializeFirewall)
+	controlplaneComputes, err := controlplane.computes()
+	if err != nil {
+		return err
+	}
+	workerComputes := make([]initializedCompute, 0)
+	for _, workerPool := range workers {
+		workerPool.enhance(initializeFirewall)
+		wComputes, err := workerPool.computes()
+		if err != nil {
+			return err
+		}
+		workerComputes = append(workerComputes, wComputes...)
+	}
+
+	initializedComputes := append(controlplaneComputes, workerComputes...)
+
+	nodeagentsDone, installNodeAgent, err := ensureNodeAgents(
 		logger,
 		orbiterCommit,
 		repoURL,
 		repoKey,
+		append(controlplaneComputes, initializedComputes...),
+	)
+	if err != nil || !nodeagentsDone {
+		logger.Info("Node Agents are not ready yet")
+		return err
+	}
+
+	if !ensureFirewall(initializedComputes) {
+		logger.Info("Firewall is not ready yet")
+		return err
+	}
+
+	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)
+	upgradingDone, err := ensureSoftware(
+		logger,
 		targetVersion,
 		k8sClient,
-		curr.Computes,
-		nodeAgentsCurrent,
-		nodeAgentsDesired,
-		cpPoolComputes,
+		controlplaneComputes,
 		workerComputes)
 	if err != nil || !upgradingDone {
-		logger.Debug("Upgrading is not done yet")
+		logger.Info("Upgrading is not done yet")
 		return err
 	}
 
@@ -176,16 +96,20 @@ func ensureCluster(
 	scalingDone, err = ensureScale(
 		logger,
 		desired,
-		curr.Computes,
-		nodeAgentsCurrent,
-		nodeAgentsDesired,
 		kubeconfig,
 		psf,
-		controlplanePool,
-		workerPools,
+		controlplane,
+		workers,
 		kubeAPIAddress,
 		targetVersion,
-		k8sClient)
+		k8sClient,
+		oneoff,
+		func(created infra.Compute, pool initializedPool) (initializedCompute, error) {
+			compute := initializeCompute(created, pool)
+			target := targetVersion.DefineSoftware()
+			compute.desiredNodeagent.Software = &target
+			return compute, installNodeAgent(compute)
+		})
 	if err != nil {
 		return err
 	}
@@ -193,6 +117,6 @@ func ensureCluster(
 	if scalingDone {
 		curr.Status = "running"
 	}
-
+	logger.Debug("Scaling is not done yet")
 	return nil
 }
