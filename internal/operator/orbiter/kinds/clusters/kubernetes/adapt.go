@@ -63,6 +63,8 @@ func AdaptFunc(
 				if deployErrors > 50 {
 					panic(err)
 				}
+			} else {
+				deployErrors = 0
 			}
 		}
 
