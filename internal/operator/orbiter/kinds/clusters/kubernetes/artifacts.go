@@ -325,6 +325,7 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 					},
 				},
 				Spec: core.PodSpec{
+					ServiceAccountName: "boom",
 					ImagePullSecrets: []core.LocalObjectReference{{
 						Name: "public-github-packages",
 					}},
