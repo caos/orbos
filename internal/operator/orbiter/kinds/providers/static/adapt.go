@@ -57,16 +57,16 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		secretsTree.Parsed = secretsKind
 
 		lbCurrent := &orbiter.Tree{}
-		switch desiredKind.Deps.Common.Kind {
+		switch desiredKind.Loadbalancing.Common.Kind {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			if _, _, _, err = dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Deps, nil, lbCurrent); err != nil {
+			if _, _, _, err = dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Loadbalancing, nil, lbCurrent); err != nil {
 				return nil, nil, nil, err
 			}
 			//		return []orbiter.Assembler{dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(kind.Spec.RemoteUser))}, nil
 		default:
-			return nil, nil, nil, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Deps.Common.Kind)
+			return nil, nil, nil, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
 		}
 
 		current := &Current{

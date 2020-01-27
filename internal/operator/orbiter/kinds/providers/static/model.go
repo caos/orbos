@@ -13,7 +13,7 @@ type DesiredV0 struct {
 		RemotePublicKeyPath string
 		Pools               map[string][]*Compute
 	}
-	Deps *orbiter.Tree
+	Loadbalancing *orbiter.Tree
 }
 
 type Compute struct {

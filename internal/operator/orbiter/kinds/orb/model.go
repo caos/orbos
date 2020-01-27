@@ -2,25 +2,23 @@ package orb
 
 import "github.com/caos/orbiter/internal/operator/orbiter"
 
-type Deps struct {
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
-}
-
 type DesiredV0 struct {
 	Common *orbiter.Common `yaml:",inline"`
 	Spec   struct {
 		Verbose bool
 	}
-	Deps Deps
+	Clusters  map[string]*orbiter.Tree
+	Providers map[string]*orbiter.Tree
 }
 
 type SecretsV0 struct {
-	Common *orbiter.Common `yaml:",inline"`
-	Deps   Deps
+	Common    *orbiter.Common `yaml:",inline"`
+	Clusters  map[string]*orbiter.Tree
+	Providers map[string]*orbiter.Tree
 }
 
 type Current struct {
-	Common *orbiter.Common `yaml:",inline"`
-	Deps   Deps
+	Common    *orbiter.Common `yaml:",inline"`
+	Clusters  map[string]*orbiter.Tree
+	Providers map[string]*orbiter.Tree
 }

@@ -44,7 +44,7 @@ func AdaptFunc(
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
 		secrets = make(map[string]*orbiter.Secret)
 
-		for provID, providerTree := range desiredKind.Deps.Providers {
+		for provID, providerTree := range desiredKind.Providers {
 
 			providerCurrent := &orbiter.Tree{}
 			providerCurrents[provID] = providerCurrent
@@ -53,9 +53,9 @@ func AdaptFunc(
 			//				"provider": provID,
 			//			})
 
-			providerSecretsTree, ok := secretsKind.Deps.Providers[provID]
+			providerSecretsTree, ok := secretsKind.Providers[provID]
 			if !ok {
-				secretsKind.Deps.Providers[provID] = &orbiter.Tree{}
+				secretsKind.Providers[provID] = &orbiter.Tree{}
 			}
 
 			//			providerID := id + provID
@@ -138,12 +138,12 @@ func AdaptFunc(
 		clusterCurrents := make(map[string]*orbiter.Tree)
 		clusterEnsurers := make([]orbiter.EnsureFunc, 0)
 		clusterDestroyers := make([]orbiter.DestroyFunc, 0)
-		for clusterID, clusterTree := range desiredKind.Deps.Clusters {
+		for clusterID, clusterTree := range desiredKind.Clusters {
 
 			clusterCurrent := &orbiter.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
 
-			clusterSecretsTree, ok := secretsKind.Deps.Clusters[clusterID]
+			clusterSecretsTree, ok := secretsKind.Clusters[clusterID]
 			if !ok {
 				return nil, nil, nil, errors.Errorf("no secrets found for cluster %s", clusterID)
 			}
@@ -171,10 +171,8 @@ func AdaptFunc(
 				Kind:    "orbiter.caos.ch/Orb",
 				Version: "v0",
 			},
-			Deps: Deps{
-				Clusters:  clusterCurrents,
-				Providers: providerCurrents,
-			},
+			Clusters:  clusterCurrents,
+			Providers: providerCurrents,
 		}
 
 		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
