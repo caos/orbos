@@ -28,6 +28,10 @@ func AdaptFunc(
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
+		if err := desiredKind.validate(); err != nil {
+			return nil, nil, nil, err
+		}
+
 		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
 			logger = logger.Verbose()
 		}

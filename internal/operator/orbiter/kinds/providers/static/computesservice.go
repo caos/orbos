@@ -63,7 +63,7 @@ func (c *computesService) List(poolName string, active bool) (infra.Computes, er
 	computes := make([]infra.Compute, 0)
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
-		compute := newCompute(c.logger, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, cmp.IP)
+		compute := newCompute(c.logger, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
 		if err := compute.UseKey(c.maintenancekey, c.bootstrapkey); err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func (c *computesService) Create(poolName string) (infra.Compute, error) {
 
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
-		compute := newCompute(c.logger, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, cmp.IP)
+		compute := newCompute(c.logger, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
 
 		if err := compute.UseKey(c.maintenancekey, c.bootstrapkey); err != nil {
 			return nil, err

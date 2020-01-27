@@ -1,6 +1,8 @@
 package static
 
 import (
+	"github.com/pkg/errors"
+
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 )
@@ -16,10 +18,39 @@ type DesiredV0 struct {
 	Loadbalancing *orbiter.Tree
 }
 
+func (d DesiredV0) validate() error {
+	if d.Spec.RemoteUser == "" {
+		return errors.New("No remote user provided")
+	}
+
+	if d.Spec.RemotePublicKeyPath == "" {
+		return errors.New("No remote public key path provided")
+	}
+
+	for pool, computes := range d.Spec.Pools {
+		for _, compute := range computes {
+			if err := compute.validate(); err != nil {
+				return errors.Wrapf(err, "Validating compute %s in pool %s failed", compute.ID, pool)
+			}
+		}
+	}
+	return nil
+}
+
 type Compute struct {
 	ID       string
 	Hostname string
-	IP       string
+	IP       orbiter.IPAddress
+}
+
+func (c *Compute) validate() error {
+	if c.ID == "" {
+		return errors.New("No id provided")
+	}
+	if c.Hostname == "" {
+		return errors.New("No hostname provided")
+	}
+	return c.IP.Validate()
 }
 
 type SecretsV0 struct {
