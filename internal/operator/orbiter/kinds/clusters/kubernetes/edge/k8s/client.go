@@ -91,6 +91,10 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	})
 }
 
+func (c *Client) DeleteDeployment(namespace, name string) error {
+	return c.set.AppsV1().Deployments(namespace).Delete(name, &mach.DeleteOptions{})
+}
+
 func (c *Client) ApplySecret(rsc *core.Secret) error {
 	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {

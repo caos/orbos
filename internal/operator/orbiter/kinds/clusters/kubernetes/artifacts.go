@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"fmt"
-	"os"
 
 	"gopkg.in/yaml.v2"
 	apps "k8s.io/api/apps/v1"
@@ -15,18 +14,12 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orbiter.Orb, oneoff bool, orbiterversion string, boomversion string) error {
+func ensureArtifacts(logger logging.Logger, client *k8s.Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
 
 	logger.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,
 		"boom":    boomversion,
 	}).Debug("Ensuring artifacts")
-
-	if orbiterversion == "" && boomversion == "" || kubeconfig == nil || kubeconfig.Value == "" {
-		return nil
-	}
-
-	client := k8s.New(logger, &kubeconfig.Value)
 
 	orbfile, err := yaml.Marshal(orb)
 	if err != nil {
@@ -135,11 +128,6 @@ func ensureArtifacts(logger logging.Logger, kubeconfig *orbiter.Secret, orb *orb
 		logger.WithFields(map[string]interface{}{
 			"version": orbiterversion,
 		}).Debug("Orbiter deployment ensured")
-
-		if oneoff {
-			logger.Info("Deployed Orbiter takes over control")
-			os.Exit(0)
-		}
 
 	}
 
