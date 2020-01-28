@@ -24,7 +24,7 @@ func AdaptFunc(
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		if desiredTree.Common.Version != "v1" {
+		if desiredTree.Common.Version != "v0" {
 			migrate = true
 		}
 
@@ -60,8 +60,8 @@ func AdaptFunc(
 				deployErrors++
 				logger.WithFields(map[string]interface{}{
 					"count": deployErrors,
-					"msg":   "Deploying Orbiter failed, awaiting next iteration",
-				}).Error(err)
+					"err":   err.Error(),
+				}).Info("Deploying Orbiter failed, awaiting next iteration")
 				if deployErrors > 50 {
 					panic(err)
 				}
