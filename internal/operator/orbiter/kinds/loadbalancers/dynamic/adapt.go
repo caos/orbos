@@ -14,16 +14,16 @@ import (
 )
 
 func AdaptFunc(remoteUser string) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, err error) {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 		desiredKind := &DesiredV0{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
 		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, migrate, err
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
@@ -261,7 +261,7 @@ http {
 			}
 			return nil
 		}
-		return nil, nil, nil, nil
+		return nil, nil, nil, migrate, nil
 	}
 }
 

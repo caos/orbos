@@ -16,20 +16,20 @@ func AdaptFunc(
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, err error) {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind := &DesiredV0{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, migrate, err
 		}
 
 		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
@@ -38,7 +38,7 @@ func AdaptFunc(
 
 		secretsKind := &SecretsV0{Common: secretsTree.Common}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
 		}
 		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
@@ -88,9 +88,12 @@ func AdaptFunc(
 				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				//				}
 
-				providerEnsurer, providerDestroyer, providerSecrets, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerSecretsTree, providerCurrent)
+				providerEnsurer, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerSecretsTree, providerCurrent)
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, nil, migrate, err
+				}
+				if pMigrate {
+					migrate = true
 				}
 				providerEnsurers = append(providerEnsurers, providerEnsurer)
 				providerDestroyers = append(providerDestroyers, providerDestroyer)
@@ -98,7 +101,7 @@ func AdaptFunc(
 					secrets[orbiter.JoinPath(provID, path)] = secret
 				}
 			default:
-				return nil, nil, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+				return nil, nil, nil, migrate, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 			}
 		}
 
@@ -149,14 +152,17 @@ func AdaptFunc(
 
 			clusterSecretsTree, ok := secretsKind.Clusters[clusterID]
 			if !ok {
-				return nil, nil, nil, errors.Errorf("no secrets found for cluster %s", clusterID)
+				return nil, nil, nil, migrate, errors.Errorf("no secrets found for cluster %s", clusterID)
 			}
 
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterEnsurer, clusterDestroyer, clusterSecrets, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterSecretsTree, clusterCurrent)
+				clusterEnsurer, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterSecretsTree, clusterCurrent)
 				if err != nil {
-					return nil, nil, nil, err
+					return nil, nil, nil, migrate, err
+				}
+				if cMigrate {
+					migrate = true
 				}
 				clusterEnsurers = append(clusterEnsurers, clusterEnsurer)
 				clusterDestroyers = append(clusterDestroyers, clusterDestroyer)
@@ -166,7 +172,7 @@ func AdaptFunc(
 
 				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 			default:
-				return nil, nil, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+				return nil, nil, nil, migrate, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 			}
 		}
 
@@ -201,6 +207,6 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, secrets, nil
+			}, secrets, migrate, nil
 	}
 }

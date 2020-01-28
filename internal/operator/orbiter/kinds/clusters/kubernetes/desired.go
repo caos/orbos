@@ -1,10 +1,10 @@
 package kubernetes
 
 import (
-	"github.com/pkg/errors"
-
 	"fmt"
 	"regexp"
+
+	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
@@ -20,6 +20,27 @@ var cidrComp = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
 
 type cidr string
 
+/*
+type DesiredV1 struct {
+	Common orbiter.Common `yaml:",inline"`
+	Spec   struct {
+		Verbose           bool
+		KubernetesVersion string
+		Versions          struct {
+			Orbiter string
+			Boom    string
+		}
+		Networking struct {
+			DNSDomain   string
+			Network     string
+			ServiceCidr orbiter.CIDR
+			PodCidr     orbiter.CIDR
+		}
+		ControlPlane Pool
+		Workers      []*Pool
+	}
+}
+*/
 type DesiredV0 struct {
 	Common orbiter.Common `yaml:",inline"`
 	Spec   struct {
@@ -93,6 +114,9 @@ type Pool struct {
 /*
 // UnmarshalYAML migrates desired states from v0 to v1:
 func (d *DesiredV1) UnmarshalYAML(node *yaml.Node) error {
+	defer func() {
+		d.Common.Version = "v1"
+	}()
 	switch d.Common.Version {
 	case "v1":
 		type latest DesiredV1
@@ -102,15 +126,19 @@ func (d *DesiredV1) UnmarshalYAML(node *yaml.Node) error {
 		}
 		d.Common = l.Common
 		d.Spec = l.Spec
-		d.Deps = l.Deps
 		return nil
 	case "v0":
 		v0 := DesiredV0{}
 		if err := node.Decode(&v0); err != nil {
 			return err
 		}
-		d.Spec.Versions.Kubernetes = v0.Spec.Kubernetes
-		d.Deps = v0.Deps
+		d.Spec.Verbose = v0.Spec.Verbose
+		d.Spec.KubernetesVersion = v0.Spec.Versions.Kubernetes
+		d.Spec.Versions.Orbiter = v0.Spec.Versions.Orbiter
+		d.Spec.Versions.Boom = v0.Spec.Versions.Boom
+		d.Spec.Networking = v0.Spec.Networking
+		d.Spec.ControlPlane = v0.Spec.ControlPlane
+		d.Spec.Workers = v0.Spec.Workers
 		return nil
 	}
 	return errors.Errorf("Version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)

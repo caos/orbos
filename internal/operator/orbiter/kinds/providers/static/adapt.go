@@ -10,15 +10,14 @@ import (
 )
 
 func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, err error) {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 		desiredKind := &DesiredV0{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
-		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
@@ -35,7 +34,7 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 			},
 		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
 		}
 		if secretsKind.Secrets.BootstrapKeyPrivate == nil {
 			secretsKind.Secrets.BootstrapKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
@@ -53,7 +52,6 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 			secretsKind.Secrets.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey}
 		}
 
-		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
 
 		lbCurrent := &orbiter.Tree{}
@@ -61,12 +59,16 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			if _, _, _, err = dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Loadbalancing, nil, lbCurrent); err != nil {
-				return nil, nil, nil, err
+			_, _, _, lMigrate, err := dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Loadbalancing, nil, lbCurrent)
+			if err != nil {
+				return nil, nil, nil, migrate, err
+			}
+			if lMigrate {
+				migrate = true
 			}
 			//		return []orbiter.Assembler{dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(kind.Spec.RemoteUser))}, nil
 		default:
-			return nil, nil, nil, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
+			return nil, nil, nil, migrate, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
 		}
 
 		current := &Current{
@@ -87,6 +89,6 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 				"bootstrapkeypublic":    secretsKind.Secrets.BootstrapKeyPublic,
 				"maintenancekeyprivate": secretsKind.Secrets.MaintenanceKeyPrivate,
 				"maintenancekeypublic":  secretsKind.Secrets.MaintenanceKeyPublic,
-			}, nil
+			}, migrate, nil
 	}
 }

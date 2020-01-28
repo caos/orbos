@@ -45,7 +45,7 @@ func findSecret(gitClient *git.Client, adapt AdaptFunc, path string) (*Secret, *
 		return nil, nil, err
 	}
 
-	_, _, secrets, err := adapt(treeDesired, treeSecrets, &Tree{})
+	_, _, secrets, _, err := adapt(treeDesired, treeSecrets, &Tree{})
 	if err != nil {
 		return nil, nil, err
 	}

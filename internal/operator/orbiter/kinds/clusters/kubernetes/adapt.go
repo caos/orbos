@@ -19,22 +19,25 @@ func AdaptFunc(
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
 
 	var deployErrors int
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, err error) {
+	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
+		if desiredTree.Common.Version != "v1" {
+			migrate = true
+		}
+
 		desiredKind := &DesiredV0{Common: *desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
-		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
-		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, err
-		}
-
+		/*		if err := desiredKind.validate(); err != nil {
+					return nil, nil, nil, migrate, err
+				}
+		*/
 		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
 			logger = logger.Verbose()
 		}
@@ -44,9 +47,8 @@ func AdaptFunc(
 			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
 		}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing secrets failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
 		}
-		secretsKind.Common.Version = "v0"
 		secretsTree.Parsed = secretsKind
 
 		if secretsKind.Secrets.Kubeconfig == nil {
@@ -86,7 +88,6 @@ func AdaptFunc(
 				if err != nil {
 					return err
 				}
-
 				return ensure(
 					logger,
 					*desiredKind,
@@ -113,6 +114,6 @@ func AdaptFunc(
 				return destroy(providers, secretsKind.Secrets.Kubeconfig)
 			}, map[string]*orbiter.Secret{
 				"kubeconfig": secretsKind.Secrets.Kubeconfig,
-			}, nil
+			}, migrate, nil
 	}
 }
