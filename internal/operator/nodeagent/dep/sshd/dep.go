@@ -60,11 +60,20 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 			if len(fields) > 1 {
 				value = fields[1]
 			}
+			checkIP := "127.0.0.1"
 			if value != "[::]:22" && value != "0.0.0.0:22" {
 				if pkg.Config == nil {
 					pkg.Config = make(map[string]string)
 				}
-				pkg.Config["listenaddress"] = value
+				checkIP = strings.Split(value, ":")[0]
+				pkg.Config["listenaddress"] = checkIP
+			}
+			out, _ := exec.Command("ssh", "-T", checkIP).CombinedOutput()
+			if strings.Contains(string(out), "Connection refused") {
+				if pkg.Config == nil {
+					pkg.Config = make(map[string]string)
+				}
+				pkg.Config["listening"] = "false"
 			}
 			return pkg, nil
 		}
