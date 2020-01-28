@@ -26,7 +26,10 @@ func Destroy(gitClient *git.Client, adapt AdaptFunc) error {
 
 	if err := gitClient.UpdateRemote(git.File{
 		Path:    "caos-internal/orbiter/current.yml",
-		Content: common.MarshalYAML(treeCurrent),
+		Content: []byte(""),
+	}, git.File{
+		Path:    "caos-internal/orbiter/node-agents-current.yml",
+		Content: []byte(""),
 	}, git.File{
 		Path:    "secrets.yml",
 		Content: common.MarshalYAML(treeSecrets),
