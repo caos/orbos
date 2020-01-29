@@ -29,13 +29,14 @@ func ensure(
 	id string,
 ) (err error) {
 
-	if sec.Secrets.MaintenanceKeyPrivate == nil && sec.Secrets.MaintenanceKeyPublic == nil {
+	if (sec.Secrets.MaintenanceKeyPrivate == nil || sec.Secrets.MaintenanceKeyPrivate.Value == "") &&
+		(sec.Secrets.MaintenanceKeyPublic == nil || sec.Secrets.MaintenanceKeyPublic.Value == "") {
 		priv, pub, err := ssh.Generate()
 		if err != nil {
 			return err
 		}
-		sec.Secrets.MaintenanceKeyPrivate = &orbiter.Secret{Value: priv}
-		sec.Secrets.BootstrapKeyPublic = &orbiter.Secret{Value: pub}
+		sec.Secrets.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
+		sec.Secrets.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
 		if err := psf(); err != nil {
 			return err
 		}
