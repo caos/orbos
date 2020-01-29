@@ -24,6 +24,13 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 			logger = logger.Verbose()
 		}
 
+		if secretsTree.Common == nil {
+			secretsTree.Common = &orbiter.Common{
+				Kind:    "orbiter.caos.ch/StaticProvider",
+				Version: "v0",
+			}
+		}
+
 		secretsKind := &SecretsV0{
 			Common: secretsTree.Common,
 			Secrets: Secrets{
@@ -33,8 +40,10 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 				MaintenanceKeyPublic:  &orbiter.Secret{Masterkey: masterkey},
 			},
 		}
-		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
+		if secretsTree.Original != nil {
+			if err := secretsTree.Original.Decode(secretsKind); err != nil {
+				return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
+			}
 		}
 		if secretsKind.Secrets.BootstrapKeyPrivate == nil {
 			secretsKind.Secrets.BootstrapKeyPrivate = &orbiter.Secret{Masterkey: masterkey}

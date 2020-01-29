@@ -36,6 +36,13 @@ func AdaptFunc(
 			logger = logger.Verbose()
 		}
 
+		if secretsTree.Common == nil {
+			secretsTree.Common = &orbiter.Common{
+				Kind:    "orbiter.caos.ch/Orb",
+				Version: "v0",
+			}
+		}
+
 		secretsKind := &SecretsV0{Common: secretsTree.Common}
 		if err := secretsTree.Original.Decode(secretsKind); err != nil {
 			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
@@ -152,7 +159,11 @@ func AdaptFunc(
 
 			clusterSecretsTree, ok := secretsKind.Clusters[clusterID]
 			if !ok {
-				return nil, nil, nil, migrate, errors.Errorf("no secrets found for cluster %s", clusterID)
+				if secretsKind.Clusters == nil {
+					secretsKind.Clusters = make(map[string]*orbiter.Tree)
+				}
+				clusterSecretsTree = &orbiter.Tree{}
+				secretsKind.Clusters[clusterID] = clusterSecretsTree
 			}
 
 			switch clusterTree.Common.Kind {

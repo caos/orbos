@@ -19,9 +19,21 @@ func JoinPath(base string, append ...string) string {
 
 func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
 
-	secret, _, err := findSecret(gitClient, adapt, path)
+	secret, _, err := findSecret(gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+		items := make([]string, 0)
+		for key, sec := range secrets {
+			if sec.Value != "" {
+				items = append(items, key)
+			}
+		}
+		return items
+	})
 	if err != nil {
 		return "", err
+	}
+
+	if secret.Value == "" {
+		return "", fmt.Errorf("Secret %s not found", path)
 	}
 
 	return secret.Value, nil
@@ -29,7 +41,13 @@ func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, er
 
 func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) error {
 
-	secret, tree, err := findSecret(gitClient, adapt, path)
+	secret, tree, err := findSecret(gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+		items := make([]string, 0, len(secrets))
+		for key := range secrets {
+			items = append(items, key)
+		}
+		return items
+	})
 	if err != nil {
 		return err
 	}
@@ -39,7 +57,7 @@ func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) err
 	return pushSecretsFunc(gitClient, tree)()
 }
 
-func findSecret(gitClient *git.Client, adapt AdaptFunc, path string) (*Secret, *Tree, error) {
+func findSecret(gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
 	treeDesired, treeSecrets, err := parse(gitClient)
 	if err != nil {
 		return nil, nil, err
@@ -55,20 +73,17 @@ func findSecret(gitClient *git.Client, adapt AdaptFunc, path string) (*Secret, *
 		return sec, treeSecrets, err
 	}
 
-	items := make([]string, 0, len(secrets))
-	for key := range secrets {
-		items = append(items, key)
-	}
+	selectItems := items(secrets)
 
-	sort.Slice(items, func(i, j int) bool {
-		iDots := strings.Count(items[i], ".")
-		jDots := strings.Count(items[j], ".")
-		return iDots < jDots || iDots == jDots && items[i] < items[j]
+	sort.Slice(selectItems, func(i, j int) bool {
+		iDots := strings.Count(selectItems[i], ".")
+		jDots := strings.Count(selectItems[j], ".")
+		return iDots < jDots || iDots == jDots && selectItems[i] < selectItems[j]
 	})
 
 	prompt := promptui.Select{
 		Label: "Select Secret",
-		Items: items,
+		Items: selectItems,
 	}
 
 	_, result, err := prompt.Run()

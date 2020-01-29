@@ -38,7 +38,7 @@ func parse(gitClient *git.Client) (desired *Tree, secrets *Tree, err error) {
 
 type Tree struct {
 	Common   *Common `yaml:",inline"`
-	Original yaml.Node
+	Original *yaml.Node
 	Parsed   interface{} `yaml:",inline"`
 }
 
@@ -48,7 +48,7 @@ type Common struct {
 }
 
 func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
-	c.Original = *node
+	c.Original = node
 	err := node.Decode(&c.Common)
 	return err
 }

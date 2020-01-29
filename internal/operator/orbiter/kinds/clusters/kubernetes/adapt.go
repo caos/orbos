@@ -45,12 +45,21 @@ func AdaptFunc(
 			logger = logger.Verbose()
 		}
 
+		if secretsTree.Common == nil {
+			secretsTree.Common = &orbiter.Common{
+				Kind:    "orbiter.caos.ch/KubernetesCluster",
+				Version: "v0",
+			}
+		}
+
 		secretsKind := &SecretsV0{
 			Common:  *secretsTree.Common,
 			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
 		}
-		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
+		if secretsTree.Original != nil {
+			if err := secretsTree.Original.Decode(secretsKind); err != nil {
+				return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
+			}
 		}
 		secretsTree.Parsed = secretsKind
 
