@@ -101,8 +101,9 @@ EOF
 orbctl writesecret kvm.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
 orbctl writesecret kvm.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
 ```
-> Bootstrap your local Kubernetes cluster
-```
+
+### Bootstrap your local Kubernetes cluster
+```bash
 orbctl takeoff
 ```
 
