@@ -29,22 +29,62 @@ What makes Orbiter special is that it ships with a nice **Mission Control UI** (
 
 In the following example we will create a `kubernetes` cluster on a `static provider`. A `static provider` is a provider, which has no or little API for automation, e.g legacy VM's or Bare Metal scenarios.
 
-### Download Orbctl
 
+### Create Two Virtual Machines
+
+> Download a CentOS7 iso image
+
+> Create and setup two new Virtual Machines. Make sure you have a passwordless sudo enabled user called orbiter on the guest OS
 ```bash
-# Download latest orbctl
+virt-install --virt-type kvm --cdrom ~/Downloads/CentOS-7-x86_64-Minimal-1908.iso --disk size=10 --memory 4000 --vcpus 2 --name first
+virt-install --virt-type kvm --cdrom ~/Downloads/CentOS-7-x86_64-Minimal-1908.iso --disk size=10 --memory 4000 --vcpus 2 --name second
+```
+
+> Create a new SSH key pair
+```bash
+mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f ~/.ssh/myorb_bootstrap -q
+```
+
+> List your local VMs IPs.
+```bash
+virsh domifaddr first
+virsh domifaddr second
+```
+
+> Make both your VMs connectable
+```bash
+IP=<vm-ip-here>
+ssh orbiter@${IP} "mkdir -p ~/.ssh"
+scp ~/.ssh/myorb_bootstrap.pub orbiter@${IP}:/home/orbiter/.ssh/authorized_keys
+ssh orbiter@${IP} "chmod 700 ~/.ssh"
+ssh orbiter@${IP} "chmod 400 ~/.ssh/authorized_keys"
+```
+
+### Initialize A Git Repository
+
+> Create a new Git Repository
+
+> Add the public part of your new SSH key pair to the git repositories trusted deploy keys.
+```
+cat ~/.ssh/myorb_bootstrap
+```
+
+> Copy the file [](examples/static/orbiter.yml) to the root of your Repository.
+
+> Replace the IPs in your orbiter.yml accordingly
+
+### Complete Your Orb Setup
+
+> Download the latest orbctl
+```bash
 curl -s https://api.github.com/repos/caos/orbiter/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d '"' -f 4 | sudo wget -i - -O /usr/local/bin/orbctl
 sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 ```
 
-### Create Config And Secrets
+> Create an orb file
 
 ```bash
-# Create a new ssh key pair.
-mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f ~/.ssh/myorb_bootstrap -q && ssh-add ~/.ssh/myorb_bootstrap
-
-# Create a new orbconfig
 mkdir -p ~/.orb
 cat > ~/.orb/config << EOF
 url: git@github.com:me/my-orb.git
@@ -54,46 +94,38 @@ $(cat ~/.ssh/myorb_bootstrap | sed s/^/\ \ /g)
 EOF
 ```
 
-> Add the public part to the git repositories trusted deploy keys.  
+> Encrypt and write your ssh key pair to your repo
 
 ```bash
 # Add the bootstrap key pair to the remote secrets file. For simplicity, we use the repokey here.
-orbctl addsecret mystaticprovider.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
-orbctl addsecret mystaticprovider.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
+orbctl writesecret kvm.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
+orbctl writesecret kvm.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
 ```
-
-### Bootstrap A New Static Cluster On Firecracker VMs Using Ignite
-
-```bash
-# Create four firecracker VMs
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name first
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name second
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name third
-sudo ignite run weaveworks/ignite-ubuntu --cpus 2 --memory 4GB --size 15GB --ssh=~/.ssh/myorb_bootstrap.pub --ports 5000:5000 --ports 6443:6443 --name fourth
+> Bootstrap your local Kubernetes cluster
 ```
-
-Make sure your orb repo contains a desired.yml file similar to [this example](./examples/k8s/static/desired.yml). Show your VMs IPs with `sudo ignite ps -a`  
-
-```bash
-# Your environment is ready now, finally we can do some actual work. Launch a local orbiter that bootstraps your orb
 orbctl takeoff
+```
 
-# When the orbiter exits, overwrite your kubeconfig by the newly created admin kubeconfig
-mkdir -p ~/.kube && orbctl readsecret myk8s.kubeconfig > ~/.kube/config
+> As soon as the Orbiter has deployed itself to the cluster, you can decrypt the generated admin kubeconfig
+```
+mkdir -p ~/.kube
+orbctl readsecret k8s.kubeconfig > ~/.kube/config
+```
 
-# Watch your nodes become ready
-kubectl get nodes --watch
+> Wait for grafana to become running
+```
+kubectl --namespace caos-system get po -w
+```
 
-# Watch your pods become ready
-kubectl get pods --all-namespaces --watch
+> Open your browser at localhost:8080 to show your new clusters dashboards
+```
+kubectl --namespace caos-system port-forward svc/grafana 8080:80
+```
 
-# [Optional] Teach your ssh daemon to use the newly created ssh key for connecting to the VMS directly. The bootstrap key is not going to work anymore.
-orbctl readsecret mystaticprovider.maintenancekeyprivate > ~/.ssh/myorb-maintenance && chmod 0600 ~/.ssh/myorb-maintenance && ssh-add ~/.ssh/myorb-maintenance
-
-# Cleanup your environment
-sudo ignite rm -f $(sudo ignite ps -aq)
-
-# Delete your git repository to clean up this tests
+> Cleanup your environment
+```
+virsh undefine first
+virsh undefine second
 ```
 
 ## Supported Clusters
