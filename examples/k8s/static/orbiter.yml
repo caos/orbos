@@ -17,8 +17,8 @@ clusters:
         servicecidr: 100.126.4.0/22
       versions:
         kubernetes: v1.16.0
-        orbiter: v0.12.5
-        boom: v0.9.10
+        orbiter: v0.13.1
+        boom: v0.9.11
       workers:
       - nodes: 1
         pool: workers

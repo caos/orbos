@@ -21,6 +21,8 @@ func destroy(logger logging.Logger, providerCurrents map[string]interface{}, k8s
 				return err
 			}
 			for _, compute := range computes {
+				compute.Execute(nil, nil, "sudo systemctl stop node-agentd")
+				compute.Execute(nil, nil, "sudo systemctl disable node-agentd")
 				compute.Execute(nil, nil, "sudo kubeadm reset -f")
 				compute.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
 			}

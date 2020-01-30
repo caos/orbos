@@ -9,11 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/k8s"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/selinux"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -48,39 +49,25 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 }
 
 func (k *kubeletDep) Current() (common.Package, error) {
-	return k.common.Current()
+	pkg, err := k.common.Current()
+	if err != nil {
+		return pkg, err
+	}
+	return pkg, selinux.Current(k.os, &pkg)
 }
 
 func (k *kubeletDep) Ensure(remove common.Package, install common.Package) (bool, error) {
+
+	if err := selinux.EnsurePermissive(k.logger, k.os, remove); err != nil {
+		return false, err
+	}
 
 	if k.os != dep.CentOS {
 		return false, k.ensurePackage(remove, install)
 	}
 
 	var errBuf bytes.Buffer
-	cmd := exec.Command("setenforce", "0")
-	cmd.Stderr = &errBuf
-	if k.logger.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "disabling SELinux while installing kubelet so that containers can access the host filesystem failed with stderr %s", errBuf.String())
-	}
-	errBuf.Reset()
-
-	cmd = exec.Command("sed", "-i", "s/^SELINUX=enforcing$/SELINUX=permissive/", "/etc/selinux/config")
-	cmd.Stderr = &errBuf
-	if k.logger.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "disabling SELinux while installing kubelet so that containers can access the host filesystem failed with stderr %s", errBuf.String())
-	}
-	errBuf.Reset()
-
-	cmd = exec.Command("modprobe", "br_netfilter")
+	cmd := exec.Command("modprobe", "br_netfilter")
 	cmd.Stderr = &errBuf
 	if k.logger.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))

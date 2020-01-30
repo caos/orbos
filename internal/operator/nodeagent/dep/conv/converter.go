@@ -60,7 +60,7 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.KeepaliveD,
-			Installer: keepalived.New(d.logger, d.pm, d.sysd, d.cipher),
+			Installer: keepalived.New(d.logger, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.SSHD,

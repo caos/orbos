@@ -57,7 +57,6 @@ IP=<vm-ip-here>
 ssh orbiter@${IP} "mkdir -p ~/.ssh"
 scp ~/.ssh/myorb_bootstrap.pub orbiter@${IP}:/home/orbiter/.ssh/authorized_keys
 ssh orbiter@${IP} "chmod 700 ~/.ssh"
-ssh orbiter@${IP} "chmod 400 ~/.ssh/authorized_keys"
 ```
 
 ### Initialize A Git Repository

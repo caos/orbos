@@ -14,6 +14,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/selinux"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -26,10 +27,11 @@ type keepaliveDDep struct {
 	manager  *dep.PackageManager
 	systemd  *dep.SystemD
 	peerAuth string
+	os       dep.OperatingSystem
 }
 
-func New(logger logging.Logger, manager *dep.PackageManager, systemd *dep.SystemD, cipher string) Installer {
-	return &keepaliveDDep{logger, manager, systemd, cipher[:8]}
+func New(logger logging.Logger, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem, cipher string) Installer {
+	return &keepaliveDDep{logger, manager, systemd, cipher[:8], os}
 }
 
 func (keepaliveDDep) isKeepalived() {}
@@ -52,6 +54,11 @@ const (
 )
 
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
+	defer func() {
+		if err != nil {
+			err = selinux.Current(s.os, &pkg)
+		}
+	}()
 	config, err := ioutil.ReadFile("/etc/keepalived/keepalived.conf")
 	if os.IsNotExist(err) {
 		return pkg, nil
@@ -95,6 +102,10 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 }
 
 func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
+
+	if err := selinux.EnsurePermissive(s.logger, s.os, remove); err != nil {
+		return false, err
+	}
 
 	ensureCfg, ok := ensure.Config["keepalived.conf"]
 	if !ok {
