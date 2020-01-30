@@ -36,8 +36,8 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 			status := strings.TrimSpace(strings.Split(line, ":")[1])
 			if status != "permissive" {
 				pkg.Config["selinux"] = status
-				return nil
 			}
+			return nil
 		}
 	}
 	return err
