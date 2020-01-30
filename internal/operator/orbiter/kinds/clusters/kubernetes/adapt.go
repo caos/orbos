@@ -73,7 +73,7 @@ func AdaptFunc(
 		}
 		k8sClient := k8s.New(logger, kc)
 
-		if k8sClient.Available() && deployOrbiterAndBoom && oneoff {
+		if k8sClient.Available() && deployOrbiterAndBoom {
 			if err := ensureArtifacts(logger, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
 				deployErrors++
 				logger.WithFields(map[string]interface{}{
