@@ -112,8 +112,15 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
-		return err
+		sa, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		if macherrs.IsNotFound(err) {
+			return nil
+		}
+		if sa.GetName() != rsc.GetName() || sa.GetNamespace() != rsc.GetNamespace() {
+			_, err := resources.Update(rsc)
+			return err
+		}
+		return nil
 	})
 }
 
