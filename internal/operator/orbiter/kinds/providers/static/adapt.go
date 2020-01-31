@@ -68,7 +68,7 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			_, _, _, lMigrate, err := dynamic.AdaptFunc(desiredKind.Spec.RemoteUser)(desiredKind.Loadbalancing, nil, lbCurrent)
+			_, _, _, lMigrate, err := dynamic.AdaptFunc(logger)(desiredKind.Loadbalancing, nil, lbCurrent)
 			if err != nil {
 				return nil, nil, nil, migrate, err
 			}
@@ -85,7 +85,6 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 				Kind:    "orbiter.caos.ch/StaticProvider",
 				Version: "v0",
 			},
-			Deps: lbCurrent,
 		}
 		currentTree.Parsed = current
 

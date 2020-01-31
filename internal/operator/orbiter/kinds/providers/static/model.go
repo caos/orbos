@@ -67,7 +67,6 @@ type Secrets struct {
 
 type Current struct {
 	Common  *orbiter.Common `yaml:",inline"`
-	Deps    *orbiter.Tree
 	Current struct {
 		Pools      map[string]infra.Pool
 		Ingresses  map[string]infra.Address

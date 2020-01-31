@@ -3,6 +3,7 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/pkg/errors"
@@ -11,9 +12,10 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbiter/logging"
 )
 
-func AdaptFunc(remoteUser string) orbiter.AdaptFunc {
+func AdaptFunc(logger logging.Logger) orbiter.AdaptFunc {
 	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -78,9 +80,8 @@ func AdaptFunc(remoteUser string) orbiter.AdaptFunc {
 			computesData := make([]Data, len(computes))
 			for idx, compute := range computes {
 				computesData[idx] = Data{
-					RemoteUser: remoteUser,
-					VIPs:       vips,
-					Self:       compute,
+					VIPs: vips,
+					Self: compute,
 					Peers: deriveFilterComputes(func(cmp infra.Compute) bool {
 						return cmp.ID() != compute.ID()
 					}, append([]infra.Compute(nil), []infra.Compute(computes)...)),
@@ -97,6 +98,21 @@ func AdaptFunc(remoteUser string) orbiter.AdaptFunc {
 				"add": func(i, y int) int {
 					return i + y
 				},
+				"user": func(compute infra.Compute) (string, error) {
+					var user string
+					whoami := "whoami"
+					stdout, err := compute.Execute(nil, nil, whoami)
+					if err != nil {
+						return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
+					}
+					user = strings.TrimSuffix(string(stdout), "\n")
+					logger.WithFields(map[string]interface{}{
+						"user":    user,
+						"compute": compute.ID(),
+						"command": whoami,
+					}).Debug("Executed command")
+					return user, nil
+				},
 				//						"healthcmd": vrrpHealthChecksScript,
 				//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
 				//							return deriveFmap(func(src model.Source) []string {
@@ -110,7 +126,7 @@ func AdaptFunc(remoteUser string) orbiter.AdaptFunc {
 
 			keepaliveDTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}global_defs {
 	enable_script_security
-	script_user {{ $root.RemoteUser }}
+	script_user {{ user $root.Self }}
 }
 
 vrrp_sync_group VG1 {
@@ -267,7 +283,6 @@ http {
 
 type Data struct {
 	VIPs                 []VIP
-	RemoteUser           string
 	State                string
 	RouterID             int
 	Self                 infra.Compute
