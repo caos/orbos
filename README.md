@@ -32,6 +32,9 @@ In the following example we will create a `kubernetes` cluster on a `static prov
 
 ### Create Two Virtual Machines
 
+> Install KVM
+https://wiki.debian.org/KVM
+
 > Download a CentOS7 iso image
 
 > Create and setup two new Virtual Machines. Make sure you have a passwordless sudo enabled user called orbiter on the guest OS

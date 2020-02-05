@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
@@ -70,8 +72,14 @@ func (s *swapDep) Current() (pkg common.Package, err error) {
 }
 
 func (s *swapDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
+	var buf bytes.Buffer
+	swapoff := exec.Command("swapoff", "--all")
+	swapoff.Stderr = &buf
+	if err := swapoff.Run(); err != nil {
+		return false, errors.Wrapf(err, "Disabling swap failed with standard error: %s", buf.String())
+	}
 
-	return remove.Version != ensure.Version, dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) *string {
+	return false, dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) *string {
 		if !strings.Contains(line, "swap") {
 			return &line
 		}
