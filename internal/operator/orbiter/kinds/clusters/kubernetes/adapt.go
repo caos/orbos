@@ -84,11 +84,11 @@ func AdaptFunc(
 					panic(err)
 				}
 			} else {
-				deployErrors = 0
 				if oneoff {
 					logger.Info("Deployed Orbiter takes over control")
 					os.Exit(0)
 				}
+				deployErrors = 0
 			}
 		}
 
@@ -133,7 +133,9 @@ func AdaptFunc(
 					return err
 				}
 
-				return destroy(logger, providers, k8sClient, secretsKind.Secrets.Kubeconfig)
+				secretsKind.Secrets.Kubeconfig = nil
+
+				return destroy(logger, providers, k8sClient)
 			}, map[string]*orbiter.Secret{
 				"kubeconfig": secretsKind.Secrets.Kubeconfig,
 			}, migrate, nil
