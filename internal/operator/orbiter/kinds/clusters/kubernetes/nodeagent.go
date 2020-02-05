@@ -70,13 +70,16 @@ func ensureNodeAgent(
 		response, cbErr = cmp.Execute(nil, nil, showVersion)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", showVersion)
 	})
+	if err != nil {
+		return false, err
+	}
 	logger.WithFields(map[string]interface{}{
 		"command":  showVersion,
 		"response": string(response),
 	}).Debug("Executed command")
 
 	fields := strings.Fields(string(response))
-	if err == nil && len(fields) > 1 && fields[1] == orbiterCommit {
+	if len(fields) > 1 && fields[1] == orbiterCommit {
 		return true, nil
 	}
 
