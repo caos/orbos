@@ -35,37 +35,38 @@ func ensureScale(
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
 
-	alignComputes := func(pool initializedPool) (err error) {
+	alignComputes := func(pool initializedPool) (initialized bool, err error) {
 
 		existing, err := pool.computes()
 		if err != nil {
-			return err
+			return false, err
 		}
 		delta := pool.desired.Nodes - len(existing)
 		if delta > 0 {
 			computes, err := newComputes(pool.infra, delta)
 			if err != nil {
-				return err
+				return false, err
 			}
 			for _, compute := range computes {
 				if _, err := initializeCompute(compute, pool); err != nil {
-					return err
+					return false, err
 				}
 			}
 		} else {
 			for _, compute := range existing[pool.desired.Nodes:] {
 				if err := k8sClient.EnsureDeleted(compute.infra.ID(), compute.infra, false); err != nil {
-					return err
+					return false, err
 				}
 				if err := compute.infra.Remove(); err != nil {
-					return err
+					return false, err
 				}
 			}
 		}
-		return nil
+		return delta <= 0, nil
 	}
 
-	if err := alignComputes(controlplanePool); err != nil {
+	upscalingDone, err := alignComputes(controlplanePool)
+	if err != nil {
 		return false, err
 	}
 
@@ -77,8 +78,12 @@ func ensureScale(
 	ensuredControlplane := len(computes)
 	var ensuredWorkers int
 	for _, workerPool := range workerPools {
-		if err := alignComputes(workerPool); err != nil {
+		workerUpscalingDone, err := alignComputes(workerPool)
+		if err != nil {
 			return false, err
+		}
+		if !workerUpscalingDone {
+			upscalingDone = false
 		}
 
 		workerComputes, err := workerPool.computes()
@@ -87,6 +92,11 @@ func ensureScale(
 		}
 		ensuredWorkers += len(workerComputes)
 		computes = append(computes, workerComputes...)
+	}
+
+	if !upscalingDone {
+		logger.Info("Upscaled computes are not ready yet")
+		return false, nil
 	}
 
 	var joinCP infra.Compute

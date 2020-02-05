@@ -78,7 +78,7 @@ func resolveEditorArguments(executable string, filename string) []string {
 	}
 
 	if strings.Contains(executable, "vim") {
-		args = append([]string{"--not-a-term"}, args...)
+		args = append([]string{"--not-a-term", "-c", "set nowrap"}, args...)
 	}
 
 	// Other common editors

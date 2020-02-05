@@ -33,8 +33,8 @@ func ensureNodeAgents(
 	}
 
 	return ready, func(compute initializedCompute) error {
-		_, err := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
-		return err
+		_, iErr := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
+		return iErr
 	}, err
 }
 
