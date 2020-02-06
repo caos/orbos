@@ -9,13 +9,13 @@ type DestroyFunc func() error
 
 func Destroy(gitClient *git.Client, adapt AdaptFunc) error {
 
-	treeDesired, treeSecrets, err := parse(gitClient)
+	treeDesired, err := parse(gitClient)
 	if err != nil {
 		return err
 	}
 
 	treeCurrent := &Tree{}
-	_, destroy, _, _, err := adapt(treeDesired, treeSecrets, treeCurrent)
+	_, destroy, _, _, err := adapt(treeDesired, treeCurrent)
 	if err != nil {
 		return err
 	}
@@ -34,8 +34,8 @@ func Destroy(gitClient *git.Client, adapt AdaptFunc) error {
 		Path:    "caos-internal/orbiter/node-agents-desired.yml",
 		Content: []byte(""),
 	}, git.File{
-		Path:    "secrets.yml",
-		Content: common.MarshalYAML(treeSecrets),
+		Path:    "orbiter.yml",
+		Content: common.MarshalYAML(treeDesired),
 	}); err != nil {
 		panic(err)
 	}

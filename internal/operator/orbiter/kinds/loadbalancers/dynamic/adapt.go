@@ -16,7 +16,7 @@ import (
 )
 
 func AdaptFunc(logger logging.Logger) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()

@@ -58,19 +58,19 @@ func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) err
 }
 
 func findSecret(gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
-	treeDesired, treeSecrets, err := parse(gitClient)
+	treeDesired, err := parse(gitClient)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, _, secrets, _, err := adapt(treeDesired, treeSecrets, &Tree{})
+	_, _, secrets, _, err := adapt(treeDesired, &Tree{})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if path != "" {
 		sec, err := exactSecret(secrets, path)
-		return sec, treeSecrets, err
+		return sec, treeDesired, err
 	}
 
 	selectItems := items(secrets)
@@ -92,7 +92,7 @@ func findSecret(gitClient *git.Client, adapt AdaptFunc, path string, items func(
 	}
 
 	sec, err := exactSecret(secrets, result)
-	return sec, treeSecrets, err
+	return sec, treeDesired, err
 }
 
 func exactSecret(secrets map[string]*Secret, path string) (*Secret, error) {

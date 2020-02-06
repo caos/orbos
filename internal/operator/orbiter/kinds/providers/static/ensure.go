@@ -18,7 +18,6 @@ import (
 func ensure(
 	desired *DesiredV0,
 	current *Current,
-	sec *SecretsV0,
 
 	psf orbiter.PushSecretsFunc,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
@@ -29,14 +28,14 @@ func ensure(
 	id string,
 ) (err error) {
 
-	if (sec.Secrets.MaintenanceKeyPrivate == nil || sec.Secrets.MaintenanceKeyPrivate.Value == "") &&
-		(sec.Secrets.MaintenanceKeyPublic == nil || sec.Secrets.MaintenanceKeyPublic.Value == "") {
+	if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
+		(desired.Spec.Keys.MaintenanceKeyPublic == nil || desired.Spec.Keys.MaintenanceKeyPublic.Value == "") {
 		priv, pub, err := ssh.Generate()
 		if err != nil {
 			return err
 		}
-		sec.Secrets.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
-		sec.Secrets.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
+		desired.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
+		desired.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
 		if err := psf(); err != nil {
 			return err
 		}
@@ -45,7 +44,7 @@ func ensure(
 	// TODO: Allow Changes
 	desireHostnameFunc := desireHostname(desired.Spec.Pools, nodeAgentsDesired)
 
-	computesSvc := NewComputesService(logger, desired, []byte(sec.Secrets.BootstrapKeyPrivate.Value), []byte(sec.Secrets.MaintenanceKeyPrivate.Value), []byte(sec.Secrets.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
+	computesSvc := NewComputesService(logger, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
 	pools, err := computesSvc.ListPools()
 	if err != nil {
 		return err

@@ -2,13 +2,13 @@ package static
 
 import "github.com/caos/orbiter/logging"
 
-func destroy(logger logging.Logger, desired *DesiredV0, current *Current, secrets Secrets, id string) error {
+func destroy(logger logging.Logger, desired *DesiredV0, current *Current, id string) error {
 	computesSvc := NewComputesService(
 		logger,
 		desired,
-		[]byte(secrets.BootstrapKeyPrivate.Value),
-		[]byte(secrets.MaintenanceKeyPrivate.Value),
-		[]byte(secrets.MaintenanceKeyPublic.Value),
+		[]byte(desired.Spec.Keys.BootstrapKeyPrivate.Value),
+		[]byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value),
+		[]byte(desired.Spec.Keys.MaintenanceKeyPublic.Value),
 		id,
 		nil)
 

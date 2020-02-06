@@ -43,22 +43,25 @@ type DesiredV1 struct {
 */
 type DesiredV0 struct {
 	Common orbiter.Common `yaml:",inline"`
-	Spec   struct {
-		Verbose  bool
-		Versions struct {
-			Kubernetes string
-			Orbiter    string
-			Boom       string
-		}
-		Networking struct {
-			DNSDomain   string
-			Network     string
-			ServiceCidr orbiter.CIDR
-			PodCidr     orbiter.CIDR
-		}
-		ControlPlane Pool
-		Workers      []*Pool
+	Spec   Spec
+}
+
+type Spec struct {
+	ControlPlane Pool
+	Kubeconfig   *orbiter.Secret `yaml:",omitempty"`
+	Networking   struct {
+		DNSDomain   string
+		Network     string
+		ServiceCidr orbiter.CIDR
+		PodCidr     orbiter.CIDR
 	}
+	Verbose  bool
+	Versions struct {
+		Kubernetes string
+		Orbiter    string
+		Boom       string
+	}
+	Workers []*Pool
 }
 
 func (d *DesiredV0) validate() error {
