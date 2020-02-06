@@ -35,6 +35,9 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 		if strings.Contains(line, "Current mode:") {
 			status := strings.TrimSpace(strings.Split(line, ":")[1])
 			if status != "permissive" {
+				if pkg.Config == nil {
+					pkg.Config = make(map[string]string)
+				}
 				pkg.Config["selinux"] = status
 			}
 			return nil
