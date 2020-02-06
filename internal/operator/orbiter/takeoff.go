@@ -17,14 +17,14 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 
 	return func() {
 
-		treeDesired, treeSecrets, err := parse(gitClient)
+		treeDesired, err := parse(gitClient)
 		if err != nil {
 			logger.Error(err)
 			return
 		}
 
 		treeCurrent := &Tree{}
-		ensure, _, _, migrate, err := adapt(treeDesired, treeSecrets, treeCurrent)
+		ensure, _, _, migrate, err := adapt(treeDesired, treeCurrent)
 		if err != nil {
 			logger.Error(err)
 			return
@@ -34,9 +34,6 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			if err := gitClient.UpdateRemote(git.File{
 				Path:    "orbiter.yml",
 				Content: common.MarshalYAML(treeDesired),
-			}, git.File{
-				Path:    "secrets.yml",
-				Content: common.MarshalYAML(treeSecrets),
 			}); err != nil {
 				logger.Error(err)
 				return
@@ -52,7 +49,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
 		}
 
-		if err := ensure(pushSecretsFunc(gitClient, treeSecrets), currentNodeAgents.Current, desiredNodeAgents); err != nil {
+		if err := ensure(pushSecretsFunc(gitClient, treeDesired), currentNodeAgents.Current, desiredNodeAgents); err != nil {
 			logger.Error(err)
 			return
 		}

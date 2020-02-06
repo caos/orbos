@@ -18,23 +18,24 @@ func ensureNodeAgents(
 	orbiterCommit string,
 	repoURL string,
 	repoKey string,
-	computes []initializedCompute) (bool, func(compute initializedCompute) error, error) {
+	computes []initializedCompute) (ready bool, ensure func(compute initializedCompute) error, err error) {
 
-	ready := true
+	ready = true
 	for _, compute := range computes {
-		ok, err := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
-		if err != nil {
-			return false, nil, err
-		}
-		if !ok {
+		var isReady bool
+		isReady, err = ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
+		if !isReady {
 			ready = false
+		}
+		if err != nil {
+			break
 		}
 	}
 
 	return ready, func(compute initializedCompute) error {
-		_, err := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
-		return err
-	}, nil
+		_, iErr := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
+		return iErr
+	}, err
 }
 
 func ensureNodeAgent(
@@ -69,13 +70,16 @@ func ensureNodeAgent(
 		response, cbErr = cmp.Execute(nil, nil, showVersion)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", showVersion)
 	})
+	if err != nil {
+		return false, err
+	}
 	logger.WithFields(map[string]interface{}{
 		"command":  showVersion,
 		"response": string(response),
 	}).Debug("Executed command")
 
 	fields := strings.Fields(string(response))
-	if err == nil && len(fields) > 1 && fields[1] == orbiterCommit {
+	if len(fields) > 1 && fields[1] == orbiterCommit {
 		return true, nil
 	}
 

@@ -16,7 +16,7 @@ func AdaptFunc(
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -36,20 +36,6 @@ func AdaptFunc(
 			logger = logger.Verbose()
 		}
 
-		if secretsTree.Common == nil {
-			secretsTree.Common = &orbiter.Common{
-				Kind:    "orbiter.caos.ch/Orb",
-				Version: "v0",
-			}
-		}
-
-		secretsKind := &SecretsV0{Common: secretsTree.Common}
-		if err := secretsTree.Original.Decode(secretsKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
-		}
-		secretsKind.Common.Version = "v0"
-		secretsTree.Parsed = secretsKind
-
 		providerCurrents := make(map[string]*orbiter.Tree)
 		providerEnsurers := make([]orbiter.EnsureFunc, 0)
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
@@ -63,11 +49,6 @@ func AdaptFunc(
 			//			providerlogger := logger.WithFields(map[string]interface{}{
 			//				"provider": provID,
 			//			})
-
-			providerSecretsTree, ok := secretsKind.Providers[provID]
-			if !ok {
-				secretsKind.Providers[provID] = &orbiter.Tree{}
-			}
 
 			//			providerID := id + provID
 			switch providerTree.Common.Kind {
@@ -95,7 +76,7 @@ func AdaptFunc(
 				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				//				}
 
-				providerEnsurer, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerSecretsTree, providerCurrent)
+				providerEnsurer, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerCurrent)
 				if err != nil {
 					return nil, nil, nil, migrate, err
 				}
@@ -157,18 +138,9 @@ func AdaptFunc(
 			clusterCurrent := &orbiter.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
 
-			clusterSecretsTree, ok := secretsKind.Clusters[clusterID]
-			if !ok {
-				if secretsKind.Clusters == nil {
-					secretsKind.Clusters = make(map[string]*orbiter.Tree)
-				}
-				clusterSecretsTree = &orbiter.Tree{}
-				secretsKind.Clusters[clusterID] = clusterSecretsTree
-			}
-
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterEnsurer, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterSecretsTree, clusterCurrent)
+				clusterEnsurer, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterCurrent)
 				if err != nil {
 					return nil, nil, nil, migrate, err
 				}

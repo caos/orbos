@@ -10,11 +10,21 @@ import (
 )
 
 func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
-		desiredKind := &DesiredV0{Common: desiredTree.Common}
+		desiredKind := &DesiredV0{
+			Common: desiredTree.Common,
+			Spec: Spec{
+				Keys: Keys{
+					BootstrapKeyPrivate:   &orbiter.Secret{Masterkey: masterkey},
+					BootstrapKeyPublic:    &orbiter.Secret{Masterkey: masterkey},
+					MaintenanceKeyPrivate: &orbiter.Secret{Masterkey: masterkey},
+					MaintenanceKeyPublic:  &orbiter.Secret{Masterkey: masterkey},
+				},
+			},
+		}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
 			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
@@ -24,51 +34,32 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 			logger = logger.Verbose()
 		}
 
-		if secretsTree.Common == nil {
-			secretsTree.Common = &orbiter.Common{
-				Kind:    "orbiter.caos.ch/StaticProvider",
-				Version: "v0",
-			}
+		if err := desiredKind.validate(); err != nil {
+			return nil, nil, nil, migrate, err
 		}
 
-		secretsKind := &SecretsV0{
-			Common: secretsTree.Common,
-			Secrets: Secrets{
-				BootstrapKeyPrivate:   &orbiter.Secret{Masterkey: masterkey},
-				BootstrapKeyPublic:    &orbiter.Secret{Masterkey: masterkey},
-				MaintenanceKeyPrivate: &orbiter.Secret{Masterkey: masterkey},
-				MaintenanceKeyPublic:  &orbiter.Secret{Masterkey: masterkey},
-			},
-		}
-		if secretsTree.Original != nil {
-			if err := secretsTree.Original.Decode(secretsKind); err != nil {
-				return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
-			}
-		}
-		if secretsKind.Secrets.BootstrapKeyPrivate == nil {
-			secretsKind.Secrets.BootstrapKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
+		if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
+			desiredKind.Spec.Keys.BootstrapKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
 		}
 
-		if secretsKind.Secrets.BootstrapKeyPublic == nil {
-			secretsKind.Secrets.BootstrapKeyPublic = &orbiter.Secret{Masterkey: masterkey}
+		if desiredKind.Spec.Keys.BootstrapKeyPublic == nil {
+			desiredKind.Spec.Keys.BootstrapKeyPublic = &orbiter.Secret{Masterkey: masterkey}
 		}
 
-		if secretsKind.Secrets.MaintenanceKeyPrivate == nil {
-			secretsKind.Secrets.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
+		if desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
+			desiredKind.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
 		}
 
-		if secretsKind.Secrets.MaintenanceKeyPublic == nil {
-			secretsKind.Secrets.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey}
+		if desiredKind.Spec.Keys.MaintenanceKeyPublic == nil {
+			desiredKind.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey}
 		}
-
-		secretsTree.Parsed = secretsKind
 
 		lbCurrent := &orbiter.Tree{}
 		switch desiredKind.Loadbalancing.Common.Kind {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			_, _, _, lMigrate, err := dynamic.AdaptFunc(logger)(desiredKind.Loadbalancing, nil, lbCurrent)
+			_, _, _, lMigrate, err := dynamic.AdaptFunc(logger)(desiredKind.Loadbalancing, lbCurrent)
 			if err != nil {
 				return nil, nil, nil, migrate, err
 			}
@@ -89,14 +80,14 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		currentTree.Parsed = current
 
 		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
-				return errors.Wrapf(ensure(desiredKind, current, secretsKind, psf, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
+				return errors.Wrapf(ensure(desiredKind, current, psf, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
 			}, func() error {
-				return destroy(logger, desiredKind, current, secretsKind.Secrets, id)
+				return destroy(logger, desiredKind, current, id)
 			}, map[string]*orbiter.Secret{
-				"bootstrapkeyprivate":   secretsKind.Secrets.BootstrapKeyPrivate,
-				"bootstrapkeypublic":    secretsKind.Secrets.BootstrapKeyPublic,
-				"maintenancekeyprivate": secretsKind.Secrets.MaintenanceKeyPrivate,
-				"maintenancekeypublic":  secretsKind.Secrets.MaintenanceKeyPublic,
+				"bootstrapkeyprivate":   desiredKind.Spec.Keys.BootstrapKeyPrivate,
+				"bootstrapkeypublic":    desiredKind.Spec.Keys.BootstrapKeyPublic,
+				"maintenancekeyprivate": desiredKind.Spec.Keys.MaintenanceKeyPrivate,
+				"maintenancekeypublic":  desiredKind.Spec.Keys.MaintenanceKeyPublic,
 			}, migrate, nil
 	}
 }

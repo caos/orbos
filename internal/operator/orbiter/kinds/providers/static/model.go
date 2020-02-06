@@ -8,14 +8,24 @@ import (
 )
 
 type DesiredV0 struct {
-	Common *orbiter.Common `yaml:",inline"`
-	Spec   struct {
-		Verbose             bool
-		RemoteUser          string
-		RemotePublicKeyPath string
-		Pools               map[string][]*Compute
-	}
+	Common        *orbiter.Common `yaml:",inline"`
+	Spec          Spec
 	Loadbalancing *orbiter.Tree
+}
+
+type Spec struct {
+	Verbose             bool
+	RemoteUser          string
+	RemotePublicKeyPath string
+	Pools               map[string][]*Compute
+	Keys                Keys
+}
+
+type Keys struct {
+	BootstrapKeyPrivate   *orbiter.Secret `yaml:",omitempty"`
+	BootstrapKeyPublic    *orbiter.Secret `yaml:",omitempty"`
+	MaintenanceKeyPrivate *orbiter.Secret `yaml:",omitempty"`
+	MaintenanceKeyPublic  *orbiter.Secret `yaml:",omitempty"`
 }
 
 func (d DesiredV0) validate() error {
@@ -51,18 +61,6 @@ func (c *Compute) validate() error {
 		return errors.New("No hostname provided")
 	}
 	return c.IP.Validate()
-}
-
-type SecretsV0 struct {
-	Common  *orbiter.Common `yaml:",inline"`
-	Secrets Secrets
-}
-
-type Secrets struct {
-	BootstrapKeyPrivate   *orbiter.Secret `yaml:",omitempty"`
-	BootstrapKeyPublic    *orbiter.Secret `yaml:",omitempty"`
-	MaintenanceKeyPrivate *orbiter.Secret `yaml:",omitempty"`
-	MaintenanceKeyPublic  *orbiter.Secret `yaml:",omitempty"`
 }
 
 type Current struct {

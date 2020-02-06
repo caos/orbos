@@ -68,7 +68,7 @@ func ensureCluster(
 		orbiterCommit,
 		repoURL,
 		repoKey,
-		append(controlplaneComputes, initializedComputes...),
+		initializedComputes,
 	)
 	if err != nil || !nodeagentsDone {
 		logger.Info("Node Agents are not ready yet")

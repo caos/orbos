@@ -22,7 +22,7 @@ func AdaptFunc(
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
 
 	var deployErrors int
-	return func(desiredTree *orbiter.Tree, secretsTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -31,7 +31,10 @@ func AdaptFunc(
 			migrate = true
 		}
 
-		desiredKind := &DesiredV0{Common: *desiredTree.Common}
+		desiredKind := &DesiredV0{
+			Common: *desiredTree.Common,
+			Spec:   Spec{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
+		}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
 			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
@@ -41,35 +44,17 @@ func AdaptFunc(
 			return nil, nil, nil, migrate, err
 		}
 
+		if desiredKind.Spec.Kubeconfig == nil {
+			desiredKind.Spec.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
+		}
+
 		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
 			logger = logger.Verbose()
 		}
 
-		if secretsTree.Common == nil {
-			secretsTree.Common = &orbiter.Common{
-				Kind:    "orbiter.caos.ch/KubernetesCluster",
-				Version: "v0",
-			}
-		}
-
-		secretsKind := &SecretsV0{
-			Common:  *secretsTree.Common,
-			Secrets: Secrets{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
-		}
-		if secretsTree.Original != nil {
-			if err := secretsTree.Original.Decode(secretsKind); err != nil {
-				return nil, nil, nil, migrate, errors.Wrap(err, "parsing secrets failed")
-			}
-		}
-		secretsTree.Parsed = secretsKind
-
-		if secretsKind.Secrets.Kubeconfig == nil {
-			secretsKind.Secrets.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
-		}
-
 		var kc *string
-		if secretsKind.Secrets.Kubeconfig.Value != "" {
-			kc = &secretsKind.Secrets.Kubeconfig.Value
+		if desiredKind.Spec.Kubeconfig.Value != "" {
+			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
 		k8sClient := k8s.New(logger, kc)
 
@@ -84,11 +69,11 @@ func AdaptFunc(
 					panic(err)
 				}
 			} else {
-				deployErrors = 0
 				if oneoff {
 					logger.Info("Deployed Orbiter takes over control")
 					os.Exit(0)
 				}
+				deployErrors = 0
 			}
 		}
 
@@ -118,7 +103,7 @@ func AdaptFunc(
 					nodeAgentsCurrent,
 					nodeAgentsDesired,
 					psf,
-					secretsKind.Secrets.Kubeconfig,
+					desiredKind.Spec.Kubeconfig,
 					orb.URL,
 					orb.Repokey,
 					orbiterCommit,
@@ -133,9 +118,11 @@ func AdaptFunc(
 					return err
 				}
 
-				return destroy(logger, providers, k8sClient, secretsKind.Secrets.Kubeconfig)
+				desiredKind.Spec.Kubeconfig = nil
+
+				return destroy(logger, providers, k8sClient)
 			}, map[string]*orbiter.Secret{
-				"kubeconfig": secretsKind.Secrets.Kubeconfig,
+				"kubeconfig": desiredKind.Spec.Kubeconfig,
 			}, migrate, nil
 	}
 }

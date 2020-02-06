@@ -6,9 +6,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(desired *Tree, secrets *Tree, current *Tree) (EnsureFunc, DestroyFunc, map[string]*Secret, bool, error)
+type AdaptFunc func(desired *Tree, current *Tree) (EnsureFunc, DestroyFunc, map[string]*Secret, bool, error)
 
-func parse(gitClient *git.Client) (desired *Tree, secrets *Tree, err error) {
+func parse(gitClient *git.Client) (desired *Tree, err error) {
 
 	if err := gitClient.Clone(); err != nil {
 		panic(err)
@@ -16,24 +16,14 @@ func parse(gitClient *git.Client) (desired *Tree, secrets *Tree, err error) {
 
 	rawDesired, err := gitClient.Read("orbiter.yml")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	treeDesired := &Tree{}
 	if err := yaml.Unmarshal([]byte(rawDesired), treeDesired); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	rawSecrets, err := gitClient.Read("secrets.yml")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	treeSecrets := &Tree{}
-	if err := yaml.Unmarshal([]byte(rawSecrets), treeSecrets); err != nil {
-		return nil, nil, err
-	}
-
-	return treeDesired, treeSecrets, nil
+	return treeDesired, nil
 }
 
 type Tree struct {
@@ -59,11 +49,11 @@ func (c *Tree) MarshalYAML() (interface{}, error) {
 
 type PushSecretsFunc func() error
 
-func pushSecretsFunc(gitClient *git.Client, secrets *Tree) PushSecretsFunc {
+func pushSecretsFunc(gitClient *git.Client, desired *Tree) PushSecretsFunc {
 	return func() error {
 		return gitClient.UpdateRemote(git.File{
-			Path:    "secrets.yml",
-			Content: common.MarshalYAML(secrets),
+			Path:    "orbiter.yml",
+			Content: common.MarshalYAML(desired),
 		})
 	}
 }
