@@ -123,6 +123,13 @@ func ensureSoftware(
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
+		waitForNodeAgent := func() error {
+			logger.WithFields(map[string]interface{}{
+				"compute": compute.infra.ID(),
+			}).Info("Waiting for software to be ensured")
+			return nil
+		}
+
 		ensureJoinSoftware := func() error {
 			logger.WithFields(map[string]interface{}{
 				"compute": compute.infra.ID(),
@@ -203,6 +210,10 @@ func ensureSoftware(
 
 		id := compute.infra.ID()
 
+		if !compute.currentNodeagent.NodeIsReady {
+			return waitForNodeAgent, nil
+		}
+
 		k8sNode, err := k8sClient.GetNode(id)
 		if k8sNode == nil || err != nil {
 			if compute.currentNodeagent.Software.Contains(to) {
@@ -236,13 +247,8 @@ func ensureSoftware(
 			return ensureOnline(k8sNode), nil
 		}
 
-		if !compute.currentNodeagent.Software.Contains(to) || !compute.currentNodeagent.NodeIsReady {
-			return func() error {
-				logger.WithFields(map[string]interface{}{
-					"compute": compute.infra.ID(),
-				}).Info("Waiting for software to be ensured")
-				return nil
-			}, nil
+		if !compute.currentNodeagent.NodeIsReady || !compute.currentNodeagent.Software.Contains(to) {
+			return waitForNodeAgent, nil
 		}
 
 		return nil, nil

@@ -31,6 +31,9 @@ func Destroy(gitClient *git.Client, adapt AdaptFunc) error {
 		Path:    "caos-internal/orbiter/node-agents-current.yml",
 		Content: []byte(""),
 	}, git.File{
+		Path:    "caos-internal/orbiter/node-agents-desired.yml",
+		Content: []byte(""),
+	}, git.File{
 		Path:    "secrets.yml",
 		Content: common.MarshalYAML(treeSecrets),
 	}); err != nil {
