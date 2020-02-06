@@ -34,6 +34,26 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 			logger = logger.Verbose()
 		}
 
+		if err := desiredKind.validate(); err != nil {
+			return nil, nil, nil, migrate, err
+		}
+
+		if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
+			desiredKind.Spec.Keys.BootstrapKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
+		}
+
+		if desiredKind.Spec.Keys.BootstrapKeyPublic == nil {
+			desiredKind.Spec.Keys.BootstrapKeyPublic = &orbiter.Secret{Masterkey: masterkey}
+		}
+
+		if desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
+			desiredKind.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
+		}
+
+		if desiredKind.Spec.Keys.MaintenanceKeyPublic == nil {
+			desiredKind.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey}
+		}
+
 		lbCurrent := &orbiter.Tree{}
 		switch desiredKind.Loadbalancing.Common.Kind {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":

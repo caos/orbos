@@ -44,6 +44,10 @@ func AdaptFunc(
 			return nil, nil, nil, migrate, err
 		}
 
+		if desiredKind.Spec.Kubeconfig == nil {
+			desiredKind.Spec.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
+		}
+
 		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
 			logger = logger.Verbose()
 		}
