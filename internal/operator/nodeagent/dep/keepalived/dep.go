@@ -55,7 +55,7 @@ const (
 
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	defer func() {
-		if err != nil {
+		if err == nil {
 			err = selinux.Current(s.os, &pkg)
 		}
 	}()
