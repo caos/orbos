@@ -20,7 +20,7 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 		return nil
 	}
 
-	if _, err := exec.LookPath("sestatus"); err != nil {
+	if path, err := exec.LookPath("sestatus"); err != nil || path == "" {
 		if pkg.Config == nil {
 			pkg.Config = make(map[string]string)
 		}
