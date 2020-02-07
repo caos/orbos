@@ -56,14 +56,14 @@ func (k *kubeletDep) Current() (common.Package, error) {
 	return pkg, selinux.Current(k.os, &pkg)
 }
 
-func (k *kubeletDep) Ensure(remove common.Package, install common.Package) (bool, error) {
+func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error {
 
 	if err := selinux.EnsurePermissive(k.logger, k.os, remove); err != nil {
-		return false, err
+		return err
 	}
 
 	if k.os != dep.CentOS {
-		return false, k.ensurePackage(remove, install)
+		return k.ensurePackage(remove, install)
 	}
 
 	var errBuf bytes.Buffer
@@ -74,13 +74,13 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) (bool
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "loading module br_netfilter while installing kubelet failed with stderr %s", errBuf.String())
+		return errors.Wrapf(err, "loading module br_netfilter while installing kubelet failed with stderr %s", errBuf.String())
 	}
 	errBuf.Reset()
 
 	file, err := os.Create("/etc/sysctl.d/k8s.conf")
 	if err != nil {
-		return false, errors.Wrap(err, "opening /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
+		return errors.Wrap(err, "opening /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
 	}
 	defer file.Close()
 
@@ -88,7 +88,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) (bool
 net.bridge.bridge-nf-call-iptables = 1
 		`)))
 	if err != nil {
-		return false, errors.Wrap(err, "writing to /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
+		return errors.Wrap(err, "writing to /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
 	}
 	file.Close()
 
@@ -100,10 +100,10 @@ net.bridge.bridge-nf-call-iptables = 1
 	}
 
 	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "running sysctl --system in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed with stderr %s", errBuf.String())
+		return errors.Wrapf(err, "running sysctl --system in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed with stderr %s", errBuf.String())
 	}
 
-	return false, k.ensurePackage(remove, install)
+	return k.ensurePackage(remove, install)
 }
 
 func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package) error {

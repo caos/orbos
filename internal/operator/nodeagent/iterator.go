@@ -59,7 +59,7 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			return
 		}
 
-		curr, reboot, err := ensure(logger, commit, firewallEnsurer, conv, *naDesired)
+		curr, err := ensure(logger, commit, firewallEnsurer, conv, *naDesired)
 		if err != nil {
 			logger.Error(err)
 			return
@@ -81,14 +81,6 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 		}, true); err != nil {
 			logger.Error(err)
 			return
-		}
-
-		if reboot {
-			logger.Info("Rebooting")
-			if err = rebooter.Reboot(); err != nil {
-				logger.Error(err)
-				return
-			}
 		}
 	}
 }

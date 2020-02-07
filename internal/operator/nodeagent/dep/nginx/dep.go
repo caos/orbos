@@ -81,13 +81,13 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
+func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	ensureCfg, ok := ensure.Config["nginx.conf"]
 	if !ok {
 		s.systemd.Disable("nginx")
 		os.Remove("/etc/nginx/nginx.conf")
-		return false, nil
+		return nil
 	}
 
 	if _, ok := remove.Config["nginx.conf"]; !ok {
@@ -99,23 +99,23 @@ gpgcheck=1
 enabled=1
 gpgkey=https://nginx.org/keys/nginx_signing.key
 module_hotfixes=true`), 0600); err != nil {
-			return false, err
+			return err
 		}
 
 		if err := s.manager.Install(&dep.Software{
 			Package: "nginx",
 			Version: ensure.Version,
 		}); err != nil {
-			return false, err
+			return err
 		}
 
 		if err := os.MkdirAll("/etc/nginx", 0700); err != nil {
-			return false, err
+			return err
 		}
 	}
 
 	if err := ioutil.WriteFile("/etc/nginx/nginx.conf", []byte(ensureCfg), 0600); err != nil {
-		return false, err
+		return err
 	}
 
 	if err := dep.ManipulateFile("/etc/sysctl.conf", []string{
@@ -125,22 +125,19 @@ module_hotfixes=true`), 0600); err != nil {
 		"net.ipv4.ip_forward = 1",
 		"net.ipv4.ip_nonlocal_bind = 1",
 	}, nil); err != nil {
-		return false, err
+		return err
+	}
+
+	cmd := exec.Command("sysctl", "--system")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
 	}
 
 	if err := s.systemd.Enable("nginx"); err != nil {
-		return false, err
+		return err
 	}
 
-	if _, ok := remove.Config[ipForwardCfg]; ok {
-		return true, nil
-	}
-
-	if _, ok = remove.Config[nonlocalbindCfg]; ok {
-		return true, nil
-	}
-
-	return false, s.systemd.Start("nginx")
+	return s.systemd.Start("nginx")
 }
 
 func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {

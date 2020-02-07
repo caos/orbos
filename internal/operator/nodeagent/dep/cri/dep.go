@@ -60,15 +60,15 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (c *criDep) Ensure(uninstall common.Package, install common.Package) (bool, error) {
+func (c *criDep) Ensure(uninstall common.Package, install common.Package) error {
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {
-		return false, errors.Errorf("Container runtime must have the form [runtime] [version], but got %s", install)
+		return errors.Errorf("Container runtime must have the form [runtime] [version], but got %s", install)
 	}
 
 	if fields[0] != "docker-ce" {
-		return false, errors.New("Only docker-ce is supported yet")
+		return errors.New("Only docker-ce is supported yet")
 	}
 
 	version := strings.TrimLeft(fields[1], "v")
@@ -79,5 +79,5 @@ func (c *criDep) Ensure(uninstall common.Package, install common.Package) (bool,
 	case dep.CentOS:
 		return c.ensureCentOS(fields[0], version)
 	}
-	return false, errors.Errorf("Operating %s system is not supported", c.os)
+	return errors.Errorf("Operating %s system is not supported", c.os)
 }

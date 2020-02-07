@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 )
 
 type Common struct {

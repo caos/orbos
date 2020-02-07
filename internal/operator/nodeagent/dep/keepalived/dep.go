@@ -101,38 +101,38 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	return pkg, err
 }
 
-func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
+func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	if err := selinux.EnsurePermissive(s.logger, s.os, remove); err != nil {
-		return false, err
+		return err
 	}
 
 	ensureCfg, ok := ensure.Config["keepalived.conf"]
 	if !ok {
 		if err := s.systemd.Disable("keepalived"); err != nil {
-			return false, err
+			return err
 		}
-		return false, os.Remove("/etc/keepalived/keepalived.conf")
+		return os.Remove("/etc/keepalived/keepalived.conf")
 	}
 
 	if err := s.manager.Install(&dep.Software{
 		Package: "keepalived",
 		Version: ensure.Version,
 	}); err != nil {
-		return false, err
+		return err
 	}
 
 	if err := os.MkdirAll("/etc/keepalived", 0700); err != nil {
-		return false, err
+		return err
 	}
 
 	if err := ioutil.WriteFile("/etc/keepalived/keepalived.conf", []byte(strings.ReplaceAll(ensureCfg, "[ REDACTED ]", s.peerAuth)), 0600); err != nil {
-		return false, err
+		return err
 	}
 
 	if notifyMaster, ok := ensure.Config["notifymaster.sh"]; ok {
 		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0777); err != nil {
-			return false, err
+			return err
 		}
 	}
 
@@ -143,21 +143,19 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) (bo
 		"net.ipv4.ip_forward = 1",
 		"net.ipv4.ip_nonlocal_bind = 1",
 	}, nil); err != nil {
-		return false, err
+		return err
+	}
+
+	cmd := exec.Command("sysctl", "--system")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
 	}
 
 	if err := s.systemd.Enable("keepalived"); err != nil {
-		return false, err
-	}
-	if _, ok := remove.Config[ipForwardCfg]; ok {
-		return true, nil
+		return err
 	}
 
-	if _, ok = remove.Config[nonlocalbindCfg]; ok {
-		return true, nil
-	}
-
-	return false, s.systemd.Start("keepalived")
+	return s.systemd.Start("keepalived")
 }
 
 func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {

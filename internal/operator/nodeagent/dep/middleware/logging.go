@@ -3,9 +3,9 @@ package middleware
 import (
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
+	"github.com/caos/orbiter/logging"
 )
 
 type loggedDep struct {
@@ -34,14 +34,13 @@ func (l *loggedDep) Current() (common.Package, error) {
 	return current, errors.Wrapf(err, "querying installed package for dependency %s failed", l.String())
 }
 
-func (l *loggedDep) Ensure(remove common.Package, install common.Package) (bool, error) {
-	reboot, err := l.unwrapped.Ensure(remove, install)
+func (l *loggedDep) Ensure(remove common.Package, install common.Package) error {
+	err := l.unwrapped.Ensure(remove, install)
 	if err == nil {
 		l.logger.WithFields(map[string]interface{}{
-			"uninstalled":  remove,
-			"installed":    install,
-			"needs_reboot": reboot,
+			"uninstalled": remove,
+			"installed":   install,
 		}).Debug("Dependency ensured")
 	}
-	return reboot, errors.Wrapf(err, "uninstalling version %s and installing version %s failed for dependency %s", remove, install, l.unwrapped.String())
+	return errors.Wrapf(err, "uninstalling version %s and installing version %s failed for dependency %s", remove, install, l.unwrapped.String())
 }

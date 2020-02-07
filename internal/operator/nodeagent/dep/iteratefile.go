@@ -65,26 +65,17 @@ func createTmpFile(path string, tmpPath string, removeContaining, append []strin
 		}
 	}
 
-	file, err := os.Open(path)
-	if err != nil {
-		return err
-	}
-	defer closeFile(file)
-
-	fileStat, err := file.Stat()
-	if err != nil {
-		return err
-	}
-
 	tmpFile, err := os.Create(tmpPath)
 	if err != nil {
 		return err
 	}
-	defer closeFile(tmpFile)
+	defer os.Remove(tmpPath)
 
-	if err := tmpFile.Chmod(fileStat.Mode()); err != nil {
+	file, err := os.OpenFile(path, os.O_CREATE, 0600)
+	if err != nil {
 		return err
 	}
+	defer closeFile(file)
 
 	return Manipulate(file, tmpFile, removeContaining, append, eachLine)
 }

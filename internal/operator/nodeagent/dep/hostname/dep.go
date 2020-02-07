@@ -52,26 +52,26 @@ func (s *hostnameDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (s *hostnameDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
+func (s *hostnameDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	oldHostname := remove.Config["hostname"]
 	newHostname := ensure.Config["hostname"]
 	if oldHostname == newHostname {
-		return false, nil
+		return nil
 	}
 
 	var buf bytes.Buffer
 	cmd := exec.Command("hostnamectl", "set-hostname", newHostname)
 	cmd.Stdout = &buf
 	if err := cmd.Run(); err != nil {
-		return false, err
+		return err
 	}
 
 	filePath := "/etc/hosts"
 
 	file, err := ioutil.ReadFile(filePath)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	hosts := string(file)
@@ -84,7 +84,7 @@ func (s *hostnameDep) Ensure(remove common.Package, ensure common.Package) (bool
 	newHosts := strings.Join(append([]string{commentLine, fmt.Sprintf("127.0.0.1\t%s", newHostname)}, newLines...), "\n")
 
 	if hosts != newHosts {
-		return false, ioutil.WriteFile(filePath, []byte(newHosts), 644)
+		return ioutil.WriteFile(filePath, []byte(newHosts), 644)
 	}
-	return false, nil
+	return nil
 }

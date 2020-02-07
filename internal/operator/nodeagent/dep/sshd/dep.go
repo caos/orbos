@@ -83,7 +83,7 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 	}
 }
 
-func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) (bool, error) {
+func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	var appendLines []string
 	listenAddress := ensure.Config["listenaddress"]
@@ -97,8 +97,8 @@ func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) (bool, er
 		}
 		return &line
 	}); err != nil {
-		return false, err
+		return err
 	}
 
-	return false, s.systemd.Start("sshd")
+	return s.systemd.Start("sshd")
 }
