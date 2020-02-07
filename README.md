@@ -90,7 +90,7 @@ sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 mkdir -p ~/.orb
 cat > ~/.orb/config << EOF
 url: git@github.com:me/my-orb.git
-masterkey: a very secret key
+masterkey: $(openssl rand -base64 21)
 repokey: |
 $(cat ~/.ssh/myorb_bootstrap | sed s/^/\ \ /g)
 EOF
