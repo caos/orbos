@@ -20,6 +20,10 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 		return nil
 	}
 
+	if _, err := exec.LookPath("sestatus"); err != nil {
+		return nil
+	}
+
 	var buf bytes.Buffer
 	cmd := exec.Command("sestatus")
 	cmd.Stdout = &buf
