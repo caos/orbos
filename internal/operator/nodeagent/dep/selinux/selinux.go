@@ -21,6 +21,10 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 	}
 
 	if _, err := exec.LookPath("sestatus"); err != nil {
+		if pkg.Config == nil {
+			pkg.Config = make(map[string]string)
+		}
+		pkg.Config["selinux"] = "permissive"
 		return nil
 	}
 
