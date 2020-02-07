@@ -135,7 +135,7 @@ func (c *compute) ReadFile(path string, data io.Writer) (err error) {
 	defer func() {
 		logger.WithFields(map[string]interface{}{
 			"error": err,
-		}).Debug("Done writing file with ssh")
+		}).Debug("Done reading file with ssh")
 	}()
 
 	cmd := fmt.Sprintf("sudo cat %s", path)
