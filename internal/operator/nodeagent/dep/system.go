@@ -3,12 +3,7 @@
 package dep
 
 import (
-	"bytes"
 	"fmt"
-	"os/exec"
-	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type Packages int
@@ -66,43 +61,44 @@ var (
 )
 
 func GetOperatingSystem() (OperatingSystemMajor, error) {
-	var buf bytes.Buffer
-	hostnamectl := exec.Command("hostnamectl")
-	hostnamectl.Stdout = &buf
+	return CentOS7, nil
+	/*	var buf bytes.Buffer
+		hostnamectl := exec.Command("hostnamectl")
+		hostnamectl.Stdout = &buf
 
-	if err := hostnamectl.Run(); err != nil {
-		return Unknown, errors.Wrap(err, "running hostnamectl in order to get operating system information failed")
-	}
-
-	var (
-		osLine string
-		err    error
-	)
-	for err == nil {
-		osLine, err = buf.ReadString('\n')
-		if strings.Contains(osLine, "Operating System") {
-			break
+		if err := hostnamectl.Run(); err != nil {
+			return Unknown, errors.Wrap(err, "running hostnamectl in order to get operating system information failed")
 		}
-	}
 
-	if err != nil {
-		return Unknown, errors.Wrap(err, "finding line containing \"Operating System\" in hostnamectl output failed")
-	}
+		var (
+			osLine string
+			err    error
+		)
+		for err == nil {
+			osLine, err = buf.ReadString('\n')
+			if strings.Contains(osLine, "Operating System") {
+				break
+			}
+		}
 
-	os := strings.Fields(osLine)[2]
-	switch os {
-	case "Ubuntu":
-		version := strings.Fields(osLine)[3]
-		if strings.HasPrefix(version, "18.04") {
-			return Bionic, nil
+		if err != nil {
+			return Unknown, errors.Wrap(err, "finding line containing \"Operating System\" in hostnamectl output failed")
 		}
-		return Unknown, errors.Errorf("Unsupported ubuntu version %s", version)
-	case "CentOS":
-		version := strings.Fields(osLine)[4]
-		if version == "7" {
-			return CentOS7, nil
+
+		os := strings.Fields(osLine)[2]
+		switch os {
+		case "Ubuntu":
+			version := strings.Fields(osLine)[3]
+			if strings.HasPrefix(version, "18.04") {
+				return Bionic, nil
+			}
+			return Unknown, errors.Errorf("Unsupported ubuntu version %s", version)
+		case "CentOS":
+			version := strings.Fields(osLine)[4]
+			if version == "7" {
+				return CentOS7, nil
+			}
+			return Unknown, errors.Errorf("Unsupported centOS version %s", version)
 		}
-		return Unknown, errors.Errorf("Unsupported centOS version %s", version)
-	}
-	return Unknown, errors.Errorf("Unknown operating system %s", os)
+		return Unknown, errors.Errorf("Unknown operating system %s", os)*/
 }
