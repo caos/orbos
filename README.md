@@ -37,7 +37,7 @@ https://wiki.debian.org/KVM
 
 > Download a CentOS7 iso image
 
-> Create and setup two new Virtual Machines. Make sure you have a passwordless sudo enabled user called orbiter on the guest OS
+> Create and setup two new Virtual Machines. Make sure you have a sudo user called orbiter on the guest OS
 ```bash
 virt-install --virt-type kvm --cdrom ~/Downloads/CentOS-7-x86_64-Minimal-1908.iso --disk size=10 --memory 4000 --vcpus 2 --name first
 virt-install --virt-type kvm --cdrom ~/Downloads/CentOS-7-x86_64-Minimal-1908.iso --disk size=10 --memory 4000 --vcpus 2 --name second
@@ -54,12 +54,15 @@ virsh domifaddr first
 virsh domifaddr second
 ```
 
-> Make both your VMs connectable
+> Make your VMs connectable
 ```bash
-IP=<vm-ip-here>
+IP=$(virsh domifaddr master1 | tail -n 2 | head -n 1 | awk '{print $4}' | cut -d "/" -f 1)
 ssh orbiter@${IP} "mkdir -p ~/.ssh"
 scp ~/.ssh/myorb_bootstrap.pub orbiter@${IP}:/home/orbiter/.ssh/authorized_keys
 ssh orbiter@${IP} "chmod 700 ~/.ssh"
+
+### comment in the line that enables passwordless sudo for wheel users
+ssh -t orbiter@${IP} "mkdir -p ~/.ssh"
 ```
 
 ### Initialize A Git Repository
