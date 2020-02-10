@@ -118,13 +118,9 @@ module_hotfixes=true`), 0600); err != nil {
 		return err
 	}
 
-	if err := dep.ManipulateFile("/etc/sysctl.conf", []string{
-		"net.ipv4.ip_forward",
-		"net.ipv4.ip_nonlocal_bind",
-	}, []string{
-		"net.ipv4.ip_forward = 1",
-		"net.ipv4.ip_nonlocal_bind = 1",
-	}, nil); err != nil {
+	if err := ioutil.WriteFile("/etc/sysctl.d/01-keepalived.conf", []byte(`net.ipv4.ip_forward = 1
+net.ipv4.ip_nonlocal_bind = 1
+`), os.ModePerm); err != nil {
 		return err
 	}
 

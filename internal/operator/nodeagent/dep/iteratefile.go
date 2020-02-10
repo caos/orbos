@@ -49,7 +49,11 @@ func ManipulateFile(path string, removeContaining, append []string, eachLine fun
 		return err
 	}
 
-	return os.Rename(tmpPath, path)
+	if err := os.Rename(tmpPath, path); err != nil {
+		return err
+	}
+
+	return os.Remove(tmpPath)
 }
 
 func createTmpFile(path string, tmpPath string, removeContaining, append []string, eachLine func(string) *string) (err error) {
@@ -69,7 +73,7 @@ func createTmpFile(path string, tmpPath string, removeContaining, append []strin
 	if err != nil {
 		return err
 	}
-	defer os.Remove(tmpPath)
+	defer closeFile(tmpFile)
 
 	file, err := os.OpenFile(path, os.O_CREATE, 0600)
 	if err != nil {
