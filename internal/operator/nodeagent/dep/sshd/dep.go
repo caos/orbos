@@ -76,7 +76,6 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 				}
 				pkg.Config["listening"] = "false"
 			}
-
 		}
 
 		if strings.Contains(line, "gssapiauthentication") && value != "no" {

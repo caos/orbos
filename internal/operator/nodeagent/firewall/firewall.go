@@ -9,8 +9,7 @@ import (
 func Ensurer(logger logging.Logger, os dep.OperatingSystem) nodeagent.FirewallEnsurer {
 	switch os {
 	case dep.CentOS:
-		return noopEnsurer()
-		//		return centosEnsurer(logger)
+		return centosEnsurer(logger)
 	default:
 		return noopEnsurer()
 	}
