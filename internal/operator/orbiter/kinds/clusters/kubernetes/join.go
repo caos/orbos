@@ -105,7 +105,7 @@ discovery:
   bootstrapToken:
     apiServerEndpoint: %s
     token: %s
-    unsafeSkipCAVerification: false
+    unsafeSkipCAVerification: true
   timeout: 5m0s
 nodeRegistration:
   name: %s
