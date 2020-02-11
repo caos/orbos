@@ -29,7 +29,6 @@ type Dependency struct {
 	Installer Installer
 	Desired   common.Package
 	Current   common.Package
-	reboot    bool
 }
 
 type Converter interface {
@@ -39,13 +38,13 @@ type Converter interface {
 
 type Installer interface {
 	Current() (common.Package, error)
-	Ensure(uninstall common.Package, install common.Package) (bool, error)
+	Ensure(uninstall common.Package, install common.Package) error
 	Equals(other Installer) bool
 	Is(other Installer) bool
 	fmt.Stringer
 }
 
-func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec) (*common.NodeAgentCurrent, bool, error) {
+func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec) (*common.NodeAgentCurrent, error) {
 
 	curr := &common.NodeAgentCurrent{
 		Commit:      commit,
@@ -55,13 +54,13 @@ func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsure
 	defer persistReadyness(curr.NodeIsReady)
 
 	if err := firewallEnsurer.Ensure(*desired.Firewall); err != nil {
-		return nil, false, err
+		return nil, err
 	}
 	curr.Open = *desired.Firewall
 
 	installedSw, err := deriveTraverse(installed, conv.ToDependencies(*desired.Software))
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	curr.Software = conv.ToSoftware(installedSw)
@@ -69,27 +68,27 @@ func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsure
 	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
 	if len(divergentSw) == 0 {
 		curr.NodeIsReady = true
-		return curr, false, nil
+		return curr, nil
 	}
 
 	if curr.NodeIsReady {
 		logger.Info("Marking node as unready")
 		curr.NodeIsReady = false
-		return curr, false, nil
+		return curr, nil
 	}
 
 	if !desired.ChangesAllowed {
 		logger.Info("Changes are not allowed")
-		return curr, false, nil
+		return curr, nil
 	}
 	ensureDep := ensureFunc(logger)
 	ensuredSw, err := deriveTraverse(ensureDep, divergentSw)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	curr.Software = conv.ToSoftware(merge(installedSw, ensuredSw))
-	return curr, anyReboot(ensuredSw), nil
+	return curr, nil
 }
 
 func installed(dep *Dependency) (*Dependency, error) {
@@ -107,8 +106,7 @@ func divergent(dep *Dependency) bool {
 
 func ensureFunc(logger logging.Logger) func(dep *Dependency) (*Dependency, error) {
 	return func(dep *Dependency) (*Dependency, error) {
-		reboot, err := dep.Installer.Ensure(dep.Current, dep.Desired)
-		if err != nil {
+		if err := dep.Installer.Ensure(dep.Current, dep.Desired); err != nil {
 			return dep, err
 		}
 
@@ -116,18 +114,12 @@ func ensureFunc(logger logging.Logger) func(dep *Dependency) (*Dependency, error
 			"dependency": dep.Installer,
 			"from":       dep.Current,
 			"to":         dep.Desired,
-			"reboot":     reboot,
 		}).Info("Ensured dependency")
 
 		dep.Current = dep.Desired
-		dep.reboot = reboot
 
 		return dep, nil
 	}
-}
-
-func anyReboot(deps []*Dependency) bool {
-	return deriveAny(func(dep *Dependency) bool { return dep.reboot }, deps)
 }
 
 func merge(inferior []*Dependency, prior []*Dependency) []*Dependency {

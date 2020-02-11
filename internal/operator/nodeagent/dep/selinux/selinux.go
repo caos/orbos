@@ -20,6 +20,14 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 		return nil
 	}
 
+	if path, err := exec.LookPath("sestatus"); err != nil || path == "" {
+		if pkg.Config == nil {
+			pkg.Config = make(map[string]string)
+		}
+		pkg.Config["selinux"] = "permissive"
+		return nil
+	}
+
 	var buf bytes.Buffer
 	cmd := exec.Command("sestatus")
 	cmd.Stdout = &buf

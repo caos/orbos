@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator"
+	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/swap"
 )
 
@@ -41,7 +41,7 @@ UUID=2be0c56f-32f4-4155-af7a-1db773af5ff0 /boot                   xfs     defaul
 		t.Fatal(err)
 	}
 
-	if _, err = swap.New(testFile).Ensure(common.Package{Version: "enabled"}, common.Package{Version: "disabled"}); err != nil {
+	if err = swap.New(testFile).Ensure(common.Package{Version: "enabled"}, common.Package{Version: "disabled"}); err != nil {
 		t.Fatal(err)
 	}
 

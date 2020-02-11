@@ -6,8 +6,8 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/k8s"
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
 )
 
 type Installer interface {
@@ -44,6 +44,6 @@ func (k *kubeadmDep) Current() (common.Package, error) {
 	return k.common.Current()
 }
 
-func (k *kubeadmDep) Ensure(remove common.Package, install common.Package) (bool, error) {
-	return false, k.common.Ensure(remove, install)
+func (k *kubeadmDep) Ensure(remove common.Package, install common.Package) error {
+	return k.common.Ensure(remove, install)
 }

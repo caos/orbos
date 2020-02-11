@@ -12,7 +12,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 )
 
-func (c *criDep) ensureCentOS(runtime string, version string) (bool, error) {
+func (c *criDep) ensureCentOS(runtime string, version string) error {
 
 	var errBuf bytes.Buffer
 	cmd := exec.Command("yum", "remove", "docker",
@@ -29,7 +29,7 @@ func (c *criDep) ensureCentOS(runtime string, version string) (bool, error) {
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "removing older docker versions failed with stderr %s", errBuf.String())
+		return errors.Wrapf(err, "removing older docker versions failed with stderr %s", errBuf.String())
 	}
 
 	for _, pkg := range []*dep.Software{
@@ -37,43 +37,43 @@ func (c *criDep) ensureCentOS(runtime string, version string) (bool, error) {
 		&dep.Software{Package: "lvm2"},
 	} {
 		if err := c.manager.Install(pkg); err != nil {
-			return false, errors.Wrap(err, "installing docker dependency failed")
+			return errors.Wrap(err, "installing docker dependency failed")
 		}
 	}
 
 	if err := c.manager.Add(&dep.Repository{
 		Repository: "https://download.docker.com/linux/centos/docker-ce.repo",
 	}); err != nil {
-		return false, errors.Wrap(err, "adding docker repository failed")
+		return errors.Wrap(err, "adding docker repository failed")
 	}
 
 	if err := c.manager.Install(&dep.Software{
 		Package: "containerd.io",
 	}); err != nil {
-		return false, err
+		return err
 	}
 
 	if err := c.manager.Install(&dep.Software{
 		Package: runtime,
 		Version: version,
 	}); err != nil {
-		return false, errors.Wrap(err, "installing container runtime failed")
+		return errors.Wrap(err, "installing container runtime failed")
 	}
 
 	if err := c.systemd.Enable("docker"); err != nil {
-		return false, err
+		return err
 	}
-	return false, c.systemd.Start("docker")
+	return c.systemd.Start("docker")
 }
 
-func (c *criDep) ensureUbuntu(runtime string, version string) (bool, error) {
+func (c *criDep) ensureUbuntu(runtime string, version string) error {
 
 	if err := c.manager.Add(&dep.Repository{
 		Repository:     fmt.Sprintf("deb [arch=amd64] https://download.docker.com/linux/ubuntu %s stable", c.os.Version),
 		KeyURL:         "https://download.docker.com/linux/ubuntu/gpg",
 		KeyFingerprint: "0EBFCD88",
 	}); err != nil {
-		return false, errors.Wrap(err, "updating repository indices before installing docker-ce failed")
+		return errors.Wrap(err, "updating repository indices before installing docker-ce failed")
 	}
 
 	var (
@@ -86,7 +86,7 @@ func (c *criDep) ensureUbuntu(runtime string, version string) (bool, error) {
 	cmd.Stderr = &errBuf
 	cmd.Stdout = &buf
 	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "running apt-cache madison %s failed with stderr %s", runtime, errBuf.String())
+		return errors.Wrapf(err, "running apt-cache madison %s failed with stderr %s", runtime, errBuf.String())
 	}
 	errBuf.Reset()
 
@@ -107,22 +107,22 @@ func (c *criDep) ensureUbuntu(runtime string, version string) (bool, error) {
 	buf.Reset()
 
 	if err != nil && versionLine == "" {
-		return false, errors.Wrapf(err, "finding line containing desired container runtime version \"%s\" failed", version)
+		return errors.Wrapf(err, "finding line containing desired container runtime version \"%s\" failed", version)
 	}
 
 	if err := c.manager.Install(&dep.Software{Package: "containerd.io"}); err != nil {
-		return false, err
+		return err
 	}
 
 	if err := c.manager.Install(&dep.Software{
 		Package: runtime,
 		Version: strings.TrimSpace(strings.Split(versionLine, "|")[1]),
 	}); err != nil {
-		return false, errors.Wrap(err, "installing container runtime failed")
+		return errors.Wrap(err, "installing container runtime failed")
 	}
 
 	if err := c.systemd.Enable("docker"); err != nil {
-		return false, err
+		return err
 	}
-	return false, c.systemd.Start("docker")
+	return c.systemd.Start("docker")
 }
