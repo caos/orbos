@@ -6,27 +6,27 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbiter/logging"
+	"google.golang.org/api/machine/v1"
 )
 
 type instanceGroup struct {
 	ctx    context.Context
 	logger logging.Logger
 	spec   *model.UserSpec
-	svc    *compute.InstanceGroupsService
+	svc    *machine.InstanceGroupsService
 	caller *api.Caller
 }
 
-func New(ctx context.Context, logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(ctx context.Context, logger logging.Logger, svc *machine.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &instanceGroup{
 		ctx,
 		logger.WithFields(map[string]interface{}{"type": "instance group"}),
 		spec,
-		compute.NewInstanceGroupsService(svc),
+		machine.NewInstanceGroupsService(svc),
 		caller,
 	}
 }
@@ -41,8 +41,8 @@ type Config struct {
 }
 
 type Desired struct {
-	IG         *compute.InstanceGroup
-	NamedPorts []*compute.NamedPort `hash:"set"`
+	IG         *machine.InstanceGroup
+	NamedPorts []*machine.NamedPort `hash:"set"`
 }
 
 func (i *instanceGroup) Desire(config interface{}) (interface{}, error) {
@@ -51,16 +51,16 @@ func (i *instanceGroup) Desire(config interface{}) (interface{}, error) {
 		return nil, errors.New("Config must be of type *unmanaged.Config")
 	}
 
-	ports := make([]*compute.NamedPort, len(cfg.Ports))
+	ports := make([]*machine.NamedPort, len(cfg.Ports))
 	for idx, port := range cfg.Ports {
-		ports[idx] = &compute.NamedPort{
+		ports[idx] = &machine.NamedPort{
 			Name: fmt.Sprintf("port-%s", strconv.FormatInt(port, 10)),
 			Port: port,
 		}
 	}
 
 	return &Desired{
-		IG: &compute.InstanceGroup{
+		IG: &machine.InstanceGroup{
 			Network:     fmt.Sprintf("projects/%s/global/networks/default", i.spec.Project),
 			Description: cfg.PoolName,
 		},

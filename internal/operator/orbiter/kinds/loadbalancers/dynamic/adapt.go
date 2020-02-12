@@ -65,50 +65,50 @@ func AdaptFunc(logger logging.Logger) orbiter.AdaptFunc {
 
 		current.Current.SourcePools = sourcePools
 		current.Current.Addresses = addresses
-		current.Current.Desire = func(pool string, svc core.ComputesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
+		current.Current.Desire = func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
 
 			vips, ok := desiredKind.Spec[pool]
 			if !ok {
 				return nil
 			}
 
-			computes, err := svc.List(pool, true)
+			machines, err := svc.List(pool, true)
 			if err != nil {
 				return err
 			}
 
-			computesData := make([]Data, len(computes))
-			for idx, compute := range computes {
-				computesData[idx] = Data{
+			machinesData := make([]Data, len(machines))
+			for idx, machine := range machines {
+				machinesData[idx] = Data{
 					VIPs: vips,
-					Self: compute,
-					Peers: deriveFilterComputes(func(cmp infra.Compute) bool {
-						return cmp.ID() != compute.ID()
-					}, append([]infra.Compute(nil), []infra.Compute(computes)...)),
+					Self: machine,
+					Peers: deriveFilterMachines(func(cmp infra.Machine) bool {
+						return cmp.ID() != machine.ID()
+					}, append([]infra.Machine(nil), []infra.Machine(machines)...)),
 					State:                "BACKUP",
 					CustomMasterNotifyer: notifyMaster != "",
 				}
 				if idx == 0 {
-					computesData[idx].State = "MASTER"
+					machinesData[idx].State = "MASTER"
 				}
 			}
 
 			templateFuncs := template.FuncMap(map[string]interface{}{
-				"computes": svc.List,
+				"machines": svc.List,
 				"add": func(i, y int) int {
 					return i + y
 				},
-				"user": func(compute infra.Compute) (string, error) {
+				"user": func(machine infra.Machine) (string, error) {
 					var user string
 					whoami := "whoami"
-					stdout, err := compute.Execute(nil, nil, whoami)
+					stdout, err := machine.Execute(nil, nil, whoami)
 					if err != nil {
 						return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
 					}
 					user = strings.TrimSuffix(string(stdout), "\n")
 					logger.WithFields(map[string]interface{}{
 						"user":    user,
-						"compute": compute.ID(),
+						"machine": machine.ID(),
 						"command": whoami,
 					}).Debug("Executed command")
 					return user, nil
@@ -173,8 +173,8 @@ vrrp_instance VI_{{ $idx }} {
 }
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $compute := computes $dest.Pool true }}
-		server {{ $compute.IP }}:{{ if eq $src.Name  "kubeapi" }}6666{{ else }}{{ $dest.Port }}{{ end }}; # {{ $dest.Pool }}{{end}}{{ end }}
+	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := machines $dest.Pool true }}
+		server {{ $machine.IP }}:{{ if eq $src.Name  "kubeapi" }}6666{{ else }}{{ $dest.Port }}{{ end }}; # {{ $dest.Pool }}{{end}}{{ end }}
 	}
 	server {
 		listen {{ $vip.IP }}:{{ $src.SourcePort }};
@@ -193,7 +193,7 @@ http {
 }
 `))
 
-			for _, d := range computesData {
+			for _, d := range machinesData {
 
 				var kaBuf bytes.Buffer
 				if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
@@ -207,11 +207,11 @@ http {
 
 				for _, vip := range d.VIPs {
 					for _, transport := range vip.Transport {
-						for _, compute := range computes {
-							deepNa, ok := nodeagents[compute.ID()]
+						for _, machine := range machines {
+							deepNa, ok := nodeagents[machine.ID()]
 							if !ok {
 								deepNa = &common.NodeAgentSpec{}
-								nodeagents[compute.ID()] = deepNa
+								nodeagents[machine.ID()] = deepNa
 							}
 							if deepNa.Firewall == nil {
 								deepNa.Firewall = &common.Firewall{}
@@ -226,7 +226,7 @@ http {
 								if deepNa.Software == nil {
 									deepNa.Software = &common.Software{}
 								}
-								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": compute.IP()}
+								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
 							}
 						}
 					}
@@ -250,16 +250,16 @@ http {
 					for _, transport := range vip.Transport {
 
 						for _, dest := range transport.Destinations {
-							destComputes, err := svc.List(dest.Pool, true)
+							destMachines, err := svc.List(dest.Pool, true)
 							if err != nil {
 								return err
 							}
-							for _, compute := range destComputes {
+							for _, machine := range destMachines {
 
-								deepNa, ok := nodeagents[compute.ID()]
+								deepNa, ok := nodeagents[machine.ID()]
 								if !ok {
 									deepNa = &common.NodeAgentSpec{}
-									nodeagents[compute.ID()] = deepNa
+									nodeagents[machine.ID()] = deepNa
 								}
 								if deepNa.Firewall == nil {
 									deepNa.Firewall = &common.Firewall{}
@@ -285,7 +285,7 @@ type Data struct {
 	VIPs                 []VIP
 	State                string
 	RouterID             int
-	Self                 infra.Compute
-	Peers                []infra.Compute
+	Self                 infra.Machine
+	Peers                []infra.Machine
 	CustomMasterNotifyer bool
 }

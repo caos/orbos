@@ -7,22 +7,22 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
-func desireHostname(poolsSpec map[string][]*Compute, nodeagents map[string]*common.NodeAgentSpec) func(compute infra.Compute, pool string) error {
-	return func(compute infra.Compute, pool string) error {
-		for _, computeSpec := range poolsSpec[pool] {
-			if computeSpec.ID == compute.ID() {
-				nodeagent, ok := nodeagents[computeSpec.ID]
+func desireHostname(poolsSpec map[string][]*Machine, nodeagents map[string]*common.NodeAgentSpec) func(machine infra.Machine, pool string) error {
+	return func(machine infra.Machine, pool string) error {
+		for _, machineSpec := range poolsSpec[pool] {
+			if machineSpec.ID == machine.ID() {
+				nodeagent, ok := nodeagents[machineSpec.ID]
 				if !ok {
 					nodeagent = &common.NodeAgentSpec{}
-					nodeagents[computeSpec.ID] = nodeagent
+					nodeagents[machineSpec.ID] = nodeagent
 				}
 				if nodeagent.Software == nil {
 					nodeagent.Software = &common.Software{}
 				}
-				nodeagent.Software.Hostname = common.Package{Config: map[string]string{"hostname": computeSpec.Hostname}}
+				nodeagent.Software.Hostname = common.Package{Config: map[string]string{"hostname": machineSpec.Hostname}}
 				return nil
 			}
 		}
-		return errors.Errorf("Compute %s is not configured in pool %s", compute.ID(), pool)
+		return errors.Errorf("Machine %s is not configured in pool %s", machine.ID(), pool)
 	}
 }

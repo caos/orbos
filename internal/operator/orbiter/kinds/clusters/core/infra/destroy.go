@@ -18,14 +18,14 @@ func Destroy(providers map[string]interface{}) (err error) {
 		}
 		pools := prov.Pools()
 		for _, pool := range pools {
-			comps, gcErr := pool.GetComputes(true)
+			comps, gcErr := pool.GetMachines(true)
 			if gcErr != nil {
 				err = gcErr
 				continue
 			}
 			for _, comp := range comps {
 				wg.Add(1)
-				go func(c Compute) {
+				go func(c Machine) {
 					if rmErr := c.Remove(); rmErr != nil {
 						synchronizer.Done(rmErr)
 						return

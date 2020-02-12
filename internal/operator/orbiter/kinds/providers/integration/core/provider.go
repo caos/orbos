@@ -5,13 +5,13 @@ package core
 import (
 	"sync"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 )
 
 type Provider interface {
-	Assemble(operatorID string, configuredPools []string, configuredLoadBalancers []*LoadBalancer) (infra.Provider, core.ComputesService, interface{}, error)
+	Assemble(operatorID string, configuredPools []string, configuredLoadBalancers []*LoadBalancer) (infra.Provider, core.MachinesService, interface{}, error)
 }
 
 type LoadBalancer struct {
@@ -38,7 +38,7 @@ func (b *BehaviourDiffersError) Error() string {
 	return b.msg
 }
 
-func Ensure(testProviders []Provider, operatorArgs OperatorArgs, beforeEnsure func(core.ComputesService) error) ([]*EnsuredValues, error) {
+func Ensure(testProviders []Provider, operatorArgs OperatorArgs, beforeEnsure func(core.MachinesService) error) ([]*EnsuredValues, error) {
 
 	var mux sync.RWMutex
 	var wg sync.WaitGroup
@@ -47,14 +47,14 @@ func Ensure(testProviders []Provider, operatorArgs OperatorArgs, beforeEnsure fu
 	provs := make([]infra.Provider, 0)
 	for _, testProv := range testProviders {
 		go func(testProvider Provider) {
-			prov, computesSvc, _, err := testProvider.Assemble(operatorArgs.OperatorID, operatorArgs.Pools, operatorArgs.Loadbalancers)
+			prov, machinesSvc, _, err := testProvider.Assemble(operatorArgs.OperatorID, operatorArgs.Pools, operatorArgs.Loadbalancers)
 			if err != nil {
 				synchronizer.Done(err)
 				return
 			}
 
 			if beforeEnsure != nil {
-				if err := beforeEnsure(computesSvc); err != nil {
+				if err := beforeEnsure(machinesSvc); err != nil {
 					synchronizer.Done(err)
 					return
 				}
@@ -82,7 +82,7 @@ func Ensure(testProviders []Provider, operatorArgs OperatorArgs, beforeEnsure fu
 	for _, prov := range provs {
 		wg.Add(1)
 		go func(provider infra.Provider) {
-			computes, ips, pruned, err := provider.Ensure()
+			machines, ips, pruned, err := provider.Ensure()
 			if err != nil {
 				if pruned != nil {
 					<-pruned
@@ -91,7 +91,7 @@ func Ensure(testProviders []Provider, operatorArgs OperatorArgs, beforeEnsure fu
 				return
 			}
 			mux.Lock()
-			ensured = append(ensured, &EnsuredValues{computes, ips, err})
+			ensured = append(ensured, &EnsuredValues{machines, ips, err})
 			mux.Unlock()
 			if pruned != nil {
 				<-pruned
@@ -114,22 +114,22 @@ func Cleanup(testProviders []Provider, operatorID string) error {
 		OperatorID:    operatorID,
 		Loadbalancers: make([]*LoadBalancer, 0),
 		Pools:         make([]string, 0),
-	}, func(computes core.ComputesService) error {
-		pools, err := computes.ListPools()
+	}, func(machines core.MachinesService) error {
+		pools, err := machines.ListPools()
 		if err != nil {
 			return err
 		}
 		var wg sync.WaitGroup
 		synchronizer := helpers.NewSynchronizer(&wg)
 		for _, pool := range pools {
-			cmps, err := computes.List(pool)
+			cmps, err := machines.List(pool)
 			if err != nil {
 				return err
 			}
 			for _, cmp := range cmps {
 				wg.Add(1)
-				go func(compute infra.Compute) {
-					synchronizer.Done(compute.Remove())
+				go func(machine infra.Machine) {
+					synchronizer.Done(machine.Remove())
 				}(cmp)
 			}
 		}

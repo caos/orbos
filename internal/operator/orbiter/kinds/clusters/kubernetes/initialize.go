@@ -11,27 +11,27 @@ type initializedPool struct {
 	infra    infra.Pool
 	tier     Tier
 	desired  Pool
-	computes func() ([]initializedCompute, error)
+	machines func() ([]initializedMachine, error)
 }
 
-type initializeFunc func(initializedPool, []initializedCompute) error
+type initializeFunc func(initializedPool, []initializedMachine) error
 
 func (i *initializedPool) enhance(initialize initializeFunc) {
-	original := i.computes
-	i.computes = func() ([]initializedCompute, error) {
-		computes, err := original()
+	original := i.machines
+	i.machines = func() ([]initializedMachine, error) {
+		machines, err := original()
 		if err != nil {
 			return nil, err
 		}
-		if err := initialize(*i, computes); err != nil {
+		if err := initialize(*i, machines); err != nil {
 			return nil, err
 		}
-		return computes, nil
+		return machines, nil
 	}
 }
 
-type initializedCompute struct {
-	infra            infra.Compute
+type initializedMachine struct {
+	infra            infra.Machine
 	tier             Tier
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
@@ -44,10 +44,10 @@ func initialize(
 	desired DesiredV0,
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
-	providerPools map[string]map[string]infra.Pool) (controlplane initializedPool, workers []initializedPool, initializeCompute func(compute infra.Compute, pool initializedPool) initializedCompute, err error) {
+	providerPools map[string]map[string]infra.Pool) (controlplane initializedPool, workers []initializedPool, initializeMachine func(machine infra.Machine, pool initializedPool) initializedMachine, err error) {
 
 	curr.Status = "maintaining"
-	curr.Computes = make(map[string]*Compute)
+	curr.Machines = make(map[string]*Machine)
 
 	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
 		pool := initializedPool{
@@ -55,43 +55,43 @@ func initialize(
 			tier:    tier,
 			desired: desired,
 		}
-		pool.computes = func() ([]initializedCompute, error) {
-			infraComputes, err := infraPool.GetComputes(true)
+		pool.machines = func() ([]initializedMachine, error) {
+			infraMachines, err := infraPool.GetMachines(true)
 			if err != nil {
 				return nil, err
 			}
-			computes := make([]initializedCompute, len(infraComputes))
-			for i, infraCompute := range infraComputes {
-				computes[i] = initializeCompute(infraCompute, pool)
+			machines := make([]initializedMachine, len(infraMachines))
+			for i, infraMachine := range infraMachines {
+				machines[i] = initializeMachine(infraMachine, pool)
 			}
-			return computes, nil
+			return machines, nil
 		}
 		return pool
 	}
 
-	initializeCompute = func(compute infra.Compute, pool initializedPool) initializedCompute {
+	initializeMachine = func(machine infra.Machine, pool initializedPool) initializedMachine {
 
-		current := &Compute{
+		current := &Machine{
 			Status: "maintaining",
-			Metadata: ComputeMetadata{
+			Metadata: MachineMetadata{
 				Tier:     pool.tier,
 				Provider: pool.desired.Provider,
 				Pool:     pool.desired.Pool,
 			},
 		}
-		curr.Computes[compute.ID()] = current
+		curr.Machines[machine.ID()] = current
 
-		naSpec, ok := nodeAgentsDesired[compute.ID()]
+		naSpec, ok := nodeAgentsDesired[machine.ID()]
 		if !ok {
 			naSpec = &common.NodeAgentSpec{}
-			nodeAgentsDesired[compute.ID()] = naSpec
+			nodeAgentsDesired[machine.ID()] = naSpec
 		}
 		naSpec.ChangesAllowed = !pool.desired.UpdatesDisabled
 
-		naCurr, ok := nodeAgentsCurrent[compute.ID()]
+		naCurr, ok := nodeAgentsCurrent[machine.ID()]
 		if !ok || naCurr == nil {
 			naCurr = &common.NodeAgentCurrent{}
-			nodeAgentsCurrent[compute.ID()] = naCurr
+			nodeAgentsCurrent[machine.ID()] = naCurr
 		}
 
 		if naSpec.Software == nil {
@@ -101,8 +101,8 @@ func initialize(
 		naSpec.Software.Merge(k8s.ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
 		naSpec.Software.Merge(k8s.Current(naCurr.Software))
 
-		return initializedCompute{
-			infra: compute,
+		return initializedMachine{
+			infra: machine,
 			markAsRunning: func() {
 				current.Status = "running"
 			},
@@ -128,5 +128,5 @@ func initialize(
 			}
 		}
 	}
-	return controlplane, workers, initializeCompute, nil
+	return controlplane, workers, initializeMachine, nil
 }

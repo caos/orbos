@@ -6,29 +6,29 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/backendservice"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/targetproxy"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbiter/logging"
+	"google.golang.org/api/machine/v1"
 )
 
 type forwardingRule struct {
 	logger    logging.Logger
 	spec      *model.UserSpec
-	regionSvc *compute.ForwardingRulesService
-	globalSvc *compute.GlobalForwardingRulesService
+	regionSvc *machine.ForwardingRulesService
+	globalSvc *machine.GlobalForwardingRulesService
 	caller    *api.Caller
 }
 
-func New(logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(logger logging.Logger, svc *machine.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &forwardingRule{
 		logger:    logger.WithFields(map[string]interface{}{"type": "forwarding rule"}),
 		spec:      spec,
-		regionSvc: compute.NewForwardingRulesService(svc),
-		globalSvc: compute.NewGlobalForwardingRulesService(svc),
+		regionSvc: machine.NewForwardingRulesService(svc),
+		globalSvc: machine.NewGlobalForwardingRulesService(svc),
 		caller:    caller,
 	}
 }
@@ -43,7 +43,7 @@ type Config struct {
 }
 
 type Desired struct {
-	Rule  *compute.ForwardingRule
+	Rule  *machine.ForwardingRule
 	Ports []string
 }
 
@@ -86,7 +86,7 @@ func (f *forwardingRule) Desire(config interface{}) (interface{}, error) {
 		}
 	}
 
-	return &compute.ForwardingRule{
+	return &machine.ForwardingRule{
 		LoadBalancingScheme: scheme,
 		Ports:               ports,
 		PortRange:           strings.Join(portRanges, ", "),
@@ -114,7 +114,7 @@ func (f *forwardingRule) Ensure(id string, desired interface{}, dependencies []i
 		return nil, errors.New("Exactly one target dependency must be provided")
 	}
 
-	rule := *desired.(*compute.ForwardingRule)
+	rule := *desired.(*machine.ForwardingRule)
 	rule.Name = id
 
 	switch target := dependencies[0].(type) {
@@ -176,7 +176,7 @@ func (f *forwardingRule) AllExisting() ([]string, error) {
 	})
 }
 
-func (f *forwardingRule) get(id string) (*compute.ForwardingRule, error) {
+func (f *forwardingRule) get(id string) (*machine.ForwardingRule, error) {
 	found, err := f.caller.GetResource(id, "selfLink,IPAddress", []interface{}{
 		f.globalSvc.Get(f.spec.Project, id),
 		f.regionSvc.Get(f.spec.Project, f.spec.Region, id),
@@ -186,7 +186,7 @@ func (f *forwardingRule) get(id string) (*compute.ForwardingRule, error) {
 	}
 
 	if found != nil {
-		return found.(*compute.ForwardingRule), nil
+		return found.(*machine.ForwardingRule), nil
 	}
 	return nil, nil
 }

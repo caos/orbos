@@ -24,7 +24,7 @@ func ensureScale(
 	k8sVersion k8s.KubernetesVersion,
 	k8sClient *k8s.Client,
 	oneoff bool,
-	initializeCompute func(infra.Compute, initializedPool) (initializedCompute, error)) (bool, error) {
+	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error)) (bool, error) {
 
 	wCount := 0
 	for _, w := range workerPools {
@@ -35,58 +35,58 @@ func ensureScale(
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
 
-	alignComputes := func(pool initializedPool) (initialized bool, err error) {
+	alignMachines := func(pool initializedPool) (initialized bool, err error) {
 
-		existing, err := pool.computes()
+		existing, err := pool.machines()
 		if err != nil {
 			return false, err
 		}
 		delta := pool.desired.Nodes - len(existing)
 		if delta > 0 {
-			computes, err := newComputes(pool.infra, delta)
+			machines, err := newMachines(pool.infra, delta)
 			if err != nil {
 				return false, err
 			}
-			for _, compute := range computes {
-				if _, err := initializeCompute(compute, pool); err != nil {
+			for _, machine := range machines {
+				if _, err := initializeMachine(machine, pool); err != nil {
 					return false, err
 				}
 			}
 		} else {
-			for _, compute := range existing[pool.desired.Nodes:] {
-				id := compute.infra.ID()
-				computeLogger := logger.WithFields(map[string]interface{}{
-					"compute": id,
+			for _, machine := range existing[pool.desired.Nodes:] {
+				id := machine.infra.ID()
+				machineLogger := logger.WithFields(map[string]interface{}{
+					"machine": id,
 				})
-				computeLogger.Info(false, "Deleting node")
-				if err := k8sClient.EnsureDeleted(compute.infra.ID(), compute.infra, false); err != nil {
+				machineLogger.Info(false, "Deleting node")
+				if err := k8sClient.EnsureDeleted(machine.infra.ID(), machine.infra, false); err != nil {
 					return false, err
 				}
-				computeLogger.Info(true, "Node deleted")
-				computeLogger.Info(false, "Removing compute")
-				if err := compute.infra.Remove(); err != nil {
+				machineLogger.Info(true, "Node deleted")
+				machineLogger.Info(false, "Removing machine")
+				if err := machine.infra.Remove(); err != nil {
 					return false, err
 				}
-				computeLogger.Info(true, "Compute removed")
+				machineLogger.Info(true, "Machine removed")
 			}
 		}
 		return delta <= 0, nil
 	}
 
-	upscalingDone, err := alignComputes(controlplanePool)
+	upscalingDone, err := alignMachines(controlplanePool)
 	if err != nil {
 		return false, err
 	}
 
-	computes, err := controlplanePool.computes()
+	machines, err := controlplanePool.machines()
 	if err != nil {
 		return false, err
 	}
 
-	ensuredControlplane := len(computes)
+	ensuredControlplane := len(machines)
 	var ensuredWorkers int
 	for _, workerPool := range workerPools {
-		workerUpscalingDone, err := alignComputes(workerPool)
+		workerUpscalingDone, err := alignMachines(workerPool)
 		if err != nil {
 			return false, err
 		}
@@ -94,29 +94,29 @@ func ensureScale(
 			upscalingDone = false
 		}
 
-		workerComputes, err := workerPool.computes()
+		workerMachines, err := workerPool.machines()
 		if err != nil {
 			return false, err
 		}
-		ensuredWorkers += len(workerComputes)
-		computes = append(computes, workerComputes...)
+		ensuredWorkers += len(workerMachines)
+		machines = append(machines, workerMachines...)
 	}
 
 	if !upscalingDone {
-		logger.Info(false, "Upscaled computes are not ready yet")
+		logger.Info(false, "Upscaled machines are not ready yet")
 		return false, nil
 	}
 
-	var joinCP infra.Compute
-	var certsCP infra.Compute
-	var joinWorkers []initializedCompute
+	var joinCP infra.Machine
+	var certsCP infra.Machine
+	var joinWorkers []initializedMachine
 	cpIsReady := true
 	done := true
 
 nodes:
-	for _, compute := range computes {
+	for _, machine := range machines {
 
-		id := compute.infra.ID()
+		id := machine.infra.ID()
 
 		nodeIsJoining := false
 		node, getNodeErr := k8sClient.GetNode(id)
@@ -125,34 +125,34 @@ nodes:
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					nodeIsJoining = false
-					compute.markAsRunning()
-					if compute.tier == Controlplane {
-						certsCP = compute.infra
+					machine.markAsRunning()
+					if machine.tier == Controlplane {
+						certsCP = machine.infra
 					}
 					continue nodes
 				}
 			}
 		}
 
-		if compute.tier == Controlplane && nodeIsJoining {
+		if machine.tier == Controlplane && nodeIsJoining {
 			cpIsReady = false
 		}
 
 		done = false
 		logger := logger.WithFields(map[string]interface{}{
-			"compute": id,
-			"tier":    compute.tier,
+			"machine": id,
+			"tier":    machine.tier,
 		})
 
 		if nodeIsJoining {
 			logger.Info(false, "Node is not ready yet")
 		}
 
-		if compute.tier == Controlplane && joinCP == nil {
-			joinCP = compute.infra
+		if machine.tier == Controlplane && joinCP == nil {
+			joinCP = machine.infra
 			continue nodes
 		}
-		joinWorkers = append(joinWorkers, compute)
+		joinWorkers = append(joinWorkers, machine)
 	}
 
 	if done {

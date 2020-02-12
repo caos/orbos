@@ -18,12 +18,12 @@ func ensureNodeAgents(
 	orbiterCommit string,
 	repoURL string,
 	repoKey string,
-	computes []initializedCompute) (ready bool, ensure func(compute initializedCompute) error, err error) {
+	machines []initializedMachine) (ready bool, ensure func(machine initializedMachine) error, err error) {
 
 	ready = true
-	for _, compute := range computes {
+	for _, machine := range machines {
 		var isReady bool
-		isReady, err = ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
+		isReady, err = ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, machine)
 		if !isReady {
 			ready = false
 		}
@@ -32,8 +32,8 @@ func ensureNodeAgents(
 		}
 	}
 
-	return ready, func(compute initializedCompute) error {
-		_, iErr := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, compute)
+	return ready, func(machine initializedMachine) error {
+		_, iErr := ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, machine)
 		return iErr
 	}, err
 }
@@ -43,11 +43,11 @@ func ensureNodeAgent(
 	orbiterCommit string,
 	repoURL string,
 	repoKey string,
-	compute initializedCompute) (bool, error) {
+	machine initializedMachine) (bool, error) {
 
 	var response []byte
 	isActive := "sudo systemctl is-active node-agentd"
-	err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		var cbErr error
 		response, cbErr = cmp.Execute(nil, nil, isActive)
 		return errors.Wrapf(cbErr, "remote command %s returned an unsuccessful exit code", isActive)
@@ -57,15 +57,15 @@ func ensureNodeAgent(
 		"response": string(response),
 	}).Debug("Executed command")
 	if err != nil && !strings.Contains(string(response), "activating") {
-		return false, loggedInstallNodeAgent(logger, "inactive", orbiterCommit, repoURL, repoKey, compute)
+		return false, loggedInstallNodeAgent(logger, "inactive", orbiterCommit, repoURL, repoKey, machine)
 	}
 
-	if compute.currentNodeagent != nil && compute.currentNodeagent.Commit == orbiterCommit {
+	if machine.currentNodeagent != nil && machine.currentNodeagent.Commit == orbiterCommit {
 		return true, nil
 	}
 	showVersion := "node-agent --version"
 
-	err = try(logger, time.NewTimer(7*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	err = try(logger, time.NewTimer(7*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		var cbErr error
 		response, cbErr = cmp.Execute(nil, nil, showVersion)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", showVersion)
@@ -87,18 +87,18 @@ func ensureNodeAgent(
 	if len(fields) > 1 {
 		from = fields[1]
 	}
-	return false, loggedInstallNodeAgent(logger, from, orbiterCommit, repoURL, repoKey, compute)
+	return false, loggedInstallNodeAgent(logger, from, orbiterCommit, repoURL, repoKey, machine)
 }
 
 func installNodeAgent(
 	logger logging.Logger,
-	compute initializedCompute,
+	machine initializedMachine,
 	repoURL string,
 	repoKey string) error {
 
 	var user string
 	whoami := "whoami"
-	if err := try(logger, time.NewTimer(1*time.Minute), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(1*time.Minute), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		var cbErr error
 		stdout, cbErr := cmp.Execute(nil, nil, whoami)
 		if cbErr != nil {
@@ -111,14 +111,14 @@ func installNodeAgent(
 	}
 	logger = logger.WithFields(map[string]interface{}{
 		"user":    user,
-		"compute": compute.infra.ID(),
+		"machine": machine.infra.ID(),
 	})
 	logger.WithFields(map[string]interface{}{
 		"command": whoami,
 	}).Debug("Executed command")
 
 	dockerCfg := "/etc/docker/daemon.json"
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		return errors.Wrapf(cmp.WriteFile(dockerCfg, strings.NewReader(`{
   "exec-opts": ["native.cgroupdriver=systemd"],
   "log-driver": "json-file",
@@ -144,13 +144,13 @@ func installNodeAgent(
 	binary := nodeAgentPath
 	if os.Getenv("MODE") == "DEBUG" {
 		// Run node agent in debug mode
-		if _, err := compute.infra.Execute(nil, nil, "sudo apt-get update && sudo apt-get install -y git && wget https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz && sudo tar -zxvf go1.13.3.linux-amd64.tar.gz -C / && sudo chown -R $(id -u):$(id -g) /go && /go/bin/go get -u github.com/go-delve/delve/cmd/dlv && /go/bin/go install github.com/go-delve/delve/cmd/dlv && mv ${HOME}/go/bin/dlv /usr/local/bin"); err != nil {
+		if _, err := machine.infra.Execute(nil, nil, "sudo apt-get update && sudo apt-get install -y git && wget https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz && sudo tar -zxvf go1.13.3.linux-amd64.tar.gz -C / && sudo chown -R $(id -u):$(id -g) /go && /go/bin/go get -u github.com/go-delve/delve/cmd/dlv && /go/bin/go install github.com/go-delve/delve/cmd/dlv && mv ${HOME}/go/bin/dlv /usr/local/bin"); err != nil {
 			panic(err)
 		}
 
 		binary = fmt.Sprintf("dlv exec %s --api-version 2 --headless --listen 0.0.0.0:5000 --continue --accept-multiclient --", nodeAgentPath)
 	}
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		return errors.Wrapf(cmp.WriteFile(systemdPath, strings.NewReader(fmt.Sprintf(`[Unit]
 Description=Node Agent
 After=network.target
@@ -164,7 +164,7 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-`, binary, repoURL, compute.infra.ID())), 600), "creating remote file %s failed", systemdPath)
+`, binary, repoURL, machine.infra.ID())), 600), "creating remote file %s failed", systemdPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 	}
@@ -173,7 +173,7 @@ WantedBy=multi-user.target
 	}).Debug("Written file")
 
 	keyPath := "/etc/nodeagent/repokey"
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		return errors.Wrapf(cmp.WriteFile(keyPath, strings.NewReader(repoKey), 400), "creating remote file %s failed", keyPath)
 	}); err != nil {
 		return errors.Wrap(err, "writing repokey failed")
@@ -183,7 +183,7 @@ WantedBy=multi-user.target
 	}).Debug("Written file")
 
 	daemonReload := "sudo systemctl daemon-reload"
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		_, cbErr := cmp.Execute(nil, nil, daemonReload)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", daemonReload)
 	}); err != nil {
@@ -194,7 +194,7 @@ WantedBy=multi-user.target
 	}).Debug("Executed command")
 
 	stopSystemd := fmt.Sprintf("if sudo systemctl is-active %s; then sudo systemctl stop %s;fi", systemdEntry, systemdEntry)
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		_, cbErr := cmp.Execute(nil, nil, stopSystemd)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", stopSystemd)
 	}); err != nil {
@@ -208,7 +208,7 @@ WantedBy=multi-user.target
 	if err != nil {
 		return err
 	}
-	if err := try(logger, time.NewTimer(20*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(20*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		return errors.Wrapf(cmp.WriteFile(nodeAgentPath, bytes.NewReader(nodeagent), 700), "creating remote file %s failed", nodeAgentPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely installing Node Agent failed")
@@ -221,7 +221,7 @@ WantedBy=multi-user.target
 	if err != nil {
 		return err
 	}
-	if err := try(logger, time.NewTimer(20*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(20*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		return errors.Wrapf(cmp.WriteFile(healthPath, bytes.NewReader(health), 711), "creating remote file %s failed", healthPath)
 	}); err != nil {
 		return errors.Wrap(err, "remotely installing health executable failed")
@@ -231,7 +231,7 @@ WantedBy=multi-user.target
 	}).Debug("Written file")
 
 	enableSystemd := fmt.Sprintf("sudo systemctl enable %s", systemdPath)
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		_, cbErr := cmp.Execute(nil, nil, enableSystemd)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", enableSystemd)
 	}); err != nil {
@@ -242,7 +242,7 @@ WantedBy=multi-user.target
 	}).Debug("Executed command")
 
 	startSystemd := fmt.Sprintf("sudo systemctl restart %s", systemdEntry)
-	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, compute.infra, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 		_, cbErr := cmp.Execute(nil, nil, startSystemd)
 		return errors.Wrapf(cbErr, "running command %s remotely failed", startSystemd)
 	}); err != nil {
@@ -254,7 +254,7 @@ WantedBy=multi-user.target
 	}).Debug("Executed command")
 
 	logger.WithFields(map[string]interface{}{
-		"compute": compute.infra.ID(),
+		"machine": machine.infra.ID(),
 	}).Info(true, "Node Agent installed and started")
 
 	return nil
@@ -267,13 +267,13 @@ func loggedInstallNodeAgent(
 	orbiterCommit,
 	repoURL,
 	repoKey string,
-	compute initializedCompute) error {
+	machine initializedMachine) error {
 
 	logger.WithFields(map[string]interface{}{
-		"compute": compute.infra.ID(),
+		"machine": machine.infra.ID(),
 		"from":    from,
 		"to":      orbiterCommit,
 	}).Info(false, "Ensuring node agent")
 
-	return installNodeAgent(logger, compute, repoURL, repoKey)
+	return installNodeAgent(logger, machine, repoURL, repoKey)
 }

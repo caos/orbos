@@ -5,11 +5,10 @@ import (
 	"errors"
 	"strings"
 
-	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/machine/v1"
 	"google.golang.org/api/option"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ec2/model"
 	"github.com/caos/orbiter/logging"
@@ -33,8 +32,8 @@ func (i *infraCurrent) Cleanupped() <-chan error {
 	return i.cu
 }
 
-func authenticatedService(ctx context.Context, googleApplicationCredentialsValue string) (*compute.Service, error) {
-	return compute.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
+func authenticatedService(ctx context.Context, googleApplicationCredentialsValue string) (*machine.Service, error) {
+	return machine.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
 }
 
 func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string) Builder {

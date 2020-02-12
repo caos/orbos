@@ -46,7 +46,7 @@ func deriveSet(list []string) map[string]struct{} {
 }
 
 // deriveFilter returns a list of all items in the list that matches the predicate.
-func deriveFilterComputes(predicate func(infra.Compute) bool, list []infra.Compute) []infra.Compute {
+func deriveFilterMachines(predicate func(infra.Machine) bool, list []infra.Machine) []infra.Machine {
 	j := 0
 	for i, elem := range list {
 		if predicate(elem) {

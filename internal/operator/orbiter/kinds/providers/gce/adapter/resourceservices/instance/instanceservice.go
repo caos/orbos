@@ -9,14 +9,13 @@ import (
 
 	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
+	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/logging"
-	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/machine/v1"
 )
 
 type instanceService struct {
@@ -24,10 +23,10 @@ type instanceService struct {
 	spec                *model.UserSpec
 	logger              logging.Logger
 	ctx                 context.Context
-	svc                 *compute.InstancesService
+	svc                 *machine.InstancesService
 	caller              *api.Caller
 	secrets             *orbiter.Secrets
-	newComputePublicKey []byte
+	newMachinePublicKey []byte
 	dynamicKeyProperty  string
 	fromOutside         bool
 }
@@ -36,21 +35,21 @@ func NewInstanceService(
 	ctx context.Context,
 	logger logging.Logger,
 	id string,
-	svc *compute.Service,
+	svc *machine.Service,
 	spec *model.UserSpec,
 	caller *api.Caller,
 	secrets *orbiter.Secrets,
-	newComputePublicKey []byte,
+	newMachinePublicKey []byte,
 	dynamicKeyProperty string,
-	fromOutside bool) core.ComputesService {
+	fromOutside bool) core.MachinesService {
 	return &instanceService{
 		id,
 		spec,
 		logger.WithFields(map[string]interface{}{"type": "instance"}),
-		ctx, compute.NewInstancesService(svc),
+		ctx, machine.NewInstancesService(svc),
 		caller,
 		secrets,
-		newComputePublicKey,
+		newMachinePublicKey,
 		dynamicKeyProperty,
 		fromOutside}
 }
@@ -84,7 +83,7 @@ instances:
 	return pools, nil
 }
 
-func (i *instanceService) List(poolName string, active bool) (infra.Computes, error) {
+func (i *instanceService) List(poolName string, active bool) (infra.Machines, error) {
 	operator := "="
 	if !active {
 		operator = "!="
@@ -100,7 +99,7 @@ func (i *instanceService) List(poolName string, active bool) (infra.Computes, er
 		return nil, err
 	}
 
-	instances := make([]infra.Compute, len(list.Items))
+	instances := make([]infra.Machine, len(list.Items))
 	for idx, inst := range list.Items {
 		connect := inst.NetworkInterfaces[0].NetworkIP
 		if i.fromOutside {
@@ -116,7 +115,7 @@ func (i *instanceService) List(poolName string, active bool) (infra.Computes, er
 	return instances, nil
 }
 
-func (i *instanceService) Create(poolName string) (infra.Compute, error) {
+func (i *instanceService) Create(poolName string) (infra.Machine, error) {
 
 	resources, ok := i.spec.Pools[poolName]
 	if !ok {
@@ -127,13 +126,13 @@ func (i *instanceService) Create(poolName string) (infra.Compute, error) {
 		return nil, fmt.Errorf("At least 15 GB disk size is needed, but got %d", resources.StorageGB)
 	}
 
-	sshKey := fmt.Sprintf("%s:%s", i.spec.RemoteUser, string(i.newComputePublicKey))
+	sshKey := fmt.Sprintf("%s:%s", i.spec.RemoteUser, string(i.newMachinePublicKey))
 
 	name := fmt.Sprintf("%s-%s-%s", i.operatorID, poolName, helpers.RandomStringRunes(30, []rune("abcdefghijklmnopqrstuvwxyz0123456789")))[:63]
 	logger := i.logger.WithFields(map[string]interface{}{"name": name})
 
 	// Calculate minimum cpu and memory according to the gce specs:
-	// https://cloud.google.com/compute/docs/instances/creating-instance-with-custom-machine-type#specifications
+	// https://cloud.google.com/machine/docs/instances/creating-instance-with-custom-machine-type#specifications
 	cores := resources.MinCPUCores
 	if cores > 1 {
 		if cores%2 != 0 {
@@ -157,32 +156,32 @@ func (i *instanceService) Create(poolName string) (infra.Compute, error) {
 	op, err := i.caller.RunFirstSuccessful(
 		logger,
 		api.Insert,
-		i.svc.Insert(i.spec.Project, i.spec.Zone, &compute.Instance{
+		i.svc.Insert(i.spec.Project, i.spec.Zone, &machine.Instance{
 			Name:        name,
 			MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", i.spec.Zone, cores, int(memory)),
-			NetworkInterfaces: []*compute.NetworkInterface{
-				&compute.NetworkInterface{
-					AccessConfigs: []*compute.AccessConfig{ // Assigns an ephemeral external ip
-						&compute.AccessConfig{
+			NetworkInterfaces: []*machine.NetworkInterface{
+				&machine.NetworkInterface{
+					AccessConfigs: []*machine.AccessConfig{ // Assigns an ephemeral external ip
+						&machine.AccessConfig{
 							Type: "ONE_TO_ONE_NAT",
 						},
 					},
 				},
 			},
 
-			Metadata: &compute.Metadata{
-				Items: []*compute.MetadataItems{
-					&compute.MetadataItems{
+			Metadata: &machine.Metadata{
+				Items: []*machine.MetadataItems{
+					&machine.MetadataItems{
 						Key:   "ssh-keys",
 						Value: &sshKey,
 					},
 				},
 			},
-			Disks: []*compute.AttachedDisk{
-				&compute.AttachedDisk{
+			Disks: []*machine.AttachedDisk{
+				&machine.AttachedDisk{
 					AutoDelete: true,
 					Boot:       true,
-					InitializeParams: &compute.AttachedDiskInitializeParams{
+					InitializeParams: &machine.AttachedDiskInitializeParams{
 						DiskSizeGb:  int64(resources.StorageGB),
 						SourceImage: resources.OSImage,
 					},
@@ -200,7 +199,7 @@ func (i *instanceService) Create(poolName string) (infra.Compute, error) {
 		return nil, err
 	}
 
-	instance := interf.(*compute.Instance)
+	instance := interf.(*machine.Instance)
 
 	connect := instance.NetworkInterfaces[0].NetworkIP
 	if i.fromOutside {

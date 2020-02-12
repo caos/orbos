@@ -8,13 +8,13 @@ import (
 )
 
 type cmpSvcLB struct {
-	original      core.ComputesService
+	original      core.MachinesService
 	dynamic       dynamic.Current
 	nodeagents    map[string]*common.NodeAgentSpec
 	notifymasters string
 }
 
-func ComputesService(svc core.ComputesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) core.ComputesService {
+func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) core.MachinesService {
 	return &cmpSvcLB{
 		original:   svc,
 		dynamic:    curr,
@@ -26,16 +26,16 @@ func (i *cmpSvcLB) ListPools() ([]string, error) {
 	return i.original.ListPools()
 }
 
-func (i *cmpSvcLB) List(poolName string, active bool) (infra.Computes, error) {
+func (i *cmpSvcLB) List(poolName string, active bool) (infra.Machines, error) {
 	return i.original.List(poolName, active)
 }
 
-func (i *cmpSvcLB) Create(poolName string) (infra.Compute, error) {
+func (i *cmpSvcLB) Create(poolName string) (infra.Machine, error) {
 	cmp, err := i.original.Create(poolName)
 	if err != nil {
 		return nil, err
 	}
 
 	desireFunc := desire(poolName, true, i.dynamic, i.original, i.nodeagents, i.notifymasters)
-	return compute(cmp, desireFunc), desireFunc()
+	return machine(cmp, desireFunc), desireFunc()
 }

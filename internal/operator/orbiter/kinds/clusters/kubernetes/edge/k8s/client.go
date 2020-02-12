@@ -268,7 +268,7 @@ func (c *Client) cordon(node *core.Node) (err error) {
 	}()
 
 	logger := c.logger.WithFields(map[string]interface{}{
-		"node": node.GetName(),
+		"machine": node.GetName(),
 	})
 	logger.Info(false, "Cordoning node")
 
@@ -285,7 +285,7 @@ func (c *Client) Uncordon(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "uncordoning node %s failed", node.GetName())
 	}()
 	logger := c.logger.WithFields(map[string]interface{}{
-		"node": node.GetName(),
+		"machine": node.GetName(),
 	})
 	logger.Info(false, "Uncordoning node")
 
@@ -303,7 +303,7 @@ func (c *Client) Drain(node *core.Node) (err error) {
 	}()
 
 	logger := c.logger.WithFields(map[string]interface{}{
-		"node": node.GetName(),
+		"machine": node.GetName(),
 	})
 	logger.Info(false, "Draining node")
 
@@ -325,7 +325,7 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 	}()
 
 	logger := c.logger.WithFields(map[string]interface{}{
-		"node": name,
+		"machine": name,
 	})
 	logger.Info(false, "Ensuring node is deleted")
 
@@ -369,7 +369,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	}()
 
 	logger := c.logger.WithFields(map[string]interface{}{
-		"node": node.GetName(),
+		"machine": node.GetName(),
 	})
 
 	logger.Info(false, "Evicting pods")

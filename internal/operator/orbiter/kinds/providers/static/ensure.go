@@ -44,18 +44,18 @@ func ensure(
 	// TODO: Allow Changes
 	desireHostnameFunc := desireHostname(desired.Spec.Pools, nodeAgentsDesired)
 
-	computesSvc := NewComputesService(logger, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
-	pools, err := computesSvc.ListPools()
+	machinesSvc := NewMachinesService(logger, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
+	pools, err := machinesSvc.ListPools()
 	if err != nil {
 		return err
 	}
 	for _, pool := range pools {
-		computes, err := computesSvc.List(pool, true)
+		machines, err := machinesSvc.List(pool, true)
 		if err != nil {
 			return err
 		}
-		for _, compute := range computes {
-			if err := desireHostnameFunc(compute, pool); err != nil {
+		for _, machine := range machines {
+			if err := desireHostnameFunc(machine, pool); err != nil {
 				return err
 			}
 		}
@@ -68,11 +68,11 @@ func ensure(
 			current.Current.Ingresses[name] = address
 		}
 		for _, pool := range pools {
-			if err := lbCurrent.Current.Desire(pool, computesSvc, nodeAgentsDesired, ""); err != nil {
+			if err := lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, ""); err != nil {
 				return err
 			}
 		}
-		computesSvc = wrap.ComputesService(computesSvc, *lbCurrent, nodeAgentsDesired, "")
+		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, "")
 		//	case *externallbmodel.Current:
 		//		for name, address := range lbCurrent.Current.Addresses {
 		//			current.Current.Ingresses[name] = address
@@ -81,5 +81,5 @@ func ensure(
 		return errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
-	return addPools(current, desired, computesSvc)
+	return addPools(current, desired, machinesSvc)
 }

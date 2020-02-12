@@ -6,8 +6,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/api"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instance"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instancegroup"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
@@ -21,7 +21,7 @@ func init() {
 	configCB = core.Config()
 }
 
-func TestAddComputeWorks(t *testing.T) {
+func TestAddMachineWorks(t *testing.T) {
 	// TODO: Resolve race conditions
 	// t.Parallel()
 

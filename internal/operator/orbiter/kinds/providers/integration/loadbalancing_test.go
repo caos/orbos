@@ -43,7 +43,7 @@ func TestLoadBalancing(t *testing.T) {
 		if _, ok := err.(*core.BehaviourDiffersError); ok {
 			panic(err)
 		}
-		panic(errors.New("Not specifying compute resources should return an error"))
+		panic(errors.New("Not specifying machine resources should return an error"))
 	}
 
 	args.Pools = []string{"balancedmaster", "unbalancedworker"}

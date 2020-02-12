@@ -15,8 +15,8 @@ import (
 
 func join(
 	logger logging.Logger,
-	joining infra.Compute,
-	joinAt infra.Compute,
+	joining infra.Machine,
+	joinAt infra.Machine,
 	desired DesiredV0,
 	kubeAPI infra.Address,
 	joinToken string,
@@ -28,7 +28,7 @@ func join(
 	switch desired.Spec.Networking.Network {
 	case "cilium":
 		installNetwork = func() error {
-			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Machine) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml")
 				logger.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
@@ -38,7 +38,7 @@ func join(
 		}
 	case "calico":
 		installNetwork = func() error {
-			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Machine) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr))
 				logger.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
@@ -131,7 +131,7 @@ nodeRegistration:
 `, intIP, certKey)
 	}
 
-	if err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+	if err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Machine) error {
 		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
 	}); err != nil {
 		return nil, err
@@ -147,7 +147,7 @@ nodeRegistration:
 	}
 	logger.WithFields(map[string]interface{}{
 		"stdout": string(resetStdout),
-	}).Debug("Cleaned up compute")
+	}).Debug("Cleaned up machine")
 
 	if joinAt != nil {
 		joinAtIP := joinAt.IP()

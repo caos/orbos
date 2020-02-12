@@ -8,27 +8,27 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-type compute struct {
+type machine struct {
 	poolFile string
 	id       *string
 	ip       string
-	ssh      infra.Compute
+	ssh      infra.Machine
 }
 
-func newCompute(logger logging.Logger, poolFile string, remoteUser string, id *string, IP string) infra.Compute {
-	cmp := &compute{poolFile: poolFile, id: id, ip: IP}
-	cmp.ssh = ssh.NewCompute(logger, cmp, remoteUser)
+func newMachine(logger logging.Logger, poolFile string, remoteUser string, id *string, IP string) infra.Machine {
+	cmp := &machine{poolFile: poolFile, id: id, ip: IP}
+	cmp.ssh = ssh.NewMachine(logger, cmp, remoteUser)
 	return cmp.ssh
 }
 
-func (c *compute) ID() string {
+func (c *machine) ID() string {
 	return *c.id
 }
 
-func (c *compute) IP() string {
+func (c *machine) IP() string {
 	return c.ip
 }
 
-func (c *compute) Remove() error {
+func (c *machine) Remove() error {
 	return c.ssh.WriteFile(c.poolFile, strings.NewReader(""), 600)
 }

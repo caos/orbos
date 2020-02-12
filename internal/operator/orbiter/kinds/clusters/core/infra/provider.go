@@ -26,11 +26,11 @@ type Ingress struct {
 
 type Pool interface {
 	EnsureMembers() error
-	GetComputes(active bool) (Computes, error)
-	AddCompute() (Compute, error)
+	GetMachines(active bool) (Machines, error)
+	AddMachine() (Machine, error)
 }
 
-type Compute interface {
+type Machine interface {
 	ID() string
 	IP() string
 	Remove() error
@@ -40,10 +40,10 @@ type Compute interface {
 	UseKey(keys ...[]byte) error
 }
 
-type Computes []Compute
+type Machines []Machine
 
-func (c Computes) ToChan() <-chan Compute {
-	compChan := make(chan Compute)
+func (c Machines) ToChan() <-chan Machine {
+	compChan := make(chan Machine)
 	go func() {
 		for _, comp := range c {
 			compChan <- comp
@@ -53,7 +53,7 @@ func (c Computes) ToChan() <-chan Compute {
 	return compChan
 }
 
-func (c Computes) String() string {
+func (c Machines) String() string {
 	list := ""
 	for _, comp := range c {
 		list += "|" + comp.ID()
@@ -64,6 +64,6 @@ func (c Computes) String() string {
 	return "(" + list + ")"
 }
 
-func (c Computes) Len() int           { return len(c) }
-func (c Computes) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
-func (c Computes) Less(i, j int) bool { return c[i].ID() < c[j].ID() }
+func (c Machines) Len() int           { return len(c) }
+func (c Machines) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c Machines) Less(i, j int) bool { return c[i].ID() < c[j].ID() }
