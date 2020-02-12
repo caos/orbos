@@ -8,13 +8,13 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"google.golang.org/api/machine/v1"
+	"google.golang.org/api/compute/v1"
 )
 
 type hc struct {
 	logger logging.Logger
 	spec   *model.UserSpec
-	svc    *machine.HealthChecksService
+	svc    *compute.HealthChecksService
 	caller *api.Caller
 }
 
@@ -23,11 +23,11 @@ type Config struct {
 	Path string
 }
 
-func New(logger logging.Logger, svc *machine.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &hc{
 		logger: logger.WithFields(map[string]interface{}{"type": "health check"}),
 		spec:   spec,
-		svc:    machine.NewHealthChecksService(svc),
+		svc:    compute.NewHealthChecksService(svc),
 		caller: caller,
 	}
 }

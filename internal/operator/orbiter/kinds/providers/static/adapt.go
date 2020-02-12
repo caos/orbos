@@ -9,8 +9,8 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
+	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -59,7 +59,7 @@ func AdaptFunc(logger logging.Logger, masterkey string, id string) orbiter.Adapt
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			_, _, _, lMigrate, err := dynamic.AdaptFunc(logger)(desiredKind.Loadbalancing, lbCurrent)
+			_, _, _, lMigrate, err := dynamic.AdaptFunc()(logger, desiredKind.Loadbalancing, lbCurrent)
 			if err != nil {
 				return nil, nil, nil, migrate, err
 			}

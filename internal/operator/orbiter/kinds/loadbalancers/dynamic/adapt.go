@@ -15,8 +15,8 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-func AdaptFunc(logger logging.Logger) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+func AdaptFunc() orbiter.AdaptFunc {
+	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()

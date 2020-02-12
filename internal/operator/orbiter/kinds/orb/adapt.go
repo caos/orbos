@@ -11,12 +11,11 @@ import (
 )
 
 func AdaptFunc(
-	logger logging.Logger,
 	orb *orbiter.Orb,
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -76,7 +75,13 @@ func AdaptFunc(
 				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				//				}
 
-				providerEnsurer, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerCurrent)
+				providerEnsurer, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(
+					orb.Masterkey,
+					provID,
+				)(
+					logger.WithFields(map[string]interface{}{"provider": provID}),
+					providerTree,
+					providerCurrent)
 				if err != nil {
 					return nil, nil, nil, migrate, err
 				}
@@ -140,7 +145,18 @@ func AdaptFunc(
 
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterEnsurer, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterCurrent)
+				clusterEnsurer, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(
+					orb,
+					orbiterCommit,
+					clusterID,
+					oneoff,
+					deployOrbiterAndBoom,
+					ensureProviders,
+					destroyProviders,
+				)(
+					logger.WithFields(map[string]interface{}{"cluster": clusterID}),
+					clusterTree,
+					clusterCurrent)
 				if err != nil {
 					return nil, nil, nil, migrate, err
 				}
