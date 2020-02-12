@@ -54,12 +54,20 @@ func ensureScale(
 			}
 		} else {
 			for _, compute := range existing[pool.desired.Nodes:] {
+				id := compute.infra.ID()
+				computeLogger := logger.WithFields(map[string]interface{}{
+					"compute": id,
+				})
+				computeLogger.Info(false, "Deleting node")
 				if err := k8sClient.EnsureDeleted(compute.infra.ID(), compute.infra, false); err != nil {
 					return false, err
 				}
+				computeLogger.Info(true, "Node deleted")
+				computeLogger.Info(false, "Removing compute")
 				if err := compute.infra.Remove(); err != nil {
 					return false, err
 				}
+				computeLogger.Info(true, "Compute removed")
 			}
 		}
 		return delta <= 0, nil
@@ -95,7 +103,7 @@ func ensureScale(
 	}
 
 	if !upscalingDone {
-		logger.Info("Upscaled computes are not ready yet")
+		logger.Info(false, "Upscaled computes are not ready yet")
 		return false, nil
 	}
 
@@ -137,7 +145,7 @@ nodes:
 		})
 
 		if nodeIsJoining {
-			logger.Info("Node is not ready yet")
+			logger.Info(false, "Node is not ready yet")
 		}
 
 		if compute.tier == Controlplane && joinCP == nil {
@@ -186,7 +194,7 @@ nodes:
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
-			logger.Info("Refreshed certs")
+			logger.Info(false, "Refreshed certs")
 		}
 
 		joinKubeconfig, err := join(
@@ -204,11 +212,13 @@ nodes:
 			return false, err
 		}
 		kubeconfig.Value = *joinKubeconfig
-		return false, psf()
+		return false, psf(logger.WithFields(map[string]interface{}{
+			"type": "kubeconfig",
+		}))
 	}
 
 	if certsCP == nil {
-		logger.Info("Awaiting controlplane initialization")
+		logger.Info(false, "Awaiting controlplane initialization")
 		return false, nil
 	}
 

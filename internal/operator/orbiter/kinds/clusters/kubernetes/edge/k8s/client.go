@@ -267,16 +267,34 @@ func (c *Client) cordon(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
 	}()
 
+	logger := c.logger.WithFields(map[string]interface{}{
+		"node": node.GetName(),
+	})
+	logger.Info(false, "Cordoning node")
+
 	node.Spec.Unschedulable = true
-	return c.UpdateNode(node)
+	if err := c.UpdateNode(node); err != nil {
+		return err
+	}
+	logger.Info(false, "Node cordoned")
+	return nil
 }
 
 func (c *Client) Uncordon(node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "uncordoning node %s failed", node.GetName())
 	}()
+	logger := c.logger.WithFields(map[string]interface{}{
+		"node": node.GetName(),
+	})
+	logger.Info(false, "Uncordoning node")
+
 	node.Spec.Unschedulable = false
-	return c.UpdateNode(node)
+	if err := c.UpdateNode(node); err != nil {
+		return err
+	}
+	logger.Info(true, "Node uncordoned")
+	return nil
 }
 
 func (c *Client) Drain(node *core.Node) (err error) {
@@ -284,11 +302,20 @@ func (c *Client) Drain(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
 
+	logger := c.logger.WithFields(map[string]interface{}{
+		"node": node.GetName(),
+	})
+	logger.Info(false, "Draining node")
+
 	if err = c.cordon(node); err != nil {
 		return err
 	}
 
-	return c.evictPods(node)
+	if err := c.evictPods(node); err != nil {
+		return err
+	}
+	logger.Info(true, "Node drained")
+	return nil
 }
 
 func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (err error) {
@@ -300,7 +327,7 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 	logger := c.logger.WithFields(map[string]interface{}{
 		"node": name,
 	})
-	logger.Debug("Deleting node")
+	logger.Info(false, "Ensuring node is deleted")
 
 	api, apiErr := c.nodeApi()
 	apiErr = errors.Wrap(apiErr, "getting node api failed")
@@ -317,6 +344,7 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 		}
 	}
 
+	logger.Info(false, "Resetting kubeadm")
 	if _, resetErr := node.Execute(nil, nil, "sudo kubeadm reset --force"); resetErr != nil {
 		if !strings.Contains(resetErr.Error(), "command not found") {
 			return resetErr
@@ -326,7 +354,12 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 	if apiErr != nil {
 		return nil
 	}
-	return api.Delete(name, &mach.DeleteOptions{})
+	logger.Info(false, "Deleting node")
+	if err := api.Delete(name, &mach.DeleteOptions{}); err != nil {
+		return err
+	}
+	logger.Info(true, "Node deleted")
+	return nil
 }
 
 func (c *Client) evictPods(node *core.Node) (err error) {
@@ -334,6 +367,12 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "evicting pods from node %s failed", node.GetName())
 	}()
+
+	logger := c.logger.WithFields(map[string]interface{}{
+		"node": node.GetName(),
+	})
+
+	logger.Info(false, "Evicting pods")
 
 	selector := fmt.Sprintf("spec.nodeName=%s", node.Name)
 	podItems, err := c.set.CoreV1().Pods("").List(mach.ListOptions{
@@ -421,6 +460,8 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	if synchronizer.IsError() {
 		return errors.Wrapf(synchronizer, "concurrently evicting pods from node %s failed", node.Name)
 	}
+
+	logger.Info(false, "Pods evicted")
 	return nil
 }
 

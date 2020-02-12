@@ -25,7 +25,7 @@ func ensure(
 	oneoff bool) error {
 
 	current.Status = "maintaining"
-	current.Computes = make(map[string]*Compute)
+	current.Machines = make(map[string]*Machine)
 
 	cloudPools := make(map[string]map[string]infra.Pool)
 	var kubeAPIAddress infra.Address

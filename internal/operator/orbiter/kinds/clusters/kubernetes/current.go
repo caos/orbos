@@ -6,7 +6,7 @@ import (
 
 type CurrentCluster struct {
 	Status   string
-	Computes map[string]*Compute `yaml:"computes"`
+	Machines map[string]*Machine `yaml:"machines"`
 }
 
 type Current struct {
@@ -14,12 +14,12 @@ type Current struct {
 	Current CurrentCluster
 }
 
-type Compute struct {
+type Machine struct {
 	Status   string
-	Metadata ComputeMetadata `yaml:",inline"`
+	Metadata MachineMetadata `yaml:",inline"`
 }
 
-type ComputeMetadata struct {
+type MachineMetadata struct {
 	Tier     Tier
 	Provider string
 	Pool     string

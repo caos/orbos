@@ -52,14 +52,14 @@ func teardownCommand(rv rootValues) *cobra.Command {
 			"version": version,
 			"commit":  gitCommit,
 			"repoURL": orbFile.URL,
-		}).Info("Shooting down Orbiter")
+		}).Info(false, "Shooting down Orbiter")
 
 		fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
 		var response string
 		fmt.Scanln(&response)
 
 		if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
-			logger.Info("Leaving Orbiter above")
+			logger.Info(false, "Leaving Orbiter above")
 			return nil
 		}
 

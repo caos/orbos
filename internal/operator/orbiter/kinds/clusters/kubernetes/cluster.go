@@ -28,7 +28,7 @@ func ensureCluster(
 		k8sClient.Refresh(&kubeconfig.Value)
 	}
 
-	controlplane, workers, initializeCompute, err := initialize(
+	controlplane, workers, initializeMachine, err := initialize(
 		logger,
 		curr,
 		desired,
@@ -40,43 +40,43 @@ func ensureCluster(
 	}
 
 	desireFirewall, ensureFirewall := firewallFuncs(desired, kubeAPIAddress.Port)
-	initializeFirewall := func(_ initializedPool, computes []initializedCompute) error {
-		for _, compute := range computes {
-			desireFirewall(compute)
+	initializeFirewall := func(_ initializedPool, machines []initializedMachine) error {
+		for _, machine := range machines {
+			desireFirewall(machine)
 		}
 		return nil
 	}
 	controlplane.enhance(initializeFirewall)
-	controlplaneComputes, err := controlplane.computes()
+	controlplaneMachines, err := controlplane.machines()
 	if err != nil {
 		return err
 	}
-	workerComputes := make([]initializedCompute, 0)
+	workerMachines := make([]initializedMachine, 0)
 	for _, workerPool := range workers {
 		workerPool.enhance(initializeFirewall)
-		wComputes, err := workerPool.computes()
+		wMachines, err := workerPool.machines()
 		if err != nil {
 			return err
 		}
-		workerComputes = append(workerComputes, wComputes...)
+		workerMachines = append(workerMachines, wMachines...)
 	}
 
-	initializedComputes := append(controlplaneComputes, workerComputes...)
+	initializedMachines := append(controlplaneMachines, workerMachines...)
 
 	nodeagentsDone, installNodeAgent, err := ensureNodeAgents(
 		logger,
 		orbiterCommit,
 		repoURL,
 		repoKey,
-		initializedComputes,
+		initializedMachines,
 	)
 	if err != nil || !nodeagentsDone {
-		logger.Info("Node Agents are not ready yet")
+		logger.Info(false, "Node Agents are not ready yet")
 		return err
 	}
 
-	if !ensureFirewall(initializedComputes) {
-		logger.Info("Firewall is not ready yet")
+	if !ensureFirewall(initializedMachines) {
+		logger.Info(false, "Firewall is not ready yet")
 		return err
 	}
 
@@ -85,10 +85,10 @@ func ensureCluster(
 		logger,
 		targetVersion,
 		k8sClient,
-		controlplaneComputes,
-		workerComputes)
+		controlplaneMachines,
+		workerMachines)
 	if err != nil || !upgradingDone {
-		logger.Info("Upgrading is not done yet")
+		logger.Info(false, "Upgrading is not done yet")
 		return err
 	}
 
@@ -104,11 +104,11 @@ func ensureCluster(
 		targetVersion,
 		k8sClient,
 		oneoff,
-		func(created infra.Compute, pool initializedPool) (initializedCompute, error) {
-			compute := initializeCompute(created, pool)
+		func(created infra.Machine, pool initializedPool) (initializedMachine, error) {
+			machine := initializeMachine(created, pool)
 			target := targetVersion.DefineSoftware()
-			compute.desiredNodeagent.Software = &target
-			return compute, installNodeAgent(compute)
+			machine.desiredNodeagent.Software = &target
+			return machine, installNodeAgent(machine)
 		})
 	if err != nil {
 		return err

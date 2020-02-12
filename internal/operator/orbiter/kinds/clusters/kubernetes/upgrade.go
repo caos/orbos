@@ -123,20 +123,22 @@ func ensureSoftware(
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
+		id := compute.infra.ID()
+		computeLogger := logger.WithFields(map[string]interface{}{
+			"compute": id,
+		})
+
 		waitForNodeAgent := func() error {
-			logger.WithFields(map[string]interface{}{
-				"compute": compute.infra.ID(),
-			}).Info("Waiting for software to be ensured")
+			computeLogger.Info(false, "Waiting for software to be ensured")
 			return nil
 		}
 
 		ensureJoinSoftware := func() error {
-			logger.WithFields(map[string]interface{}{
-				"compute": compute.infra.ID(),
-				"from":    compute.desiredNodeagent.Software.Kubeadm.Version,
-				"to":      to.Kubeadm.Version,
-			}).Info("Ensuring join software")
 			compute.desiredNodeagent.Software.Merge(to)
+			computeLogger.WithFields(map[string]interface{}{
+				"current": k8s.Current(compute.currentNodeagent.Software),
+				"desired": to,
+			}).Info(true, "Join software desired")
 			return nil
 		}
 
@@ -144,11 +146,10 @@ func ensureSoftware(
 			compute.desiredNodeagent.Software.Kubeadm = common.Package{
 				Version: to.Kubeadm.Version,
 			}
-			logger.WithFields(map[string]interface{}{
-				"compute": compute.infra.ID(),
-				"from":    compute.desiredNodeagent.Software.Kubeadm.Version,
-				"to":      to.Kubeadm.Version,
-			}).Info("Ensuring kubeadm")
+			computeLogger.WithFields(map[string]interface{}{
+				"current": compute.currentNodeagent.Software.Kubeadm.Version,
+				"desired": to.Kubeadm.Version,
+			}).Info(true, "Kubeadm desired")
 			return nil
 		}
 
@@ -159,12 +160,7 @@ func ensureSoftware(
 					err = errors.Wrapf(err, "ensuring software on node %s failed", compute.infra.ID())
 				}()
 
-				id := compute.infra.ID()
 				if !isControlplane {
-					logger.WithFields(map[string]interface{}{
-						"compute": id,
-					}).Info("Draining node")
-
 					if err := k8sClient.Drain(k8sNode); err != nil {
 						return err
 					}
@@ -172,43 +168,41 @@ func ensureSoftware(
 
 				upgradeAction := "node"
 				if isFirstControlplane {
-					logger.WithFields(map[string]interface{}{
-						"compute": id,
-					}).Info("Upgrading kubelet configuration on first controlplane node")
-
+					computeLogger.Info(false, "Migrating kubelet configuration on first controlplane node")
 					upgradeAction = fmt.Sprintf("apply %s --yes", to.Kubelet.Version)
-				} else {
-					logger.WithFields(map[string]interface{}{
-						"compute": id,
-					}).Info("Migrating node")
+					computeLogger.Info(true, "Kubelet configuration on first controlplane node migrated")
 				}
+
+				computeLogger.Info(false, "Migrating node")
 
 				_, err = compute.infra.Execute(nil, nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
 				if err != nil {
 					return err
 				}
 
-				logger.WithFields(map[string]interface{}{
-					"compute": id,
-					"from":    compute.currentNodeagent.Software.Kubelet.Version,
-					"to":      to.Kubelet.Version,
-				}).Info("Ensuring kubelet")
+				computeLogger.WithFields(map[string]interface{}{
+					"from": compute.currentNodeagent.Software.Kubelet.Version,
+					"to":   to.Kubelet.Version,
+				}).Info(true, "Node migrated")
 
 				compute.desiredNodeagent.Software.Merge(to)
+
+				computeLogger.WithFields(map[string]interface{}{
+					"from": compute.currentNodeagent.Software.Kubelet.Version,
+					"to":   to.Kubelet.Version,
+				}).Info(true, "Kubelet desired")
 				return nil
 			}
 		}
 
 		ensureOnline := func(k8sNode *v1.Node) func() error {
 			return func() error {
-				logger.WithFields(map[string]interface{}{
-					"compute": compute.infra.ID(),
-				}).Info("Bringing node back online")
-				return k8sClient.Uncordon(k8sNode)
+				if err := k8sClient.Uncordon(k8sNode); err != nil {
+					return err
+				}
+				return nil
 			}
 		}
-
-		id := compute.infra.ID()
 
 		if !compute.currentNodeagent.NodeIsReady {
 			return waitForNodeAgent, nil

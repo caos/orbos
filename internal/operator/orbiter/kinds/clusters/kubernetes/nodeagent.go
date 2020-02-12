@@ -255,7 +255,7 @@ WantedBy=multi-user.target
 
 	logger.WithFields(map[string]interface{}{
 		"compute": compute.infra.ID(),
-	}).Info("Node Agent installed and started")
+	}).Info(true, "Node Agent installed and started")
 
 	return nil
 
@@ -273,7 +273,7 @@ func loggedInstallNodeAgent(
 		"compute": compute.infra.ID(),
 		"from":    from,
 		"to":      orbiterCommit,
-	}).Info("Ensuring node agent")
+	}).Info(false, "Ensuring node agent")
 
 	return installNodeAgent(logger, compute, repoURL, repoKey)
 }

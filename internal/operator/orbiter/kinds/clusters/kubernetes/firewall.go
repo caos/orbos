@@ -6,9 +6,9 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 )
 
-func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute initializedCompute), ensure func(computes []initializedCompute) bool) {
+func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(machine initializedMachine), ensure func(machines []initializedMachine) bool) {
 
-	desireFirewall := func(compute initializedCompute) common.Firewall {
+	desireFirewall := func(machine initializedMachine) common.Firewall {
 
 		fw := map[string]common.Allowed{
 			"kubelet": common.Allowed{
@@ -17,14 +17,14 @@ func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute i
 			},
 		}
 
-		if compute.tier == Workers {
+		if machine.tier == Workers {
 			fw["node-ports"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
-		if compute.tier == Controlplane {
+		if machine.tier == Controlplane {
 			fw["kubeapi-external"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPIPort),
 				Protocol: "tcp",
@@ -54,26 +54,26 @@ func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute i
 			}
 		}
 
-		if compute.desiredNodeagent.Firewall == nil {
-			compute.desiredNodeagent.Firewall = &common.Firewall{}
+		if machine.desiredNodeagent.Firewall == nil {
+			machine.desiredNodeagent.Firewall = &common.Firewall{}
 		}
 		firewall := common.Firewall(fw)
-		compute.desiredNodeagent.Firewall.Merge(firewall)
+		machine.desiredNodeagent.Firewall.Merge(firewall)
 		return firewall
 	}
 
-	return func(compute initializedCompute) {
-			desireFirewall(compute)
-		}, func(computes []initializedCompute) bool {
+	return func(machine initializedMachine) {
+			desireFirewall(machine)
+		}, func(machines []initializedMachine) bool {
 			ready := true
-			for _, compute := range computes {
+			for _, machine := range machines {
 
-				firewall := desireFirewall(compute)
+				firewall := desireFirewall(machine)
 
-				if compute.currentNodeagent == nil {
+				if machine.currentNodeagent == nil {
 					ready = false
 				} else if ready {
-					ready = compute.currentNodeagent.Open.Contains(firewall)
+					ready = machine.currentNodeagent.Open.Contains(firewall)
 				}
 			}
 			return ready

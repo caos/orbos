@@ -25,7 +25,7 @@ import (
 
 var gitCommit string
 var version string
- 
+
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
@@ -46,7 +46,7 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")
 	repoURL := flag.String("repourl", "", "Repository URL")
-	nodeAgentID := flag.String("id", "", "The managed computes ID")
+	nodeAgentID := flag.String("id", "", "The managed machines ID")
 
 	flag.Parse()
 

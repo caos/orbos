@@ -18,6 +18,11 @@ func Add(l logging.Logger) logging.Logger {
 	return &logger{l.IsVerbose(), l}
 }
 
+func (l logger) AddSideEffect(onLog func(bool, map[string]string)) logging.Logger {
+	l.original = l.original.AddSideEffect(onLog)
+	return l
+}
+
 func (c logger) IsVerbose() bool {
 	return c.verbose
 }
@@ -47,12 +52,12 @@ func (c logger) Error(err error) {
 	l.original.Error(err)
 }
 
-func (c logger) Info(msg string) {
+func (c logger) Info(event bool, msg string) {
 	l := c.withTs().(logger)
 	if c.verbose {
 		l = l.WithFields(callerFields()).(logger)
 	}
-	l.original.Info(msg)
+	l.original.Info(event, msg)
 }
 
 func (c logger) Debug(msg string) {

@@ -8,8 +8,9 @@ import (
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/logging/base"
 	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
+	"github.com/caos/orbiter/logging/format"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -82,7 +83,11 @@ $ orbctl -f ~/.orb/myorb [command]
 
 		ctx := context.Background()
 
-		l := logcontext.Add(stdlib.New(os.Stdout))
+		l := logcontext.Add(base.New().AddSideEffect(func(event bool, fields map[string]string) {
+			if _, err := os.Stdout.WriteString(format.LogRecord(fields)); err != nil {
+				panic(err)
+			}
+		}))
 		if verbose {
 			l = l.Verbose()
 		}

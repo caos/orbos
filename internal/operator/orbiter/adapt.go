@@ -3,10 +3,12 @@ package orbiter
 import (
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/logging/format"
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(desired *Tree, current *Tree) (EnsureFunc, DestroyFunc, map[string]*Secret, bool, error)
+type AdaptFunc func(logger logging.Logger, desired *Tree, current *Tree) (EnsureFunc, DestroyFunc, map[string]*Secret, bool, error)
 
 func parse(gitClient *git.Client) (desired *Tree, err error) {
 
@@ -47,13 +49,21 @@ func (c *Tree) MarshalYAML() (interface{}, error) {
 	return c.Parsed, nil
 }
 
-type PushSecretsFunc func() error
+type PushSecretsFunc func(logging.Logger) error
 
 func pushSecretsFunc(gitClient *git.Client, desired *Tree) PushSecretsFunc {
-	return func() error {
-		return gitClient.UpdateRemote(git.File{
+	return func(logger logging.Logger) error {
+		logger.Info(false, "Writing secret")
+		return pushOrbiterYML(logger, "Secret written", gitClient, desired)
+	}
+}
+
+func pushOrbiterYML(logger logging.Logger, msg string, gitClient *git.Client, desired *Tree) (err error) {
+	logger.AddSideEffect(func(event bool, fields map[string]string) {
+		err = gitClient.UpdateRemote(format.CommitRecord(fields), git.File{
 			Path:    "orbiter.yml",
 			Content: common.MarshalYAML(desired),
 		})
-	}
+	}).Info(false, msg)
+	return err
 }

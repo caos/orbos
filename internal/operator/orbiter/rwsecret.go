@@ -8,6 +8,7 @@ import (
 	"github.com/manifoldco/promptui"
 
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/logging"
 )
 
 func JoinPath(base string, append ...string) string {
@@ -17,9 +18,9 @@ func JoinPath(base string, append ...string) string {
 	return base
 }
 
-func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
+func ReadSecret(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
 
-	secret, _, err := findSecret(gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+	secret, _, err := findSecret(logger, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0)
 		for key, sec := range secrets {
 			if sec.Value != "" {
@@ -39,9 +40,9 @@ func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, er
 	return secret.Value, nil
 }
 
-func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) error {
+func WriteSecret(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc, path, value string) error {
 
-	secret, tree, err := findSecret(gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+	secret, tree, err := findSecret(logger, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0, len(secrets))
 		for key := range secrets {
 			items = append(items, key)
@@ -54,16 +55,16 @@ func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) err
 
 	secret.Value = value
 
-	return pushSecretsFunc(gitClient, tree)()
+	return pushSecretsFunc(gitClient, tree)(logger)
 }
 
-func findSecret(gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
+func findSecret(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
 	treeDesired, err := parse(gitClient)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, _, secrets, _, err := adapt(treeDesired, &Tree{})
+	_, _, secrets, _, err := adapt(logger, treeDesired, &Tree{})
 	if err != nil {
 		return nil, nil, err
 	}

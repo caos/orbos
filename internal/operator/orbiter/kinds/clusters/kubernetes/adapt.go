@@ -12,7 +12,6 @@ import (
 )
 
 func AdaptFunc(
-	logger logging.Logger,
 	orb *orbiter.Orb,
 	orbiterCommit string,
 	id string,
@@ -22,7 +21,7 @@ func AdaptFunc(
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
 
 	var deployErrors int
-	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -64,13 +63,13 @@ func AdaptFunc(
 				logger.WithFields(map[string]interface{}{
 					"count": deployErrors,
 					"err":   err.Error(),
-				}).Info("Deploying Orbiter failed, awaiting next iteration")
+				}).Info(false, "Deploying Orbiter failed, awaiting next iteration")
 				if deployErrors > 50 {
 					panic(err)
 				}
 			} else {
 				if oneoff {
-					logger.Info("Deployed Orbiter takes over control")
+					logger.Info(false, "Deployed Orbiter takes over control")
 					os.Exit(0)
 				}
 				deployErrors = 0

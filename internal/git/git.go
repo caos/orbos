@@ -119,29 +119,38 @@ type File struct {
 	Content []byte
 }
 
-func (g *Client) UpdateRemote(files ...File) error {
+func (g *Client) Commit(msg string, files ...File) (bool, error) {
+	clean, err := g.stage(files...)
+	if err != nil {
+		return false, err
+	}
+
+	if clean {
+		return false, nil
+	}
+
+	return true, g.commit(msg)
+}
+
+func (g *Client) UpdateRemote(msg string, files ...File) error {
 	if err := g.Clone(); err != nil {
 		return errors.Wrap(err, "recloning before committing changes failed")
 	}
 
-	clean, err := g.stage(files...)
+	changed, err := g.Commit(msg, files...)
 	if err != nil {
 		return err
 	}
 
-	if clean {
-		g.logger.Info("No changes")
+	if !changed {
+		g.logger.Info(false, "No changes")
 		return nil
 	}
 
-	if err := g.commit(); err != nil {
-		return err
-	}
-
-	return g.push()
+	return g.Push()
 }
 
-func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([]byte, error), force bool) ([]byte, error) {
+func (g *Client) UpdateRemoteUntilItWorks(msg string, path string, overwrite func([]byte) ([]byte, error), force bool) ([]byte, error) {
 
 	if err := g.Clone(); err != nil {
 		return nil, errors.Wrap(err, "recloning before committing changes failed")
@@ -163,15 +172,15 @@ func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([
 	}
 
 	if clean {
-		g.logger.Info("No changes")
+		g.logger.Info(false, "No changes")
 		return overwritten, nil
 	}
 
-	if err := g.commit(); err != nil {
+	if err := g.commit(msg); err != nil {
 		return nil, err
 	}
 
-	if err := g.push(); err != nil && strings.Contains(err.Error(), "command error on refs/heads/master: cannot lock ref 'refs/heads/master': is at ") {
+	if err := g.Push(); err != nil && strings.Contains(err.Error(), "command error on refs/heads/master: cannot lock ref 'refs/heads/master': is at ") {
 		g.logger.Debug("Undoing latest commit")
 		if resetErr := g.workTree.Reset(&gogit.ResetOptions{
 			Mode: gogit.HardReset,
@@ -179,7 +188,7 @@ func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([
 			return overwritten, errors.Wrap(resetErr, "undoing the latest commit failed")
 		}
 
-		newLatestFiles, err := g.UpdateRemoteUntilItWorks(path, overwrite, force)
+		newLatestFiles, err := g.UpdateRemoteUntilItWorks(msg, path, overwrite, force)
 		return newLatestFiles, errors.Wrap(err, "pushing failed")
 	}
 	return overwritten, nil
@@ -217,9 +226,9 @@ func (g *Client) stage(files ...File) (bool, error) {
 	return status.IsClean(), nil
 }
 
-func (g *Client) commit() error {
+func (g *Client) commit(msg string) error {
 
-	if _, err := g.workTree.Commit("update current state or secrets", &gogit.CommitOptions{
+	if _, err := g.workTree.Commit(msg, &gogit.CommitOptions{
 		Author: &object.Signature{
 			Name:  g.committer,
 			Email: g.email,
@@ -232,7 +241,7 @@ func (g *Client) commit() error {
 	return nil
 }
 
-func (g *Client) push() error {
+func (g *Client) Push() error {
 
 	err := g.repo.PushContext(g.ctx, &gogit.PushOptions{
 		RemoteName: "origin",
@@ -244,6 +253,6 @@ func (g *Client) push() error {
 		return errors.Wrap(err, "pushing repository failed")
 	}
 
-	g.logger.Info("Repository pushed")
+	g.logger.Info(false, "Repository pushed")
 	return nil
 }

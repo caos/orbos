@@ -46,7 +46,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"destroy": destroy,
 			"verbose": verbose,
 			"repoURL": orbFile.URL,
-		}).Info("Orbiter is taking off")
+		}).Info(false, "Orbiter took off")
 
 		op := operator.New(ctx, logger, orbiter.Takeoff(
 			ctx,
