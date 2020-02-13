@@ -16,9 +16,9 @@ clusters:
         podcidr: 100.127.224.0/20
         servicecidr: 100.126.4.0/22
       versions:
-        kubernetes: v1.16.0
-        orbiter: v0.13.1
-        boom: v0.9.11
+        kubernetes: v1.17.0
+        orbiter: v0.15.2
+        boom: v0.9.19
       workers:
       - nodes: 1
         pool: workers
@@ -45,7 +45,7 @@ providers:
       version: v0
       spec:
         masters:
-        - ip: 192.168.122.0
+        - ip: 192.168.122.10
           transport:
           - name: kubeapi
             sourceport: 6443
@@ -56,3 +56,24 @@ providers:
                 code: 200
                 path: /healthz
                 protocol: https
+        workers:
+        - ip: 192.168.122.11
+          transport:
+          - name: httpsingress
+            sourceport: 443
+            destinations:
+            - healthchecks:
+                protocol: https
+                path: /ambassador/v0/check_ready
+                code: 200
+              port: 30443
+              pool: workers
+          - name: httpingress
+            sourceport: 80
+            destinations:
+            - healthchecks:
+                protocol: http
+                path: /ambassador/v0/check_ready
+                code: 200
+              port: 30080
+              pool: workers
