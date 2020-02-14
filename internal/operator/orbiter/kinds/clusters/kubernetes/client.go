@@ -1,6 +1,6 @@
 //go:generate goderive .
 
-package k8s
+package kubernetes
 
 import (
 	"fmt"
@@ -47,7 +47,7 @@ type Client struct {
 	set    *kubernetes.Clientset
 }
 
-func New(logger logging.Logger, kubeconfig *string) *Client {
+func NewK8sClient(logger logging.Logger, kubeconfig *string) *Client {
 	kc := &Client{logger: logger}
 	kc.Refresh(kubeconfig)
 	return kc
@@ -248,7 +248,7 @@ func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 	return nodeList.Items, nil
 }
 
-func (c *Client) UpdateNode(node *core.Node) (err error) {
+func (c *Client) updateNode(node *core.Node) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "updating node %s failed", node.GetName())
@@ -273,14 +273,14 @@ func (c *Client) cordon(node *core.Node) (err error) {
 	logger.Info(false, "Cordoning node")
 
 	node.Spec.Unschedulable = true
-	if err := c.UpdateNode(node); err != nil {
+	if err := c.updateNode(node); err != nil {
 		return err
 	}
 	logger.Info(false, "Node cordoned")
 	return nil
 }
 
-func (c *Client) Uncordon(node *core.Node) (err error) {
+func (c *Client) Uncordon(machine *Machine, node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "uncordoning node %s failed", node.GetName())
 	}()
@@ -290,14 +290,15 @@ func (c *Client) Uncordon(node *core.Node) (err error) {
 	logger.Info(false, "Uncordoning node")
 
 	node.Spec.Unschedulable = false
-	if err := c.UpdateNode(node); err != nil {
+	if err := c.updateNode(node); err != nil {
 		return err
 	}
+	machine.Status = "online"
 	logger.Info(true, "Node uncordoned")
 	return nil
 }
 
-func (c *Client) Drain(node *core.Node) (err error) {
+func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
@@ -315,10 +316,11 @@ func (c *Client) Drain(node *core.Node) (err error) {
 		return err
 	}
 	logger.Info(true, "Node drained")
+	machine.Status = "Drained"
 	return nil
 }
 
-func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (err error) {
+func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubeadm, drain bool) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "deleting node %s failed", name)
@@ -339,7 +341,7 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 			return errors.Wrapf(err, "getting node %s from kube api failed", name)
 		}
 
-		if err = c.Drain(nodeStruct); err != nil {
+		if err = c.Drain(machine, nodeStruct); err != nil {
 			return err
 		}
 	}
@@ -358,6 +360,7 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 	if err := api.Delete(name, &mach.DeleteOptions{}); err != nil {
 		return err
 	}
+	machine.Status = "deleted"
 	logger.Info(true, "Node deleted")
 	return nil
 }

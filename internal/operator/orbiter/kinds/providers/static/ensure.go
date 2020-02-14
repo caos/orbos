@@ -36,7 +36,7 @@ func ensure(
 		}
 		desired.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
 		desired.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
-		if err := psf(logger); err != nil {
+		if err := psf(logger.WithFields(map[string]interface{}{"type": "maintenancekey"})); err != nil {
 			return err
 		}
 	}

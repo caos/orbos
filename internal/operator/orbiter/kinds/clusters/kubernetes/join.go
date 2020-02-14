@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -20,7 +19,7 @@ func join(
 	desired DesiredV0,
 	kubeAPI infra.Address,
 	joinToken string,
-	kubernetesVersion k8s.KubernetesVersion,
+	kubernetesVersion KubernetesVersion,
 	certKey string,
 	isControlPlane bool) (*string, error) {
 

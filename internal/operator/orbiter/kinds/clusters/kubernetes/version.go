@@ -1,4 +1,4 @@
-package k8s
+package kubernetes
 
 import (
 	"errors"
@@ -47,7 +47,7 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	}
 }
 
-func Current(current common.Software) common.Software {
+func KubernetesSoftware(current common.Software) common.Software {
 	return common.Software{
 		Swap:             current.Swap,
 		Containerruntime: current.Containerruntime,

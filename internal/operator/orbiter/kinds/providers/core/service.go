@@ -35,6 +35,7 @@ type loggedResourceService struct {
 func (l *loggedResourceService) Abbreviate() string {
 	return l.svc.Abbreviate()
 }
+
 func (l *loggedResourceService) Desire(payload interface{}) (interface{}, error) {
 	desired, err := l.svc.Desire(payload)
 	if err == nil {
@@ -60,6 +61,7 @@ func (l *loggedResourceService) Ensure(id string, desired interface{}, ensuredDe
 	ensured, err = l.svc.Ensure(id, desired, ensuredDependencies)
 	return ensured, errors.Wrapf(err, "ensuring resource %s desired %#+v failed", id, desired)
 }
+
 func (l *loggedResourceService) AllExisting() ([]string, error) {
 	found, err := l.svc.AllExisting()
 	if err == nil {
@@ -83,7 +85,7 @@ func (l *loggedResourceService) Delete(id string) (err error) {
 		l.logger.WithFields(map[string]interface{}{
 			"id":   id,
 			"took": time.Now().Sub(started),
-		}).Debug("Resource deleted")
+		}).Info(true, "Resource deleted")
 	}()
 	return errors.Wrapf(l.svc.Delete(id), "deleting resource %s failed", id)
 }

@@ -10,11 +10,10 @@ import (
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
-func ensureArtifacts(logger logging.Logger, client *k8s.Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
+func ensureArtifacts(logger logging.Logger, client *Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
 
 	logger.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,

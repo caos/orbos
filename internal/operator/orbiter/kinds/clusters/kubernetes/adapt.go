@@ -7,7 +7,6 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -55,7 +54,7 @@ func AdaptFunc(
 		if desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
-		k8sClient := k8s.New(logger, kc)
+		k8sClient := NewK8sClient(logger, kc)
 
 		if k8sClient.Available() && deployOrbiterAndBoom {
 			if err := ensureArtifacts(logger, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {

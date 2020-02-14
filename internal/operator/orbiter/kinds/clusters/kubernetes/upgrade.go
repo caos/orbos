@@ -8,7 +8,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -20,14 +19,14 @@ func (c initializedMachines) Less(i, j int) bool { return c[i].infra.ID() < c[j]
 
 func ensureSoftware(
 	logger logging.Logger,
-	target k8s.KubernetesVersion,
-	k8sClient *k8s.Client,
+	target KubernetesVersion,
+	k8sClient *Client,
 	controlplane []initializedMachine,
 	workers []initializedMachine) (bool, error) {
 
 	findPath := func(machines []initializedMachine) (common.Software, common.Software, error) {
 
-		var overallLowKubelet k8s.KubernetesVersion
+		var overallLowKubelet KubernetesVersion
 		var overallLowKubeletMinor int
 		zeroSW := common.Software{}
 
@@ -44,8 +43,8 @@ func ensureSoftware(
 				"machine": id,
 				"kubelet": nodeinfoKubelet,
 			}).Debug("Found kubelet version from node info")
-			kubelet := k8s.ParseString(nodeinfoKubelet)
-			if kubelet == k8s.Unknown {
+			kubelet := ParseString(nodeinfoKubelet)
+			if kubelet == Unknown {
 				return zeroSW, zeroSW, errors.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
 
@@ -54,7 +53,7 @@ func ensureSoftware(
 				return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from kubelet version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
 
-			if overallLowKubelet == k8s.Unknown {
+			if overallLowKubelet == Unknown {
 				overallLowKubelet = kubelet
 				overallLowKubeletMinor = kubeletMinor
 				continue
@@ -80,7 +79,7 @@ func ensureSoftware(
 			}
 		}
 
-		if overallLowKubelet == target || overallLowKubelet == k8s.Unknown {
+		if overallLowKubelet == target || overallLowKubelet == Unknown {
 			target := target.DefineSoftware()
 			logger.WithFields(map[string]interface{}{
 				"from": overallLowKubelet,
@@ -136,7 +135,7 @@ func ensureSoftware(
 		ensureJoinSoftware := func() error {
 			machine.desiredNodeagent.Software.Merge(to)
 			machineLogger.WithFields(map[string]interface{}{
-				"current": k8s.Current(machine.currentNodeagent.Software),
+				"current": KubernetesSoftware(machine.currentNodeagent.Software),
 				"desired": to,
 			}).Info(true, "Join software desired")
 			return nil
@@ -161,7 +160,7 @@ func ensureSoftware(
 				}()
 
 				if !isControlplane {
-					if err := k8sClient.Drain(k8sNode); err != nil {
+					if err := k8sClient.Drain(machine.currentMachine, k8sNode); err != nil {
 						return err
 					}
 				}
@@ -197,7 +196,7 @@ func ensureSoftware(
 
 		ensureOnline := func(k8sNode *v1.Node) func() error {
 			return func() error {
-				if err := k8sClient.Uncordon(k8sNode); err != nil {
+				if err := k8sClient.Uncordon(machine.currentMachine, k8sNode); err != nil {
 					return err
 				}
 				return nil

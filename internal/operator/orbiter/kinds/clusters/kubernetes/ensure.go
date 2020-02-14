@@ -6,7 +6,6 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -58,7 +57,7 @@ func ensure(
 		}
 	}
 
-	k8sClient := k8s.New(logger, nil)
+	k8sClient := NewK8sClient(logger, nil)
 	if err := ensureCluster(
 		logger,
 		desired,

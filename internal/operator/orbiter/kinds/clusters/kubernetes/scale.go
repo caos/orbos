@@ -9,7 +9,6 @@ import (
 	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -21,8 +20,8 @@ func ensureScale(
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
 	kubeAPI infra.Address,
-	k8sVersion k8s.KubernetesVersion,
-	k8sClient *k8s.Client,
+	k8sVersion KubernetesVersion,
+	k8sClient *Client,
 	oneoff bool,
 	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error)) (bool, error) {
 
@@ -59,7 +58,7 @@ func ensureScale(
 					"machine": id,
 				})
 				machineLogger.Info(false, "Deleting node")
-				if err := k8sClient.EnsureDeleted(machine.infra.ID(), machine.infra, false); err != nil {
+				if err := k8sClient.EnsureDeleted(machine.infra.ID(), machine.currentMachine, machine.infra, false); err != nil {
 					return false, err
 				}
 				machineLogger.Info(true, "Node deleted")

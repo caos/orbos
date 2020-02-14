@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -35,6 +34,7 @@ type initializedMachine struct {
 	tier             Tier
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
+	currentMachine   *Machine
 	markAsRunning    func()
 }
 
@@ -72,7 +72,7 @@ func initialize(
 	initializeMachine = func(machine infra.Machine, pool initializedPool) initializedMachine {
 
 		current := &Machine{
-			Status: "maintaining",
+			Status: "initialized",
 			Metadata: MachineMetadata{
 				Tier:     pool.tier,
 				Provider: pool.desired.Provider,
@@ -98,8 +98,8 @@ func initialize(
 			naSpec.Software = &common.Software{}
 		}
 
-		naSpec.Software.Merge(k8s.ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
-		naSpec.Software.Merge(k8s.Current(naCurr.Software))
+		naSpec.Software.Merge(ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
+		naSpec.Software.Merge(KubernetesSoftware(naCurr.Software))
 
 		return initializedMachine{
 			infra: machine,
@@ -109,6 +109,7 @@ func initialize(
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
 			tier:             pool.tier,
+			currentMachine:   current,
 		}
 	}
 

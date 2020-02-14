@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 	"github.com/pkg/errors"
 )
@@ -47,7 +46,7 @@ func newPool(
 }
 */
 
-func cleanupMachines(logger logging.Logger, pool infra.Pool, k8s *k8s.Client) (err error) {
+func cleanupMachines(logger logging.Logger, pool infra.Pool, k8s *Client) (err error) {
 
 	nodes, err := k8s.ListNodes()
 	if err != nil {

@@ -4,7 +4,6 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 	"github.com/caos/orbiter/logging"
 )
 
@@ -18,7 +17,7 @@ func ensureCluster(
 	kubeAPIAddress infra.Address,
 	kubeconfig *orbiter.Secret,
 	psf orbiter.PushSecretsFunc,
-	k8sClient *k8s.Client,
+	k8sClient *Client,
 	repoURL string,
 	repoKey string,
 	orbiterCommit string,
@@ -80,7 +79,7 @@ func ensureCluster(
 		return err
 	}
 
-	targetVersion := k8s.ParseString(desired.Spec.Versions.Kubernetes)
+	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
 	upgradingDone, err := ensureSoftware(
 		logger,
 		targetVersion,
