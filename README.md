@@ -35,27 +35,20 @@ In the following example we will create a `kubernetes` cluster on a `static prov
 > Install KVM
 https://wiki.debian.org/KVM
 
-> Download a CentOS7 iso image
-
-> Create and setup two new Virtual Machines. Make sure you have a sudo user called orbiter on the guest OS
-```bash
-virt-install --virt-type kvm --cdrom ~/Downloads/CentOS-7-x86_64-Minimal-1908.iso --disk size=10 --memory 4000 --vcpus 2 --name first
-virt-install --virt-type kvm --cdrom ~/Downloads/CentOS-7-x86_64-Minimal-1908.iso --disk size=10 --memory 4000 --vcpus 2 --name second
-```
-
 > Create a new SSH key pair
 ```bash
 mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "" -f ~/.ssh/myorb_bootstrap -q
 ```
 
-> List your local VMs IPs.
+> Create and setup two new Virtual Machines. Make sure you have a sudo user called orbiter on the guest OS
 ```bash
-virsh domifaddr first
-virsh domifaddr second
+./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/orbitertest_bootstrap.pub master1
+./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/orbitertest_bootstrap.pub worker1
 ```
 
-> Make your VMs connectable
+> List the new virtual machines IP addresses
 ```bash
+<<<<<<< HEAD
 IP=$(virsh domifaddr master1 | tail -n 2 | head -n 1 | awk '{print $4}' | cut -d "/" -f 1)
 ssh orbiter@${IP} "mkdir -p ~/.ssh"
 scp ~/.ssh/myorb_bootstrap.pub orbiter@${IP}:/home/orbiter/.ssh/authorized_keys
@@ -63,6 +56,12 @@ ssh orbiter@${IP} "chmod 700 ~/.ssh"
 
 ### comment in the line that enables passwordless sudo for wheel users
 ssh -t orbiter@${IP} "sudo visudo"
+=======
+for MACHINE in master1 worker1
+do
+    virsh domifaddr $MACHINE
+done
+>>>>>>> kickstart
 ```
 
 ### Initialize A Git Repository
@@ -74,7 +73,11 @@ ssh -t orbiter@${IP} "sudo visudo"
 cat ~/.ssh/myorb_bootstrap
 ```
 
+<<<<<<< HEAD
 > Copy the file [orbiter.yml](examples/k8s/static/orbiter.yml) to the root of your Repository.
+=======
+> Copy the [file](examples/k8s/static/orbiter.yml) to the root of your Repository.
+>>>>>>> kickstart
 
 > Replace the IPs in your orbiter.yml accordingly
 
@@ -95,7 +98,7 @@ cat > ~/.orb/config << EOF
 url: git@github.com:me/my-orb.git
 masterkey: $(openssl rand -base64 21)
 repokey: |
-$(cat ~/.ssh/myorb_bootstrap | sed s/^/\ \ /g)
+$(sed s/^/\ \ /g ~/.ssh/myorb_bootstrap)
 EOF
 ```
 
@@ -113,26 +116,33 @@ orbctl takeoff
 ```
 
 > As soon as the Orbiter has deployed itself to the cluster, you can decrypt the generated admin kubeconfig
-```
+```bash
 mkdir -p ~/.kube
 orbctl readsecret k8s.kubeconfig > ~/.kube/config
 ```
 
 > Wait for grafana to become running
-```
+```bash
 kubectl --namespace caos-system get po -w
 ```
 
 > Open your browser at localhost:8080 to show your new clusters dashboards
-```
+```bash
 kubectl --namespace caos-system port-forward svc/grafana 8080:80
 ```
 
 > Cleanup your environment
+```bash
+for MACHINE in master1 worker1
+do
+    virsh destroy $MACHINE
+    virsh undefine $MACHINE
+done
 ```
-virsh undefine first
-virsh undefine second
-```
+
+## Operating System Requirements
+
+See [OS Requirements](./docs/os-requirements.md) for details.
 
 ## Supported Clusters
 
