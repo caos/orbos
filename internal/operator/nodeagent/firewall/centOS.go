@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
+func centosEnsurer(logger logging.Logger, ignore []string) nodeagent.FirewallEnsurer {
 	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (bool, error) {
 
 		var (
@@ -70,7 +70,7 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 	openloop:
 		for _, des := range desired {
 			desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
-			for _, already := range alreadyOpen {
+			for _, already := range append(alreadyOpen, ignore...) {
 				if desStr == already {
 					continue openloop
 				}
@@ -78,6 +78,12 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 			addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
 		}
 
+		for _, ign := range ignore {
+			desired[ign] = common.Allowed{
+				Port:     ign,
+				Protocol: "tcp",
+			}
+		}
 	closeloop:
 		for _, already := range alreadyOpen {
 			for _, des := range desired {

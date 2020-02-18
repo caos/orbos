@@ -38,11 +38,9 @@ func ensureCluster(
 		return err
 	}
 
-	desireFirewall, ensureFirewall := firewallFuncs(desired, kubeAPIAddress.Port)
+	desireFirewall, ensureFirewall := firewallFuncs(logger, desired, kubeAPIAddress.Port)
 	initializeFirewall := func(_ initializedPool, machines []initializedMachine) error {
-		for _, machine := range machines {
-			desireFirewall(machine)
-		}
+		ensureFirewall(machines)
 		return nil
 	}
 	controlplane.enhance(initializeFirewall)
@@ -105,6 +103,7 @@ func ensureCluster(
 		oneoff,
 		func(created infra.Machine, pool initializedPool) (initializedMachine, error) {
 			machine := initializeMachine(created, pool)
+			desireFirewall(machine)
 			target := targetVersion.DefineSoftware()
 			machine.desiredNodeagent.Software = &target
 			return machine, installNodeAgent(machine)

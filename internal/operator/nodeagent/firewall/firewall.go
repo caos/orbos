@@ -6,10 +6,10 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-func Ensurer(logger logging.Logger, os dep.OperatingSystem) nodeagent.FirewallEnsurer {
+func Ensurer(logger logging.Logger, os dep.OperatingSystem, ignore []string) nodeagent.FirewallEnsurer {
 	switch os {
 	case dep.CentOS:
-		return centosEnsurer(logger)
+		return centosEnsurer(logger, ignore)
 	default:
 		return noopEnsurer()
 	}

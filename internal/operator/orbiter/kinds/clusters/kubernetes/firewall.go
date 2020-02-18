@@ -4,9 +4,10 @@ import (
 	"fmt"
 
 	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/logging"
 )
 
-func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(machine initializedMachine), ensure func(machines []initializedMachine) bool) {
+func firewallFuncs(logger logging.Logger, desired DesiredV0, kubeAPIPort uint16) (desire func(machine initializedMachine), ensure func(machines []initializedMachine) bool) {
 
 	desireFirewall := func(machine initializedMachine) common.Firewall {
 
@@ -69,7 +70,6 @@ func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(machine i
 			for _, machine := range machines {
 
 				firewall := desireFirewall(machine)
-
 				if machine.currentNodeagent == nil {
 					ready = false
 				} else if ready {

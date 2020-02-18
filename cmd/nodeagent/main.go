@@ -47,6 +47,7 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")
 	repoURL := flag.String("repourl", "", "Repository URL")
+	ignorePorts := flag.String("ignore-ports", "", "Comma separated list of firewall ports that are ignored")
 	nodeAgentID := flag.String("id", "", "The managed machines ID")
 
 	flag.Parse()
@@ -112,7 +113,7 @@ func main() {
 			node.New(),
 			gitCommit,
 			*nodeAgentID,
-			firewall.Ensurer(logger, os.OperatingSystem),
+			firewall.Ensurer(logger, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
 			converter,
 			before),
 		[]operator.Watcher{

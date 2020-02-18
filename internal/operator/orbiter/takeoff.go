@@ -114,7 +114,26 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), outsideChangeMessage))
 		}
 
-		if len(commits) > 0 || changedOutside {
+		desiredOutsideMessage := format.CommitRecord(map[string]string{
+			"msg": "Update desired node agents",
+		})
+		desiredNodeAgentsUpdated, err := gitClient.Commit(desiredOutsideMessage, git.File{
+			Path: "caos-internal/orbiter/node-agents-desired.yml",
+			Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
+				Kind:    "nodeagent.caos.ch/NodeAgents",
+				Version: "v0",
+				Spec: common.NodeAgentsSpec{
+					Commit:     orbiterCommit,
+					NodeAgents: desiredNodeAgents,
+				},
+			}),
+		})
+
+		if err != nil {
+			panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), outsideChangeMessage))
+		}
+
+		if len(commits) > 0 || changedOutside || desiredNodeAgentsUpdated {
 			if err := gitClient.Push(); err != nil {
 				logger.Error(err)
 			}
