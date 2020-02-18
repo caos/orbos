@@ -48,20 +48,10 @@ mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "
 
 > List the new virtual machines IP addresses
 ```bash
-<<<<<<< HEAD
-IP=$(virsh domifaddr master1 | tail -n 2 | head -n 1 | awk '{print $4}' | cut -d "/" -f 1)
-ssh orbiter@${IP} "mkdir -p ~/.ssh"
-scp ~/.ssh/myorb_bootstrap.pub orbiter@${IP}:/home/orbiter/.ssh/authorized_keys
-ssh orbiter@${IP} "chmod 700 ~/.ssh"
-
-### comment in the line that enables passwordless sudo for wheel users
-ssh -t orbiter@${IP} "sudo visudo"
-=======
 for MACHINE in master1 worker1
 do
     virsh domifaddr $MACHINE
 done
->>>>>>> kickstart
 ```
 
 ### Initialize A Git Repository
@@ -73,11 +63,7 @@ done
 cat ~/.ssh/myorb_bootstrap
 ```
 
-<<<<<<< HEAD
 > Copy the file [orbiter.yml](examples/k8s/static/orbiter.yml) to the root of your Repository.
-=======
-> Copy the [file](examples/k8s/static/orbiter.yml) to the root of your Repository.
->>>>>>> kickstart
 
 > Replace the IPs in your orbiter.yml accordingly
 
