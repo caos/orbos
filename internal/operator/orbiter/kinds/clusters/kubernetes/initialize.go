@@ -71,10 +71,14 @@ func initialize(
 	initializeMachine = func(machine infra.Machine, pool initializedPool) initializedMachine {
 
 		current := &Machine{
-			Joined: bool,
-			Versions: Versions{
-				NodeAgent:  "absent",
-				Kubernetes: "disjoined",
+			Kubernetes: KubernetesStatus{
+				Joined:      false,
+				Online:      false,
+				Maintaining: true,
+			},
+			NodeAgent: NodeAgentStatus{
+				Running: false,
+				Commit:  "absent",
 			},
 			Metadata: MachineMetadata{
 				Tier:     pool.tier,

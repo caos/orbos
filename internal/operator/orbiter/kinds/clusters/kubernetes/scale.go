@@ -109,14 +109,13 @@ nodes:
 
 		id := machine.infra.ID()
 
-		nodeIsJoining := false
 		node, getNodeErr := k8sClient.GetNode(id)
 		if getNodeErr == nil {
-			nodeIsJoining = true
+			machine.currentMachine.Kubernetes.Joined = true
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
-					nodeIsJoining = false
-					machine.currentMachine.Status.Kubernetes = "online"
+					machine.currentMachine.Kubernetes.Online = true
+					machine.currentMachine.Kubernetes.Maintaining = false
 					if machine.tier == Controlplane {
 						certsCP = machine.infra
 					}
@@ -125,7 +124,7 @@ nodes:
 			}
 		}
 
-		if machine.tier == Controlplane && nodeIsJoining {
+		if machine.tier == Controlplane && !machine.currentMachine.Kubernetes.Online {
 			cpIsReady = false
 		}
 
@@ -135,7 +134,7 @@ nodes:
 			"tier":    machine.tier,
 		})
 
-		if nodeIsJoining {
+		if !machine.currentMachine.Kubernetes.Online {
 			logger.Info(false, "Node is not ready yet")
 		}
 

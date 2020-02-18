@@ -10,7 +10,7 @@ func CommitRecord(stringMap map[string]string) string {
 	stringFields := make([]string, len(fields))
 	for idx, field := range fields {
 		if field.key == "msg" {
-			stringFields[idx] = fmt.Sprintf("EVENT: %s", field.value)
+			stringFields[idx] = fmt.Sprint(field.value)
 			continue
 		}
 		if field.key == "err" {

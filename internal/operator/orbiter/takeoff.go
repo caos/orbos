@@ -34,6 +34,8 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 				return
 			}
 
+			fields["event"] = "true"
+
 			commits = append(commits, &commit{
 				msg: format.CommitRecord(fields),
 				files: []git.File{{
@@ -91,9 +93,8 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 		for _, commit := range commits {
 
 			changed, err := gitClient.Commit(commit.msg, commit.files...)
-
 			if err != nil {
-				logger.Error(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
+				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
 			}
 
 			if !changed {
@@ -101,7 +102,20 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			}
 		}
 
-		if len(commits) > 0 {
+		outsideChangeMessage := format.CommitRecord(map[string]string{
+			"msg":   "Current state changed without orbiter interaction",
+			"event": "true",
+		})
+		changedOutside, err := gitClient.Commit(outsideChangeMessage, git.File{
+			Path:    "caos-internal/orbiter/current.yml",
+			Content: common.MarshalYAML(treeCurrent),
+		})
+
+		if err != nil {
+			panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), outsideChangeMessage))
+		}
+
+		if len(commits) > 0 || changedOutside {
 			if err := gitClient.Push(); err != nil {
 				logger.Error(err)
 			}
