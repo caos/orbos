@@ -17,9 +17,9 @@ func CommitRecord(stringMap map[string]string) string {
 			stringFields[idx] = fmt.Sprintf("ERROR: %s", field.value)
 			continue
 		}
-		stringFields[idx] = fmt.Sprintf("%s=%s", field.key, field.value)
+		stringFields[idx] = fmt.Sprintf("%s: %s", field.key, field.value)
 	}
-	return strings.Join(stringFields, ",")
+	return strings.Join(stringFields, "\n")
 }
 
 func LogRecord(stringMap map[string]string) string {
