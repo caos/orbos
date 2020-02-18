@@ -14,9 +14,26 @@ type Current struct {
 	Current CurrentCluster
 }
 
+type KubernetesStatus struct {
+	Joined      bool
+	Online      bool
+	Maintaining bool
+}
+
+type NodeAgentStatus struct {
+	Running bool
+	Commit  string
+}
+
 type Machine struct {
-	Status   string
-	Metadata MachineMetadata `yaml:",inline"`
+	Kubernetes KubernetesStatus
+	NodeAgent  NodeAgentStatus
+	Metadata   MachineMetadata `yaml:",inline"`
+}
+
+type Versions struct {
+	NodeAgent  string
+	Kubernetes string
 }
 
 type MachineMetadata struct {

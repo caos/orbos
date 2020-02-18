@@ -167,29 +167,24 @@ func ensureSoftware(
 
 				upgradeAction := "node"
 				if isFirstControlplane {
-					machineLogger.Info(false, "Migrating kubelet configuration on first controlplane node")
+					machineLogger.Info(false, "Migrating first controlplane node")
 					upgradeAction = fmt.Sprintf("apply %s --yes", to.Kubelet.Version)
-					machineLogger.Info(true, "Kubelet configuration on first controlplane node migrated")
+				} else {
+					machineLogger.Info(false, "Migrating node")
 				}
-
-				machineLogger.Info(false, "Migrating node")
 
 				_, err = machine.infra.Execute(nil, nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
 				if err != nil {
 					return err
 				}
 
-				machineLogger.WithFields(map[string]interface{}{
-					"from": machine.currentNodeagent.Software.Kubelet.Version,
-					"to":   to.Kubelet.Version,
-				}).Info(true, "Node migrated")
-
 				machine.desiredNodeagent.Software.Merge(to)
 
 				machineLogger.WithFields(map[string]interface{}{
 					"from": machine.currentNodeagent.Software.Kubelet.Version,
 					"to":   to.Kubelet.Version,
-				}).Info(true, "Kubelet desired")
+				}).Info(true, "Node migrated")
+
 				return nil
 			}
 		}
@@ -209,38 +204,49 @@ func ensureSoftware(
 
 		k8sNode, err := k8sClient.GetNode(id)
 		if k8sNode == nil || err != nil {
+			machine.currentMachine.Kubernetes.Joined = false
+			machine.currentMachine.Kubernetes.Online = false
+			machine.currentMachine.Kubernetes.Maintaining = true
 			if machine.currentNodeagent.Software.Contains(to) {
 				return nil, nil
 			}
 			return ensureJoinSoftware, nil
 		}
 
-		k8sNodeIsReady := false
+		machine.currentMachine.Kubernetes.Joined = true
 		for _, cond := range k8sNode.Status.Conditions {
 			if cond.Type == v1.NodeReady {
-				k8sNodeIsReady = true
+				machine.currentMachine.Kubernetes.Joined = true
+				machine.currentMachine.Kubernetes.Online = true
+				machine.currentMachine.Kubernetes.Maintaining = false
 				break
 			}
 		}
-		if !k8sNodeIsReady {
+		if !machine.currentMachine.Kubernetes.Online {
+			machine.currentMachine.Kubernetes.Maintaining = true
 			// This is a joiners case and treated as up-to-date here
 			return nil, nil
 		}
 
 		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
+			machine.currentMachine.Kubernetes.Maintaining = true
 			return ensureKubeadm, nil
 		}
 
 		isControlplane := machine.tier == Controlplane
 		if k8sNode.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
+			machine.currentMachine.Kubernetes.Maintaining = true
 			return ensureSoftware(k8sNode, isControlplane, isFirstControlplane), nil
 		}
 
 		if k8sNode.Spec.Unschedulable && !isControlplane {
+			machine.currentMachine.Kubernetes.Online = false
+			machine.currentMachine.Kubernetes.Maintaining = true
 			return ensureOnline(k8sNode), nil
 		}
 
 		if !machine.currentNodeagent.NodeIsReady || !machine.currentNodeagent.Software.Contains(to) {
+			machine.currentMachine.Kubernetes.Maintaining = true
 			return waitForNodeAgent, nil
 		}
 

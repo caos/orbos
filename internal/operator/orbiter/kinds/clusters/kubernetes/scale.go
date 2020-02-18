@@ -53,20 +53,12 @@ func ensureScale(
 			}
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
-				id := machine.infra.ID()
-				machineLogger := logger.WithFields(map[string]interface{}{
-					"machine": id,
-				})
-				machineLogger.Info(false, "Deleting node")
 				if err := k8sClient.EnsureDeleted(machine.infra.ID(), machine.currentMachine, machine.infra, false); err != nil {
 					return false, err
 				}
-				machineLogger.Info(true, "Node deleted")
-				machineLogger.Info(false, "Removing machine")
 				if err := machine.infra.Remove(); err != nil {
 					return false, err
 				}
-				machineLogger.Info(true, "Machine removed")
 			}
 		}
 		return delta <= 0, nil
@@ -124,7 +116,7 @@ nodes:
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					nodeIsJoining = false
-					machine.markAsRunning()
+					machine.currentMachine.Status.Kubernetes = "online"
 					if machine.tier == Controlplane {
 						certsCP = machine.infra
 					}

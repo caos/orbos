@@ -93,8 +93,9 @@ func ensureNodeAgent(
 func installNodeAgent(
 	logger logging.Logger,
 	machine initializedMachine,
-	repoURL string,
-	repoKey string) error {
+	repoURL,
+	repoKey,
+	orbiterCommit string) error {
 
 	var user string
 	whoami := "whoami"
@@ -253,6 +254,8 @@ WantedBy=multi-user.target
 		"command": startSystemd,
 	}).Debug("Executed command")
 
+	machine.currentMachine.NodeAgent.Commit = orbiterCommit
+	machine.currentMachine.NodeAgent.Running = true
 	logger.WithFields(map[string]interface{}{
 		"machine": machine.infra.ID(),
 	}).Info(true, "Node Agent installed and started")
@@ -275,5 +278,5 @@ func loggedInstallNodeAgent(
 		"to":      orbiterCommit,
 	}).Info(false, "Ensuring node agent")
 
-	return installNodeAgent(logger, machine, repoURL, repoKey)
+	return installNodeAgent(logger, machine, repoURL, repoKey, orbiterCommit)
 }

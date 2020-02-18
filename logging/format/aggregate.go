@@ -24,14 +24,14 @@ func toCommitFields(f map[string]string) []field {
 		sortableField := field{
 			key:   k,
 			value: v,
-			pos:   1,
+			pos:   2,
 		}
 
 		switch k {
 		case "msg":
 			sortableField.pos = 0
 		case "err":
-			sortableField.pos = 0
+			sortableField.pos = 1
 		case "ts":
 			continue
 		case "file":

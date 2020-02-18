@@ -35,7 +35,6 @@ type initializedMachine struct {
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
-	markAsRunning    func()
 }
 
 func initialize(
@@ -72,7 +71,11 @@ func initialize(
 	initializeMachine = func(machine infra.Machine, pool initializedPool) initializedMachine {
 
 		current := &Machine{
-			Status: "initialized",
+			Joined: bool,
+			Versions: Versions{
+				NodeAgent:  "absent",
+				Kubernetes: "disjoined",
+			},
 			Metadata: MachineMetadata{
 				Tier:     pool.tier,
 				Provider: pool.desired.Provider,
@@ -102,10 +105,7 @@ func initialize(
 		naSpec.Software.Merge(KubernetesSoftware(naCurr.Software))
 
 		return initializedMachine{
-			infra: machine,
-			markAsRunning: func() {
-				current.Status = "running"
-			},
+			infra:            machine,
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
 			tier:             pool.tier,
