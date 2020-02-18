@@ -63,12 +63,14 @@ func teardownCommand(rv rootValues) *cobra.Command {
 			return nil
 		}
 
-		return orbiter.Destroy(gitClient, orb.AdaptFunc(
+		return orbiter.Destroy(
 			logger,
-			orbFile,
-			gitCommit,
-			true,
-			false))
+			gitClient,
+			orb.AdaptFunc(
+				orbFile,
+				gitCommit,
+				true,
+				false))
 	}
 	return cmd
 }

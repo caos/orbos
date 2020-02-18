@@ -13,8 +13,8 @@ import (
 	"github.com/caos/orbiter/internal/operator"
 	"github.com/caos/orbiter/internal/watcher/cron"
 	"github.com/caos/orbiter/internal/watcher/immediate"
+	"github.com/caos/orbiter/logging/base"
 	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
 
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
@@ -59,7 +59,7 @@ func main() {
 		panic("flags --repourl and --id are required")
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stderr))
+	logger := logcontext.Add(base.New())
 	if *verbose {
 		logger = logger.Verbose()
 	}
@@ -69,7 +69,7 @@ func main() {
 		"verbose":     *verbose,
 		"repourl":     *repoURL,
 		"nodeAgentID": *nodeAgentID,
-	}).Info("Node Agent is starting")
+	}).Info(false, "Node Agent is starting")
 
 	os, err := dep.GetOperatingSystem()
 	if err != nil {

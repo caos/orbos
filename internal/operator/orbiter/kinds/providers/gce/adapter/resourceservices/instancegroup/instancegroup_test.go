@@ -11,8 +11,8 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instance"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instancegroup"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
+	"github.com/caos/orbiter/logging/base"
 	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
 )
 
 var configCB func() *core.Vipers

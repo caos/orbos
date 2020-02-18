@@ -2,6 +2,7 @@ package orbiter
 
 import (
 	"context"
+	"fmt"
 
 	"gopkg.in/yaml.v3"
 
@@ -89,19 +90,21 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 
 		for _, commit := range commits {
 
-			changed, err := gitClient.Commit(commit.msg)
+			changed, err := gitClient.Commit(commit.msg, commit.files...)
 
 			if err != nil {
-				logger.Error(err)
+				logger.Error(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
 			}
 
 			if !changed {
-				panic("Event has no effect")
+				panic(fmt.Sprint("Event has no effect:", commit.msg))
 			}
 		}
 
-		if err := gitClient.Push(); err != nil {
-			logger.Error(err)
+		if len(commits) > 0 {
+			if err := gitClient.Push(); err != nil {
+				logger.Error(err)
+			}
 		}
 	}
 }

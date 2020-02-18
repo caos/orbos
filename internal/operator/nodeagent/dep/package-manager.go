@@ -47,7 +47,7 @@ func (p *PackageManager) RefreshInstalled() error {
 
 func (p *PackageManager) Init() error {
 
-	p.logger.Info("Updating packages")
+	p.logger.Info(false, "Updating packages")
 
 	var err error
 	switch p.os.Packages {
@@ -61,7 +61,7 @@ func (p *PackageManager) Init() error {
 		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
 	}
 
-	p.logger.Info("Packages are updated")
+	p.logger.Info(false, "Packages are updated")
 	return nil
 }
 

@@ -50,8 +50,9 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		}
 
 		if err := orbiter.WriteSecret(
+			logger,
 			gitClient,
-			orb.AdaptFunc(logger,
+			orb.AdaptFunc(
 				orbconfig,
 				gitCommit,
 				false,

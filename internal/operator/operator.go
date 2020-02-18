@@ -55,7 +55,7 @@ loop:
 			return
 		case <-i.fired:
 			if len(i.fired) != 0 {
-				i.logger.Info("Skipping iteration")
+				i.logger.Info(false, "Skipping iteration")
 				continue loop
 			}
 			i.iterateWrapped()
@@ -75,5 +75,5 @@ func (i *Iterator) iterateWrapped() {
 	i.iterate()
 	i.logger.WithFields(map[string]interface{}{
 		"took": time.Now().Sub(started),
-	}).Info("Iteration done")
+	}).Info(false, "Iteration done")
 }

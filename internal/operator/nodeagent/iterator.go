@@ -55,7 +55,7 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			logger.WithFields(map[string]interface{}{
 				"desired": desired.Spec.Commit,
 				"current": commit,
-			}).Info("Node Agent is on the wrong commit")
+			}).Info(false, "Node Agent is on the wrong commit")
 			return
 		}
 
@@ -65,7 +65,7 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, c
 			return
 		}
 
-		if _, err := gitClient.UpdateRemoteUntilItWorks("caos-internal/orbiter/node-agents-current.yml", func(nodeagents []byte) ([]byte, error) {
+		if _, err := gitClient.UpdateRemoteUntilItWorks("Update current state", "caos-internal/orbiter/node-agents-current.yml", func(nodeagents []byte) ([]byte, error) {
 			current := common.NodeAgentsCurrentKind{}
 			if err := yaml.Unmarshal(nodeagents, &current); err != nil {
 				return nil, err

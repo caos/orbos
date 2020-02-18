@@ -8,8 +8,8 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/caos/orbiter/logging/base"
 	"github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
 )
 
 type testcase struct {
@@ -19,7 +19,7 @@ type testcase struct {
 
 func TestLoggers(t *testing.T) {
 	var buf bytes.Buffer
-	context.Add(stdlib.New(&buf)).Verbose().WithFields(map[string]interface{}{
+	context.Add(base.New(&buf)).Verbose().WithFields(map[string]interface{}{
 		"afield": "testfield",
 		"amap": map[string]interface{}{
 			"inner": "innertestfield",

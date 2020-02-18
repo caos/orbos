@@ -72,13 +72,13 @@ func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsure
 	}
 
 	if curr.NodeIsReady {
-		logger.Info("Marking node as unready")
 		curr.NodeIsReady = false
+		logger.Info(true, "Marked node as unready")
 		return curr, nil
 	}
 
 	if !desired.ChangesAllowed {
-		logger.Info("Changes are not allowed")
+		logger.Info(false, "Changes are not allowed")
 		return curr, nil
 	}
 	ensureDep := ensureFunc(logger)
@@ -114,7 +114,7 @@ func ensureFunc(logger logging.Logger) func(dep *Dependency) (*Dependency, error
 			"dependency": dep.Installer,
 			"from":       dep.Current,
 			"to":         dep.Desired,
-		}).Info("Ensured dependency")
+		}).Info(true, "Dependency ensured")
 
 		dep.Current = dep.Desired
 

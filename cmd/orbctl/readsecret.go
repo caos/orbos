@@ -30,8 +30,9 @@ func readSecretCommand(rv rootValues) *cobra.Command {
 			}
 
 			value, err := orbiter.ReadSecret(
+				logger,
 				gitClient,
-				orb.AdaptFunc(logger,
+				orb.AdaptFunc(
 					orbconfig,
 					gitCommit,
 					false,
