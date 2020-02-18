@@ -21,9 +21,8 @@ type NodeStatus struct {
 }
 
 type Machine struct {
-	Node      NodeStatus
-	NodeAgent NodeStatus
-	Metadata  MachineMetadata `yaml:",inline"`
+	Node     NodeStatus
+	Metadata MachineMetadata `yaml:",inline"`
 }
 
 type Versions struct {
