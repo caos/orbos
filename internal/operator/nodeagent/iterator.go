@@ -94,12 +94,10 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, n
 			panic(err)
 		}
 
-		for _, commit := range commits {
-
+		doCommit := func(commit commit) bool {
 			current := common.NodeAgentsCurrentKind{}
 			if err := yaml.Unmarshal(currentNodeagents, &current); err != nil {
-				logger.Error(err)
-				return
+				panic(err)
 			}
 			current.Kind = "nodeagent.caos.ch/NodeAgents"
 			current.Version = "v0"
@@ -116,13 +114,19 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, n
 			if err != nil {
 				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
 			}
+			return changed
+		}
 
-			if !changed {
+		for _, commit := range commits {
+			if !doCommit(*commit) {
 				panic(fmt.Sprint("Event has no effect:", commit.msg))
 			}
 		}
 
-		if len(commits) > 0 {
+		if len(commits) > 0 || doCommit(commit{
+			msg:     "Current state changed without node agent interaction",
+			current: *curr,
+		}) {
 			if err := gitClient.Push(); err != nil {
 				logger.Error(err)
 			}
