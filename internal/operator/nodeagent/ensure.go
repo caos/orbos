@@ -16,12 +16,12 @@ func init() {
 }
 
 type FirewallEnsurer interface {
-	Ensure(common.Firewall) error
+	Ensure(common.Firewall) (bool, error)
 }
 
-type FirewallEnsurerFunc func(common.Firewall) error
+type FirewallEnsurerFunc func(common.Firewall) (bool, error)
 
-func (f FirewallEnsurerFunc) Ensure(fw common.Firewall) error {
+func (f FirewallEnsurerFunc) Ensure(fw common.Firewall) (bool, error) {
 	return f(fw)
 }
 
@@ -44,23 +44,25 @@ type Installer interface {
 	fmt.Stringer
 }
 
-func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec) (*common.NodeAgentCurrent, error) {
+func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) error {
 
-	curr := &common.NodeAgentCurrent{
-		Commit:      commit,
-		NodeIsReady: isReady(),
-	}
+	curr.Commit = commit
+	curr.NodeIsReady = isReady()
 
 	defer persistReadyness(curr.NodeIsReady)
 
-	if err := firewallEnsurer.Ensure(*desired.Firewall); err != nil {
-		return nil, err
+	fwChanged, err := firewallEnsurer.Ensure(*desired.Firewall)
+	if err != nil {
+		return err
 	}
 	curr.Open = *desired.Firewall
+	if fwChanged {
+		logger.Info(true, "Firewall changed")
+	}
 
 	installedSw, err := deriveTraverse(installed, conv.ToDependencies(*desired.Software))
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	curr.Software = conv.ToSoftware(installedSw)
@@ -68,27 +70,27 @@ func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsure
 	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
 	if len(divergentSw) == 0 {
 		curr.NodeIsReady = true
-		return curr, nil
+		return nil
 	}
 
 	if curr.NodeIsReady {
 		curr.NodeIsReady = false
 		logger.Info(true, "Marked node as unready")
-		return curr, nil
+		return nil
 	}
 
 	if !desired.ChangesAllowed {
 		logger.Info(false, "Changes are not allowed")
-		return curr, nil
+		return nil
 	}
 	ensureDep := ensureFunc(logger)
 	ensuredSw, err := deriveTraverse(ensureDep, divergentSw)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	curr.Software = conv.ToSoftware(merge(installedSw, ensuredSw))
-	return curr, nil
+	return nil
 }
 
 func installed(dep *Dependency) (*Dependency, error) {
@@ -106,17 +108,23 @@ func divergent(dep *Dependency) bool {
 
 func ensureFunc(logger logging.Logger) func(dep *Dependency) (*Dependency, error) {
 	return func(dep *Dependency) (*Dependency, error) {
+		logger.WithFields(map[string]interface{}{
+			"dependency": dep.Installer,
+			"from":       dep.Current,
+			"to":         dep.Desired,
+		}).Info(false, "Ensuring dependency")
+
 		if err := dep.Installer.Ensure(dep.Current, dep.Desired); err != nil {
 			return dep, err
 		}
+
+		dep.Current = dep.Desired
 
 		logger.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
 			"from":       dep.Current,
 			"to":         dep.Desired,
 		}).Info(true, "Dependency ensured")
-
-		dep.Current = dep.Desired
 
 		return dep, nil
 	}

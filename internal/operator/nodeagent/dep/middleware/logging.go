@@ -35,12 +35,10 @@ func (l *loggedDep) Current() (common.Package, error) {
 }
 
 func (l *loggedDep) Ensure(remove common.Package, install common.Package) error {
-	err := l.unwrapped.Ensure(remove, install)
-	if err == nil {
-		l.logger.WithFields(map[string]interface{}{
-			"uninstalled": remove,
-			"installed":   install,
-		}).Debug("Dependency ensured")
-	}
-	return errors.Wrapf(err, "uninstalling version %s and installing version %s failed for dependency %s", remove, install, l.unwrapped.String())
+	return errors.Wrapf(
+		l.unwrapped.Ensure(remove, install),
+		"uninstalling version %s and installing version %s failed for dependency %s",
+		remove,
+		install,
+		l.unwrapped.String())
 }

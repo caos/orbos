@@ -15,7 +15,7 @@ import (
 )
 
 func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) error {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (bool, error) {
 
 		var (
 			outBuf bytes.Buffer
@@ -33,7 +33,7 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 		}
 
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+			return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
 		}
 
 		errBuf.Reset()
@@ -47,7 +47,7 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 		}
 
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+			return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
 		}
 
 		cmd = exec.Command("firewall-cmd", "--list-ports")
@@ -55,7 +55,7 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 		cmd.Stdout = &outBuf
 
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
+			return false, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
 		}
 
 		stdout := outBuf.String()
@@ -89,10 +89,10 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 		}
 
 		if err := changeFirewall(logger, addPorts); err != nil {
-			return err
+			return false, err
 		}
 
-		return changeFirewall(logger, removePorts)
+		return len(addPorts) > 0 || len(removePorts) > 0, changeFirewall(logger, removePorts)
 	})
 }
 

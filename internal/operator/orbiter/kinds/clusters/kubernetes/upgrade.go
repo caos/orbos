@@ -204,49 +204,49 @@ func ensureSoftware(
 
 		k8sNode, err := k8sClient.GetNode(id)
 		if k8sNode == nil || err != nil {
-			machine.currentMachine.Kubernetes.Joined = false
-			machine.currentMachine.Kubernetes.Online = false
-			machine.currentMachine.Kubernetes.Maintaining = true
+			machine.currentMachine.Node.Joined = false
+			machine.currentMachine.Node.Online = false
+			machine.currentMachine.Node.Maintaining = true
 			if machine.currentNodeagent.Software.Contains(to) {
 				return nil, nil
 			}
 			return ensureJoinSoftware, nil
 		}
 
-		machine.currentMachine.Kubernetes.Joined = true
+		machine.currentMachine.Node.Joined = true
 		for _, cond := range k8sNode.Status.Conditions {
 			if cond.Type == v1.NodeReady {
-				machine.currentMachine.Kubernetes.Joined = true
-				machine.currentMachine.Kubernetes.Online = true
-				machine.currentMachine.Kubernetes.Maintaining = false
+				machine.currentMachine.Node.Joined = true
+				machine.currentMachine.Node.Online = true
+				machine.currentMachine.Node.Maintaining = false
 				break
 			}
 		}
-		if !machine.currentMachine.Kubernetes.Online {
-			machine.currentMachine.Kubernetes.Maintaining = true
+		if !machine.currentMachine.Node.Online {
+			machine.currentMachine.Node.Maintaining = true
 			// This is a joiners case and treated as up-to-date here
 			return nil, nil
 		}
 
 		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-			machine.currentMachine.Kubernetes.Maintaining = true
+			machine.currentMachine.Node.Maintaining = true
 			return ensureKubeadm, nil
 		}
 
 		isControlplane := machine.tier == Controlplane
 		if k8sNode.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
-			machine.currentMachine.Kubernetes.Maintaining = true
+			machine.currentMachine.Node.Maintaining = true
 			return ensureSoftware(k8sNode, isControlplane, isFirstControlplane), nil
 		}
 
 		if k8sNode.Spec.Unschedulable && !isControlplane {
-			machine.currentMachine.Kubernetes.Online = false
-			machine.currentMachine.Kubernetes.Maintaining = true
+			machine.currentMachine.Node.Online = false
+			machine.currentMachine.Node.Maintaining = true
 			return ensureOnline(k8sNode), nil
 		}
 
 		if !machine.currentNodeagent.NodeIsReady || !machine.currentNodeagent.Software.Contains(to) {
-			machine.currentMachine.Kubernetes.Maintaining = true
+			machine.currentMachine.Node.Maintaining = true
 			return waitForNodeAgent, nil
 		}
 

@@ -254,11 +254,9 @@ WantedBy=multi-user.target
 		"command": startSystemd,
 	}).Debug("Executed command")
 
-	machine.currentMachine.NodeAgent.Commit = orbiterCommit
-	machine.currentMachine.NodeAgent.Running = true
 	logger.WithFields(map[string]interface{}{
 		"machine": machine.infra.ID(),
-	}).Info(true, "Node Agent installed and started")
+	}).Info(false, "Node Agent installed and started")
 
 	return nil
 

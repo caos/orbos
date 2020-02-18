@@ -103,8 +103,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 		}
 
 		outsideChangeMessage := format.CommitRecord(map[string]string{
-			"msg":   "Current state changed without orbiter interaction",
-			"event": "true",
+			"msg": "Current state changed without orbiter interaction",
 		})
 		changedOutside, err := gitClient.Commit(outsideChangeMessage, git.File{
 			Path:    "caos-internal/orbiter/current.yml",

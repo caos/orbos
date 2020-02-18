@@ -81,7 +81,7 @@ func AdaptFunc(
 				Kind:    "orbiter.caos.ch/KubernetesCluster",
 				Version: "v0",
 			},
-			Current: *current,
+			Current: current,
 		}
 
 		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
