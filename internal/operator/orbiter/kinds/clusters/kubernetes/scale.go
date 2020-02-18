@@ -112,6 +112,8 @@ nodes:
 		node, getNodeErr := k8sClient.GetNode(id)
 		if getNodeErr == nil {
 			machine.currentMachine.Node.Joined = true
+			machine.currentMachine.Node.Online = false
+			machine.currentMachine.Node.Maintaining = true
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					machine.currentMachine.Node.Online = true
