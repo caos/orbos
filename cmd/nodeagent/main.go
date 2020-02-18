@@ -15,6 +15,7 @@ import (
 	"github.com/caos/orbiter/internal/watcher/immediate"
 	"github.com/caos/orbiter/logging/base"
 	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbiter/logging/format"
 
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
@@ -59,10 +60,15 @@ func main() {
 		panic("flags --repourl and --id are required")
 	}
 
-	logger := logcontext.Add(base.New())
+	logger := logcontext.Add(base.New()).AddSideEffect(func(event bool, fields map[string]string) {
+		if _, err := os.Stdout.WriteString(format.LogRecord(fields)); err != nil {
+			panic(err)
+		}
+	})
 	if *verbose {
 		logger = logger.Verbose()
 	}
+
 	logger.WithFields(map[string]interface{}{
 		"version":     version,
 		"commit":      gitCommit,
