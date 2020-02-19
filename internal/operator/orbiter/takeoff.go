@@ -15,6 +15,7 @@ import (
 type EnsureFunc func(psf PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error)
 
 type commit struct {
+	isErr bool
 	msg   string
 	files []git.File
 }
@@ -28,7 +29,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 
 		commits := make([]*commit, 0)
 
-		iterationLogger := logger.AddSideEffect(func(event bool, fields map[string]string) {
+		iterationLogger := logger.AddSideEffect(func(event bool, err error, fields map[string]string) {
 
 			if !event {
 				return
@@ -37,7 +38,8 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			fields["event"] = "true"
 
 			commits = append(commits, &commit{
-				msg: format.CommitRecord(fields),
+				isErr: err != nil,
+				msg:   format.CommitRecord(fields),
 				files: []git.File{{
 					Path:    "caos-internal/orbiter/current.yml",
 					Content: common.MarshalYAML(treeCurrent),
@@ -97,7 +99,7 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
 			}
 
-			if !changed {
+			if !changed && !commit.isErr {
 				panic(fmt.Sprint("Event has no effect:", commit.msg))
 			}
 		}

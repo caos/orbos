@@ -33,13 +33,14 @@ func ensureCluster(
 		desired,
 		nodeAgentsCurrent,
 		nodeAgentsDesired,
-		providerPools)
+		providerPools,
+		k8sClient)
 	if err != nil {
 		return err
 	}
 
 	desireFirewall, ensureFirewall := firewallFuncs(logger, desired, kubeAPIAddress.Port)
-	initializeFirewall := func(_ initializedPool, machines []initializedMachine) error {
+	initializeFirewall := func(_ initializedPool, machines []*initializedMachine) error {
 		ensureFirewall(machines)
 		return nil
 	}
@@ -48,7 +49,7 @@ func ensureCluster(
 	if err != nil {
 		return err
 	}
-	workerMachines := make([]initializedMachine, 0)
+	workerMachines := make([]*initializedMachine, 0)
 	for _, workerPool := range workers {
 		workerPool.enhance(initializeFirewall)
 		wMachines, err := workerPool.machines()
@@ -103,11 +104,12 @@ func ensureCluster(
 		oneoff,
 		func(created infra.Machine, pool initializedPool) (initializedMachine, error) {
 			machine := initializeMachine(created, pool)
-			desireFirewall(machine)
+			desireFirewall(*machine)
 			target := targetVersion.DefineSoftware()
 			machine.desiredNodeagent.Software = &target
-			return machine, installNodeAgent(machine)
-		})
+			return *machine, installNodeAgent(*machine)
+		},
+		uninitializeMachine)
 	if err != nil {
 		return err
 	}

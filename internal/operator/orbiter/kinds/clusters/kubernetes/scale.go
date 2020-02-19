@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter"
@@ -107,53 +106,47 @@ func ensureScale(
 
 	var joinCP *initializedMachine
 	var certsCP infra.Machine
-	var joinWorkers []initializedMachine
-	cpIsReady := true
-	done := true
+	var joinWorkers []*initializedMachine
 
 nodes:
 	for _, machine := range machines {
 
-		id := machine.infra.ID()
-		node, getNodeErr := k8sClient.GetNode(id)
-		if getNodeErr == nil {
-			machine.currentMachine.Node.Joined = true
-			machine.currentMachine.Node.Online = false
-			machine.currentMachine.Node.Maintaining = true
-			for _, cond := range node.Status.Conditions {
-				if cond.Type == v1.NodeReady {
-					machine.currentMachine.Node.Online = true
-					machine.currentMachine.Node.Maintaining = false
-					if machine.tier == Controlplane {
-						certsCP = machine.infra
-					}
-					continue nodes
-				}
-			}
+		isJoinedControlPlane := machine.tier == Controlplane && machine.currentMachine.Joined
+
+		if isJoinedControlPlane && machine.currentMachine.Online {
+			certsCP = machine.infra
+			continue nodes
 		}
 
-		if machine.tier == Controlplane && machine.currentMachine.Node.Joined && (!machine.currentMachine.Node.Online || machine.currentMachine.Node.Maintaining) {
-			cpIsReady = false
+		if isJoinedControlPlane && !machine.currentMachine.Online {
+			logger.WithFields(map[string]interface{}{
+				"machine": machine.infra.ID(),
+				"tier":    machine.tier,
+			}).Info(false, "Awaiting controlplane to become ready")
+			return false, nil
 		}
 
-		done = false
-		logger := logger.WithFields(map[string]interface{}{
-			"machine": id,
-			"tier":    machine.tier,
-		})
+		if machine.currentMachine.Online {
+			continue nodes
+		}
 
-		if !machine.currentMachine.Node.Online {
-			logger.Info(false, "Node is not ready yet")
+		if machine.currentMachine.Joined {
+			logger.WithFields(map[string]interface{}{
+				"machine": machine.infra.ID(),
+				"tier":    machine.tier,
+			}).Info(false, "Node is already joining")
+			continue nodes
 		}
 
 		if machine.tier == Controlplane && joinCP == nil {
-			joinCP = &machine
+			joinCP = machine
 			continue nodes
 		}
+
 		joinWorkers = append(joinWorkers, machine)
 	}
 
-	if done {
+	if joinCP == nil && len(joinWorkers) == 0 {
 		logger.WithFields(map[string]interface{}{
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
@@ -179,11 +172,7 @@ nodes:
 	if joinCP != nil {
 
 		if doKubeadmInit && (kubeconfig.Value != "" || !oneoff) {
-			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is true")
-		}
-
-		if !doKubeadmInit && !cpIsReady {
-			return false, nil
+			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is passed")
 		}
 
 		if !doKubeadmInit && certKey == nil {
@@ -197,7 +186,7 @@ nodes:
 
 		joinKubeconfig, err := join(
 			logger,
-			*joinCP,
+			joinCP,
 			certsCP,
 			desired,
 			kubeAPI,

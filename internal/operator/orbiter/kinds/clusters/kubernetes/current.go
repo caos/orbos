@@ -14,14 +14,9 @@ type Current struct {
 	Current *CurrentCluster
 }
 
-type NodeStatus struct {
-	Joined      bool
-	Online      bool
-	Maintaining bool
-}
-
 type Machine struct {
-	Node     NodeStatus
+	Joined   bool
+	Online   bool
 	Metadata MachineMetadata `yaml:",inline"`
 }
 

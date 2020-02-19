@@ -59,7 +59,7 @@ func pushSecretsFunc(gitClient *git.Client, desired *Tree) PushSecretsFunc {
 }
 
 func pushOrbiterYML(logger logging.Logger, msg string, gitClient *git.Client, desired *Tree) (err error) {
-	logger.AddSideEffect(func(event bool, fields map[string]string) {
+	logger.AddSideEffect(func(_ bool, _ error, fields map[string]string) {
 		err = gitClient.UpdateRemote(format.CommitRecord(fields), git.File{
 			Path:    "orbiter.yml",
 			Content: common.MarshalYAML(desired),

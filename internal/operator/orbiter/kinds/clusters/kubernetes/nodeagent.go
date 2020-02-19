@@ -18,12 +18,12 @@ func ensureNodeAgents(
 	orbiterCommit string,
 	repoURL string,
 	repoKey string,
-	machines []initializedMachine) (ready bool, ensure func(machine initializedMachine) error, err error) {
+	machines []*initializedMachine) (ready bool, ensure func(machine initializedMachine) error, err error) {
 
 	ready = true
 	for _, machine := range machines {
 		var isReady bool
-		isReady, err = ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, machine)
+		isReady, err = ensureNodeAgent(logger, orbiterCommit, repoURL, repoKey, *machine)
 		if !isReady {
 			ready = false
 		}

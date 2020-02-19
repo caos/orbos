@@ -4,22 +4,23 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/logging"
+	v1 "k8s.io/api/core/v1"
 )
 
 type initializedPool struct {
 	infra    infra.Pool
 	tier     Tier
 	desired  Pool
-	machines func() ([]initializedMachine, error)
+	machines func() ([]*initializedMachine, error)
 }
 
-type initializeFunc func(initializedPool, []initializedMachine) error
+type initializeFunc func(initializedPool, []*initializedMachine) error
 type uninitializeMachineFunc func(id string)
-type initializeMachineFunc func(machine infra.Machine, pool initializedPool) initializedMachine
+type initializeMachineFunc func(machine infra.Machine, pool initializedPool) *initializedMachine
 
 func (i *initializedPool) enhance(initialize initializeFunc) {
 	original := i.machines
-	i.machines = func() ([]initializedMachine, error) {
+	i.machines = func() ([]*initializedMachine, error) {
 		machines, err := original()
 		if err != nil {
 			return nil, err
@@ -45,7 +46,8 @@ func initialize(
 	desired DesiredV0,
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
-	providerPools map[string]map[string]infra.Pool) (controlplane initializedPool, workers []initializedPool, initializeMachine initializeMachineFunc, uninitializeMachine uninitializeMachineFunc, err error) {
+	providerPools map[string]map[string]infra.Pool,
+	k8s *Client) (controlplane initializedPool, workers []initializedPool, initializeMachine initializeMachineFunc, uninitializeMachine uninitializeMachineFunc, err error) {
 
 	curr.Status = "maintaining"
 	curr.Machines = make(map[string]*Machine)
@@ -56,12 +58,12 @@ func initialize(
 			tier:    tier,
 			desired: desired,
 		}
-		pool.machines = func() ([]initializedMachine, error) {
+		pool.machines = func() ([]*initializedMachine, error) {
 			infraMachines, err := infraPool.GetMachines(true)
 			if err != nil {
 				return nil, err
 			}
-			machines := make([]initializedMachine, len(infraMachines))
+			machines := make([]*initializedMachine, len(infraMachines))
 			for i, infraMachine := range infraMachines {
 				machines[i] = initializeMachine(infraMachine, pool)
 			}
@@ -70,20 +72,28 @@ func initialize(
 		return pool
 	}
 
-	initializeMachine = func(machine infra.Machine, pool initializedPool) initializedMachine {
+	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
+
+		node, getNodeErr := k8s.GetNode(machine.ID())
 
 		current := &Machine{
-			Node: NodeStatus{
-				Joined:      false,
-				Online:      false,
-				Maintaining: true,
-			},
 			Metadata: MachineMetadata{
 				Tier:     pool.tier,
 				Provider: pool.desired.Provider,
 				Pool:     pool.desired.Pool,
 			},
 		}
+
+		if getNodeErr == nil {
+			current.Joined = true
+			for _, cond := range node.Status.Conditions {
+				if cond.Type == v1.NodeReady {
+					current.Online = true
+					break
+				}
+			}
+		}
+
 		curr.Machines[machine.ID()] = current
 
 		naSpec, ok := nodeAgentsDesired[machine.ID()]
@@ -106,7 +116,7 @@ func initialize(
 		naSpec.Software.Merge(ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
 		naSpec.Software.Merge(KubernetesSoftware(naCurr.Software))
 
-		return initializedMachine{
+		return &initializedMachine{
 			infra:            machine,
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,

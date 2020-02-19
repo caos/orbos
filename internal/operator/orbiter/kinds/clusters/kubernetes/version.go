@@ -38,9 +38,13 @@ func (k KubernetesVersion) String() string {
 }
 
 func (k KubernetesVersion) DefineSoftware() common.Software {
+	dockerVersion := "docker-ce v19.03.5"
+	//	if minor, err := k.ExtractMinor(); err != nil && minor <= 15 {
+	//		dockerVersion = "docker-ce v18.09.6"
+	//	}
 	return common.Software{
 		Swap:             common.Package{Version: "disabled"},
-		Containerruntime: common.Package{Version: "docker-ce v19.03.5"},
+		Containerruntime: common.Package{Version: dockerVersion},
 		Kubelet:          common.Package{Version: k.String()},
 		Kubeadm:          common.Package{Version: k.String()},
 		Kubectl:          common.Package{Version: k.String()},

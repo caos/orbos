@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbiter/logging"
 )
 
-type initializedMachines []initializedMachine
+type initializedMachines []*initializedMachine
 
 func (c initializedMachines) Len() int           { return len(c) }
 func (c initializedMachines) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
@@ -21,10 +21,10 @@ func ensureSoftware(
 	logger logging.Logger,
 	target KubernetesVersion,
 	k8sClient *Client,
-	controlplane []initializedMachine,
-	workers []initializedMachine) (bool, error) {
+	controlplane []*initializedMachine,
+	workers []*initializedMachine) (bool, error) {
 
-	findPath := func(machines []initializedMachine) (common.Software, common.Software, error) {
+	findPath := func(machines []*initializedMachine) (common.Software, common.Software, error) {
 
 		var overallLowKubelet KubernetesVersion
 		var overallLowKubeletMinor int
@@ -118,7 +118,7 @@ func ensureSoftware(
 	}
 
 	plan := func(
-		machine initializedMachine,
+		machine *initializedMachine,
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
@@ -127,28 +127,8 @@ func ensureSoftware(
 			"machine": id,
 		})
 
-		waitForNodeAgent := func() error {
-			machineLogger.Info(false, "Waiting for software to be ensured")
-			return nil
-		}
-
-		ensureJoinSoftware := func() error {
-			machine.desiredNodeagent.Software.Merge(to)
-			machineLogger.WithFields(map[string]interface{}{
-				"current": KubernetesSoftware(machine.currentNodeagent.Software),
-				"desired": to,
-			}).Info(true, "Join software desired")
-			return nil
-		}
-
-		ensureKubeadm := func() error {
-			machine.desiredNodeagent.Software.Kubeadm = common.Package{
-				Version: to.Kubeadm.Version,
-			}
-			machineLogger.WithFields(map[string]interface{}{
-				"current": machine.currentNodeagent.Software.Kubeadm.Version,
-				"desired": to.Kubeadm.Version,
-			}).Info(true, "Kubeadm desired")
+		awaitNodeAgent := func() error {
+			machineLogger.Info(false, "Awaiting node agent")
 			return nil
 		}
 
@@ -199,55 +179,52 @@ func ensureSoftware(
 		}
 
 		if !machine.currentNodeagent.NodeIsReady {
-			return waitForNodeAgent, nil
+			return awaitNodeAgent, nil
 		}
 
-		k8sNode, err := k8sClient.GetNode(id)
-		if k8sNode == nil || err != nil {
-			machine.currentMachine.Node.Joined = false
-			machine.currentMachine.Node.Online = false
-			machine.currentMachine.Node.Maintaining = true
+		if !machine.currentMachine.Joined {
 			if machine.currentNodeagent.Software.Contains(to) {
+				// This node needs to be joined first
 				return nil, nil
 			}
-			return ensureJoinSoftware, nil
-		}
-
-		machine.currentMachine.Node.Joined = true
-		for _, cond := range k8sNode.Status.Conditions {
-			if cond.Type == v1.NodeReady {
-				machine.currentMachine.Node.Joined = true
-				machine.currentMachine.Node.Online = true
-				machine.currentMachine.Node.Maintaining = false
-				break
-			}
-		}
-		if !machine.currentMachine.Node.Online {
-			machine.currentMachine.Node.Maintaining = true
-			// This is a joiners case and treated as up-to-date here
-			return nil, nil
+			return func() error {
+				machine.desiredNodeagent.Software.Merge(to)
+				machineLogger.WithFields(map[string]interface{}{
+					"current": KubernetesSoftware(machine.currentNodeagent.Software),
+					"desired": to,
+				}).Info(true, "Join software desired")
+				return nil
+			}, nil
 		}
 
 		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-			machine.currentMachine.Node.Maintaining = true
-			return ensureKubeadm, nil
+			return func() error {
+				machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
+				machineLogger.WithFields(map[string]interface{}{
+					"current": machine.currentNodeagent.Software.Kubeadm.Version,
+					"desired": to.Kubeadm.Version,
+				}).Info(true, "Kubeadm desired")
+				return nil
+			}, nil
 		}
 
 		isControlplane := machine.tier == Controlplane
+		k8sNode, err := k8sClient.GetNode(id)
+		if err != nil {
+			return nil, err
+		}
+
 		if k8sNode.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
-			machine.currentMachine.Node.Maintaining = true
 			return ensureSoftware(k8sNode, isControlplane, isFirstControlplane), nil
 		}
 
 		if k8sNode.Spec.Unschedulable && !isControlplane {
-			machine.currentMachine.Node.Online = false
-			machine.currentMachine.Node.Maintaining = true
+			machine.currentMachine.Online = false
 			return ensureOnline(k8sNode), nil
 		}
 
 		if !machine.currentNodeagent.NodeIsReady || !machine.currentNodeagent.Software.Contains(to) {
-			machine.currentMachine.Node.Maintaining = true
-			return waitForNodeAgent, nil
+			return awaitNodeAgent, nil
 		}
 
 		return nil, nil

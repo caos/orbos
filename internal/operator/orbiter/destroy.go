@@ -27,7 +27,7 @@ func Destroy(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc) erro
 		return err
 	}
 
-	logger.AddSideEffect(func(event bool, fields map[string]string) {
+	logger.AddSideEffect(func(event bool, err error, fields map[string]string) {
 		if err := gitClient.UpdateRemote(format.CommitRecord(fields), git.File{
 			Path:    "caos-internal/orbiter/current.yml",
 			Content: []byte(""),

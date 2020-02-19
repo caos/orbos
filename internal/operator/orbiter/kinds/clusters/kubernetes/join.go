@@ -14,7 +14,7 @@ import (
 
 func join(
 	logger logging.Logger,
-	joining initializedMachine,
+	joining *initializedMachine,
 	joinAt infra.Machine,
 	desired DesiredV0,
 	kubeAPI infra.Address,
@@ -166,7 +166,7 @@ nodeRegistration:
 		logger.WithFields(map[string]interface{}{
 			"stdout": string(joinStdout),
 		}).Debug("Executed kubeadm join")
-		joining.currentMachine.Node.Joined = true
+		joining.currentMachine.Joined = true
 		logger.Info(true, "Node joined")
 		return nil, nil
 	}
@@ -197,7 +197,7 @@ nodeRegistration:
 		return nil, err
 	}
 
-	joining.currentMachine.Node.Joined = true
+	joining.currentMachine.Joined = true
 	logger.Info(true, "Cluster initialized")
 
 	kc := kubeconfig.String()
