@@ -14,6 +14,8 @@ type initializedPool struct {
 }
 
 type initializeFunc func(initializedPool, []initializedMachine) error
+type uninitializeMachineFunc func(id string)
+type initializeMachineFunc func(machine infra.Machine, pool initializedPool) initializedMachine
 
 func (i *initializedPool) enhance(initialize initializeFunc) {
 	original := i.machines
@@ -43,7 +45,7 @@ func initialize(
 	desired DesiredV0,
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
-	providerPools map[string]map[string]infra.Pool) (controlplane initializedPool, workers []initializedPool, initializeMachine func(machine infra.Machine, pool initializedPool) initializedMachine, err error) {
+	providerPools map[string]map[string]infra.Pool) (controlplane initializedPool, workers []initializedPool, initializeMachine initializeMachineFunc, uninitializeMachine uninitializeMachineFunc, err error) {
 
 	curr.Status = "maintaining"
 	curr.Machines = make(map[string]*Machine)
@@ -129,5 +131,8 @@ func initialize(
 			}
 		}
 	}
-	return controlplane, workers, initializeMachine, nil
+	return controlplane, workers, initializeMachine, func(id string) {
+		delete(nodeAgentsDesired, id)
+		delete(curr.Machines, id)
+	}, nil
 }

@@ -27,7 +27,7 @@ func ensureCluster(
 		k8sClient.Refresh(&kubeconfig.Value)
 	}
 
-	controlplane, workers, initializeMachine, err := initialize(
+	controlplane, workers, initializeMachine, uninitializeMachine, err := initialize(
 		logger,
 		curr,
 		desired,

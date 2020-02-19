@@ -23,7 +23,8 @@ func ensureScale(
 	k8sVersion KubernetesVersion,
 	k8sClient *Client,
 	oneoff bool,
-	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error)) (bool, error) {
+	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error),
+	uninitializeMachine uninitializeMachineFunc) (bool, error) {
 
 	wCount := 0
 	for _, w := range workerPools {
@@ -53,12 +54,18 @@ func ensureScale(
 			}
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
-				if err := k8sClient.EnsureDeleted(machine.infra.ID(), machine.currentMachine, machine.infra, false); err != nil {
+				id := machine.infra.ID()
+				if err := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false); err != nil {
 					return false, err
 				}
 				if err := machine.infra.Remove(); err != nil {
 					return false, err
 				}
+				uninitializeMachine(id)
+				logger.WithFields(map[string]interface{}{
+					"machine": id,
+					"tier":    machine.tier,
+				}).Info(true, "Machine removed")
 			}
 		}
 		return delta <= 0, nil
@@ -98,7 +105,7 @@ func ensureScale(
 		return false, nil
 	}
 
-	var joinCP infra.Machine
+	var joinCP *initializedMachine
 	var certsCP infra.Machine
 	var joinWorkers []initializedMachine
 	cpIsReady := true
@@ -108,7 +115,6 @@ nodes:
 	for _, machine := range machines {
 
 		id := machine.infra.ID()
-
 		node, getNodeErr := k8sClient.GetNode(id)
 		if getNodeErr == nil {
 			machine.currentMachine.Node.Joined = true
@@ -126,7 +132,7 @@ nodes:
 			}
 		}
 
-		if machine.tier == Controlplane && !machine.currentMachine.Node.Online {
+		if machine.tier == Controlplane && machine.currentMachine.Node.Joined && (!machine.currentMachine.Node.Online || machine.currentMachine.Node.Maintaining) {
 			cpIsReady = false
 		}
 
@@ -141,7 +147,7 @@ nodes:
 		}
 
 		if machine.tier == Controlplane && joinCP == nil {
-			joinCP = machine.infra
+			joinCP = &machine
 			continue nodes
 		}
 		joinWorkers = append(joinWorkers, machine)
@@ -191,14 +197,13 @@ nodes:
 
 		joinKubeconfig, err := join(
 			logger,
-			joinCP,
+			*joinCP,
 			certsCP,
 			desired,
 			kubeAPI,
 			jointoken,
 			k8sVersion,
-			string(certKey),
-			true)
+			string(certKey))
 
 		if joinKubeconfig == nil || err != nil {
 			return false, err
@@ -217,14 +222,13 @@ nodes:
 	for _, worker := range joinWorkers {
 		if _, err := join(
 			logger,
-			worker.infra,
+			worker,
 			certsCP,
 			desired,
 			kubeAPI,
 			string(jointoken),
 			k8sVersion,
-			"",
-			false); err != nil {
+			""); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}
