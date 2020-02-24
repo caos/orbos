@@ -22,7 +22,7 @@ type Current struct {
 
 type DesiredV0 struct {
 	Common *orbiter.Common `yaml:",inline"`
-	Spec   map[string][]VIP
+	Spec   map[string][]*VIP
 }
 
 func (d *DesiredV0) Validate() error {

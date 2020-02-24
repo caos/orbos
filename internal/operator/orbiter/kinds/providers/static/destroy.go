@@ -1,10 +1,10 @@
 package static
 
-import "github.com/caos/orbiter/logging"
+import "github.com/caos/orbiter/mntr"
 
-func destroy(logger logging.Logger, desired *DesiredV0, current *Current, id string) error {
+func destroy(monitor mntr.Monitor, desired *DesiredV0, current *Current, id string) error {
 	machinesSvc := NewMachinesService(
-		logger,
+		monitor,
 		desired,
 		[]byte(desired.Spec.Keys.BootstrapKeyPrivate.Value),
 		[]byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value),

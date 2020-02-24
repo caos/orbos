@@ -5,7 +5,7 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/ssh"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type machine struct {
@@ -15,9 +15,9 @@ type machine struct {
 	ssh      infra.Machine
 }
 
-func newMachine(logger logging.Logger, poolFile string, remoteUser string, id *string, IP string) infra.Machine {
+func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, IP string) infra.Machine {
 	cmp := &machine{poolFile: poolFile, id: id, ip: IP}
-	cmp.ssh = ssh.NewMachine(logger, cmp, remoteUser)
+	cmp.ssh = ssh.NewMachine(monitor, cmp, remoteUser)
 	return cmp.ssh
 }
 

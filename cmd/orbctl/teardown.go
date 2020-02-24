@@ -52,14 +52,14 @@ func teardownCommand(rv rootValues) *cobra.Command {
 			"version": version,
 			"commit":  gitCommit,
 			"repoURL": orbFile.URL,
-		}).Info(false, "Destroying Orb")
+		}).Info("Destroying Orb")
 
 		fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
 		var response string
 		fmt.Scanln(&response)
 
 		if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
-			logger.Info(false, "Not touching Orb")
+			logger.Info("Not touching Orb")
 			return nil
 		}
 

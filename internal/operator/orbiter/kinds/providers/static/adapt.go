@@ -6,11 +6,11 @@ import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
-	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -30,8 +30,8 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		}
 		desiredTree.Parsed = desiredKind
 
-		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
-			logger = logger.Verbose()
+		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
+			monitor = monitor.Verbose()
 		}
 
 		if err := desiredKind.validate(); err != nil {
@@ -55,18 +55,15 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		}
 
 		lbCurrent := &orbiter.Tree{}
+		var lbQuery orbiter.QueryFunc
 		switch desiredKind.Loadbalancing.Common.Kind {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			_, _, _, lMigrate, err := dynamic.AdaptFunc()(logger, desiredKind.Loadbalancing, lbCurrent)
+			lbQuery, _, _, migrate, err = dynamic.AdaptFunc()(monitor, desiredKind.Loadbalancing, lbCurrent)
 			if err != nil {
 				return nil, nil, nil, migrate, err
 			}
-			if lMigrate {
-				migrate = true
-			}
-			//		return []orbiter.Assembler{dynamic.New(depPath, generalOverwriteSpec, dynamiclbadapter.New(kind.Spec.RemoteUser))}, nil
 		default:
 			return nil, nil, nil, migrate, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
 		}
@@ -79,10 +76,17 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		}
 		currentTree.Parsed = current
 
-		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
-				return errors.Wrapf(ensure(desiredKind, current, psf, nodeAgentsDesired, lbCurrent.Parsed, masterkey, logger, id), "ensuring %s failed", desiredKind.Common.Kind)
+		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
+				defer func() {
+					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
+				}()
+
+				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
+					return nil, err
+				}
+				return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
 			}, func() error {
-				return destroy(logger, desiredKind, current, id)
+				return destroy(monitor, desiredKind, current, id)
 			}, map[string]*orbiter.Secret{
 				"bootstrapkeyprivate":   desiredKind.Spec.Keys.BootstrapKeyPrivate,
 				"bootstrapkeypublic":    desiredKind.Spec.Keys.BootstrapKeyPublic,

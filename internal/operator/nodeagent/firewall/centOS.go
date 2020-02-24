@@ -11,10 +11,10 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func centosEnsurer(logger logging.Logger, ignore []string) nodeagent.FirewallEnsurer {
+func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (bool, error) {
 
 		var (
@@ -27,7 +27,7 @@ func centosEnsurer(logger logging.Logger, ignore []string) nodeagent.FirewallEns
 		cmd.Stderr = &errBuf
 
 		fullCmd := strings.Join(cmd.Args, " ")
-		if logger.IsVerbose() {
+		if monitor.IsVerbose() {
 			fmt.Println(fullCmd)
 			cmd.Stdout = os.Stdout
 		}
@@ -41,7 +41,7 @@ func centosEnsurer(logger logging.Logger, ignore []string) nodeagent.FirewallEns
 		cmd.Stderr = &errBuf
 
 		fullCmd = strings.Join(cmd.Args, " ")
-		if logger.IsVerbose() {
+		if monitor.IsVerbose() {
 			fmt.Println(fullCmd)
 			cmd.Stdout = os.Stdout
 		}
@@ -59,7 +59,7 @@ func centosEnsurer(logger logging.Logger, ignore []string) nodeagent.FirewallEns
 		}
 
 		stdout := outBuf.String()
-		if logger.IsVerbose() {
+		if monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
 			fmt.Println(stdout)
 		}
@@ -94,15 +94,15 @@ func centosEnsurer(logger logging.Logger, ignore []string) nodeagent.FirewallEns
 			removePorts = append(removePorts, fmt.Sprintf("--remove-port=%s", already))
 		}
 
-		if err := changeFirewall(logger, addPorts); err != nil {
+		if err := changeFirewall(monitor, addPorts); err != nil {
 			return false, err
 		}
 
-		return len(addPorts) > 0 || len(removePorts) > 0, changeFirewall(logger, removePorts)
+		return len(addPorts) > 0 || len(removePorts) > 0, changeFirewall(monitor, removePorts)
 	})
 }
 
-func changeFirewall(logger logging.Logger, changes []string) error {
+func changeFirewall(monitor mntr.Monitor, changes []string) error {
 	var errBuf bytes.Buffer
 	if len(changes) == 0 {
 		return nil
@@ -113,7 +113,7 @@ func changeFirewall(logger logging.Logger, changes []string) error {
 	cmd.Stderr = &errBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(fullCmd)
 		cmd.Stdout = os.Stdout
 	}
@@ -125,7 +125,7 @@ func changeFirewall(logger logging.Logger, changes []string) error {
 	errBuf.Reset()
 	cmd = exec.Command("firewall-cmd", "--reload")
 	cmd.Stderr = &errBuf
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}

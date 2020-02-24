@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ec2/model"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type infraCurrent struct {
@@ -36,7 +36,7 @@ func authenticatedService(ctx context.Context, googleApplicationCredentialsValue
 	return machine.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
 }
 
-func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string) Builder {
+func New(monitor mntr.Monitor, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string) Builder {
 	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 		return model.Config{}, adapterFunc(func(context.Context, *orbiter.Secrets, map[string]interface{}) (*model.Current, error) {
 			return &model.Current{}, errors.New("Not yet implemented")

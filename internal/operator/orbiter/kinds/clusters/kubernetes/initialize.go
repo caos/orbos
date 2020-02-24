@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -41,16 +41,25 @@ type initializedMachine struct {
 }
 
 func initialize(
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	curr *CurrentCluster,
 	desired DesiredV0,
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	providerPools map[string]map[string]infra.Pool,
-	k8s *Client) (controlplane initializedPool, workers []initializedPool, initializeMachine initializeMachineFunc, uninitializeMachine uninitializeMachineFunc, err error) {
+	k8s *Client,
+	postInit func(machine *initializedMachine)) (
+	controlplane initializedPool,
+	controlplaneMachines []*initializedMachine,
+	workers []initializedPool,
+	workerMachines []*initializedMachine,
+	initializeMachine initializeMachineFunc,
+	uninitializeMachine uninitializeMachineFunc,
+	err error) {
 
-	curr.Status = "maintaining"
-	curr.Machines = make(map[string]*Machine)
+	if curr.Machines == nil {
+		curr.Machines = make(map[string]*Machine)
+	}
 
 	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
 		pool := initializedPool{
@@ -66,6 +75,9 @@ func initialize(
 			machines := make([]*initializedMachine, len(infraMachines))
 			for i, infraMachine := range infraMachines {
 				machines[i] = initializeMachine(infraMachine, pool)
+				if !machines[i].currentMachine.Online {
+					curr.Status = "maintaining"
+				}
 			}
 			return machines, nil
 		}
@@ -96,6 +108,8 @@ func initialize(
 
 		curr.Machines[machine.ID()] = current
 
+		machineMonitor := monitor.WithField("machine", machine.ID())
+
 		naSpec, ok := nodeAgentsDesired[machine.ID()]
 		if !ok {
 			naSpec = &common.NodeAgentSpec{}
@@ -113,16 +127,23 @@ func initialize(
 			naSpec.Software = &common.Software{}
 		}
 
-		naSpec.Software.Merge(ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
-		naSpec.Software.Merge(KubernetesSoftware(naCurr.Software))
+		desiredSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
+		if !naCurr.Software.Defines(desiredSoftware) {
+			naSpec.Software.Merge(desiredSoftware)
+			machineMonitor.Changed("Kubernetes software desired")
+		}
 
-		return &initializedMachine{
+		initMachine := &initializedMachine{
 			infra:            machine,
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
 			tier:             pool.tier,
 			currentMachine:   current,
 		}
+
+		postInit(initMachine)
+
+		return initMachine
 	}
 
 	for providerName, provider := range providerPools {
@@ -130,19 +151,46 @@ func initialize(
 		for poolName, pool := range provider {
 			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == poolName {
 				controlplane = initializePool(pool, desired.Spec.ControlPlane, Controlplane)
+				controlplaneMachines, err = controlplane.machines()
+				if err != nil {
+					return controlplane,
+						controlplaneMachines,
+						workers,
+						workerMachines,
+						initializeMachine,
+						uninitializeMachine,
+						err
+				}
 				continue
 			}
 
 			for _, desiredPool := range desired.Spec.Workers {
 				if providerName == desiredPool.Provider && poolName == desiredPool.Pool {
-					workers = append(workers, initializePool(pool, *desiredPool, Workers))
+					workerPool := initializePool(pool, *desiredPool, Workers)
+					workers = append(workers, workerPool)
+					initializedWorkerMachines, err := workerPool.machines()
+					if err != nil {
+						return controlplane,
+							controlplaneMachines,
+							workers,
+							workerMachines,
+							initializeMachine,
+							uninitializeMachine,
+							err
+					}
+					workerMachines = append(workerMachines, initializedWorkerMachines...)
 					continue pools
 				}
 			}
 		}
 	}
-	return controlplane, workers, initializeMachine, func(id string) {
-		delete(nodeAgentsDesired, id)
-		delete(curr.Machines, id)
-	}, nil
+
+	return controlplane,
+		controlplaneMachines,
+		workers,
+		workerMachines,
+		initializeMachine, func(id string) {
+			delete(nodeAgentsDesired, id)
+			delete(curr.Machines, id)
+		}, nil
 }

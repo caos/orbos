@@ -11,7 +11,7 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
@@ -54,7 +54,7 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 	return err
 }
 
-func EnsurePermissive(logger logging.Logger, opsys dep.OperatingSystem, remove common.Package) error {
+func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove common.Package) error {
 
 	if opsys != dep.CentOS || remove.Config["selinux"] == "permissive" {
 		return nil
@@ -63,7 +63,7 @@ func EnsurePermissive(logger logging.Logger, opsys dep.OperatingSystem, remove c
 	var errBuf bytes.Buffer
 	cmd := exec.Command("setenforce", "0")
 	cmd.Stderr = &errBuf
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -74,7 +74,7 @@ func EnsurePermissive(logger logging.Logger, opsys dep.OperatingSystem, remove c
 
 	cmd = exec.Command("sed", "-i", "s/^SELINUX=enforcing$/SELINUX=permissive/", "/etc/selinux/config")
 	cmd.Stderr = &errBuf
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}

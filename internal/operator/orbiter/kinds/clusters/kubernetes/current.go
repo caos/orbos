@@ -15,9 +15,11 @@ type Current struct {
 }
 
 type Machine struct {
-	Joined   bool
-	Online   bool
-	Metadata MachineMetadata `yaml:",inline"`
+	Joined             bool
+	Online             bool
+	FirewallIsReady    bool
+	NodeAgentIsRunning bool
+	Metadata           MachineMetadata `yaml:",inline"`
 }
 
 type Versions struct {

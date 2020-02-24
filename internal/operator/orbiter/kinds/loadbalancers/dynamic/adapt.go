@@ -12,11 +12,11 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func AdaptFunc() orbiter.AdaptFunc {
-	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -38,93 +38,95 @@ func AdaptFunc() orbiter.AdaptFunc {
 		}
 		currentTree.Parsed = current
 
-		sourcePools := make(map[string][]string)
-		addresses := make(map[string]infra.Address)
-		for _, pool := range desiredKind.Spec {
-			for _, vip := range pool {
-				for _, src := range vip.Transport {
-					addresses[src.Name] = infra.Address{
-						Location: vip.IP,
-						Port:     uint16(src.SourcePort),
-					}
-				destinations:
-					for _, dest := range src.Destinations {
-						if _, ok := sourcePools[dest.Pool]; !ok {
-							sourcePools[dest.Pool] = make([]string, 0)
+		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
+
+			sourcePools := make(map[string][]string)
+			addresses := make(map[string]infra.Address)
+			for _, pool := range desiredKind.Spec {
+				for _, vip := range pool {
+					for _, src := range vip.Transport {
+						addresses[src.Name] = infra.Address{
+							Location: vip.IP,
+							Port:     uint16(src.SourcePort),
 						}
-						for _, existing := range sourcePools[dest.Pool] {
-							if dest.Pool == existing {
-								continue destinations
+					destinations:
+						for _, dest := range src.Destinations {
+							if _, ok := sourcePools[dest.Pool]; !ok {
+								sourcePools[dest.Pool] = make([]string, 0)
 							}
+							for _, existing := range sourcePools[dest.Pool] {
+								if dest.Pool == existing {
+									continue destinations
+								}
+							}
+							sourcePools[dest.Pool] = append(sourcePools[dest.Pool], dest.Pool)
 						}
-						sourcePools[dest.Pool] = append(sourcePools[dest.Pool], dest.Pool)
 					}
 				}
 			}
-		}
 
-		current.Current.SourcePools = sourcePools
-		current.Current.Addresses = addresses
-		current.Current.Desire = func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
+			current.Current.SourcePools = sourcePools
+			current.Current.Addresses = addresses
+			current.Current.Desire = func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
 
-			vips, ok := desiredKind.Spec[pool]
-			if !ok {
-				return nil
-			}
-
-			machines, err := svc.List(pool, true)
-			if err != nil {
-				return err
-			}
-
-			machinesData := make([]Data, len(machines))
-			for idx, machine := range machines {
-				machinesData[idx] = Data{
-					VIPs: vips,
-					Self: machine,
-					Peers: deriveFilterMachines(func(cmp infra.Machine) bool {
-						return cmp.ID() != machine.ID()
-					}, append([]infra.Machine(nil), []infra.Machine(machines)...)),
-					State:                "BACKUP",
-					CustomMasterNotifyer: notifyMaster != "",
+				vips, ok := desiredKind.Spec[pool]
+				if !ok {
+					return nil
 				}
-				if idx == 0 {
-					machinesData[idx].State = "MASTER"
-				}
-			}
 
-			templateFuncs := template.FuncMap(map[string]interface{}{
-				"machines": svc.List,
-				"add": func(i, y int) int {
-					return i + y
-				},
-				"user": func(machine infra.Machine) (string, error) {
-					var user string
-					whoami := "whoami"
-					stdout, err := machine.Execute(nil, nil, whoami)
-					if err != nil {
-						return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
+				machines, err := svc.List(pool, true)
+				if err != nil {
+					return err
+				}
+
+				machinesData := make([]Data, len(machines))
+				for idx, machine := range machines {
+					machinesData[idx] = Data{
+						VIPs: vips,
+						Self: machine,
+						Peers: deriveFilterMachines(func(cmp infra.Machine) bool {
+							return cmp.ID() != machine.ID()
+						}, append([]infra.Machine(nil), []infra.Machine(machines)...)),
+						State:                "BACKUP",
+						CustomMasterNotifyer: notifyMaster != "",
 					}
-					user = strings.TrimSuffix(string(stdout), "\n")
-					logger.WithFields(map[string]interface{}{
-						"user":    user,
-						"machine": machine.ID(),
-						"command": whoami,
-					}).Debug("Executed command")
-					return user, nil
-				},
-				//						"healthcmd": vrrpHealthChecksScript,
-				//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
-				//							return deriveFmap(func(src model.Source) []string {
-				//
-				//								if src.HealthChecks != nil {
-				//									return fmt.Sprintf(check, src.HealthChecks.Protocol)
-				//								}
-				//							}, vip.Transport)
-				//						},
-			})
+					if idx == 0 {
+						machinesData[idx].State = "MASTER"
+					}
+				}
 
-			keepaliveDTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}global_defs {
+				templateFuncs := template.FuncMap(map[string]interface{}{
+					"machines": svc.List,
+					"add": func(i, y int) int {
+						return i + y
+					},
+					"user": func(machine infra.Machine) (string, error) {
+						var user string
+						whoami := "whoami"
+						stdout, err := machine.Execute(nil, nil, whoami)
+						if err != nil {
+							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
+						}
+						user = strings.TrimSuffix(string(stdout), "\n")
+						monitor.WithFields(map[string]interface{}{
+							"user":    user,
+							"machine": machine.ID(),
+							"command": whoami,
+						}).Debug("Executed command")
+						return user, nil
+					},
+					//						"healthcmd": vrrpHealthChecksScript,
+					//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
+					//							return deriveFmap(func(src model.Source) []string {
+					//
+					//								if src.HealthChecks != nil {
+					//									return fmt.Sprintf(check, src.HealthChecks.Protocol)
+					//								}
+					//							}, vip.Transport)
+					//						},
+				})
+
+				keepaliveDTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}global_defs {
 	enable_script_security
 	script_user {{ user $root.Self }}
 }
@@ -168,7 +170,7 @@ vrrp_instance VI_{{ $idx }} {
 {{ end }}
 `))
 
-			nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+				nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
 	worker_connections  4096;  ## Default: 1024
 }
 
@@ -193,69 +195,21 @@ http {
 }
 `))
 
-			for _, d := range machinesData {
+				for _, d := range machinesData {
 
-				var kaBuf bytes.Buffer
-				if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
-					return err
-				}
-				kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
-
-				if d.CustomMasterNotifyer {
-					kaPkg.Config["notifymaster.sh"] = notifyMaster
-				}
-
-				for _, vip := range d.VIPs {
-					for _, transport := range vip.Transport {
-						for _, machine := range machines {
-							deepNa, ok := nodeagents[machine.ID()]
-							if !ok {
-								deepNa = &common.NodeAgentSpec{}
-								nodeagents[machine.ID()] = deepNa
-							}
-							if deepNa.Firewall == nil {
-								deepNa.Firewall = &common.Firewall{}
-							}
-							fw := *deepNa.Firewall
-							fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = common.Allowed{
-								Port:     fmt.Sprintf("%d", transport.SourcePort),
-								Protocol: "tcp",
-							}
-
-							if transport.SourcePort == 22 {
-								if deepNa.Software == nil {
-									deepNa.Software = &common.Software{}
-								}
-								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
-							}
-						}
+					var kaBuf bytes.Buffer
+					if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
+						return err
 					}
-				}
-				na, ok := nodeagents[d.Self.ID()]
-				if !ok {
-					na = &common.NodeAgentSpec{}
-					nodeagents[d.Self.ID()] = na
-				}
-				if na.Software == nil {
-					na.Software = &common.Software{}
-				}
-				na.Software.KeepaliveD = kaPkg
+					kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 
-				var ngxBuf bytes.Buffer
-				if nginxTemplate.Execute(&ngxBuf, d); err != nil {
-					return err
-				}
-				ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
-				for _, vip := range d.VIPs {
-					for _, transport := range vip.Transport {
+					if d.CustomMasterNotifyer {
+						kaPkg.Config["notifymaster.sh"] = notifyMaster
+					}
 
-						for _, dest := range transport.Destinations {
-							destMachines, err := svc.List(dest.Pool, true)
-							if err != nil {
-								return err
-							}
-							for _, machine := range destMachines {
-
+					for _, vip := range d.VIPs {
+						for _, transport := range vip.Transport {
+							for _, machine := range machines {
 								deepNa, ok := nodeagents[machine.ID()]
 								if !ok {
 									deepNa = &common.NodeAgentSpec{}
@@ -265,24 +219,73 @@ http {
 									deepNa.Firewall = &common.Firewall{}
 								}
 								fw := *deepNa.Firewall
-								fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = common.Allowed{
-									Port:     fmt.Sprintf("%d", dest.Port),
+								fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = common.Allowed{
+									Port:     fmt.Sprintf("%d", transport.SourcePort),
 									Protocol: "tcp",
+								}
+
+								if transport.SourcePort == 22 {
+									if deepNa.Software == nil {
+										deepNa.Software = &common.Software{}
+									}
+									deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
 								}
 							}
 						}
 					}
+					na, ok := nodeagents[d.Self.ID()]
+					if !ok {
+						na = &common.NodeAgentSpec{}
+						nodeagents[d.Self.ID()] = na
+					}
+					if na.Software == nil {
+						na.Software = &common.Software{}
+					}
+					na.Software.KeepaliveD = kaPkg
+
+					var ngxBuf bytes.Buffer
+					if nginxTemplate.Execute(&ngxBuf, d); err != nil {
+						return err
+					}
+					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					for _, vip := range d.VIPs {
+						for _, transport := range vip.Transport {
+
+							for _, dest := range transport.Destinations {
+								destMachines, err := svc.List(dest.Pool, true)
+								if err != nil {
+									return err
+								}
+								for _, machine := range destMachines {
+
+									deepNa, ok := nodeagents[machine.ID()]
+									if !ok {
+										deepNa = &common.NodeAgentSpec{}
+										nodeagents[machine.ID()] = deepNa
+									}
+									if deepNa.Firewall == nil {
+										deepNa.Firewall = &common.Firewall{}
+									}
+									fw := *deepNa.Firewall
+									fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = common.Allowed{
+										Port:     fmt.Sprintf("%d", dest.Port),
+										Protocol: "tcp",
+									}
+								}
+							}
+						}
+					}
+					na.Software.Nginx = ngxPkg
 				}
-				na.Software.Nginx = ngxPkg
+				return nil
 			}
-			return nil
-		}
-		return nil, nil, nil, migrate, nil
+			return nil, nil
+		}, nil, nil, false, nil
 	}
 }
 
 type Data struct {
-	VIPs                 []VIP
+	VIPs                 []*VIP
 	State                string
 	RouterID             int
 	Self                 infra.Machine

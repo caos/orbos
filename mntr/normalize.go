@@ -1,11 +1,11 @@
-package base
+package mntr
 
 import (
 	"fmt"
 	"reflect"
 )
 
-func toStringMap(fields map[string]interface{}) map[string]string {
+func normalize(fields map[string]interface{}) map[string]string {
 	out := make(map[string]string)
 	for key, value := range fields {
 		rValue := reflect.ValueOf(value)
@@ -16,7 +16,7 @@ func toStringMap(fields map[string]interface{}) map[string]string {
 			for _, rMapKey := range rValue.MapKeys() {
 				stringKeyedMap[fmt.Sprintf("%s.%s", key, rMapKey.Interface())] = rValue.MapIndex(rMapKey).Interface()
 			}
-			for iKey, iValue := range toStringMap(stringKeyedMap) {
+			for iKey, iValue := range normalize(stringKeyedMap) {
 				out[iKey] = iValue
 			}
 		default:

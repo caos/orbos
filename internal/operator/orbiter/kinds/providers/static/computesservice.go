@@ -9,11 +9,11 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type machinesService struct {
-	logger            logging.Logger
+	monitor           mntr.Monitor
 	desired           *DesiredV0
 	bootstrapkey      []byte
 	maintenancekey    []byte
@@ -24,7 +24,7 @@ type machinesService struct {
 
 // TODO: Dont accept the whole spec. Accept exactly the values needed (check other constructors too)
 func NewMachinesService(
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	desired *DesiredV0,
 	bootstrapkey []byte,
 	maintenancekey []byte,
@@ -32,7 +32,7 @@ func NewMachinesService(
 	id string,
 	desireHostname func(machine infra.Machine, pool string) error) core.MachinesService {
 	return &machinesService{
-		logger,
+		monitor,
 		desired,
 		bootstrapkey,
 		maintenancekey,
@@ -63,7 +63,7 @@ func (c *machinesService) List(poolName string, active bool) (infra.Machines, er
 	machines := make([]infra.Machine, 0)
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
-		machine := newMachine(c.logger, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
+		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
 		if err := machine.UseKey(c.maintenancekey, c.bootstrapkey); err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
-		machine := newMachine(c.logger, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
+		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
 
 		if err := machine.UseKey(c.maintenancekey, c.bootstrapkey); err != nil {
 			return nil, err

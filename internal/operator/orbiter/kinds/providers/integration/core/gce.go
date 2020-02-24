@@ -64,11 +64,11 @@ func (g *gceProvider) Assemble(operatorID string, configuredPools []string, conf
 		return nil, nil, nil, err
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
-	machinesSvc := instance.NewInstanceService(logger, assembly, &api.Caller{
+	monitor := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
+	machinesSvc := instance.NewInstanceService(monitor, assembly, &api.Caller{
 		Ctx: ctx,
 		Cfg: assembly.Config(),
 	})
 
-	return gce.New(logger, assembly), machinesSvc, assembly, nil
+	return gce.New(monitor, assembly), machinesSvc, assembly, nil
 }

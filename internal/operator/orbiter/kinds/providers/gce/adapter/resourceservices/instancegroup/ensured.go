@@ -9,22 +9,22 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/instance"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"google.golang.org/api/machine/v1"
 )
 
 type Ensured struct {
-	ctx    context.Context
-	logger logging.Logger
-	spec   *model.UserSpec
-	svc    *machine.InstanceGroupsService
-	name   string
-	URL    string
-	caller *api.Caller
+	ctx     context.Context
+	monitor mntr.Monitor
+	spec    *model.UserSpec
+	svc     *machine.InstanceGroupsService
+	name    string
+	URL     string
+	caller  *api.Caller
 }
 
-func newEnsured(ctx context.Context, logger logging.Logger, spec *model.UserSpec, svc *machine.InstanceGroupsService, name string, url string, caller *api.Caller) core.EnsuredGroup {
-	return &Ensured{ctx, logger.WithFields(map[string]interface{}{
+func newEnsured(ctx context.Context, monitor mntr.Monitor, spec *model.UserSpec, svc *machine.InstanceGroupsService, name string, url string, caller *api.Caller) core.EnsuredGroup {
+	return &Ensured{ctx, monitor.WithFields(map[string]interface{}{
 		"type": "instance group",
 		"name": name,
 	}), spec, svc, name, url, caller}
@@ -42,7 +42,7 @@ func (e *Ensured) EnsureMembers(machines []infra.Machine) error {
 	if err != nil {
 		return err
 	}
-	e.logger.WithFields(map[string]interface{}{
+	e.monitor.WithFields(map[string]interface{}{
 		"before": len(existing.Items),
 		"after":  len(machines),
 	}).Debug("Ensuring instances are attached")
@@ -76,7 +76,7 @@ remove:
 
 	if len(add) > 0 {
 		if _, err = e.caller.RunFirstSuccessful(
-			e.logger.WithFields(map[string]interface{}{
+			e.monitor.WithFields(map[string]interface{}{
 				"instances": fmt.Sprintf("%v", add),
 			}),
 			api.Add,
@@ -92,7 +92,7 @@ remove:
 
 	if len(remove) > 0 {
 		if _, err = e.caller.RunFirstSuccessful(
-			e.logger.WithFields(map[string]interface{}{
+			e.monitor.WithFields(map[string]interface{}{
 				"instances": fmt.Sprintf("%v", remove),
 			}),
 			api.Remove,
@@ -111,7 +111,7 @@ remove:
 func (e *Ensured) AddMember(comp infra.Machine) error {
 	instance := comp.(instance.Instance)
 	_, err := e.caller.RunFirstSuccessful(
-		e.logger.WithFields(map[string]interface{}{
+		e.monitor.WithFields(map[string]interface{}{
 			"instances": fmt.Sprintf("%v", []string{instance.ID()}),
 		}),
 		api.Add,

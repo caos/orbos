@@ -2,13 +2,13 @@ package kubernetes
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 )
 
 /*
 type pool struct {
-	logger  logging.Logger
+	monitor  mntr.Monitor
 	repoURL string
 	repoKey string
 	desired Pool
@@ -19,7 +19,7 @@ type pool struct {
 }
 
 func newPool(
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	repoURL string,
 	repoKey string,
 	desired Pool,
@@ -27,7 +27,7 @@ func newPool(
 	k8s *k8s.Client,
 	initialMachines []infra.Machine) *pool {
 	return &pool{
-		logger,
+		monitor,
 		repoURL,
 		repoKey,
 		desired,
@@ -46,7 +46,7 @@ func newPool(
 }
 */
 
-func cleanupMachines(logger logging.Logger, pool infra.Pool, k8s *Client) (err error) {
+func cleanupMachines(monitor mntr.Monitor, pool infra.Pool, k8s *Client) (err error) {
 
 	nodes, err := k8s.ListNodes()
 	if err != nil {
@@ -57,7 +57,7 @@ func cleanupMachines(logger logging.Logger, pool infra.Pool, k8s *Client) (err e
 	if err != nil {
 		return err
 	}
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"machines": len(machines),
 		"nodes":    len(nodes),
 	}).Debug("Aligning machines to nodes")

@@ -13,9 +13,7 @@ import (
 	"github.com/caos/orbiter/internal/operator"
 	"github.com/caos/orbiter/internal/watcher/cron"
 	"github.com/caos/orbiter/internal/watcher/immediate"
-	"github.com/caos/orbiter/logging/base"
-	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/format"
+	"github.com/caos/orbiter/mntr"
 
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
@@ -60,23 +58,23 @@ func main() {
 	if *repoURL == "" || *nodeAgentID == "" {
 		panic("flags --repourl and --id are required")
 	}
-
-	logger := logcontext.Add(base.New()).AddSideEffect(func(event bool, fields map[string]string) {
-		if _, err := os.Stdout.WriteString(format.LogRecord(fields)); err != nil {
-			panic(err)
-		}
-	})
-	if *verbose {
-		logger = logger.Verbose()
+	monitor := mntr.Monitor{
+		OnInfo:   mntr.LogMessage,
+		OnChange: mntr.LogMessage,
+		OnError:  mntr.LogError,
 	}
 
-	logger.WithFields(map[string]interface{}{
+	if *verbose {
+		monitor = monitor.Verbose()
+	}
+
+	monitor.WithFields(map[string]interface{}{
 		"version":     version,
 		"commit":      gitCommit,
 		"verbose":     *verbose,
 		"repourl":     *repoURL,
 		"nodeAgentID": *nodeAgentID,
-	}).Info(false, "Node Agent is starting")
+	}).Info("Node Agent is starting")
 
 	os, err := dep.GetOperatingSystem()
 	if err != nil {
@@ -92,33 +90,33 @@ func main() {
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
 
-	converter := conv.New(logger, os, fmt.Sprintf("%x", hashed[:]))
+	converter := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
 	before, err := converter.Init()
 	if err != nil {
 		panic(err)
 	}
 
 	ctx := context.Background()
-	gitClient := git.New(ctx, logger, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
+	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
 	if err := gitClient.Init(repoKey); err != nil {
 		panic(err)
 	}
 
 	op := operator.New(
 		ctx,
-		logger,
+		monitor,
 		nodeagent.Iterator(
-			logger,
+			monitor,
 			gitClient,
 			node.New(),
 			gitCommit,
 			*nodeAgentID,
-			firewall.Ensurer(logger, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
+			firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
 			converter,
 			before),
 		[]operator.Watcher{
-			immediate.New(logger),
-			cron.New(logger, "@every 10s"),
+			immediate.New(monitor),
+			cron.New(monitor, "@every 10s"),
 		})
 
 	if err := op.Initialize(); err != nil {

@@ -68,7 +68,7 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 	if !utf8.Valid(cipherText) {
 		return errors.New("Decryption failed")
 	}
-	//	s.logger.Info("Decoded and decrypted secret")
+	//	s.monitor.Info("Decoded and decrypted secret")
 	s.Value = string(cipherText)
 	return nil
 }

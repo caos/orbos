@@ -8,13 +8,12 @@ import (
 	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func ensureScale(
-	logger logging.Logger,
-	desired DesiredV0,
-	kubeconfig *orbiter.Secret,
+	monitor mntr.Monitor,
+	desired *DesiredV0,
 	psf orbiter.PushSecretsFunc,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
@@ -29,7 +28,7 @@ func ensureScale(
 	for _, w := range workerPools {
 		wCount += w.desired.Nodes
 	}
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"control_plane_nodes": controlplanePool.desired.Nodes,
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
@@ -61,10 +60,10 @@ func ensureScale(
 					return false, err
 				}
 				uninitializeMachine(id)
-				logger.WithFields(map[string]interface{}{
+				monitor.WithFields(map[string]interface{}{
 					"machine": id,
 					"tier":    machine.tier,
-				}).Info(true, "Machine removed")
+				}).Changed("Machine removed")
 			}
 		}
 		return delta <= 0, nil
@@ -100,7 +99,7 @@ func ensureScale(
 	}
 
 	if !upscalingDone {
-		logger.Info(false, "Upscaled machines are not ready yet")
+		monitor.Info("Upscaled machines are not ready yet")
 		return false, nil
 	}
 
@@ -113,16 +112,18 @@ nodes:
 
 		isJoinedControlPlane := machine.tier == Controlplane && machine.currentMachine.Joined
 
+		machineMonitor := monitor.WithFields(map[string]interface{}{
+			"machine": machine.infra.ID(),
+			"tier":    machine.tier,
+		})
+
 		if isJoinedControlPlane && machine.currentMachine.Online {
 			certsCP = machine.infra
 			continue nodes
 		}
 
 		if isJoinedControlPlane && !machine.currentMachine.Online {
-			logger.WithFields(map[string]interface{}{
-				"machine": machine.infra.ID(),
-				"tier":    machine.tier,
-			}).Info(false, "Awaiting controlplane to become ready")
+			machineMonitor.Info("Awaiting controlplane to become ready")
 			return false, nil
 		}
 
@@ -131,10 +132,7 @@ nodes:
 		}
 
 		if machine.currentMachine.Joined {
-			logger.WithFields(map[string]interface{}{
-				"machine": machine.infra.ID(),
-				"tier":    machine.tier,
-			}).Info(false, "Node is already joining")
+			machineMonitor.Info("Node is already joining")
 			continue nodes
 		}
 
@@ -147,7 +145,7 @@ nodes:
 	}
 
 	if joinCP == nil && len(joinWorkers) == 0 {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
 		}).Debug("Scale is ensured")
@@ -171,7 +169,7 @@ nodes:
 
 	if joinCP != nil {
 
-		if doKubeadmInit && (kubeconfig.Value != "" || !oneoff) {
+		if doKubeadmInit && (desired.Spec.Kubeconfig.Value != "" || !oneoff) {
 			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is passed")
 		}
 
@@ -181,14 +179,14 @@ nodes:
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
-			logger.Info(false, "Refreshed certs")
+			monitor.Info("Refreshed certs")
 		}
 
 		joinKubeconfig, err := join(
-			logger,
+			monitor,
 			joinCP,
 			certsCP,
-			desired,
+			*desired,
 			kubeAPI,
 			jointoken,
 			k8sVersion,
@@ -197,23 +195,23 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		kubeconfig.Value = *joinKubeconfig
-		return false, psf(logger.WithFields(map[string]interface{}{
+		desired.Spec.Kubeconfig.Value = *joinKubeconfig
+		return false, psf(monitor.WithFields(map[string]interface{}{
 			"type": "kubeconfig",
 		}))
 	}
 
 	if certsCP == nil {
-		logger.Info(false, "Awaiting controlplane initialization")
+		monitor.Info("Awaiting controlplane initialization")
 		return false, nil
 	}
 
 	for _, worker := range joinWorkers {
 		if _, err := join(
-			logger,
+			monitor,
 			worker,
 			certsCP,
-			desired,
+			*desired,
 			kubeAPI,
 			string(jointoken),
 			k8sVersion,

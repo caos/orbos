@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"
@@ -43,12 +43,12 @@ func (n *NotAvailableError) Error() string {
 }
 
 type Client struct {
-	logger logging.Logger
-	set    *kubernetes.Clientset
+	monitor mntr.Monitor
+	set     *kubernetes.Clientset
 }
 
-func NewK8sClient(logger logging.Logger, kubeconfig *string) *Client {
-	kc := &Client{logger: logger}
+func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
+	kc := &Client{monitor: monitor}
 	kc.Refresh(kubeconfig)
 	return kc
 }
@@ -267,16 +267,16 @@ func (c *Client) cordon(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
 	}()
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"machine": node.GetName(),
 	})
-	logger.Info(false, "Cordoning node")
+	monitor.Info("Cordoning node")
 
 	node.Spec.Unschedulable = true
 	if err := c.updateNode(node); err != nil {
 		return err
 	}
-	logger.Info(false, "Node cordoned")
+	monitor.Info("Node cordoned")
 	return nil
 }
 
@@ -284,17 +284,17 @@ func (c *Client) Uncordon(machine *Machine, node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "uncordoning node %s failed", node.GetName())
 	}()
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"machine": node.GetName(),
 	})
-	logger.Info(false, "Uncordoning node")
+	monitor.Info("Uncordoning node")
 
 	node.Spec.Unschedulable = false
 	if err := c.updateNode(node); err != nil {
 		return err
 	}
 	machine.Online = true
-	logger.Info(true, "Node uncordoned")
+	monitor.Changed("Node uncordoned")
 	return nil
 }
 
@@ -303,10 +303,10 @@ func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"machine": node.GetName(),
 	})
-	logger.Info(false, "Draining node")
+	monitor.Info("Draining node")
 
 	if err = c.cordon(node); err != nil {
 		return err
@@ -316,7 +316,7 @@ func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
 		return err
 	}
 	machine.Online = false
-	logger.Info(true, "Node drained")
+	monitor.Changed("Node drained")
 	return nil
 }
 
@@ -326,10 +326,10 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 		err = errors.Wrapf(err, "deleting node %s failed", name)
 	}()
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"machine": name,
 	})
-	logger.Info(false, "Ensuring node is deleted")
+	monitor.Info("Ensuring node is deleted")
 
 	api, apiErr := c.nodeApi()
 	apiErr = errors.Wrap(apiErr, "getting node api failed")
@@ -346,7 +346,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 		}
 	}
 
-	logger.Info(false, "Resetting kubeadm")
+	monitor.Info("Resetting kubeadm")
 	if _, resetErr := node.Execute(nil, nil, "sudo kubeadm reset --force"); resetErr != nil {
 		if !strings.Contains(resetErr.Error(), "command not found") {
 			return resetErr
@@ -356,13 +356,13 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	if apiErr != nil {
 		return nil
 	}
-	logger.Info(false, "Deleting node")
+	monitor.Info("Deleting node")
 	if err := api.Delete(name, &mach.DeleteOptions{}); err != nil {
 		return err
 	}
 	machine.Online = false
 	machine.Joined = false
-	logger.Info(true, "Node deleted")
+	monitor.Changed("Node deleted")
 	return nil
 }
 
@@ -372,11 +372,11 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "evicting pods from node %s failed", node.GetName())
 	}()
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"machine": node.GetName(),
 	})
 
-	logger.Info(false, "Evicting pods")
+	monitor.Info("Evicting pods")
 
 	selector := fmt.Sprintf("spec.nodeName=%s", node.Name)
 	podItems, err := c.set.CoreV1().Pods("").List(mach.ListOptions{
@@ -400,11 +400,11 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 		go func(pod core.Pod) {
 
 			var gracePeriodSeconds int64 = 60
-			logger := c.logger.WithFields(map[string]interface{}{
+			monitor := c.monitor.WithFields(map[string]interface{}{
 				"pod":       pod.GetName(),
 				"namespace": pod.GetNamespace(),
 			})
-			logger.Debug("Evicting pod")
+			monitor.Debug("Evicting pod")
 
 			watcher, goErr := c.set.CoreV1().Pods(pod.Namespace).Watch(mach.ListOptions{
 				FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name),
@@ -431,7 +431,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 				synchronizer.Done(errors.Wrapf(goErr, "evicting pod %s failed", pod.Name))
 				return
 			}
-			logger.Debug("Watching pod")
+			monitor.Debug("Watching pod")
 
 			timeout := time.After(time.Duration(safeUint64(pod.Spec.TerminationGracePeriodSeconds)) + 30)
 			for {
@@ -441,12 +441,12 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 					if !ok {
 						continue
 					}
-					logger = logger.WithFields(map[string]interface{}{
+					monitor = monitor.WithFields(map[string]interface{}{
 						"event": event.Type,
 					})
-					logger.Debug("Pod event happened")
+					monitor.Debug("Pod event happened")
 					if event.Type == watch.Deleted {
-						logger.WithFields(map[string]interface{}{
+						monitor.WithFields(map[string]interface{}{
 							"new_node": wPod.Spec.NodeName,
 						}).Debug("Pod evicted")
 						synchronizer.Done(nil)
@@ -465,7 +465,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 		return errors.Wrapf(synchronizer, "concurrently evicting pods from node %s failed", node.Name)
 	}
 
-	logger.Info(false, "Pods evicted")
+	monitor.Info("Pods evicted")
 	return nil
 }
 

@@ -8,70 +8,44 @@ import (
 
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
-	"github.com/caos/orbiter/logging/format"
+	"github.com/caos/orbiter/mntr"
 )
 
-type EnsureFunc func(psf PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error)
+type EnsureFunc func(psf PushSecretsFunc) error
 
-type commit struct {
-	isErr bool
-	msg   string
-	files []git.File
+type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
+
+type event struct {
+	commit string
+	files  []git.File
 }
 
-func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
+func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
 
 	return func() {
 
-		treeCurrent := &Tree{}
-		desiredNodeAgents := make(map[string]*common.NodeAgentSpec)
+		events := make([]*event, 0)
 
-		commits := make([]*commit, 0)
-
-		iterationLogger := logger.AddSideEffect(func(event bool, err error, fields map[string]string) {
-
-			if !event {
-				return
-			}
-
-			fields["event"] = "true"
-
-			commits = append(commits, &commit{
-				isErr: err != nil,
-				msg:   format.CommitRecord(fields),
-				files: []git.File{{
-					Path:    "caos-internal/orbiter/current.yml",
-					Content: common.MarshalYAML(treeCurrent),
-				}, {
-					Path: "caos-internal/orbiter/node-agents-desired.yml",
-					Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
-						Kind:    "nodeagent.caos.ch/NodeAgents",
-						Version: "v0",
-						Spec: common.NodeAgentsSpec{
-							Commit:     orbiterCommit,
-							NodeAgents: desiredNodeAgents,
-						},
-					}),
-				}},
-			})
-		})
-
-		treeDesired, err := parse(gitClient)
+		trees, err := parse(gitClient, "orbiter.yml")
 		if err != nil {
-			iterationLogger.Error(err)
+			monitor.Error(err)
 			return
 		}
 
-		ensure, _, _, migrate, err := adapt(iterationLogger, treeDesired, treeCurrent)
+		treeDesired := trees[0]
+		treeCurrent := &Tree{}
+
+		desiredNodeAgents := make(map[string]*common.NodeAgentSpec)
+
+		query, _, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
 		if err != nil {
-			iterationLogger.Error(err)
+			monitor.Error(err)
 			return
 		}
 
 		if migrate {
-			if err := pushOrbiterYML(iterationLogger, "Desired state migrated", gitClient, treeDesired); err != nil {
-				logger.Error(err)
+			if err := pushOrbiterYML(monitor, "Desired state migrated", gitClient, treeDesired); err != nil {
+				monitor.Error(err)
 				return
 			}
 		}
@@ -84,61 +58,79 @@ func Takeoff(ctx context.Context, logger logging.Logger, gitClient *git.Client, 
 			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
 		}
 
-		if err := ensure(pushSecretsFunc(gitClient, treeDesired), currentNodeAgents.Current, desiredNodeAgents); err != nil {
-			iterationLogger.Error(err)
+		handleAdapterError := func(err error) {
+			monitor.Error(err)
+			//			monitor.Error(gitClient.Clone())
+			if commitErr := gitClient.Commit(mntr.CommitRecord([]*mntr.Field{{Pos: 0, Key: "err", Value: err.Error()}})); commitErr != nil {
+				panic(commitErr)
+			}
+			monitor.Error(gitClient.Push())
 		}
 
-		if err := gitClient.Clone(); err != nil {
-			logger.Error(err)
+		ensure, err := query(currentNodeAgents.Current, desiredNodeAgents, nil)
+		if err != nil {
+			handleAdapterError(err)
+			return
 		}
 
-		for _, commit := range commits {
+		//		if err := gitClient.Clone(); err != nil {
+		//			monitor.Error(err)
+		//			return
+		//		}
 
-			changed, err := gitClient.Commit(commit.msg, commit.files...)
+		currentFiles := func() []git.File {
+			return []git.File{{
+				Path:    "caos-internal/orbiter/current.yml",
+				Content: common.MarshalYAML(treeCurrent),
+			}, {
+				Path: "caos-internal/orbiter/node-agents-desired.yml",
+				Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
+					Kind:    "nodeagent.caos.ch/NodeAgents",
+					Version: "v0",
+					Spec: common.NodeAgentsSpec{
+						Commit:     orbiterCommit,
+						NodeAgents: desiredNodeAgents,
+					},
+				}),
+			}}
+		}
+
+		reconciledCurrentStateMsg := "Current state reconciled"
+		if _, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), currentFiles()...); err != nil {
+			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+		}
+
+		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			events = append(events, &event{
+				commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
+				files:  currentFiles(),
+			})
+		}, monitor.OnChange)
+
+		if err := ensure(pushSecretsFunc(gitClient, treeDesired)); err != nil {
+			handleAdapterError(err)
+			return
+		}
+
+		//		if err := gitClient.Clone(); err != nil {
+		//			monitor.Error(err)
+		//			return
+		//		}
+
+		for _, event := range events {
+
+			changed, err := gitClient.StageAndCommit(event.commit, event.files...)
 			if err != nil {
-				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
+				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), event.commit))
 			}
 
-			if !changed && !commit.isErr {
-				panic(fmt.Sprint("Event has no effect:", commit.msg))
+			if !changed {
+				panic(fmt.Sprint("Event has no effect:", event.commit))
 			}
 		}
 
-		outsideChangeMessage := format.CommitRecord(map[string]string{
-			"msg": "Current state changed without orbiter interaction",
-		})
-		changedOutside, err := gitClient.Commit(outsideChangeMessage, git.File{
-			Path:    "caos-internal/orbiter/current.yml",
-			Content: common.MarshalYAML(treeCurrent),
-		})
-
-		if err != nil {
-			panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), outsideChangeMessage))
-		}
-
-		desiredOutsideMessage := format.CommitRecord(map[string]string{
-			"msg": "Update desired node agents",
-		})
-		desiredNodeAgentsUpdated, err := gitClient.Commit(desiredOutsideMessage, git.File{
-			Path: "caos-internal/orbiter/node-agents-desired.yml",
-			Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
-				Kind:    "nodeagent.caos.ch/NodeAgents",
-				Version: "v0",
-				Spec: common.NodeAgentsSpec{
-					Commit:     orbiterCommit,
-					NodeAgents: desiredNodeAgents,
-				},
-			}),
-		})
-
-		if err != nil {
-			panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), outsideChangeMessage))
-		}
-
-		if len(commits) > 0 || changedOutside || desiredNodeAgentsUpdated {
-			if err := gitClient.Push(); err != nil {
-				logger.Error(err)
-			}
+		if len(events) > 0 {
+			monitor.Error(gitClient.Push())
 		}
 	}
 }

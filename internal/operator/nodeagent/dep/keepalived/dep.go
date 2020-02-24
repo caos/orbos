@@ -15,7 +15,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/selinux"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Installer interface {
@@ -23,15 +23,15 @@ type Installer interface {
 	nodeagent.Installer
 }
 type keepaliveDDep struct {
-	logger   logging.Logger
+	monitor  mntr.Monitor
 	manager  *dep.PackageManager
 	systemd  *dep.SystemD
 	peerAuth string
 	os       dep.OperatingSystem
 }
 
-func New(logger logging.Logger, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem, cipher string) Installer {
-	return &keepaliveDDep{logger, manager, systemd, cipher[:8], os}
+func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem, cipher string) Installer {
+	return &keepaliveDDep{monitor, manager, systemd, cipher[:8], os}
 }
 
 func (keepaliveDDep) isKeepalived() {}
@@ -103,7 +103,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) error {
 
-	if err := selinux.EnsurePermissive(s.logger, s.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(s.monitor, s.os, remove); err != nil {
 		return err
 	}
 
@@ -166,7 +166,7 @@ func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {
 	cmd.Stdout = &outBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
-	k.logger.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
+	k.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
 
 	if err := cmd.Run(); err != nil {
 		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())

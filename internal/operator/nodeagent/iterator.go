@@ -10,20 +10,19 @@ import (
 
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
-	"github.com/caos/orbiter/logging/format"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Rebooter interface {
 	Reboot() error
 }
 
-type commit struct {
-	msg     string
-	current common.NodeAgentCurrent
+type event struct {
+	commit  string
+	current *common.NodeAgentCurrent
 }
 
-func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
+func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
 
 	return func() {
 		if err := before(); err != nil {
@@ -31,7 +30,7 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, n
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			logger.Error(err)
+			monitor.Error(err)
 			return
 		}
 
@@ -46,55 +45,42 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, n
 		}
 
 		if desired.Spec.NodeAgents == nil {
-			logger.Error(errors.New("No desired node agents found"))
+			monitor.Error(errors.New("No desired node agents found"))
 			return
 		}
 
 		naDesired, ok := desired.Spec.NodeAgents[id]
 		if !ok {
-			logger.Error(fmt.Errorf("No desired state for node agent with id %s found", id))
+			monitor.Error(fmt.Errorf("No desired state for node agent with id %s found", id))
 			return
 		}
 
 		if desired.Spec.Commit != nodeAgentCommit {
-			logger.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"desired": desired.Spec.Commit,
 				"current": nodeAgentCommit,
-			}).Info(false, "Node Agent is on the wrong commit")
+			}).Info("Node Agent is on the wrong commit")
 			return
 		}
 
 		curr := &common.NodeAgentCurrent{}
-		commits := make([]*commit, 0)
-		if err := ensure(logger.AddSideEffect(func(event bool, fields map[string]string) {
 
-			if !event {
-				return
+		ensure, err := query(monitor, nodeAgentCommit, firewallEnsurer, conv, *naDesired, curr)
+		if err != nil {
+			monitor.Error(err)
+			return
+		}
+
+		readCurrent := func() common.NodeAgentsCurrentKind {
+			if err := gitClient.Clone(); err != nil {
+				panic(err)
 			}
 
-			fields["event"] = "true"
+			currentNodeagents, err := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
+			if err != nil {
+				panic(err)
+			}
 
-			snap := *curr
-			commits = append(commits, &commit{
-				msg:     format.CommitRecord(fields),
-				current: snap,
-			})
-		}), nodeAgentCommit, firewallEnsurer, conv, *naDesired, curr); err != nil {
-			logger.Error(err)
-			return
-		}
-
-		if err := gitClient.Clone(); err != nil {
-			logger.Error(err)
-			return
-		}
-
-		currentNodeagents, err := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
-		if err != nil {
-			panic(err)
-		}
-
-		doCommit := func(commit commit) bool {
 			current := common.NodeAgentsCurrentKind{}
 			if err := yaml.Unmarshal(currentNodeagents, &current); err != nil {
 				panic(err)
@@ -104,32 +90,52 @@ func Iterator(logger logging.Logger, gitClient *git.Client, rebooter Rebooter, n
 			if current.Current == nil {
 				current.Current = make(map[string]*common.NodeAgentCurrent)
 			}
-			current.Current[id] = &commit.current
+			return current
+		}
 
-			changed, err := gitClient.Commit(commit.msg, git.File{
+		current := readCurrent()
+		current.Current[id] = curr
+
+		reconciledCurrentStateMsg := "Current state reconciled"
+		reconciledCurrent, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), git.File{
+			Path:    "caos-internal/orbiter/node-agents-current.yml",
+			Content: common.MarshalYAML(current),
+		})
+		if err != nil {
+			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+		}
+
+		events := make([]*event, 0)
+		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			events = append(events, &event{
+				commit:  mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
+				current: &*curr,
+			})
+		}, monitor.OnChange)
+
+		if err := ensure(); err != nil {
+			monitor.Error(err)
+			return
+		}
+
+		current = readCurrent()
+
+		for _, event := range events {
+			current.Current[id] = event.current
+			changed, err := gitClient.StageAndCommit(event.commit, git.File{
 				Path:    "caos-internal/orbiter/node-agents-current.yml",
 				Content: common.MarshalYAML(current),
 			})
-
 			if err != nil {
-				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), commit.msg))
+				panic(fmt.Errorf("Commiting event \"%s\" failed: %s", event.commit, err.Error()))
 			}
-			return changed
-		}
-
-		for _, commit := range commits {
-			if !doCommit(*commit) {
-				panic(fmt.Sprint("Event has no effect:", commit.msg))
+			if !changed {
+				panic(fmt.Sprint("Event has no effect:", event.commit))
 			}
 		}
 
-		if len(commits) > 0 || doCommit(commit{
-			msg:     "Current state changed without node agent interaction",
-			current: *curr,
-		}) {
-			if err := gitClient.Push(); err != nil {
-				logger.Error(err)
-			}
+		if len(events) > 0 || reconciledCurrent {
+			monitor.Error(gitClient.Push())
 		}
 	}
 }

@@ -8,7 +8,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type initializedMachines []*initializedMachine
@@ -18,7 +18,7 @@ func (c initializedMachines) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 func (c initializedMachines) Less(i, j int) bool { return c[i].infra.ID() < c[j].infra.ID() }
 
 func ensureSoftware(
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	target KubernetesVersion,
 	k8sClient *Client,
 	controlplane []*initializedMachine,
@@ -39,7 +39,7 @@ func ensureSoftware(
 
 			nodeinfoKubelet := node.Status.NodeInfo.KubeletVersion
 
-			logger.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"machine": id,
 				"kubelet": nodeinfoKubelet,
 			}).Debug("Found kubelet version from node info")
@@ -81,7 +81,7 @@ func ensureSoftware(
 
 		if overallLowKubelet == target || overallLowKubelet == Unknown {
 			target := target.DefineSoftware()
-			logger.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"from": overallLowKubelet,
 				"to":   target,
 			}).Debug("Cluster is up to date")
@@ -99,7 +99,7 @@ func ensureSoftware(
 
 		overallLowKubeletSoftware := overallLowKubelet.DefineSoftware()
 		if targetMinor-overallLowKubeletMinor < 2 {
-			logger.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"from": overallLowKubelet,
 				"to":   target,
 			}).Debug("Desired version can be reached directly")
@@ -107,7 +107,7 @@ func ensureSoftware(
 		}
 
 		nextHighestMinor := overallLowKubelet.NextHighestMinor()
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"from":         overallLowKubelet,
 			"fromMinor":    overallLowKubeletMinor,
 			"intermediate": nextHighestMinor,
@@ -123,12 +123,12 @@ func ensureSoftware(
 		to common.Software) (func() error, error) {
 
 		id := machine.infra.ID()
-		machineLogger := logger.WithFields(map[string]interface{}{
+		machinemonitor := monitor.WithFields(map[string]interface{}{
 			"machine": id,
 		})
 
 		awaitNodeAgent := func() error {
-			machineLogger.Info(false, "Awaiting node agent")
+			machinemonitor.Info("Awaiting node agent")
 			return nil
 		}
 
@@ -147,10 +147,10 @@ func ensureSoftware(
 
 				upgradeAction := "node"
 				if isFirstControlplane {
-					machineLogger.Info(false, "Migrating first controlplane node")
+					machinemonitor.Info("Migrating first controlplane node")
 					upgradeAction = fmt.Sprintf("apply %s --yes", to.Kubelet.Version)
 				} else {
-					machineLogger.Info(false, "Migrating node")
+					machinemonitor.Info("Migrating node")
 				}
 
 				_, err = machine.infra.Execute(nil, nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
@@ -160,10 +160,10 @@ func ensureSoftware(
 
 				machine.desiredNodeagent.Software.Merge(to)
 
-				machineLogger.WithFields(map[string]interface{}{
+				machinemonitor.WithFields(map[string]interface{}{
 					"from": machine.currentNodeagent.Software.Kubelet.Version,
 					"to":   to.Kubelet.Version,
-				}).Info(true, "Node migrated")
+				}).Changed("Node migrated")
 
 				return nil
 			}
@@ -189,10 +189,10 @@ func ensureSoftware(
 			}
 			return func() error {
 				machine.desiredNodeagent.Software.Merge(to)
-				machineLogger.WithFields(map[string]interface{}{
+				machinemonitor.WithFields(map[string]interface{}{
 					"current": KubernetesSoftware(machine.currentNodeagent.Software),
 					"desired": to,
-				}).Info(true, "Join software desired")
+				}).Changed("Join software desired")
 				return nil
 			}, nil
 		}
@@ -200,10 +200,10 @@ func ensureSoftware(
 		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
 			return func() error {
 				machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
-				machineLogger.WithFields(map[string]interface{}{
+				machinemonitor.WithFields(map[string]interface{}{
 					"current": machine.currentNodeagent.Software.Kubeadm.Version,
 					"desired": to.Kubeadm.Version,
-				}).Info(true, "Kubeadm desired")
+				}).Changed("Kubeadm desired")
 				return nil
 			}, nil
 		}
@@ -240,7 +240,7 @@ func ensureSoftware(
 		return false, err
 	}
 
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"currentSoftware":   from,
 		"currentKubernetes": from.Kubelet,
 		"desiredSofware":    to,

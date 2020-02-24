@@ -106,10 +106,6 @@ func packageEquals(this, that Package) bool {
 		configEquals(this.Config, that.Config)
 }
 
-func contains(this, that Package) bool {
-	return that.Version == "" && that.Config == nil || packageEquals(this, that)
-}
-
 func (p Package) Equals(other Package) bool {
 	return packageEquals(p, other)
 }
@@ -123,6 +119,22 @@ func (this *Software) Contains(that Software) bool {
 		contains(this.KeepaliveD, that.KeepaliveD) &&
 		contains(this.Nginx, that.Nginx) &&
 		contains(this.Hostname, that.Hostname)
+}
+
+func contains(this, that Package) bool {
+	return that.Version == "" && that.Config == nil || packageEquals(this, that)
+}
+
+func (this *Software) Defines(that Software) bool {
+	zeroPkg := Package{}
+	return that.Swap.Equals(zeroPkg) || !this.Swap.Equals(zeroPkg) &&
+		that.Kubelet.Equals(zeroPkg) || !this.Kubelet.Equals(zeroPkg) &&
+		that.Kubeadm.Equals(zeroPkg) || !this.Kubeadm.Equals(zeroPkg) &&
+		that.Kubectl.Equals(zeroPkg) || !this.Kubectl.Equals(zeroPkg) &&
+		that.Containerruntime.Equals(zeroPkg) || !this.Containerruntime.Equals(zeroPkg) &&
+		that.KeepaliveD.Equals(zeroPkg) || !this.KeepaliveD.Equals(zeroPkg) &&
+		that.Nginx.Equals(zeroPkg) || !this.Nginx.Equals(zeroPkg) &&
+		that.Hostname.Equals(zeroPkg) || !this.Hostname.Equals(zeroPkg)
 }
 
 type Firewall map[string]Allowed

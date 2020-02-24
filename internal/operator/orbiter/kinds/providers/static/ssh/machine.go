@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 	sshlib "golang.org/x/crypto/ssh"
 )
@@ -20,16 +20,16 @@ type ProvidedMachine interface {
 }
 
 type machine struct {
-	logger     logging.Logger
+	monitor    mntr.Monitor
 	machine    ProvidedMachine
 	remoteUser string
 	sshCfg     *sshlib.ClientConfig
 }
 
-func NewMachine(logger logging.Logger, comp ProvidedMachine, remoteUser string) infra.Machine {
+func NewMachine(monitor mntr.Monitor, comp ProvidedMachine, remoteUser string) infra.Machine {
 	return &machine{
 		remoteUser: remoteUser,
-		logger: logger.WithFields(map[string]interface{}{
+		monitor: monitor.WithFields(map[string]interface{}{
 			"machine": comp.ID(),
 		}),
 		machine: comp,
@@ -50,13 +50,13 @@ func (c *machine) Remove() error {
 
 func (c *machine) Execute(env map[string]string, stdin io.Reader, cmd string) (stdout []byte, err error) {
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"env":     env,
 		"command": cmd,
 	})
-	logger.Debug("Trying to execute with ssh")
+	monitor.Debug("Trying to execute with ssh")
 	defer func() {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"error":  err,
 			"stdout": string(stdout),
 		}).Debug("Done executing command with ssh")
@@ -91,13 +91,13 @@ func (c *machine) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 
 func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) (err error) {
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"path":        path,
 		"permissions": permissions,
 	})
-	logger.Debug("Trying to write file with ssh")
+	monitor.Debug("Trying to write file with ssh")
 	defer func() {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"error": err,
 		}).Debug("Done writing file with ssh")
 	}()
@@ -113,7 +113,7 @@ func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) (er
 	}
 	var stderr bytes.Buffer
 	sess.Stderr = &stderr
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		sess.Stdout = os.Stdout
 	}
 	sess.Stdin = data
@@ -128,12 +128,12 @@ func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) (er
 
 func (c *machine) ReadFile(path string, data io.Writer) (err error) {
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"path": path,
 	})
-	logger.Debug("Trying to read file with ssh")
+	monitor.Debug("Trying to read file with ssh")
 	defer func() {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"error": err,
 		}).Debug("Done reading file with ssh")
 	}()
@@ -156,7 +156,7 @@ func (c *machine) ReadFile(path string, data io.Writer) (err error) {
 
 func (c *machine) open() (sess *sshlib.Session, close func() error, err error) {
 
-	c.logger.Debug("Trying to open an ssh connection")
+	c.monitor.Debug("Trying to open an ssh connection")
 	close = func() error { return nil }
 
 	if c.sshCfg == nil {

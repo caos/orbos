@@ -44,9 +44,9 @@ func TestAddMachineWorks(t *testing.T) {
 		Cfg: assembly.Config(),
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
+	monitor := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
 
-	svc := instancegroup.New(assembly.AppContext(), logger, assembly.Config(), caller)
+	svc := instancegroup.New(assembly.AppContext(), monitor, assembly.Config(), caller)
 	desired, err := svc.Desire(&instancegroup.Config{
 		PoolName: testPool,
 		Ports:    []int64{80},
@@ -60,7 +60,7 @@ func TestAddMachineWorks(t *testing.T) {
 		panic(err)
 	}
 
-	iSvc := instance.NewInstanceService(logger, assembly, caller)
+	iSvc := instance.NewInstanceService(monitor, assembly, caller)
 	inst, err := iSvc.Create(testPool)
 	if err != nil {
 		panic(err)

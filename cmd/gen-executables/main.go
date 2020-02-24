@@ -51,11 +51,11 @@ func main() {
 
 	orbctlMain := path("orbctl")
 	orbctls := executables.Build(*debug, *commit, *version,
-		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
+		//		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
+		//		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
-		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
+		//		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
+		//		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
 	)
 
 	var hasErr bool

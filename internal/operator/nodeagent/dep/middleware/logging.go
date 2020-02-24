@@ -5,18 +5,18 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type loggedDep struct {
-	logger logging.Logger
+	monitor mntr.Monitor
 	*wrapped
 	unwrapped nodeagent.Installer
 }
 
-func AddLogging(logger logging.Logger, original nodeagent.Installer) Installer {
+func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 	return &loggedDep{
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"dependency": original,
 		}),
 		&wrapped{original},
@@ -27,7 +27,7 @@ func AddLogging(logger logging.Logger, original nodeagent.Installer) Installer {
 func (l *loggedDep) Current() (common.Package, error) {
 	current, err := l.unwrapped.Current()
 	if err == nil {
-		l.logger.WithFields(map[string]interface{}{
+		l.monitor.WithFields(map[string]interface{}{
 			"version": current,
 		}).Debug("Queried current dependency version")
 	}

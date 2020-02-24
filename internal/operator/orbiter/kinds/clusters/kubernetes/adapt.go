@@ -7,7 +7,7 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func AdaptFunc(
@@ -16,11 +16,10 @@ func AdaptFunc(
 	id string,
 	oneoff bool,
 	deployOrbiterAndBoom bool,
-	ensureProviders func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (map[string]interface{}, error),
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
 
 	var deployErrors int
-	return func(logger logging.Logger, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -46,29 +45,29 @@ func AdaptFunc(
 			desiredKind.Spec.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
 		}
 
-		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
-			logger = logger.Verbose()
+		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
+			monitor = monitor.Verbose()
 		}
 
 		var kc *string
 		if desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
-		k8sClient := NewK8sClient(logger, kc)
+		k8sClient := NewK8sClient(monitor, kc)
 
 		if k8sClient.Available() && deployOrbiterAndBoom {
-			if err := ensureArtifacts(logger, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
+			if err := ensureArtifacts(monitor, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
 				deployErrors++
-				logger.WithFields(map[string]interface{}{
+				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
 					"err":   err.Error(),
-				}).Info(false, "Deploying Orbiter failed, awaiting next iteration")
+				}).Info("Deploying Orbiter failed, awaiting next iteration")
 				if deployErrors > 50 {
 					panic(err)
 				}
 			} else {
 				if oneoff {
-					logger.Info(false, "Deployed Orbiter takes over control")
+					monitor.Info("Deployed Orbiter takes over control")
 					os.Exit(0)
 				}
 				deployErrors = 0
@@ -84,28 +83,19 @@ func AdaptFunc(
 			Current: current,
 		}
 
-		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
-				defer func() {
-					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
-				}()
-
-				providers, err := ensureProviders(psf, nodeAgentsCurrent, nodeAgentsDesired)
-				if err != nil {
-					return err
-				}
-				return ensure(
-					logger,
-					*desiredKind,
+		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
+				ensureFunc, err := query(monitor,
+					desiredKind,
 					current,
 					providers,
 					nodeAgentsCurrent,
 					nodeAgentsDesired,
-					psf,
-					desiredKind.Spec.Kubeconfig,
+					k8sClient,
 					orb.URL,
 					orb.Repokey,
 					orbiterCommit,
 					oneoff)
+				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 			}, func() error {
 				defer func() {
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
@@ -118,7 +108,7 @@ func AdaptFunc(
 
 				desiredKind.Spec.Kubeconfig = nil
 
-				return destroy(logger, providers, k8sClient)
+				return destroy(monitor, providers, k8sClient)
 			}, map[string]*orbiter.Secret{
 				"kubeconfig": desiredKind.Spec.Kubeconfig,
 			}, migrate, nil

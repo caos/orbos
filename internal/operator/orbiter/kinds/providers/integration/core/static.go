@@ -35,8 +35,8 @@ func (s *staticProvider) Assemble(operatorID string, configuredPools []string, c
 		return nil, nil, nil, err
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
-	machinesSvc := static.NewMachinesService(logger, assembly)
+	monitor := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
+	machinesSvc := static.NewMachinesService(monitor, assembly)
 
-	return static.New(logger, assembly), machinesSvc, assembly, nil
+	return static.New(monitor, assembly), machinesSvc, assembly, nil
 }

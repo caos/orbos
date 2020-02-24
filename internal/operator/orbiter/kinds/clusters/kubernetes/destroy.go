@@ -2,10 +2,10 @@ package kubernetes
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func destroy(logger logging.Logger, providerCurrents map[string]interface{}, k8sClient *Client) error {
+func destroy(monitor mntr.Monitor, providerCurrents map[string]interface{}, k8sClient *Client) error {
 
 	if k8sClient.Available() {
 		k8sClient.DeleteDeployment("caos-system", "orbiter")

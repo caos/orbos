@@ -4,12 +4,14 @@ import (
 	"fmt"
 
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func firewallFuncs(logger logging.Logger, desired DesiredV0, kubeAPIPort uint16) (desire func(machine initializedMachine), ensure func(machines []*initializedMachine) bool) {
+func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (desire func(machine *initializedMachine)) {
 
-	desireFirewall := func(machine initializedMachine) common.Firewall {
+	return func(machine *initializedMachine) {
+
+		monitor = monitor.WithField("machine", machine.infra.ID())
 
 		fw := map[string]common.Allowed{
 			"kubelet": common.Allowed{
@@ -59,23 +61,13 @@ func firewallFuncs(logger logging.Logger, desired DesiredV0, kubeAPIPort uint16)
 			machine.desiredNodeagent.Firewall = &common.Firewall{}
 		}
 		firewall := common.Firewall(fw)
-		machine.desiredNodeagent.Firewall.Merge(firewall)
-		return firewall
-	}
-
-	return func(machine initializedMachine) {
-			desireFirewall(machine)
-		}, func(machines []*initializedMachine) bool {
-			ready := true
-			for _, machine := range machines {
-
-				firewall := desireFirewall(*machine)
-				if machine.currentNodeagent == nil {
-					ready = false
-				} else if ready {
-					ready = machine.currentNodeagent.Open.Contains(firewall)
-				}
-			}
-			return ready
+		if machine.desiredNodeagent.Firewall.Contains(firewall) {
+			machine.currentMachine.FirewallIsReady = true
+			monitor.Debug("Firewall is ready")
+			return
 		}
+		machine.currentMachine.FirewallIsReady = false
+		monitor.Debug("Firewall desired")
+		machine.desiredNodeagent.Firewall.Merge(firewall)
+	}
 }

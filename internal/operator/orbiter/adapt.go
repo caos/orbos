@@ -3,29 +3,32 @@ package orbiter
 import (
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
-	"github.com/caos/orbiter/logging/format"
+	"github.com/caos/orbiter/mntr"
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(logger logging.Logger, desired *Tree, current *Tree) (EnsureFunc, DestroyFunc, map[string]*Secret, bool, error)
+type AdaptFunc func(monitor mntr.Monitor, desired *Tree, current *Tree) (QueryFunc, DestroyFunc, map[string]*Secret, bool, error)
 
-func parse(gitClient *git.Client) (desired *Tree, err error) {
+func parse(gitClient *git.Client, files ...string) (trees []*Tree, err error) {
 
 	if err := gitClient.Clone(); err != nil {
 		panic(err)
 	}
 
-	rawDesired, err := gitClient.Read("orbiter.yml")
-	if err != nil {
-		return nil, err
-	}
-	treeDesired := &Tree{}
-	if err := yaml.Unmarshal([]byte(rawDesired), treeDesired); err != nil {
-		return nil, err
+	for _, file := range files {
+		raw, err := gitClient.Read(file)
+		if err != nil {
+			return nil, err
+		}
+
+		tree := &Tree{}
+		if err := yaml.Unmarshal([]byte(raw), tree); err != nil {
+			return nil, err
+		}
+		trees = append(trees, tree)
 	}
 
-	return treeDesired, nil
+	return trees, nil
 }
 
 type Tree struct {
@@ -49,21 +52,23 @@ func (c *Tree) MarshalYAML() (interface{}, error) {
 	return c.Parsed, nil
 }
 
-type PushSecretsFunc func(logging.Logger) error
+type PushSecretsFunc func(monitor mntr.Monitor) error
 
 func pushSecretsFunc(gitClient *git.Client, desired *Tree) PushSecretsFunc {
-	return func(logger logging.Logger) error {
-		logger.Info(false, "Writing secret")
-		return pushOrbiterYML(logger, "Secret written", gitClient, desired)
+	return func(monitor mntr.Monitor) error {
+		monitor.Info("Writing secret")
+		return pushOrbiterYML(monitor, "Secret written", gitClient, desired)
 	}
 }
 
-func pushOrbiterYML(logger logging.Logger, msg string, gitClient *git.Client, desired *Tree) (err error) {
-	logger.AddSideEffect(func(_ bool, _ error, fields map[string]string) {
-		err = gitClient.UpdateRemote(format.CommitRecord(fields), git.File{
+func pushOrbiterYML(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *Tree) (err error) {
+	monitor.OnChange = func(_ string, fields map[string]string) {
+		err = gitClient.UpdateRemote(mntr.SprintCommit(msg, fields), git.File{
 			Path:    "orbiter.yml",
 			Content: common.MarshalYAML(desired),
 		})
-	}).Info(false, msg)
+		mntr.LogMessage(msg, fields)
+	}
+	monitor.Changed(msg)
 	return err
 }

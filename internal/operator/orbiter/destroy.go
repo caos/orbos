@@ -3,22 +3,21 @@ package orbiter
 import (
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
-	"github.com/caos/orbiter/logging/format"
+	"github.com/caos/orbiter/mntr"
 )
 
 type DestroyFunc func() error
 
-func Destroy(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc) error {
+func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error {
 
-	treeDesired, err := parse(gitClient)
+	treeDesired, err := parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return err
 	}
 
 	treeCurrent := &Tree{}
 
-	_, destroy, _, _, err := adapt(logger, treeDesired, treeCurrent)
+	_, destroy, _, _, err := adapt(monitor, treeDesired[0], treeCurrent)
 	if err != nil {
 		return err
 	}
@@ -27,8 +26,8 @@ func Destroy(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc) erro
 		return err
 	}
 
-	logger.AddSideEffect(func(event bool, err error, fields map[string]string) {
-		if err := gitClient.UpdateRemote(format.CommitRecord(fields), git.File{
+	monitor.OnChange = func(evt string, fields map[string]string) {
+		if err := gitClient.UpdateRemote(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: evt}}), git.File{
 			Path:    "caos-internal/orbiter/current.yml",
 			Content: []byte(""),
 		}, git.File{
@@ -43,6 +42,7 @@ func Destroy(logger logging.Logger, gitClient *git.Client, adapt AdaptFunc) erro
 		}); err != nil {
 			panic(err)
 		}
-	}).Info(true, "Orb destroyed")
+	}
+	monitor.Changed("Orb destroyed")
 	return nil
 }

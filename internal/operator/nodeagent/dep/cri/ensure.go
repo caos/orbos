@@ -24,7 +24,7 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		"docker-logrotate",
 		"docker-engine")
 	cmd.Stderr = &errBuf
-	if c.logger.IsVerbose() {
+	if c.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -90,14 +90,14 @@ func (c *criDep) ensureUbuntu(runtime string, version string) error {
 	}
 	errBuf.Reset()
 
-	if c.logger.IsVerbose() {
+	if c.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 	}
 
 	var err error
 	for err == nil {
 		versionLine, err = buf.ReadString('\n')
-		if c.logger.IsVerbose() {
+		if c.monitor.IsVerbose() {
 			fmt.Println(versionLine)
 		}
 		if strings.Contains(versionLine, version) {

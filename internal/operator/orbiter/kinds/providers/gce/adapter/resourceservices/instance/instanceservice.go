@@ -14,14 +14,14 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
 	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"google.golang.org/api/machine/v1"
 )
 
 type instanceService struct {
 	operatorID          string
 	spec                *model.UserSpec
-	logger              logging.Logger
+	monitor             mntr.Monitor
 	ctx                 context.Context
 	svc                 *machine.InstancesService
 	caller              *api.Caller
@@ -33,7 +33,7 @@ type instanceService struct {
 
 func NewInstanceService(
 	ctx context.Context,
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	id string,
 	svc *machine.Service,
 	spec *model.UserSpec,
@@ -45,7 +45,7 @@ func NewInstanceService(
 	return &instanceService{
 		id,
 		spec,
-		logger.WithFields(map[string]interface{}{"type": "instance"}),
+		monitor.WithFields(map[string]interface{}{"type": "instance"}),
 		ctx, machine.NewInstancesService(svc),
 		caller,
 		secrets,
@@ -106,7 +106,7 @@ func (i *instanceService) List(poolName string, active bool) (infra.Machines, er
 			connect = inst.NetworkInterfaces[0].AccessConfigs[0].NatIP
 		}
 
-		instance := newInstance(i.logger, i.caller, i.spec, i.svc, inst.Name, inst.SelfLink, i.spec.RemoteUser, connect)
+		instance := newInstance(i.monitor, i.caller, i.spec, i.svc, inst.Name, inst.SelfLink, i.spec.RemoteUser, connect)
 		if err := instance.UseKeys(i.secrets, i.dynamicKeyProperty); err != nil && errors.Cause(err) != secret.ErrNotExist {
 			return nil, err
 		}
@@ -129,7 +129,7 @@ func (i *instanceService) Create(poolName string) (infra.Machine, error) {
 	sshKey := fmt.Sprintf("%s:%s", i.spec.RemoteUser, string(i.newMachinePublicKey))
 
 	name := fmt.Sprintf("%s-%s-%s", i.operatorID, poolName, helpers.RandomStringRunes(30, []rune("abcdefghijklmnopqrstuvwxyz0123456789")))[:63]
-	logger := i.logger.WithFields(map[string]interface{}{"name": name})
+	monitor := i.monitor.WithFields(map[string]interface{}{"name": name})
 
 	// Calculate minimum cpu and memory according to the gce specs:
 	// https://cloud.google.com/machine/docs/instances/creating-instance-with-custom-machine-type#specifications
@@ -154,7 +154,7 @@ func (i *instanceService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	op, err := i.caller.RunFirstSuccessful(
-		logger,
+		monitor,
 		api.Insert,
 		i.svc.Insert(i.spec.Project, i.spec.Zone, &machine.Instance{
 			Name:        name,
@@ -206,6 +206,6 @@ func (i *instanceService) Create(poolName string) (infra.Machine, error) {
 		connect = instance.NetworkInterfaces[0].AccessConfigs[0].NatIP
 	}
 
-	inst := newInstance(i.logger, i.caller, i.spec, i.svc, name, op.TargetLink, i.spec.RemoteUser, connect)
+	inst := newInstance(i.monitor, i.caller, i.spec, i.svc, name, op.TargetLink, i.spec.RemoteUser, connect)
 	return inst, inst.UseKeys(i.secrets, i.dynamicKeyProperty)
 }

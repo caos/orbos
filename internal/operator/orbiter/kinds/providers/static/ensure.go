@@ -12,65 +12,40 @@ import (
 	//	externallbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/ssh"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func ensure(
+func query(
 	desired *DesiredV0,
 	current *Current,
 
-	psf orbiter.PushSecretsFunc,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	lb interface{},
 	masterkey string,
 
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	id string,
-) (err error) {
-
-	if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
-		(desired.Spec.Keys.MaintenanceKeyPublic == nil || desired.Spec.Keys.MaintenanceKeyPublic.Value == "") {
-		priv, pub, err := ssh.Generate()
-		if err != nil {
-			return err
-		}
-		desired.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
-		desired.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
-		if err := psf(logger.WithFields(map[string]interface{}{"type": "maintenancekey"})); err != nil {
-			return err
-		}
-	}
+) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	// TODO: Allow Changes
 	desireHostnameFunc := desireHostname(desired.Spec.Pools, nodeAgentsDesired)
 
-	machinesSvc := NewMachinesService(logger, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
+	machinesSvc := NewMachinesService(monitor, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, desireHostnameFunc)
 	pools, err := machinesSvc.ListPools()
 	if err != nil {
-		return err
-	}
-	for _, pool := range pools {
-		machines, err := machinesSvc.List(pool, true)
-		if err != nil {
-			return err
-		}
-		for _, machine := range machines {
-			if err := desireHostnameFunc(machine, pool); err != nil {
-				return err
-			}
-		}
+		return nil, err
 	}
 
 	current.Current.Ingresses = make(map[string]infra.Address)
+	var desireLb func(pool string) error
 	switch lbCurrent := lb.(type) {
 	case *dynamiclbmodel.Current:
+
+		desireLb = func(pool string) error {
+			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, "")
+		}
 		for name, address := range lbCurrent.Current.Addresses {
 			current.Current.Ingresses[name] = address
-		}
-		for _, pool := range pools {
-			if err := lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, ""); err != nil {
-				return err
-			}
 		}
 		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, "")
 		//	case *externallbmodel.Current:
@@ -78,8 +53,39 @@ func ensure(
 		//			current.Current.Ingresses[name] = address
 		//		}
 	default:
-		return errors.Errorf("Unknown load balancer of type %T", lb)
+		return nil, errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
-	return addPools(current, desired, machinesSvc)
+	for _, pool := range pools {
+
+		if err := desireLb(pool); err != nil {
+			return nil, err
+		}
+
+		machines, err := machinesSvc.List(pool, true)
+		if err != nil {
+			return nil, err
+		}
+		for _, machine := range machines {
+			if err := desireHostnameFunc(machine, pool); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return func(psf orbiter.PushSecretsFunc) error {
+		if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
+			(desired.Spec.Keys.MaintenanceKeyPublic == nil || desired.Spec.Keys.MaintenanceKeyPublic.Value == "") {
+			priv, pub, err := ssh.Generate()
+			if err != nil {
+				return err
+			}
+			desired.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
+			desired.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
+			if err := psf(monitor.WithField("type", "maintenancekey")); err != nil {
+				return err
+			}
+		}
+		return nil
+	}, addPools(current, desired, machinesSvc)
 }
