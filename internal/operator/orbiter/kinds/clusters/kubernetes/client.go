@@ -293,8 +293,10 @@ func (c *Client) Uncordon(machine *Machine, node *core.Node) (err error) {
 	if err := c.updateNode(node); err != nil {
 		return err
 	}
-	machine.Online = true
-	monitor.Changed("Node uncordoned")
+	if !machine.Online {
+		machine.Online = true
+		monitor.Changed("Node uncordoned")
+	}
 	return nil
 }
 
@@ -315,8 +317,10 @@ func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
 	if err := c.evictPods(node); err != nil {
 		return err
 	}
-	machine.Online = false
-	monitor.Changed("Node drained")
+	if machine.Online {
+		machine.Online = false
+		monitor.Changed("Node drained")
+	}
 	return nil
 }
 
@@ -360,9 +364,11 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	if err := api.Delete(name, &mach.DeleteOptions{}); err != nil {
 		return err
 	}
-	machine.Online = false
-	machine.Joined = false
-	monitor.Changed("Node deleted")
+	if machine.Online || machine.Joined {
+		machine.Online = false
+		machine.Joined = false
+		monitor.Changed("Node deleted")
+	}
 	return nil
 }
 

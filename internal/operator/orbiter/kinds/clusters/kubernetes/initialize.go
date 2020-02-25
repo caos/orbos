@@ -100,10 +100,12 @@ func initialize(
 
 		if getNodeErr == nil {
 			current.Joined = true
-			for _, cond := range node.Status.Conditions {
-				if cond.Type == v1.NodeReady {
-					current.Online = true
-					break
+			if !node.Spec.Unschedulable {
+				for _, cond := range node.Status.Conditions {
+					if cond.Type == v1.NodeReady {
+						current.Online = true
+						break
+					}
 				}
 			}
 		}
