@@ -6,9 +6,9 @@ import (
 )
 
 func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesService) error {
-	current.Current.Pools = make(map[string]infra.Pool)
+	current.Current.pools = make(map[string]infra.Pool)
 	for pool := range desired.Spec.Pools {
-		current.Current.Pools[pool] = core.NewPool(pool, nil, machinesSvc)
+		current.Current.pools[pool] = core.NewPool(pool, nil, machinesSvc)
 	}
 
 	unconfiguredPools, err := machinesSvc.ListPools()
@@ -16,8 +16,8 @@ func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesSer
 		return nil
 	}
 	for _, unconfiguredPool := range unconfiguredPools {
-		if _, ok := current.Current.Pools[unconfiguredPool]; !ok {
-			current.Current.Pools[unconfiguredPool] = core.NewPool(unconfiguredPool, nil, machinesSvc)
+		if _, ok := current.Current.pools[unconfiguredPool]; !ok {
+			current.Current.pools[unconfiguredPool] = core.NewPool(unconfiguredPool, nil, machinesSvc)
 		}
 	}
 	return nil

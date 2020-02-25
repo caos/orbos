@@ -66,14 +66,14 @@ func (c *Machine) validate() error {
 type Current struct {
 	Common  *orbiter.Common `yaml:",inline"`
 	Current struct {
-		Pools      map[string]infra.Pool
+		pools      map[string]infra.Pool `yaml:"-"`
 		Ingresses  map[string]infra.Address
 		cleanupped <-chan error `yaml:"-"`
 	}
 }
 
 func (c *Current) Pools() map[string]infra.Pool {
-	return c.Current.Pools
+	return c.Current.pools
 }
 func (c *Current) Ingresses() map[string]infra.Address {
 	return c.Current.Ingresses
