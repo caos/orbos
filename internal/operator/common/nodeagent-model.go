@@ -82,8 +82,7 @@ var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func configEquals(this, that map[string]string) bool {
 	if this == nil || that == nil {
-		equal := this == nil && that == nil
-		return equal
+		return this == nil && that == nil
 	}
 	if len(this) != len(that) {
 		return false
@@ -101,13 +100,13 @@ func configEquals(this, that map[string]string) bool {
 	return true
 }
 
-func packageEquals(this, that Package) bool {
-	return this.Version == that.Version &&
-		configEquals(this.Config, that.Config)
-}
-
 func (p Package) Equals(other Package) bool {
 	return packageEquals(p, other)
+}
+func packageEquals(this, that Package) bool {
+	equals := this.Version == that.Version &&
+		configEquals(this.Config, that.Config)
+	return equals
 }
 
 func (this *Software) Contains(that Software) bool {
@@ -126,15 +125,20 @@ func contains(this, that Package) bool {
 }
 
 func (this *Software) Defines(that Software) bool {
+	return defines(this.Swap, that.Swap) &&
+		defines(this.Kubelet, that.Kubelet) &&
+		defines(this.Kubeadm, that.Kubeadm) &&
+		defines(this.Kubectl, that.Kubectl) &&
+		defines(this.Containerruntime, that.Containerruntime) &&
+		defines(this.KeepaliveD, that.KeepaliveD) &&
+		defines(this.Nginx, that.Nginx) &&
+		defines(this.Hostname, that.Hostname)
+}
+
+func defines(this, that Package) bool {
 	zeroPkg := Package{}
-	return that.Swap.Equals(zeroPkg) || !this.Swap.Equals(zeroPkg) &&
-		that.Kubelet.Equals(zeroPkg) || !this.Kubelet.Equals(zeroPkg) &&
-		that.Kubeadm.Equals(zeroPkg) || !this.Kubeadm.Equals(zeroPkg) &&
-		that.Kubectl.Equals(zeroPkg) || !this.Kubectl.Equals(zeroPkg) &&
-		that.Containerruntime.Equals(zeroPkg) || !this.Containerruntime.Equals(zeroPkg) &&
-		that.KeepaliveD.Equals(zeroPkg) || !this.KeepaliveD.Equals(zeroPkg) &&
-		that.Nginx.Equals(zeroPkg) || !this.Nginx.Equals(zeroPkg) &&
-		that.Hostname.Equals(zeroPkg) || !this.Hostname.Equals(zeroPkg)
+	defines := packageEquals(that, zeroPkg) || !packageEquals(this, zeroPkg)
+	return defines
 }
 
 type Firewall map[string]Allowed

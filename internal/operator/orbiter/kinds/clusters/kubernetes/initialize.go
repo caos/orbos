@@ -129,10 +129,13 @@ func initialize(
 			naSpec.Software = &common.Software{}
 		}
 
-		desiredSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
-		if !naCurr.Software.Defines(desiredSoftware) && !naSpec.Software.Defines(desiredSoftware) {
-			naSpec.Software.Merge(desiredSoftware)
-			machineMonitor.Changed("Kubernetes software desired")
+		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
+		if !naSpec.Software.Defines(k8sSoftware) {
+			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
+			if !naSpec.Software.Contains(k8sSoftware) {
+				naSpec.Software.Merge(k8sSoftware)
+				machineMonitor.Changed("Kubernetes software desired")
+			}
 		}
 
 		initMachine := &initializedMachine{
