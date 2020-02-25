@@ -91,9 +91,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 			}
 
 			current := common.NodeAgentsCurrentKind{}
-			if err := yaml.Unmarshal(currentNodeagents, &current); err != nil {
-				panic(err)
-			}
+			yaml.Unmarshal(currentNodeagents, &current)
 			current.Kind = "nodeagent.caos.ch/NodeAgents"
 			current.Version = "v0"
 			if current.Current == nil {
