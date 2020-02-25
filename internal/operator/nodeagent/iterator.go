@@ -114,6 +114,10 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 		}
 
+		if reconciledCurrent {
+			monitor.Error(gitClient.Push())
+		}
+
 		events = make([]*event, 0)
 		if err := ensure(); err != nil {
 			monitor.Error(err)
@@ -136,7 +140,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 			}
 		}
 
-		if len(events) > 0 || reconciledCurrent {
+		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
 	}
