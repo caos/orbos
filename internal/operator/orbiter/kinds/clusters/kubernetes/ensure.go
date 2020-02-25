@@ -54,9 +54,17 @@ func ensure(
 		k8sClient,
 		controlplaneMachines,
 		workerMachines)
-	if err != nil || !upgradingDone {
-		monitor.Info("Upgrading is not done yet")
+	if err != nil {
 		return err
+	}
+
+	if !upgradingDone {
+		if curr.Status == "maintaining" {
+			monitor.Info("Upgrading is not done yet")
+		} else {
+			curr.Status = "maintaining"
+			monitor.Changed("Cluster is maintaining")
+		}
 	}
 
 	var scalingDone bool
@@ -88,6 +96,15 @@ func ensure(
 		curr.Status = "running"
 		monitor.Changed("Maintenance is done")
 	}
-	monitor.Debug("Scaling is not done yet")
+
+	if !scalingDone && curr.Status != "maintaining" {
+		curr.Status = "maintaining"
+		monitor.Changed("Cluster is maintaining")
+	}
+
+	if !scalingDone {
+		monitor.Info("Scaling is not done yet")
+	}
+
 	return nil
 }
