@@ -16,13 +16,13 @@ func init() {
 }
 
 type FirewallEnsurer interface {
-	Ensure(common.Firewall) (bool, error)
+	Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
 }
 
-type FirewallEnsurerFunc func(common.Firewall) (bool, error)
+type FirewallEnsurerFunc func(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
 
-func (f FirewallEnsurerFunc) Ensure(fw common.Firewall) (bool, error) {
-	return f(fw)
+func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error) {
+	return f(desired)
 }
 
 type Dependency struct {
@@ -51,6 +51,15 @@ func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer,
 
 	defer persistReadyness(curr.NodeIsReady)
 
+	var (
+		err            error
+		ensureFirewall func() error
+	)
+	curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
+	if err != nil {
+		return noop, err
+	}
+
 	installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
 	if err != nil {
 		return noop, err
@@ -72,19 +81,19 @@ func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer,
 
 	return func() error {
 
-		fwChanged, err := firewallEnsurer.Ensure(*desired.Firewall)
-		if err != nil {
-			return err
-		}
-		curr.Open = *desired.Firewall
-		if fwChanged {
-			monitor.Changed("Firewall changed")
-		}
-
 		if !desired.ChangesAllowed {
 			monitor.Info("Changes are not allowed")
 			return nil
 		}
+
+		if ensureFirewall != nil {
+			if err := ensureFirewall(); err != nil {
+				return err
+			}
+			curr.Open = desired.Firewall.Ports()
+			monitor.Changed("Firewall changed")
+		}
+
 		ensureDep := ensureFunc(monitor)
 		ensuredSw, err := deriveTraverse(ensureDep, divergentSw)
 		if err != nil {

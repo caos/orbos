@@ -16,7 +16,7 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        Firewall
+	Open        []*Allowed
 	Commit      string
 }
 
@@ -150,12 +150,20 @@ func (f *Firewall) Merge(fw Firewall) {
 	}
 }
 
+func (f *Firewall) Ports() []*Allowed {
+	ports := make([]*Allowed, 0)
+	for _, value := range *f {
+		ports = append(ports, &value)
+	}
+	return ports
+}
+
 type Allowed struct {
 	Port     string
 	Protocol string
 }
 
-func (f Firewall) Contains(other Firewall) bool {
+func (f Firewall) Equals(other Firewall) bool {
 	for name, port := range other {
 		found, ok := f[name]
 		if !ok {
@@ -164,6 +172,22 @@ func (f Firewall) Contains(other Firewall) bool {
 		if !deriveEqualPort(port, found) {
 			return false
 		}
+	}
+	return true
+}
+
+func (f Firewall) Matches(ports []*Allowed) bool {
+	if len(f) != len(ports) {
+		return false
+	}
+checks:
+	for _, port := range ports {
+		for _, fwPort := range f {
+			if deriveEqualPort(*port, fwPort) {
+				continue checks
+			}
+		}
+		return false
 	}
 	return true
 }

@@ -61,7 +61,7 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (
 			machine.desiredNodeagent.Firewall = &common.Firewall{}
 		}
 		firewall := common.Firewall(fw)
-		if machine.currentNodeagent.Open.Contains(firewall) && machine.desiredNodeagent.Firewall.Contains(firewall) {
+		if firewall.Matches(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Equals(firewall) {
 			machine.currentMachine.FirewallIsReady = true
 			monitor.Debug("Firewall is ready")
 			return
