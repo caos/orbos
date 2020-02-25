@@ -158,13 +158,13 @@ func ensureSoftware(
 					return err
 				}
 
-				machine.desiredNodeagent.Software.Merge(to)
-
-				machinemonitor.WithFields(map[string]interface{}{
-					"from": machine.currentNodeagent.Software.Kubelet.Version,
-					"to":   to.Kubelet.Version,
-				}).Changed("Node migrated")
-
+				if !machine.desiredNodeagent.Software.Contains(to) {
+					machine.desiredNodeagent.Software.Merge(to)
+					machinemonitor.WithFields(map[string]interface{}{
+						"from": machine.currentNodeagent.Software.Kubelet.Version,
+						"to":   to.Kubelet.Version,
+					}).Changed("Updated Kubernetes packages desired")
+				}
 				return nil
 			}
 		}
@@ -188,22 +188,26 @@ func ensureSoftware(
 				return nil, nil
 			}
 			return func() error {
-				machine.desiredNodeagent.Software.Merge(to)
-				machinemonitor.WithFields(map[string]interface{}{
-					"current": KubernetesSoftware(machine.currentNodeagent.Software),
-					"desired": to,
-				}).Changed("Join software desired")
+				if !machine.desiredNodeagent.Software.Contains(to) {
+					machine.desiredNodeagent.Software.Merge(to)
+					machinemonitor.WithFields(map[string]interface{}{
+						"current": KubernetesSoftware(machine.currentNodeagent.Software),
+						"desired": to,
+					}).Changed("Join software desired")
+				}
 				return nil
 			}, nil
 		}
 
 		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
 			return func() error {
-				machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
-				machinemonitor.WithFields(map[string]interface{}{
-					"current": machine.currentNodeagent.Software.Kubeadm.Version,
-					"desired": to.Kubeadm.Version,
-				}).Changed("Kubeadm desired")
+				if machine.desiredNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
+					machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
+					machinemonitor.WithFields(map[string]interface{}{
+						"current": machine.currentNodeagent.Software.Kubeadm.Version,
+						"desired": to.Kubeadm.Version,
+					}).Changed("Kubeadm desired")
+				}
 				return nil
 			}, nil
 		}
