@@ -67,9 +67,10 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 
 		events := make([]*event, 0)
 		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			clone := *curr
 			events = append(events, &event{
 				commit:  mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
-				current: &*curr,
+				current: &clone,
 			})
 		}, monitor.OnChange)
 
