@@ -22,7 +22,6 @@ func query(
 	orbiterCommit string,
 	oneoff bool) (orbiter.EnsureFunc, error) {
 
-	current.Status = "maintaining"
 	current.Machines = make(map[string]*Machine)
 
 	cloudPools := make(map[string]map[string]infra.Pool)

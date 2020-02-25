@@ -26,7 +26,7 @@ func WriteToStdout(record string) {
 	}
 }
 
-func Concat(new func(string, map[string]string), original func(string, map[string]string)) func(string, map[string]string) {
+func Concat(new OnMessage, original OnMessage) OnMessage {
 	if original == nil {
 		return new
 	}

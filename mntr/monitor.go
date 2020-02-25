@@ -7,11 +7,14 @@ import (
 	"time"
 )
 
+type OnMessage func(string, map[string]string)
+type OnError func(error, map[string]string)
+
 type Monitor struct {
 	Fields   map[string]interface{}
-	OnInfo   func(string, map[string]string)
-	OnChange func(string, map[string]string)
-	OnError  func(error, map[string]string)
+	OnInfo   OnMessage
+	OnChange OnMessage
+	OnError  OnError
 	verbose  bool
 }
 

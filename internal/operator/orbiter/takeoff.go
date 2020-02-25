@@ -24,8 +24,6 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 
 	return func() {
 
-		events := make([]*event, 0)
-
 		trees, err := parse(gitClient, "orbiter.yml")
 		if err != nil {
 			monitor.Error(err)
@@ -35,7 +33,33 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 		treeDesired := trees[0]
 		treeCurrent := &Tree{}
 
-		desiredNodeAgents := make(map[string]*common.NodeAgentSpec)
+		desiredNodeAgents := common.NodeAgentsDesiredKind{
+			Kind:    "nodeagent.caos.ch/NodeAgents",
+			Version: "v0",
+		}
+		rawDesiredNodeAgents, err := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
+		if err != nil {
+			panic(err)
+		}
+		yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents)
+
+		marshalCurrentFiles := func() []git.File {
+			return []git.File{{
+				Path:    "caos-internal/orbiter/current.yml",
+				Content: common.MarshalYAML(treeCurrent),
+			}, {
+				Path:    "caos-internal/orbiter/node-agents-desired.yml",
+				Content: common.MarshalYAML(desiredNodeAgents),
+			}}
+		}
+
+		events := make([]*event, 0)
+		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			events = append(events, &event{
+				commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
+				files:  marshalCurrentFiles(),
+			})
+		}, monitor.OnChange)
 
 		query, _, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
 		if err != nil {
@@ -51,7 +75,10 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 		}
 
 		currentNodeAgents := common.NodeAgentsCurrentKind{}
-		rawCurrentNodeAgents, _ := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
+		rawCurrentNodeAgents, err := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
+		if err != nil {
+			panic(err)
+		}
 		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
 
 		if currentNodeAgents.Current == nil {
@@ -67,55 +94,37 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 			monitor.Error(gitClient.Push())
 		}
 
-		ensure, err := query(currentNodeAgents.Current, desiredNodeAgents, nil)
+		ensure, err := query(currentNodeAgents.Current, desiredNodeAgents.Spec.NodeAgents, nil)
 		if err != nil {
 			handleAdapterError(err)
 			return
 		}
 
-		//		if err := gitClient.Clone(); err != nil {
-		//			monitor.Error(err)
-		//			return
-		//		}
-
-		currentFiles := func() []git.File {
-			return []git.File{{
-				Path:    "caos-internal/orbiter/current.yml",
-				Content: common.MarshalYAML(treeCurrent),
-			}, {
-				Path: "caos-internal/orbiter/node-agents-desired.yml",
-				Content: common.MarshalYAML(&common.NodeAgentsDesiredKind{
-					Kind:    "nodeagent.caos.ch/NodeAgents",
-					Version: "v0",
-					Spec: common.NodeAgentsSpec{
-						Commit:     orbiterCommit,
-						NodeAgents: desiredNodeAgents,
-					},
-				}),
-			}}
+		if err := gitClient.Clone(); err != nil {
+			panic(err)
 		}
 
 		reconciledCurrentStateMsg := "Current state reconciled"
-		if _, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), currentFiles()...); err != nil {
+		currentReconciled, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()...)
+		if err != nil {
 			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 		}
 
-		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
-			events = append(events, &event{
-				commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
-				files:  currentFiles(),
-			})
-		}, monitor.OnChange)
+		if currentReconciled {
+			if err := gitClient.Push(); err != nil {
+				panic(err)
+			}
+		}
 
+		events = make([]*event, 0)
 		if err := ensure(pushSecretsFunc(gitClient, treeDesired)); err != nil {
 			handleAdapterError(err)
 			return
 		}
 
-		//		if err := gitClient.Clone(); err != nil {
-		//			monitor.Error(err)
-		//			return
-		//		}
+		if err := gitClient.Clone(); err != nil {
+			panic(err)
+		}
 
 		for _, event := range events {
 

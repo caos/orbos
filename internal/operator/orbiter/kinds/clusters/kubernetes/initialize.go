@@ -61,6 +61,8 @@ func initialize(
 		curr.Machines = make(map[string]*Machine)
 	}
 
+	curr.Status = "running"
+
 	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
 		pool := initializedPool{
 			infra:   infraPool,
@@ -128,7 +130,7 @@ func initialize(
 		}
 
 		desiredSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
-		if !naCurr.Software.Defines(desiredSoftware) {
+		if !naCurr.Software.Defines(desiredSoftware) && !naSpec.Software.Defines(desiredSoftware) {
 			naSpec.Software.Merge(desiredSoftware)
 			machineMonitor.Changed("Kubernetes software desired")
 		}
@@ -182,6 +184,13 @@ func initialize(
 					continue pools
 				}
 			}
+		}
+	}
+
+	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
+			curr.Status = "maintaining"
+			break
 		}
 	}
 
