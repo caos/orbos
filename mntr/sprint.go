@@ -8,7 +8,7 @@ import (
 func CommitRecord(fields []*Field) string {
 	stringFields := make([]string, len(fields))
 	for _, field := range fields {
-		if field.Key == "evt" || field.Key == "qry" {
+		if field.Key == "evt" {
 			stringFields = append(stringFields, fmt.Sprint(field.Value))
 			continue
 		}

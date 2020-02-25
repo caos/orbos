@@ -384,7 +384,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 
 	monitor.Info("Evicting pods")
 
-	selector := fmt.Sprintf("spec.nodeName=%s", node.Name)
+	selector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name)
 	podItems, err := c.set.CoreV1().Pods("").List(mach.ListOptions{
 		FieldSelector: selector,
 	})
@@ -459,7 +459,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 						return
 					}
 				case <-timeout:
-					synchronizer.Done(c.set.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &mach.DeleteOptions{}))
+					synchronizer.Done(errors.Wrapf(c.set.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &mach.DeleteOptions{}), "Deleting pod %s after timout exceeded failed", pod.Name))
 					return
 				}
 			}
