@@ -130,7 +130,6 @@ func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurr
 			return dep, err
 		}
 
-		dep.Current = dep.Desired
 		curr.Software.Merge(conv.ToSoftware([]*Dependency{dep}, func(dep Dependency) common.Package {
 			return dep.Desired
 		}))
@@ -139,7 +138,7 @@ func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurr
 			"from":       dep.Current.Version,
 			"to":         dep.Desired.Version,
 		}).Changed("Dependency ensured")
-
+		dep.Current = dep.Desired
 		return dep, nil
 	}
 }
