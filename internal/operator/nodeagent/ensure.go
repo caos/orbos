@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func init() {
@@ -16,13 +16,13 @@ func init() {
 }
 
 type FirewallEnsurer interface {
-	Ensure(common.Firewall) error
+	Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
 }
 
-type FirewallEnsurerFunc func(common.Firewall) error
+type FirewallEnsurerFunc func(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
 
-func (f FirewallEnsurerFunc) Ensure(fw common.Firewall) error {
-	return f(fw)
+func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error) {
+	return f(desired)
 }
 
 type Dependency struct {
@@ -33,7 +33,7 @@ type Dependency struct {
 
 type Converter interface {
 	ToDependencies(common.Software) []*Dependency
-	ToSoftware([]*Dependency) common.Software
+	ToSoftware([]*Dependency, func(Dependency) common.Package) common.Software
 }
 
 type Installer interface {
@@ -44,80 +44,101 @@ type Installer interface {
 	fmt.Stringer
 }
 
-func ensure(logger logging.Logger, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec) (*common.NodeAgentCurrent, error) {
+func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
 
-	curr := &common.NodeAgentCurrent{
-		Commit:      commit,
-		NodeIsReady: isReady(),
-	}
+	curr.Commit = commit
+	curr.NodeIsReady = isReady()
 
 	defer persistReadyness(curr.NodeIsReady)
 
-	if err := firewallEnsurer.Ensure(*desired.Firewall); err != nil {
-		return nil, err
-	}
-	curr.Open = *desired.Firewall
-
-	installedSw, err := deriveTraverse(installed, conv.ToDependencies(*desired.Software))
+	var (
+		err            error
+		ensureFirewall func() error
+	)
+	curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
 	if err != nil {
-		return nil, err
+		return noop, err
 	}
 
-	curr.Software = conv.ToSoftware(installedSw)
+	installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
+	if err != nil {
+		return noop, err
+	}
+
+	curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
+		return dep.Current
+	})
 
 	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
 	if len(divergentSw) == 0 {
 		curr.NodeIsReady = true
-		return curr, nil
+		return noop, nil
 	}
 
 	if curr.NodeIsReady {
-		logger.Info("Marking node as unready")
 		curr.NodeIsReady = false
-		return curr, nil
+		monitor.Changed("Marked node as unready")
+		return noop, nil
 	}
 
-	if !desired.ChangesAllowed {
-		logger.Info("Changes are not allowed")
-		return curr, nil
-	}
-	ensureDep := ensureFunc(logger)
-	ensuredSw, err := deriveTraverse(ensureDep, divergentSw)
-	if err != nil {
-		return nil, err
-	}
+	return func() error {
 
-	curr.Software = conv.ToSoftware(merge(installedSw, ensuredSw))
-	return curr, nil
+		if !desired.ChangesAllowed {
+			monitor.Info("Changes are not allowed")
+			return nil
+		}
+
+		if ensureFirewall != nil {
+			if err := ensureFirewall(); err != nil {
+				return err
+			}
+			curr.Open = desired.Firewall.Ports()
+			monitor.Changed("Firewall changed")
+		}
+
+		ensureDep := ensureFunc(monitor, conv, curr)
+		_, err := deriveTraverse(ensureDep, divergentSw)
+		return err
+	}, nil
 }
 
-func installed(dep *Dependency) (*Dependency, error) {
-	version, err := dep.Installer.Current()
-	if err != nil {
-		return dep, err
+func queryFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error) {
+	return func(dep *Dependency) (*Dependency, error) {
+		version, err := dep.Installer.Current()
+		if err != nil {
+			return dep, err
+		}
+		dep.Current = version
+		monitor.Debug("Dependency found")
+		return dep, nil
 	}
-	dep.Current = version
-	return dep, nil
 }
 
 func divergent(dep *Dependency) bool {
 	return !dep.Desired.Equals(dep.Current)
 }
 
-func ensureFunc(logger logging.Logger) func(dep *Dependency) (*Dependency, error) {
+func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurrent) func(dep *Dependency) (*Dependency, error) {
 	return func(dep *Dependency) (*Dependency, error) {
+		monitor.WithFields(map[string]interface{}{
+			"dependency": dep.Installer,
+			"from":       dep.Current.Version,
+			"to":         dep.Desired.Version,
+		}).Info("Ensuring dependency")
+
 		if err := dep.Installer.Ensure(dep.Current, dep.Desired); err != nil {
 			return dep, err
 		}
 
-		logger.WithFields(map[string]interface{}{
+		curr.Software.Merge(conv.ToSoftware([]*Dependency{dep}, func(dep Dependency) common.Package {
+			return dep.Desired
+		}))
+		monitor.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
-			"from":       dep.Current,
-			"to":         dep.Desired,
-		}).Info("Ensured dependency")
-
+			"from":       dep.Current.Version,
+			"to":         dep.Desired.Version,
+		}).Changed("Dependency ensured")
 		dep.Current = dep.Desired
-
 		return dep, nil
 	}
 }
@@ -158,3 +179,5 @@ func isReady() bool {
 	}
 	return err == nil
 }
+
+func noop() error { return nil }

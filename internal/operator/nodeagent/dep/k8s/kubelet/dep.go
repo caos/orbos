@@ -15,7 +15,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/k8s"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/selinux"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Installer interface {
@@ -25,13 +25,13 @@ type Installer interface {
 
 type kubeletDep struct {
 	os      dep.OperatingSystem
-	logger  logging.Logger
+	monitor mntr.Monitor
 	common  *k8s.Common
 	systemd *dep.SystemD
 }
 
-func New(logger logging.Logger, os dep.OperatingSystem, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &kubeletDep{os, logger, k8s.New(os, manager, "kubelet"), systemd}
+func New(monitor mntr.Monitor, os dep.OperatingSystem, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
+	return &kubeletDep{os, monitor, k8s.New(os, manager, "kubelet"), systemd}
 }
 
 func (kubeletDep) isKubelet() {}
@@ -58,7 +58,7 @@ func (k *kubeletDep) Current() (common.Package, error) {
 
 func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error {
 
-	if err := selinux.EnsurePermissive(k.logger, k.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(k.monitor, k.os, remove); err != nil {
 		return err
 	}
 
@@ -69,7 +69,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 	var errBuf bytes.Buffer
 	cmd := exec.Command("modprobe", "br_netfilter")
 	cmd.Stderr = &errBuf
-	if k.logger.IsVerbose() {
+	if k.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -94,7 +94,7 @@ net.bridge.bridge-nf-call-iptables = 1
 
 	cmd = exec.Command("sysctl", "--system")
 	cmd.Stderr = &errBuf
-	if k.logger.IsVerbose() {
+	if k.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}

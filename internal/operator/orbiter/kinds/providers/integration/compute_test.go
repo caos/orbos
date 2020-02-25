@@ -10,12 +10,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
-	"github.com/caos/orbiter/internal/helpers"
 )
 
-func TestComputeExecutions(t *testing.T) {
+func TestMachineExecutions(t *testing.T) {
 	// TODO: Resolve race conditions
 	// t.Parallel()
 
@@ -37,12 +37,12 @@ func TestComputeExecutions(t *testing.T) {
 	}
 
 	for _, pool := range pools {
-		first, err := pool.AddCompute()
+		first, err := pool.AddMachine()
 		if err != nil {
 			panic(err)
 		}
 
-		second, err := pool.AddCompute()
+		second, err := pool.AddMachine()
 		if err != nil {
 			panic(err)
 		}
@@ -76,14 +76,14 @@ func TestComputeExecutions(t *testing.T) {
 	}
 }
 
-func run(compute infra.Compute) error {
+func run(machine infra.Machine) error {
 
 	msg := "Okay"
 	var stdout []byte
 	var err error
 
 	if err = helpers.Retry(time.NewTimer(5*time.Minute), 10*time.Second, func() (bool, fmt.Stringer) {
-		stdout, err = compute.Execute(nil, nil, fmt.Sprintf("echo \"%s\"", msg))
+		stdout, err = machine.Execute(nil, nil, fmt.Sprintf("echo \"%s\"", msg))
 		return err != nil, helpers.ErrorStringer(err)
 	}); err != nil {
 		return err

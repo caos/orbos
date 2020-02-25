@@ -2,11 +2,10 @@ package kubernetes
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func destroy(logger logging.Logger, providerCurrents map[string]interface{}, k8sClient *k8s.Client) error {
+func destroy(monitor mntr.Monitor, providerCurrents map[string]interface{}, k8sClient *Client) error {
 
 	if k8sClient.Available() {
 		k8sClient.DeleteDeployment("caos-system", "orbiter")
@@ -15,15 +14,15 @@ func destroy(logger logging.Logger, providerCurrents map[string]interface{}, k8s
 	for _, provider := range providerCurrents {
 		prov := provider.(infra.ProviderCurrent)
 		for _, pool := range prov.Pools() {
-			computes, err := pool.GetComputes(false)
+			machines, err := pool.GetMachines(false)
 			if err != nil {
 				return err
 			}
-			for _, compute := range computes {
-				compute.Execute(nil, nil, "sudo systemctl stop node-agentd")
-				compute.Execute(nil, nil, "sudo systemctl disable node-agentd")
-				compute.Execute(nil, nil, "sudo kubeadm reset -f")
-				compute.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
+			for _, machine := range machines {
+				machine.Execute(nil, nil, "sudo systemctl stop node-agentd")
+				machine.Execute(nil, nil, "sudo systemctl disable node-agentd")
+				machine.Execute(nil, nil, "sudo kubeadm reset -f")
+				machine.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
 			}
 		}
 	}

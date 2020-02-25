@@ -7,13 +7,12 @@ import (
 	"strings"
 	"sync"
 
-	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/machine/v1"
 	"google.golang.org/api/option"
 
+	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/concepts"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/backendservice"
@@ -25,7 +24,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/targetproxy"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type infraCurrent struct {
@@ -46,17 +45,17 @@ func (i *infraCurrent) Cleanupped() <-chan error {
 	return i.cu
 }
 
-func authenticatedService(ctx context.Context, googleApplicationCredentialsValue string) (*compute.Service, error) {
-	return compute.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
+func authenticatedService(ctx context.Context, googleApplicationCredentialsValue string) (*machine.Service, error) {
+	return machine.NewService(ctx, option.WithCredentialsJSON([]byte(strings.Trim(googleApplicationCredentialsValue, "\""))))
 }
 
-func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string, connectFromOutside bool) Builder {
+func New(monitor mntr.Monitor, id string, lbs map[string]*infra.Ingress, publicKey []byte, privateKeyProperty string, connectFromOutside bool) Builder {
 	return builderFunc(func(spec model.UserSpec, _ orbiter.NodeAgentUpdater) (model.Config, Adapter, error) {
 
 		cfg := model.Config{}
 
-		if spec.Verbose && !logger.IsVerbose() {
-			logger = logger.Verbose()
+		if spec.Verbose && !monitor.IsVerbose() {
+			monitor = monitor.Verbose()
 		}
 
 		pools := make([]string, 0)
@@ -88,7 +87,7 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 				return current, err
 			}
 
-			resourceFactory := core.NewResourceFactory(logger, id)
+			resourceFactory := core.NewResourceFactory(monitor, id)
 
 			caller := &api.Caller{Ctx: ctx, OperatorID: id}
 
@@ -104,7 +103,7 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 				privateKeyProperty = dynamicKeyProperty
 			}
 
-			instancesSvc := instance.NewInstanceService(ctx, logger, id, svc, &spec, caller, secrets, publicKey, privateKeyProperty, connectFromOutside)
+			instancesSvc := instance.NewInstanceService(ctx, monitor, id, svc, &spec, caller, secrets, publicKey, privateKeyProperty, connectFromOutside)
 
 			configuredPools := make([]string, 0)
 			for poolName := range spec.Pools {
@@ -112,12 +111,12 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 			}
 
 			services := &concepts.Services{
-				HealthChecks:   healthcheck.New(logger, svc, &spec, caller),
-				BackendService: backendservice.New(logger, svc, &spec, caller),
-				InstanceGroup:  instancegroup.New(ctx, logger, svc, &spec, caller),
-				ForwardingRule: forwardingrule.New(logger, svc, &spec, caller),
-				FirewallRule:   firewallrule.New(logger, svc, &spec, caller),
-				TargetProxy:    targetproxy.New(logger, svc, &spec, caller),
+				HealthChecks:   healthcheck.New(monitor, svc, &spec, caller),
+				BackendService: backendservice.New(monitor, svc, &spec, caller),
+				InstanceGroup:  instancegroup.New(ctx, monitor, svc, &spec, caller),
+				ForwardingRule: forwardingrule.New(monitor, svc, &spec, caller),
+				FirewallRule:   firewallrule.New(monitor, svc, &spec, caller),
+				TargetProxy:    targetproxy.New(monitor, svc, &spec, caller),
 			}
 
 			resourcesExecutor := core.NewExecutor([][]core.Cleanupper{
@@ -241,18 +240,18 @@ func New(logger logging.Logger, id string, lbs map[string]*infra.Ingress, public
 							cleanupErr = cErr
 							continue
 						}
-						logger.Debug("Resource Cleanupped")
+						monitor.Debug("Resource Cleanupped")
 					case cErr := <-firewallCleanupped:
 						count++
 						if cErr != nil {
 							cleanupErr = cErr
 							continue
 						}
-						logger.Debug("Firewalls Cleanupped")
+						monitor.Debug("Firewalls Cleanupped")
 					}
 					if count >= 2 {
 						if cleanupErr == nil {
-							logger.Debug("Cleanupping done")
+							monitor.Debug("Cleanupping done")
 						}
 						cleanupped <- cleanupErr
 						return

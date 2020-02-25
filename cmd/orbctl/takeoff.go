@@ -46,7 +46,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			"destroy": destroy,
 			"verbose": verbose,
 			"repoURL": orbFile.URL,
-		}).Info("Orbiter is taking off")
+		}).Info("Orbiter took off")
 
 		op := operator.New(ctx, logger, orbiter.Takeoff(
 			ctx,
@@ -56,7 +56,6 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			orbFile.Masterkey,
 			recur,
 			orb.AdaptFunc(
-				logger,
 				orbFile,
 				gitCommit,
 				!recur,

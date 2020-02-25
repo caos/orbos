@@ -15,7 +15,7 @@ func (p *PackageManager) debSpecificUpdatePackages() error {
 	var errBuf bytes.Buffer
 	cmd := exec.Command("apt-get", "--assume-yes", "update")
 	cmd.Stderr = &errBuf
-	if p.logger.IsVerbose() {
+	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -33,7 +33,7 @@ func (p *PackageManager) remSpecificUpdatePackages() error {
 	var errBuf bytes.Buffer
 	cmd := exec.Command("yum", "update", "-y")
 	cmd.Stderr = &errBuf
-	if p.logger.IsVerbose() {
+	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}

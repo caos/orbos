@@ -6,9 +6,9 @@ participant node-agent(s)
 
 orbiter->cloud provider: Ensure infrastructure
 orbiter<--cloud provider: Pools and IPs
-orbiter->cloud provider:Ensure desired number of computes per pool\n(add computes or kubectl drain + remove computes)
+orbiter->cloud provider:Ensure desired number of machines per pool\n(add machines or kubectl drain + remove machines)
 activate orbiter
-orbiter->node-agent(s):Pass initial metadata to new computes\nand run node-agent(s) on them
+orbiter->node-agent(s):Pass initial metadata to new machines\nand run node-agent(s) on them
 activate node-agent(s)
 node-agent(s)->node-agent(s):Ensure software\nand restart node
 node-agent(s)->cloud provider: Mark self as initialized
@@ -16,7 +16,7 @@ deactivate node-agent(s)
 activate node-agent(s)
 orbiter->cloud provider: Wait until all node-agents are initialized
 deactivate orbiter
-orbiter->cloud provider:Ensure kubernetes nodes number is equal\nto cloud provider computes number\n(kubeadm init/join)
+orbiter->cloud provider:Ensure kubernetes nodes number is equal\nto cloud provider machines number\n(kubeadm init/join)
 node-agent(s)->kubernetes:Safe metadata as soon as \nKubernetes API is available
 deactivate node-agent(s)
 note right of orbiter:Kubernetes scale is ensured, from\nnow on software versions are ensured...

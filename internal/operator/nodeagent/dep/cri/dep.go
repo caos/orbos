@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Installer interface {
@@ -21,7 +21,7 @@ type Installer interface {
 
 // TODO: Add support for containerd, cri-o, ...
 type criDep struct {
-	logger                    logging.Logger
+	monitor                   mntr.Monitor
 	os                        dep.OperatingSystemMajor
 	manager                   *dep.PackageManager
 	dockerVersionPrunerRegexp *regexp.Regexp
@@ -29,8 +29,8 @@ type criDep struct {
 }
 
 // New returns a dependency that implements the kubernetes container runtime interface
-func New(logger logging.Logger, os dep.OperatingSystemMajor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &criDep{logger, os, manager, regexp.MustCompile(`\d+\.\d+\.\d+`), systemd}
+func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
+	return &criDep{monitor, os, manager, regexp.MustCompile(`\d+\.\d+\.\d+`), systemd}
 }
 
 func (criDep) Is(other nodeagent.Installer) bool {

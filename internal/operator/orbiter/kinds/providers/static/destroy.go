@@ -1,10 +1,10 @@
 package static
 
-import "github.com/caos/orbiter/logging"
+import "github.com/caos/orbiter/mntr"
 
-func destroy(logger logging.Logger, desired *DesiredV0, current *Current, id string) error {
-	computesSvc := NewComputesService(
-		logger,
+func destroy(monitor mntr.Monitor, desired *DesiredV0, current *Current, id string) error {
+	machinesSvc := NewMachinesService(
+		monitor,
 		desired,
 		[]byte(desired.Spec.Keys.BootstrapKeyPrivate.Value),
 		[]byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value),
@@ -12,21 +12,21 @@ func destroy(logger logging.Logger, desired *DesiredV0, current *Current, id str
 		id,
 		nil)
 
-	pools, err := computesSvc.ListPools()
+	pools, err := machinesSvc.ListPools()
 	if err != nil {
 		return err
 	}
 
 	for _, pool := range pools {
-		computes, err := computesSvc.List(pool, true)
+		machines, err := machinesSvc.List(pool, true)
 		if err != nil {
 			return err
 		}
-		for _, compute := range computes {
-			if err := compute.Remove(); err != nil {
+		for _, machine := range machines {
+			if err := machine.Remove(); err != nil {
 				return err
 			}
 		}
 	}
-	return addPools(current, desired, computesSvc)
+	return addPools(current, desired, machinesSvc)
 }

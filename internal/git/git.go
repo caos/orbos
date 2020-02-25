@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"
@@ -23,7 +23,7 @@ import (
 )
 
 type Client struct {
-	logger    logging.Logger
+	monitor   mntr.Monitor
 	ctx       context.Context
 	committer string
 	email     string
@@ -35,15 +35,15 @@ type Client struct {
 	repoURL   string
 }
 
-func New(ctx context.Context, logger logging.Logger, committer, email, repoURL string) *Client {
+func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL string) *Client {
 	newClient := &Client{
 		ctx:       ctx,
-		logger:    logger,
+		monitor:   monitor,
 		committer: committer,
 		repoURL:   repoURL,
 	}
 
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		newClient.progress = os.Stdout
 	}
 	return newClient
@@ -80,7 +80,7 @@ func (g *Client) Clone() error {
 	if err != nil {
 		return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
 	}
-	g.logger.Debug("Repository cloned")
+	g.monitor.Debug("Repository cloned")
 
 	g.workTree, err = g.repo.Worktree()
 	if err != nil {
@@ -91,10 +91,10 @@ func (g *Client) Clone() error {
 }
 
 func (g *Client) Read(path string) ([]byte, error) {
-	readLogger := g.logger.WithFields(map[string]interface{}{
+	readmonitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
 	})
-	readLogger.Debug("Reading file")
+	readmonitor.Debug("Reading file")
 	file, err := g.fs.Open(path)
 	if err != nil {
 		if os.IsNotExist(errors.Cause(err)) {
@@ -107,8 +107,8 @@ func (g *Client) Read(path string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading %s from worktree failed", path)
 	}
-	if readLogger.IsVerbose() {
-		readLogger.Debug("File read")
+	if readmonitor.IsVerbose() {
+		readmonitor.Debug("File read")
 		fmt.Println(string(fileBytes))
 	}
 	return fileBytes, nil
@@ -119,29 +119,38 @@ type File struct {
 	Content []byte
 }
 
-func (g *Client) UpdateRemote(files ...File) error {
+func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
+	clean, err := g.stage(files...)
+	if err != nil {
+		return false, err
+	}
+
+	if clean {
+		return false, nil
+	}
+
+	return true, g.Commit(msg)
+}
+
+func (g *Client) UpdateRemote(msg string, files ...File) error {
 	if err := g.Clone(); err != nil {
 		return errors.Wrap(err, "recloning before committing changes failed")
 	}
 
-	clean, err := g.stage(files...)
+	changed, err := g.StageAndCommit(msg, files...)
 	if err != nil {
 		return err
 	}
 
-	if clean {
-		g.logger.Info("No changes")
+	if !changed {
+		g.monitor.Info("No changes")
 		return nil
 	}
 
-	if err := g.commit(); err != nil {
-		return err
-	}
-
-	return g.push()
+	return g.Push()
 }
 
-func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([]byte, error), force bool) ([]byte, error) {
+func (g *Client) UpdateRemoteUntilItWorks(msg string, path string, overwrite func([]byte) ([]byte, error), force bool) ([]byte, error) {
 
 	if err := g.Clone(); err != nil {
 		return nil, errors.Wrap(err, "recloning before committing changes failed")
@@ -163,23 +172,23 @@ func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([
 	}
 
 	if clean {
-		g.logger.Info("No changes")
+		g.monitor.Info("No changes")
 		return overwritten, nil
 	}
 
-	if err := g.commit(); err != nil {
+	if err := g.Commit(msg); err != nil {
 		return nil, err
 	}
 
-	if err := g.push(); err != nil && strings.Contains(err.Error(), "command error on refs/heads/master: cannot lock ref 'refs/heads/master': is at ") {
-		g.logger.Debug("Undoing latest commit")
+	if err := g.Push(); err != nil && strings.Contains(err.Error(), "command error on refs/heads/master: cannot lock ref 'refs/heads/master': is at ") {
+		g.monitor.Debug("Undoing latest commit")
 		if resetErr := g.workTree.Reset(&gogit.ResetOptions{
 			Mode: gogit.HardReset,
 		}); resetErr != nil {
 			return overwritten, errors.Wrap(resetErr, "undoing the latest commit failed")
 		}
 
-		newLatestFiles, err := g.UpdateRemoteUntilItWorks(path, overwrite, force)
+		newLatestFiles, err := g.UpdateRemoteUntilItWorks(msg, path, overwrite, force)
 		return newLatestFiles, errors.Wrap(err, "pushing failed")
 	}
 	return overwritten, nil
@@ -187,11 +196,11 @@ func (g *Client) UpdateRemoteUntilItWorks(path string, overwrite func([]byte) ([
 
 func (g *Client) stage(files ...File) (bool, error) {
 	for _, f := range files {
-		updateLogger := g.logger.WithFields(map[string]interface{}{
+		updatemonitor := g.monitor.WithFields(map[string]interface{}{
 			"path": f.Path,
 		})
 
-		updateLogger.Debug("Overwriting local index")
+		updatemonitor.Debug("Overwriting local index")
 
 		file, err := g.fs.Create(f.Path)
 		if err != nil {
@@ -217,9 +226,9 @@ func (g *Client) stage(files ...File) (bool, error) {
 	return status.IsClean(), nil
 }
 
-func (g *Client) commit() error {
+func (g *Client) Commit(msg string) error {
 
-	if _, err := g.workTree.Commit("update current state or secrets", &gogit.CommitOptions{
+	if _, err := g.workTree.Commit(msg, &gogit.CommitOptions{
 		Author: &object.Signature{
 			Name:  g.committer,
 			Email: g.email,
@@ -228,11 +237,11 @@ func (g *Client) commit() error {
 	}); err != nil {
 		return errors.Wrap(err, "committing changes failed")
 	}
-	g.logger.Debug("Changes commited")
+	g.monitor.Debug("Changes commited")
 	return nil
 }
 
-func (g *Client) push() error {
+func (g *Client) Push() error {
 
 	err := g.repo.PushContext(g.ctx, &gogit.PushOptions{
 		RemoteName: "origin",
@@ -244,6 +253,6 @@ func (g *Client) push() error {
 		return errors.Wrap(err, "pushing repository failed")
 	}
 
-	g.logger.Info("Repository pushed")
+	g.monitor.Info("Repository pushed")
 	return nil
 }

@@ -5,21 +5,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 )
 
 type ResourceFactory struct {
-	logger     logging.Logger
+	monitor    mntr.Monitor
 	operatorID *string
 }
 
-func NewResourceFactory(logger logging.Logger, operatorID string) *ResourceFactory {
-	return &ResourceFactory{logger, &operatorID}
+func NewResourceFactory(monitor mntr.Monitor, operatorID string) *ResourceFactory {
+	return &ResourceFactory{monitor, &operatorID}
 }
 
 func (i *ResourceFactory) New(service ResourceService, payload interface{}, dependencies []*Resource, ensured func(interface{}) error) *Resource {
-	return newResource(i.operatorID, &loggedResourceService{i.logger, service, i.operatorID}, payload, dependencies, ensured)
+	return newResource(i.operatorID, &loggedResourceService{i.monitor, service, i.operatorID}, payload, dependencies, ensured)
 }
 
 func (i *ResourceFactory) IsOperatorManaged(id *string) bool {
@@ -27,7 +27,7 @@ func (i *ResourceFactory) IsOperatorManaged(id *string) bool {
 }
 
 type loggedResourceService struct {
-	logger     logging.Logger
+	monitor    mntr.Monitor
 	svc        ResourceService
 	operatorID *string
 }
@@ -35,10 +35,11 @@ type loggedResourceService struct {
 func (l *loggedResourceService) Abbreviate() string {
 	return l.svc.Abbreviate()
 }
+
 func (l *loggedResourceService) Desire(payload interface{}) (interface{}, error) {
 	desired, err := l.svc.Desire(payload)
 	if err == nil {
-		l.logger.WithFields(map[string]interface{}{
+		l.monitor.WithFields(map[string]interface{}{
 			"payload": payload,
 			"desired": desired,
 		}).Debug("Resources desired")
@@ -52,7 +53,7 @@ func (l *loggedResourceService) Ensure(id string, desired interface{}, ensuredDe
 		if err != nil {
 			return
 		}
-		l.logger.WithFields(map[string]interface{}{
+		l.monitor.WithFields(map[string]interface{}{
 			"resource": fmt.Sprintf("%#+v", ensured),
 			"took":     time.Now().Sub(started),
 		}).Debug("Resource ensured")
@@ -60,14 +61,15 @@ func (l *loggedResourceService) Ensure(id string, desired interface{}, ensuredDe
 	ensured, err = l.svc.Ensure(id, desired, ensuredDependencies)
 	return ensured, errors.Wrapf(err, "ensuring resource %s desired %#+v failed", id, desired)
 }
+
 func (l *loggedResourceService) AllExisting() ([]string, error) {
 	found, err := l.svc.AllExisting()
 	if err == nil {
-		l.logger.Verbose().WithFields(map[string]interface{}{
+		l.monitor.Verbose().WithFields(map[string]interface{}{
 			"result": found,
 		}).Debug("Resources queried")
 	} else {
-		l.logger.Verbose().WithFields(map[string]interface{}{
+		l.monitor.Verbose().WithFields(map[string]interface{}{
 			"error": err,
 		}).Debug("Querying resources failed")
 	}
@@ -80,10 +82,10 @@ func (l *loggedResourceService) Delete(id string) (err error) {
 		if err != nil {
 			return
 		}
-		l.logger.WithFields(map[string]interface{}{
+		l.monitor.WithFields(map[string]interface{}{
 			"id":   id,
 			"took": time.Now().Sub(started),
-		}).Debug("Resource deleted")
+		}).Changed("Resource deleted")
 	}()
 	return errors.Wrapf(l.svc.Delete(id), "deleting resource %s failed", id)
 }

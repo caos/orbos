@@ -9,15 +9,15 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type SystemD struct {
-	logger logging.Logger
+	monitor mntr.Monitor
 }
 
-func NewSystemD(logger logging.Logger) *SystemD {
-	return &SystemD{logger}
+func NewSystemD(monitor mntr.Monitor) *SystemD {
+	return &SystemD{monitor}
 }
 
 func (s *SystemD) Disable(binary string) error {
@@ -25,7 +25,7 @@ func (s *SystemD) Disable(binary string) error {
 	var errBuf bytes.Buffer
 	cmd := exec.Command("systemctl", "stop", binary)
 	cmd.Stderr = &errBuf
-	if s.logger.IsVerbose() {
+	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -36,7 +36,7 @@ func (s *SystemD) Disable(binary string) error {
 	errBuf.Reset()
 	cmd = exec.Command("systemctl", "disable", binary)
 	cmd.Stderr = &errBuf
-	if s.logger.IsVerbose() {
+	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -59,7 +59,7 @@ func (s *SystemD) Enable(binary string) error {
 	var errBuf bytes.Buffer
 	cmd := exec.Command("systemctl", "daemon-reload")
 	cmd.Stderr = &errBuf
-	if s.logger.IsVerbose() {
+	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -70,7 +70,7 @@ func (s *SystemD) Enable(binary string) error {
 	errBuf.Reset()
 	cmd = exec.Command("systemctl", "enable", binary)
 	cmd.Stderr = &errBuf
-	if s.logger.IsVerbose() {
+	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}

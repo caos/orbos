@@ -6,13 +6,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/api"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instance"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instancegroup"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
+	"github.com/caos/orbiter/logging/base"
 	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
 )
 
 var configCB func() *core.Vipers
@@ -21,7 +21,7 @@ func init() {
 	configCB = core.Config()
 }
 
-func TestAddComputeWorks(t *testing.T) {
+func TestAddMachineWorks(t *testing.T) {
 	// TODO: Resolve race conditions
 	// t.Parallel()
 
@@ -44,9 +44,9 @@ func TestAddComputeWorks(t *testing.T) {
 		Cfg: assembly.Config(),
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
+	monitor := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
 
-	svc := instancegroup.New(assembly.AppContext(), logger, assembly.Config(), caller)
+	svc := instancegroup.New(assembly.AppContext(), monitor, assembly.Config(), caller)
 	desired, err := svc.Desire(&instancegroup.Config{
 		PoolName: testPool,
 		Ports:    []int64{80},
@@ -60,7 +60,7 @@ func TestAddComputeWorks(t *testing.T) {
 		panic(err)
 	}
 
-	iSvc := instance.NewInstanceService(logger, assembly, caller)
+	iSvc := instance.NewInstanceService(monitor, assembly, caller)
 	inst, err := iSvc.Create(testPool)
 	if err != nil {
 		panic(err)

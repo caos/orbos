@@ -5,18 +5,18 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type loggedDep struct {
-	logger logging.Logger
+	monitor mntr.Monitor
 	*wrapped
 	unwrapped nodeagent.Installer
 }
 
-func AddLogging(logger logging.Logger, original nodeagent.Installer) Installer {
+func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 	return &loggedDep{
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"dependency": original,
 		}),
 		&wrapped{original},
@@ -27,7 +27,7 @@ func AddLogging(logger logging.Logger, original nodeagent.Installer) Installer {
 func (l *loggedDep) Current() (common.Package, error) {
 	current, err := l.unwrapped.Current()
 	if err == nil {
-		l.logger.WithFields(map[string]interface{}{
+		l.monitor.WithFields(map[string]interface{}{
 			"version": current,
 		}).Debug("Queried current dependency version")
 	}
@@ -35,12 +35,10 @@ func (l *loggedDep) Current() (common.Package, error) {
 }
 
 func (l *loggedDep) Ensure(remove common.Package, install common.Package) error {
-	err := l.unwrapped.Ensure(remove, install)
-	if err == nil {
-		l.logger.WithFields(map[string]interface{}{
-			"uninstalled": remove,
-			"installed":   install,
-		}).Debug("Dependency ensured")
-	}
-	return errors.Wrapf(err, "uninstalling version %s and installing version %s failed for dependency %s", remove, install, l.unwrapped.String())
+	return errors.Wrapf(
+		l.unwrapped.Ensure(remove, install),
+		"uninstalling version %s and installing version %s failed for dependency %s",
+		remove,
+		install,
+		l.unwrapped.String())
 }

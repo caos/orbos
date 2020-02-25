@@ -8,31 +8,30 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-type initializedComputes []initializedCompute
+type initializedMachines []*initializedMachine
 
-func (c initializedComputes) Len() int           { return len(c) }
-func (c initializedComputes) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
-func (c initializedComputes) Less(i, j int) bool { return c[i].infra.ID() < c[j].infra.ID() }
+func (c initializedMachines) Len() int           { return len(c) }
+func (c initializedMachines) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c initializedMachines) Less(i, j int) bool { return c[i].infra.ID() < c[j].infra.ID() }
 
 func ensureSoftware(
-	logger logging.Logger,
-	target k8s.KubernetesVersion,
-	k8sClient *k8s.Client,
-	controlplane []initializedCompute,
-	workers []initializedCompute) (bool, error) {
+	monitor mntr.Monitor,
+	target KubernetesVersion,
+	k8sClient *Client,
+	controlplane []*initializedMachine,
+	workers []*initializedMachine) (bool, error) {
 
-	findPath := func(computes []initializedCompute) (common.Software, common.Software, error) {
+	findPath := func(machines []*initializedMachine) (common.Software, common.Software, error) {
 
-		var overallLowKubelet k8s.KubernetesVersion
+		var overallLowKubelet KubernetesVersion
 		var overallLowKubeletMinor int
 		zeroSW := common.Software{}
 
-		for _, compute := range computes {
-			id := compute.infra.ID()
+		for _, machine := range machines {
+			id := machine.infra.ID()
 			node, err := k8sClient.GetNode(id)
 			if err != nil {
 				continue
@@ -40,12 +39,12 @@ func ensureSoftware(
 
 			nodeinfoKubelet := node.Status.NodeInfo.KubeletVersion
 
-			logger.WithFields(map[string]interface{}{
-				"compute": id,
+			monitor.WithFields(map[string]interface{}{
+				"machine": id,
 				"kubelet": nodeinfoKubelet,
 			}).Debug("Found kubelet version from node info")
-			kubelet := k8s.ParseString(nodeinfoKubelet)
-			if kubelet == k8s.Unknown {
+			kubelet := ParseString(nodeinfoKubelet)
+			if kubelet == Unknown {
 				return zeroSW, zeroSW, errors.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
 
@@ -54,7 +53,7 @@ func ensureSoftware(
 				return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from kubelet version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
 
-			if overallLowKubelet == k8s.Unknown {
+			if overallLowKubelet == Unknown {
 				overallLowKubelet = kubelet
 				overallLowKubeletMinor = kubeletMinor
 				continue
@@ -80,9 +79,9 @@ func ensureSoftware(
 			}
 		}
 
-		if overallLowKubelet == target || overallLowKubelet == k8s.Unknown {
+		if overallLowKubelet == target || overallLowKubelet == Unknown {
 			target := target.DefineSoftware()
-			logger.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"from": overallLowKubelet,
 				"to":   target,
 			}).Debug("Cluster is up to date")
@@ -100,7 +99,7 @@ func ensureSoftware(
 
 		overallLowKubeletSoftware := overallLowKubelet.DefineSoftware()
 		if targetMinor-overallLowKubeletMinor < 2 {
-			logger.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"from": overallLowKubelet,
 				"to":   target,
 			}).Debug("Desired version can be reached directly")
@@ -108,7 +107,7 @@ func ensureSoftware(
 		}
 
 		nextHighestMinor := overallLowKubelet.NextHighestMinor()
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"from":         overallLowKubelet,
 			"fromMinor":    overallLowKubeletMinor,
 			"intermediate": nextHighestMinor,
@@ -119,36 +118,17 @@ func ensureSoftware(
 	}
 
 	plan := func(
-		compute initializedCompute,
+		machine *initializedMachine,
 		isFirstControlplane bool,
 		to common.Software) (func() error, error) {
 
-		waitForNodeAgent := func() error {
-			logger.WithFields(map[string]interface{}{
-				"compute": compute.infra.ID(),
-			}).Info("Waiting for software to be ensured")
-			return nil
-		}
+		id := machine.infra.ID()
+		machinemonitor := monitor.WithFields(map[string]interface{}{
+			"machine": id,
+		})
 
-		ensureJoinSoftware := func() error {
-			logger.WithFields(map[string]interface{}{
-				"compute": compute.infra.ID(),
-				"from":    compute.desiredNodeagent.Software.Kubeadm.Version,
-				"to":      to.Kubeadm.Version,
-			}).Info("Ensuring join software")
-			compute.desiredNodeagent.Software.Merge(to)
-			return nil
-		}
-
-		ensureKubeadm := func() error {
-			compute.desiredNodeagent.Software.Kubeadm = common.Package{
-				Version: to.Kubeadm.Version,
-			}
-			logger.WithFields(map[string]interface{}{
-				"compute": compute.infra.ID(),
-				"from":    compute.desiredNodeagent.Software.Kubeadm.Version,
-				"to":      to.Kubeadm.Version,
-			}).Info("Ensuring kubeadm")
+		awaitNodeAgent := func() error {
+			machinemonitor.Info("Awaiting node agent")
 			return nil
 		}
 
@@ -156,106 +136,106 @@ func ensureSoftware(
 			return func() (err error) {
 
 				defer func() {
-					err = errors.Wrapf(err, "ensuring software on node %s failed", compute.infra.ID())
+					err = errors.Wrapf(err, "ensuring software on node %s failed", machine.infra.ID())
 				}()
 
-				id := compute.infra.ID()
 				if !isControlplane {
-					logger.WithFields(map[string]interface{}{
-						"compute": id,
-					}).Info("Draining node")
-
-					if err := k8sClient.Drain(k8sNode); err != nil {
+					if err := k8sClient.Drain(machine.currentMachine, k8sNode); err != nil {
 						return err
 					}
 				}
 
 				upgradeAction := "node"
 				if isFirstControlplane {
-					logger.WithFields(map[string]interface{}{
-						"compute": id,
-					}).Info("Upgrading kubelet configuration on first controlplane node")
-
+					machinemonitor.Info("Migrating first controlplane node")
 					upgradeAction = fmt.Sprintf("apply %s --yes", to.Kubelet.Version)
 				} else {
-					logger.WithFields(map[string]interface{}{
-						"compute": id,
-					}).Info("Migrating node")
+					machinemonitor.Info("Migrating node")
 				}
 
-				_, err = compute.infra.Execute(nil, nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
+				_, err = machine.infra.Execute(nil, nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
 				if err != nil {
 					return err
 				}
 
-				logger.WithFields(map[string]interface{}{
-					"compute": id,
-					"from":    compute.currentNodeagent.Software.Kubelet.Version,
-					"to":      to.Kubelet.Version,
-				}).Info("Ensuring kubelet")
-
-				compute.desiredNodeagent.Software.Merge(to)
+				if !machine.desiredNodeagent.Software.Contains(to) {
+					machine.desiredNodeagent.Software.Merge(to)
+					machinemonitor.WithFields(map[string]interface{}{
+						"from": machine.currentNodeagent.Software.Kubelet.Version,
+						"to":   to.Kubelet.Version,
+					}).Changed("Updated Kubernetes packages desired")
+				}
 				return nil
 			}
 		}
 
 		ensureOnline := func(k8sNode *v1.Node) func() error {
 			return func() error {
-				logger.WithFields(map[string]interface{}{
-					"compute": compute.infra.ID(),
-				}).Info("Bringing node back online")
-				return k8sClient.Uncordon(k8sNode)
+				if err := k8sClient.Uncordon(machine.currentMachine, k8sNode); err != nil {
+					return err
+				}
+				return nil
 			}
 		}
 
-		id := compute.infra.ID()
-
-		if !compute.currentNodeagent.NodeIsReady {
-			return waitForNodeAgent, nil
+		if !machine.currentNodeagent.NodeIsReady {
+			return awaitNodeAgent, nil
 		}
 
-		k8sNode, err := k8sClient.GetNode(id)
-		if k8sNode == nil || err != nil {
-			if compute.currentNodeagent.Software.Contains(to) {
+		if !machine.currentMachine.Joined {
+			if machine.currentNodeagent.Software.Contains(to) {
+				// This node needs to be joined first
 				return nil, nil
 			}
-			return ensureJoinSoftware, nil
+			return func() error {
+				if !machine.desiredNodeagent.Software.Contains(to) {
+					machine.desiredNodeagent.Software.Merge(to)
+					machinemonitor.WithFields(map[string]interface{}{
+						"current": KubernetesSoftware(machine.currentNodeagent.Software),
+						"desired": to,
+					}).Changed("Join software desired")
+				}
+				return nil
+			}, nil
 		}
 
-		k8sNodeIsReady := false
-		for _, cond := range k8sNode.Status.Conditions {
-			if cond.Type == v1.NodeReady {
-				k8sNodeIsReady = true
-				break
-			}
-		}
-		if !k8sNodeIsReady {
-			// This is a joiners case and treated as up-to-date here
-			return nil, nil
-		}
-
-		if compute.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-			return ensureKubeadm, nil
+		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
+			return func() error {
+				if machine.desiredNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
+					machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
+					machinemonitor.WithFields(map[string]interface{}{
+						"current": machine.currentNodeagent.Software.Kubeadm.Version,
+						"desired": to.Kubeadm.Version,
+					}).Changed("Kubeadm desired")
+				}
+				return nil
+			}, nil
 		}
 
-		isControlplane := compute.tier == Controlplane
+		isControlplane := machine.tier == Controlplane
+		k8sNode, err := k8sClient.GetNode(id)
+		if err != nil {
+			return nil, err
+		}
+
 		if k8sNode.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
 			return ensureSoftware(k8sNode, isControlplane, isFirstControlplane), nil
 		}
 
 		if k8sNode.Spec.Unschedulable && !isControlplane {
+			machine.currentMachine.Online = false
 			return ensureOnline(k8sNode), nil
 		}
 
-		if !compute.currentNodeagent.NodeIsReady || !compute.currentNodeagent.Software.Contains(to) {
-			return waitForNodeAgent, nil
+		if !machine.currentNodeagent.NodeIsReady || !machine.currentNodeagent.Software.Contains(to) {
+			return awaitNodeAgent, nil
 		}
 
 		return nil, nil
 	}
 
-	sortedControlplane := initializedComputes(controlplane)
-	sortedWorkers := initializedComputes(workers)
+	sortedControlplane := initializedMachines(controlplane)
+	sortedWorkers := initializedMachines(workers)
 	sort.Sort(sortedControlplane)
 	sort.Sort(sortedWorkers)
 
@@ -264,7 +244,7 @@ func ensureSoftware(
 		return false, err
 	}
 
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"currentSoftware":   from,
 		"currentKubernetes": from.Kubelet,
 		"desiredSofware":    to,
@@ -273,11 +253,11 @@ func ensureSoftware(
 
 	done := true
 	nexting := true
-	for idx, compute := range append(sortedControlplane, sortedWorkers...) {
+	for idx, machine := range append(sortedControlplane, sortedWorkers...) {
 
-		next, err := plan(compute, idx == 0, to)
+		next, err := plan(machine, idx == 0, to)
 		if err != nil {
-			return false, errors.Wrapf(err, "planning compute %s failed", compute.infra.ID())
+			return false, errors.Wrapf(err, "planning machine %s failed", machine.infra.ID())
 		}
 
 		if next == nil || !nexting {

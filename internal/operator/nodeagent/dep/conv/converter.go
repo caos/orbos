@@ -16,7 +16,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/nginx"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sshd"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/swap"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Converter interface {
@@ -25,25 +25,25 @@ type Converter interface {
 }
 
 type dependencies struct {
-	logger logging.Logger
-	os     dep.OperatingSystemMajor
-	pm     *dep.PackageManager
-	sysd   *dep.SystemD
-	cipher string
+	monitor mntr.Monitor
+	os      dep.OperatingSystemMajor
+	pm      *dep.PackageManager
+	sysd    *dep.SystemD
+	cipher  string
 }
 
-func New(logger logging.Logger, os dep.OperatingSystemMajor, cipher string) Converter {
-	return &dependencies{logger, os, nil, nil, cipher}
+func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Converter {
+	return &dependencies{monitor, os, nil, nil, cipher}
 }
 
 func (d *dependencies) Init() (func() error, error) {
 
-	d.pm = dep.NewPackageManager(d.logger, d.os.OperatingSystem)
+	d.pm = dep.NewPackageManager(d.monitor, d.os.OperatingSystem)
 	if err := d.pm.Init(); err != nil {
 		return d.pm.RefreshInstalled, err
 	}
 
-	d.sysd = dep.NewSystemD(d.logger)
+	d.sysd = dep.NewSystemD(d.monitor)
 	return d.pm.RefreshInstalled, nil
 }
 
@@ -60,7 +60,7 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.KeepaliveD,
-			Installer: keepalived.New(d.logger, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
+			Installer: keepalived.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.SSHD,
@@ -68,15 +68,15 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.Nginx,
-			Installer: nginx.New(d.logger, d.pm, d.sysd),
+			Installer: nginx.New(d.monitor, d.pm, d.sysd),
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.Containerruntime,
-			Installer: cri.New(d.logger, d.os, d.pm, d.sysd),
+			Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.Kubelet,
-			Installer: kubelet.New(d.logger, d.os.OperatingSystem, d.pm, d.sysd),
+			Installer: kubelet.New(d.monitor, d.os.OperatingSystem, d.pm, d.sysd),
 		},
 		&nodeagent.Dependency{
 			Desired:   sw.Kubectl,
@@ -89,35 +89,35 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 	}
 
 	for key, dependency := range dependencies {
-		dependency.Installer = middleware.AddLogging(d.logger, dependency.Installer)
+		dependency.Installer = middleware.AddLogging(d.monitor, dependency.Installer)
 		dependencies[key] = dependency
 	}
 
 	return dependencies
 }
 
-func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency) (sw common.Software) {
+func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func(nodeagent.Dependency) common.Package) (sw common.Software) {
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
 		case hostname.Installer:
-			sw.Hostname = dependency.Current
+			sw.Hostname = pkg(*dependency)
 		case swap.Installer:
-			sw.Swap = dependency.Current
+			sw.Swap = pkg(*dependency)
 		case kubelet.Installer:
-			sw.Kubelet = dependency.Current
+			sw.Kubelet = pkg(*dependency)
 		case kubeadm.Installer:
-			sw.Kubeadm = dependency.Current
+			sw.Kubeadm = pkg(*dependency)
 		case kubectl.Installer:
-			sw.Kubectl = dependency.Current
+			sw.Kubectl = pkg(*dependency)
 		case cri.Installer:
-			sw.Containerruntime = dependency.Current
+			sw.Containerruntime = pkg(*dependency)
 		case keepalived.Installer:
-			sw.KeepaliveD = dependency.Current
+			sw.KeepaliveD = pkg(*dependency)
 		case nginx.Installer:
-			sw.Nginx = dependency.Current
+			sw.Nginx = pkg(*dependency)
 		case sshd.Installer:
-			sw.SSHD = dependency.Current
+			sw.SSHD = pkg(*dependency)
 		default:
 			panic(errors.Errorf("No installer type for dependency %s found", i))
 		}

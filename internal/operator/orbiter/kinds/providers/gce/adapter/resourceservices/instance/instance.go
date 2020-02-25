@@ -5,32 +5,32 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"github.com/caos/orbiter/logging"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbiter/mntr"
+	"google.golang.org/api/machine/v1"
 )
 
 type Instance interface {
 	URL() string
-	infra.Compute
+	infra.Machine
 }
 
 type instance struct {
-	logger logging.Logger
-	infra.Compute
+	monitor mntr.Monitor
+	infra.Machine
 	spec   *model.UserSpec
 	caller *api.Caller
-	svc    *compute.InstancesService
+	svc    *machine.InstancesService
 	id     string
 	ip     string
 	url    string
 }
 
-func newInstance(logger logging.Logger, caller *api.Caller, spec *model.UserSpec, svc *compute.InstancesService, id, url, remoteUser, IP string) Instance {
-	i := &instance{logger.WithFields(map[string]interface{}{
+func newInstance(monitor mntr.Monitor, caller *api.Caller, spec *model.UserSpec, svc *machine.InstancesService, id, url, remoteUser, IP string) Instance {
+	i := &instance{monitor.WithFields(map[string]interface{}{
 		"type": "instance",
 		"name": id,
 	}), nil, spec, caller, svc, id, IP, url}
-	i.Compute = ssh.NewCompute(logger, i, remoteUser)
+	i.Machine = ssh.NewMachine(monitor, i, remoteUser)
 	return i
 }
 
@@ -40,7 +40,7 @@ func (m *instance) URL() string {
 
 func (m *instance) Remove() error {
 	_, err := m.caller.RunFirstSuccessful(
-		m.logger,
+		m.monitor,
 		api.Delete,
 		m.svc.Delete(m.spec.Project, m.spec.Zone, m.id))
 	return err

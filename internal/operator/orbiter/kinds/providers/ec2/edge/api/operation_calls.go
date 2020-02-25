@@ -6,10 +6,10 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	uuid "github.com/satori/go.uuid"
-	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/machine/v1"
 )
 
 type Action int
@@ -22,20 +22,20 @@ const (
 )
 
 type GceCall interface {
-	Do(opts ...googleapi.CallOption) (*compute.Operation, error)
+	Do(opts ...googleapi.CallOption) (*machine.Operation, error)
 }
 
 type Operation struct {
-	Logger       logging.Logger
+	monitor      mntr.Monitor
 	Action       Action
 	ResourceType string
 	ResourceName string
 	GceCall      GceCall
 }
 
-func (c *Caller) RunFirstSuccessful(logger logging.Logger, action Action, gceCall ...GceCall) (compOp *compute.Operation, err error) {
+func (c *Caller) RunFirstSuccessful(monitor mntr.Monitor, action Action, gceCall ...GceCall) (compOp *machine.Operation, err error) {
 
-	fieldedLogger := logger.WithFields(map[string]interface{}{"action": action})
+	fieldedmonitor := monitor.WithFields(map[string]interface{}{"action": action})
 
 next:
 	for _, call := range gceCall {
@@ -57,15 +57,15 @@ next:
 				continue next
 			}
 		}
-		fieldedLogger.Info("Operation done")
+		fieldedmonitor.Info("Operation done")
 	}
 	return
 }
 
 /*
-func (c *Caller) RunParallel(operation ...*Operation) ([]*compute.Operation, error) {
+func (c *Caller) RunParallel(operation ...*Operation) ([]*machine.Operation, error) {
 
-	compOps := make(chan *compute.Operation)
+	compOps := make(chan *machine.Operation)
 	errs := make(chan error)
 
 	var wg sync.WaitGroup
@@ -79,7 +79,7 @@ func (c *Caller) RunParallel(operation ...*Operation) ([]*compute.Operation, err
 			c.addContext(callValue)
 			callValue.MethodByName("RequestId").Call([]reflect.Value{reflect.ValueOf(id.String())})
 
-			logger := operation.Logger.WithFields(map[string]interface{}{
+			monitor := operation.monitor.WithFields(map[string]interface{}{
 				"action": operation.Action,
 				"type":   operation.ResourceType,
 				"name":   operation.ResourceName,
@@ -87,10 +87,10 @@ func (c *Caller) RunParallel(operation ...*Operation) ([]*compute.Operation, err
 
 			select {
 			case <-errs:
-				logger.Debug("Operation aborting")
+				monitor.Debug("Operation aborting")
 				return
 			default:
-				logger.Debug("Operation starting")
+				monitor.Debug("Operation starting")
 			}
 
 			op, err := operation.GceCall.Do()
@@ -103,7 +103,7 @@ func (c *Caller) RunParallel(operation ...*Operation) ([]*compute.Operation, err
 				time.Sleep(time.Second)
 				select {
 				case <-errs:
-					logger.Debug("Not waiting for operation to finish")
+					monitor.Debug("Not waiting for operation to finish")
 					return
 				default:
 				}
@@ -113,7 +113,7 @@ func (c *Caller) RunParallel(operation ...*Operation) ([]*compute.Operation, err
 					return
 				}
 			}
-			logger.Info("Operation done")
+			monitor.Info("Operation done")
 
 			compOps <- op
 		}(op)
@@ -129,10 +129,10 @@ func (c *Caller) RunParallel(operation ...*Operation) ([]*compute.Operation, err
 	default:
 	}
 
-	computeOperations := make([]*compute.Operation, 0)
+	machineOperations := make([]*machine.Operation, 0)
 	for compOp := range compOps {
-		computeOperations = append(computeOperations, compOp)
+		machineOperations = append(machineOperations, compOp)
 	}
-	return computeOperations, nil
+	return machineOperations, nil
 }
 */

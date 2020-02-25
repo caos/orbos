@@ -9,28 +9,31 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func join(
-	logger logging.Logger,
-	joining infra.Compute,
-	joinAt infra.Compute,
+	monitor mntr.Monitor,
+	joining *initializedMachine,
+	joinAt infra.Machine,
 	desired DesiredV0,
 	kubeAPI infra.Address,
 	joinToken string,
-	kubernetesVersion k8s.KubernetesVersion,
-	certKey string,
-	isControlPlane bool) (*string, error) {
+	kubernetesVersion KubernetesVersion,
+	certKey string) (*string, error) {
 
 	var installNetwork func() error
+	monitor = monitor.WithFields(map[string]interface{}{
+		"machine": joining.infra.ID(),
+		"tier":    joining.tier,
+	})
+
 	switch desired.Spec.Networking.Network {
 	case "cilium":
 		installNetwork = func() error {
-			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+			return try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml")
-				logger.WithFields(map[string]interface{}{
+				monitor.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
 				}).Debug("Applied cilium network")
 				return applyErr
@@ -38,9 +41,9 @@ func join(
 		}
 	case "calico":
 		installNetwork = func() error {
-			return try(logger, time.NewTimer(20*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+			return try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr))
-				logger.WithFields(map[string]interface{}{
+				monitor.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
 				}).Debug("Applied calico network")
 				return applyErr
@@ -50,7 +53,7 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
 
-	intIP := joining.IP()
+	intIP := joining.infra.IP()
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
@@ -112,7 +115,7 @@ nodeRegistration:
 `,
 		joinToken,
 		intIP,
-		joining.ID(),
+		joining.infra.ID(),
 		kubeAPI,
 		kubernetesVersion,
 		desired.Spec.Networking.DNSDomain,
@@ -120,9 +123,9 @@ nodeRegistration:
 		desired.Spec.Networking.ServiceCidr,
 		kubeAPI,
 		joinToken,
-		joining.ID())
+		joining.infra.ID())
 
-	if isControlPlane {
+	if joining.tier == Controlplane {
 		kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
     advertiseAddress: %s
@@ -131,23 +134,23 @@ nodeRegistration:
 `, intIP, certKey)
 	}
 
-	if err := try(logger, time.NewTimer(7*time.Second), 2*time.Second, joining, func(cmp infra.Compute) error {
+	if err := try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
 	}); err != nil {
 		return nil, err
 	}
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"path": kubeadmCfgPath,
 	}).Debug("Written file")
 
 	cmd := fmt.Sprintf("sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd")
-	resetStdout, err := joining.Execute(nil, nil, cmd)
+	resetStdout, err := joining.infra.Execute(nil, nil, cmd)
 	if err != nil {
 		return nil, errors.Wrapf(err, "executing %s failed", cmd)
 	}
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"stdout": string(resetStdout),
-	}).Debug("Cleaned up compute")
+	}).Debug("Cleaned up machine")
 
 	if joinAt != nil {
 		joinAtIP := joinAt.IP()
@@ -156,28 +159,30 @@ nodeRegistration:
 		}
 
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAtIP, kubeAPI.Port, kubeadmCfgPath)
-		joinStdout, err := joining.Execute(nil, nil, cmd)
+		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
 		}
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"stdout": string(joinStdout),
 		}).Debug("Executed kubeadm join")
+		joining.currentMachine.Joined = true
+		monitor.Changed("Node joined")
 		return nil, nil
 	}
 
 	var kubeconfig bytes.Buffer
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
-	initStdout, err := joining.Execute(nil, nil, initCmd)
+	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
 	if err != nil {
 		return nil, err
 	}
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"stdout": string(initStdout),
 	}).Debug("Executed kubeadm init")
 
-	copyKubeconfigStdout, err := joining.Execute(nil, nil, fmt.Sprintf("mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config"))
-	logger.WithFields(map[string]interface{}{
+	copyKubeconfigStdout, err := joining.infra.Execute(nil, nil, fmt.Sprintf("mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config"))
+	monitor.WithFields(map[string]interface{}{
 		"stdout": string(copyKubeconfigStdout),
 	}).Debug("Moved kubeconfig")
 	if err != nil {
@@ -188,9 +193,12 @@ nodeRegistration:
 		return nil, err
 	}
 
-	if err := joining.ReadFile("${HOME}/.kube/config", &kubeconfig); err != nil {
+	if err := joining.infra.ReadFile("${HOME}/.kube/config", &kubeconfig); err != nil {
 		return nil, err
 	}
+
+	joining.currentMachine.Joined = true
+	monitor.Changed("Cluster initialized")
 
 	kc := kubeconfig.String()
 

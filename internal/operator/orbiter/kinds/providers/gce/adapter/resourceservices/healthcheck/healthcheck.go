@@ -3,8 +3,8 @@ package healthcheck
 import (
 	"errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbiter/mntr"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
@@ -12,10 +12,10 @@ import (
 )
 
 type hc struct {
-	logger logging.Logger
-	spec   *model.UserSpec
-	svc    *compute.HealthChecksService
-	caller *api.Caller
+	monitor mntr.Monitor
+	spec    *model.UserSpec
+	svc     *compute.HealthChecksService
+	caller  *api.Caller
 }
 
 type Config struct {
@@ -23,12 +23,12 @@ type Config struct {
 	Path string
 }
 
-func New(logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(monitor mntr.Monitor, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &hc{
-		logger: logger.WithFields(map[string]interface{}{"type": "health check"}),
-		spec:   spec,
-		svc:    compute.NewHealthChecksService(svc),
-		caller: caller,
+		monitor: monitor.WithFields(map[string]interface{}{"type": "health check"}),
+		spec:    spec,
+		svc:     compute.NewHealthChecksService(svc),
+		caller:  caller,
 	}
 }
 
@@ -42,9 +42,9 @@ func (h *hc) Desire(payload interface{}) (interface{}, error) {
 		return nil, errors.New("Config must be of type *healthcheck.Config")
 	}
 
-	return &compute.HealthCheck{
+	return &machine.HealthCheck{
 		Type: "HTTPS",
-		HttpsHealthCheck: &compute.HTTPSHealthCheck{
+		HttpsHealthCheck: &machine.HTTPSHealthCheck{
 			Port:        cfg.Port,
 			RequestPath: cfg.Path,
 		},
@@ -57,7 +57,7 @@ type Ensured struct {
 
 func (h *hc) Ensure(id string, desired interface{}, dependencies []interface{}) (interface{}, error) {
 
-	logger := h.logger.WithFields(map[string]interface{}{"name": id})
+	monitor := h.monitor.WithFields(map[string]interface{}{"name": id})
 
 	// ID validations
 	if len(dependencies) > 0 {
@@ -75,11 +75,11 @@ func (h *hc) Ensure(id string, desired interface{}, dependencies []interface{}) 
 		return &Ensured{*selflink}, nil
 	}
 
-	hc := *desired.(*compute.HealthCheck)
+	hc := *desired.(*machine.HealthCheck)
 	hc.Name = id
 
 	op, err := h.caller.RunFirstSuccessful(
-		logger,
+		monitor,
 		api.Insert,
 		h.svc.Insert(h.spec.Project, &hc))
 	if err != nil {
@@ -89,8 +89,8 @@ func (h *hc) Ensure(id string, desired interface{}, dependencies []interface{}) 
 }
 
 func (h *hc) Delete(id string) error {
-	logger := h.logger.WithFields(map[string]interface{}{"name": id})
-	_, err := h.caller.RunFirstSuccessful(logger, api.Delete, h.svc.Delete(h.spec.Project, id))
+	monitor := h.monitor.WithFields(map[string]interface{}{"name": id})
+	_, err := h.caller.RunFirstSuccessful(monitor, api.Delete, h.svc.Delete(h.spec.Project, id))
 	return err
 }
 

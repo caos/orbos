@@ -3,51 +3,65 @@ package kubernetes
 import (
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
+	v1 "k8s.io/api/core/v1"
 )
 
 type initializedPool struct {
 	infra    infra.Pool
 	tier     Tier
 	desired  Pool
-	computes func() ([]initializedCompute, error)
+	machines func() ([]*initializedMachine, error)
 }
 
-type initializeFunc func(initializedPool, []initializedCompute) error
+type initializeFunc func(initializedPool, []*initializedMachine) error
+type uninitializeMachineFunc func(id string)
+type initializeMachineFunc func(machine infra.Machine, pool initializedPool) *initializedMachine
 
 func (i *initializedPool) enhance(initialize initializeFunc) {
-	original := i.computes
-	i.computes = func() ([]initializedCompute, error) {
-		computes, err := original()
+	original := i.machines
+	i.machines = func() ([]*initializedMachine, error) {
+		machines, err := original()
 		if err != nil {
 			return nil, err
 		}
-		if err := initialize(*i, computes); err != nil {
+		if err := initialize(*i, machines); err != nil {
 			return nil, err
 		}
-		return computes, nil
+		return machines, nil
 	}
 }
 
-type initializedCompute struct {
-	infra            infra.Compute
+type initializedMachine struct {
+	infra            infra.Machine
 	tier             Tier
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
-	markAsRunning    func()
+	currentMachine   *Machine
 }
 
 func initialize(
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	curr *CurrentCluster,
 	desired DesiredV0,
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
-	providerPools map[string]map[string]infra.Pool) (controlplane initializedPool, workers []initializedPool, initializeCompute func(compute infra.Compute, pool initializedPool) initializedCompute, err error) {
+	providerPools map[string]map[string]infra.Pool,
+	k8s *Client,
+	postInit func(machine *initializedMachine)) (
+	controlplane initializedPool,
+	controlplaneMachines []*initializedMachine,
+	workers []initializedPool,
+	workerMachines []*initializedMachine,
+	initializeMachine initializeMachineFunc,
+	uninitializeMachine uninitializeMachineFunc,
+	err error) {
 
-	curr.Status = "maintaining"
-	curr.Computes = make(map[string]*Compute)
+	if curr.Machines == nil {
+		curr.Machines = make(map[string]*Machine)
+	}
+
+	curr.Status = "running"
 
 	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
 		pool := initializedPool{
@@ -55,61 +69,88 @@ func initialize(
 			tier:    tier,
 			desired: desired,
 		}
-		pool.computes = func() ([]initializedCompute, error) {
-			infraComputes, err := infraPool.GetComputes(true)
+		pool.machines = func() ([]*initializedMachine, error) {
+			infraMachines, err := infraPool.GetMachines(true)
 			if err != nil {
 				return nil, err
 			}
-			computes := make([]initializedCompute, len(infraComputes))
-			for i, infraCompute := range infraComputes {
-				computes[i] = initializeCompute(infraCompute, pool)
+			machines := make([]*initializedMachine, len(infraMachines))
+			for i, infraMachine := range infraMachines {
+				machines[i] = initializeMachine(infraMachine, pool)
+				if !machines[i].currentMachine.Online {
+					curr.Status = "maintaining"
+				}
 			}
-			return computes, nil
+			return machines, nil
 		}
 		return pool
 	}
 
-	initializeCompute = func(compute infra.Compute, pool initializedPool) initializedCompute {
+	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
 
-		current := &Compute{
-			Status: "maintaining",
-			Metadata: ComputeMetadata{
+		node, getNodeErr := k8s.GetNode(machine.ID())
+
+		current := &Machine{
+			Metadata: MachineMetadata{
 				Tier:     pool.tier,
 				Provider: pool.desired.Provider,
 				Pool:     pool.desired.Pool,
 			},
 		}
-		curr.Computes[compute.ID()] = current
 
-		naSpec, ok := nodeAgentsDesired[compute.ID()]
+		if getNodeErr == nil {
+			current.Joined = true
+			if !node.Spec.Unschedulable {
+				for _, cond := range node.Status.Conditions {
+					if cond.Type == v1.NodeReady {
+						current.Online = true
+						break
+					}
+				}
+			}
+		}
+
+		curr.Machines[machine.ID()] = current
+
+		machineMonitor := monitor.WithField("machine", machine.ID())
+
+		naSpec, ok := nodeAgentsDesired[machine.ID()]
 		if !ok {
 			naSpec = &common.NodeAgentSpec{}
-			nodeAgentsDesired[compute.ID()] = naSpec
+			nodeAgentsDesired[machine.ID()] = naSpec
 		}
 		naSpec.ChangesAllowed = !pool.desired.UpdatesDisabled
 
-		naCurr, ok := nodeAgentsCurrent[compute.ID()]
+		naCurr, ok := nodeAgentsCurrent[machine.ID()]
 		if !ok || naCurr == nil {
 			naCurr = &common.NodeAgentCurrent{}
-			nodeAgentsCurrent[compute.ID()] = naCurr
+			nodeAgentsCurrent[machine.ID()] = naCurr
 		}
 
 		if naSpec.Software == nil {
 			naSpec.Software = &common.Software{}
 		}
 
-		naSpec.Software.Merge(k8s.ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware())
-		naSpec.Software.Merge(k8s.Current(naCurr.Software))
+		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
+		if !naSpec.Software.Defines(k8sSoftware) {
+			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
+			if !naSpec.Software.Contains(k8sSoftware) {
+				naSpec.Software.Merge(k8sSoftware)
+				machineMonitor.Changed("Kubernetes software desired")
+			}
+		}
 
-		return initializedCompute{
-			infra: compute,
-			markAsRunning: func() {
-				current.Status = "running"
-			},
+		initMachine := &initializedMachine{
+			infra:            machine,
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
 			tier:             pool.tier,
+			currentMachine:   current,
 		}
+
+		postInit(initMachine)
+
+		return initMachine
 	}
 
 	for providerName, provider := range providerPools {
@@ -117,16 +158,53 @@ func initialize(
 		for poolName, pool := range provider {
 			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == poolName {
 				controlplane = initializePool(pool, desired.Spec.ControlPlane, Controlplane)
+				controlplaneMachines, err = controlplane.machines()
+				if err != nil {
+					return controlplane,
+						controlplaneMachines,
+						workers,
+						workerMachines,
+						initializeMachine,
+						uninitializeMachine,
+						err
+				}
 				continue
 			}
 
 			for _, desiredPool := range desired.Spec.Workers {
 				if providerName == desiredPool.Provider && poolName == desiredPool.Pool {
-					workers = append(workers, initializePool(pool, *desiredPool, Workers))
+					workerPool := initializePool(pool, *desiredPool, Workers)
+					workers = append(workers, workerPool)
+					initializedWorkerMachines, err := workerPool.machines()
+					if err != nil {
+						return controlplane,
+							controlplaneMachines,
+							workers,
+							workerMachines,
+							initializeMachine,
+							uninitializeMachine,
+							err
+					}
+					workerMachines = append(workerMachines, initializedWorkerMachines...)
 					continue pools
 				}
 			}
 		}
 	}
-	return controlplane, workers, initializeCompute, nil
+
+	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
+			curr.Status = "maintaining"
+			break
+		}
+	}
+
+	return controlplane,
+		controlplaneMachines,
+		workers,
+		workerMachines,
+		initializeMachine, func(id string) {
+			delete(nodeAgentsDesired, id)
+			delete(curr.Machines, id)
+		}, nil
 }

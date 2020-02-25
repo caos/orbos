@@ -11,55 +11,27 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) error {
+func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.Allowed, func() error, error) {
 
 		var (
 			outBuf bytes.Buffer
 			errBuf bytes.Buffer
 		)
 
-		errBuf.Reset()
-		cmd := exec.Command("systemctl", "enable", "firewalld")
-		cmd.Stderr = &errBuf
-
-		fullCmd := strings.Join(cmd.Args, " ")
-		if logger.IsVerbose() {
-			fmt.Println(fullCmd)
-			cmd.Stdout = os.Stdout
-		}
-
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-		}
-
-		errBuf.Reset()
-		cmd = exec.Command("systemctl", "start", "firewalld")
-		cmd.Stderr = &errBuf
-
-		fullCmd = strings.Join(cmd.Args, " ")
-		if logger.IsVerbose() {
-			fmt.Println(fullCmd)
-			cmd.Stdout = os.Stdout
-		}
-
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-		}
-
-		cmd = exec.Command("firewall-cmd", "--list-ports")
+		cmd := exec.Command("firewall-cmd", "--list-ports")
 		cmd.Stderr = &errBuf
 		cmd.Stdout = &outBuf
 
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
+			return nil, nil, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
 		}
 
 		stdout := outBuf.String()
-		if logger.IsVerbose() {
+		if monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
 			fmt.Println(stdout)
 		}
@@ -70,7 +42,7 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 	openloop:
 		for _, des := range desired {
 			desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
-			for _, already := range alreadyOpen {
+			for _, already := range append(alreadyOpen, ignore...) {
 				if desStr == already {
 					continue openloop
 				}
@@ -78,25 +50,78 @@ func centosEnsurer(logger logging.Logger) nodeagent.FirewallEnsurer {
 			addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
 		}
 
+		for _, ign := range ignore {
+			desired[ign] = common.Allowed{
+				Port:     ign,
+				Protocol: "tcp",
+			}
+		}
+
+		current := make([]*common.Allowed, len(alreadyOpen))
 	closeloop:
-		for _, already := range alreadyOpen {
+		for idx, already := range alreadyOpen {
+			fields := strings.Split(already, "/")
+			port := fields[0]
+			protocol := fields[1]
+			current[idx] = &common.Allowed{Port: port, Protocol: protocol}
 			for _, des := range desired {
-				if fmt.Sprintf("%s/%s", des.Port, des.Protocol) == already {
+				if des.Port == port && des.Protocol == protocol {
 					continue closeloop
 				}
 			}
 			removePorts = append(removePorts, fmt.Sprintf("--remove-port=%s", already))
 		}
 
-		if err := changeFirewall(logger, addPorts); err != nil {
-			return err
+		cmd = exec.Command("systemctl", "is-active", "firewalld")
+		if monitor.IsVerbose() {
+			fmt.Println(strings.Join(cmd.Args, " "))
+			cmd.Stdout = os.Stdout
 		}
 
-		return changeFirewall(logger, removePorts)
+		if cmd.Run() != nil || len(addPorts) == 0 && len(removePorts) == 0 {
+			return current, nil, nil
+		}
+
+		return current, func() error {
+
+			errBuf.Reset()
+			cmd = exec.Command("systemctl", "enable", "firewalld")
+			cmd.Stderr = &errBuf
+
+			fullCmd := strings.Join(cmd.Args, " ")
+			if monitor.IsVerbose() {
+				fmt.Println(fullCmd)
+				cmd.Stdout = os.Stdout
+			}
+
+			if err := cmd.Run(); err != nil {
+				return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+			}
+
+			errBuf.Reset()
+			cmd = exec.Command("systemctl", "start", "firewalld")
+			cmd.Stderr = &errBuf
+
+			fullCmd = strings.Join(cmd.Args, " ")
+			if monitor.IsVerbose() {
+				fmt.Println(fullCmd)
+				cmd.Stdout = os.Stdout
+			}
+
+			if err := cmd.Run(); err != nil {
+				return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+			}
+
+			if err := changeFirewall(monitor, addPorts); err != nil {
+				return err
+			}
+
+			return changeFirewall(monitor, removePorts)
+		}, nil
 	})
 }
 
-func changeFirewall(logger logging.Logger, changes []string) error {
+func changeFirewall(monitor mntr.Monitor, changes []string) error {
 	var errBuf bytes.Buffer
 	if len(changes) == 0 {
 		return nil
@@ -107,7 +132,7 @@ func changeFirewall(logger logging.Logger, changes []string) error {
 	cmd.Stderr = &errBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(fullCmd)
 		cmd.Stdout = os.Stdout
 	}
@@ -119,7 +144,7 @@ func changeFirewall(logger logging.Logger, changes []string) error {
 	errBuf.Reset()
 	cmd = exec.Command("firewall-cmd", "--reload")
 	cmd.Stderr = &errBuf
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
 )
 
 var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
@@ -70,7 +69,7 @@ func (d *DesiredV0) validate() error {
 		return errors.Errorf("Controlplane nodes can only be scaled to 1, 3 or 5 but desired are %d", d.Spec.ControlPlane.Nodes)
 	}
 
-	if k8s.ParseString(d.Spec.Versions.Kubernetes) == k8s.Unknown {
+	if ParseString(d.Spec.Versions.Kubernetes) == Unknown {
 		return errors.Errorf("Unknown kubernetes version %s", d.Spec.Versions.Kubernetes)
 	}
 

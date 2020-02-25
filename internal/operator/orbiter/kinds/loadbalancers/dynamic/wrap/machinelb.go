@@ -7,13 +7,13 @@ import (
 )
 
 type cmpLB struct {
-	original infra.Compute
+	original infra.Machine
 	desire   func() error
 }
 
-func compute(compute infra.Compute, desire func() error) infra.Compute {
+func machine(machine infra.Machine, desire func() error) infra.Machine {
 	return &cmpLB{
-		original: compute,
+		original: machine,
 		desire:   desire,
 	}
 }

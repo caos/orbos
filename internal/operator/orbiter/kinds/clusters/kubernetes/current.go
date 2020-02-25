@@ -6,20 +6,28 @@ import (
 
 type CurrentCluster struct {
 	Status   string
-	Computes map[string]*Compute `yaml:"computes"`
+	Machines map[string]*Machine `yaml:"machines"`
 }
 
 type Current struct {
 	Common  orbiter.Common `yaml:",inline"`
-	Current CurrentCluster
+	Current *CurrentCluster
 }
 
-type Compute struct {
-	Status   string
-	Metadata ComputeMetadata `yaml:",inline"`
+type Machine struct {
+	Joined             bool
+	Online             bool
+	FirewallIsReady    bool
+	NodeAgentIsRunning bool
+	Metadata           MachineMetadata `yaml:",inline"`
 }
 
-type ComputeMetadata struct {
+type Versions struct {
+	NodeAgent  string
+	Kubernetes string
+}
+
+type MachineMetadata struct {
 	Tier     Tier
 	Provider string
 	Pool     string

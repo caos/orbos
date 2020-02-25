@@ -4,30 +4,30 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbiter/mntr"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/healthcheck"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/instancegroup"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"google.golang.org/api/compute/v1"
+	"google.golang.org/api/machine/v1"
 )
 
 type backendService struct {
-	logger    logging.Logger
+	monitor   mntr.Monitor
 	spec      *model.UserSpec
-	regionSvc *compute.RegionBackendServicesService
-	globalSvc *compute.BackendServicesService
+	regionSvc *machine.RegionBackendServicesService
+	globalSvc *machine.BackendServicesService
 	caller    *api.Caller
 }
 
-func New(logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(monitor mntr.Monitor, svc *machine.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &backendService{
-		logger:    logger.WithFields(map[string]interface{}{"type": "backend service"}),
+		monitor:   monitor.WithFields(map[string]interface{}{"type": "backend service"}),
 		spec:      spec,
-		regionSvc: compute.NewRegionBackendServicesService(svc),
-		globalSvc: compute.NewBackendServicesService(svc),
+		regionSvc: machine.NewRegionBackendServicesService(svc),
+		globalSvc: machine.NewBackendServicesService(svc),
 		caller:    caller,
 	}
 }
@@ -45,8 +45,8 @@ type Config struct {
 }
 
 type Desired struct {
-	BackendType    *compute.Backend
-	BackendService *compute.BackendService
+	BackendType    *machine.Backend
+	BackendService *machine.BackendService
 }
 
 func (b *backendService) Desire(config interface{}) (interface{}, error) {
@@ -66,11 +66,11 @@ func (b *backendService) Desire(config interface{}) (interface{}, error) {
 	}
 
 	return &Desired{
-		BackendType: &compute.Backend{
+		BackendType: &machine.Backend{
 			BalancingMode:  "CONNECTION",
 			MaxConnections: maxConnections,
 		},
-		BackendService: &compute.BackendService{
+		BackendService: &machine.BackendService{
 			Protocol:            "TCP",
 			LoadBalancingScheme: scheme,
 			PortName:            portName,
@@ -84,7 +84,7 @@ type Ensured struct {
 
 func (b *backendService) Ensure(id string, desired interface{}, dependencies []interface{}) (interface{}, error) {
 
-	logger := b.logger.WithFields(map[string]interface{}{"name": id})
+	monitor := b.monitor.WithFields(map[string]interface{}{"name": id})
 
 	selflink, err := b.caller.GetResourceSelfLink(id, []interface{}{
 		b.regionSvc.Get(b.spec.Project, b.spec.Region, id),
@@ -100,7 +100,7 @@ func (b *backendService) Ensure(id string, desired interface{}, dependencies []i
 
 	cfg := desired.(*Desired)
 
-	backends := make([]*compute.Backend, 0)
+	backends := make([]*machine.Backend, 0)
 	healthchecks := make([]string, 0)
 	for _, dep := range dependencies {
 		switch typedDep := dep.(type) {
@@ -120,14 +120,14 @@ func (b *backendService) Ensure(id string, desired interface{}, dependencies []i
 	bes.HealthChecks = healthchecks
 	bes.Backends = backends
 
-	var op *compute.Operation
+	var op *machine.Operation
 	if bes.LoadBalancingScheme == "INTERNAL" {
 		op, err = b.caller.RunFirstSuccessful(
-			logger.WithFields(map[string]interface{}{"scope": "regional"}),
+			monitor.WithFields(map[string]interface{}{"scope": "regional"}),
 			api.Insert, b.regionSvc.Insert(b.spec.Project, b.spec.Region, &bes))
 	} else {
 		op, err = b.caller.RunFirstSuccessful(
-			logger.WithFields(map[string]interface{}{"scope": "global"}),
+			monitor.WithFields(map[string]interface{}{"scope": "global"}),
 			api.Insert, b.globalSvc.Insert(b.spec.Project, &bes))
 	}
 	if err != nil {
@@ -137,8 +137,8 @@ func (b *backendService) Ensure(id string, desired interface{}, dependencies []i
 }
 
 func (b *backendService) Delete(name string) error {
-	logger := b.logger.WithFields(map[string]interface{}{"name": name})
-	_, err := b.caller.RunFirstSuccessful(logger, api.Delete,
+	monitor := b.monitor.WithFields(map[string]interface{}{"name": name})
+	_, err := b.caller.RunFirstSuccessful(monitor, api.Delete,
 		b.regionSvc.Delete(b.spec.Project, b.spec.Region, name),
 		b.globalSvc.Delete(b.spec.Project, name))
 	return err

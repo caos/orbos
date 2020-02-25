@@ -44,7 +44,7 @@ func (p *PackageManager) rembasedInstalled() error {
 func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining string, parse func(line string) (string, string, error)) error {
 
 	p.installed = make(map[string]string)
-	if p.logger.IsVerbose() {
+	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(listCommand.Args, " "))
 	}
 
@@ -63,7 +63,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 	for err == nil {
 		var line string
 		line, err = bufferedReader.ReadString('\n')
-		if p.logger.IsVerbose() {
+		if p.monitor.IsVerbose() {
 			fmt.Println(line)
 		}
 
@@ -78,7 +78,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 
 		pkg, version, _ := parse(line)
 		p.installed[pkg] = version
-		p.logger.WithFields(map[string]interface{}{
+		p.monitor.WithFields(map[string]interface{}{
 			"package": pkg,
 			"version": version,
 		}).Debug("Found installed package")

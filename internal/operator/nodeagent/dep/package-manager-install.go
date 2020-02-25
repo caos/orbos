@@ -22,7 +22,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		pkgs[idx] = fmt.Sprintf("%s-%s", sw.Package, sw.Version)
 		cmd := exec.Command("yum", "versionlock", "delete", sw.Package)
 		cmd.Stderr = &errBuf
-		if p.logger.IsVerbose() {
+		if p.monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
 			cmd.Stdout = os.Stdout
 		}
@@ -35,7 +35,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 
 		cmd = exec.Command("yum", "versionlock", "add", "-y", pkgs[idx])
 		cmd.Stderr = &errBuf
-		if p.logger.IsVerbose() {
+		if p.monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
 			cmd.Stdout = os.Stdout
 		}
@@ -47,7 +47,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 
 	cmd := exec.Command("yum", append([]string{"install", "-y"}, pkgs...)...)
 	cmd.Stderr = &errBuf
-	if p.logger.IsVerbose() {
+	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -70,7 +70,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 
 		cmd := exec.Command("apt-mark", "unhold", sw.Package)
 		cmd.Stderr = &errBuf
-		if p.logger.IsVerbose() {
+		if p.monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
 			cmd.Stdout = os.Stdout
 		}
@@ -82,7 +82,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 
 	cmd := exec.Command("dpkg", "--configure", "-a")
 	cmd.Stderr = &errBuf
-	if p.logger.IsVerbose() {
+	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -94,7 +94,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 	cmd = exec.Command("apt-get", append(strings.Fields(
 		"--assume-yes --allow-downgrades install -y"), pkgs...)...)
 	cmd.Stderr = &errBuf
-	if p.logger.IsVerbose() {
+	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
@@ -106,7 +106,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 	for _, pkg := range hold {
 		cmd = exec.Command("apt-mark", "hold", pkg)
 		cmd.Stderr = &errBuf
-		if p.logger.IsVerbose() {
+		if p.monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
 			cmd.Stdout = os.Stdout
 		}
@@ -115,7 +115,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 		}
 		errBuf.Reset()
 
-		p.logger.WithFields(map[string]interface{}{
+		p.monitor.WithFields(map[string]interface{}{
 			"package": installVersion.Package,
 			"version": installVersion.Version,
 		}).Debug("Installed package")

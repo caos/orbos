@@ -2,72 +2,71 @@ package kubernetes
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 )
 
 /*
 type pool struct {
-	logger  logging.Logger
+	monitor  mntr.Monitor
 	repoURL string
 	repoKey string
 	desired Pool
 	cloud   infra.Pool
 	k8s     *k8s.Client
-	cmps    []infra.Compute
+	cmps    []infra.Machine
 	mux     sync.Mutex
 }
 
 func newPool(
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	repoURL string,
 	repoKey string,
 	desired Pool,
 	cloudPool infra.Pool,
 	k8s *k8s.Client,
-	initialComputes []infra.Compute) *pool {
+	initialMachines []infra.Machine) *pool {
 	return &pool{
-		logger,
+		monitor,
 		repoURL,
 		repoKey,
 		desired,
 		cloudPool,
 		k8s,
-		initialComputes,
+		initialMachines,
 		sync.Mutex{},
 	}
 }*/
 
 // TODO: Implement
-/*func (p *pool) deleteComputes(number int) error {
+/*func (p *pool) deleteMachines(number int) error {
 
-	all := p.computes()
+	all := p.machines()
 	remaining := all[]
 }
 */
 
-func cleanupComputes(logger logging.Logger, pool infra.Pool, k8s *k8s.Client) (err error) {
+func cleanupMachines(monitor mntr.Monitor, pool infra.Pool, k8s *Client) (err error) {
 
 	nodes, err := k8s.ListNodes()
 	if err != nil {
 		return err
 	}
 
-	computes, err := pool.GetComputes(true)
+	machines, err := pool.GetMachines(true)
 	if err != nil {
 		return err
 	}
-	logger.WithFields(map[string]interface{}{
-		"computes": len(computes),
+	monitor.WithFields(map[string]interface{}{
+		"machines": len(machines),
 		"nodes":    len(nodes),
-	}).Debug("Aligning computes to nodes")
+	}).Debug("Aligning machines to nodes")
 
-keepCompute:
-	for _, comp := range computes {
+keepMachine:
+	for _, comp := range machines {
 		for _, node := range nodes {
 			if node.GetName() == comp.ID() {
-				continue keepCompute
+				continue keepMachine
 			}
 		}
 		if err := comp.Remove(); err != nil {
@@ -78,28 +77,28 @@ keepCompute:
 	return nil
 }
 
-func newComputes(pool infra.Pool, number int) (computes []infra.Compute, err error) {
+func newMachines(pool infra.Pool, number int) (machines []infra.Machine, err error) {
 
-	computes = make([]infra.Compute, 0)
+	machines = make([]infra.Machine, 0)
 
 	var it int
 	for it = 0; it < number; it++ {
-		var compute infra.Compute
-		compute, err = pool.AddCompute()
+		var machine infra.Machine
+		machine, err = pool.AddMachine()
 		if err != nil {
 			break
 		}
-		computes = append(computes, compute)
+		machines = append(machines, machine)
 	}
 
 	if err != nil {
-		for _, compute := range computes {
-			if rmErr := compute.Remove(); rmErr != nil {
-				err = errors.Wrapf(rmErr, "cleaning up compute failed. original error: %s", err)
+		for _, machine := range machines {
+			if rmErr := machine.Remove(); rmErr != nil {
+				err = errors.Wrapf(rmErr, "cleaning up machine failed. original error: %s", err)
 			}
 		}
 		return nil, err
 	}
 
-	return computes, nil
+	return machines, nil
 }

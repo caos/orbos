@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Software struct {
@@ -24,7 +24,7 @@ type Repository struct {
 }
 
 type PackageManager struct {
-	logger    logging.Logger
+	monitor   mntr.Monitor
 	os        OperatingSystem
 	installed map[string]string
 }
@@ -38,7 +38,7 @@ func (p *PackageManager) RefreshInstalled() error {
 		err = p.rembasedInstalled()
 	}
 
-	p.logger.WithFields(map[string]interface{}{
+	p.monitor.WithFields(map[string]interface{}{
 		"packages": len(p.installed),
 	}).Debug("Refreshed installed packages")
 
@@ -47,7 +47,7 @@ func (p *PackageManager) RefreshInstalled() error {
 
 func (p *PackageManager) Init() error {
 
-	p.logger.Info("Updating packages")
+	p.monitor.Info("Updating packages")
 
 	var err error
 	switch p.os.Packages {
@@ -61,12 +61,12 @@ func (p *PackageManager) Init() error {
 		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
 	}
 
-	p.logger.Info("Packages are updated")
+	p.monitor.Info("Packages are updated")
 	return nil
 }
 
-func NewPackageManager(logger logging.Logger, os OperatingSystem) *PackageManager {
-	return &PackageManager{logger, os, nil}
+func NewPackageManager(monitor mntr.Monitor, os OperatingSystem) *PackageManager {
+	return &PackageManager{monitor, os, nil}
 }
 
 func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Software, error) {
@@ -79,7 +79,7 @@ func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Softwar
 				Version: version,
 			}
 			software = append(software, pkg)
-			p.logger.WithFields(map[string]interface{}{
+			p.monitor.WithFields(map[string]interface{}{
 				"package": pkg.Package,
 				"version": pkg.Version,
 			}).Debug("Found filtered installed package")

@@ -7,16 +7,15 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func AdaptFunc(
-	logger logging.Logger,
 	orb *orbiter.Orb,
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (ensureFunc orbiter.EnsureFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -32,12 +31,12 @@ func AdaptFunc(
 			return nil, nil, nil, migrate, err
 		}
 
-		if desiredKind.Spec.Verbose && !logger.IsVerbose() {
-			logger = logger.Verbose()
+		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
+			monitor = monitor.Verbose()
 		}
 
 		providerCurrents := make(map[string]*orbiter.Tree)
-		providerEnsurers := make([]orbiter.EnsureFunc, 0)
+		providerQueriers := make([]orbiter.QueryFunc, 0)
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
 		secrets = make(map[string]*orbiter.Secret)
 
@@ -46,7 +45,7 @@ func AdaptFunc(
 			providerCurrent := &orbiter.Tree{}
 			providerCurrents[provID] = providerCurrent
 
-			//			providerlogger := logger.WithFields(map[string]interface{}{
+			//			providermonitor := monitor.WithFields(map[string]interface{}{
 			//				"provider": provID,
 			//			})
 
@@ -63,7 +62,7 @@ func AdaptFunc(
 			//						},
 			//					}
 			//				}
-			//				subassemblers[provIdx] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providerlogger, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
+			//				subassemblers[provIdx] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providermonitor, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
 			case "orbiter.caos.ch/StaticProvider":
 				//				updatesDisabled := make([]string, 0)
 				//				for _, pool := range desiredKind.Spec.Workers {
@@ -76,14 +75,20 @@ func AdaptFunc(
 				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				//				}
 
-				providerEnsurer, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(logger, orb.Masterkey, provID)(providerTree, providerCurrent)
+				providerQuerier, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(
+					orb.Masterkey,
+					provID,
+				)(
+					monitor.WithFields(map[string]interface{}{"provider": provID}),
+					providerTree,
+					providerCurrent)
 				if err != nil {
 					return nil, nil, nil, migrate, err
 				}
 				if pMigrate {
 					migrate = true
 				}
-				providerEnsurers = append(providerEnsurers, providerEnsurer)
+				providerQueriers = append(providerQueriers, providerQuerier)
 				providerDestroyers = append(providerDestroyers, providerDestroyer)
 				for path, secret := range providerSecrets {
 					secrets[orbiter.JoinPath(provID, path)] = secret
@@ -94,24 +99,6 @@ func AdaptFunc(
 		}
 
 		var provCurr map[string]interface{}
-		ensureProviders := func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (map[string]interface{}, error) {
-
-			if provCurr != nil {
-				return provCurr, nil
-			}
-
-			provCurr = make(map[string]interface{})
-			for _, ensurer := range providerEnsurers {
-				if err := ensurer(psf, nodeAgentsCurrent, nodeAgentsDesired); err != nil {
-					return nil, err
-				}
-			}
-
-			for currKey, currVal := range providerCurrents {
-				provCurr[currKey] = currVal.Parsed
-			}
-			return provCurr, nil
-		}
 		destroyProviders := func() (map[string]interface{}, error) {
 			if provCurr != nil {
 				return provCurr, nil
@@ -131,7 +118,7 @@ func AdaptFunc(
 		}
 
 		clusterCurrents := make(map[string]*orbiter.Tree)
-		clusterEnsurers := make([]orbiter.EnsureFunc, 0)
+		clusterQueriers := make([]orbiter.QueryFunc, 0)
 		clusterDestroyers := make([]orbiter.DestroyFunc, 0)
 		for clusterID, clusterTree := range desiredKind.Clusters {
 
@@ -140,20 +127,30 @@ func AdaptFunc(
 
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterEnsurer, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(logger, orb, orbiterCommit, clusterID, oneoff, deployOrbiterAndBoom, ensureProviders, destroyProviders)(clusterTree, clusterCurrent)
+				clusterQuerier, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(
+					orb,
+					orbiterCommit,
+					clusterID,
+					oneoff,
+					deployOrbiterAndBoom,
+					destroyProviders,
+				)(
+					monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
+					clusterTree,
+					clusterCurrent)
 				if err != nil {
 					return nil, nil, nil, migrate, err
 				}
 				if cMigrate {
 					migrate = true
 				}
-				clusterEnsurers = append(clusterEnsurers, clusterEnsurer)
+				clusterQueriers = append(clusterQueriers, clusterQuerier)
 				clusterDestroyers = append(clusterDestroyers, clusterDestroyer)
 				for path, secret := range clusterSecrets {
 					secrets[orbiter.JoinPath(clusterID, path)] = secret
 				}
 
-				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providerlogger, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
+				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 			default:
 				return nil, nil, nil, migrate, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 			}
@@ -168,17 +165,44 @@ func AdaptFunc(
 			Providers: providerCurrents,
 		}
 
-		return func(psf orbiter.PushSecretsFunc, nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec) (err error) {
-				defer func() {
-					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
-				}()
+		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 
-				for _, ensurer := range clusterEnsurers {
-					if err := ensurer(psf, nodeAgentsCurrent, nodeAgentsDesired); err != nil {
-						return err
+				providerEnsurers := make([]orbiter.EnsureFunc, 0)
+				queriedProviders := make(map[string]interface{})
+				for _, querier := range providerQueriers {
+					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					if err != nil {
+						return nil, err
 					}
+					providerEnsurers = append(providerEnsurers, ensurer)
 				}
-				return nil
+
+				for currKey, currVal := range providerCurrents {
+					queriedProviders[currKey] = currVal.Parsed
+				}
+
+				clusterEnsurers := make([]orbiter.EnsureFunc, 0)
+				for _, querier := range clusterQueriers {
+					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					if err != nil {
+						return nil, err
+					}
+					clusterEnsurers = append(clusterEnsurers, ensurer)
+				}
+
+				return func(psf orbiter.PushSecretsFunc) (err error) {
+					defer func() {
+						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+					}()
+
+					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
+						if err := ensurer(psf); err != nil {
+							return err
+						}
+					}
+
+					return nil
+				}, nil
 			}, func() error {
 				defer func() {
 					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)

@@ -9,9 +9,9 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/api"
 	gceconfig "github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config"
 	gcetypes "github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config/api"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instance"
 	logcontext "github.com/caos/orbiter/logging/context"
 	"github.com/caos/orbiter/logging/stdlib"
@@ -27,7 +27,7 @@ func Gce(config *viper.Viper, secrets *viper.Viper) Provider {
 	return &gceProvider{config, secrets}
 }
 
-func (g *gceProvider) Assemble(operatorID string, configuredPools []string, configuredLoadBalancers []*LoadBalancer) (infra.Provider, core.ComputesService, interface{}, error) {
+func (g *gceProvider) Assemble(operatorID string, configuredPools []string, configuredLoadBalancers []*LoadBalancer) (infra.Provider, core.MachinesService, interface{}, error) {
 
 	pools := make(map[string]*gcetypes.Pool)
 	for _, pool := range configuredPools {
@@ -64,11 +64,11 @@ func (g *gceProvider) Assemble(operatorID string, configuredPools []string, conf
 		return nil, nil, nil, err
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
-	computesSvc := instance.NewInstanceService(logger, assembly, &api.Caller{
+	monitor := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
+	machinesSvc := instance.NewInstanceService(monitor, assembly, &api.Caller{
 		Ctx: ctx,
 		Cfg: assembly.Config(),
 	})
 
-	return gce.New(logger, assembly), computesSvc, assembly, nil
+	return gce.New(monitor, assembly), machinesSvc, assembly, nil
 }

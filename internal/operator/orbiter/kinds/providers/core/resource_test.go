@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbiter/logging/base"
 	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
 )
 
 type equalsCase struct {

@@ -4,81 +4,85 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/helpers"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func ensureScale(
-	logger logging.Logger,
-	desired DesiredV0,
-	kubeconfig *orbiter.Secret,
+	monitor mntr.Monitor,
+	desired *DesiredV0,
 	psf orbiter.PushSecretsFunc,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
 	kubeAPI infra.Address,
-	k8sVersion k8s.KubernetesVersion,
-	k8sClient *k8s.Client,
+	k8sVersion KubernetesVersion,
+	k8sClient *Client,
 	oneoff bool,
-	initializeCompute func(infra.Compute, initializedPool) (initializedCompute, error)) (bool, error) {
+	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error),
+	uninitializeMachine uninitializeMachineFunc) (bool, error) {
 
 	wCount := 0
 	for _, w := range workerPools {
 		wCount += w.desired.Nodes
 	}
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"control_plane_nodes": controlplanePool.desired.Nodes,
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
 
-	alignComputes := func(pool initializedPool) (initialized bool, err error) {
+	alignMachines := func(pool initializedPool) (initialized bool, err error) {
 
-		existing, err := pool.computes()
+		existing, err := pool.machines()
 		if err != nil {
 			return false, err
 		}
 		delta := pool.desired.Nodes - len(existing)
 		if delta > 0 {
-			computes, err := newComputes(pool.infra, delta)
+			machines, err := newMachines(pool.infra, delta)
 			if err != nil {
 				return false, err
 			}
-			for _, compute := range computes {
-				if _, err := initializeCompute(compute, pool); err != nil {
+			for _, machine := range machines {
+				if _, err := initializeMachine(machine, pool); err != nil {
 					return false, err
 				}
 			}
 		} else {
-			for _, compute := range existing[pool.desired.Nodes:] {
-				if err := k8sClient.EnsureDeleted(compute.infra.ID(), compute.infra, false); err != nil {
+			for _, machine := range existing[pool.desired.Nodes:] {
+				id := machine.infra.ID()
+				if err := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false); err != nil {
 					return false, err
 				}
-				if err := compute.infra.Remove(); err != nil {
+				if err := machine.infra.Remove(); err != nil {
 					return false, err
 				}
+				uninitializeMachine(id)
+				monitor.WithFields(map[string]interface{}{
+					"machine": id,
+					"tier":    machine.tier,
+				}).Changed("Machine removed")
 			}
 		}
 		return delta <= 0, nil
 	}
 
-	upscalingDone, err := alignComputes(controlplanePool)
+	upscalingDone, err := alignMachines(controlplanePool)
 	if err != nil {
 		return false, err
 	}
 
-	computes, err := controlplanePool.computes()
+	machines, err := controlplanePool.machines()
 	if err != nil {
 		return false, err
 	}
 
-	ensuredControlplane := len(computes)
+	ensuredControlplane := len(machines)
 	var ensuredWorkers int
 	for _, workerPool := range workerPools {
-		workerUpscalingDone, err := alignComputes(workerPool)
+		workerUpscalingDone, err := alignMachines(workerPool)
 		if err != nil {
 			return false, err
 		}
@@ -86,69 +90,62 @@ func ensureScale(
 			upscalingDone = false
 		}
 
-		workerComputes, err := workerPool.computes()
+		workerMachines, err := workerPool.machines()
 		if err != nil {
 			return false, err
 		}
-		ensuredWorkers += len(workerComputes)
-		computes = append(computes, workerComputes...)
+		ensuredWorkers += len(workerMachines)
+		machines = append(machines, workerMachines...)
 	}
 
 	if !upscalingDone {
-		logger.Info("Upscaled computes are not ready yet")
+		monitor.Info("Upscaled machines are not ready yet")
 		return false, nil
 	}
 
-	var joinCP infra.Compute
-	var certsCP infra.Compute
-	var joinWorkers []initializedCompute
-	cpIsReady := true
-	done := true
+	var joinCP *initializedMachine
+	var certsCP infra.Machine
+	var joinWorkers []*initializedMachine
 
 nodes:
-	for _, compute := range computes {
+	for _, machine := range machines {
 
-		id := compute.infra.ID()
+		isJoinedControlPlane := machine.tier == Controlplane && machine.currentMachine.Joined
 
-		nodeIsJoining := false
-		node, getNodeErr := k8sClient.GetNode(id)
-		if getNodeErr == nil {
-			nodeIsJoining = true
-			for _, cond := range node.Status.Conditions {
-				if cond.Type == v1.NodeReady {
-					nodeIsJoining = false
-					compute.markAsRunning()
-					if compute.tier == Controlplane {
-						certsCP = compute.infra
-					}
-					continue nodes
-				}
-			}
-		}
-
-		if compute.tier == Controlplane && nodeIsJoining {
-			cpIsReady = false
-		}
-
-		done = false
-		logger := logger.WithFields(map[string]interface{}{
-			"compute": id,
-			"tier":    compute.tier,
+		machineMonitor := monitor.WithFields(map[string]interface{}{
+			"machine": machine.infra.ID(),
+			"tier":    machine.tier,
 		})
 
-		if nodeIsJoining {
-			logger.Info("Node is not ready yet")
-		}
-
-		if compute.tier == Controlplane && joinCP == nil {
-			joinCP = compute.infra
+		if isJoinedControlPlane && machine.currentMachine.Online {
+			certsCP = machine.infra
 			continue nodes
 		}
-		joinWorkers = append(joinWorkers, compute)
+
+		if isJoinedControlPlane && !machine.currentMachine.Online {
+			machineMonitor.Info("Awaiting controlplane to become ready")
+			return false, nil
+		}
+
+		if machine.currentMachine.Online {
+			continue nodes
+		}
+
+		if machine.currentMachine.Joined {
+			machineMonitor.Info("Node is already joining")
+			continue nodes
+		}
+
+		if machine.tier == Controlplane && joinCP == nil {
+			joinCP = machine
+			continue nodes
+		}
+
+		joinWorkers = append(joinWorkers, machine)
 	}
 
-	if done {
-		logger.WithFields(map[string]interface{}{
+	if joinCP == nil && len(joinWorkers) == 0 {
+		monitor.WithFields(map[string]interface{}{
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
 		}).Debug("Scale is ensured")
@@ -172,12 +169,8 @@ nodes:
 
 	if joinCP != nil {
 
-		if doKubeadmInit && (kubeconfig.Value != "" || !oneoff) {
-			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is true")
-		}
-
-		if !doKubeadmInit && !cpIsReady {
-			return false, nil
+		if doKubeadmInit && (desired.Spec.Kubeconfig.Value != "" || !oneoff) {
+			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is passed")
 		}
 
 		if !doKubeadmInit && certKey == nil {
@@ -186,43 +179,43 @@ nodes:
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
-			logger.Info("Refreshed certs")
+			monitor.Info("Refreshed certs")
 		}
 
 		joinKubeconfig, err := join(
-			logger,
+			monitor,
 			joinCP,
 			certsCP,
-			desired,
+			*desired,
 			kubeAPI,
 			jointoken,
 			k8sVersion,
-			string(certKey),
-			true)
+			string(certKey))
 
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		kubeconfig.Value = *joinKubeconfig
-		return false, psf()
+		desired.Spec.Kubeconfig.Value = *joinKubeconfig
+		return false, psf(monitor.WithFields(map[string]interface{}{
+			"type": "kubeconfig",
+		}))
 	}
 
 	if certsCP == nil {
-		logger.Info("Awaiting controlplane initialization")
+		monitor.Info("Awaiting controlplane initialization")
 		return false, nil
 	}
 
 	for _, worker := range joinWorkers {
 		if _, err := join(
-			logger,
-			worker.infra,
+			monitor,
+			worker,
 			certsCP,
-			desired,
+			*desired,
 			kubeAPI,
 			string(jointoken),
 			k8sVersion,
-			"",
-			false); err != nil {
+			""); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}

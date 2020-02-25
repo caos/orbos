@@ -17,7 +17,7 @@ type Spec struct {
 	Verbose             bool
 	RemoteUser          string
 	RemotePublicKeyPath string
-	Pools               map[string][]*Compute
+	Pools               map[string][]*Machine
 	Keys                Keys
 }
 
@@ -37,23 +37,23 @@ func (d DesiredV0) validate() error {
 		return errors.New("No remote public key path provided")
 	}
 
-	for pool, computes := range d.Spec.Pools {
-		for _, compute := range computes {
-			if err := compute.validate(); err != nil {
-				return errors.Wrapf(err, "Validating compute %s in pool %s failed", compute.ID, pool)
+	for pool, machines := range d.Spec.Pools {
+		for _, machine := range machines {
+			if err := machine.validate(); err != nil {
+				return errors.Wrapf(err, "Validating machine %s in pool %s failed", machine.ID, pool)
 			}
 		}
 	}
 	return nil
 }
 
-type Compute struct {
+type Machine struct {
 	ID       string
 	Hostname string
 	IP       orbiter.IPAddress
 }
 
-func (c *Compute) validate() error {
+func (c *Machine) validate() error {
 	if c.ID == "" {
 		return errors.New("No id provided")
 	}
@@ -66,14 +66,14 @@ func (c *Compute) validate() error {
 type Current struct {
 	Common  *orbiter.Common `yaml:",inline"`
 	Current struct {
-		Pools      map[string]infra.Pool
+		pools      map[string]infra.Pool `yaml:"-"`
 		Ingresses  map[string]infra.Address
 		cleanupped <-chan error `yaml:"-"`
 	}
 }
 
 func (c *Current) Pools() map[string]infra.Pool {
-	return c.Current.Pools
+	return c.Current.pools
 }
 func (c *Current) Ingresses() map[string]infra.Address {
 	return c.Current.Ingresses

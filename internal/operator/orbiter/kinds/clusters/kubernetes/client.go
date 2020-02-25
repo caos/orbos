@@ -1,6 +1,6 @@
 //go:generate goderive .
 
-package k8s
+package kubernetes
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"
@@ -43,12 +43,12 @@ func (n *NotAvailableError) Error() string {
 }
 
 type Client struct {
-	logger logging.Logger
-	set    *kubernetes.Clientset
+	monitor mntr.Monitor
+	set     *kubernetes.Clientset
 }
 
-func New(logger logging.Logger, kubeconfig *string) *Client {
-	kc := &Client{logger: logger}
+func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
+	kc := &Client{monitor: monitor}
 	kc.Refresh(kubeconfig)
 	return kc
 }
@@ -248,7 +248,7 @@ func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 	return nodeList.Items, nil
 }
 
-func (c *Client) UpdateNode(node *core.Node) (err error) {
+func (c *Client) updateNode(node *core.Node) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "updating node %s failed", node.GetName())
@@ -267,40 +267,73 @@ func (c *Client) cordon(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
 	}()
 
+	monitor := c.monitor.WithFields(map[string]interface{}{
+		"machine": node.GetName(),
+	})
+	monitor.Info("Cordoning node")
+
 	node.Spec.Unschedulable = true
-	return c.UpdateNode(node)
+	if err := c.updateNode(node); err != nil {
+		return err
+	}
+	monitor.Info("Node cordoned")
+	return nil
 }
 
-func (c *Client) Uncordon(node *core.Node) (err error) {
+func (c *Client) Uncordon(machine *Machine, node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "uncordoning node %s failed", node.GetName())
 	}()
+	monitor := c.monitor.WithFields(map[string]interface{}{
+		"machine": node.GetName(),
+	})
+	monitor.Info("Uncordoning node")
+
 	node.Spec.Unschedulable = false
-	return c.UpdateNode(node)
+	if err := c.updateNode(node); err != nil {
+		return err
+	}
+	if !machine.Online {
+		machine.Online = true
+		monitor.Changed("Node uncordoned")
+	}
+	return nil
 }
 
-func (c *Client) Drain(node *core.Node) (err error) {
+func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
+
+	monitor := c.monitor.WithFields(map[string]interface{}{
+		"machine": node.GetName(),
+	})
+	monitor.Info("Draining node")
 
 	if err = c.cordon(node); err != nil {
 		return err
 	}
 
-	return c.evictPods(node)
+	if err := c.evictPods(node); err != nil {
+		return err
+	}
+	if machine.Online {
+		machine.Online = false
+		monitor.Changed("Node drained")
+	}
+	return nil
 }
 
-func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (err error) {
+func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubeadm, drain bool) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "deleting node %s failed", name)
 	}()
 
-	logger := c.logger.WithFields(map[string]interface{}{
-		"node": name,
+	monitor := c.monitor.WithFields(map[string]interface{}{
+		"machine": name,
 	})
-	logger.Debug("Deleting node")
+	monitor.Info("Ensuring node is deleted")
 
 	api, apiErr := c.nodeApi()
 	apiErr = errors.Wrap(apiErr, "getting node api failed")
@@ -312,11 +345,12 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 			return errors.Wrapf(err, "getting node %s from kube api failed", name)
 		}
 
-		if err = c.Drain(nodeStruct); err != nil {
+		if err = c.Drain(machine, nodeStruct); err != nil {
 			return err
 		}
 	}
 
+	monitor.Info("Resetting kubeadm")
 	if _, resetErr := node.Execute(nil, nil, "sudo kubeadm reset --force"); resetErr != nil {
 		if !strings.Contains(resetErr.Error(), "command not found") {
 			return resetErr
@@ -326,7 +360,16 @@ func (c *Client) EnsureDeleted(name string, node NodeWithKubeadm, drain bool) (e
 	if apiErr != nil {
 		return nil
 	}
-	return api.Delete(name, &mach.DeleteOptions{})
+	monitor.Info("Deleting node")
+	if err := api.Delete(name, &mach.DeleteOptions{}); err != nil {
+		return err
+	}
+	if machine.Online || machine.Joined {
+		machine.Online = false
+		machine.Joined = false
+		monitor.Changed("Node deleted")
+	}
+	return nil
 }
 
 func (c *Client) evictPods(node *core.Node) (err error) {
@@ -335,7 +378,13 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "evicting pods from node %s failed", node.GetName())
 	}()
 
-	selector := fmt.Sprintf("spec.nodeName=%s", node.Name)
+	monitor := c.monitor.WithFields(map[string]interface{}{
+		"machine": node.GetName(),
+	})
+
+	monitor.Info("Evicting pods")
+
+	selector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name)
 	podItems, err := c.set.CoreV1().Pods("").List(mach.ListOptions{
 		FieldSelector: selector,
 	})
@@ -357,11 +406,11 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 		go func(pod core.Pod) {
 
 			var gracePeriodSeconds int64 = 60
-			logger := c.logger.WithFields(map[string]interface{}{
+			monitor := c.monitor.WithFields(map[string]interface{}{
 				"pod":       pod.GetName(),
 				"namespace": pod.GetNamespace(),
 			})
-			logger.Debug("Evicting pod")
+			monitor.Debug("Evicting pod")
 
 			watcher, goErr := c.set.CoreV1().Pods(pod.Namespace).Watch(mach.ListOptions{
 				FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name),
@@ -388,7 +437,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 				synchronizer.Done(errors.Wrapf(goErr, "evicting pod %s failed", pod.Name))
 				return
 			}
-			logger.Debug("Watching pod")
+			monitor.Debug("Watching pod")
 
 			timeout := time.After(time.Duration(safeUint64(pod.Spec.TerminationGracePeriodSeconds)) + 30)
 			for {
@@ -398,19 +447,19 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 					if !ok {
 						continue
 					}
-					logger = logger.WithFields(map[string]interface{}{
+					monitor = monitor.WithFields(map[string]interface{}{
 						"event": event.Type,
 					})
-					logger.Debug("Pod event happened")
+					monitor.Debug("Pod event happened")
 					if event.Type == watch.Deleted {
-						logger.WithFields(map[string]interface{}{
+						monitor.WithFields(map[string]interface{}{
 							"new_node": wPod.Spec.NodeName,
 						}).Debug("Pod evicted")
 						synchronizer.Done(nil)
 						return
 					}
 				case <-timeout:
-					synchronizer.Done(c.set.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &mach.DeleteOptions{}))
+					synchronizer.Done(errors.Wrapf(c.set.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &mach.DeleteOptions{}), "Deleting pod %s after timout exceeded failed", pod.Name))
 					return
 				}
 			}
@@ -421,6 +470,8 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	if synchronizer.IsError() {
 		return errors.Wrapf(synchronizer, "concurrently evicting pods from node %s failed", node.Name)
 	}
+
+	monitor.Info("Pods evicted")
 	return nil
 }
 

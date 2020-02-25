@@ -8,55 +8,55 @@ import (
 	"path/filepath"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 	sshlib "golang.org/x/crypto/ssh"
 )
 
-type ProvidedCompute interface {
+type ProvidedMachine interface {
 	ID() string
 	IP() string
 	Remove() error
 }
 
-type compute struct {
-	logger     logging.Logger
-	compute    ProvidedCompute
+type machine struct {
+	monitor    mntr.Monitor
+	machine    ProvidedMachine
 	remoteUser string
 	sshCfg     *sshlib.ClientConfig
 }
 
-func NewCompute(logger logging.Logger, comp ProvidedCompute, remoteUser string) infra.Compute {
-	return &compute{
+func NewMachine(monitor mntr.Monitor, comp ProvidedMachine, remoteUser string) infra.Machine {
+	return &machine{
 		remoteUser: remoteUser,
-		logger: logger.WithFields(map[string]interface{}{
-			"compute": comp.ID(),
+		monitor: monitor.WithFields(map[string]interface{}{
+			"machine": comp.ID(),
 		}),
-		compute: comp,
+		machine: comp,
 	}
 }
 
-func (c *compute) ID() string {
-	return c.compute.ID()
+func (c *machine) ID() string {
+	return c.machine.ID()
 }
 
-func (c *compute) IP() string {
-	return c.compute.IP()
+func (c *machine) IP() string {
+	return c.machine.IP()
 }
 
-func (c *compute) Remove() error {
-	return c.compute.Remove()
+func (c *machine) Remove() error {
+	return c.machine.Remove()
 }
 
-func (c *compute) Execute(env map[string]string, stdin io.Reader, cmd string) (stdout []byte, err error) {
+func (c *machine) Execute(env map[string]string, stdin io.Reader, cmd string) (stdout []byte, err error) {
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"env":     env,
 		"command": cmd,
 	})
-	logger.Debug("Trying to execute with ssh")
+	monitor.Debug("Trying to execute with ssh")
 	defer func() {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"error":  err,
 			"stdout": string(stdout),
 		}).Debug("Done executing command with ssh")
@@ -84,20 +84,20 @@ func (c *compute) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 	}
 	output, err = sess.Output(envPre + cmd)
 	if err != nil {
-		return output, errors.Wrapf(err, "executing %s on compute %s failed with stderr %s", cmd, c.ID(), buf.String())
+		return output, errors.Wrapf(err, "executing %s on machine %s failed with stderr %s", cmd, c.ID(), buf.String())
 	}
 	return output, nil
 }
 
-func (c *compute) WriteFile(path string, data io.Reader, permissions uint16) (err error) {
+func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) (err error) {
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"path":        path,
 		"permissions": permissions,
 	})
-	logger.Debug("Trying to write file with ssh")
+	monitor.Debug("Trying to write file with ssh")
 	defer func() {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"error": err,
 		}).Debug("Done writing file with ssh")
 	}()
@@ -109,31 +109,31 @@ func (c *compute) WriteFile(path string, data io.Reader, permissions uint16) (er
 	sess, close, err := c.open()
 	defer close()
 	if err != nil {
-		return errors.Wrapf(err, "ssh-ing to compute %s failed", c.ID())
+		return errors.Wrapf(err, "ssh-ing to machine %s failed", c.ID())
 	}
 	var stderr bytes.Buffer
 	sess.Stderr = &stderr
-	if logger.IsVerbose() {
+	if monitor.IsVerbose() {
 		sess.Stdout = os.Stdout
 	}
 	sess.Stdin = data
 
 	cmd := fmt.Sprintf("sudo sh -c 'cat > %s && chmod %d %s && chown %s %s'", path, permissions, path, c.remoteUser, path)
 	if err := sess.Run(cmd); err != nil {
-		return errors.Wrapf(err, "executing %s with ssh on compute %s failed with stderr %s", cmd, c.ID(), stderr.String())
+		return errors.Wrapf(err, "executing %s with ssh on machine %s failed with stderr %s", cmd, c.ID(), stderr.String())
 	}
 
 	return nil
 }
 
-func (c *compute) ReadFile(path string, data io.Writer) (err error) {
+func (c *machine) ReadFile(path string, data io.Writer) (err error) {
 
-	logger := c.logger.WithFields(map[string]interface{}{
+	monitor := c.monitor.WithFields(map[string]interface{}{
 		"path": path,
 	})
-	logger.Debug("Trying to read file with ssh")
+	monitor.Debug("Trying to read file with ssh")
 	defer func() {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"error": err,
 		}).Debug("Done reading file with ssh")
 	}()
@@ -142,28 +142,28 @@ func (c *compute) ReadFile(path string, data io.Writer) (err error) {
 	sess, close, err := c.open()
 	defer close()
 	if err != nil {
-		return errors.Wrapf(err, "ssh-ing to compute %s failed", c.ID())
+		return errors.Wrapf(err, "ssh-ing to machine %s failed", c.ID())
 	}
 	var stderr bytes.Buffer
 	sess.Stdout = data
 	sess.Stderr = &stderr
 
 	if err := sess.Run(cmd); err != nil {
-		return errors.Wrapf(err, "executing %s with ssh on compute %s failed with stderr %s", cmd, c.ID(), stderr.String())
+		return errors.Wrapf(err, "executing %s with ssh on machine %s failed with stderr %s", cmd, c.ID(), stderr.String())
 	}
 	return nil
 }
 
-func (c *compute) open() (sess *sshlib.Session, close func() error, err error) {
+func (c *machine) open() (sess *sshlib.Session, close func() error, err error) {
 
-	c.logger.Debug("Trying to open an ssh connection")
+	c.monitor.Debug("Trying to open an ssh connection")
 	close = func() error { return nil }
 
 	if c.sshCfg == nil {
-		return nil, close, errors.New("no ssh key passed via infra.Compute.UseKey")
+		return nil, close, errors.New("no ssh key passed via infra.Machine.UseKey")
 	}
 
-	ip := c.compute.IP()
+	ip := c.machine.IP()
 
 	address := fmt.Sprintf("%s:%d", ip, 22)
 	conn, err := sshlib.Dial("tcp", address, c.sshCfg)
@@ -183,7 +183,7 @@ func (c *compute) open() (sess *sshlib.Session, close func() error, err error) {
 	}, nil
 }
 
-func (c *compute) UseKey(keys ...[]byte) error {
+func (c *machine) UseKey(keys ...[]byte) error {
 
 	var signers []sshlib.Signer
 	for _, key := range keys {

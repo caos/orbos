@@ -8,8 +8,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
 )
@@ -47,12 +47,12 @@ func TestPools(t *testing.T) {
 		synchronizer := helpers.NewSynchronizer(&wg)
 		wg.Add(1)
 		go func() {
-			_, addErr := pool.AddCompute()
+			_, addErr := pool.AddMachine()
 			synchronizer.Done(addErr)
 		}()
 		wg.Add(1)
 		go func() {
-			_, addErr := pool.AddCompute()
+			_, addErr := pool.AddMachine()
 			synchronizer.Done(addErr)
 		}()
 		wg.Wait()
@@ -61,12 +61,12 @@ func TestPools(t *testing.T) {
 			panic(synchronizer)
 		}
 
-		computes, err := pool.GetComputes()
+		machines, err := pool.GetMachines()
 		if err != nil {
 			panic(err)
 		}
-		if len(computes) != 2 {
-			panic(fmt.Errorf("Expected 2 computes but got %d", len(computes)))
+		if len(machines) != 2 {
+			panic(fmt.Errorf("Expected 2 machines but got %d", len(machines)))
 		}
 	}
 
@@ -77,7 +77,7 @@ func TestPools(t *testing.T) {
 	}
 
 	if len(pools) == 0 {
-		panic("Not configured pools that still have computes should be returned")
+		panic("Not configured pools that still have machines should be returned")
 	}
 
 	if err := core.Cleanup(prov, operatorID); err != nil {
@@ -144,17 +144,17 @@ func testPools(operatorArgs core.OperatorArgs) ([]infra.Pool, error) {
 
 func clearPool(pool infra.Pool) error {
 
-	computes, err := pool.GetComputes()
+	machines, err := pool.GetMachines()
 	if err != nil {
 		return err
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(len(computes))
+	wg.Add(len(machines))
 	synchronizer := helpers.NewSynchronizer(&wg)
-	for _, c := range computes {
-		go func(compute infra.Compute) {
-			synchronizer.Done(compute.Remove())
+	for _, c := range machines {
+		go func(machine infra.Machine) {
+			synchronizer.Done(machine.Remove())
 		}(c)
 	}
 	wg.Wait()

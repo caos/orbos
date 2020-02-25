@@ -8,6 +8,7 @@ import (
 	"github.com/manifoldco/promptui"
 
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/mntr"
 )
 
 func JoinPath(base string, append ...string) string {
@@ -17,9 +18,9 @@ func JoinPath(base string, append ...string) string {
 	return base
 }
 
-func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
+func ReadSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
 
-	secret, _, err := findSecret(gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+	secret, _, err := findSecret(monitor, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0)
 		for key, sec := range secrets {
 			if sec.Value != "" {
@@ -39,9 +40,9 @@ func ReadSecret(gitClient *git.Client, adapt AdaptFunc, path string) (string, er
 	return secret.Value, nil
 }
 
-func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) error {
+func WriteSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path, value string) error {
 
-	secret, tree, err := findSecret(gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+	secret, tree, err := findSecret(monitor, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0, len(secrets))
 		for key := range secrets {
 			items = append(items, key)
@@ -54,23 +55,23 @@ func WriteSecret(gitClient *git.Client, adapt AdaptFunc, path, value string) err
 
 	secret.Value = value
 
-	return pushSecretsFunc(gitClient, tree)()
+	return pushSecretsFunc(gitClient, tree)(monitor)
 }
 
-func findSecret(gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
-	treeDesired, err := parse(gitClient)
+func findSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
+	treeDesired, err := parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, _, secrets, _, err := adapt(treeDesired, &Tree{})
+	_, _, secrets, _, err := adapt(monitor, treeDesired[0], &Tree{})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if path != "" {
 		sec, err := exactSecret(secrets, path)
-		return sec, treeDesired, err
+		return sec, treeDesired[0], err
 	}
 
 	selectItems := items(secrets)
@@ -92,7 +93,7 @@ func findSecret(gitClient *git.Client, adapt AdaptFunc, path string, items func(
 	}
 
 	sec, err := exactSecret(secrets, result)
-	return sec, treeDesired, err
+	return sec, treeDesired[0], err
 }
 
 func exactSecret(secrets map[string]*Secret, path string) (*Secret, error) {

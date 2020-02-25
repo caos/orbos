@@ -3,18 +3,18 @@ package firewallrule
 import (
 	"errors"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbiter/mntr"
+	"google.golang.org/api/machine/v1"
 )
 
 type fw struct {
-	logger logging.Logger
-	spec   *model.UserSpec
-	svc    *compute.FirewallsService
-	caller *api.Caller
+	monitor mntr.Monitor
+	spec    *model.UserSpec
+	svc     *machine.FirewallsService
+	caller  *api.Caller
 }
 type Config struct {
 	AllowedPorts []string
@@ -23,12 +23,12 @@ type Config struct {
 	Egress       bool
 }
 
-func New(logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(monitor mntr.Monitor, svc *machine.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &fw{
-		spec:   spec,
-		logger: logger.WithFields(map[string]interface{}{"type": "firewall rule"}),
-		svc:    compute.NewFirewallsService(svc),
-		caller: caller,
+		spec:    spec,
+		monitor: monitor.WithFields(map[string]interface{}{"type": "firewall rule"}),
+		svc:     machine.NewFirewallsService(svc),
+		caller:  caller,
 	}
 }
 
@@ -51,12 +51,12 @@ func (f *fw) Desire(payload interface{}) (interface{}, error) {
 		direction = "EGRESS"
 	}
 
-	var allowed []*compute.FirewallAllowed
-	var denied []*compute.FirewallDenied
+	var allowed []*machine.FirewallAllowed
+	var denied []*machine.FirewallDenied
 
 	if len(cfg.AllowedPorts) > 0 {
-		allowed = []*compute.FirewallAllowed{
-			&compute.FirewallAllowed{
+		allowed = []*machine.FirewallAllowed{
+			&machine.FirewallAllowed{
 				IPProtocol: "tcp",
 				Ports:      cfg.AllowedPorts,
 			},
@@ -64,15 +64,15 @@ func (f *fw) Desire(payload interface{}) (interface{}, error) {
 	}
 
 	if len(cfg.DeniedPorts) > 0 {
-		denied = []*compute.FirewallDenied{
-			&compute.FirewallDenied{
+		denied = []*machine.FirewallDenied{
+			&machine.FirewallDenied{
 				IPProtocol: "tcp",
 				Ports:      cfg.DeniedPorts,
 			},
 		}
 	}
 
-	return &compute.Firewall{
+	return &machine.Firewall{
 		Allowed:      allowed,
 		Denied:       denied,
 		Direction:    direction,
@@ -86,7 +86,7 @@ type Ensured struct {
 
 func (f *fw) Ensure(id string, desired interface{}, dependencies []interface{}) (interface{}, error) {
 
-	logger := f.logger.WithFields(map[string]interface{}{"name": id})
+	monitor := f.monitor.WithFields(map[string]interface{}{"name": id})
 
 	selflink, err := f.caller.GetResourceSelfLink(id, []interface{}{
 		f.svc.Get(f.spec.Project, id),
@@ -99,10 +99,10 @@ func (f *fw) Ensure(id string, desired interface{}, dependencies []interface{}) 
 		return &Ensured{*selflink}, nil
 	}
 
-	fwr := *desired.(*compute.Firewall)
+	fwr := *desired.(*machine.Firewall)
 	fwr.Name = id
 
-	op, err := f.caller.RunFirstSuccessful(logger, api.Insert, f.svc.Insert(f.spec.Project, &fwr))
+	op, err := f.caller.RunFirstSuccessful(monitor, api.Insert, f.svc.Insert(f.spec.Project, &fwr))
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +110,8 @@ func (f *fw) Ensure(id string, desired interface{}, dependencies []interface{}) 
 }
 
 func (f *fw) Delete(id string) error {
-	logger := f.logger.WithFields(map[string]interface{}{"name": id})
-	_, err := f.caller.RunFirstSuccessful(logger, api.Delete, f.svc.Delete(f.spec.Project, id))
+	monitor := f.monitor.WithFields(map[string]interface{}{"name": id})
+	_, err := f.caller.RunFirstSuccessful(monitor, api.Delete, f.svc.Delete(f.spec.Project, id))
 	return err
 }
 

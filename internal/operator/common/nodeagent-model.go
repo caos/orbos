@@ -16,7 +16,7 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        Firewall
+	Open        []*Allowed
 	Commit      string
 }
 
@@ -82,8 +82,7 @@ var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func configEquals(this, that map[string]string) bool {
 	if this == nil || that == nil {
-		equal := this == nil && that == nil
-		return equal
+		return this == nil && that == nil
 	}
 	if len(this) != len(that) {
 		return false
@@ -101,17 +100,13 @@ func configEquals(this, that map[string]string) bool {
 	return true
 }
 
-func packageEquals(this, that Package) bool {
-	return this.Version == that.Version &&
-		configEquals(this.Config, that.Config)
-}
-
-func contains(this, that Package) bool {
-	return that.Version == "" && that.Config == nil || packageEquals(this, that)
-}
-
 func (p Package) Equals(other Package) bool {
 	return packageEquals(p, other)
+}
+func packageEquals(this, that Package) bool {
+	equals := this.Version == that.Version &&
+		configEquals(this.Config, that.Config)
+	return equals
 }
 
 func (this *Software) Contains(that Software) bool {
@@ -125,6 +120,27 @@ func (this *Software) Contains(that Software) bool {
 		contains(this.Hostname, that.Hostname)
 }
 
+func contains(this, that Package) bool {
+	return that.Version == "" && that.Config == nil || packageEquals(this, that)
+}
+
+func (this *Software) Defines(that Software) bool {
+	return defines(this.Swap, that.Swap) &&
+		defines(this.Kubelet, that.Kubelet) &&
+		defines(this.Kubeadm, that.Kubeadm) &&
+		defines(this.Kubectl, that.Kubectl) &&
+		defines(this.Containerruntime, that.Containerruntime) &&
+		defines(this.KeepaliveD, that.KeepaliveD) &&
+		defines(this.Nginx, that.Nginx) &&
+		defines(this.Hostname, that.Hostname)
+}
+
+func defines(this, that Package) bool {
+	zeroPkg := Package{}
+	defines := packageEquals(that, zeroPkg) || !packageEquals(this, zeroPkg)
+	return defines
+}
+
 type Firewall map[string]Allowed
 
 func (f *Firewall) Merge(fw Firewall) {
@@ -132,6 +148,14 @@ func (f *Firewall) Merge(fw Firewall) {
 		m := *f
 		m[key] = value
 	}
+}
+
+func (f *Firewall) Ports() []*Allowed {
+	ports := make([]*Allowed, 0)
+	for _, value := range *f {
+		ports = append(ports, &value)
+	}
+	return ports
 }
 
 type Allowed struct {
@@ -148,6 +172,22 @@ func (f Firewall) Contains(other Firewall) bool {
 		if !deriveEqualPort(port, found) {
 			return false
 		}
+	}
+	return true
+}
+
+func (f Firewall) IsContainedIn(ports []*Allowed) bool {
+	if len(f) > len(ports) {
+		return false
+	}
+checks:
+	for _, fwPort := range f {
+		for _, port := range ports {
+			if deriveEqualPort(*port, fwPort) {
+				continue checks
+			}
+		}
+		return false
 	}
 	return true
 }

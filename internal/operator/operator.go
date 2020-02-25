@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 type Watcher interface {
@@ -17,19 +17,19 @@ type Watcher interface {
 
 type Iterator struct {
 	ctx      context.Context
-	logger   logging.Logger
+	monitor  mntr.Monitor
 	iterate  func()
 	watchers []Watcher
 	fired    chan struct{}
 }
 
 func New(ctx context.Context,
-	logger logging.Logger,
+	monitor mntr.Monitor,
 	iterate func(),
 	watchers []Watcher) *Iterator {
 	return &Iterator{
 		ctx:      ctx,
-		logger:   logger,
+		monitor:  monitor,
 		iterate:  iterate,
 		watchers: watchers,
 		fired:    make(chan struct{}),
@@ -55,7 +55,7 @@ loop:
 			return
 		case <-i.fired:
 			if len(i.fired) != 0 {
-				i.logger.Info("Skipping iteration")
+				i.monitor.Info("Skipping iteration")
 				continue loop
 			}
 			i.iterateWrapped()
@@ -70,10 +70,10 @@ func (i *Iterator) iterateWrapped() {
 			panic(r)
 		}
 	}()
-	i.logger.Debug("Starting iteration")
+	i.monitor.Debug("Starting iteration")
 	started := time.Now()
 	i.iterate()
-	i.logger.WithFields(map[string]interface{}{
+	i.monitor.WithFields(map[string]interface{}{
 		"took": time.Now().Sub(started),
 	}).Info("Iteration done")
 }

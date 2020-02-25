@@ -6,27 +6,27 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/caos/orbiter/logging"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbiter/mntr"
+	"google.golang.org/api/machine/v1"
 )
 
 type instanceGroup struct {
-	ctx    context.Context
-	logger logging.Logger
-	spec   *model.UserSpec
-	svc    *compute.InstanceGroupsService
-	caller *api.Caller
+	ctx     context.Context
+	monitor mntr.Monitor
+	spec    *model.UserSpec
+	svc     *machine.InstanceGroupsService
+	caller  *api.Caller
 }
 
-func New(ctx context.Context, logger logging.Logger, svc *compute.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
+func New(ctx context.Context, monitor mntr.Monitor, svc *machine.Service, spec *model.UserSpec, caller *api.Caller) core.ResourceService {
 	return &instanceGroup{
 		ctx,
-		logger.WithFields(map[string]interface{}{"type": "instance group"}),
+		monitor.WithFields(map[string]interface{}{"type": "instance group"}),
 		spec,
-		compute.NewInstanceGroupsService(svc),
+		machine.NewInstanceGroupsService(svc),
 		caller,
 	}
 }
@@ -41,8 +41,8 @@ type Config struct {
 }
 
 type Desired struct {
-	IG         *compute.InstanceGroup
-	NamedPorts []*compute.NamedPort `hash:"set"`
+	IG         *machine.InstanceGroup
+	NamedPorts []*machine.NamedPort `hash:"set"`
 }
 
 func (i *instanceGroup) Desire(config interface{}) (interface{}, error) {
@@ -51,16 +51,16 @@ func (i *instanceGroup) Desire(config interface{}) (interface{}, error) {
 		return nil, errors.New("Config must be of type *unmanaged.Config")
 	}
 
-	ports := make([]*compute.NamedPort, len(cfg.Ports))
+	ports := make([]*machine.NamedPort, len(cfg.Ports))
 	for idx, port := range cfg.Ports {
-		ports[idx] = &compute.NamedPort{
+		ports[idx] = &machine.NamedPort{
 			Name: fmt.Sprintf("port-%s", strconv.FormatInt(port, 10)),
 			Port: port,
 		}
 	}
 
 	return &Desired{
-		IG: &compute.InstanceGroup{
+		IG: &machine.InstanceGroup{
 			Network:     fmt.Sprintf("projects/%s/global/networks/default", i.spec.Project),
 			Description: cfg.PoolName,
 		},
@@ -70,7 +70,7 @@ func (i *instanceGroup) Desire(config interface{}) (interface{}, error) {
 
 func (i *instanceGroup) Ensure(id string, desired interface{}, dependencies []interface{}) (interface{}, error) {
 
-	logger := i.logger.WithFields(map[string]interface{}{"name": id})
+	monitor := i.monitor.WithFields(map[string]interface{}{"name": id})
 
 	if len(dependencies) > 0 {
 		return nil, errors.New("Instance groups cannot have dependencies")
@@ -84,7 +84,7 @@ func (i *instanceGroup) Ensure(id string, desired interface{}, dependencies []in
 	}
 
 	if selflink != nil {
-		return newEnsured(i.ctx, i.logger, i.spec, i.svc, id, *selflink, i.caller), nil
+		return newEnsured(i.ctx, i.monitor, i.spec, i.svc, id, *selflink, i.caller), nil
 	}
 
 	des := desired.(*Desired)
@@ -93,18 +93,18 @@ func (i *instanceGroup) Ensure(id string, desired interface{}, dependencies []in
 	ig.NamedPorts = des.NamedPorts
 
 	op, err := i.caller.RunFirstSuccessful(
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"name": id,
 		}),
 		api.Insert,
 		i.svc.Insert(i.spec.Project, i.spec.Zone, &ig))
 
-	return newEnsured(i.ctx, i.logger, i.spec, i.svc, id, op.TargetLink, i.caller), err
+	return newEnsured(i.ctx, i.monitor, i.spec, i.svc, id, op.TargetLink, i.caller), err
 }
 
 func (i *instanceGroup) Delete(id string) error {
-	logger := i.logger.WithFields(map[string]interface{}{"name": id})
-	_, err := i.caller.RunFirstSuccessful(logger, api.Delete, i.svc.Delete(i.spec.Project, i.spec.Zone, id))
+	monitor := i.monitor.WithFields(map[string]interface{}{"name": id})
+	_, err := i.caller.RunFirstSuccessful(monitor, api.Delete, i.svc.Delete(i.spec.Project, i.spec.Zone, id))
 	return err
 }
 

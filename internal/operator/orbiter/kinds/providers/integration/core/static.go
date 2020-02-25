@@ -25,7 +25,7 @@ func Static(config *viper.Viper, secrets *viper.Viper) Provider {
 	return &staticProvider{config, secrets}
 }
 
-func (s *staticProvider) Assemble(operatorID string, configuredPools []string, configuredLoadBalancers []*LoadBalancer) (infra.Provider, core.ComputesService, interface{}, error) {
+func (s *staticProvider) Assemble(operatorID string, configuredPools []string, configuredLoadBalancers []*LoadBalancer) (infra.Provider, core.MachinesService, interface{}, error) {
 
 	ctx := context.Background()
 	assembly, err := staticconfig.New(ctx, s.config, map[string]interface{}{
@@ -35,8 +35,8 @@ func (s *staticProvider) Assemble(operatorID string, configuredPools []string, c
 		return nil, nil, nil, err
 	}
 
-	logger := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
-	computesSvc := static.NewComputesService(logger, assembly)
+	monitor := logcontext.Add(stdlib.New(os.Stdout)).Verbose()
+	machinesSvc := static.NewMachinesService(monitor, assembly)
 
-	return static.New(logger, assembly), computesSvc, assembly, nil
+	return static.New(monitor, assembly), machinesSvc, assembly, nil
 }

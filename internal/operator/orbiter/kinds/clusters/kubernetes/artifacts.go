@@ -10,13 +10,12 @@ import (
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
-func ensureArtifacts(logger logging.Logger, client *k8s.Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
+func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
 
-	logger.WithFields(map[string]interface{}{
+	monitor.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,
 		"boom":    boomversion,
 	}).Debug("Ensuring artifacts")
@@ -125,7 +124,7 @@ func ensureArtifacts(logger logging.Logger, client *k8s.Client, orb *orbiter.Orb
 		}); err != nil {
 			return err
 		}
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"version": orbiterversion,
 		}).Debug("Orbiter deployment ensured")
 
@@ -348,7 +347,7 @@ func ensureArtifacts(logger logging.Logger, client *k8s.Client, orb *orbiter.Orb
 		},
 	})
 	if err == nil {
-		logger.WithFields(map[string]interface{}{
+		monitor.WithFields(map[string]interface{}{
 			"version": boomversion,
 		}).Debug("Boom deployment ensured")
 	}

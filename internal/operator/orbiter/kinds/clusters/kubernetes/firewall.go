@@ -4,11 +4,14 @@ import (
 	"fmt"
 
 	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/mntr"
 )
 
-func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute initializedCompute), ensure func(computes []initializedCompute) bool) {
+func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (desire func(machine *initializedMachine)) {
 
-	desireFirewall := func(compute initializedCompute) common.Firewall {
+	return func(machine *initializedMachine) {
+
+		monitor = monitor.WithField("machine", machine.infra.ID())
 
 		fw := map[string]common.Allowed{
 			"kubelet": common.Allowed{
@@ -17,14 +20,14 @@ func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute i
 			},
 		}
 
-		if compute.tier == Workers {
+		if machine.tier == Workers {
 			fw["node-ports"] = common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
-		if compute.tier == Controlplane {
+		if machine.tier == Controlplane {
 			fw["kubeapi-external"] = common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPIPort),
 				Protocol: "tcp",
@@ -54,28 +57,18 @@ func firewallFuncs(desired DesiredV0, kubeAPIPort uint16) (desire func(compute i
 			}
 		}
 
-		if compute.desiredNodeagent.Firewall == nil {
-			compute.desiredNodeagent.Firewall = &common.Firewall{}
+		if machine.desiredNodeagent.Firewall == nil {
+			machine.desiredNodeagent.Firewall = &common.Firewall{}
 		}
 		firewall := common.Firewall(fw)
-		compute.desiredNodeagent.Firewall.Merge(firewall)
-		return firewall
-	}
-
-	return func(compute initializedCompute) {
-			desireFirewall(compute)
-		}, func(computes []initializedCompute) bool {
-			ready := true
-			for _, compute := range computes {
-
-				firewall := desireFirewall(compute)
-
-				if compute.currentNodeagent == nil {
-					ready = false
-				} else if ready {
-					ready = compute.currentNodeagent.Open.Contains(firewall)
-				}
-			}
-			return ready
+		if firewall.IsContainedIn(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Contains(firewall) {
+			machine.currentMachine.FirewallIsReady = true
+			monitor.Debug("Firewall is ready")
+			return
 		}
+
+		machine.currentMachine.FirewallIsReady = false
+		machine.desiredNodeagent.Firewall.Merge(firewall)
+		monitor.Info("Firewall desired")
+	}
 }

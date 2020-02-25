@@ -1,92 +1,87 @@
 package kubernetes
 
 import (
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes/edge/k8s"
-	"github.com/caos/orbiter/logging"
+	"github.com/caos/orbiter/mntr"
 )
 
 func ensure(
-	logger logging.Logger,
-	desired DesiredV0,
-	current *CurrentCluster,
-	providerCurrents map[string]interface{},
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	monitor mntr.Monitor,
+	desired *DesiredV0,
+	curr *CurrentCluster,
+	kubeAPIAddress infra.Address,
 	psf orbiter.PushSecretsFunc,
-	kubeconfig *orbiter.Secret,
-	repoURL string,
-	repoKey string,
-	orbiterCommit string,
-	oneoff bool) error {
+	k8sClient *Client,
+	oneoff bool,
+	controlplane initializedPool,
+	controlplaneMachines []*initializedMachine,
+	workers []initializedPool,
+	workerMachines []*initializedMachine,
+	initializeMachine initializeMachineFunc,
+	uninitializeMachine uninitializeMachineFunc,
+	installNodeAgent func(*initializedMachine) error,
+) (err error) {
 
-	current.Status = "maintaining"
-	current.Computes = make(map[string]*Compute)
+	initializedMachines := append(controlplaneMachines, workerMachines...)
 
-	cloudPools := make(map[string]map[string]infra.Pool)
-	var kubeAPIAddress infra.Address
+	initialized := true
 
-	for providerName, provider := range providerCurrents {
-		if cloudPools[providerName] == nil {
-			cloudPools[providerName] = make(map[string]infra.Pool)
-		}
-		prov := provider.(infra.ProviderCurrent)
-		providerPools := prov.Pools()
-		providerIngresses := prov.Ingresses()
-		for providerPoolName, providerPool := range providerPools {
-			cloudPools[providerName][providerPoolName] = providerPool
-			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
-				kubeAPIAddress = providerIngresses["kubeapi"]
-				logger.WithFields(map[string]interface{}{
-					"address": kubeAPIAddress,
-				}).Debug("Found kubernetes api address")
+	for _, machine := range initializedMachines {
+		machineMonitor := monitor.WithField("machine", machine.infra.ID())
+		if !machine.currentMachine.NodeAgentIsRunning {
+			machineMonitor.Info("Node agent is not running on the correct version yet")
+			if err := installNodeAgent(machine); err != nil {
+				return err
 			}
+			initialized = false
+		}
+
+		if !machine.currentMachine.FirewallIsReady {
+			initialized = false
+			machineMonitor.Info("Firewall is not ready yet")
 		}
 	}
 
-	if err := poolIsConfigured(&desired.Spec.ControlPlane, cloudPools); err != nil {
+	if !initialized {
+		return nil
+	}
+
+	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
+	upgradingDone, err := ensureSoftware(
+		monitor,
+		targetVersion,
+		k8sClient,
+		controlplaneMachines,
+		workerMachines)
+	if err != nil || !upgradingDone {
+		monitor.Info("Upgrading is not done yet")
 		return err
 	}
 
-	for _, w := range desired.Spec.Workers {
-		if err := poolIsConfigured(w, cloudPools); err != nil {
-			return err
-		}
-	}
-
-	k8sClient := k8s.New(logger, nil)
-	if err := ensureCluster(
-		logger,
+	var scalingDone bool
+	scalingDone, err = ensureScale(
+		monitor,
 		desired,
-		current,
-		nodeAgentsCurrent,
-		nodeAgentsDesired,
-		cloudPools,
-		kubeAPIAddress,
-		kubeconfig,
 		psf,
+		controlplane,
+		workers,
+		kubeAPIAddress,
+		targetVersion,
 		k8sClient,
-		repoURL,
-		repoKey,
-		orbiterCommit,
-		oneoff); err != nil {
-		return errors.Wrap(err, "ensuring cluster failed")
+		oneoff,
+		func(created infra.Machine, pool initializedPool) (initializedMachine, error) {
+			machine := initializeMachine(created, pool)
+			target := targetVersion.DefineSoftware()
+			machine.desiredNodeagent.Software = &target
+			if machine.currentMachine.NodeAgentIsRunning {
+				return *machine, nil
+			}
+			return *machine, installNodeAgent(machine)
+		},
+		uninitializeMachine)
+	if !scalingDone {
+		monitor.Info("Scaling is not done yet")
 	}
-
-	return nil
-}
-
-func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) error {
-	prov, ok := infra[poolSpec.Provider]
-	if !ok {
-		return errors.Errorf("provider %s not configured", poolSpec.Provider)
-	}
-	if _, ok := prov[poolSpec.Pool]; !ok {
-		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Provider, poolSpec.Pool)
-	}
-	return nil
+	return err
 }
