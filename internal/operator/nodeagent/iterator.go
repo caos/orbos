@@ -65,6 +65,14 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 
 		curr := &common.NodeAgentCurrent{}
 
+		events := make([]*event, 0)
+		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			events = append(events, &event{
+				commit:  mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
+				current: &*curr,
+			})
+		}, monitor.OnChange)
+
 		ensure, err := query(monitor, nodeAgentCommit, firewallEnsurer, conv, *naDesired, curr)
 		if err != nil {
 			monitor.Error(err)
@@ -105,14 +113,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 		}
 
-		events := make([]*event, 0)
-		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
-			events = append(events, &event{
-				commit:  mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
-				current: &*curr,
-			})
-		}, monitor.OnChange)
-
+		events = make([]*event, 0)
 		if err := ensure(); err != nil {
 			monitor.Error(err)
 			return
