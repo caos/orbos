@@ -42,6 +42,9 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 			panic(err)
 		}
 		yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents)
+		desiredNodeAgents.Kind = "nodeagent.caos.ch/NodeAgents"
+		desiredNodeAgents.Version = "v0"
+		desiredNodeAgents.Spec.Commit = orbiterCommit
 
 		marshalCurrentFiles := func() []git.File {
 			return []git.File{{
