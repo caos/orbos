@@ -96,28 +96,28 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 	return dependencies
 }
 
-func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency) (sw common.Software) {
+func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func(nodeagent.Dependency) common.Package) (sw common.Software) {
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
 		case hostname.Installer:
-			sw.Hostname = dependency.Current
+			sw.Hostname = pkg(*dependency)
 		case swap.Installer:
-			sw.Swap = dependency.Current
+			sw.Swap = pkg(*dependency)
 		case kubelet.Installer:
-			sw.Kubelet = dependency.Current
+			sw.Kubelet = pkg(*dependency)
 		case kubeadm.Installer:
-			sw.Kubeadm = dependency.Current
+			sw.Kubeadm = pkg(*dependency)
 		case kubectl.Installer:
-			sw.Kubectl = dependency.Current
+			sw.Kubectl = pkg(*dependency)
 		case cri.Installer:
-			sw.Containerruntime = dependency.Current
+			sw.Containerruntime = pkg(*dependency)
 		case keepalived.Installer:
-			sw.KeepaliveD = dependency.Current
+			sw.KeepaliveD = pkg(*dependency)
 		case nginx.Installer:
-			sw.Nginx = dependency.Current
+			sw.Nginx = pkg(*dependency)
 		case sshd.Installer:
-			sw.SSHD = dependency.Current
+			sw.SSHD = pkg(*dependency)
 		default:
 			panic(errors.Errorf("No installer type for dependency %s found", i))
 		}

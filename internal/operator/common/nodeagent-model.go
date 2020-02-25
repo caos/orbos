@@ -163,7 +163,7 @@ type Allowed struct {
 	Protocol string
 }
 
-func (f Firewall) Equals(other Firewall) bool {
+func (f Firewall) Contains(other Firewall) bool {
 	for name, port := range other {
 		found, ok := f[name]
 		if !ok {
@@ -176,13 +176,13 @@ func (f Firewall) Equals(other Firewall) bool {
 	return true
 }
 
-func (f Firewall) Matches(ports []*Allowed) bool {
-	if len(f) != len(ports) {
+func (f Firewall) IsContainedIn(ports []*Allowed) bool {
+	if len(f) > len(ports) {
 		return false
 	}
 checks:
-	for _, port := range ports {
-		for _, fwPort := range f {
+	for _, fwPort := range f {
+		for _, port := range ports {
 			if deriveEqualPort(*port, fwPort) {
 				continue checks
 			}

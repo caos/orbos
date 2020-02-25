@@ -33,7 +33,7 @@ type Dependency struct {
 
 type Converter interface {
 	ToDependencies(common.Software) []*Dependency
-	ToSoftware([]*Dependency) common.Software
+	ToSoftware([]*Dependency, func(Dependency) common.Package) common.Software
 }
 
 type Installer interface {
@@ -65,7 +65,9 @@ func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer,
 		return noop, err
 	}
 
-	curr.Software = conv.ToSoftware(installedSw)
+	curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
+		return dep.Current
+	})
 
 	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
 	if len(divergentSw) == 0 {
@@ -94,14 +96,9 @@ func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer,
 			monitor.Changed("Firewall changed")
 		}
 
-		ensureDep := ensureFunc(monitor)
-		ensuredSw, err := deriveTraverse(ensureDep, divergentSw)
-		if err != nil {
-			return err
-		}
-
-		curr.Software = conv.ToSoftware(merge(installedSw, ensuredSw))
-		return nil
+		ensureDep := ensureFunc(monitor, conv, curr)
+		_, err := deriveTraverse(ensureDep, divergentSw)
+		return err
 	}, nil
 }
 
@@ -121,7 +118,7 @@ func divergent(dep *Dependency) bool {
 	return !dep.Desired.Equals(dep.Current)
 }
 
-func ensureFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error) {
+func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurrent) func(dep *Dependency) (*Dependency, error) {
 	return func(dep *Dependency) (*Dependency, error) {
 		monitor.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
@@ -134,7 +131,9 @@ func ensureFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error)
 		}
 
 		dep.Current = dep.Desired
-
+		curr.Software.Merge(conv.ToSoftware([]*Dependency{dep}, func(dep Dependency) common.Package {
+			return dep.Desired
+		}))
 		monitor.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
 			"from":       dep.Current.Version,
