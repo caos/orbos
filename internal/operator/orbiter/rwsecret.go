@@ -59,19 +59,21 @@ func WriteSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, p
 }
 
 func findSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
-	treeDesired, err := parse(gitClient, "orbiter.yml")
+	trees, err := parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	_, _, secrets, _, err := adapt(monitor, treeDesired[0], &Tree{})
+	treeDesired := trees[0]
+
+	_, _, secrets, _, err := adapt(monitor, treeDesired, &Tree{})
 	if err != nil {
 		return nil, nil, err
 	}
 
 	if path != "" {
 		sec, err := exactSecret(secrets, path)
-		return sec, treeDesired[0], err
+		return sec, treeDesired, err
 	}
 
 	selectItems := items(secrets)
@@ -93,7 +95,7 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, pa
 	}
 
 	sec, err := exactSecret(secrets, result)
-	return sec, treeDesired[0], err
+	return sec, treeDesired, err
 }
 
 func exactSecret(secrets map[string]*Secret, path string) (*Secret, error) {

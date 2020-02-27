@@ -10,14 +10,15 @@ type DestroyFunc func() error
 
 func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error {
 
-	treeDesired, err := parse(gitClient, "orbiter.yml")
+	trees, err := parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return err
 	}
 
+	treeDesired := trees[0]
 	treeCurrent := &Tree{}
 
-	_, destroy, _, _, err := adapt(monitor, treeDesired[0], treeCurrent)
+	_, destroy, _, _, err := adapt(monitor, treeDesired, treeCurrent)
 	if err != nil {
 		return err
 	}
