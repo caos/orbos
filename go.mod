@@ -7,8 +7,12 @@ require (
 	github.com/Azure/go-autorest v11.1.2+incompatible // indirect
 	github.com/awalterschulze/goderive v0.0.0-20190728081913-2613afbe1240 // indirect
 	github.com/aws/aws-sdk-go v1.26.3
+	github.com/caos/utils/pairs v0.0.0-20200224135210-c3dc453671a9 // indirect
+	github.com/envoyproxy/protoc-gen-validate v0.3.0 // indirect
 	github.com/go-logr/logr v0.1.0
+	github.com/golang/protobuf v1.3.2
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
+	github.com/grpc-ecosystem/grpc-gateway v1.13.0 // indirect
 	github.com/hhatto/gocloc v0.3.2 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/kr/pretty v0.2.0 // indirect
@@ -22,7 +26,9 @@ require (
 	github.com/spf13/viper v1.3.2
 	github.com/stretchr/testify v1.5.1 // indirect
 	golang.org/x/crypto v0.0.0-20191202143827-86a70503ff7e
+	golang.org/x/tools v0.0.0-20200301222351-066e0c02454c // indirect
 	google.golang.org/api v0.14.0
+	google.golang.org/grpc v1.27.1
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.8
