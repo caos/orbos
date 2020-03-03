@@ -7,6 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/ingestion"
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/mntr"
 )
@@ -20,7 +21,7 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
+func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
 
 	return func() {
 

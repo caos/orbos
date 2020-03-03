@@ -8,8 +8,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external/adapter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external/model"

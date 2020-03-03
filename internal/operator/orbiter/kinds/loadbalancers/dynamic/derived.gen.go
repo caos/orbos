@@ -2,7 +2,9 @@
 
 package dynamic
 
-import "github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+import (
+	infra "github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+)
 
 // deriveUnique returns a list containing only the unique items from the input list.
 // It does this by reusing the input list.
@@ -13,7 +15,21 @@ func deriveUnique(list []string) []string {
 	return deriveKeys(deriveSet(list))
 }
 
-// deriveFilter returns a list of all items in the list that matches the predicate.
+// deriveFilterMachines returns a list of all items in the list that matches the predicate.
+func deriveFilterMachines(predicate func(infra.Machine) bool, list []infra.Machine) []infra.Machine {
+	j := 0
+	for i, elem := range list {
+		if predicate(elem) {
+			if i != j {
+				list[j] = list[i]
+			}
+			j++
+		}
+	}
+	return list[:j]
+}
+
+// deriveFilterSources returns a list of all items in the list that matches the predicate.
 func deriveFilterSources(predicate func(Source) bool, list []Source) []Source {
 	j := 0
 	for i, elem := range list {
@@ -43,18 +59,4 @@ func deriveSet(list []string) map[string]struct{} {
 		set[v] = struct{}{}
 	}
 	return set
-}
-
-// deriveFilter returns a list of all items in the list that matches the predicate.
-func deriveFilterMachines(predicate func(infra.Machine) bool, list []infra.Machine) []infra.Machine {
-	j := 0
-	for i, elem := range list {
-		if predicate(elem) {
-			if i != j {
-				list[j] = list[i]
-			}
-			j++
-		}
-	}
-	return list[:j]
 }

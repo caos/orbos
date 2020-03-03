@@ -53,10 +53,19 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 		ingc := ingestion.NewIngestionServiceClient(conn)
 
+		pushEvents := func(events []*ingestion.EventRequest) error {
+			_, err := ingc.PushEvents(ctx, &ingestion.EventsRequest{
+				Orb:    orbFile.URL,
+				Events: events,
+			})
+			return err
+		}
+
 		op := operator.New(ctx, monitor, orbiter.Takeoff(
 			ctx,
 			monitor,
 			gitClient,
+			pushEvents,
 			gitCommit,
 			orbFile.Masterkey,
 			recur,
@@ -76,18 +85,15 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 		executables.Populate()
 
-		if _, err := ingc.PushEvents(ctx, &ingestion.EventsRequest{
-			Orb: orbFile.URL,
-			Events: []*ingestion.EventRequest{{
-				CreationDate: ptypes.TimestampNow(),
-				Type:         "orbiter.tookoff",
-				Data: &structpb.Struct{
-					Fields: map[string]*structpb.Value{
-						"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: gitCommit}},
-					},
+		if err := pushEvents([]*ingestion.EventRequest{{
+			CreationDate: ptypes.TimestampNow(),
+			Type:         "orbiter.tookoff",
+			Data: &structpb.Struct{
+				Fields: map[string]*structpb.Value{
+					"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: gitCommit}},
 				},
-			}},
-		}); err != nil {
+			},
+		}}); err != nil {
 			panic(err)
 		}
 
@@ -103,18 +109,15 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 
 		go func() {
 			for range time.Tick(time.Minute) {
-				ingc.PushEvents(ctx, &ingestion.EventsRequest{
-					Orb: orbFile.URL,
-					Events: []*ingestion.EventRequest{{
-						CreationDate: ptypes.TimestampNow(),
-						Type:         "orbiter.running",
-						Data: &structpb.Struct{
-							Fields: map[string]*structpb.Value{
-								"since": &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: started}},
-							},
+				pushEvents([]*ingestion.EventRequest{{
+					CreationDate: ptypes.TimestampNow(),
+					Type:         "orbiter.running",
+					Data: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"since": &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: started}},
 						},
-					}},
-				})
+					},
+				}})
 			}
 		}()
 

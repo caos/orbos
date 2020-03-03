@@ -7,6 +7,7 @@ require (
 	github.com/Azure/go-autorest v11.1.2+incompatible // indirect
 	github.com/awalterschulze/goderive v0.0.0-20190728081913-2613afbe1240 // indirect
 	github.com/aws/aws-sdk-go v1.26.3
+	github.com/caos/eventstore-lib v0.0.0-20191010123523-b03a5c154385 // indirect
 	github.com/caos/utils/pairs v0.0.0-20200224135210-c3dc453671a9 // indirect
 	github.com/envoyproxy/protoc-gen-validate v0.3.0 // indirect
 	github.com/go-logr/logr v0.1.0
