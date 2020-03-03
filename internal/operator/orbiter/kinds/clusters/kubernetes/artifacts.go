@@ -182,10 +182,10 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 			Name: "boom-manager-role",
 		},
 		Rules: []rbac.PolicyRule{{
-			APIGroups: []string{""},
+			APIGroups: []string{"*"},
 			Resources: []string{"*"},
 			Verbs:     []string{"*"},
-		}, {
+		},/* {
 			APIGroups: []string{"admissionregistration.k8s.io"},
 			Resources: []string{"*"},
 			Verbs:     []string{"*"},
@@ -249,7 +249,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 				"patch",
 				"update",
 			},
-		}},
+		}},*/
 	}); err != nil {
 		return err
 	}
