@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/AppsFlyer/go-sundheit v0.1.1
 	github.com/aws/aws-sdk-go v1.29.15
+	github.com/caos/utils/config v0.0.0-20200224135210-c3dc453671a9 // indirect
 	github.com/golang/protobuf v1.3.4
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
 	github.com/manifoldco/promptui v0.7.0
