@@ -2,6 +2,7 @@
 *secrets.y*ml
 *kubeconfig
 .vscode
+.idea
 /artifacts
 /*.go
 
