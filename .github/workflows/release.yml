@@ -28,6 +28,7 @@ jobs:
         GO111MODULE: on
         CGO_ENABLED: 0
       run: |
+        npm install semantic-release@v16.0.2
         export BRANCH=${GITHUB_REF##*/}
         export VERSION=$BRANCH
         [[ "$BRANCH" == "master" ]] && VERSION="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
