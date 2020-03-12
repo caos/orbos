@@ -13,6 +13,7 @@ import (
 
 func ensureScale(
 	monitor mntr.Monitor,
+	clusterID string,
 	desired *DesiredV0,
 	psf orbiter.PushSecretsFunc,
 	controlplanePool initializedPool,
@@ -184,6 +185,7 @@ nodes:
 
 		joinKubeconfig, err := join(
 			monitor,
+			clusterID,
 			joinCP,
 			certsCP,
 			*desired,
@@ -209,6 +211,7 @@ nodes:
 	for _, worker := range joinWorkers {
 		if _, err := join(
 			monitor,
+			clusterID,
 			worker,
 			certsCP,
 			*desired,

@@ -13,7 +13,7 @@ import (
 func AdaptFunc(
 	orb *orbiter.Orb,
 	orbiterCommit string,
-	id string,
+	clusterID string,
 	oneoff bool,
 	deployOrbiterAndBoom bool,
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
@@ -84,7 +84,9 @@ func AdaptFunc(
 		}
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
-				ensureFunc, err := query(monitor,
+				ensureFunc, err := query(
+					monitor,
+					clusterID,
 					desiredKind,
 					current,
 					providers,

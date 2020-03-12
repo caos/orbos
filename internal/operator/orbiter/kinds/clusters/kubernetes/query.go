@@ -11,6 +11,7 @@ import (
 
 func query(
 	monitor mntr.Monitor,
+	clusterID string,
 	desired *DesiredV0,
 	current *CurrentCluster,
 	providerCurrents map[string]interface{},
@@ -78,6 +79,7 @@ func query(
 	return func(psf orbiter.PushSecretsFunc) error {
 		return ensure(
 			monitor,
+			clusterID,
 			desired,
 			current,
 			kubeAPIAddress,
