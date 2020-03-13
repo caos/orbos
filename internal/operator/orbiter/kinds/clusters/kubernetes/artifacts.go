@@ -182,73 +182,9 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 			Name: "boom-manager-role",
 		},
 		Rules: []rbac.PolicyRule{{
-			APIGroups: []string{""},
+			APIGroups: []string{"*"},
 			Resources: []string{"*"},
 			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"admissionregistration.k8s.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"apiextensions.k8s.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"apiregistration.k8s.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"apps"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"batch"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"extensions"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"logging.banzaicloud.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"monitoring.coreos.com"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"getambassador.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"policy"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"rbac.authorization.k8s.io"},
-			Resources: []string{"*"},
-			Verbs:     []string{"*"},
-		}, {
-			APIGroups: []string{"toolsets.boom.caos.ch"},
-			Resources: []string{"toolsets"},
-			Verbs: []string{
-				"create",
-				"delete",
-				"get",
-				"list",
-				"patch",
-				"update",
-				"watch",
-			},
-		}, {
-			APIGroups: []string{"toolsets.boom.caos.ch"},
-			Resources: []string{"toolsets/status"},
-			Verbs: []string{
-				"get",
-				"patch",
-				"update",
-			},
 		}},
 	}); err != nil {
 		return err
