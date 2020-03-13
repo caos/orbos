@@ -46,7 +46,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		conn, err := grpc.Dial("127.0.0.1:50000", grpc.WithInsecure())
+		conn, err := grpc.Dial("ingestion:31000", grpc.WithInsecure())
 		if err != nil {
 			panic(err)
 		}
@@ -62,13 +62,10 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		}
 
 		op := operator.New(ctx, monitor, orbiter.Takeoff(
-			ctx,
 			monitor,
 			gitClient,
 			pushEvents,
 			gitCommit,
-			orbFile.Masterkey,
-			recur,
 			orb.AdaptFunc(
 				orbFile,
 				gitCommit,

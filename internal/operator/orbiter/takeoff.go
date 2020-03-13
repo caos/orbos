@@ -1,9 +1,7 @@
 package orbiter
 
 import (
-	"context"
 	"fmt"
-
 	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbiter/internal/git"
@@ -21,7 +19,7 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
 
 	return func() {
 
@@ -62,6 +60,7 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, p
 
 		events := make([]*event, 0)
 		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			pushEvents([]*ingestion.EventRequest{mntr.EventRecord("orbiter", evt, fields)})
 			events = append(events, &event{
 				commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
 				files:  marshalCurrentFiles(),
