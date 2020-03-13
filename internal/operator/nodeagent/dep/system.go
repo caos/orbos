@@ -103,6 +103,9 @@ func GetOperatingSystem() (OperatingSystemMajor, error) {
 			return CentOS7, nil
 		}
 		return Unknown, errors.Errorf("Unsupported centOS version %s", version)
+	case "Fedora":
+		return CentOS7, nil
 	}
+
 	return Unknown, errors.Errorf("Unknown operating system %s", os)
 }
