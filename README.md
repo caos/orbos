@@ -63,7 +63,7 @@ done
 cat ~/.ssh/myorb_bootstrap
 ```
 
-> Copy the file [orbiter.yml](examples/k8s/static/orbiter.yml) to the root of your Repository.
+> Copy the file [orbiter.yml](examples/k8s/static/virt-install/orbiter.yml) to the root of your Repository.
 
 > Replace the IPs in your orbiter.yml accordingly
 
