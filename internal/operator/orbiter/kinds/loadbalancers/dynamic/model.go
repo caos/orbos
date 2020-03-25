@@ -50,7 +50,7 @@ func (d *DesiredV0) Validate() error {
 
 type VIP struct {
 	IP        string
-	Transport []Source
+	Transport []*Source
 }
 
 func (v *VIP) validate() error {
@@ -67,9 +67,9 @@ func (v *VIP) validate() error {
 		}
 	}
 
-	withDestinations := len(deriveFilterSources(func(src Source) bool {
+	withDestinations := len(deriveFilterSources(func(src *Source) bool {
 		return len(src.Destinations) > 0
-	}, append([]Source(nil), v.Transport...)))
+	}, append([]*Source(nil), v.Transport...)))
 
 	if withDestinations != 0 && withDestinations != len(v.Transport) {
 		return errors.Errorf("sources of vip %s must eighter all have configured destinations or none", v.IP)
@@ -94,7 +94,7 @@ func (h *HealthChecks) validate() error {
 type Source struct {
 	Name         string
 	SourcePort   Port
-	Destinations []Destination
+	Destinations []*Destination
 }
 
 func (s *Source) validate() error {

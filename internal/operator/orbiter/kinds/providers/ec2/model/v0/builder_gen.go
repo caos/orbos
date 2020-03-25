@@ -5,8 +5,7 @@ package v0
 import (
 	"errors"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ec2/model"
 )
 

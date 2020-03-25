@@ -1,12 +1,15 @@
 package orbiter
 
 import (
-	"context"
 	"fmt"
-
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
+	"net/http"
+
+	 "github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbiter/internal/ingestion"
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/mntr"
 )
@@ -20,7 +23,15 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
+
+	go func(){
+		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":9000", nil); err != nil {
+			panic(err)
+		}
+	}()
 
 	return func() {
 
@@ -61,6 +72,7 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 
 		events := make([]*event, 0)
 		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			pushEvents([]*ingestion.EventRequest{mntr.EventRecord("orbiter", evt, fields)})
 			events = append(events, &event{
 				commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
 				files:  marshalCurrentFiles(),

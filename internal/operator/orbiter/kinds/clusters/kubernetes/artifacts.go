@@ -99,6 +99,10 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 								ReadOnly:  true,
 								MountPath: "/etc/orbiter",
 							}},
+							Ports: []core.ContainerPort{{
+								Name:          "metrics",
+								ContainerPort: 9000,
+							}},
 						}},
 						Volumes: []core.Volume{{
 							Name: "keys",
