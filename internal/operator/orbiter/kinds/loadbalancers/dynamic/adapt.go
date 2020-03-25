@@ -3,6 +3,7 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 	"text/template"
 
@@ -14,6 +15,18 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/mntr"
 )
+
+var	probes = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name:       "probe",
+		Help:       "Load Balancing Probes.",
+	},
+	[]string{"target"},
+)
+
+func init(){
+	prometheus.MustRegister(probes)
+}
 
 func AdaptFunc() orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
@@ -250,6 +263,11 @@ http {
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
+							vipProbe := fmt.Sprintf("%s:%d", vip.IP, transport.SourcePort)
+							probes.With(prometheus.Labels{
+								"target": fmt.Sprintf("%s VIP (%s)",transport.Name, vipProbe),
+							})
+							transport.Destinations[0].HealthChecks.
 
 							for _, dest := range transport.Destinations {
 								destMachines, err := svc.List(dest.Pool, true)
