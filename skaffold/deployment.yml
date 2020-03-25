@@ -29,6 +29,7 @@ spec:
             - takeoff
             - --recur
             - --deploy=false
+            - --ingestion=
           image: eu.gcr.io/caos-240809/orbiter
           env:
             - name: GRPC_GO_LOG_VERBOSITY_LEVEL

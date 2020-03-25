@@ -11,7 +11,7 @@ set -e
 
 # get gopass secrets and output secret yaml
 GITHUB_IMAGE_PULL_SECRET=$(cat ~/.docker/config.json | $ENCODE)
-ORBCONFIG=$(cat ~/.orb/test | $ENCODE)
+ORBCONFIG=$(cat ~/.orb/orbiterdev | $ENCODE)
 
 NAMESPACE=caos-system
 
