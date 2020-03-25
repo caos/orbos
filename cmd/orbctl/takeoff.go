@@ -25,6 +25,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 		recur   bool
 		destroy bool
 		deploy  bool
+		ingestionAddress string
 		cmd     = &cobra.Command{
 			Use:   "takeoff",
 			Short: "Launch an orbiter",
@@ -35,6 +36,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
+	flags.StringVar(&ingestionAddress, "ingestion", "ingestion:31000", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if recur && destroy {
@@ -46,19 +48,25 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		conn, err := grpc.Dial("ingestion:31000", grpc.WithInsecure())
-		if err != nil {
-			panic(err)
+		pushEvents := func(_ []*ingestion.EventRequest) error {
+			return nil
 		}
 
-		ingc := ingestion.NewIngestionServiceClient(conn)
+		if ingestionAddress != "" {
+			conn, err := grpc.Dial(ingestionAddress, grpc.WithInsecure())
+			if err != nil {
+				panic(err)
+			}
 
-		pushEvents := func(events []*ingestion.EventRequest) error {
-			_, err := ingc.PushEvents(ctx, &ingestion.EventsRequest{
-				Orb:    orbFile.URL,
-				Events: events,
-			})
-			return err
+			ingc := ingestion.NewIngestionServiceClient(conn)
+
+			pushEvents = func(events []*ingestion.EventRequest) error {
+				_, err := ingc.PushEvents(ctx, &ingestion.EventsRequest{
+					Orb:    orbFile.URL,
+					Events: events,
+				})
+				return err
+			}
 		}
 
 		op := operator.New(ctx, monitor, orbiter.Takeoff(
