@@ -93,7 +93,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 							Name:            "orbiter",
 							ImagePullPolicy: core.PullIfNotPresent,
 							Image:           "docker.pkg.github.com/caos/orbiter/orbiter:" + orbiterversion,
-							Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur"},
+							Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur", "--ingestion="},
 							VolumeMounts: []core.VolumeMount{{
 								Name:      "keys",
 								ReadOnly:  true,
