@@ -30,7 +30,7 @@ func deriveFilterMachines(predicate func(infra.Machine) bool, list []infra.Machi
 }
 
 // deriveFilterSources returns a list of all items in the list that matches the predicate.
-func deriveFilterSources(predicate func(Source) bool, list []Source) []Source {
+func deriveFilterSources(predicate func(*Source) bool, list []*Source) []*Source {
 	j := 0
 	for i, elem := range list {
 		if predicate(elem) {

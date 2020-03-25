@@ -3,6 +3,7 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"github.com/caos/orbiter/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 	"text/template"
@@ -50,6 +51,21 @@ func AdaptFunc() orbiter.AdaptFunc {
 			},
 		}
 		currentTree.Parsed = current
+
+		for _, pool := range desiredKind.Spec {
+			for _, vip := range pool {
+				for _, src := range vip.Transport{
+					if src.Name == "kubeapi"{
+						for _, dest := range src.Destinations {
+							if dest.Port != 6666 {
+								dest.Port = 6666
+								migrate = true
+							}
+						}
+					}
+				}
+			}
+		}
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
 
@@ -189,7 +205,7 @@ vrrp_instance VI_{{ $idx }} {
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := machines $dest.Pool true }}
-		server {{ $machine.IP }}:{{ if eq $src.Name  "kubeapi" }}6666{{ else }}{{ $dest.Port }}{{ end }}; # {{ $dest.Pool }}{{end}}{{ end }}
+		server {{ $machine.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
 	}
 	server {
 		listen {{ $vip.IP }}:{{ $src.SourcePort }};
@@ -263,12 +279,7 @@ http {
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
-							vipProbe := fmt.Sprintf("%s:%d", vip.IP, transport.SourcePort)
-							probes.With(prometheus.Labels{
-								"target": fmt.Sprintf("%s VIP (%s)",transport.Name, vipProbe),
-							})
-							transport.Destinations[0].HealthChecks.
-
+							probe("VIP",vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
 							for _, dest := range transport.Destinations {
 								destMachines, err := svc.List(dest.Pool, true)
 								if err != nil {
@@ -289,6 +300,7 @@ http {
 										Port:     fmt.Sprintf("%d", dest.Port),
 										Protocol: "tcp",
 									}
+									probe("Upstream",machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
 								}
 							}
 						}
@@ -298,8 +310,20 @@ http {
 				return nil
 			}
 			return nil, nil
-		}, nil, nil, false, nil
+		}, nil, nil, migrate, nil
 	}
+}
+
+func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {
+	vipProbe := fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path)
+	_, err := helpers.Check(vipProbe, int(hc.Code))
+	var success float64
+	if err == nil {
+		success = 1
+	}
+	probes.With(prometheus.Labels{
+		"target": fmt.Sprintf("%s %s (%s)", source.Name, probeType, vipProbe),
+	}).Set(success)
 }
 
 type Data struct {

@@ -36,6 +36,9 @@ spec:
               value: "99"
             - name: GRPC_GO_LOG_SEVERITY_LEVEL
               value: info
+          ports:
+          - name: metrics
+            containerPort: 9000
           imagePullPolicy: IfNotPresent
           name: orbiter
           resources: {}
