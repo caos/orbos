@@ -36,7 +36,7 @@ func takeoffCommand(rv rootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
-	flags.StringVar(&ingestionAddress, "ingestion", "ingestion:31000", "Ingestion API address")
+	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		if recur && destroy {
