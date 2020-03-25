@@ -22,7 +22,7 @@ var	probes = prometheus.NewGaugeVec(
 		Name:       "probe",
 		Help:       "Load Balancing Probes.",
 	},
-	[]string{"target"},
+	[]string{"name", "type", "target"},
 )
 
 func init(){
@@ -322,7 +322,9 @@ func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {
 		success = 1
 	}
 	probes.With(prometheus.Labels{
-		"target": fmt.Sprintf("%s %s (%s)", source.Name, probeType, vipProbe),
+		"name": source.Name,
+		"type": probeType,
+		"target": vipProbe,
 	}).Set(success)
 }
 
