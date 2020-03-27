@@ -1,9 +1,12 @@
-# Orbiter The Meta Cluster Manager
+![ORBOS](./raw/img/orbos-logo-oneline-lightdesign@2x.png)
+
+# ORBOS Orbiter The Meta Cluster Manager
 
 ![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)
 ![Github Release Badge](https://github.com/caos/orbiter/workflows/Release/badge.svg)
 [![GitHub license](https://img.shields.io/github/license/caos/orbiter)](https://github.com/caos/orbiter/blob/master/LICENSE)
 [![GitHub release](https://img.shields.io/github/release/caos/orbiter)](https://GitHub.com/caos/orbiter/releases/)
+[![Go Report Card](https://goreportcard.com/badge/github.com/caos/orbiter)](https://goreportcard.com/report/github.com/caos/orbiter)
 
 > This project is in alpha state. The API will continue breaking until version 1.0.0 is released
 
