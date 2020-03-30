@@ -1,6 +1,6 @@
 ![ORBOS](./raw/img/orbos-logo-oneline-lightdesign@2x.png)
 
-# ORBOS Orbiter The Meta Cluster Manager
+# ORBOS Orbiter - The Meta Cluster Manager
 
 ![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)
 ![Github Release Badge](https://github.com/caos/orbiter/workflows/Release/badge.svg)
