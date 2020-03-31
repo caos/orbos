@@ -65,7 +65,16 @@ func (g *Client) Init(deploykey []byte) error {
 	return nil
 }
 
-func (g *Client) Clone() error {
+func (g *Client) Clone() (err error) {
+	for i := 0; i < 3; i++ {
+		if err = g.clone(); err == nil {
+			return nil
+		}
+	}
+	return err
+}
+
+func (g *Client) clone() error {
 
 	g.fs = memfs.New()
 
