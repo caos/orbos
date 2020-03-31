@@ -35,6 +35,9 @@ func Check(url string, status int) (string, error) {
 
 func check(check checks.Check, err error) (string, error){
 	msg, err := checks.Must(check, err).Execute()
-	message := msg.(string)
+	message, ok := msg.(string)
+	if !ok {
+		return "", err
+	}
 	return message, errors.Wrap(err, fmt.Sprintf("%s", message))
 }
