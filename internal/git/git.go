@@ -66,10 +66,11 @@ func (g *Client) Init(deploykey []byte) error {
 }
 
 func (g *Client) Clone() (err error) {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		if err = g.clone(); err == nil {
 			return nil
 		}
+		time.Sleep(time.Second)
 	}
 	return err
 }
