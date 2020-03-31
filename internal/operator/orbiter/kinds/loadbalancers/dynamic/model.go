@@ -81,7 +81,7 @@ func (v *VIP) validate() error {
 type HealthChecks struct {
 	Protocol string
 	Path     string
-	Code     uint8
+	Code     uint16
 }
 
 func (h *HealthChecks) validate() error {
