@@ -93,6 +93,8 @@ dns:
 etcd:
   local:
     dataDir: /var/lib/etcd
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381
 imageRepository: k8s.gcr.io
 kubernetesVersion: %s
 networking:

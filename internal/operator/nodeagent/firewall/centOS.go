@@ -51,7 +51,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		}
 
 		for _, ign := range ignore {
-			desired[ign] = common.Allowed{
+			desired[ign] = &common.Allowed{
 				Port:     ign,
 				Protocol: "tcp",
 			}
@@ -78,7 +78,13 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			cmd.Stdout = os.Stdout
 		}
 
+		monitor.WithFields(map[string]interface{}{
+			"open": strings.Join(addPorts, ";"),
+			"close": strings.Join(removePorts, ";"),
+		}).Debug("Firewall changes determined")
+
 		if cmd.Run() != nil || len(addPorts) == 0 && len(removePorts) == 0 {
+			monitor.Debug("Not changing firewall")
 			return current, nil, nil
 		}
 
@@ -121,7 +127,19 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 	})
 }
 
-func changeFirewall(monitor mntr.Monitor, changes []string) error {
+func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
+
+	changesMonitor := monitor.WithField("changes", strings.Join(changes, ";"))
+	changesMonitor.Debug("Changing firewall")
+
+	defer func(){
+		if err == nil {
+			changesMonitor.Debug("Firewall changed")
+		} else {
+			changesMonitor.Error(err)
+		}
+	}()
+
 	var errBuf bytes.Buffer
 	if len(changes) == 0 {
 		return nil

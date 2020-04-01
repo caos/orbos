@@ -5,6 +5,7 @@ metadata:
 build:
   artifacts:
   - image: eu.gcr.io/caos-240809/orbiter
+    context: .
     custom:
       buildCommand: ./skaffold/build.sh
 deploy:

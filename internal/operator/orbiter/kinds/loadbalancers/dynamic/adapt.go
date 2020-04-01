@@ -248,7 +248,7 @@ http {
 									deepNa.Firewall = &common.Firewall{}
 								}
 								fw := *deepNa.Firewall
-								fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = common.Allowed{
+								fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = &common.Allowed{
 									Port:     fmt.Sprintf("%d", transport.SourcePort),
 									Protocol: "tcp",
 								}
@@ -296,7 +296,7 @@ http {
 										deepNa.Firewall = &common.Firewall{}
 									}
 									fw := *deepNa.Firewall
-									fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = common.Allowed{
+									fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = &common.Allowed{
 										Port:     fmt.Sprintf("%d", dest.Port),
 										Protocol: "tcp",
 									}

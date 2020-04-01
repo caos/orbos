@@ -70,7 +70,7 @@ func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer,
 	})
 
 	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-	if len(divergentSw) == 0 {
+	if len(divergentSw) == 0 && ensureFirewall == nil{
 		curr.NodeIsReady = true
 		return noop, nil
 	}

@@ -13,45 +13,45 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (
 
 		monitor = monitor.WithField("machine", machine.infra.ID())
 
-		fw := map[string]common.Allowed{
-			"kubelet": common.Allowed{
+		fw := map[string]*common.Allowed{
+			"kubelet": {
 				Port:     fmt.Sprintf("%d", 10250),
 				Protocol: "tcp",
 			},
 		}
 
 		if machine.tier == Workers {
-			fw["node-ports"] = common.Allowed{
+			fw["node-ports"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
 				Protocol: "tcp",
 			}
 		}
 
-		if machine.tier == Controlplane {
-			fw["kubeapi-external"] = common.Allowed{
+		if machine.tier == Controlplane { 
+			fw["kubeapi-external"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPIPort),
 				Protocol: "tcp",
 			}
-			fw["kubeapi-internal"] = common.Allowed{
+			fw["kubeapi-internal"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d", 6666),
 				Protocol: "tcp",
 			}
-			fw["etcd"] = common.Allowed{
-				Port:     fmt.Sprintf("%d-%d", 2379, 2380),
+			fw["etcd"] = &common.Allowed{
+				Port:     fmt.Sprintf("%d-%d", 2379, 2381),
 				Protocol: "tcp",
 			}
-			fw["kube-scheduler"] = common.Allowed{
+			fw["kube-scheduler"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d", 10251),
 				Protocol: "tcp",
 			}
-			fw["kube-controller"] = common.Allowed{
+			fw["kube-controller"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d", 10252),
 				Protocol: "tcp",
 			}
 		}
 
 		if desired.Spec.Networking.Network == "calico" {
-			fw["calico-bgp"] = common.Allowed{
+			fw["calico-bgp"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d", 179),
 				Protocol: "tcp",
 			}

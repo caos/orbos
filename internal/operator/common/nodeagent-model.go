@@ -141,7 +141,7 @@ func defines(this, that Package) bool {
 	return defines
 }
 
-type Firewall map[string]Allowed
+type Firewall map[string]*Allowed
 
 func (f *Firewall) Merge(fw Firewall) {
 	for key, value := range fw {
@@ -153,7 +153,7 @@ func (f *Firewall) Merge(fw Firewall) {
 func (f *Firewall) Ports() []*Allowed {
 	ports := make([]*Allowed, 0)
 	for _, value := range *f {
-		ports = append(ports, &value)
+		ports = append(ports, value)
 	}
 	return ports
 }
@@ -169,7 +169,7 @@ func (f Firewall) Contains(other Firewall) bool {
 		if !ok {
 			return false
 		}
-		if !deriveEqualPort(port, found) {
+		if !deriveEqualPort(*port, *found) {
 			return false
 		}
 	}
@@ -183,7 +183,7 @@ func (f Firewall) IsContainedIn(ports []*Allowed) bool {
 checks:
 	for _, fwPort := range f {
 		for _, port := range ports {
-			if deriveEqualPort(*port, fwPort) {
+			if deriveEqualPort(*port, *fwPort) {
 				continue checks
 			}
 		}
