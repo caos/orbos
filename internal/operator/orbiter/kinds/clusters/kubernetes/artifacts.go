@@ -108,11 +108,11 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 							Resources: core.ResourceRequirements{
 								Limits: core.ResourceList{
 									"cpu":    resource.MustParse("10m"),
-									"memory": resource.MustParse("2Gi"),
+									"memory": resource.MustParse("200Mi"),
 								},
 								Requests: core.ResourceList{
 									"cpu":    resource.MustParse("10m"),
-									"memory": resource.MustParse("500Mi"),
+									"memory": resource.MustParse("50Mi"),
 								},
 							},
 						}},
