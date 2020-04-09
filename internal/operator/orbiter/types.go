@@ -22,8 +22,6 @@ var (
 	compiledCIDR = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
 )
 
-type cidr string
-
 type IPAddress string
 
 type CIDR string

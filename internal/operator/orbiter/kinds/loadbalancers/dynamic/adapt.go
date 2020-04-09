@@ -3,10 +3,11 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
-	"github.com/caos/orbiter/internal/helpers"
-	"github.com/prometheus/client_golang/prometheus"
 	"strings"
 	"text/template"
+
+	"github.com/caos/orbiter/internal/helpers"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/pkg/errors"
 
@@ -17,15 +18,15 @@ import (
 	"github.com/caos/orbiter/mntr"
 )
 
-var	probes = prometheus.NewGaugeVec(
+var probes = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
-		Name:       "probe",
-		Help:       "Load Balancing Probes.",
+		Name: "probe",
+		Help: "Load Balancing Probes.",
 	},
 	[]string{"name", "type", "target"},
 )
 
-func init(){
+func init() {
 	prometheus.MustRegister(probes)
 }
 
@@ -54,8 +55,13 @@ func AdaptFunc() orbiter.AdaptFunc {
 
 		for _, pool := range desiredKind.Spec {
 			for _, vip := range pool {
-				for _, src := range vip.Transport{
-					if src.Name == "kubeapi"{
+				if len(vip.Whitelist) == 0 {
+					allIPs := orbiter.CIDR("")
+					vip.Whitelist = []*orbiter.CIDR{&allIPs}
+					migrate = true
+				}
+				for _, src := range vip.Transport {
+					if src.Name == "kubeapi" {
 						for _, dest := range src.Destinations {
 							if dest.Port != 6666 {
 								dest.Port = 6666
@@ -209,6 +215,9 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 	}
 	server {
 		listen {{ $vip.IP }}:{{ $src.SourcePort }};
+{{ range $white := $vip.Whitelist }}		allow $white;
+{{ end }}
+		deny all;
 		proxy_pass {{ $src.Name }};
 	}
 {{ end }}{{ end }}}
@@ -279,7 +288,7 @@ http {
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
-							probe("VIP",vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
+							probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
 							for _, dest := range transport.Destinations {
 								destMachines, err := svc.List(dest.Pool, true)
 								if err != nil {
@@ -300,7 +309,7 @@ http {
 										Port:     fmt.Sprintf("%d", dest.Port),
 										Protocol: "tcp",
 									}
-									probe("Upstream",machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
+									probe("Upstream", machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
 								}
 							}
 						}
@@ -322,8 +331,8 @@ func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {
 		success = 1
 	}
 	probes.With(prometheus.Labels{
-		"name": source.Name,
-		"type": probeType,
+		"name":   source.Name,
+		"type":   probeType,
 		"target": vipProbe,
 	}).Set(success)
 }

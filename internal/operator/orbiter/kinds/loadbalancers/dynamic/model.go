@@ -50,6 +50,7 @@ func (d *DesiredV0) Validate() error {
 
 type VIP struct {
 	IP        string
+	Whitelist []*orbiter.CIDR
 	Transport []*Source
 }
 
@@ -57,6 +58,13 @@ func (v *VIP) validate() error {
 	if v.IP == "" {
 		return errors.New("no virtual IP configured")
 	}
+
+	for _, cidr := range v.Whitelist {
+		if err := cidr.Validate(); err != nil {
+			return err
+		}
+	}
+
 	if len(v.Transport) == 0 {
 		return errors.Errorf("vip %s has no transport configured", v.IP)
 	}
