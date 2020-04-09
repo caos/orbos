@@ -20,6 +20,7 @@ type machinesService struct {
 	maintenancekeyPub []byte
 	statusFile        string
 	desireHostname    func(machine infra.Machine, pool string) error
+	cache             map[string]cachedMachines
 }
 
 // TODO: Dont accept the whole spec. Accept exactly the values needed (check other constructors too)
@@ -39,6 +40,7 @@ func NewMachinesService(
 		maintenancekeyPub,
 		filepath.Join("/var/orbiter", id),
 		desireHostname,
+		nil,
 	}
 }
 
@@ -60,7 +62,12 @@ func (c *machinesService) List(poolName string, active bool) (infra.Machines, er
 		return nil, fmt.Errorf("Pool %s does not exist", poolName)
 	}
 
-	machines := make([]infra.Machine, 0)
+	cache, ok := c.cache[poolName]
+	if ok {
+		return cache.Machines(active), nil
+	}
+
+	newCache := make([]*cachedMachine, 0)
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
 		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
@@ -68,13 +75,14 @@ func (c *machinesService) List(poolName string, active bool) (infra.Machines, er
 			return nil, err
 		}
 		machine.ReadFile(c.statusFile, &buf)
-		isActive := strings.Contains(buf.String(), "active")
-		if active && isActive || !active && !isActive {
-			machines = append(machines, machine)
-		}
+		newCache = append(newCache, &cachedMachine{
+			infra:  machine,
+			active: strings.Contains(buf.String(), "active"),
+		})
 		buf.Reset()
 	}
-	return machines, nil
+	c.cache[poolName] = newCache
+	return cachedMachines(newCache).Machines(active), nil
 }
 
 func (c *machinesService) Create(poolName string) (infra.Machine, error) {
@@ -111,4 +119,21 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	return nil, errors.New("No machines left")
+}
+
+type cachedMachine struct {
+	infra  infra.Machine
+	active bool
+}
+
+type cachedMachines []*cachedMachine
+
+func (c *cachedMachines) Machines(activeOnly bool) infra.Machines {
+	machines := make([]infra.Machine, 0)
+	for _, machine := range *c {
+		if !activeOnly || machine.active {
+			machines = append(machines, machine.infra)
+		}
+	}
+	return machines
 }
