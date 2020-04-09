@@ -123,6 +123,9 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		buf.Reset()
 	}
 
+	if c.cache == nil {
+		c.cache = make(map[string]cachedMachines)
+	}
 	c.cache[poolName] = newCache
 	return newCache, nil
 }
