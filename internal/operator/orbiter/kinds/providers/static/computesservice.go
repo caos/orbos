@@ -75,22 +75,22 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 		if len(c.maintenanceKeyPub) == 0 {
 			panic("no maintenance key")
 		}
-		if err := machine.infra.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader(c.maintenanceKeyPub), 600); err != nil {
+		if err := machine.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader(c.maintenanceKeyPub), 600); err != nil {
 			return nil, err
 		}
 
 		if !machine.active {
 
-			if err := machine.infra.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
+			if err := machine.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
 				return nil, err
 			}
 
-			if err := c.desireHostname(machine.infra, poolName); err != nil {
+			if err := c.desireHostname(machine, poolName); err != nil {
 				return nil, err
 			}
 
 			machine.active = true
-			return machine.infra, nil
+			return machine, nil
 		}
 	}
 
@@ -109,7 +109,7 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		return cache, nil
 	}
 
-	newCache := make([]*cachedMachine, 0)
+	newCache := make([]*machine, 0)
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
 		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
@@ -117,12 +117,9 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 			return nil, err
 		}
 		if err := machine.ReadFile(c.statusFile, &buf); err != nil {
-			// treat as inactive inactive
+			// treat as inactive
 		}
-		newCache = append(newCache, &cachedMachine{
-			infra:  machine,
-			active: strings.Contains(buf.String(), "active"),
-		})
+		machine.active = strings.Contains(buf.String(), "active")
 		buf.Reset()
 	}
 
@@ -135,13 +132,13 @@ type cachedMachine struct {
 	active bool
 }
 
-type cachedMachines []*cachedMachine
+type cachedMachines []*machine
 
 func (c cachedMachines) Machines(activeOnly bool) infra.Machines {
 	machines := make([]infra.Machine, 0)
 	for _, machine := range c {
 		if !activeOnly || machine.active {
-			machines = append(machines, machine.infra)
+			machines = append(machines, machine)
 		}
 	}
 	return machines
