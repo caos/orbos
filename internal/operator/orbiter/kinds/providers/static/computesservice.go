@@ -15,9 +15,9 @@ import (
 type machinesService struct {
 	monitor           mntr.Monitor
 	desired           *DesiredV0
-	bootstrapkey      []byte
-	maintenancekey    []byte
-	maintenancekeyPub []byte
+	bootstrapKey      []byte
+	maintenanceKey    []byte
+	maintenanceKeyPub []byte
 	statusFile        string
 	desireHostname    func(machine infra.Machine, pool string) error
 	cache             map[string]cachedMachines
@@ -27,17 +27,17 @@ type machinesService struct {
 func NewMachinesService(
 	monitor mntr.Monitor,
 	desired *DesiredV0,
-	bootstrapkey []byte,
-	maintenancekey []byte,
-	maintenancekeyPub []byte,
+	bootstrapKey []byte,
+	maintenanceKey []byte,
+	maintenanceKeyPub []byte,
 	id string,
 	desireHostname func(machine infra.Machine, pool string) error) core.MachinesService {
 	return &machinesService{
 		monitor,
 		desired,
-		bootstrapkey,
-		maintenancekey,
-		maintenancekeyPub,
+		bootstrapKey,
+		maintenanceKey,
+		maintenanceKeyPub,
 		filepath.Join("/var/orbiter", id),
 		desireHostname,
 		nil,
@@ -56,69 +56,78 @@ func (c *machinesService) ListPools() ([]string, error) {
 }
 
 func (c *machinesService) List(poolName string, active bool) (infra.Machines, error) {
+	pool, err := c.cachedPool(poolName)
+	if err != nil {
+		return nil, err
+	}
+
+	return pool.Machines(active), nil
+}
+
+func (c *machinesService) Create(poolName string) (infra.Machine, error) {
+	pool, err := c.cachedPool(poolName)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, machine := range pool {
+
+		if len(c.maintenanceKeyPub) == 0 {
+			panic("no maintenance key")
+		}
+		if err := machine.infra.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader(c.maintenanceKeyPub), 600); err != nil {
+			return nil, err
+		}
+
+		if !machine.active {
+
+			if err := machine.infra.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
+				return nil, err
+			}
+
+			if err := c.desireHostname(machine.infra, poolName); err != nil {
+				return nil, err
+			}
+
+			machine.active = true
+			return machine.infra, nil
+		}
+	}
+
+	return nil, errors.New("no machines left")
+}
+
+func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	cmps, ok := c.desired.Spec.Pools[poolName]
 	if !ok {
-		return nil, fmt.Errorf("Pool %s does not exist", poolName)
+		return nil, fmt.Errorf("pool %s does not exist", poolName)
 	}
 
 	cache, ok := c.cache[poolName]
 	if ok {
-		return cache.Machines(active), nil
+		return cache, nil
 	}
 
 	newCache := make([]*cachedMachine, 0)
 	for _, cmp := range cmps {
 		var buf bytes.Buffer
 		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
-		if err := machine.UseKey(c.maintenancekey, c.bootstrapkey); err != nil {
+		if err := machine.UseKey(c.maintenanceKey, c.bootstrapKey); err != nil {
 			return nil, err
 		}
-		machine.ReadFile(c.statusFile, &buf)
+		if err := machine.ReadFile(c.statusFile, &buf); err != nil {
+			// treat as inactive inactive
+		}
 		newCache = append(newCache, &cachedMachine{
 			infra:  machine,
 			active: strings.Contains(buf.String(), "active"),
 		})
 		buf.Reset()
 	}
+
 	c.cache[poolName] = newCache
-	return cachedMachines(newCache).Machines(active), nil
-}
-
-func (c *machinesService) Create(poolName string) (infra.Machine, error) {
-	cmps, ok := c.desired.Spec.Pools[poolName]
-	if !ok {
-		return nil, fmt.Errorf("Pool %s does not exist", poolName)
-	}
-
-	for _, cmp := range cmps {
-		var buf bytes.Buffer
-		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
-
-		if err := machine.UseKey(c.maintenancekey, c.bootstrapkey); err != nil {
-			return nil, err
-		}
-		machine.ReadFile(c.statusFile, &buf)
-
-		if len(c.maintenancekeyPub) == 0 {
-			panic("no maintenancekey")
-		}
-		if err := machine.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader(c.maintenancekeyPub), 600); err != nil {
-			return nil, err
-		}
-
-		if strings.Contains(buf.String(), "active") {
-			continue
-		}
-
-		if err := machine.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
-			return nil, err
-		}
-
-		return machine, c.desireHostname(machine, poolName)
-	}
-
-	return nil, errors.New("No machines left")
+	return newCache, nil
 }
 
 type cachedMachine struct {
