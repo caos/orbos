@@ -128,9 +128,9 @@ type cachedMachine struct {
 
 type cachedMachines []*cachedMachine
 
-func (c *cachedMachines) Machines(activeOnly bool) infra.Machines {
+func (c cachedMachines) Machines(activeOnly bool) infra.Machines {
 	machines := make([]infra.Machine, 0)
-	for _, machine := range *c {
+	for _, machine := range c {
 		if !activeOnly || machine.active {
 			machines = append(machines, machine.infra)
 		}
