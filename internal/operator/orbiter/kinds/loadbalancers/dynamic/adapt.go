@@ -215,7 +215,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 	}
 	server {
 		listen {{ $vip.IP }}:{{ $src.SourcePort }};
-{{ range $white := $vip.Whitelist }}		allow $white;
+{{ range $white := $vip.Whitelist }}		allow {{ $white }};
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
