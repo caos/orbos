@@ -99,7 +99,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 
 func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
-	cmps, ok := c.desired.Spec.Pools[poolName]
+	specifiedMachines, ok := c.desired.Spec.Pools[poolName]
 	if !ok {
 		return nil, fmt.Errorf("pool %s does not exist", poolName)
 	}
@@ -110,17 +110,18 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 	}
 
 	newCache := make([]*machine, 0)
-	for _, cmp := range cmps {
-		var buf bytes.Buffer
-		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &cmp.ID, string(cmp.IP))
+	for _, spec := range specifiedMachines {
+		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &spec.ID, string(spec.IP))
 		if err := machine.UseKey(c.maintenanceKey, c.bootstrapKey); err != nil {
 			return nil, err
 		}
+		var buf bytes.Buffer
 		if err := machine.ReadFile(c.statusFile, &buf); err != nil {
 			// treat as inactive
 		}
 		machine.active = strings.Contains(buf.String(), "active")
 		buf.Reset()
+		newCache = append(newCache, machine)
 	}
 
 	if c.cache == nil {
@@ -128,11 +129,6 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 	}
 	c.cache[poolName] = newCache
 	return newCache, nil
-}
-
-type cachedMachine struct {
-	infra  infra.Machine
-	active bool
 }
 
 type cachedMachines []*machine
