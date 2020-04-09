@@ -50,6 +50,31 @@ func AdaptFunc(
 			monitor = monitor.Verbose()
 		}
 
+		var kc *string
+		if desiredKind.Spec.Kubeconfig.Value != "" {
+			kc = &desiredKind.Spec.Kubeconfig.Value
+		}
+		k8sClient := NewK8sClient(monitor, kc)
+
+		if k8sClient.Available() && deployOrbiterAndBoom {
+			if err := ensureArtifacts(monitor, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
+				deployErrors++
+				monitor.WithFields(map[string]interface{}{
+					"count": deployErrors,
+					"err":   err.Error(),
+				}).Info("Deploying Orbiter failed, awaiting next iteration")
+				if deployErrors > 50 {
+					panic(err)
+				}
+			} else {
+				if oneoff {
+					monitor.Info("Deployed Orbiter takes over control")
+					os.Exit(0)
+				}
+				deployErrors = 0
+			}
+		}
+
 		current := &CurrentCluster{}
 		currentTree.Parsed = &Current{
 			Common: orbiter.Common{
@@ -59,33 +84,7 @@ func AdaptFunc(
 			Current: current,
 		}
 
-		var kc *string
-		if desiredKind.Spec.Kubeconfig.Value != "" {
-			kc = &desiredKind.Spec.Kubeconfig.Value
-		}
-		k8sClient := NewK8sClient(monitor, kc)
-
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
-
-				if k8sClient.Available() && deployOrbiterAndBoom {
-					if err := ensureArtifacts(monitor, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
-						deployErrors++
-						monitor.WithFields(map[string]interface{}{
-							"count": deployErrors,
-							"err":   err.Error(),
-						}).Info("Deploying Orbiter failed, awaiting next iteration")
-						if deployErrors > 50 {
-							panic(err)
-						}
-					} else {
-						if oneoff {
-							monitor.Info("Deployed Orbiter takes over control")
-							os.Exit(0)
-						}
-						deployErrors = 0
-					}
-				}
-
 				ensureFunc, err := query(monitor,
 					desiredKind,
 					current,
