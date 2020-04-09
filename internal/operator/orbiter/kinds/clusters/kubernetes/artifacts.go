@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
 	"gopkg.in/yaml.v2"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
@@ -103,6 +105,16 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 								Name:          "metrics",
 								ContainerPort: 9000,
 							}},
+							Resources: core.ResourceRequirements{
+								Limits: core.ResourceList{
+									"cpu":    resource.MustParse("10m"),
+									"memory": resource.MustParse("200Mi"),
+								},
+								Requests: core.ResourceList{
+									"cpu":    resource.MustParse("10m"),
+									"memory": resource.MustParse("50Mi"),
+								},
+							},
 						}},
 						Volumes: []core.Volume{{
 							Name: "keys",
@@ -272,6 +284,16 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 							ReadOnly:  true,
 							MountPath: "/secrets",
 						}},
+						Resources: core.ResourceRequirements{
+							Limits: core.ResourceList{
+								"cpu":    resource.MustParse("10m"),
+								"memory": resource.MustParse("200Mi"),
+							},
+							Requests: core.ResourceList{
+								"cpu":    resource.MustParse("10m"),
+								"memory": resource.MustParse("50Mi"),
+							},
+						},
 					}},
 					Volumes: []core.Volume{{
 						Name: "orbconfig",

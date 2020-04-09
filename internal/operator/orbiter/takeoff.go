@@ -1,12 +1,15 @@
 package orbiter
 
 import (
+	_ "net/http/pprof"
+
 	"fmt"
-	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/yaml.v3"
 	"net/http"
 
-	 "github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/client_golang/prometheus"
+	"gopkg.in/yaml.v3"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/ingestion"
@@ -25,7 +28,7 @@ type event struct {
 
 func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
 
-	go func(){
+	go func() {
 		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
 		http.Handle("/metrics", promhttp.Handler())
 		if err := http.ListenAndServe(":9000", nil); err != nil {
