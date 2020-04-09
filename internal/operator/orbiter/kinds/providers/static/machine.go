@@ -42,7 +42,7 @@ func (c *machine) Remove() error {
 }
 
 func (c *machine) Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error) {
-	return c.Execute(env, stdin, cmd)
+	return c.ssh.Execute(env, stdin, cmd)
 }
 func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) error {
 	return c.ssh.WriteFile(path, data, permissions)
