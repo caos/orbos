@@ -56,7 +56,7 @@ func AdaptFunc() orbiter.AdaptFunc {
 		for _, pool := range desiredKind.Spec {
 			for _, vip := range pool {
 				if len(vip.Whitelist) == 0 {
-					allIPs := orbiter.CIDR("")
+					allIPs := orbiter.CIDR("0.0.0.0/0")
 					vip.Whitelist = []*orbiter.CIDR{&allIPs}
 					migrate = true
 				}
