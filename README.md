@@ -43,8 +43,8 @@ mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "
 
 > Create and setup two new Virtual Machines. Make sure you have a sudo user called orbiter on the guest OS
 ```bash
-./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/orbitertest_bootstrap.pub master1
-./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/orbitertest_bootstrap.pub worker1
+./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/myorb_bootstrap.pub master1
+./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/myorb_bootstrap.pub worker1
 ```
 
 > List the new virtual machines IP addresses
@@ -61,7 +61,7 @@ done
 
 > Add the public part of your new SSH key pair to the git repositories trusted deploy keys.
 ```
-cat ~/.ssh/myorb_bootstrap
+cat ~/.ssh/myorb_bootstrap.pub
 ```
 
 > Copy the file [orbiter.yml](examples/k8s/static/orbiter.yml) to the root of your Repository.
