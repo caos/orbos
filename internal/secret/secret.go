@@ -1,4 +1,4 @@
-package orbiter
+package secret
 
 import (
 	"crypto/aes"
@@ -6,11 +6,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 	"unicode/utf8"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Secret struct {

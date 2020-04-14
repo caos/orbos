@@ -1,6 +1,9 @@
 package orb
 
 import (
+	"github.com/caos/orbiter/internal/orb"
+	"github.com/caos/orbiter/internal/push"
+	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -11,38 +14,37 @@ import (
 )
 
 func AdaptFunc(
-	orb *orbiter.Orb,
+	orb *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind := &DesiredV0{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, migrate, err
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
 		}
 
-		providerCurrents := make(map[string]*orbiter.Tree)
+		providerCurrents := make(map[string]*tree.Tree)
 		providerQueriers := make([]orbiter.QueryFunc, 0)
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
-		secrets = make(map[string]*orbiter.Secret)
 
 		for provID, providerTree := range desiredKind.Providers {
 
-			providerCurrent := &orbiter.Tree{}
+			providerCurrent := &tree.Tree{}
 			providerCurrents[provID] = providerCurrent
 
 			//			providermonitor := monitor.WithFields(map[string]interface{}{
@@ -75,7 +77,7 @@ func AdaptFunc(
 				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 				//				}
 
-				providerQuerier, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(
+				providerQuerier, providerDestroyer, pMigrate, err := static.AdaptFunc(
 					orb.Masterkey,
 					provID,
 				)(
@@ -83,18 +85,15 @@ func AdaptFunc(
 					providerTree,
 					providerCurrent)
 				if err != nil {
-					return nil, nil, nil, migrate, err
+					return nil, nil, migrate, err
 				}
 				if pMigrate {
 					migrate = true
 				}
 				providerQueriers = append(providerQueriers, providerQuerier)
 				providerDestroyers = append(providerDestroyers, providerDestroyer)
-				for path, secret := range providerSecrets {
-					secrets[orbiter.JoinPath(provID, path)] = secret
-				}
 			default:
-				return nil, nil, nil, migrate, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+				return nil, nil, migrate, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 			}
 		}
 
@@ -117,17 +116,17 @@ func AdaptFunc(
 			return provCurr, nil
 		}
 
-		clusterCurrents := make(map[string]*orbiter.Tree)
+		clusterCurrents := make(map[string]*tree.Tree)
 		clusterQueriers := make([]orbiter.QueryFunc, 0)
 		clusterDestroyers := make([]orbiter.DestroyFunc, 0)
 		for clusterID, clusterTree := range desiredKind.Clusters {
 
-			clusterCurrent := &orbiter.Tree{}
+			clusterCurrent := &tree.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
 
 			switch clusterTree.Common.Kind {
 			case "orbiter.caos.ch/KubernetesCluster":
-				clusterQuerier, clusterDestroyer, clusterSecrets, cMigrate, err := kubernetes.AdaptFunc(
+				clusterQuerier, clusterDestroyer, cMigrate, err := kubernetes.AdaptFunc(
 					orb,
 					orbiterCommit,
 					clusterID,
@@ -139,25 +138,22 @@ func AdaptFunc(
 					clusterTree,
 					clusterCurrent)
 				if err != nil {
-					return nil, nil, nil, migrate, err
+					return nil, nil, migrate, err
 				}
 				if cMigrate {
 					migrate = true
 				}
 				clusterQueriers = append(clusterQueriers, clusterQuerier)
 				clusterDestroyers = append(clusterDestroyers, clusterDestroyer)
-				for path, secret := range clusterSecrets {
-					secrets[orbiter.JoinPath(clusterID, path)] = secret
-				}
 
 				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 			default:
-				return nil, nil, nil, migrate, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+				return nil, nil, migrate, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 			}
 		}
 
 		currentTree.Parsed = &Current{
-			Common: &orbiter.Common{
+			Common: &tree.Common{
 				Kind:    "orbiter.caos.ch/Orb",
 				Version: "v0",
 			},
@@ -190,7 +186,7 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf orbiter.PushSecretsFunc) (err error) {
+				return func(psf push.Func) (err error) {
 					defer func() {
 						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 					}()
@@ -214,6 +210,6 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, secrets, migrate, nil
+			}, migrate, nil
 	}
 }

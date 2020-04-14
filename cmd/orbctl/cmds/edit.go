@@ -1,6 +1,6 @@
 // Inspired by https://samrapdev.com/capturing-sensitive-input-with-editor-in-golang-from-the-cli/
 
-package main
+package cmds
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 	"github.com/caos/orbiter/internal/git"
 )
 
-func editCommand(rv rootValues) *cobra.Command {
+func EditCommand(rv RootValues) *cobra.Command {
 	return &cobra.Command{
 		Use:     "edit [file]",
 		Short:   "Edit a file and push changes to the remote orb repository",

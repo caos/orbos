@@ -3,6 +3,7 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"github.com/caos/orbiter/internal/tree"
 	"strings"
 	"text/template"
 
@@ -31,22 +32,22 @@ func init() {
 }
 
 func AdaptFunc() orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 		desiredKind := &DesiredV0{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
 		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, migrate, err
 		}
 		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
-			Common: &orbiter.Common{
+			Common: &tree.Common{
 				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
 				Version: "v0",
 			},
@@ -319,7 +320,7 @@ http {
 				return nil
 			}
 			return nil, nil
-		}, nil, nil, migrate, nil
+		}, nil, migrate, nil
 	}
 }
 

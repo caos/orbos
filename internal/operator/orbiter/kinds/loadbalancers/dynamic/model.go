@@ -3,6 +3,7 @@
 package dynamic
 
 import (
+	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -12,7 +13,7 @@ import (
 )
 
 type Current struct {
-	Common  *orbiter.Common `yaml:",inline"`
+	Common  *tree.Common `yaml:",inline"`
 	Current struct {
 		SourcePools map[string][]string
 		Addresses   map[string]infra.Address
@@ -21,7 +22,7 @@ type Current struct {
 }
 
 type DesiredV0 struct {
-	Common *orbiter.Common `yaml:",inline"`
+	Common *tree.Common `yaml:",inline"`
 	Spec   map[string][]*VIP
 }
 

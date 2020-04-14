@@ -3,6 +3,7 @@ package orbiter
 import (
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/internal/tree"
 	"github.com/caos/orbiter/mntr"
 )
 
@@ -16,9 +17,9 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error
 	}
 
 	treeDesired := trees[0]
-	treeCurrent := &Tree{}
+	treeCurrent := &tree.Tree{}
 
-	_, destroy, _, _, err := adapt(monitor, treeDesired, treeCurrent)
+	_, destroy, _, err := adapt(monitor, treeDesired, treeCurrent)
 	if err != nil {
 		return err
 	}

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/caos/orbiter/internal/orb"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -11,11 +12,10 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/mntr"
 )
 
-func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
+func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiterversion string, boomversion string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,

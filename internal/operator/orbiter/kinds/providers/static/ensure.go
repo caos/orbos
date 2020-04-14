@@ -1,6 +1,8 @@
 package static
 
 import (
+	"github.com/caos/orbiter/internal/push"
+	"github.com/caos/orbiter/internal/secret"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -73,15 +75,15 @@ func query(
 		}
 	}
 
-	return func(psf orbiter.PushSecretsFunc) error {
+	return func(psf push.Func) error {
 		if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
 			(desired.Spec.Keys.MaintenanceKeyPublic == nil || desired.Spec.Keys.MaintenanceKeyPublic.Value == "") {
 			priv, pub, err := ssh.Generate()
 			if err != nil {
 				return err
 			}
-			desired.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey, Value: priv}
-			desired.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey, Value: pub}
+			desired.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey, Value: priv}
+			desired.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey, Value: pub}
 			if err := psf(monitor.WithField("type", "maintenancekey")); err != nil {
 				return err
 			}

@@ -1,17 +1,17 @@
 package orb
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 )
 
 type DesiredV0 struct {
-	Common *orbiter.Common `yaml:",inline"`
+	Common *tree.Common `yaml:",inline"`
 	Spec   struct {
 		Verbose bool
 	}
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
+	Clusters  map[string]*tree.Tree
+	Providers map[string]*tree.Tree
 }
 
 func (d *DesiredV0) validate() error {
@@ -36,13 +36,13 @@ func (d *DesiredV0) validate() error {
 }
 
 type SecretsV0 struct {
-	Common    *orbiter.Common `yaml:",inline"`
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
+	Common    *tree.Common `yaml:",inline"`
+	Clusters  map[string]*tree.Tree
+	Providers map[string]*tree.Tree
 }
 
 type Current struct {
-	Common    *orbiter.Common `yaml:",inline"`
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
+	Common    *tree.Common `yaml:",inline"`
+	Clusters  map[string]*tree.Tree
+	Providers map[string]*tree.Tree
 }

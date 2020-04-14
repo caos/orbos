@@ -1,15 +1,15 @@
-package main
+package cmds
 
 import (
+	"github.com/caos/orbiter/internal/secret"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
 )
 
-func readSecretCommand(rv rootValues) *cobra.Command {
+func ReadSecretCommand(rv RootValues) *cobra.Command {
 
 	return &cobra.Command{
 		Use:     "readsecret [path]",
@@ -29,14 +29,10 @@ func readSecretCommand(rv rootValues) *cobra.Command {
 				path = args[0]
 			}
 
-			value, err := orbiter.ReadSecret(
+			value, err := secret.Read(
 				logger,
 				gitClient,
-				orb.AdaptFunc(
-					orbconfig,
-					gitCommit,
-					false,
-					false),
+				orb.SecretsFunc(orbconfig),
 				path)
 			if err != nil {
 				panic(err)

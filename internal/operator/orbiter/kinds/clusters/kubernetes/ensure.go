@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbiter/internal/push"
 	"github.com/caos/orbiter/mntr"
 )
 
@@ -11,7 +11,7 @@ func ensure(
 	desired *DesiredV0,
 	curr *CurrentCluster,
 	kubeAPIAddress infra.Address,
-	psf orbiter.PushSecretsFunc,
+	psf push.Func,
 	k8sClient *Client,
 	oneoff bool,
 	controlplane initializedPool,

@@ -1,7 +1,10 @@
-package orbiter
+package secret
 
 import (
 	"fmt"
+	"github.com/caos/orbiter/internal/push"
+	"github.com/caos/orbiter/internal/tree"
+	"gopkg.in/yaml.v3"
 	"sort"
 	"strings"
 
@@ -11,6 +14,30 @@ import (
 	"github.com/caos/orbiter/mntr"
 )
 
+func Parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err error) {
+
+	if err := gitClient.Clone(); err != nil {
+		panic(err)
+	}
+
+	for _, file := range files {
+		raw, err := gitClient.Read(file)
+		if err != nil {
+			return nil, err
+		}
+
+		tree := &tree.Tree{}
+		if err := yaml.Unmarshal([]byte(raw), tree); err != nil {
+			return nil, err
+		}
+		trees = append(trees, tree)
+	}
+
+	return trees, nil
+}
+
+type Func func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (secrets map[string]*Secret, err error)
+
 func JoinPath(base string, append ...string) string {
 	for _, item := range append {
 		base = fmt.Sprintf("%s.%s", base, item)
@@ -18,7 +45,7 @@ func JoinPath(base string, append ...string) string {
 	return base
 }
 
-func ReadSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path string) (string, error) {
+func Read(monitor mntr.Monitor, gitClient *git.Client, adapt Func, path string) (string, error) {
 
 	secret, _, err := findSecret(monitor, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0)
@@ -40,7 +67,7 @@ func ReadSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, pa
 	return secret.Value, nil
 }
 
-func WriteSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path, value string) error {
+func Write(monitor mntr.Monitor, gitClient *git.Client, adapt Func, path, value string) error {
 
 	secret, tree, err := findSecret(monitor, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0, len(secrets))
@@ -55,18 +82,18 @@ func WriteSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, p
 
 	secret.Value = value
 
-	return pushSecretsFunc(gitClient, tree)(monitor)
+	return push.SecretsFunc(gitClient, tree)(monitor)
 }
 
-func findSecret(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, path string, items func(map[string]*Secret) []string) (*Secret, *Tree, error) {
-	trees, err := parse(gitClient, "orbiter.yml")
+func findSecret(monitor mntr.Monitor, gitClient *git.Client, adaptFunc Func, path string, items func(map[string]*Secret) []string) (*Secret, *tree.Tree, error) {
+	trees, err := Parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return nil, nil, err
 	}
 
 	treeDesired := trees[0]
 
-	_, _, secrets, _, err := adapt(monitor, treeDesired, &Tree{})
+	secrets, err := adaptFunc(monitor, treeDesired, &tree.Tree{})
 	if err != nil {
 		return nil, nil, err
 	}

@@ -1,6 +1,8 @@
 package static
 
 import (
+	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -10,7 +12,7 @@ import (
 )
 
 func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -18,15 +20,15 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 			Common: desiredTree.Common,
 			Spec: Spec{
 				Keys: Keys{
-					BootstrapKeyPrivate:   &orbiter.Secret{Masterkey: masterkey},
-					BootstrapKeyPublic:    &orbiter.Secret{Masterkey: masterkey},
-					MaintenanceKeyPrivate: &orbiter.Secret{Masterkey: masterkey},
-					MaintenanceKeyPublic:  &orbiter.Secret{Masterkey: masterkey},
+					BootstrapKeyPrivate:   &secret.Secret{Masterkey: masterkey},
+					BootstrapKeyPublic:    &secret.Secret{Masterkey: masterkey},
+					MaintenanceKeyPrivate: &secret.Secret{Masterkey: masterkey},
+					MaintenanceKeyPublic:  &secret.Secret{Masterkey: masterkey},
 				},
 			},
 		}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -35,41 +37,41 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		}
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, migrate, err
 		}
 
 		if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
-			desiredKind.Spec.Keys.BootstrapKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
+			desiredKind.Spec.Keys.BootstrapKeyPrivate = &secret.Secret{Masterkey: masterkey}
 		}
 
 		if desiredKind.Spec.Keys.BootstrapKeyPublic == nil {
-			desiredKind.Spec.Keys.BootstrapKeyPublic = &orbiter.Secret{Masterkey: masterkey}
+			desiredKind.Spec.Keys.BootstrapKeyPublic = &secret.Secret{Masterkey: masterkey}
 		}
 
 		if desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
-			desiredKind.Spec.Keys.MaintenanceKeyPrivate = &orbiter.Secret{Masterkey: masterkey}
+			desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey}
 		}
 
 		if desiredKind.Spec.Keys.MaintenanceKeyPublic == nil {
-			desiredKind.Spec.Keys.MaintenanceKeyPublic = &orbiter.Secret{Masterkey: masterkey}
+			desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey}
 		}
 
-		lbCurrent := &orbiter.Tree{}
+		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
 		switch desiredKind.Loadbalancing.Common.Kind {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			lbQuery, _, _, migrate, err = dynamic.AdaptFunc()(monitor, desiredKind.Loadbalancing, lbCurrent)
+			lbQuery, _, migrate, err = dynamic.AdaptFunc()(monitor, desiredKind.Loadbalancing, lbCurrent)
 			if err != nil {
-				return nil, nil, nil, migrate, err
+				return nil, nil, migrate, err
 			}
 		default:
-			return nil, nil, nil, migrate, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
+			return nil, nil, migrate, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
 		}
 
 		current := &Current{
-			Common: &orbiter.Common{
+			Common: &tree.Common{
 				Kind:    "orbiter.caos.ch/StaticProvider",
 				Version: "v0",
 			},
@@ -87,11 +89,6 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 				return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
 			}, func() error {
 				return destroy(monitor, desiredKind, current, id)
-			}, map[string]*orbiter.Secret{
-				"bootstrapkeyprivate":   desiredKind.Spec.Keys.BootstrapKeyPrivate,
-				"bootstrapkeypublic":    desiredKind.Spec.Keys.BootstrapKeyPublic,
-				"maintenancekeyprivate": desiredKind.Spec.Keys.MaintenanceKeyPrivate,
-				"maintenancekeypublic":  desiredKind.Spec.Keys.MaintenanceKeyPublic,
 			}, migrate, nil
 	}
 }

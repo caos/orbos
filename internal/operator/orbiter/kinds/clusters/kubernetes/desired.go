@@ -2,6 +2,8 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbiter/internal/tree"
 	"regexp"
 
 	"github.com/pkg/errors"
@@ -41,13 +43,13 @@ type DesiredV1 struct {
 }
 */
 type DesiredV0 struct {
-	Common orbiter.Common `yaml:",inline"`
+	Common tree.Common `yaml:",inline"`
 	Spec   Spec
 }
 
 type Spec struct {
 	ControlPlane Pool
-	Kubeconfig   *orbiter.Secret `yaml:",omitempty"`
+	Kubeconfig   *secret.Secret `yaml:",omitempty"`
 	Networking   struct {
 		DNSDomain   string
 		Network     string

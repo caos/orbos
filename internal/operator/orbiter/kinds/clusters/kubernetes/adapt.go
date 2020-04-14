@@ -1,6 +1,9 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbiter/internal/orb"
+	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbiter/internal/tree"
 	"os"
 
 	"github.com/pkg/errors"
@@ -13,14 +16,14 @@ import (
 var deployErrors int
 
 func AdaptFunc(
-	orb *orbiter.Orb,
+	orb *orb.Orb,
 	orbiterCommit string,
 	id string,
 	oneoff bool,
 	deployOrbiterAndBoom bool,
 	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -31,19 +34,19 @@ func AdaptFunc(
 
 		desiredKind := &DesiredV0{
 			Common: *desiredTree.Common,
-			Spec:   Spec{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
+			Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: orb.Masterkey}},
 		}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, migrate, err
 		}
 
 		if desiredKind.Spec.Kubeconfig == nil {
-			desiredKind.Spec.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
+			desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: orb.Masterkey}
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
@@ -77,7 +80,7 @@ func AdaptFunc(
 
 		current := &CurrentCluster{}
 		currentTree.Parsed = &Current{
-			Common: orbiter.Common{
+			Common: tree.Common{
 				Kind:    "orbiter.caos.ch/KubernetesCluster",
 				Version: "v0",
 			},
@@ -110,8 +113,6 @@ func AdaptFunc(
 				desiredKind.Spec.Kubeconfig = nil
 
 				return destroy(monitor, providers, k8sClient)
-			}, map[string]*orbiter.Secret{
-				"kubeconfig": desiredKind.Spec.Kubeconfig,
 			}, migrate, nil
 	}
 }

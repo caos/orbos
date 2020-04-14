@@ -1,6 +1,8 @@
 package static
 
 import (
+	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
@@ -8,9 +10,9 @@ import (
 )
 
 type DesiredV0 struct {
-	Common        *orbiter.Common `yaml:",inline"`
+	Common        *tree.Common `yaml:",inline"`
 	Spec          Spec
-	Loadbalancing *orbiter.Tree
+	Loadbalancing *tree.Tree
 }
 
 type Spec struct {
@@ -22,10 +24,10 @@ type Spec struct {
 }
 
 type Keys struct {
-	BootstrapKeyPrivate   *orbiter.Secret `yaml:",omitempty"`
-	BootstrapKeyPublic    *orbiter.Secret `yaml:",omitempty"`
-	MaintenanceKeyPrivate *orbiter.Secret `yaml:",omitempty"`
-	MaintenanceKeyPublic  *orbiter.Secret `yaml:",omitempty"`
+	BootstrapKeyPrivate   *secret.Secret `yaml:",omitempty"`
+	BootstrapKeyPublic    *secret.Secret `yaml:",omitempty"`
+	MaintenanceKeyPrivate *secret.Secret `yaml:",omitempty"`
+	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
 }
 
 func (d DesiredV0) validate() error {
@@ -64,7 +66,7 @@ func (c *Machine) validate() error {
 }
 
 type Current struct {
-	Common  *orbiter.Common `yaml:",inline"`
+	Common  *tree.Common `yaml:",inline"`
 	Current struct {
 		pools      map[string]infra.Pool `yaml:"-"`
 		Ingresses  map[string]infra.Address

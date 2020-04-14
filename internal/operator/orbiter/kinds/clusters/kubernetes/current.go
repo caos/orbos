@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/tree"
 )
 
 type CurrentCluster struct {
@@ -10,7 +10,7 @@ type CurrentCluster struct {
 }
 
 type Current struct {
-	Common  orbiter.Common `yaml:",inline"`
+	Common  tree.Common `yaml:",inline"`
 	Current *CurrentCluster
 }
 

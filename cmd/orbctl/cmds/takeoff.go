@@ -1,4 +1,4 @@
-package main
+package cmds
 
 import (
 	"time"
@@ -18,15 +18,15 @@ import (
 	"github.com/caos/orbiter/internal/watcher/immediate"
 )
 
-func takeoffCommand(rv rootValues) *cobra.Command {
+func TakeoffCommand(rv RootValues) *cobra.Command {
 
 	var (
-		verbose bool
-		recur   bool
-		destroy bool
-		deploy  bool
+		verbose          bool
+		recur            bool
+		destroy          bool
+		deploy           bool
 		ingestionAddress string
-		cmd     = &cobra.Command{
+		cmd              = &cobra.Command{
 			Use:   "takeoff",
 			Short: "Launch an orbiter",
 			Long:  "Ensures a desired state",
