@@ -107,12 +107,12 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 							}},
 							Resources: core.ResourceRequirements{
 								Limits: core.ResourceList{
-									"cpu":    resource.MustParse("10m"),
-									"memory": resource.MustParse("200Mi"),
+									"cpu":    resource.MustParse("500m"),
+									"memory": resource.MustParse("250Mi"),
 								},
 								Requests: core.ResourceList{
-									"cpu":    resource.MustParse("10m"),
-									"memory": resource.MustParse("50Mi"),
+									"cpu":    resource.MustParse("500m"),
+									"memory": resource.MustParse("250Mi"),
 								},
 							},
 						}},
@@ -286,12 +286,12 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 						}},
 						Resources: core.ResourceRequirements{
 							Limits: core.ResourceList{
-								"cpu":    resource.MustParse("10m"),
-								"memory": resource.MustParse("200Mi"),
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
 							},
 							Requests: core.ResourceList{
-								"cpu":    resource.MustParse("10m"),
-								"memory": resource.MustParse("50Mi"),
+								"cpu":    resource.MustParse("250m"),
+								"memory": resource.MustParse("250Mi"),
 							},
 						},
 					}},
