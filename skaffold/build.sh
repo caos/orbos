@@ -5,7 +5,7 @@ set -e
 rm -rf ./artifacts/*
 
 export CGO_ENABLED=0
-go run ./cmd/gen-executables/*.go --version "${IMAGE}" --commit "$(date --iso-8601=seconds)" --debug $DEBUG --orbctl ./artifacts
+go run ./cmd/gen-executables/*.go --version "${IMAGE}" --commit "$(git log --pretty=format:'%h' -n 1)" --debug $DEBUG --orbctl ./artifacts
 
 TARGET=prod
 if [[ "$DEBUG" == "true" ]]; then
