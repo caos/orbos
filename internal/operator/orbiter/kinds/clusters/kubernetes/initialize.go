@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -126,26 +127,22 @@ func initialize(
 			}
 
 			desiredTaints := append([]core.Taint{}, pool.desired.Taints...)
+			updateTaints := false
+		outer:
 			for _, existing := range node.Spec.Taints {
-				if existing.Key == "node.kubernetes.io/unschedulable" {
+				if strings.HasPrefix(existing.Key, "node.kubernetes.io/") {
 					desiredTaints = append(desiredTaints, existing)
 					continue
 				}
-			}
-			updateTaints := len(node.Spec.Taints) != len(desiredTaints)
-			if !updateTaints {
-			outer:
-				for _, existing := range node.Spec.Taints {
-					for _, des := range desiredTaints {
-						if existing == des {
-							continue outer
-						}
+				for _, des := range pool.desired.Taints {
+					if existing == des {
+						continue outer
 					}
 					updateTaints = true
 					break
 				}
 			}
-			if updateTaints {
+			if updateTaints || len(node.Spec.Taints) != len(desiredTaints) {
 				reconcileNode = true
 				node.Spec.Taints = desiredTaints
 				reconcileMonitor = reconcileMonitor.WithField("taints", desiredTaints)

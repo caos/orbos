@@ -112,7 +112,7 @@ type Pool struct {
 	Provider        string
 	Nodes           int
 	Pool            string
-	Taints          []core.Taint
+	Taints          []core.Taint `yaml:"taints,omitempty"`
 }
 
 /*

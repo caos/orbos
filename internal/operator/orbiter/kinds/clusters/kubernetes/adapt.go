@@ -41,7 +41,10 @@ func AdaptFunc(
 		desiredTree.Parsed = desiredKind
 
 		if desiredKind.Spec.ControlPlane.Taints == nil {
-			desiredKind.Spec.ControlPlane.Taints = []core.Taint{{Key: "node-role.kubernetes.io/master"}}
+			desiredKind.Spec.ControlPlane.Taints = []core.Taint{{
+				Key:    "node-role.kubernetes.io/master",
+				Effect: core.TaintEffectNoSchedule,
+			}}
 			migrate = true
 		}
 
