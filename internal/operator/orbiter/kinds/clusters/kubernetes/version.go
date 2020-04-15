@@ -40,7 +40,7 @@ var kubernetesVersions = []string{
 	"v1.15.0", "v1.15.1", "v1.15.2", "v1.15.3", "v1.15.4", "v1.15.5", "v1.15.6", "v1.15.7", "v1.15.8", "v1.15.9",
 	"v1.16.0", "v1.16.1", "v1.16.2", "v1.16.3", "v1.16.4", "v1.16.5", "v1.16.6",
 	"v1.17.0", "v1.17.1", "v1.17.2",
-	"v0.18.0"}
+	"v1.18.0"}
 
 func (k KubernetesVersion) String() string {
 	return kubernetesVersions[k]

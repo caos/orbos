@@ -23,17 +23,21 @@ func ensure(
 	installNodeAgent func(*initializedMachine) error,
 ) (err error) {
 
-	initializedMachines := append(controlplaneMachines, workerMachines...)
-
 	initialized := true
 
-	for _, machine := range initializedMachines {
+	for _, machine := range append(controlplaneMachines, workerMachines...) {
+
+		if err := machine.reconcile(); err != nil {
+			return err
+		}
+
 		machineMonitor := monitor.WithField("machine", machine.infra.ID())
 		if !machine.currentMachine.NodeAgentIsRunning {
 			machineMonitor.Info("Node agent is not running on the correct version yet")
 			if err := installNodeAgent(machine); err != nil {
 				return err
 			}
+
 			initialized = false
 		}
 

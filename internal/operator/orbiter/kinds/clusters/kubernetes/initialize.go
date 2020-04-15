@@ -1,9 +1,12 @@
 package kubernetes
 
 import (
+	"fmt"
+
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/mntr"
+	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -35,6 +38,7 @@ func (i *initializedPool) enhance(initialize initializeFunc) {
 type initializedMachine struct {
 	infra            infra.Machine
 	tier             Tier
+	reconcile        func() error
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
@@ -111,6 +115,50 @@ func initialize(
 		}
 
 		curr.Machines[machine.ID()] = current
+		reconcileNode := false
+		reconcileMonitor := monitor.WithField("node", node.Name)
+		if node != nil {
+			poolLabelKey := "orbos.ch/pool"
+			if node.Labels[poolLabelKey] != pool.desired.Pool {
+				reconcileNode = true
+				reconcileMonitor = reconcileMonitor.WithField("label", fmt.Sprintf("%s=%s", poolLabelKey, pool.desired.Pool))
+				node.Labels[poolLabelKey] = pool.desired.Pool
+			}
+
+			desiredTaints := append([]core.Taint{}, pool.desired.Taints...)
+			for _, existing := range node.Spec.Taints {
+				if existing.Key == "node.kubernetes.io/unschedulable" {
+					desiredTaints = append(desiredTaints, existing)
+					continue
+				}
+			}
+			updateTaints := len(node.Spec.Taints) != len(desiredTaints)
+			if !updateTaints {
+			outer:
+				for _, existing := range node.Spec.Taints {
+					for _, des := range desiredTaints {
+						if existing == des {
+							continue outer
+						}
+					}
+					updateTaints = true
+					break
+				}
+			}
+			if updateTaints {
+				reconcileNode = true
+				node.Spec.Taints = desiredTaints
+				reconcileMonitor = reconcileMonitor.WithField("taints", desiredTaints)
+			}
+		}
+
+		reconcile := func() error { return nil }
+		if reconcileNode {
+			reconcile = func() error {
+				reconcileMonitor.Info("Reconciling node")
+				return k8s.updateNode(node)
+			}
+		}
 
 		machineMonitor := monitor.WithField("machine", machine.ID())
 
@@ -145,6 +193,7 @@ func initialize(
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
 			tier:             pool.tier,
+			reconcile:        reconcile,
 			currentMachine:   current,
 		}
 

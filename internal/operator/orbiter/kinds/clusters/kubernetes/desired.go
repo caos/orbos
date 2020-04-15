@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
 )
@@ -111,6 +112,7 @@ type Pool struct {
 	Provider        string
 	Nodes           int
 	Pool            string
+	Taints          []core.Taint
 }
 
 /*
