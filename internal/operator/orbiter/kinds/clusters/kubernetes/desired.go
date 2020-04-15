@@ -125,8 +125,12 @@ type Taints []Taint
 
 func (t *Taints) ToK8sTaints() []core.Taint {
 	taints := make([]core.Taint, len(*t))
-	for idx, taint := range taints {
-		taints[idx] = taint
+	for idx, taint := range *t {
+		taints[idx] = core.Taint{
+			Key:    taint.Key,
+			Value:  taint.Value,
+			Effect: taint.Effect,
+		}
 	}
 	return taints
 }
