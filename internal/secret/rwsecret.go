@@ -36,7 +36,7 @@ func Parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err erro
 	return trees, nil
 }
 
-type Func func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (secrets map[string]*Secret, err error)
+type Func func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*Secret, err error)
 
 func JoinPath(base string, append ...string) string {
 	for _, item := range append {
@@ -45,9 +45,9 @@ func JoinPath(base string, append ...string) string {
 	return base
 }
 
-func Read(monitor mntr.Monitor, gitClient *git.Client, adapt Func, path string) (string, error) {
+func Read(monitor mntr.Monitor, gitClient *git.Client, secretFunc Func, path string) (string, error) {
 
-	secret, _, err := findSecret(monitor, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+	secret, _, err := findSecret(monitor, gitClient, secretFunc, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0)
 		for key, sec := range secrets {
 			if sec.Value != "" {
@@ -67,9 +67,9 @@ func Read(monitor mntr.Monitor, gitClient *git.Client, adapt Func, path string) 
 	return secret.Value, nil
 }
 
-func Write(monitor mntr.Monitor, gitClient *git.Client, adapt Func, path, value string) error {
+func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc Func, path, value string) error {
 
-	secret, tree, err := findSecret(monitor, gitClient, adapt, path, func(secrets map[string]*Secret) []string {
+	secret, tree, err := findSecret(monitor, gitClient, secretFunc, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0, len(secrets))
 		for key := range secrets {
 			items = append(items, key)
@@ -85,7 +85,7 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, adapt Func, path, value 
 	return push.SecretsFunc(gitClient, tree)(monitor)
 }
 
-func findSecret(monitor mntr.Monitor, gitClient *git.Client, adaptFunc Func, path string, items func(map[string]*Secret) []string) (*Secret, *tree.Tree, error) {
+func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc Func, path string, items func(map[string]*Secret) []string) (*Secret, *tree.Tree, error) {
 	trees, err := Parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return nil, nil, err
@@ -93,7 +93,7 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, adaptFunc Func, pat
 
 	treeDesired := trees[0]
 
-	secrets, err := adaptFunc(monitor, treeDesired, &tree.Tree{})
+	secrets, err := secretFunc(monitor, treeDesired)
 	if err != nil {
 		return nil, nil, err
 	}

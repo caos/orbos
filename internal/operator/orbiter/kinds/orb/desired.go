@@ -14,6 +14,17 @@ type DesiredV0 struct {
 	Providers map[string]*tree.Tree
 }
 
+func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{Common: desiredTree.Common}
+
+	if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+	desiredKind.Common.Version = "v0"
+
+	return desiredKind, nil
+}
+
 func (d *DesiredV0) validate() error {
 	if len(d.Clusters) < 1 {
 		return errors.New("No clusters configured")
@@ -33,16 +44,4 @@ func (d *DesiredV0) validate() error {
 		return errors.Errorf("Exactly one cluster of kind %s must be configured, but got %d", k8sKind, k8s)
 	}
 	return nil
-}
-
-type SecretsV0 struct {
-	Common    *tree.Common `yaml:",inline"`
-	Clusters  map[string]*tree.Tree
-	Providers map[string]*tree.Tree
-}
-
-type Current struct {
-	Common    *tree.Common `yaml:",inline"`
-	Clusters  map[string]*tree.Tree
-	Providers map[string]*tree.Tree
 }

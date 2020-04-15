@@ -1,13 +1,12 @@
 package static
 
 import (
-	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/mntr"
 )
 
@@ -16,18 +15,8 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
-		desiredKind := &DesiredV0{
-			Common: desiredTree.Common,
-			Spec: Spec{
-				Keys: Keys{
-					BootstrapKeyPrivate:   &secret.Secret{Masterkey: masterkey},
-					BootstrapKeyPublic:    &secret.Secret{Masterkey: masterkey},
-					MaintenanceKeyPrivate: &secret.Secret{Masterkey: masterkey},
-					MaintenanceKeyPublic:  &secret.Secret{Masterkey: masterkey},
-				},
-			},
-		}
-		if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		desiredKind, err := parseDesiredV0(desiredTree, masterkey)
+		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
@@ -40,34 +29,17 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 			return nil, nil, migrate, err
 		}
 
-		if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
-			desiredKind.Spec.Keys.BootstrapKeyPrivate = &secret.Secret{Masterkey: masterkey}
-		}
-
-		if desiredKind.Spec.Keys.BootstrapKeyPublic == nil {
-			desiredKind.Spec.Keys.BootstrapKeyPublic = &secret.Secret{Masterkey: masterkey}
-		}
-
-		if desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
-			desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey}
-		}
-
-		if desiredKind.Spec.Keys.MaintenanceKeyPublic == nil {
-			desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey}
-		}
+		initializeNecessarySecrets(desiredKind, masterkey)
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
-		switch desiredKind.Loadbalancing.Common.Kind {
-		//		case "orbiter.caos.ch/ExternalLoadBalancer":
-		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
-		case "orbiter.caos.ch/DynamicLoadBalancer":
-			lbQuery, _, migrate, err = dynamic.AdaptFunc()(monitor, desiredKind.Loadbalancing, lbCurrent)
-			if err != nil {
-				return nil, nil, migrate, err
-			}
-		default:
-			return nil, nil, migrate, errors.Errorf("unknown loadbalancing kind %s", desiredKind.Loadbalancing.Common.Kind)
+
+		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, desiredKind.Loadbalancing, lbCurrent)
+		if err != nil {
+			return nil, nil, migrate, err
+		}
+		if migrateLocal{
+			migrate = true
 		}
 
 		current := &Current{

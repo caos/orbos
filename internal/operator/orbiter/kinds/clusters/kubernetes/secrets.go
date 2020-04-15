@@ -11,43 +11,25 @@ import (
 
 func SecretFunc(orb *orb.Orb) secret.Func {
 
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind := &DesiredV0{
-			Common: *desiredTree.Common,
-			Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: orb.Masterkey}},
-		}
-		if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		desiredKind, err := parseDesiredV0(desiredTree, orb.Masterkey)
+		if err != nil {
 			return nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
-		if err := desiredKind.validate(); err != nil {
-			return nil, err
-		}
+		initializeNecessarySecrets(desiredKind, orb.Masterkey)
 
-		if desiredKind.Spec.Kubeconfig == nil {
-			desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: orb.Masterkey}
-		}
+		return getSecretsMap(desiredKind), nil
+	}
+}
 
-		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
-			monitor = monitor.Verbose()
-		}
-
-		current := &CurrentCluster{}
-		currentTree.Parsed = &Current{
-			Common: tree.Common{
-				Kind:    "orbiter.caos.ch/KubernetesCluster",
-				Version: "v0",
-			},
-			Current: current,
-		}
-
-		return map[string]*secret.Secret{
-			"kubeconfig": desiredKind.Spec.Kubeconfig,
-		}, nil
+func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
+	return map[string]*secret.Secret{
+		"kubeconfig": desiredKind.Spec.Kubeconfig,
 	}
 }

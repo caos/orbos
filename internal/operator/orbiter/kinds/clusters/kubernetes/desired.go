@@ -65,6 +65,24 @@ type Spec struct {
 	Workers []*Pool
 }
 
+func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{
+		Common: *desiredTree.Common,
+		Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: masterkey}},
+	}
+	if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+
+	return desiredKind, nil
+}
+
+func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
+	if desiredKind.Spec.Kubeconfig == nil {
+		desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: masterkey}
+	}
+}
+
 func (d *DesiredV0) validate() error {
 
 	if d.Spec.ControlPlane.Nodes != 1 && d.Spec.ControlPlane.Nodes != 3 && d.Spec.ControlPlane.Nodes != 5 {

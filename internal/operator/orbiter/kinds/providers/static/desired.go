@@ -1,12 +1,10 @@
 package static
 
 import (
+	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
-
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 type DesiredV0 struct {
@@ -49,6 +47,44 @@ func (d DesiredV0) validate() error {
 	return nil
 }
 
+func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{
+		Common: desiredTree.Common,
+		Spec: Spec{
+			Keys: Keys{
+				BootstrapKeyPrivate:   &secret.Secret{Masterkey: masterkey},
+				BootstrapKeyPublic:    &secret.Secret{Masterkey: masterkey},
+				MaintenanceKeyPrivate: &secret.Secret{Masterkey: masterkey},
+				MaintenanceKeyPublic:  &secret.Secret{Masterkey: masterkey},
+			},
+		},
+	}
+
+	if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+
+	return desiredKind, nil
+}
+
+func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
+	if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
+		desiredKind.Spec.Keys.BootstrapKeyPrivate = &secret.Secret{Masterkey: masterkey}
+	}
+
+	if desiredKind.Spec.Keys.BootstrapKeyPublic == nil {
+		desiredKind.Spec.Keys.BootstrapKeyPublic = &secret.Secret{Masterkey: masterkey}
+	}
+
+	if desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
+		desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey}
+	}
+
+	if desiredKind.Spec.Keys.MaintenanceKeyPublic == nil {
+		desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey}
+	}
+}
+
 type Machine struct {
 	ID       string
 	Hostname string
@@ -63,23 +99,4 @@ func (c *Machine) validate() error {
 		return errors.New("No hostname provided")
 	}
 	return c.IP.Validate()
-}
-
-type Current struct {
-	Common  *tree.Common `yaml:",inline"`
-	Current struct {
-		pools      map[string]infra.Pool `yaml:"-"`
-		Ingresses  map[string]infra.Address
-		cleanupped <-chan error `yaml:"-"`
-	}
-}
-
-func (c *Current) Pools() map[string]infra.Pool {
-	return c.Current.pools
-}
-func (c *Current) Ingresses() map[string]infra.Address {
-	return c.Current.Ingresses
-}
-func (c *Current) Cleanupped() <-chan error {
-	return c.Current.cleanupped
 }

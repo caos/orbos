@@ -1,100 +1,61 @@
 package orb
 
 import (
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbiter/internal/orb"
 	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbiter/mntr"
 )
 
 func SecretsFunc(
 	orb *orb.Orb) secret.Func {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind := &DesiredV0{Common: desiredTree.Common}
-		if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		desiredKind, err := parseDesiredV0(desiredTree)
+		if err != nil {
 			return nil, errors.Wrap(err, "parsing desired state failed")
 		}
-		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
-		if err := desiredKind.validate(); err != nil {
-			return nil, err
-		}
-
-		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
-			monitor = monitor.Verbose()
-		}
-
-		providerCurrents := make(map[string]*tree.Tree)
 		secrets = make(map[string]*secret.Secret)
 
 		for provID, providerTree := range desiredKind.Providers {
 
-			providerCurrent := &tree.Tree{}
-			providerCurrents[provID] = providerCurrent
+			providerSecrets, err := providers.GetSecrets(
+				monitor.WithFields(map[string]interface{}{"provider": provID}),
+				orb.Masterkey,
+				providerTree,
+			)
+			if err != nil {
+				return nil, err
+			}
 
-			switch providerTree.Common.Kind {
-			case "orbiter.caos.ch/StaticProvider":
-				providerSecrets, err := static.SecretsFunc(
-					orb.Masterkey,
-				)(
-					monitor.WithFields(map[string]interface{}{"provider": provID}),
-					providerTree,
-					providerCurrent)
-
-				if err != nil {
-					return nil, err
-				}
-
-				for path, providerSecret := range providerSecrets {
-					secrets[secret.JoinPath(provID, path)] = providerSecret
-				}
-			default:
-				return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+			for path, providerSecret := range providerSecrets {
+				secrets[secret.JoinPath(provID, path)] = providerSecret
 			}
 		}
 
-		clusterCurrents := make(map[string]*tree.Tree)
 		for clusterID, clusterTree := range desiredKind.Clusters {
 
-			clusterCurrent := &tree.Tree{}
-			clusterCurrents[clusterID] = clusterCurrent
-
-			switch clusterTree.Common.Kind {
-			case "orbiter.caos.ch/KubernetesCluster":
-				clusterSecrets, err := kubernetes.SecretFunc(orb)(
-					monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-					clusterTree,
-					clusterCurrent)
-
-				if err != nil {
-					return nil, err
-				}
-
-				for path, clusterSecret := range clusterSecrets {
-					secrets[secret.JoinPath(clusterID, path)] = clusterSecret
-				}
-
-			default:
-				return nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+			clusterSecrets, err := clusters.GetSecrets(
+				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
+				orb,
+				clusterTree,
+			)
+			if err != nil {
+				return nil, err
 			}
-		}
 
-		currentTree.Parsed = &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/Orb",
-				Version: "v0",
-			},
-			Clusters:  clusterCurrents,
-			Providers: providerCurrents,
+			for path, clusterSecret := range clusterSecrets {
+				secrets[secret.JoinPath(clusterID, path)] = clusterSecret
+			}
 		}
 
 		return secrets, nil

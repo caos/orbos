@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/internal/tree"
 	"os"
 
@@ -32,11 +31,8 @@ func AdaptFunc(
 			migrate = true
 		}
 
-		desiredKind := &DesiredV0{
-			Common: *desiredTree.Common,
-			Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: orb.Masterkey}},
-		}
-		if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		desiredKind, err := parseDesiredV0(desiredTree, orb.Masterkey)
+		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
@@ -45,9 +41,7 @@ func AdaptFunc(
 			return nil, nil, migrate, err
 		}
 
-		if desiredKind.Spec.Kubeconfig == nil {
-			desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: orb.Masterkey}
-		}
+		initializeNecessarySecrets(desiredKind, orb.Masterkey)
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()

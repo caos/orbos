@@ -1,6 +1,8 @@
 package orb
 
 import (
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbiter/internal/orb"
 	"github.com/caos/orbiter/internal/push"
 	"github.com/caos/orbiter/internal/tree"
@@ -8,8 +10,6 @@ import (
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbiter/mntr"
 )
 
@@ -23,11 +23,10 @@ func AdaptFunc(
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind := &DesiredV0{Common: desiredTree.Common}
-		if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		desiredKind, err := parseDesiredV0(desiredTree)
+		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
-		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		if err := desiredKind.validate(); err != nil {
@@ -52,49 +51,24 @@ func AdaptFunc(
 			//			})
 
 			//			providerID := id + provID
-			switch providerTree.Common.Kind {
-			//			case "orbiter.caos.ch/GCEProvider":
-			//				var lbs map[string]*infra.Ingress
-			//
-			//				if !kind.Spec.Destroyed && kind.Spec.ControlPlane.Provider == depID {
-			//					lbs = map[string]*infra.Ingress{
-			//						"kubeapi": &infra.Ingress{
-			//							Pools:            []string{kind.Spec.ControlPlane.Pool},
-			//							HealthChecksPath: "/healthz",
-			//						},
-			//					}
-			//				}
-			//				subassemblers[provIdx] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providermonitor, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
-			case "orbiter.caos.ch/StaticProvider":
-				//				updatesDisabled := make([]string, 0)
-				//				for _, pool := range desiredKind.Spec.Workers {
-				//					if pool.UpdatesDisabled {
-				//						updatesDisabled = append(updatesDisabled, pool.Pool)
-				//					}
-				//				}
-				//
-				//				if desiredKind.Spec.ControlPlane.UpdatesDisabled {
-				//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
-				//				}
+			query, destroy, migrateLocal, err := providers.GetQueryAndDestroyFuncs(
+				monitor,
+				orb,
+				provID,
+				providerTree,
+				providerCurrent,
+			)
 
-				providerQuerier, providerDestroyer, pMigrate, err := static.AdaptFunc(
-					orb.Masterkey,
-					provID,
-				)(
-					monitor.WithFields(map[string]interface{}{"provider": provID}),
-					providerTree,
-					providerCurrent)
-				if err != nil {
-					return nil, nil, migrate, err
-				}
-				if pMigrate {
-					migrate = true
-				}
-				providerQueriers = append(providerQueriers, providerQuerier)
-				providerDestroyers = append(providerDestroyers, providerDestroyer)
-			default:
-				return nil, nil, migrate, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+			if err != nil {
+				return nil, nil, migrate, err
 			}
+
+			if migrateLocal {
+				migrate = true
+			}
+
+			providerQueriers = append(providerQueriers, query)
+			providerDestroyers = append(providerDestroyers, destroy)
 		}
 
 		var provCurr map[string]interface{}
@@ -123,32 +97,25 @@ func AdaptFunc(
 
 			clusterCurrent := &tree.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
+			query, destroy, migrateLocal, err := clusters.GetQueryAndDestroyFuncs(
+				monitor,
+				orb,
+				clusterID,
+				clusterTree,
+				orbiterCommit,
+				oneoff,
+				deployOrbiterAndBoom,
+				clusterCurrent,
+				destroyProviders,
+			)
 
-			switch clusterTree.Common.Kind {
-			case "orbiter.caos.ch/KubernetesCluster":
-				clusterQuerier, clusterDestroyer, cMigrate, err := kubernetes.AdaptFunc(
-					orb,
-					orbiterCommit,
-					clusterID,
-					oneoff,
-					deployOrbiterAndBoom,
-					destroyProviders,
-				)(
-					monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-					clusterTree,
-					clusterCurrent)
-				if err != nil {
-					return nil, nil, migrate, err
-				}
-				if cMigrate {
-					migrate = true
-				}
-				clusterQueriers = append(clusterQueriers, clusterQuerier)
-				clusterDestroyers = append(clusterDestroyers, clusterDestroyer)
-
-				//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
-			default:
-				return nil, nil, migrate, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+			if err != nil {
+				return nil, nil, migrate, err
+			}
+			clusterQueriers = append(clusterQueriers, query)
+			clusterDestroyers = append(clusterDestroyers, destroy)
+			if migrateLocal {
+				migrate = true
 			}
 		}
 
