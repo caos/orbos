@@ -117,8 +117,9 @@ func initialize(
 
 		curr.Machines[machine.ID()] = current
 		reconcileNode := false
-		reconcileMonitor := monitor.WithField("node", node.Name)
+		reconcile := func() error { return nil }
 		if node != nil {
+			reconcileMonitor := monitor.WithField("node", node.Name)
 			poolLabelKey := "orbos.ch/pool"
 			if node.Labels[poolLabelKey] != pool.desired.Pool {
 				reconcileNode = true
@@ -126,34 +127,36 @@ func initialize(
 				node.Labels[poolLabelKey] = pool.desired.Pool
 			}
 
-			desiredTaints := append([]core.Taint{}, pool.desired.Taints...)
+			desiredTaints := pool.desired.Taints.ToK8sTaints()
+			newTaints := append([]core.Taint{}, desiredTaints...)
 			updateTaints := false
 		outer:
 			for _, existing := range node.Spec.Taints {
 				if strings.HasPrefix(existing.Key, "node.kubernetes.io/") {
-					desiredTaints = append(desiredTaints, existing)
+					newTaints = append(newTaints, existing)
 					continue
 				}
-				for _, des := range pool.desired.Taints {
-					if existing == des {
+				for _, des := range desiredTaints {
+					if existing.Key == des.Key &&
+						existing.Effect == des.Effect &&
+						existing.Value == des.Value {
 						continue outer
 					}
 					updateTaints = true
 					break
 				}
 			}
-			if updateTaints || len(node.Spec.Taints) != len(desiredTaints) {
+			if updateTaints || len(node.Spec.Taints) != len(newTaints) {
 				reconcileNode = true
-				node.Spec.Taints = desiredTaints
+				node.Spec.Taints = newTaints
 				reconcileMonitor = reconcileMonitor.WithField("taints", desiredTaints)
 			}
-		}
 
-		reconcile := func() error { return nil }
-		if reconcileNode {
-			reconcile = func() error {
-				reconcileMonitor.Info("Reconciling node")
-				return k8s.updateNode(node)
+			if reconcileNode {
+				reconcile = func() error {
+					reconcileMonitor.Info("Reconciling node")
+					return k8s.updateNode(node)
+				}
 			}
 		}
 

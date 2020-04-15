@@ -112,7 +112,23 @@ type Pool struct {
 	Provider        string
 	Nodes           int
 	Pool            string
-	Taints          []core.Taint `yaml:"taints,omitempty"`
+	Taints          *Taints `yaml:"taints,omitempty"`
+}
+
+type Taint struct {
+	Key    string           `yaml:"key"`
+	Value  string           `yaml:"value,omitempty"`
+	Effect core.TaintEffect `yaml:"effect"`
+}
+
+type Taints []Taint
+
+func (t *Taints) ToK8sTaints() []core.Taint {
+	taints := make([]core.Taint, len(*t))
+	for idx, taint := range taints {
+		taints[idx] = taint
+	}
+	return taints
 }
 
 /*
