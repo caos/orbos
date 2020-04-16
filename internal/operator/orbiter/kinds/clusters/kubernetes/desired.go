@@ -124,6 +124,9 @@ type Taint struct {
 type Taints []Taint
 
 func (t *Taints) ToK8sTaints() []core.Taint {
+	if t == nil {
+		return nil
+	}
 	taints := make([]core.Taint, len(*t))
 	for idx, taint := range *t {
 		taints[idx] = core.Taint{
