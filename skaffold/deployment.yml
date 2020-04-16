@@ -57,6 +57,8 @@ spec:
       terminationGracePeriodSeconds: 30
       tolerations:
         - operator: Exists
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
       volumes:
         - name: keys
           secret:
