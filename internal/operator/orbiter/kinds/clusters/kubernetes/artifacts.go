@@ -125,14 +125,8 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 								},
 							},
 						}},
-						NodeSelector: map[string]string{
-							"node-role.kubernetes.io/master": "",
-						},
 						Tolerations: []core.Toleration{{
-							Key:      "node-role.kubernetes.io/master",
-							Operator: "Equal",
-							Value:    "",
-							Effect:   "NoSchedule",
+							Operator: "Exists",
 						}},
 					},
 				},
