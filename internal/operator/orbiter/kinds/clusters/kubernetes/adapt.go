@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"os"
 
+	core "k8s.io/api/core/v1"
+
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -37,6 +39,15 @@ func AdaptFunc(
 			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
+
+		if desiredKind.Spec.ControlPlane.Taints == nil {
+			taints := Taints([]Taint{{
+				Key:    "node-role.kubernetes.io/master",
+				Effect: core.TaintEffectNoSchedule,
+			}})
+			desiredKind.Spec.ControlPlane.Taints = &taints
+			migrate = true
+		}
 
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, nil, migrate, err

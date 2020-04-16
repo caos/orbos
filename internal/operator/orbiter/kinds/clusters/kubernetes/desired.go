@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
 )
@@ -111,6 +112,30 @@ type Pool struct {
 	Provider        string
 	Nodes           int
 	Pool            string
+	Taints          *Taints `yaml:"taints,omitempty"`
+}
+
+type Taint struct {
+	Key    string           `yaml:"key"`
+	Value  string           `yaml:"value,omitempty"`
+	Effect core.TaintEffect `yaml:"effect"`
+}
+
+type Taints []Taint
+
+func (t *Taints) ToK8sTaints() []core.Taint {
+	if t == nil {
+		return nil
+	}
+	taints := make([]core.Taint, len(*t))
+	for idx, taint := range *t {
+		taints[idx] = core.Taint{
+			Key:    taint.Key,
+			Value:  taint.Value,
+			Effect: taint.Effect,
+		}
+	}
+	return taints
 }
 
 /*
