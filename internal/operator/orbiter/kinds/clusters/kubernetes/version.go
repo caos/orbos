@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/caos/orbiter/internal/operator/common"
+	"github.com/caos/orbiter/mntr"
 )
 
 type KubernetesVersion int
@@ -96,15 +97,15 @@ func (k KubernetesVersion) NextHighestMinor() KubernetesVersion {
 	}
 }
 
-func (k KubernetesVersion) ExtractMinor() (int, error) {
-	return k.extractNumber(1)
+func (k KubernetesVersion) ExtractMinor(monitor mntr.Monitor) (int, error) {
+	return k.extractNumber(monitor, 1)
 }
 
-func (k KubernetesVersion) ExtractPatch() (int, error) {
-	return k.extractNumber(2)
+func (k KubernetesVersion) ExtractPatch(monitor mntr.Monitor) (int, error) {
+	return k.extractNumber(monitor, 2)
 }
 
-func (k KubernetesVersion) extractNumber(position int) (int, error) {
+func (k KubernetesVersion) extractNumber(monitor mntr.Monitor, position int) (int, error) {
 	if k == Unknown {
 		return 0, errors.New("Unknown kubernetes version")
 	}
@@ -114,5 +115,12 @@ func (k KubernetesVersion) extractNumber(position int) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	monitor.WithFields(map[string]interface{}{
+		"number":   version,
+		"position": position,
+		"string":   k,
+	}).Debug("Extracted from semantic version")
+
 	return int(version), nil
 }
