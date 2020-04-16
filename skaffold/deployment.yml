@@ -51,16 +51,12 @@ spec:
       dnsPolicy: ClusterFirst
       imagePullSecrets:
         - name: gcr
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
       tolerations:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/master
-          operator: Equal
+        - operator: Exists
       volumes:
         - name: keys
           secret:
