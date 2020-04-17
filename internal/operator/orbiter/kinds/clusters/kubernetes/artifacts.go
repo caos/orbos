@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"gopkg.in/yaml.v2"
@@ -73,6 +75,12 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 			ObjectMeta: mach.ObjectMeta{
 				Name:      "orbiter",
 				Namespace: "caos-system",
+				Labels: map[string]string{
+					"app.kubernetes.io/instance":   "orbiter",
+					"app.kubernetes.io/part-of":    "orbos",
+					"app.kubernetes.io/component":  "orbiter",
+					"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				},
 			},
 			Spec: apps.DeploymentSpec{
 				Replicas: int32Ptr(1),
@@ -141,6 +149,33 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 			"version": orbiterversion,
 		}).Debug("Orbiter deployment ensured")
 
+		if err := client.ApplyService(&core.Service{
+			ObjectMeta: mach.ObjectMeta{
+				Name:      "orbiter",
+				Namespace: "caos-system",
+				Labels: map[string]string{
+					"app.kubernetes.io/instance":   "orbiter",
+					"app.kubernetes.io/part-of":    "orbos",
+					"app.kubernetes.io/component":  "orbiter",
+					"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				},
+			},
+			Spec: core.ServiceSpec{
+				Ports: []core.ServicePort{{
+					Name:       "metrics",
+					Protocol:   "TCP",
+					Port:       9000,
+					TargetPort: intstr.FromInt(9000),
+				}},
+				Selector: map[string]string{
+					"app": "orbiter",
+				},
+				Type: core.ServiceTypeClusterIP,
+			},
+		}); err != nil {
+			return err
+		}
+		monitor.Debug("Orbiter service ensured")
 	}
 
 	if boomversion == "" {
@@ -244,7 +279,11 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 			Name:      "boom",
 			Namespace: "caos-system",
 			Labels: map[string]string{
-				"app": "boom",
+				"app.kubernetes.io/instance":   "boom",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "boom",
+				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				"boom.caos.ch/application":     "boom",
 			},
 		},
 		Spec: apps.DeploymentSpec{

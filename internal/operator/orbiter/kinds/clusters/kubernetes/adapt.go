@@ -72,7 +72,7 @@ func AdaptFunc(
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
-					"err":   err.Error(),
+					"error": err.Error(),
 				}).Info("Deploying Orbiter failed, awaiting next iteration")
 				if deployErrors > 50 {
 					panic(err)
