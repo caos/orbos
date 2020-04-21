@@ -313,7 +313,8 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 						Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
 						Command:         []string{"/boom"},
 						Args: []string{
-							"--metrics-addr", "127.0.0.1:2112",
+							"--metrics=true",
+							"--metricsport", "2112",
 							"--enable-leader-election",
 							"--git-orbconfig", "/secrets/orbconfig",
 							"--git-crd-path", "boom.yml",
