@@ -97,7 +97,13 @@ func (c *Client) ApplyService(rsc *core.Service) error {
 		_, err := resources.Create(rsc)
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		svc, err := resources.Get(rsc.Name, mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rsc.Spec.ClusterIP = svc.Spec.ClusterIP
+		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+		_, err = resources.Update(rsc)
 		return err
 	})
 }
