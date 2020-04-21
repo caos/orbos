@@ -12,3 +12,4 @@ deploy:
   kubectl:
     manifests:
     - skaffold/deployment.yml
+    - skaffold/service.yml
