@@ -3,6 +3,7 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	"text/template"
 
@@ -383,6 +384,7 @@ func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
 		}
 	}
 
-	return us
-
+	cidrs := orbiter.CIDRs(us)
+	sort.Sort(cidrs)
+	return cidrs
 }

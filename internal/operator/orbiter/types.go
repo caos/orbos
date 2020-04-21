@@ -26,6 +26,12 @@ type IPAddress string
 
 type CIDR string
 
+type CIDRs []*CIDR
+
+func (c CIDRs) Len() int           { return len(c) }
+func (c CIDRs) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c CIDRs) Less(i, j int) bool { return *c[i] < *c[j] }
+
 func (c CIDR) Validate() error {
 	if !compiledCIDR.MatchString(string(c)) {
 		return errors.Errorf("Value %s is not in valid CIDR notation. It does not match the regular expression %s", c, compiledCIDR.String())
