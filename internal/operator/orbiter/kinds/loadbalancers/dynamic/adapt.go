@@ -30,7 +30,9 @@ func init() {
 	prometheus.MustRegister(probes)
 }
 
-func AdaptFunc() orbiter.AdaptFunc {
+type WhiteListFunc func() []*orbiter.CIDR
+
+func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -75,6 +77,8 @@ func AdaptFunc() orbiter.AdaptFunc {
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
 
+			wl := whitelist()
+
 			sourcePools := make(map[string][]string)
 			addresses := make(map[string]infra.Address)
 			for _, pool := range desiredKind.Spec {
@@ -102,26 +106,47 @@ func AdaptFunc() orbiter.AdaptFunc {
 
 			current.Current.SourcePools = sourcePools
 			current.Current.Addresses = addresses
-			current.Current.Desire = func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
+			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
 
-				vips, ok := desiredKind.Spec[pool]
+				vips, ok := desiredKind.Spec[forPool]
 				if !ok {
 					return nil
 				}
 
-				machines, err := svc.List(pool, true)
+				allPools, err := svc.ListPools()
 				if err != nil {
 					return err
 				}
 
-				machinesData := make([]Data, len(machines))
-				for idx, machine := range machines {
+				var forMachines infra.Machines
+				for _, pool := range allPools {
+					machines, err := svc.List(pool, true)
+					if err != nil {
+						return err
+					}
+					if forPool == pool {
+						forMachines = machines
+					}
+					for _, machine := range machines {
+						cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
+						for _, vip := range vips {
+							vip.Whitelist = append(vip.Whitelist, &cidr)
+						}
+					}
+				}
+
+				for _, vip := range vips {
+					vip.Whitelist = unique(append(vip.Whitelist, wl...))
+				}
+
+				machinesData := make([]Data, len(forMachines))
+				for idx, machine := range forMachines {
 					machinesData[idx] = Data{
 						VIPs: vips,
 						Self: machine,
 						Peers: deriveFilterMachines(func(cmp infra.Machine) bool {
 							return cmp.ID() != machine.ID()
-						}, append([]infra.Machine(nil), []infra.Machine(machines)...)),
+						}, append([]infra.Machine(nil), []infra.Machine(forMachines)...)),
 						State:                "BACKUP",
 						CustomMasterNotifyer: notifyMaster != "",
 					}
@@ -131,7 +156,7 @@ func AdaptFunc() orbiter.AdaptFunc {
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
-					"machines": svc.List,
+					"forMachines": svc.List,
 					"add": func(i, y int) int {
 						return i + y
 					},
@@ -210,7 +235,7 @@ vrrp_instance VI_{{ $idx }} {
 }
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := machines $dest.Pool true }}
+	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := forMachines $dest.Pool true }}
 		server {{ $machine.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
 	}
 	server {
@@ -247,7 +272,7 @@ http {
 
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
-							for _, machine := range machines {
+							for _, machine := range forMachines {
 								deepNa, ok := nodeagents[machine.ID()]
 								if !ok {
 									deepNa = &common.NodeAgentSpec{}
@@ -282,7 +307,7 @@ http {
 					na.Software.KeepaliveD = kaPkg
 
 					var ngxBuf bytes.Buffer
-					if nginxTemplate.Execute(&ngxBuf, d); err != nil {
+					if err := nginxTemplate.Execute(&ngxBuf, d); err != nil {
 						return err
 					}
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
@@ -344,4 +369,20 @@ type Data struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
+}
+
+func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
+	m := make(map[string]bool, len(s))
+	us := make([]*orbiter.CIDR, len(m))
+	for _, elem := range s {
+		if len(*elem) != 0 {
+			if !m[string(*elem)] {
+				us = append(us, elem)
+				m[string(*elem)] = true
+			}
+		}
+	}
+
+	return us
+
 }

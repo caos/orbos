@@ -9,7 +9,7 @@ import (
 	"github.com/caos/orbiter/mntr"
 )
 
-func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
+func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -60,7 +60,7 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		//		case "orbiter.caos.ch/ExternalLoadBalancer":
 		//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 		case "orbiter.caos.ch/DynamicLoadBalancer":
-			lbQuery, _, _, migrate, err = dynamic.AdaptFunc()(monitor, desiredKind.Loadbalancing, lbCurrent)
+			lbQuery, _, _, migrate, err = dynamic.AdaptFunc(whitelist)(monitor, desiredKind.Loadbalancing, lbCurrent)
 			if err != nil {
 				return nil, nil, nil, migrate, err
 			}

@@ -40,6 +40,8 @@ func AdaptFunc(
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
 		secrets = make(map[string]*orbiter.Secret)
 
+		whitelistChan := make(chan []*orbiter.CIDR)
+
 		for provID, providerTree := range desiredKind.Providers {
 
 			providerCurrent := &orbiter.Tree{}
@@ -78,6 +80,10 @@ func AdaptFunc(
 				providerQuerier, providerDestroyer, providerSecrets, pMigrate, err := static.AdaptFunc(
 					orb.Masterkey,
 					provID,
+					func() []*orbiter.CIDR {
+						monitor.Debug("Reading whitelist")
+						return <-whitelistChan
+					},
 				)(
 					monitor.WithFields(map[string]interface{}{"provider": provID}),
 					providerTree,
@@ -134,6 +140,14 @@ func AdaptFunc(
 					oneoff,
 					deployOrbiterAndBoom,
 					destroyProviders,
+					func(whitelist []*orbiter.CIDR) {
+						go func() {
+							monitor.Debug("Sending whitelist")
+							whitelistChan <- whitelist
+							close(whitelistChan)
+						}()
+						monitor.Debug("Whitelist sent")
+					},
 				)(
 					monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
 					clusterTree,

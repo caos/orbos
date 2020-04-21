@@ -20,7 +20,8 @@ func AdaptFunc(
 	id string,
 	oneoff bool,
 	deployOrbiterAndBoom bool,
-	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
+	destroyProviders func() (map[string]interface{}, error),
+	whitelist func([]*orbiter.CIDR)) orbiter.AdaptFunc {
 
 	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
 		defer func() {
@@ -60,6 +61,8 @@ func AdaptFunc(
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
 		}
+
+		whitelist([]*orbiter.CIDR{&desiredKind.Spec.Networking.PodCidr})
 
 		var kc *string
 		if desiredKind.Spec.Kubeconfig.Value != "" {
