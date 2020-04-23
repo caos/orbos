@@ -38,14 +38,16 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
-		desiredKind := &DesiredV0{Common: desiredTree.Common}
+		if desiredTree.Common.Version != "v1" {
+			migrate = true
+		}
+		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
 			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
 		if err := desiredKind.Validate(); err != nil {
 			return nil, nil, nil, migrate, err
 		}
-		desiredKind.Common.Version = "v0"
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
@@ -58,11 +60,6 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 		for _, pool := range desiredKind.Spec {
 			for _, vip := range pool {
-				if len(vip.Whitelist) == 0 {
-					allIPs := orbiter.CIDR("0.0.0.0/0")
-					vip.Whitelist = []*orbiter.CIDR{&allIPs}
-					migrate = true
-				}
 				for _, src := range vip.Transport {
 					if src.Name == "kubeapi" {
 						for _, dest := range src.Destinations {
@@ -71,6 +68,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 								migrate = true
 							}
 						}
+					}
+					if len(src.Whitelist) == 0 {
+						allIPs := orbiter.CIDR("0.0.0.0/0")
+						src.Whitelist = []*orbiter.CIDR{&allIPs}
+						migrate = true
 					}
 				}
 			}
@@ -130,15 +132,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					}
 					for _, machine := range machines {
 						cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-						for _, vip := range vips {
-							vip.Whitelist = append(vip.Whitelist, &cidr)
-						}
+						addToWhitelists(false, vips, &cidr)
 					}
 				}
 
-				for _, vip := range vips {
-					vip.Whitelist = unique(append(vip.Whitelist, wl...))
-				}
+				addToWhitelists(true, vips, wl...)
 
 				machinesData := make([]Data, len(forMachines))
 				for idx, machine := range forMachines {
@@ -241,7 +239,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 	}
 	server {
 		listen {{ $vip.IP }}:{{ $src.SourcePort }};
-{{ range $white := $vip.Whitelist }}		allow {{ $white }};
+{{ range $white := $src.Whitelist }}		allow {{ $white }};
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
@@ -346,6 +344,17 @@ http {
 			}
 			return nil, nil
 		}, nil, nil, migrate, nil
+	}
+}
+
+func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) {
+	for _, vip := range vips {
+		for _, src := range vip.Transport {
+			src.Whitelist = append(src.Whitelist, cidr...)
+			if makeUnique {
+				src.Whitelist = unique(src.Whitelist)
+			}
+		}
 	}
 }
 
