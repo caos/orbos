@@ -9,17 +9,17 @@ import (
 
 type Func func(monitor mntr.Monitor) error
 
-func SecretsFunc(gitClient *git.Client, desired *tree.Tree) Func {
+func SecretsFunc(gitClient *git.Client, desired *tree.Tree, path string) Func {
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing secret")
-		return OrbiterYML(monitor, "Secret written", gitClient, desired)
+		return YML(monitor, "Secret written", gitClient, desired, path)
 	}
 }
 
-func OrbiterYML(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
+func YML(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree, path string) (err error) {
 	monitor.OnChange = func(_ string, fields map[string]string) {
 		err = gitClient.UpdateRemote(mntr.SprintCommit(msg, fields), git.File{
-			Path:    "orbiter.yml",
+			Path:    path,
 			Content: common.MarshalYAML(desired),
 		})
 		mntr.LogMessage(msg, fields)

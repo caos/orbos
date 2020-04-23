@@ -91,7 +91,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		if migrate {
-			if err := push.OrbiterYML(monitor, "Desired state migrated", gitClient, treeDesired); err != nil {
+			if err := push.YML(monitor, "Desired state migrated", gitClient, treeDesired, "orbiter.yml"); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -140,7 +140,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		events = make([]*event, 0)
-		if err := ensure(push.SecretsFunc(gitClient, treeDesired)); err != nil {
+		if err := ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
 			handleAdapterError(err)
 			return
 		}

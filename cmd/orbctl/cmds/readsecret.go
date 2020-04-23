@@ -1,6 +1,7 @@
 package cmds
 
 import (
+	"github.com/caos/orbiter/internal/operator/boom/api"
 	"github.com/caos/orbiter/internal/secret"
 	"os"
 
@@ -16,7 +17,7 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 		Short:   "Print a secrets decrypted value to stdout",
 		Long:    "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 		Args:    cobra.MaximumNArgs(1),
-		Example: `orbctl readsecret k8s.kubeconfig > ~/.kube/config`,
+		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			_, logger, gitClient, orbconfig, errFunc := rv()
@@ -29,10 +30,19 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				path = args[0]
 			}
 
+			secretFunc := func(operator string) secret.Func {
+				if operator == "boom" {
+					return api.SecretFunc(orbconfig)
+				} else if operator == "orbiter" {
+					return orb.SecretsFunc(orbconfig)
+				}
+				return nil
+			}
+
 			value, err := secret.Read(
 				logger,
 				gitClient,
-				orb.SecretsFunc(orbconfig),
+				secretFunc,
 				path)
 			if err != nil {
 				panic(err)

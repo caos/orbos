@@ -19,6 +19,19 @@ type Secret struct {
 	Masterkey  string `yaml:"-"`
 }
 
+type Existing struct {
+	Name         string `json:"name" yaml:"name"`
+	Key          string `json:"key" yaml:"key"`
+	InternalName string `json:"internalName" yaml:"internalName"`
+}
+
+type ExistingIDSecret struct {
+	Name         string `json:"name" yaml:"name"`
+	IDKey        string `json:"idKey" yaml:"idKey"`
+	SecretKey    string `json:"secretKey" yaml:"secretKey"`
+	InternalName string `json:"internalName" yaml:"internalName"`
+}
+
 func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 
 	type Alias Secret
