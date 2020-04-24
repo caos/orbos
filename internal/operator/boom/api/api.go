@@ -2,6 +2,19 @@ package api
 
 import (
 	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd"
+	argocdauth "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/github"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/gitlab"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/google"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/oidc"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana"
+	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/admin"
+	grafanaauth "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth"
+	grafanageneric "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Generic"
+	grafanagithub "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Github"
+	grafanagitlab "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
+	grafanagoogle "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Google"
 	orbconfig "github.com/caos/orbiter/internal/orb"
 	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/internal/tree"
@@ -12,50 +25,50 @@ import (
 func parseToolset(desiredTree *tree.Tree, masterkey string) (*v1beta1.Toolset, error) {
 	desiredKind := &v1beta1.Toolset{
 		Spec: &v1beta1.ToolsetSpec{
-			Grafana: &v1beta1.Grafana{
-				Admin: &v1beta1.Admin{
+			Grafana: &grafana.Grafana{
+				Admin: &admin.Admin{
 					Username: &secret.Secret{Masterkey: masterkey},
 					Password: &secret.Secret{Masterkey: masterkey},
 				},
-				Auth: &v1beta1.GrafanaAuth{
-					Google: &v1beta1.GrafanaGoogleAuth{
+				Auth: &grafanaauth.Auth{
+					Google: &grafanagoogle.Auth{
 						ClientID:     &secret.Secret{Masterkey: masterkey},
 						ClientSecret: &secret.Secret{Masterkey: masterkey},
 					},
-					Github: &v1beta1.GrafanaGithubAuth{
+					Github: &grafanagithub.Auth{
 						ClientID:     &secret.Secret{Masterkey: masterkey},
 						ClientSecret: &secret.Secret{Masterkey: masterkey},
 					},
-					Gitlab: &v1beta1.GrafanaGitlabAuth{
+					Gitlab: &grafanagitlab.Auth{
 						ClientID:     &secret.Secret{Masterkey: masterkey},
 						ClientSecret: &secret.Secret{Masterkey: masterkey},
 					},
-					GenericOAuth: &v1beta1.GrafanaGenericOAuth{
+					GenericOAuth: &grafanageneric.Auth{
 						ClientID:     &secret.Secret{Masterkey: masterkey},
 						ClientSecret: &secret.Secret{Masterkey: masterkey},
 					},
 				},
 			},
-			Argocd: &v1beta1.Argocd{
-				Auth: &v1beta1.ArgocdAuth{
-					OIDC: &v1beta1.ArgocdOIDC{
+			Argocd: &argocd.Argocd{
+				Auth: &argocdauth.Auth{
+					OIDC: &oidc.OIDC{
 						ClientID:     &secret.Secret{Masterkey: masterkey},
 						ClientSecret: &secret.Secret{Masterkey: masterkey},
 					},
-					GithubConnector: &v1beta1.ArgocdGithubConnector{
-						Config: &v1beta1.ArgocdGithubConfig{
+					GithubConnector: &github.Connector{
+						Config: &github.Config{
 							ClientID:     &secret.Secret{Masterkey: masterkey},
 							ClientSecret: &secret.Secret{Masterkey: masterkey},
 						},
 					},
-					GitlabConnector: &v1beta1.ArgocdGitlabConnector{
-						Config: &v1beta1.ArgocdGitlabConfig{
+					GitlabConnector: &gitlab.Connector{
+						Config: &gitlab.Config{
 							ClientID:     &secret.Secret{Masterkey: masterkey},
 							ClientSecret: &secret.Secret{Masterkey: masterkey},
 						},
 					},
-					GoogleConnector: &v1beta1.ArgocdGoogleConnector{
-						Config: &v1beta1.ArgocdGoogleConfig{
+					GoogleConnector: &google.Connector{
+						Config: &google.Config{
 							ClientID:           &secret.Secret{Masterkey: masterkey},
 							ClientSecret:       &secret.Secret{Masterkey: masterkey},
 							ServiceAccountJSON: &secret.Secret{Masterkey: masterkey},

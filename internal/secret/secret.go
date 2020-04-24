@@ -117,3 +117,10 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 	type Alias Secret
 	return &Alias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}, nil
 }
+
+func ClearEmpty(secret *Secret) *Secret {
+	if secret != nil && secret.Value == "" {
+		return nil
+	}
+	return secret
+}

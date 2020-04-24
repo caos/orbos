@@ -69,10 +69,10 @@ func main() {
 	}*/
 
 	//change secret
-	err = writeSecret(monitor, gitClient, orbconfig, path, value, writeFilePath, false)
+	/*err = writeSecret(monitor, gitClient, orbconfig, path, value, writeFilePath, false)
 	if err != nil {
 		os.Stdout.Write([]byte(err.Error()))
-	}
+	}*/
 
 	value = "test"
 	path = "boom.grafana.admin.password"
