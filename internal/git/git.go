@@ -38,7 +38,7 @@ type Client struct {
 func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL string) *Client {
 	newClient := &Client{
 		ctx:       ctx,
-		monitor:   monitor,
+		monitor:   monitor.WithField("repository", repoURL),
 		committer: committer,
 		repoURL:   repoURL,
 	}
@@ -79,6 +79,7 @@ func (g *Client) clone() error {
 
 	g.fs = memfs.New()
 
+	g.monitor.Debug("Cloning")
 	var err error
 	g.repo, err = gogit.CloneContext(g.ctx, memory.NewStorage(), g.fs, &gogit.CloneOptions{
 		URL:          g.repoURL,
@@ -90,7 +91,7 @@ func (g *Client) clone() error {
 	if err != nil {
 		return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
 	}
-	g.monitor.Debug("Repository cloned")
+	g.monitor.Debug("Cloned")
 
 	g.workTree, err = g.repo.Worktree()
 	if err != nil {

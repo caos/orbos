@@ -162,6 +162,12 @@ nodes:
 		}
 
 		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
+
+		if k8sVersion.equals(V1x18x0) {
+			if _, err := certsCP.Execute(nil, nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
+				return false, errors.Wrap(err, "Working around kubeadm bug failed, see https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#not-possible-to-join-a-v1-18-node-to-a-v1-17-cluster-due-to-missing-rbac")
+			}
+		}
 	}
 
 	var certKey []byte

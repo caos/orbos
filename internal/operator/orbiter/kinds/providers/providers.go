@@ -16,6 +16,7 @@ func GetQueryAndDestroyFuncs(
 	provID string,
 	providerTree *tree.Tree,
 	providerCurrent *tree.Tree,
+	whitelistChan chan []*orbiter.CIDR,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -50,6 +51,10 @@ func GetQueryAndDestroyFuncs(
 		return static.AdaptFunc(
 			orb.Masterkey,
 			provID,
+			func() []*orbiter.CIDR {
+				monitor.Debug("Reading whitelist")
+				return <-whitelistChan
+			},
 		)(
 			monitor.WithFields(map[string]interface{}{"provider": provID}),
 			providerTree,

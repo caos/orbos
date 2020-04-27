@@ -41,6 +41,8 @@ func AdaptFunc(
 		providerQueriers := make([]orbiter.QueryFunc, 0)
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
 
+		whitelistChan := make(chan []*orbiter.CIDR)
+
 		for provID, providerTree := range desiredKind.Providers {
 
 			providerCurrent := &tree.Tree{}
@@ -57,6 +59,7 @@ func AdaptFunc(
 				provID,
 				providerTree,
 				providerCurrent,
+				whitelistChan,
 			)
 
 			if err != nil {
@@ -107,6 +110,7 @@ func AdaptFunc(
 				deployOrbiterAndBoom,
 				clusterCurrent,
 				destroyProviders,
+				whitelistChan,
 			)
 
 			if err != nil {

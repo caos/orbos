@@ -5,28 +5,36 @@ package dynamic
 import (
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 )
 
-type Current struct {
-	Common  *tree.Common `yaml:",inline"`
-	Current struct {
-		SourcePools map[string][]string
-		Addresses   map[string]infra.Address
-		Desire      func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error
-	} `yaml:"-"`
-}
-
-type DesiredV0 struct {
+type Desired struct {
 	Common *tree.Common `yaml:",inline"`
 	Spec   map[string][]*VIP
 }
 
-func (d *DesiredV0) Validate() error {
+func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
+	defer func() {
+		d.Common.Version = "v1"
+	}()
+	switch d.Common.Version {
+	case "v1":
+		type latest Desired
+		l := latest{}
+		if err := node.Decode(&l); err != nil {
+			return err
+		}
+		d.Spec = l.Spec
+		return nil
+	case "v0":
+		return v0tov1(node, d)
+	}
+	return errors.Errorf("Version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)
+}
+
+func (d *Desired) Validate() error {
 
 	ips := make([]string, 0)
 
@@ -51,19 +59,12 @@ func (d *DesiredV0) Validate() error {
 
 type VIP struct {
 	IP        string
-	Whitelist []*orbiter.CIDR
 	Transport []*Source
 }
 
 func (v *VIP) validate() error {
 	if v.IP == "" {
 		return errors.New("no virtual IP configured")
-	}
-
-	for _, cidr := range v.Whitelist {
-		if err := cidr.Validate(); err != nil {
-			return err
-		}
 	}
 
 	if len(v.Transport) == 0 {
@@ -104,20 +105,32 @@ type Source struct {
 	Name         string
 	SourcePort   Port
 	Destinations []*Destination
+	Whitelist    []*orbiter.CIDR
 }
 
-func (s *Source) validate() error {
+func (s *Source) validate() (err error) {
+
+	defer func() {
+		err = errors.Wrapf(err, "source %s is invalid", s.Name)
+	}()
+
 	if s.Name == "" {
 		return errors.Errorf("source with port %d has no name", s.SourcePort)
 	}
 
+	for _, cidr := range s.Whitelist {
+		if err := cidr.Validate(); err != nil {
+			return err
+		}
+	}
+
 	if err := s.SourcePort.validate(); err != nil {
-		return errors.Wrapf(err, "configuring port for source %s failed", s.Name)
+		return err
 	}
 
 	for _, dest := range s.Destinations {
 		if err := dest.validate(); err != nil {
-			return errors.Wrapf(err, "configuring destinations for source %s failed", s.Name)
+			return err
 		}
 	}
 

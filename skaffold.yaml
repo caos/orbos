@@ -7,8 +7,9 @@ build:
   - image: eu.gcr.io/caos-240809/orbiter
     context: .
     custom:
-      buildCommand: ./skaffold/build.sh
+      buildCommand: DEBUG=true ./skaffold/build.sh
 deploy:
   kubectl:
     manifests:
     - skaffold/deployment.yml
+    - skaffold/service.yml

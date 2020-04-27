@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
 )
@@ -19,29 +20,6 @@ var cidrRegex = fmt.Sprintf(`%s/([1-2][0-9]|3[0-2]|[0-9])`, ipRegex)
 
 var cidrComp = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
 
-type cidr string
-
-/*
-type DesiredV1 struct {
-	Common orbiter.Common `yaml:",inline"`
-	Spec   struct {
-		Verbose           bool
-		KubernetesVersion string
-		Versions          struct {
-			Orbiter string
-			Boom    string
-		}
-		Networking struct {
-			DNSDomain   string
-			Network     string
-			ServiceCidr orbiter.CIDR
-			PodCidr     orbiter.CIDR
-		}
-		ControlPlane Pool
-		Workers      []*Pool
-	}
-}
-*/
 type DesiredV0 struct {
 	Common tree.Common `yaml:",inline"`
 	Spec   Spec
@@ -131,38 +109,28 @@ type Pool struct {
 	Provider        string
 	Nodes           int
 	Pool            string
+	Taints          *Taints `yaml:"taints,omitempty"`
 }
 
-/*
-// UnmarshalYAML migrates desired states from v0 to v1:
-func (d *DesiredV1) UnmarshalYAML(node *yaml.Node) error {
-	defer func() {
-		d.Common.Version = "v1"
-	}()
-	switch d.Common.Version {
-	case "v1":
-		type latest DesiredV1
-		l := latest{}
-		if err := node.Decode(&l); err != nil {
-			return err
-		}
-		d.Common = l.Common
-		d.Spec = l.Spec
-		return nil
-	case "v0":
-		v0 := DesiredV0{}
-		if err := node.Decode(&v0); err != nil {
-			return err
-		}
-		d.Spec.Verbose = v0.Spec.Verbose
-		d.Spec.KubernetesVersion = v0.Spec.Versions.Kubernetes
-		d.Spec.Versions.Orbiter = v0.Spec.Versions.Orbiter
-		d.Spec.Versions.Boom = v0.Spec.Versions.Boom
-		d.Spec.Networking = v0.Spec.Networking
-		d.Spec.ControlPlane = v0.Spec.ControlPlane
-		d.Spec.Workers = v0.Spec.Workers
+type Taint struct {
+	Key    string           `yaml:"key"`
+	Value  string           `yaml:"value,omitempty"`
+	Effect core.TaintEffect `yaml:"effect"`
+}
+
+type Taints []Taint
+
+func (t *Taints) ToK8sTaints() []core.Taint {
+	if t == nil {
 		return nil
 	}
-	return errors.Errorf("Version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)
+	taints := make([]core.Taint, len(*t))
+	for idx, taint := range *t {
+		taints[idx] = core.Taint{
+			Key:    taint.Key,
+			Value:  taint.Value,
+			Effect: taint.Effect,
+		}
+	}
+	return taints
 }
-*/

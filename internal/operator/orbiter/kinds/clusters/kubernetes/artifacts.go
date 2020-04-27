@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/caos/orbiter/internal/orb"
 
+	"k8s.io/apimachinery/pkg/util/intstr"
+
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"gopkg.in/yaml.v2"
@@ -73,6 +75,12 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 			ObjectMeta: mach.ObjectMeta{
 				Name:      "orbiter",
 				Namespace: "caos-system",
+				Labels: map[string]string{
+					"app.kubernetes.io/instance":   "orbiter",
+					"app.kubernetes.io/part-of":    "orbos",
+					"app.kubernetes.io/component":  "orbiter",
+					"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				},
 			},
 			Spec: apps.DeploymentSpec{
 				Replicas: int32Ptr(1),
@@ -129,10 +137,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 							"node-role.kubernetes.io/master": "",
 						},
 						Tolerations: []core.Toleration{{
-							Key:      "node-role.kubernetes.io/master",
-							Operator: "Equal",
-							Value:    "",
-							Effect:   "NoSchedule",
+							Operator: "Exists",
 						}},
 					},
 				},
@@ -144,6 +149,33 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 			"version": orbiterversion,
 		}).Debug("Orbiter deployment ensured")
 
+		if err := client.ApplyService(&core.Service{
+			ObjectMeta: mach.ObjectMeta{
+				Name:      "orbiter",
+				Namespace: "caos-system",
+				Labels: map[string]string{
+					"app.kubernetes.io/instance":   "orbiter",
+					"app.kubernetes.io/part-of":    "orbos",
+					"app.kubernetes.io/component":  "orbiter",
+					"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				},
+			},
+			Spec: core.ServiceSpec{
+				Ports: []core.ServicePort{{
+					Name:       "metrics",
+					Protocol:   "TCP",
+					Port:       9000,
+					TargetPort: intstr.FromInt(9000),
+				}},
+				Selector: map[string]string{
+					"app": "orbiter",
+				},
+				Type: core.ServiceTypeClusterIP,
+			},
+		}); err != nil {
+			return err
+		}
+		monitor.Debug("Orbiter service ensured")
 	}
 
 	if boomversion == "" {
@@ -247,20 +279,27 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 			Name:      "boom",
 			Namespace: "caos-system",
 			Labels: map[string]string{
-				"app": "boom",
+				"app.kubernetes.io/instance":   "boom",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "boom",
+				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
 			},
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "boom",
+					"app.kubernetes.io/instance":  "boom",
+					"app.kubernetes.io/part-of":   "orbos",
+					"app.kubernetes.io/component": "boom",
 				},
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
 					Labels: map[string]string{
-						"app": "boom",
+						"app.kubernetes.io/instance":  "boom",
+						"app.kubernetes.io/part-of":   "orbos",
+						"app.kubernetes.io/component": "boom",
 					},
 				},
 				Spec: core.PodSpec{
@@ -274,11 +313,17 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 						Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
 						Command:         []string{"/boom"},
 						Args: []string{
-							"--metrics-addr", "127.0.0.1:8080",
+							"--metrics=true",
+							"--metricsport", "2112",
 							"--enable-leader-election",
 							"--git-orbconfig", "/secrets/orbconfig",
 							"--git-crd-path", "boom.yml",
 						},
+						Ports: []core.ContainerPort{{
+							Name:          "metrics",
+							ContainerPort: 2112,
+							Protocol:      "TCP",
+						}},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "orbconfig",
 							ReadOnly:  true,
@@ -313,6 +358,37 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 			"version": boomversion,
 		}).Debug("Boom deployment ensured")
 	}
+
+	if err := client.ApplyService(&core.Service{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "boom",
+			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":   "boom",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "boom",
+				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+			},
+		},
+		Spec: core.ServiceSpec{
+			Ports: []core.ServicePort{{
+				Name:       "metrics",
+				Protocol:   "TCP",
+				Port:       2112,
+				TargetPort: intstr.FromInt(2112),
+			}},
+			Selector: map[string]string{
+				"app.kubernetes.io/instance":  "boom",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "boom",
+			},
+			Type: core.ServiceTypeClusterIP,
+		},
+	}); err != nil {
+		return err
+	}
+	monitor.Debug("Boom service ensured")
+
 	return err
 }
 

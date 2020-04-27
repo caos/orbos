@@ -5,6 +5,8 @@ import (
 	"github.com/caos/orbiter/internal/tree"
 	"os"
 
+	core "k8s.io/api/core/v1"
+
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -20,7 +22,8 @@ func AdaptFunc(
 	id string,
 	oneoff bool,
 	deployOrbiterAndBoom bool,
-	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
+	destroyProviders func() (map[string]interface{}, error),
+	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
 
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
@@ -37,6 +40,15 @@ func AdaptFunc(
 		}
 		desiredTree.Parsed = desiredKind
 
+		if desiredKind.Spec.ControlPlane.Taints == nil {
+			taints := Taints([]Taint{{
+				Key:    "node-role.kubernetes.io/master",
+				Effect: core.TaintEffectNoSchedule,
+			}})
+			desiredKind.Spec.ControlPlane.Taints = &taints
+			migrate = true
+		}
+
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, migrate, err
 		}
@@ -46,6 +58,8 @@ func AdaptFunc(
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
 		}
+
+		whitelist([]*orbiter.CIDR{&desiredKind.Spec.Networking.PodCidr})
 
 		var kc *string
 		if desiredKind.Spec.Kubeconfig.Value != "" {
@@ -58,7 +72,7 @@ func AdaptFunc(
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
-					"err":   err.Error(),
+					"error": err.Error(),
 				}).Info("Deploying Orbiter failed, awaiting next iteration")
 				if deployErrors > 50 {
 					panic(err)

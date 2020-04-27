@@ -2,6 +2,7 @@ package static
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/caos/orbiter/mntr"
 )
 
-func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
+func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -34,11 +35,11 @@ func AdaptFunc(masterkey string, id string) orbiter.AdaptFunc {
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
 
-		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, desiredKind.Loadbalancing, lbCurrent)
+		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent)
 		if err != nil {
 			return nil, nil, migrate, err
 		}
-		if migrateLocal{
+		if migrateLocal {
 			migrate = true
 		}
 

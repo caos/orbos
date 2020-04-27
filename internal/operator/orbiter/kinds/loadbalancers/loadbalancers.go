@@ -10,6 +10,7 @@ import (
 
 func GetQueryAndDestroyFunc(
 	monitor mntr.Monitor,
+	whitelist dynamic.WhiteListFunc,
 	loadBalancingTree *tree.Tree,
 	loadBalacingCurrent *tree.Tree,
 ) (
@@ -23,7 +24,7 @@ func GetQueryAndDestroyFunc(
 	//		case "orbiter.caos.ch/ExternalLoadBalancer":
 	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 	case "orbiter.caos.ch/DynamicLoadBalancer":
-		return dynamic.AdaptFunc()(monitor, loadBalancingTree, loadBalacingCurrent)
+		return dynamic.AdaptFunc(whitelist)(monitor, loadBalancingTree, loadBalacingCurrent)
 	default:
 		return nil, nil, false, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
 	}

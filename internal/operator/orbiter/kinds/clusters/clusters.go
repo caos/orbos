@@ -20,6 +20,7 @@ func GetQueryAndDestroyFuncs(
 	deployOrbiterAndBoom bool,
 	clusterCurrent *tree.Tree,
 	destroyProviders func() (map[string]interface{}, error),
+	whitelistChan chan []*orbiter.CIDR,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -36,6 +37,14 @@ func GetQueryAndDestroyFuncs(
 			oneoff,
 			deployOrbiterAndBoom,
 			destroyProviders,
+			func(whitelist []*orbiter.CIDR) {
+				go func() {
+					monitor.Debug("Sending whitelist")
+					whitelistChan <- whitelist
+					close(whitelistChan)
+				}()
+				monitor.Debug("Whitelist sent")
+			},
 		)(
 			monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
 			clusterTree,

@@ -91,6 +91,23 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	})
 }
 
+func (c *Client) ApplyService(rsc *core.Service) error {
+	resources := c.set.CoreV1().Services(rsc.GetNamespace())
+	return c.apply("service", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		svc, err := resources.Get(rsc.Name, mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rsc.Spec.ClusterIP = svc.Spec.ClusterIP
+		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+		_, err = resources.Update(rsc)
+		return err
+	})
+}
+
 func (c *Client) DeleteDeployment(namespace, name string) error {
 	return c.set.AppsV1().Deployments(namespace).Delete(name, &mach.DeleteOptions{})
 }
