@@ -1,4 +1,4 @@
-package cmds
+package main
 
 import (
 	"github.com/caos/orbiter/internal/operator/boom/api"

@@ -1,4 +1,4 @@
-package cmds
+package main
 
 import (
 	"context"
@@ -10,12 +10,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
-)
-
-var (
-	// Build arguments
-	gitCommit = "none"
-	version   = "none"
 )
 
 type RootValues func() (context.Context, mntr.Monitor, *git.Client, *orb.Orb, errFunc)

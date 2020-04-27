@@ -2,8 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/caos/orbiter/cmd/orbctl/cmds"
 	"os"
+)
+
+var (
+	// Build arguments
+	gitCommit = "none"
+	version   = "none"
 )
 
 func main() {
@@ -14,13 +19,14 @@ func main() {
 		}
 	}()
 
-	rootCmd, rootValues := cmds.RootCommand()
+	rootCmd, rootValues := RootCommand()
+	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 	rootCmd.AddCommand(
-		cmds.ReadSecretCommand(rootValues),
-		cmds.WriteSecretCommand(rootValues),
-		cmds.EditCommand(rootValues),
-		cmds.TakeoffCommand(rootValues),
-		cmds.TeardownCommand(rootValues),
+		ReadSecretCommand(rootValues),
+		WriteSecretCommand(rootValues),
+		EditCommand(rootValues),
+		TakeoffCommand(rootValues),
+		TeardownCommand(rootValues),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

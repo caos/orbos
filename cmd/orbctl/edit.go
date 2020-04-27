@@ -1,6 +1,6 @@
 // Inspired by https://samrapdev.com/capturing-sensitive-input-with-editor-in-golang-from-the-cli/
 
-package cmds
+package main
 
 import (
 	"bytes"
