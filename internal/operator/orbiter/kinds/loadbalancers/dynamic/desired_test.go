@@ -1,9 +1,9 @@
 package dynamic
 
 import (
+	"github.com/caos/orbiter/internal/tree"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
 	"github.com/pkg/errors"
 
 	"gopkg.in/yaml.v3"
@@ -83,7 +83,7 @@ func TestMigration(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			d := &Desired{Common: &orbiter.Common{Version: tt.version}}
+			d := &Desired{Common: &tree.Common{Version: tt.version}}
 			if unmarshalErr := yaml.Unmarshal(template, d); (unmarshalErr != nil) != tt.wantUnmarshalErr {
 				t.Errorf("%s\nyaml.Unmarshal() error = %v, wantUnmarshalErr %v", string(template), unmarshalErr, tt.wantUnmarshalErr)
 			}

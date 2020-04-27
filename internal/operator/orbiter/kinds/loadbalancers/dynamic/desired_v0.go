@@ -2,11 +2,12 @@ package dynamic
 
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/tree"
 	"gopkg.in/yaml.v3"
 )
 
 type DesiredV0 struct {
-	Common *orbiter.Common `yaml:",inline"`
+	Common *tree.Common `yaml:",inline"`
 	Spec   map[string][]*VIPV0
 }
 
