@@ -22,13 +22,9 @@ type event struct {
 	current *common.NodeAgentCurrent
 }
 
-func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
+func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
 
 	return func() {
-		if err := before(); err != nil {
-			panic(err)
-		}
-
 		if err := gitClient.Clone(); err != nil {
 			monitor.Error(err)
 			return
@@ -73,6 +69,10 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 				current: &clone,
 			})
 		}, monitor.OnChange)
+
+		if err := before(); err != nil {
+			panic(err)
+		}
 
 		ensure, err := query(monitor, nodeAgentCommit, firewallEnsurer, conv, *naDesired, curr)
 		if err != nil {
