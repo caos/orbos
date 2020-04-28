@@ -20,7 +20,7 @@ import (
 )
 
 type Converter interface {
-	Init() (func() error, error)
+	Init() func() error
 	nodeagent.Converter
 }
 
@@ -36,56 +36,49 @@ func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Conve
 	return &dependencies{monitor, os, nil, nil, cipher}
 }
 
-func (d *dependencies) Init() (func() error, error) {
+func (d *dependencies) Init() func() error {
 
 	d.pm = dep.NewPackageManager(d.monitor, d.os.OperatingSystem)
-	if err := d.pm.Init(); err != nil {
-		return d.pm.RefreshInstalled, err
-	}
-
 	d.sysd = dep.NewSystemD(d.monitor)
-	return d.pm.RefreshInstalled, nil
+
+	return func() error {
+		if err := d.pm.Init(); err != nil {
+			return err
+		}
+		return d.pm.RefreshInstalled()
+	}
 }
 
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
 
-	dependencies := []*nodeagent.Dependency{
-		&nodeagent.Dependency{
-			Desired:   sw.Hostname,
-			Installer: hostname.New(),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Swap,
-			Installer: swap.New("/etc/fstab"),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.KeepaliveD,
-			Installer: keepalived.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.SSHD,
-			Installer: sshd.New(d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Nginx,
-			Installer: nginx.New(d.monitor, d.pm, d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Containerruntime,
-			Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Kubelet,
-			Installer: kubelet.New(d.monitor, d.os.OperatingSystem, d.pm, d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Kubectl,
-			Installer: kubectl.New(d.os.OperatingSystem, d.pm),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Kubeadm,
-			Installer: kubeadm.New(d.os.OperatingSystem, d.pm),
-		},
+	dependencies := []*nodeagent.Dependency{{
+		Desired:   sw.Hostname,
+		Installer: hostname.New(),
+	}, {
+		Desired:   sw.Swap,
+		Installer: swap.New("/etc/fstab"),
+	}, {
+		Desired:   sw.KeepaliveD,
+		Installer: keepalived.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
+	}, {
+		Desired:   sw.SSHD,
+		Installer: sshd.New(d.sysd),
+	}, {
+		Desired:   sw.Nginx,
+		Installer: nginx.New(d.monitor, d.pm, d.sysd),
+	}, {
+		Desired:   sw.Containerruntime,
+		Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),
+	}, {
+		Desired:   sw.Kubelet,
+		Installer: kubelet.New(d.monitor, d.os.OperatingSystem, d.pm, d.sysd),
+	}, {
+		Desired:   sw.Kubectl,
+		Installer: kubectl.New(d.os.OperatingSystem, d.pm),
+	}, {
+		Desired:   sw.Kubeadm,
+		Installer: kubeadm.New(d.os.OperatingSystem, d.pm),
+	},
 	}
 
 	for key, dependency := range dependencies {

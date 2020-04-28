@@ -19,7 +19,6 @@ import (
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
 	"github.com/caos/orbiter/internal/operator/nodeagent/dep/conv"
 	"github.com/caos/orbiter/internal/operator/nodeagent/firewall"
-	"github.com/caos/orbiter/internal/operator/nodeagent/rebooter/node"
 )
 
 var gitCommit string
@@ -89,12 +88,7 @@ func main() {
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-
-	converter := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
-	before, err := converter.Init()
-	if err != nil {
-		panic(err)
-	}
+	conv := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
 
 	ctx := context.Background()
 	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
@@ -108,12 +102,11 @@ func main() {
 		nodeagent.Iterator(
 			monitor,
 			gitClient,
-			node.New(),
 			gitCommit,
 			*nodeAgentID,
 			firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
-			converter,
-			before),
+			conv,
+			conv.Init()),
 		[]operator.Watcher{
 			immediate.New(monitor),
 			cron.New(monitor, "@every 10s"),
