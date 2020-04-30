@@ -32,4 +32,4 @@ Keyed secrets are symmetrically encrypted with the AES 256 and encoded with the 
 
 ## Sequence
 
-![Sequence diagram](./sequencediagram.org.svg)
+![Sequence diagram](sequencediagram.org.svg)
