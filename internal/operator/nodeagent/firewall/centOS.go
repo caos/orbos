@@ -79,7 +79,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		}
 
 		monitor.WithFields(map[string]interface{}{
-			"open": strings.Join(addPorts, ";"),
+			"open":  strings.Join(addPorts, ";"),
 			"close": strings.Join(removePorts, ";"),
 		}).Debug("Firewall changes determined")
 
@@ -132,7 +132,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
 	changesMonitor := monitor.WithField("changes", strings.Join(changes, ";"))
 	changesMonitor.Debug("Changing firewall")
 
-	defer func(){
+	defer func() {
 		if err == nil {
 			changesMonitor.Debug("Firewall changed")
 		} else {

@@ -134,11 +134,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					}
 					for _, machine := range machines {
 						cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-						addToWhitelists(false, vips, &cidr)
+						vips = addToWhitelists(false, vips, &cidr)
 					}
 				}
 
-				addToWhitelists(true, vips, wl...)
+				vips = addToWhitelists(true, vips, wl...)
 
 				machinesData := make([]Data, len(forMachines))
 				for idx, machine := range forMachines {
@@ -349,15 +349,28 @@ http {
 	}
 }
 
-func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) {
-	for _, vip := range vips {
-		for _, src := range vip.Transport {
-			src.Whitelist = append(src.Whitelist, cidr...)
-			if makeUnique {
-				src.Whitelist = unique(src.Whitelist)
+func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP {
+	newVIPs := make([]*VIP, len(vips))
+	for vipIdx, vip := range vips {
+		newTransport := make([]*Source, len(vip.Transport))
+		for srcIdx, src := range vip.Transport {
+			newSource := &Source{
+				Name:         src.Name,
+				SourcePort:   src.SourcePort,
+				Destinations: src.Destinations,
+				Whitelist:    append(src.Whitelist, cidr...),
 			}
+			if makeUnique {
+				newSource.Whitelist = unique(src.Whitelist)
+			}
+			newTransport[srcIdx] = newSource
+		}
+		newVIPs[vipIdx] = &VIP{
+			IP:        vip.IP,
+			Transport: newTransport,
 		}
 	}
+	return newVIPs
 }
 
 func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {
