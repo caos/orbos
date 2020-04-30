@@ -4,8 +4,12 @@ go 1.14
 
 require (
 	github.com/AppsFlyer/go-sundheit v0.1.1
+	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
 	github.com/aws/aws-sdk-go v1.29.15
+	github.com/caos/oidc v0.6.0
+	github.com/fatih/color v1.9.0 // indirect
 	github.com/golang/protobuf v1.3.4
+	github.com/google/go-github/v31 v31.0.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mitchellh/mapstructure v1.1.2
@@ -16,6 +20,7 @@ require (
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.4.0
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
+	golang.org/x/oauth2 v0.0.0-20191122200657-5d9234df094c
 	google.golang.org/api v0.4.0
 	google.golang.org/grpc v1.27.1
 	gopkg.in/src-d/go-billy.v4 v4.3.2

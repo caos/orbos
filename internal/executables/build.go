@@ -22,15 +22,17 @@ type Bin struct {
 
 type BuiltTuple func() (bin Bin, err error)
 
-func Build(debug bool, gitCommit, version string, bins ...Bin) <-chan BuiltTuple {
-	return deriveFmap(curryBuild(debug, gitCommit, version), toChan(bins))
+func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bins ...Bin) <-chan BuiltTuple {
+	return deriveFmap(curryBuild(debug, gitCommit, version, githubClientID, githubClientSecret), toChan(bins))
 }
 
-func curryBuild(debug bool, gitCommit, version string) func(bin Bin) BuiltTuple {
+func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecret string) func(bin Bin) BuiltTuple {
 	debugCurried := deriveCurryDebug(build)(debug)
 	commitCurried := deriveCurryCommit(debugCurried)(gitCommit)
 	tagCurried := deriveCurryTag(commitCurried)(version)
-	return tagCurried
+	githubClientIDCurried := deriveCurryGithubClientID(tagCurried)(githubClientID)
+	githubClientSecretCurried := deriveCurryGithubClientSecret(githubClientIDCurried)(githubClientSecret)
+	return githubClientSecretCurried
 }
 
 func toChan(bins []Bin) <-chan Bin {
@@ -44,7 +46,7 @@ func toChan(bins []Bin) <-chan Bin {
 	return binChan
 }
 
-func build(debug bool, gitCommit, version string, bin Bin) BuiltTuple {
+func build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bin Bin) BuiltTuple {
 
 	if bin.OutDir == "" {
 		bin.OutDir = filepath.Join(os.TempDir(), filepath.Base(bin.MainDir))
@@ -62,7 +64,7 @@ func build(debug bool, gitCommit, version string, bin Bin) BuiltTuple {
 			"all=-N -l")
 	}
 
-	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s", gitCommit, version)
+	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s -X main.version=%s -X main.version=%s", gitCommit, version, githubClientID, githubClientSecret)
 
 	cmdEnv := os.Environ()
 	for k, v := range bin.Env {

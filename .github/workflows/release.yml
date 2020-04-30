@@ -25,7 +25,7 @@ jobs:
         export TAG_VERSION=${IMAGE}:${VERSION}
         go mod download
         mkdir -p ./artifacts
-        go run cmd/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" --orbctl ./artifacts
+        go run cmd/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" -githubclientid "${{ secrets.GITHUBOAUTHCLIENTID }}" -githubclientsecret "${{ secrets.GITHUBOAUTHCLIENTSECRET }}" --orbctl ./artifacts
         [[ "$BRANCH" == "master" ]] && [[ "$VERSION" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
         echo "Publishing Orbiter version $VERSION"
         docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
