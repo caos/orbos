@@ -2,7 +2,7 @@
 
 package integration_test
 
-import "github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
+import "github.com/caos/orbos/internal/operator/orbiter/kinds/providers/integration/core"
 
 var configCB func() *core.Vipers
 

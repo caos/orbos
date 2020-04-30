@@ -6,11 +6,11 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
-func teardownCommand(rv rootValues) *cobra.Command {
+func TeardownCommand(rv RootValues) *cobra.Command {
 
 	var (
 		cmd = &cobra.Command{

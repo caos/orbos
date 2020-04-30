@@ -7,11 +7,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/mntr"
 )
 
 type Installer interface {

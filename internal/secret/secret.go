@@ -1,4 +1,4 @@
-package orbiter
+package secret
 
 import (
 	"crypto/aes"
@@ -6,11 +6,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 	"unicode/utf8"
-
-	"gopkg.in/yaml.v3"
 )
 
 type Secret struct {
@@ -18,6 +17,19 @@ type Secret struct {
 	Encoding   string
 	Value      string
 	Masterkey  string `yaml:"-"`
+}
+
+type Existing struct {
+	Name         string `json:"name" yaml:"name"`
+	Key          string `json:"key" yaml:"key"`
+	InternalName string `json:"internalName" yaml:"internalName"`
+}
+
+type ExistingIDSecret struct {
+	Name         string `json:"name" yaml:"name"`
+	IDKey        string `json:"idKey" yaml:"idKey"`
+	SecretKey    string `json:"secretKey" yaml:"secretKey"`
+	InternalName string `json:"internalName" yaml:"internalName"`
 }
 
 func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
@@ -104,4 +116,11 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 
 	type Alias Secret
 	return &Alias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}, nil
+}
+
+func ClearEmpty(secret *Secret) *Secret {
+	if secret != nil && secret.Value == "" {
+		return nil
+	}
+	return secret
 }

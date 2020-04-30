@@ -1,22 +1,23 @@
 package main
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/secret"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
-func readSecretCommand(rv rootValues) *cobra.Command {
+func ReadSecretCommand(rv RootValues) *cobra.Command {
 
 	return &cobra.Command{
 		Use:     "readsecret [path]",
 		Short:   "Print a secrets decrypted value to stdout",
 		Long:    "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 		Args:    cobra.MaximumNArgs(1),
-		Example: `orbctl readsecret k8s.kubeconfig > ~/.kube/config`,
+		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			_, logger, gitClient, orbconfig, errFunc := rv()
@@ -29,14 +30,19 @@ func readSecretCommand(rv rootValues) *cobra.Command {
 				path = args[0]
 			}
 
-			value, err := orbiter.ReadSecret(
+			secretFunc := func(operator string) secret.Func {
+				if operator == "boom" {
+					return api.SecretFunc(orbconfig)
+				} else if operator == "orbiter" {
+					return orb.SecretsFunc(orbconfig)
+				}
+				return nil
+			}
+
+			value, err := secret.Read(
 				logger,
 				gitClient,
-				orb.AdaptFunc(
-					orbconfig,
-					gitCommit,
-					false,
-					false),
+				secretFunc,
 				path)
 			if err != nil {
 				panic(err)

@@ -7,9 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/logging/base"
-	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/logging/base"
+	logcontext "github.com/caos/orbos/logging/context"
 )
 
 type equalsCase struct {

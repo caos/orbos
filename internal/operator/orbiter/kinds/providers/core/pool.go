@@ -1,6 +1,6 @@
 package core
 
-import "github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+import "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 
 type EnsuredGroup interface {
 	EnsureMembers(machine []infra.Machine) error

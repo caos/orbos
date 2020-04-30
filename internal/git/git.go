@@ -12,7 +12,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/src-d/go-billy.v4"
 	"gopkg.in/src-d/go-billy.v4/memfs"

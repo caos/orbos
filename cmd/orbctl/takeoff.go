@@ -9,24 +9,24 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
-	"github.com/caos/orbiter/internal/executables"
-	"github.com/caos/orbiter/internal/ingestion"
-	"github.com/caos/orbiter/internal/operator"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbiter/internal/watcher/cron"
-	"github.com/caos/orbiter/internal/watcher/immediate"
+	"github.com/caos/orbos/internal/executables"
+	"github.com/caos/orbos/internal/ingestion"
+	"github.com/caos/orbos/internal/operator"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/watcher/cron"
+	"github.com/caos/orbos/internal/watcher/immediate"
 )
 
-func takeoffCommand(rv rootValues) *cobra.Command {
+func TakeoffCommand(rv RootValues) *cobra.Command {
 
 	var (
-		verbose bool
-		recur   bool
-		destroy bool
-		deploy  bool
+		verbose          bool
+		recur            bool
+		destroy          bool
+		deploy           bool
 		ingestionAddress string
-		cmd     = &cobra.Command{
+		cmd              = &cobra.Command{
 			Use:   "takeoff",
 			Short: "Launch an orbiter",
 			Long:  "Ensures a desired state",
