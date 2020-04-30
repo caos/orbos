@@ -150,8 +150,3 @@ The full functionality of the operator is and stays open source and free to use 
 See the exact licensing terms [here](../LICENSE)
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
-
-<<<<<<< HEAD
-
-=======
->>>>>>> c1d026df6a7d75a2c8f6fbd8733cec699ab8eeb4
