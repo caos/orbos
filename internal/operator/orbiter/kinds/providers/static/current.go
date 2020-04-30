@@ -1,9 +1,9 @@
 package static
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/tree"
 )
 
 func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesService) error {

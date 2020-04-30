@@ -6,13 +6,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/api"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/config"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instance"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/resourceservices/instancegroup"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
-	"github.com/caos/orbiter/logging/base"
-	logcontext "github.com/caos/orbiter/logging/context"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/api"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/config"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/resourceservices/instance"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/resourceservices/instancegroup"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/integration/core"
+	"github.com/caos/orbos/logging/base"
+	logcontext "github.com/caos/orbos/logging/context"
 )
 
 var configCB func() *core.Vipers

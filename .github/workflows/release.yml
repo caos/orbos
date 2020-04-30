@@ -20,7 +20,7 @@ jobs:
         export BRANCH=${GITHUB_REF##*/}
         export VERSION=$BRANCH
         [[ "$BRANCH" == "master" ]] && VERSION="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
-        export IMAGE=docker.pkg.github.com/caos/orbiter/orbiter
+        export IMAGE=docker.pkg.github.com/caos/orbos/orbiter
         export TAG_LATEST=${IMAGE}:latest
         export TAG_VERSION=${IMAGE}:${VERSION}
         go mod download
@@ -34,7 +34,7 @@ jobs:
         [[ "$BRANCH" == "master" ]] && docker push ${TAG_LATEST}
         [[ "$BRANCH" == "master" ]] && npx semantic-release && exit 0
         echo "##[set-output name=relbranch;]$(echo ${BRANCH})"
-        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbiter/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbiter/releases/tags/$BRANCH | jq .id))
+        curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/$BRANCH | jq .id))
     - name: Dev Release
       id: dev_release
       uses: actions/create-release@v1

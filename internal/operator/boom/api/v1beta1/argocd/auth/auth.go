@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/github"
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/gitlab"
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/google"
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth/oidc"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/github"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/gitlab"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/google"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/oidc"
 	"reflect"
 )
 

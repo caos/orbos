@@ -2,14 +2,14 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
 	"regexp"
 
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
 var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`

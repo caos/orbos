@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 )
 
 func destroy(monitor mntr.Monitor, providerCurrents map[string]interface{}, k8sClient *Client) error {

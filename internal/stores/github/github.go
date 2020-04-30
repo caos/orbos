@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/caos/oidc/pkg/cli"
 	"github.com/caos/oidc/pkg/rp"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 	"github.com/google/go-github/v31/github"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"

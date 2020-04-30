@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (desire func(machine *initializedMachine)) {
@@ -27,7 +27,7 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (
 			}
 		}
 
-		if machine.tier == Controlplane { 
+		if machine.tier == Controlplane {
 			fw["kubeapi-external"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d", kubeAPIPort),
 				Protocol: "tcp",

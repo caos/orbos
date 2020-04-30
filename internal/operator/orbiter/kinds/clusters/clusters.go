@@ -1,12 +1,12 @@
 package clusters
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/internal/tree"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
 

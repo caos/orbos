@@ -1,8 +1,8 @@
 package orbiter
 
 import (
-	"github.com/caos/orbiter/internal/push"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/tree"
 	_ "net/http/pprof"
 
 	"fmt"
@@ -13,10 +13,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/ingestion"
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/ingestion"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 type EnsureFunc func(psf push.Func) error

@@ -1,12 +1,12 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 )
 
 func SecretFunc(orb *orb.Orb) secret.Func {

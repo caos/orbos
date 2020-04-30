@@ -1,7 +1,7 @@
 package dynamic
 
 import (
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/tree"
 	"testing"
 
 	"github.com/pkg/errors"

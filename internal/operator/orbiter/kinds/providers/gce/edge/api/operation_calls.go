@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/machine/v1"

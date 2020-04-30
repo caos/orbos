@@ -3,9 +3,9 @@ package v0
 import (
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external/model"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external/model"
 )
 
 func init() {

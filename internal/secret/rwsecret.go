@@ -3,16 +3,16 @@ package secret
 import (
 	"errors"
 	"fmt"
-	"github.com/caos/orbiter/internal/push"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
 	"sort"
 	"strings"
 
 	"github.com/manifoldco/promptui"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/mntr"
 )
 
 const (

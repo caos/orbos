@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbiter/internal/executables"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/executables"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
 

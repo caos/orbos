@@ -1,9 +1,8 @@
 package orb
 
 import (
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/tree"
 )
-
 
 type Current struct {
 	Common    *tree.Common `yaml:",inline"`

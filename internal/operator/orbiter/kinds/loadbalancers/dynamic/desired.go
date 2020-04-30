@@ -3,11 +3,11 @@
 package dynamic
 
 import (
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
 type Desired struct {

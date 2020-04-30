@@ -1,17 +1,17 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/tree"
 	"os"
 
 	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
 var deployErrors int

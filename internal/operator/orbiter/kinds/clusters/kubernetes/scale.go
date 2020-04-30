@@ -2,13 +2,13 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/caos/orbiter/internal/push"
+	"github.com/caos/orbos/internal/push"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 )
 
 func ensureScale(

@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 func init() {
@@ -70,7 +70,7 @@ func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer,
 	})
 
 	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-	if len(divergentSw) == 0 && ensureFirewall == nil{
+	if len(divergentSw) == 0 && ensureFirewall == nil {
 		curr.NodeIsReady = true
 		return noop, nil
 	}

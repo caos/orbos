@@ -1,14 +1,14 @@
 package static
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {

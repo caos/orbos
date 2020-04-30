@@ -1,7 +1,7 @@
 package oidc
 
 import (
-	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbos/internal/secret"
 	"reflect"
 )
 

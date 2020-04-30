@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/caos/orbiter/internal/executables"
+	"github.com/caos/orbos/internal/executables"
 )
 
 func main() {

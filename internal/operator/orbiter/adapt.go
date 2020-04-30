@@ -1,9 +1,9 @@
 package orbiter
 
 import (
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/tree"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"gopkg.in/yaml.v3"
 )
 

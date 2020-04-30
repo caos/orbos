@@ -9,13 +9,13 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
-	"github.com/caos/orbiter/internal/executables"
-	"github.com/caos/orbiter/internal/ingestion"
-	"github.com/caos/orbiter/internal/operator"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbiter/internal/watcher/cron"
-	"github.com/caos/orbiter/internal/watcher/immediate"
+	"github.com/caos/orbos/internal/executables"
+	"github.com/caos/orbos/internal/ingestion"
+	"github.com/caos/orbos/internal/operator"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/watcher/cron"
+	"github.com/caos/orbos/internal/watcher/immediate"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {

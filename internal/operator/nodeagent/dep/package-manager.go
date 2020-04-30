@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 )
 
 type Software struct {

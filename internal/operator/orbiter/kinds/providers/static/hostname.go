@@ -3,8 +3,8 @@ package static
 import (
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 func desireHostname(poolsSpec map[string][]*Machine, nodeagents map[string]*common.NodeAgentSpec) func(machine infra.Machine, pool string) error {

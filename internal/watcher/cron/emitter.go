@@ -1,9 +1,9 @@
 package cron
 
 import (
-	"github.com/caos/orbiter/internal/operator"
-	"github.com/caos/orbiter/internal/watcher"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator"
+	"github.com/caos/orbos/internal/watcher"
+	"github.com/caos/orbos/mntr"
 	"github.com/robfig/cron"
 )
 

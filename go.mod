@@ -1,4 +1,4 @@
-module github.com/caos/orbiter
+module github.com/caos/orbos
 
 go 1.14
 

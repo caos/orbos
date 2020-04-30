@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/caos/orbiter/internal/orb"
+	"github.com/caos/orbos/internal/orb"
 	"io/ioutil"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
@@ -36,7 +36,7 @@ func RootCommand() (*cobra.Command, RootValues) {
 		Use:   "orbctl [flags]",
 		Short: "Interact with your orbs",
 		Long: `orbctl launches orbiters and simplifies common tasks such as updating your kubeconfig.
-Participate in our community on https://github.com/caos/orbiter
+Participate in our community on https://github.com/caos/orbos
 and visit our website at https://caos.ch`,
 		Example: `$ mkdir -p ~/.orb
 $ cat > ~/.orb/myorb << EOF

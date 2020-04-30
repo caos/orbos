@@ -6,7 +6,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/integration/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/integration/core"
 )
 
 func TestLoadBalancing(t *testing.T) {

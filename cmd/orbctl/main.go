@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/caos/orbiter/internal/stores/github"
+	"github.com/caos/orbos/internal/stores/github"
 	"math/rand"
 	"os"
 )

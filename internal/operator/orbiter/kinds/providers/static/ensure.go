@@ -1,20 +1,20 @@
 package static
 
 import (
-	"github.com/caos/orbiter/internal/push"
-	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	dynamiclbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 
-	//	externallbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external"
+	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/ssh"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
 func query(

@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/tree"
 )
 
 type CurrentCluster struct {

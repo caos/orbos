@@ -1,10 +1,10 @@
 package auth
 
 import (
-	generic "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Generic"
-	github "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Github"
-	gitlab "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
-	google "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana/auth/Google"
+	generic "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Generic"
+	github "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Github"
+	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
+	google "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Google"
 	"reflect"
 )
 

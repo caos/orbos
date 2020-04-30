@@ -1,9 +1,9 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/push"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/mntr"
 )
 
 func ensure(
