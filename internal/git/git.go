@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -123,6 +125,44 @@ func (g *Client) Read(path string) ([]byte, error) {
 		fmt.Println(string(fileBytes))
 	}
 	return fileBytes, nil
+}
+
+func (g *Client) ReadYamlIntoStruct(path string, struc interface{}) error {
+	data, err := g.Read(path)
+	if err != nil {
+		return err
+	}
+
+	return errors.Wrapf(yaml.Unmarshal(data, struc), "Error while unmarshaling yaml %s to struct", path)
+}
+
+func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
+	monitor := g.monitor.WithFields(map[string]interface{}{
+		"path": path,
+	})
+	monitor.Debug("Reading folder")
+	dirBytes := make(map[string][]byte, 0)
+	files, err := g.fs.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(errors.Cause(err)) {
+			return make(map[string][]byte, 0), nil
+		}
+		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+	}
+	for _, file := range files {
+		filePath := filepath.Join(path, file.Name())
+		fileBytes, err := g.Read(filePath)
+		if err != nil {
+			return nil, err
+		}
+		dirBytes[file.Name()] = fileBytes
+	}
+
+	if monitor.IsVerbose() {
+		monitor.Debug("Folder read")
+		fmt.Println(dirBytes)
+	}
+	return dirBytes, nil
 }
 
 type File struct {

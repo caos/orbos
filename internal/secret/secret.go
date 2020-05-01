@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"github.com/caos/orbos/internal/utils/clientgo"
 	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
@@ -30,6 +31,29 @@ type ExistingIDSecret struct {
 	IDKey        string `json:"idKey" yaml:"idKey"`
 	SecretKey    string `json:"secretKey" yaml:"secretKey"`
 	InternalName string `json:"internalName" yaml:"internalName"`
+}
+
+func (s *Secret) UnmarshalYAMLWithExisting(node *yaml.Node, existing *Existing) error {
+	if err := s.UnmarshalYAML(node); err != nil {
+		return err
+	}
+
+	if s.Value == "" {
+		if existing != nil && existing.Name != "" && existing.Key != "" {
+			secret, err := clientgo.GetSecret(existing.Name, "caos-system")
+			if err != nil {
+				return errors.New("Error while reading existing secret")
+			}
+
+			value, found := secret.Data[existing.Key]
+			if !found {
+				return errors.New("Error while reading existing secret, key non-existent")
+			}
+			s.Value = string(value)
+		}
+	}
+
+	return nil
 }
 
 func (s *Secret) UnmarshalYAML(node *yaml.Node) error {

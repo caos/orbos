@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func parseToolset(desiredTree *tree.Tree, masterkey string) (*v1beta1.Toolset, error) {
+func ParseToolset(desiredTree *tree.Tree, masterkey string) (*v1beta1.Toolset, error) {
 	desiredKind := &v1beta1.Toolset{
 		Spec: &v1beta1.ToolsetSpec{
 			Grafana: &grafana.Grafana{
@@ -104,7 +104,7 @@ func SecretFunc(orb *orbconfig.Orb) secret.Func {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind, err := parseToolset(desiredTree, orb.Masterkey)
+		desiredKind, err := ParseToolset(desiredTree, orb.Masterkey)
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing desired state failed")
 		}
