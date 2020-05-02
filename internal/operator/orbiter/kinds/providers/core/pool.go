@@ -9,7 +9,7 @@ type EnsuredGroup interface {
 
 type MachinesService interface {
 	ListPools() ([]string, error)
-	List(poolName string, active bool) (infra.Machines, error)
+	List(poolName string) (infra.Machines, error)
 	Create(poolName string) (infra.Machine, error)
 }
 
@@ -25,7 +25,7 @@ func NewPool(poolName string, groups []EnsuredGroup, svc MachinesService) infra.
 
 func (p *pool) EnsureMembers() error {
 
-	machines, err := p.GetMachines(true)
+	machines, err := p.GetMachines()
 	if err != nil {
 		return err
 	}
@@ -39,8 +39,8 @@ func (p *pool) EnsureMembers() error {
 	return nil
 }
 
-func (p *pool) GetMachines(active bool) (infra.Machines, error) {
-	return p.svc.List(p.poolName, active)
+func (p *pool) GetMachines() (infra.Machines, error) {
+	return p.svc.List(p.poolName)
 }
 
 func (p *pool) AddMachine() (infra.Machine, error) {

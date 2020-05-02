@@ -3,10 +3,11 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
-	"github.com/caos/orbiter/internal/tree"
 	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/caos/orbiter/internal/tree"
 
 	"github.com/caos/orbiter/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"
@@ -125,7 +126,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 				var forMachines infra.Machines
 				for _, pool := range allPools {
-					machines, err := svc.List(pool, true)
+					machines, err := svc.List(pool)
 					if err != nil {
 						return err
 					}
@@ -236,7 +237,7 @@ vrrp_instance VI_{{ $idx }} {
 }
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := forMachines $dest.Pool true }}
+	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := forMachines $dest.Pool }}
 		server {{ $machine.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
 	}
 	server {
@@ -316,7 +317,7 @@ http {
 						for _, transport := range vip.Transport {
 							probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
 							for _, dest := range transport.Destinations {
-								destMachines, err := svc.List(dest.Pool, true)
+								destMachines, err := svc.List(dest.Pool)
 								if err != nil {
 									return err
 								}

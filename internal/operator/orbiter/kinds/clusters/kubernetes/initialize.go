@@ -75,7 +75,7 @@ func initialize(
 			desired: desired,
 		}
 		pool.machines = func() ([]*initializedMachine, error) {
-			infraMachines, err := infraPool.GetMachines(true)
+			infraMachines, err := infraPool.GetMachines()
 			if err != nil {
 				return nil, err
 			}

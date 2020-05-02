@@ -18,7 +18,7 @@ func destroy(monitor mntr.Monitor, desired *DesiredV0, current *Current, id stri
 	}
 
 	for _, pool := range pools {
-		machines, err := machinesSvc.List(pool, true)
+		machines, err := machinesSvc.List(pool)
 		if err != nil {
 			return err
 		}

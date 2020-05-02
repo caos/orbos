@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+
 	"github.com/pkg/errors"
 
 	uuid "github.com/satori/go.uuid"
-
 	"google.golang.org/api/option"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -17,7 +18,7 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-//var _ core.MachinesService = (*machinesService)(nil)
+var _ core.MachinesService = (*machinesService)(nil)
 
 type machinesService struct {
 	monitor    mntr.Monitor
@@ -102,27 +103,25 @@ func (m *machinesService) ListPools() ([]string, error) {
 	return pools, nil
 }
 
-/*
-func (m *machinesService) List(poolName string, active bool) (infra.Machines, error) {
+func (m *machinesService) List(poolName string) (infra.Machines, error) {
+	return nil, errors.New("Not yet implemented")
+	/*
+		instances, err := m.instances()
+		if err != nil {
+			return nil, err
+		}
 
-	instances, err := m.instances()
-	if err != nil {
-		return nil, err
-	}
 
+		pool, err := c.cachedPool(poolName)
+		if err != nil {
+			return nil, err
+		}
 
-	pool, err := c.cachedPool(poolName)
-	if err != nil {
-		return nil, err
-	}
-
-	return pool.Machines(active), nil
+		return pool.Machines(active), nil*/
 }
 
-*/
-
 func (m *machinesService) client() (_ *compute.Service, err error) {
-	if m.cache.client != nil {
+	if m.cache.client == nil {
 		m.cache.client, err = compute.NewService(context.TODO(), option.WithCredentialsJSON([]byte(m.desired.JSONKey.Value)))
 	}
 	return m.cache.client, err
@@ -227,85 +226,4 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	monitor.Info("Machine created")
 	return nil, nil
-
-	/*
-		pool, err := c.cachedPool(poolName)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, machine := range pool {
-
-			if len(c.maintenanceKeyPub) == 0 {
-				panic("no maintenance key")
-			}
-			if err := machine.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader(c.maintenanceKeyPub), 600); err != nil {
-				return nil, err
-			}
-
-			if !machine.active {
-
-				if err := machine.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
-					return nil, err
-				}
-
-				if err := c.desireHostname(machine, poolName); err != nil {
-					return nil, err
-				}
-
-				machine.active = true
-				return machine, nil
-			}
-		}
-
-		return nil, errors.New("no machines left")
-	*/
 }
-
-/*
-func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
-
-	specifiedMachines, ok := c.desired.Spec.Pools[poolName]
-	if !ok {
-		return nil, fmt.Errorf("pool %s does not exist", poolName)
-	}
-
-	cache, ok := c.cache[poolName]
-	if ok {
-		return cache, nil
-	}
-
-	newCache := make([]*machine, 0)
-	for _, spec := range specifiedMachines {
-		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &spec.ID, string(spec.IP))
-		if err := machine.UseKey(c.maintenanceKey, c.bootstrapKey); err != nil {
-			return nil, err
-		}
-		var buf bytes.Buffer
-		if err := machine.ReadFile(c.statusFile, &buf); err != nil {
-			// treat as inactive
-		}
-		machine.active = strings.Contains(buf.String(), "active")
-		buf.Reset()
-		newCache = append(newCache, machine)
-	}
-
-	if c.cache == nil {
-		c.cache = make(map[string]cachedMachines)
-	}
-	c.cache[poolName] = newCache
-	return newCache, nil
-}
-
-type cachedMachines []*machine
-
-func (c cachedMachines) Machines(activeOnly bool) infra.Machines {
-	machines := make([]infra.Machine, 0)
-	for _, machine := range c {
-		if !activeOnly || machine.active {
-			machines = append(machines, machine)
-		}
-	}
-	return machines
-}
-*/

@@ -13,7 +13,7 @@ import (
 
 	//	externallbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/ssh"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbiter/mntr"
 )
 
@@ -64,7 +64,7 @@ func query(
 			return nil, err
 		}
 
-		machines, err := machinesSvc.List(pool, true)
+		machines, err := machinesSvc.List(pool)
 		if err != nil {
 			return nil, err
 		}

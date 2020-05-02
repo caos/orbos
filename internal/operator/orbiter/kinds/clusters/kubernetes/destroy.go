@@ -14,15 +14,12 @@ func destroy(monitor mntr.Monitor, providerCurrents map[string]interface{}, k8sC
 	for _, provider := range providerCurrents {
 		prov := provider.(infra.ProviderCurrent)
 		for _, pool := range prov.Pools() {
-			machines, err := pool.GetMachines(false)
+			machines, err := pool.GetMachines()
 			if err != nil {
 				return err
 			}
 			for _, machine := range machines {
-				machine.Execute(nil, nil, "sudo systemctl stop node-agentd")
-				machine.Execute(nil, nil, "sudo systemctl disable node-agentd")
-				machine.Execute(nil, nil, "sudo kubeadm reset -f")
-				machine.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
+				machine.Remove()
 			}
 		}
 	}

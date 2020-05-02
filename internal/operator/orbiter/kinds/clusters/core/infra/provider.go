@@ -26,7 +26,7 @@ type Ingress struct {
 
 type Pool interface {
 	EnsureMembers() error
-	GetMachines(active bool) (Machines, error)
+	GetMachines() (Machines, error)
 	AddMachine() (Machine, error)
 }
 
@@ -37,7 +37,6 @@ type Machine interface {
 	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
-	UseKey(keys ...[]byte) error
 }
 
 type Machines []Machine

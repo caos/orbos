@@ -7,35 +7,29 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 )
 
+var _ core.MachinesService = (*cmpSvcLB)(nil)
+
 type cmpSvcLB struct {
-	original      core.MachinesService
+	core.MachinesService
 	dynamic       dynamic.Current
 	nodeagents    map[string]*common.NodeAgentSpec
 	notifymasters string
 }
 
-func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) core.MachinesService {
+func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) *cmpSvcLB {
 	return &cmpSvcLB{
-		original:   svc,
-		dynamic:    curr,
-		nodeagents: nodeagents,
+		MachinesService: svc,
+		dynamic:         curr,
+		nodeagents:      nodeagents,
 	}
 }
 
-func (i *cmpSvcLB) ListPools() ([]string, error) {
-	return i.original.ListPools()
-}
-
-func (i *cmpSvcLB) List(poolName string, active bool) (infra.Machines, error) {
-	return i.original.List(poolName, active)
-}
-
 func (i *cmpSvcLB) Create(poolName string) (infra.Machine, error) {
-	cmp, err := i.original.Create(poolName)
+	cmp, err := i.MachinesService.Create(poolName)
 	if err != nil {
 		return nil, err
 	}
 
-	desireFunc := desire(poolName, true, i.dynamic, i.original, i.nodeagents, i.notifymasters)
+	desireFunc := desire(poolName, true, i.dynamic, i.MachinesService, i.nodeagents, i.notifymasters)
 	return machine(cmp, desireFunc), desireFunc()
 }
