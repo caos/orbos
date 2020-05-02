@@ -18,7 +18,7 @@ require (
 	github.com/robfig/cron v1.2.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.6
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.6.3
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/oauth2 v0.0.0-20191122200657-5d9234df094c
 	google.golang.org/api v0.4.0
