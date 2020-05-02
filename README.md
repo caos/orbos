@@ -3,10 +3,11 @@
 # Orbos - GitOps everything
 
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
-[![Release](https://github.com/caos/orbiter/workflows/Release/badge.svg)](https://github.com/caos/orbiter/actions)
-[![license](https://badgen.net/github/license/caos/orbiter/)](https://github.com/caos/orbiter/blob/master/LICENSE)
-[![release](https://badgen.net/github/release/caos/orbiter/stable)](https://github.com/caos/orbiter/releases)
-[![Go Report Card](https://goreportcard.com/badge/github.com/caos/orbiter)](https://goreportcard.com/report/github.com/caos/orbiter)
+[![Release](https://github.com/caos/orbos/workflows/Release/badge.svg)](https://github.com/caos/orbos/actions)
+[![license](https://badgen.net/github/license/caos/orbos/)](https://github.com/caos/orbos/blob/master/LICENSE)
+[![release](https://badgen.net/github/release/caos/orbos/stable)](https://github.com/caos/orbos/releases)
+[![Go Report Card](https://goreportcard.com/badge/github.com/caos/orbos)](https://goreportcard.com/report/github.com/caos/orbos)
+[![codecov](https://codecov.io/gh/caos/orbos/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/orbos)
 
 > This project is in alpha state. The API will continue breaking until version 1.0.0 is released
 
