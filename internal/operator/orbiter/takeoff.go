@@ -1,8 +1,6 @@
 package orbiter
 
 import (
-	_ "net/http/pprof"
-
 	"fmt"
 	"net/http"
 
