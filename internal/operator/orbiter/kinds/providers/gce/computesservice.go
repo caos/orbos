@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/api/googleapi"
+
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/pkg/errors"
@@ -28,7 +30,7 @@ type machinesService struct {
 	cache      struct {
 		client    *compute.Service
 		projectID string
-		instances map[string][]*compute.Instance
+		machines  map[string][]*machine
 	}
 	//	cache      map[string]cachedMachines
 }
@@ -57,9 +59,9 @@ func (m *machinesService) context() (*compute.Service, string, error) {
 	return client, projectID, err
 }
 
-func (m *machinesService) instances() (map[string][]*compute.Instance, error) {
-	if m.cache.instances != nil {
-		return m.cache.instances, nil
+func (m *machinesService) machines() (map[string][]*machine, error) {
+	if m.cache.machines != nil {
+		return m.cache.machines, nil
 	}
 
 	client, projectID, err := m.context()
@@ -70,54 +72,63 @@ func (m *machinesService) instances() (map[string][]*compute.Instance, error) {
 	instances, err := client.Instances.
 		List(projectID, m.desired.Zone).
 		Filter(fmt.Sprintf("labels.orb:%s AND labels.provider:%s", m.orbID, m.providerID)).
-		Fields("items(labels)").
+		Fields("items(name,labels,networkInterfaces(accessConfigs(natIP)))").
 		Do()
 	if err != nil {
 		return nil, err
 	}
 
-	m.cache.instances = make(map[string][]*compute.Instance)
+	m.cache.machines = make(map[string][]*machine)
 	for _, inst := range instances.Items {
 		if inst.Labels["orb"] != m.orbID || inst.Labels["provider"] != m.providerID {
 			continue
 		}
 
-		m.cache.instances[inst.Labels["pool"]] = append(m.cache.instances[inst.Labels["pool"]], inst)
+		pool := inst.Labels["pool"]
+
+		m.cache.machines[pool] = append(
+			m.cache.machines[pool],
+			newMachine(
+				m.monitor,
+				inst.Name,
+				inst.NetworkInterfaces[0].AccessConfigs[0].NatIP,
+				pool,
+				m.removeMachineFunc(pool, inst.Name),
+			),
+		)
 	}
 
-	return m.cache.instances, nil
+	return m.cache.machines, nil
 
 }
 
 func (m *machinesService) ListPools() ([]string, error) {
 
-	instances, err := m.instances()
+	pools, err := m.machines()
 	if err != nil {
 		return nil, err
 	}
 
-	pools := make([]string, 0)
-	for pool := range instances {
-		pools = append(pools, pool)
+	var poolNames []string
+	for poolName := range pools {
+		poolNames = append(poolNames, poolName)
 	}
-	return pools, nil
+	return poolNames, nil
 }
 
 func (m *machinesService) List(poolName string) (infra.Machines, error) {
-	return nil, errors.New("Not yet implemented")
-	/*
-		instances, err := m.instances()
-		if err != nil {
-			return nil, err
-		}
+	pools, err := m.machines()
+	if err != nil {
+		return nil, err
+	}
 
+	pool := pools[poolName]
+	machines := make([]infra.Machine, len(pool))
+	for idx, machine := range pool {
+		machines[idx] = machine
+	}
 
-		pool, err := c.cachedPool(poolName)
-		if err != nil {
-			return nil, err
-		}
-
-		return pool.Machines(active), nil*/
+	return machines, nil
 }
 
 func (m *machinesService) client() (_ *compute.Service, err error) {
@@ -182,11 +193,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			"provider": m.providerID,
 			"pool":     poolName,
 		},
-		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.desired.Zone, cores, int(memory)),
+		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.desired.Zone, cores, int(memory)),
 		NetworkInterfaces: []*compute.NetworkInterface{{
-			//					AccessConfigs: []*compute.AccessConfig{{ // Assigns an ephemeral external ip
-			//						Type: "ONE_TO_ONE_NAT",
-			//					}},
+			AccessConfigs: []*compute.AccessConfig{{ // Assigns an ephemeral external ip
+				Type: "ONE_TO_ONE_NAT",
+			}},
 		}},
 		Disks: []*compute.AttachedDisk{{
 			AutoDelete: true,
@@ -198,8 +209,6 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		},
 	}
 
-	call := client.Instances.Insert(projectID, m.desired.Zone, instance).RequestId(id)
-
 	monitor := m.monitor.WithFields(map[string]interface{}{
 		"name":    name,
 		"pool":    poolName,
@@ -207,23 +216,78 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		"zone":    m.desired.Zone,
 	})
 
-	compOp := &compute.Operation{}
-	for compOp.Progress < 100 {
-		monitor.Info("Creating machine")
-		time.Sleep(time.Second)
-		compOp, err = call.Do()
-		if err != nil {
-			return nil, err
-		}
+	if err := operate(
+		func() { monitor.Info("Creating machine") },
+		client.Instances.Insert(projectID, m.desired.Zone, instance).RequestId(id).Do,
+	); err != nil {
+		return nil, err
 	}
 
-	if m.cache.instances != nil {
-		if _, ok := m.cache.instances[poolName]; !ok {
-			m.cache.instances[poolName] = make([]*compute.Instance, 0)
+	newInstance, err := client.Instances.Get(projectID, m.desired.Zone, instance.Name).
+		Fields("networkInterfaces(accessConfigs(natIP))").
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	infraMachine := newMachine(
+		m.monitor,
+		instance.Name,
+		newInstance.NetworkInterfaces[0].AccessConfigs[0].NatIP,
+		poolName,
+		m.removeMachineFunc(
+			poolName,
+			instance.Name,
+		),
+	)
+
+	if m.cache.machines != nil {
+		if _, ok := m.cache.machines[poolName]; !ok {
+			m.cache.machines[poolName] = make([]*machine, 0)
 		}
-		m.cache.instances[poolName] = append(m.cache.instances[poolName], instance)
+		m.cache.machines[poolName] = append(m.cache.machines[poolName], infraMachine)
 	}
 
 	monitor.Info("Machine created")
-	return nil, nil
+	return infraMachine, nil
+}
+
+func operate(before func(), call func(...googleapi.CallOption) (*compute.Operation, error)) error {
+	before()
+	op, err := call()
+	if err != nil {
+		return err
+	}
+
+	if op.Progress < 100 {
+		time.Sleep(time.Second)
+		return operate(before, call)
+	}
+	return nil
+}
+
+func (m *machinesService) removeMachineFunc(pool, id string) func() error {
+	return func() error {
+
+		client, projectID, err := m.context()
+		if err != nil {
+			return err
+		}
+
+		if err := operate(
+			func() { m.monitor.Info("Deleting machine") },
+			client.Instances.Delete(projectID, m.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
+		); err != nil {
+			return err
+		}
+		cleanMachines := make([]*machine, 0)
+		for _, cachedMachine := range m.cache.machines[pool] {
+			if cachedMachine.id != id {
+				cleanMachines = append(cleanMachines, cachedMachine)
+			}
+		}
+		m.cache.machines[pool] = cleanMachines
+		return nil
+
+	}
 }

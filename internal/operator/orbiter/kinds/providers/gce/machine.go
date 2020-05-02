@@ -10,24 +10,26 @@ var _ infra.Machine = (*machine)(nil)
 
 type machine struct {
 	mntr.Monitor
-	id     *string
+	id     string
 	ip     string
+	pool   string
 	remove func() error
 	*ssh.Machine
 }
 
-func newMachine(monitor mntr.Monitor, id *string, IP string, remove func() error) *machine {
+func newMachine(monitor mntr.Monitor, id, ip, pool string, remove func() error) *machine {
 	return &machine{
 		Monitor: monitor,
 		id:      id,
-		ip:      IP,
+		ip:      ip,
+		pool:    pool,
 		remove:  remove,
-		Machine: ssh.NewMachine(monitor, IP, "orbiter"),
+		Machine: ssh.NewMachine(monitor, ip, "orbiter"),
 	}
 }
 
 func (c *machine) ID() string {
-	return *c.id
+	return c.id
 }
 
 func (c *machine) IP() string {
