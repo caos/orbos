@@ -2,6 +2,7 @@ name: Release
 on: push
 jobs:
   release-orbiter:
+    name: Orbiter
     runs-on: ubuntu-18.04
     steps:
     - name: Source checkout
@@ -100,6 +101,7 @@ jobs:
         asset_name: orbctl Windows x86_64
         asset_content_type: application/octet-stream
   release-boom:
+    name: Boom
     runs-on: ubuntu-18.04
     steps:
       - name: Source checkout
