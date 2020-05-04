@@ -29,7 +29,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
-	k8s.io/client-go v0.17.0
+	k8s.io/client-go v0.18.2
 	k8s.io/code-generator v0.17.3 // indirect
 	k8s.io/kubectl v0.17.0
 )
