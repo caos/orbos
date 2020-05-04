@@ -12,7 +12,7 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
 	github.com/manifoldco/promptui v0.7.0
-	github.com/mitchellh/mapstructure v1.1.2
+	github.com/mitchellh/mapstructure v1.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
 	github.com/robfig/cron v1.2.0
