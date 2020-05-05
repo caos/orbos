@@ -5,7 +5,7 @@ go 1.14
 require (
 	github.com/AppsFlyer/go-sundheit v0.1.1
 	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
-	github.com/aws/aws-sdk-go v1.29.15
+	github.com/aws/aws-sdk-go v1.30.20
 	github.com/caos/oidc v0.6.0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/golang/protobuf v1.3.4
