@@ -5,7 +5,9 @@ import (
 	dynamiclbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbiter/internal/push"
+	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -16,6 +18,7 @@ import (
 func query(
 	desired *Spec,
 	current *Current,
+	monitor mntr.Monitor,
 
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	lb interface{},
@@ -57,5 +60,16 @@ func query(
 		}
 	}
 
-	return func(_ push.Func) error { return nil }, addPools(current, desired, service)
+	return func(psf push.Func) error {
+		if desired.SSHKey != nil && desired.SSHKey.Private != nil && desired.SSHKey.Private.Value != "" && desired.SSHKey.Public != nil && desired.SSHKey.Public.Value != "" {
+			return nil
+		}
+		private, public, err := ssh.Generate()
+		if err != nil {
+			return err
+		}
+		desired.SSHKey.Private.Value = private
+		desired.SSHKey.Public.Value = public
+		return psf(monitor.WithField("secret", "sshkey"))
+	}, addPools(current, desired, service)
 }
