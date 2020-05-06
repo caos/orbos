@@ -62,7 +62,7 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			logger.Info("Not touching Orb")
 			return nil
 		}
-
+		finishedChan := make(chan bool)
 		return orbiter.Destroy(
 			logger,
 			gitClient,
@@ -70,7 +70,9 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 				orbFile,
 				gitCommit,
 				true,
-				false))
+				false),
+			finishedChan,
+		)
 	}
 	return cmd
 }

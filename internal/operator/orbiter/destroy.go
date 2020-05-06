@@ -9,7 +9,7 @@ import (
 
 type DestroyFunc func() error
 
-func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error {
+func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan bool) error {
 
 	trees, err := parse(gitClient, "orbiter.yml")
 	if err != nil {
@@ -19,7 +19,7 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error
 	treeDesired := trees[0]
 	treeCurrent := &tree.Tree{}
 
-	_, destroy, _, err := adapt(monitor, treeDesired, treeCurrent)
+	_, destroy, _, err := adapt(monitor, finishedChan, treeDesired, treeCurrent)
 	if err != nil {
 		return err
 	}

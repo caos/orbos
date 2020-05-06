@@ -41,6 +41,7 @@ COPY --from=dependencies /gen /
 COPY dashboards /dashboards
 
 RUN /gen
+RUN rm /gen
 
 # ####################################################################################################
 # Build debug binary

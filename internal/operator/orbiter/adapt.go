@@ -7,7 +7,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, bool, error)
+type AdaptFunc func(monitor mntr.Monitor, finishedChan chan bool, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, bool, error)
 
 func parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err error) {
 

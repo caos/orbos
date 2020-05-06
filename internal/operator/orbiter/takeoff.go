@@ -28,7 +28,7 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc, finishedChan chan bool) func() {
 
 	go func() {
 		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
@@ -84,7 +84,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			})
 		}, monitor.OnChange)
 
-		query, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
+		query, _, migrate, err := adapt(monitor, finishedChan, treeDesired, treeCurrent)
 		if err != nil {
 			monitor.Error(err)
 			return

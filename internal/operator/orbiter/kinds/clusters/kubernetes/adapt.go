@@ -3,8 +3,6 @@ package kubernetes
 import (
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/tree"
-	"os"
-
 	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
@@ -21,11 +19,12 @@ func AdaptFunc(
 	orbiterCommit string,
 	id string,
 	oneoff bool,
-	deployOrbiterAndBoom bool,
+	deployOrbiter bool,
 	destroyProviders func() (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+		finished := false
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -67,8 +66,19 @@ func AdaptFunc(
 		}
 		k8sClient := NewK8sClient(monitor, kc)
 
-		if k8sClient.Available() && deployOrbiterAndBoom {
-			if err := ensureArtifacts(monitor, k8sClient, orb, desiredKind.Spec.Versions.Orbiter, desiredKind.Spec.Versions.Boom); err != nil {
+		if k8sClient.Available() && deployOrbiter {
+			if err := EnsureCommonArtifacts(monitor, k8sClient, orb); err != nil {
+				deployErrors++
+				monitor.WithFields(map[string]interface{}{
+					"count": deployErrors,
+					"error": err.Error(),
+				}).Info("Applying Common failed, awaiting next iteration")
+			}
+			if deployErrors > 50 {
+				panic(err)
+			}
+
+			if err := EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
@@ -80,7 +90,7 @@ func AdaptFunc(
 			} else {
 				if oneoff {
 					monitor.Info("Deployed Orbiter takes over control")
-					os.Exit(0)
+					finished = true
 				}
 				deployErrors = 0
 			}
@@ -94,6 +104,8 @@ func AdaptFunc(
 			},
 			Current: current,
 		}
+
+		finishedChan <- finished
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
 				ensureFunc, err := query(monitor,
