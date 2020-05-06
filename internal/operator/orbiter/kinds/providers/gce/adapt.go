@@ -59,7 +59,7 @@ func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListF
 				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
 					return nil, err
 				}
-				return query(&desiredKind.Spec, current, nodeAgentsDesired, lbCurrent.Parsed, NewMachinesService(monitor, &desiredKind.Spec, providerID, orbID))
+				return query(&desiredKind.Spec, current, monitor, nodeAgentsDesired, lbCurrent.Parsed, NewMachinesService(monitor, &desiredKind.Spec, providerID, orbID))
 			}, func() error {
 				return destroy(NewMachinesService(monitor, &desiredKind.Spec, providerID, orbID))
 			}, migrate, nil
