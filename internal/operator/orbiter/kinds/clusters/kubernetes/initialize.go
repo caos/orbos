@@ -98,7 +98,7 @@ func initialize(
 		node, imErr := k8s.GetNode(machine.ID())
 
 		// Retry if kubeapi returns other error than "NotFound"
-		for node == nil && k8s.Available() && !macherrs.IsNotFound(imErr) {
+		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(imErr) {
 			monitor.WithFields(map[string]interface{}{
 				"node":  machine.ID(),
 				"error": imErr.Error(),
