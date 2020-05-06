@@ -6,9 +6,9 @@ import (
 	"github.com/caos/orbiter/internal/tree"
 )
 
-func addPools(current *Current, desired *Desired, machinesSvc core.MachinesService) error {
+func addPools(current *Current, desired *Spec, machinesSvc core.MachinesService) error {
 	current.Current.pools = make(map[string]infra.Pool)
-	for pool := range desired.Spec.Pools {
+	for pool := range desired.Pools {
 		current.Current.pools[pool] = core.NewPool(pool, nil, machinesSvc)
 	}
 

@@ -28,6 +28,8 @@ func SecretsFunc(masterkey string) secret.Func {
 
 func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
 	return map[string]*secret.Secret{
-		"jsonkey": desiredKind.Spec.JSONKey,
+		"jsonkey":       desiredKind.Spec.JSONKey,
+		"sshkey.pivate": desiredKind.Spec.SSHKey.Private,
+		"sshkey.public": desiredKind.Spec.SSHKey.Public,
 	}
 }

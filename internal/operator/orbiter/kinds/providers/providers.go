@@ -1,7 +1,10 @@
 package providers
 
 import (
+	"strings"
+
 	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbiter/internal/orb"
 	"github.com/caos/orbiter/internal/secret"
@@ -23,40 +26,33 @@ func GetQueryAndDestroyFuncs(
 	bool,
 	error,
 ) {
-	switch providerTree.Common.Kind {
-	//			case "orbiter.caos.ch/GCEProvider":
-	//				var lbs map[string]*infra.Ingress
-	//
-	//				if !kind.Spec.Destroyed && kind.Spec.ControlPlane.Provider == depID {
-	//					lbs = map[string]*infra.Ingress{
-	//						"kubeapi": &infra.Ingress{
-	//							Pools:            []string{kind.Spec.ControlPlane.Pool},
-	//							HealthChecksPath: "/healthz",
-	//						},
-	//					}
-	//				}
-	//				subassemblers[provIdx] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providermonitor, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
-	case "orbiter.caos.ch/StaticProvider":
-		//				updatesDisabled := make([]string, 0)
-		//				for _, pool := range desiredKind.Spec.Workers {
-		//					if pool.UpdatesDisabled {
-		//						updatesDisabled = append(updatesDisabled, pool.Pool)
-		//					}
-		//				}
-		//
-		//				if desiredKind.Spec.ControlPlane.UpdatesDisabled {
-		//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
-		//				}
 
+	monitor = monitor.WithFields(map[string]interface{}{"provider": provID})
+
+	wlFunc := func() []*orbiter.CIDR {
+		monitor.Debug("Reading whitelist")
+		return <-whitelistChan
+	}
+
+	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.AdaptFunc(
+			orb.Masterkey,
+			provID,
+			strings.TrimSuffix(strings.TrimPrefix(orb.URL, "git@"), ".git"),
+			wlFunc,
+		)(
+			monitor,
+			providerTree,
+			providerCurrent,
+		)
+	case "orbiter.caos.ch/StaticProvider":
 		return static.AdaptFunc(
 			orb.Masterkey,
 			provID,
-			func() []*orbiter.CIDR {
-				monitor.Debug("Reading whitelist")
-				return <-whitelistChan
-			},
+			wlFunc,
 		)(
-			monitor.WithFields(map[string]interface{}{"provider": provID}),
+			monitor,
 			providerTree,
 			providerCurrent)
 	default:
@@ -74,6 +70,13 @@ func GetSecrets(
 	error,
 ) {
 	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.SecretsFunc(
+			masterkey,
+		)(
+			monitor,
+			providerTree,
+		)
 	case "orbiter.caos.ch/StaticProvider":
 		return static.SecretsFunc(
 			masterkey,

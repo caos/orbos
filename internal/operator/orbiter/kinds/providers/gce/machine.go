@@ -24,7 +24,7 @@ func newMachine(monitor mntr.Monitor, id, ip, pool string, remove func() error) 
 		ip:      ip,
 		pool:    pool,
 		remove:  remove,
-		Machine: ssh.NewMachine(monitor, ip, "orbiter"),
+		Machine: ssh.NewMachine(monitor, "orbiter", ip),
 	}
 }
 
