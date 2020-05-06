@@ -3,12 +3,14 @@ package kubernetes
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/mntr"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type initializedPool struct {
@@ -93,7 +95,17 @@ func initialize(
 
 	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
 
-		node, getNodeErr := k8s.GetNode(machine.ID())
+		node, imErr := k8s.GetNode(machine.ID())
+
+		// Retry if kubeapi returns other error than "NotFound"
+		for node == nil && k8s.Available() && !macherrs.IsNotFound(imErr) {
+			monitor.WithFields(map[string]interface{}{
+				"node":  machine.ID(),
+				"error": imErr.Error(),
+			}).Info("Could not determine node state")
+			time.Sleep(5 * time.Second)
+			node, imErr = k8s.GetNode(machine.ID())
+		}
 
 		current := &Machine{
 			Metadata: MachineMetadata{
@@ -104,7 +116,7 @@ func initialize(
 		}
 
 		reconcile := func() error { return nil }
-		if getNodeErr == nil {
+		if node != nil {
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s)
 			current.Joined = true
 			if !node.Spec.Unschedulable {
