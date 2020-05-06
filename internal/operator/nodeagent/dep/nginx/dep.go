@@ -118,7 +118,7 @@ module_hotfixes=true`), 0600); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile("/etc/sysctl.d/01-keepalived.conf", []byte(`net.ipv4.ip_forward = 1
+	if err := ioutil.WriteFile("/etc/sysctl.d/21-nginx.conf", []byte(`net.ipv4.ip_forward = 1
 net.ipv4.ip_nonlocal_bind = 1
 `), os.ModePerm); err != nil {
 		return err
