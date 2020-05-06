@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/caos/orbiter/internal/operator/orbiter"
@@ -12,6 +13,8 @@ import (
 	"github.com/caos/orbiter/mntr"
 	"github.com/pkg/errors"
 )
+
+var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -39,7 +42,7 @@ func GetQueryAndDestroyFuncs(
 		return gce.AdaptFunc(
 			orb.Masterkey,
 			provID,
-			strings.TrimSuffix(strings.TrimPrefix(orb.URL, "git@"), ".git"),
+			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(orb.URL, "git@"), ".git"), "-"),
 			wlFunc,
 		)(
 			monitor,
