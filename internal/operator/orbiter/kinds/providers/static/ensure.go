@@ -38,7 +38,7 @@ func query(
 		return nil, err
 	}
 
-	current.Current.Ingresses = make(map[string]infra.Address)
+	current.Current.Ingresses = make(map[string]*infra.Address)
 	var desireLb func(pool string) error
 	switch lbCurrent := lb.(type) {
 	case *dynamiclbmodel.Current:

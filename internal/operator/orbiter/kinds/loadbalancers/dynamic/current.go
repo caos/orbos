@@ -11,7 +11,7 @@ type Current struct {
 	Common  *tree.Common `yaml:",inline"`
 	Current struct {
 		SourcePools map[string][]string
-		Addresses   map[string]infra.Address
+		Addresses   map[string]*infra.Address
 		Desire      func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error
 	} `yaml:"-"`
 }

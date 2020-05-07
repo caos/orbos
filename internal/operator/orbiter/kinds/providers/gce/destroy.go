@@ -4,7 +4,7 @@ import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 )
 
-func destroy(machinesService core.MachinesService) error {
+func destroy(machinesService core.MachinesService, addressesSvc *addressesSvc, desired *Spec) error {
 	pools, err := machinesService.ListPools()
 	if err != nil {
 		return err
@@ -20,5 +20,9 @@ func destroy(machinesService core.MachinesService) error {
 			}
 		}
 	}
+	if _, err := addressesSvc.ensure(nil); err != nil {
+		return err
+	}
+	desired.SSHKey = nil
 	return nil
 }

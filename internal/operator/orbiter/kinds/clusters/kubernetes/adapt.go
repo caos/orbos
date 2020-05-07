@@ -1,9 +1,10 @@
 package kubernetes
 
 import (
+	"os"
+
 	"github.com/caos/orbiter/internal/orb"
 	"github.com/caos/orbiter/internal/tree"
-	"os"
 
 	core "k8s.io/api/core/v1"
 
@@ -120,7 +121,7 @@ func AdaptFunc(
 
 				desiredKind.Spec.Kubeconfig = nil
 
-				return destroy(monitor, providers, k8sClient)
+				return destroy(providers, k8sClient)
 			}, migrate, nil
 	}
 }

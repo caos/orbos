@@ -78,9 +78,9 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 	}
 	errBuf.Reset()
 
-	file, err := os.Create("/etc/sysctl.d/k8s.conf")
+	file, err := os.Create("/etc/sysctl.d/22-k8s.conf")
 	if err != nil {
-		return errors.Wrap(err, "opening /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
+		return errors.Wrap(err, "opening /etc/sysctl.d/22-k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
 	}
 	defer file.Close()
 
@@ -88,7 +88,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 net.bridge.bridge-nf-call-iptables = 1
 		`)))
 	if err != nil {
-		return errors.Wrap(err, "writing to /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
+		return errors.Wrap(err, "writing to /etc/sysctl.d/22-k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
 	}
 	file.Close()
 

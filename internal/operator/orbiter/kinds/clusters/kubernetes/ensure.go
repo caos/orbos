@@ -10,7 +10,7 @@ func ensure(
 	monitor mntr.Monitor,
 	desired *DesiredV0,
 	curr *CurrentCluster,
-	kubeAPIAddress infra.Address,
+	kubeAPIAddress *infra.Address,
 	psf push.Func,
 	k8sClient *Client,
 	oneoff bool,

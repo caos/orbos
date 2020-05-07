@@ -46,7 +46,7 @@ func (d *Desired) Validate() error {
 			if err := vip.validate(); err != nil {
 				return errors.Wrapf(err, "configuring vip for pool %s failed", pool)
 			}
-			ips = append(ips, vip.IP)
+			ips = append(ips, *vip.IP)
 		}
 	}
 
@@ -58,14 +58,11 @@ func (d *Desired) Validate() error {
 }
 
 type VIP struct {
-	IP        string
+	IP        *string
 	Transport []*Source
 }
 
 func (v *VIP) validate() error {
-	if v.IP == "" {
-		return errors.New("no virtual IP configured")
-	}
 
 	if len(v.Transport) == 0 {
 		return errors.Errorf("vip %s has no transport configured", v.IP)

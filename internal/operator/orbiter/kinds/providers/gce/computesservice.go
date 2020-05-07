@@ -2,18 +2,14 @@ package gce
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
+	"strings"
 
-	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 
-	"github.com/pkg/errors"
-
 	uuid "github.com/satori/go.uuid"
-	"google.golang.org/api/option"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbiter/mntr"
@@ -23,34 +19,46 @@ import (
 var _ core.MachinesService = (*machinesService)(nil)
 
 type machinesService struct {
-	monitor    mntr.Monitor
-	desired    *Spec
-	providerID string
-	orbID      string
-	cache      struct {
-		client    *compute.Service
-		projectID string
-		machines  map[string][]*machine
+	monitor      mntr.Monitor
+	desired      *Spec
+	providerID   string
+	orbID        string
+	projectID    string
+	clientOption option.ClientOption
+	cache        struct {
+		client   *compute.Service
+		machines map[string][]*machine
 	}
-	//	cache      map[string]cachedMachines
 }
 
-func NewMachinesService(
+func newMachinesService(
 	monitor mntr.Monitor,
 	desired *Spec,
+	orbID string,
 	providerID string,
-	orbID string) *machinesService {
+	projectID string,
+	clientOptions option.ClientOption,
+) *machinesService {
 	return &machinesService{
-		monitor:    monitor,
-		desired:    desired,
-		providerID: providerID,
-		orbID:      orbID,
+		monitor:      monitor,
+		desired:      desired,
+		providerID:   providerID,
+		orbID:        orbID,
+		projectID:    projectID,
+		clientOption: clientOptions,
 	}
+}
+
+func (m *machinesService) client() (client *compute.Service, err error) {
+	if m.cache.client == nil {
+		m.cache.client, err = compute.NewService(context.TODO(), m.clientOption)
+	}
+	return m.cache.client, err
 }
 
 func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
-	client, projectID, err := m.context()
+	client, err := m.client()
 	if err != nil {
 		return nil, err
 	}
@@ -116,20 +124,19 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	monitor := m.monitor.WithFields(map[string]interface{}{
-		"name":    name,
-		"pool":    poolName,
-		"project": projectID,
-		"zone":    m.desired.Zone,
+		"name": name,
+		"pool": poolName,
+		"zone": m.desired.Zone,
 	})
 
 	if err := operate(
 		func() { monitor.Info("Creating machine") },
-		client.Instances.Insert(projectID, m.desired.Zone, instance).RequestId(id).Do,
+		client.Instances.Insert(m.projectID, m.desired.Zone, instance).RequestId(id).Do,
 	); err != nil {
 		return nil, err
 	}
 
-	newInstance, err := client.Instances.Get(projectID, m.desired.Zone, instance.Name).
+	newInstance, err := client.Instances.Get(m.projectID, m.desired.Zone, instance.Name).
 		Fields("networkInterfaces(accessConfigs(natIP))").
 		Do()
 	if err != nil {
@@ -158,8 +165,22 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		m.cache.machines[poolName] = append(m.cache.machines[poolName], infraMachine)
 	}
 
+	if err := configureGcloud(infraMachine, m.desired.JSONKey.Value); err != nil {
+		return nil, err
+	}
+
 	monitor.Info("Machine created")
 	return infraMachine, nil
+}
+
+func configureGcloud(machine infra.Machine, jsonKey string) error {
+	path := "/etc/orbiter/gce.json"
+	if err := machine.WriteFile(path, strings.NewReader(jsonKey), 400); err != nil {
+		return err
+	}
+
+	_, err := machine.Execute(nil, nil, fmt.Sprintf("gcloud auth activate-service-account --key-file %s", path))
+	return err
 }
 
 func (m *machinesService) ListPools() ([]string, error) {
@@ -191,61 +212,18 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 	return machines, nil
 }
 
-func operate(before func(), call func(...googleapi.CallOption) (*compute.Operation, error)) error {
-	before()
-	op, err := call()
-	if err != nil {
-		return err
-	}
-
-	if op.Progress < 100 {
-		time.Sleep(time.Second)
-		return operate(before, call)
-	}
-	return nil
-}
-
-func (m *machinesService) context() (*compute.Service, string, error) {
-
-	client, err := m.client()
-	if err != nil {
-		return nil, "", err
-	}
-
-	projectID, err := m.projectID()
-	return client, projectID, err
-}
-
-func (m *machinesService) client() (_ *compute.Service, err error) {
-	if m.cache.client == nil {
-		m.cache.client, err = compute.NewService(context.TODO(), option.WithCredentialsJSON([]byte(m.desired.JSONKey.Value)))
-	}
-	return m.cache.client, err
-}
-
-func (m *machinesService) projectID() (_ string, err error) {
-	if m.cache.projectID == "" {
-		jsonKey := struct {
-			ProjectID string `json:"project_id"`
-		}{}
-		err = errors.Wrap(json.Unmarshal([]byte(m.desired.JSONKey.Value), &jsonKey), "extracting project id from jsonkey failed")
-		m.cache.projectID = jsonKey.ProjectID
-	}
-	return m.cache.projectID, err
-}
-
 func (m *machinesService) machines() (map[string][]*machine, error) {
 	if m.cache.machines != nil {
 		return m.cache.machines, nil
 	}
 
-	client, projectID, err := m.context()
+	client, err := m.client()
 	if err != nil {
 		return nil, err
 	}
 
 	instances, err := client.Instances.
-		List(projectID, m.desired.Zone).
+		List(m.projectID, m.desired.Zone).
 		Filter(fmt.Sprintf("labels.orb:%s AND labels.provider:%s", m.orbID, m.providerID)).
 		Fields("items(name,labels,networkInterfaces(accessConfigs(natIP)))").
 		Do()
@@ -278,16 +256,20 @@ func (m *machinesService) machines() (map[string][]*machine, error) {
 }
 
 func (m *machinesService) removeMachineFunc(pool, id string) func() error {
+	monitor := m.monitor.WithFields(map[string]interface{}{
+		"pool":    pool,
+		"machine": id,
+	})
 	return func() error {
 
-		client, projectID, err := m.context()
+		client, err := m.client()
 		if err != nil {
 			return err
 		}
 
 		if err := operate(
-			func() { m.monitor.Info("Deleting machine") },
-			client.Instances.Delete(projectID, m.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
+			func() { monitor.Info("Deleting machine") },
+			client.Instances.Delete(m.projectID, m.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
 		); err != nil {
 			return err
 		}
@@ -297,6 +279,9 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 				cleanMachines = append(cleanMachines, cachedMachine)
 			}
 		}
+
+		monitor.Info("Machine deleted")
+
 		m.cache.machines[pool] = cleanMachines
 		return nil
 

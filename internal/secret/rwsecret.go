@@ -3,11 +3,12 @@ package secret
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/caos/orbiter/internal/push"
 	"github.com/caos/orbiter/internal/tree"
 	"gopkg.in/yaml.v3"
-	"sort"
-	"strings"
 
 	"github.com/manifoldco/promptui"
 
@@ -90,7 +91,7 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 
 	secret.Value = value
 
-	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, "yml"}, "."))(monitor)
+	return push.RewriteDesiredFunc(gitClient, tree, strings.Join([]string{operator, "yml"}, "."))(monitor)
 }
 
 func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Secret {

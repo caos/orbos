@@ -26,7 +26,7 @@ func query(
 	current.Machines = make(map[string]*Machine)
 
 	cloudPools := make(map[string]map[string]infra.Pool)
-	var kubeAPIAddress infra.Address
+	var kubeAPIAddress *infra.Address
 
 	for providerName, provider := range providerCurrents {
 		if cloudPools[providerName] == nil {

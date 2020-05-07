@@ -17,7 +17,7 @@ func join(
 	joining *initializedMachine,
 	joinAt infra.Machine,
 	desired DesiredV0,
-	kubeAPI infra.Address,
+	kubeAPI *infra.Address,
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
 	certKey string) (*string, error) {

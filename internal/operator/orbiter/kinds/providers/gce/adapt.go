@@ -1,10 +1,13 @@
 package gce
 
 import (
+	"encoding/json"
+
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
+	"google.golang.org/api/option"
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/orbiter"
@@ -59,9 +62,62 @@ func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListF
 				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
 					return nil, err
 				}
-				return query(&desiredKind.Spec, current, monitor, nodeAgentsDesired, lbCurrent.Parsed, NewMachinesService(monitor, &desiredKind.Spec, providerID, orbID))
+
+				machinesSvc, addressesSvc, err := services(monitor, &desiredKind.Spec, orbID, providerID)
+				if err != nil {
+					return nil, err
+				}
+
+				return query(
+					&desiredKind.Spec,
+					current,
+					monitor,
+					nodeAgentsDesired,
+					lbCurrent.Parsed,
+					machinesSvc,
+					addressesSvc,
+				)
 			}, func() error {
-				return destroy(NewMachinesService(monitor, &desiredKind.Spec, providerID, orbID))
+				machinesSvc, addressesSvc, err := services(monitor, &desiredKind.Spec, orbID, providerID)
+				if err != nil {
+					return err
+				}
+
+				return destroy(
+					machinesSvc,
+					addressesSvc,
+					&desiredKind.Spec,
+				)
 			}, migrate, nil
 	}
+}
+
+func services(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*machinesService, *addressesSvc, error) {
+
+	jsonKey := []byte(desired.JSONKey.Value)
+	credsOption := option.WithCredentialsJSON(jsonKey)
+	key := struct {
+		ProjectID string `json:"project_id"`
+	}{}
+	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
+		return nil, nil, err
+	}
+
+	monitor = monitor.WithField("projectID", key.ProjectID)
+
+	return newMachinesService(
+			monitor,
+			desired,
+			orbID,
+			providerID,
+			key.ProjectID,
+			credsOption,
+		), newAdressesService(
+			monitor,
+			orbID,
+			providerID,
+			key.ProjectID,
+			desired.Region,
+			credsOption,
+		), nil
 }

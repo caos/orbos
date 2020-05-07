@@ -1,9 +1,10 @@
 package orbiter
 
 import (
+	_ "net/http/pprof"
+
 	"github.com/caos/orbiter/internal/push"
 	"github.com/caos/orbiter/internal/tree"
-	_ "net/http/pprof"
 
 	"fmt"
 	"net/http"
@@ -140,7 +141,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		events = make([]*event, 0)
-		if err := ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
+		if err := ensure(push.RewriteDesiredFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
 			handleAdapterError(err)
 			return
 		}

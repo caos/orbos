@@ -86,11 +86,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			wl := whitelist()
 
 			sourcePools := make(map[string][]string)
-			addresses := make(map[string]infra.Address)
+			addresses := make(map[string]*infra.Address)
 			for _, pool := range desiredKind.Spec {
 				for _, vip := range pool {
 					for _, src := range vip.Transport {
-						addresses[src.Name] = infra.Address{
+						addresses[src.Name] = &infra.Address{
 							Location: vip.IP,
 							Port:     uint16(src.SourcePort),
 						}
@@ -315,7 +315,7 @@ http {
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
-							probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
+							probe("VIP", *vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
 							for _, dest := range transport.Destinations {
 								destMachines, err := svc.List(dest.Pool)
 								if err != nil {

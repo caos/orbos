@@ -28,7 +28,7 @@ type Current struct {
 	Common  *tree.Common `yaml:",inline"`
 	Current struct {
 		pools      map[string]infra.Pool `yaml:"-"`
-		Ingresses  map[string]infra.Address
+		Ingresses  map[string]*infra.Address
 		cleanupped <-chan error `yaml:"-"`
 	}
 }
@@ -36,7 +36,7 @@ type Current struct {
 func (c *Current) Pools() map[string]infra.Pool {
 	return c.Current.pools
 }
-func (c *Current) Ingresses() map[string]infra.Address {
+func (c *Current) Ingresses() map[string]*infra.Address {
 	return c.Current.Ingresses
 }
 func (c *Current) Cleanupped() <-chan error {

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbiter/internal/push"
 
 	"github.com/pkg/errors"
@@ -17,7 +18,7 @@ func ensureScale(
 	psf push.Func,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
-	kubeAPI infra.Address,
+	kubeAPI *infra.Address,
 	k8sVersion KubernetesVersion,
 	k8sClient *Client,
 	oneoff bool,

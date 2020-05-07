@@ -23,21 +23,25 @@ func query(
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	lb interface{},
 
-	service core.MachinesService,
+	machinesSvc core.MachinesService,
+	addressesSvc *addressesSvc,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
-	current.Current.Ingresses = make(map[string]infra.Address)
+	current.Current.Ingresses = make(map[string]*infra.Address)
 	var desireLb func(pool string) error
+
+	var addresses map[string]*infra.Address
+
 	switch lbCurrent := lb.(type) {
 	case *dynamiclbmodel.Current:
-
+		addresses = lbCurrent.Current.Addresses
 		desireLb = func(pool string) error {
-			return lbCurrent.Current.Desire(pool, service, nodeAgentsDesired, "")
+			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, "")
 		}
 		for name, address := range lbCurrent.Current.Addresses {
 			current.Current.Ingresses[name] = address
 		}
-		service = wrap.MachinesService(service, *lbCurrent, nodeAgentsDesired, "")
+		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, "")
 		//	case *externallbmodel.Current:
 		//		for name, address := range lbCurrent.Current.Addresses {
 		//			current.Current.Ingresses[name] = address
@@ -46,21 +50,18 @@ func query(
 		return nil, errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
-	pools, err := service.ListPools()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, pool := range pools {
-		if err := desireLb(pool); err != nil {
-			return nil, err
-		}
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	return func(psf push.Func) error {
+		changed, err := addressesSvc.ensure(addresses)
+		if err != nil {
+			return err
+		}
+
+		if changed {
+			if err := psf(monitor.WithField("ips", addresses)); err != nil {
+				return err
+			}
+		}
+
 		if desired.SSHKey != nil && desired.SSHKey.Private != nil && desired.SSHKey.Private.Value != "" && desired.SSHKey.Public != nil && desired.SSHKey.Public.Value != "" {
 			return nil
 		}
@@ -70,6 +71,32 @@ func query(
 		}
 		desired.SSHKey.Private.Value = private
 		desired.SSHKey.Public.Value = public
-		return psf(monitor.WithField("secret", "sshkey"))
-	}, addPools(current, desired, service)
+		if err := psf(monitor.WithField("secret", "sshkey")); err != nil {
+			return err
+		}
+
+		pools, err := machinesSvc.ListPools()
+		if err != nil {
+			return err
+		}
+
+		for _, pool := range pools {
+			if err := desireLb(pool); err != nil {
+				return err
+			}
+			if err != nil {
+				return err
+			}
+			machines, err := machinesSvc.List(pool)
+			if err != nil {
+				return err
+			}
+			for _, machine := range machines {
+				if err := configureGcloud(machine, desired.JSONKey.Value); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}, addPools(current, desired, machinesSvc)
 }
