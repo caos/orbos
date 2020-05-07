@@ -5,9 +5,9 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/model"
 )
 
 func init() {

@@ -1,16 +1,17 @@
 package main
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/secret"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
-func writeSecretCommand(rv rootValues) *cobra.Command {
+func WriteSecretCommand(rv RootValues) *cobra.Command {
 
 	var (
 		value string
@@ -49,14 +50,19 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			path = args[0]
 		}
 
-		if err := orbiter.WriteSecret(
+		secretFunc := func(operator string) secret.Func {
+			if operator == "boom" {
+				return api.SecretFunc(orbconfig)
+			} else if operator == "orbiter" {
+				return orb.SecretsFunc(orbconfig)
+			}
+			return nil
+		}
+
+		if err := secret.Write(
 			logger,
 			gitClient,
-			orb.AdaptFunc(
-				orbconfig,
-				gitCommit,
-				false,
-				false),
+			secretFunc,
 			path,
 			s); err != nil {
 			panic(err)

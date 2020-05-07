@@ -3,7 +3,7 @@ package core
 import (
 	"fmt"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 func Validate(lbs map[string]*infra.Ingress, pools []string) error {

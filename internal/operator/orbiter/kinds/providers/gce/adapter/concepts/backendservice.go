@@ -3,11 +3,11 @@ package concepts
 import (
 	"strconv"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/backendservice"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/firewallrule"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/healthcheck"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/instancegroup"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/backendservice"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/firewallrule"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/healthcheck"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/instancegroup"
 )
 
 type Services struct {

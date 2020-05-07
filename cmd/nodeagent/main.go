@@ -9,16 +9,16 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/operator"
-	"github.com/caos/orbiter/internal/watcher/cron"
-	"github.com/caos/orbiter/internal/watcher/immediate"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/operator"
+	"github.com/caos/orbos/internal/watcher/cron"
+	"github.com/caos/orbos/internal/watcher/immediate"
+	"github.com/caos/orbos/mntr"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/conv"
-	"github.com/caos/orbiter/internal/operator/nodeagent/firewall"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/conv"
+	"github.com/caos/orbos/internal/operator/nodeagent/firewall"
 )
 
 var gitCommit string

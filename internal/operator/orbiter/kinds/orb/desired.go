@@ -1,17 +1,28 @@
 package orb
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 )
 
 type DesiredV0 struct {
-	Common *orbiter.Common `yaml:",inline"`
+	Common *tree.Common `yaml:",inline"`
 	Spec   struct {
 		Verbose bool
 	}
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
+	Clusters  map[string]*tree.Tree
+	Providers map[string]*tree.Tree
+}
+
+func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{Common: desiredTree.Common}
+
+	if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+	desiredKind.Common.Version = "v0"
+
+	return desiredKind, nil
 }
 
 func (d *DesiredV0) validate() error {
@@ -33,16 +44,4 @@ func (d *DesiredV0) validate() error {
 		return errors.Errorf("Exactly one cluster of kind %s must be configured, but got %d", k8sKind, k8s)
 	}
 	return nil
-}
-
-type SecretsV0 struct {
-	Common    *orbiter.Common `yaml:",inline"`
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
-}
-
-type Current struct {
-	Common    *orbiter.Common `yaml:",inline"`
-	Clusters  map[string]*orbiter.Tree
-	Providers map[string]*orbiter.Tree
 }

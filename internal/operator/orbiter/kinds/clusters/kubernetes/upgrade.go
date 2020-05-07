@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 type initializedMachines []*initializedMachine

@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbos/internal/helpers"
 	"github.com/pkg/errors"
 )
 

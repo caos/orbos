@@ -3,20 +3,21 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"github.com/caos/orbos/internal/tree"
 	"sort"
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbos/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 )
 
 var probes = prometheus.NewGaugeVec(
@@ -34,7 +35,8 @@ func init() {
 type WhiteListFunc func() []*orbiter.CIDR
 
 func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -43,15 +45,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
 		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, migrate, err
 		}
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
-			Common: &orbiter.Common{
+			Common: &tree.Common{
 				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
 				Version: "v0",
 			},
@@ -343,7 +345,7 @@ http {
 				return nil
 			}
 			return nil, nil
-		}, nil, nil, migrate, nil
+		}, nil, migrate, nil
 	}
 }
 

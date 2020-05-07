@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 )
 
 type machinesService struct {

@@ -19,28 +19,46 @@ func deriveTuplePacked(v0 Bin, v1 *string, v2 error) func() (Bin, *string, error
 }
 
 // deriveCurryDebug returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryDebug(f func(debug bool, gitCommit string, version string, bin Bin) BuiltTuple) func(debug bool) func(gitCommit string, version string, bin Bin) BuiltTuple {
-	return func(debug bool) func(gitCommit string, version string, bin Bin) BuiltTuple {
-		return func(gitCommit string, version string, bin Bin) BuiltTuple {
-			return f(debug, gitCommit, version, bin)
+func deriveCurryDebug(f func(debug bool, gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(debug bool) func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+	return func(debug bool) func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+		return func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+			return f(debug, gitCommit, version, githubClientID, githubClientSecret, bin)
 		}
 	}
 }
 
 // deriveCurryCommit returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryCommit(f func(gitCommit string, version string, bin Bin) BuiltTuple) func(gitCommit string) func(version string, bin Bin) BuiltTuple {
-	return func(gitCommit string) func(version string, bin Bin) BuiltTuple {
-		return func(version string, bin Bin) BuiltTuple {
-			return f(gitCommit, version, bin)
+func deriveCurryCommit(f func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(gitCommit string) func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+	return func(gitCommit string) func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+		return func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+			return f(gitCommit, version, githubClientID, githubClientSecret, bin)
 		}
 	}
 }
 
 // deriveCurryTag returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryTag(f func(version string, bin Bin) BuiltTuple) func(version string) func(bin Bin) BuiltTuple {
-	return func(version string) func(bin Bin) BuiltTuple {
+func deriveCurryTag(f func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(version string) func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+	return func(version string) func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+		return func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+			return f(version, githubClientID, githubClientSecret, bin)
+		}
+	}
+}
+
+// deriveCurryGithubClientID returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
+func deriveCurryGithubClientID(f func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(githubClientID string) func(githubClientSecret string, bin Bin) BuiltTuple {
+	return func(githubClientID string) func(githubClientSecret string, bin Bin) BuiltTuple {
+		return func(githubClientSecret string, bin Bin) BuiltTuple {
+			return f(githubClientID, githubClientSecret, bin)
+		}
+	}
+}
+
+// deriveCurryGithubClientSecret returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
+func deriveCurryGithubClientSecret(f func(githubClientSecret string, bin Bin) BuiltTuple) func(githubClientSecret string) func(bin Bin) BuiltTuple {
+	return func(githubClientSecret string) func(bin Bin) BuiltTuple {
 		return func(bin Bin) BuiltTuple {
-			return f(version, bin)
+			return f(githubClientSecret, bin)
 		}
 	}
 }
