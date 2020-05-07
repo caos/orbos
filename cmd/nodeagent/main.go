@@ -98,6 +98,7 @@ func main() {
 
 	for {
 		itFunc()
+		monitor.Info("Iteration done")
 		time.Sleep(10 * time.Second)
 	}
 }

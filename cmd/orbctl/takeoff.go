@@ -118,6 +118,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 
 		for {
 			takeoffFunc()
+			monitor.Info("Iteration done")
 		}
 
 		return nil
