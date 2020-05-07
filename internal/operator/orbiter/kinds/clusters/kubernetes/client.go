@@ -226,10 +226,6 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {
 
-	defer func() {
-		err = errors.Wrapf(err, "getting node %s failed", id)
-	}()
-
 	api, err := c.nodeApi()
 	if err != nil {
 		return nil, err

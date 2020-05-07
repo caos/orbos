@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -99,7 +98,7 @@ func initialize(
 		node, imErr := k8s.GetNode(machine.ID())
 
 		// Retry if kubeapi returns other error than "NotFound"
-		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(errors.Unwrap(imErr)) {
+		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(imErr) {
 			monitor.WithFields(map[string]interface{}{
 				"node":  machine.ID(),
 				"error": imErr.Error(),
@@ -117,7 +116,7 @@ func initialize(
 		}
 
 		reconcile := func() error { return nil }
-		if node != nil {
+		if imErr == nil {
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s)
 			current.Joined = true
 			for _, cond := range node.Status.Conditions {
