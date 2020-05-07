@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -98,7 +99,7 @@ func initialize(
 		node, imErr := k8s.GetNode(machine.ID())
 
 		// Retry if kubeapi returns other error than "NotFound"
-		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(imErr) {
+		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(errors.Unwrap(imErr)) {
 			monitor.WithFields(map[string]interface{}{
 				"node":  machine.ID(),
 				"error": imErr.Error(),
