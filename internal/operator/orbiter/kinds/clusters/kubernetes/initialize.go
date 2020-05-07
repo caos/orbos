@@ -120,11 +120,11 @@ func initialize(
 		if node != nil {
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s)
 			current.Joined = true
-			if !node.Spec.Unschedulable {
-				for _, cond := range node.Status.Conditions {
-					if cond.Type == v1.NodeReady {
+			for _, cond := range node.Status.Conditions {
+				if cond.Type == v1.NodeReady {
+					current.Ready = true
+					if !node.Spec.Unschedulable {
 						current.Online = true
-						break
 					}
 				}
 			}
@@ -214,6 +214,9 @@ func initialize(
 	}
 
 	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		if !machine.currentMachine.Ready {
+			curr.Status = "degraded"
+		}
 		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
 			curr.Status = "maintaining"
 			break
