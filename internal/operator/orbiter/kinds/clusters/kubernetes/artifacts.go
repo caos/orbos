@@ -209,15 +209,9 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
-						Command:         []string{"/boom"},
-						Args: []string{
-							"--metrics=true",
-							"--metricsport", "2112",
-							"--enable-leader-election",
-							"--git-orbconfig", "/secrets/orbconfig",
-							"--git-crd-path", "boom.yml",
-						},
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", boomversion),
+						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
+						Args:            []string{},
 						Ports: []core.ContainerPort{{
 							Name:          "metrics",
 							ContainerPort: 2112,
@@ -332,7 +326,7 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           "docker.pkg.github.com/caos/orbos/orbiter:" + orbiterversion,
-						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur", "--ingestion="},
+						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",
 							ReadOnly:  true,

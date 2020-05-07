@@ -38,8 +38,8 @@ func main() {
 
 	if err := executables.PreBuild(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
-		executables.Bin{MainDir: path("nodeagent")},
-		executables.Bin{MainDir: path("health")},
+		executables.Bin{MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64"}},
+		executables.Bin{MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64"}},
 	)); err != nil {
 		panic(err)
 	}

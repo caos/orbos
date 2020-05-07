@@ -8,6 +8,9 @@ import (
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net/http"
+	"strings"
 	"time"
 )
 
@@ -17,7 +20,7 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 
 	gitcrdConf := &gitcrdconfig.Config{
 		Monitor:          gitcrdMonitor,
-		CrdDirectoryPath: "/tmp/crd",
+		CrdDirectoryPath: "/boom/crd",
 		CrdUrl:           orb.URL,
 		PrivateKey:       []byte(orb.Repokey),
 		CrdPath:          "boom.yml",
@@ -29,11 +32,26 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 		clientgo.InConfig = false
 	}
 
-	gconfig.DashboardsDirectoryPath = "dashboards"
+	gconfig.DashboardsDirectoryPath = "/boom/dashboards"
 
 	if err := appStruct.AddGitCrd(gitcrdConf); err != nil {
 		monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
 	}
+
+	metricsport := "2112"
+
+	http.Handle("/metrics", promhttp.Handler())
+	address := strings.Join([]string{":", metricsport}, "")
+	go func() {
+		if err := http.ListenAndServe(address, nil); err != nil {
+			monitor.Error(errors.Wrap(err, "error while serving metrics endpoint"))
+		}
+
+		monitor.WithFields(map[string]interface{}{
+			"port":     metricsport,
+			"endpoint": "/metrics",
+		}).Info("Started metrics")
+	}()
 
 	return func() {
 		// TODO: use a function scoped error variable

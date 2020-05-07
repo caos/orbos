@@ -1,10 +1,14 @@
 package main
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/start"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"os"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
@@ -40,14 +44,39 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		var kc *string
-		k8sClient := kubernetes.NewK8sClient(monitor, kc)
+		path := "orbiter.k8s.kubeconfig"
+		secretFunc := func(operator string) secret.Func {
+			if operator == "boom" {
+				return api.SecretFunc(orbFile)
+			} else if operator == "orbiter" {
+				return orb.SecretsFunc(orbFile)
+			}
+			return nil
+		}
+
+		value, err := secret.Read(
+			monitor,
+			gitClient,
+			secretFunc,
+			path)
+		if err != nil {
+			monitor.Info("Failed to get kubeconfig")
+			os.Exit(1)
+		}
+		monitor.Info("Read kubeconfig for boom deployment")
+
+		k8sClient := kubernetes.NewK8sClient(monitor, &value)
 
 		if k8sClient.Available() {
-			if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
+			if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, "v0.10.7"); err != nil {
+				monitor.Info("failed to deploy boom into k8s-cluster")
 				return err
 			}
+			monitor.Info("Deployed boom")
+		} else {
+			monitor.Info("Failed to connect to k8s")
 		}
+
 		return nil
 	}
 	return cmd

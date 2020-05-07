@@ -12,10 +12,10 @@ import (
 )
 
 func main() {
-	var toolsDirectoryPath string
+	var basePath string
 
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
-	flag.StringVar(&toolsDirectoryPath, "tools-directory-path", "/tmp/tools", "The local path where the tools folder should be")
+	flag.StringVar(&basePath, "basepath", "./artifacts", "The local path where the base folder should be")
 	flag.Parse()
 
 	monitor := mntr.Monitor{
@@ -29,7 +29,7 @@ func main() {
 
 	// ctrl.SetLogger(monitor)
 
-	if err := fetch.All(monitor, toolsDirectoryPath); err != nil {
+	if err := fetch.All(monitor, basePath); err != nil {
 		monitor.Error(errors.Wrap(err, "unable to fetch charts"))
 		os.Exit(1)
 	}

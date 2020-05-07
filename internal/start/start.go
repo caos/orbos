@@ -124,12 +124,12 @@ func Boom(ctx context.Context, monitor mntr.Monitor, orbFile *orbconfig.Orb, loc
 	op := operator.New(ctxCancel, monitor, boom.Takeoff(
 		monitor,
 		orbFile,
-		"/tmp/tools",
+		"/boom",
 		localmode,
 		finishedChan,
 	), []operator.Watcher{
 		immediate.New(monitor),
-		cron.New(monitor, "@every 10s"),
+		cron.New(monitor, "@every 60s"),
 	})
 
 	if err := op.Initialize(); err != nil {
@@ -143,7 +143,7 @@ func Boom(ctx context.Context, monitor mntr.Monitor, orbFile *orbconfig.Orb, loc
 	opMetrics := operator.New(ctxCancel, monitor, boom.TakeOffCurrentState(
 		monitor,
 		orbFile,
-		"/tmp/tools",
+		"/boom",
 		finishedChan,
 	), []operator.Watcher{
 		immediate.New(monitor),

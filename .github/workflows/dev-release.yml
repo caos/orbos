@@ -4,17 +4,17 @@ on:
     branches-ignore:
       - master
 jobs:
-  dev-release-orbiter:
-    name: Dev-Release Orbiter
+  dev-release:
+    name: Dev-Release Orbos
     runs-on: ubuntu-18.04
     steps:
-      - name: Source Checkout Dev-Orbiter
-        id: source-checkout-dev-orbiter
+      - name: Source Checkout Dev
+        id: source-checkout-dev
         uses: actions/checkout@v1
         with:
           fetch-depth: 1
-      - name: Dev-Release Orbiter
-        id: dev-release-orbiter
+      - name: Dev-Release
+        id: dev-release
         shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -28,6 +28,7 @@ jobs:
 
           go mod download
           mkdir -p ./artifacts
+          go run cmd/gen-charts/*.go -basepath "./artifacts"
           go run cmd/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" -githubclientid "${{ secrets.GITHUBOAUTHCLIENTID }}" -githubclientsecret "${{ secrets.GITHUBOAUTHCLIENTSECRET }}" --orbctl ./artifacts
 
           echo "Publishing Orbiter dev-version $VERSION"
@@ -38,14 +39,14 @@ jobs:
           echo "##[set-output name=relbranch;]$(echo ${BRANCH})"
           curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/$BRANCH | jq .id))
       - name: Dev Release Orbiter Create
-        id: dev-release-orbiter-create
+        id: dev-release-create
         uses: actions/create-release@v1
-        if: steps.dev-release-orbiter.outputs.relbranch != null
+        if: steps.dev-release.outputs.relbranch != null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.dev-release-orbiter.outputs.relbranch }}
-          release_name: Branch ${{ steps.dev-release-orbiter.outputs.relbranch }}
+          tag_name: ${{ steps.dev-release.outputs.relbranch }}
+          release_name: Branch ${{ steps.dev-release.outputs.relbranch }}
           body: |
             This is a release from a development branch.
             Do not use these artifacts in production.
@@ -53,75 +54,51 @@ jobs:
           prerelease: true
       - name: Upload Darwin Dev Release Asset
         uses: actions/upload-release-asset@v1.0.1
-        if: steps.dev-release-orbiter.outputs.relbranch != null
+        if: steps.dev-release.outputs.relbranch != null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.dev-release-orbiter-create.outputs.upload_url }}
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
           asset_path: ./artifacts/orbctl-Darwin-x86_64
           asset_name: orbctl Darwin x86_64
           asset_content_type: application/octet-stream
       - name: Upload FreeBSD Dev Release Asset
-        if: steps.dev-release-orbiter.outputs.relbranch != null
+        if: steps.dev-release.outputs.relbranch != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.dev-release-orbiter-create.outputs.upload_url }}
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
           asset_path: ./artifacts/orbctl-FreeBSD-x86_64
           asset_name: orbctl FreeBSD x86_64
           asset_content_type: application/octet-stream
       - name: Upload Linux Dev Release Asset
-        if: steps.dev-release-orbiter.outputs.relbranch != null
+        if: steps.dev-release.outputs.relbranch != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.dev-release-orbiter-create.outputs.upload_url }}
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
           asset_path: ./artifacts/orbctl-Linux-x86_64
           asset_name: orbctl Linux x86_64
           asset_content_type: application/octet-stream
       - name: Upload OpenBSD Dev Release Asset
-        if: steps.dev-release-orbiter.outputs.relbranch != null
+        if: steps.dev-release.outputs.relbranch != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.dev-release-orbiter-create.outputs.upload_url }}
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
           asset_path: ./artifacts/orbctl-OpenBSD-x86_64
           asset_name: orbctl OpenBSD x86_64
           asset_content_type: application/octet-stream
       - name: Upload Windows Dev Release Asset
-        if: steps.dev-release-orbiter.outputs.relbranch != null
+        if: steps.dev-release.outputs.relbranch != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.dev-release-orbiter-create.outputs.upload_url }}
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
           asset_path: ./artifacts/orbctl-Windows-x86_64.exe
           asset_name: orbctl Windows x86_64
           asset_content_type: application/octet-stream
-  dev-release-boom:
-    name: Dev-Release Boom
-    runs-on: ubuntu-18.04
-    steps:
-      - name: Source Checkout Boom
-        id: source-checkout-boom
-        uses: actions/checkout@v1
-        with:
-          fetch-depth: 1
-      - name: Dev-Release Boom
-        id: release-boom
-        shell: bash
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          export VERSION=${GITHUB_REF##*/}
-
-          export IMAGE=docker.pkg.github.com/caos/orbos/boom
-          export TAG_VERSION=${IMAGE}:${VERSION}
-
-          echo "Publishing Boom dev-version $VERSION"
-          docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
-          docker build --tag ${TAG_VERSION} --file ./boom.Dockerfile .
-          docker push ${TAG_VERSION}
