@@ -2,7 +2,6 @@
 FROM golang:1.14.0-alpine3.11 as build
 
 RUN apk add -U --no-cache ca-certificates git && \
-    echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd && \
     go get github.com/go-delve/delve/cmd/dlv
 
 # Runtime dependencies
@@ -18,19 +17,25 @@ RUN apk update && apk add git curl && \
     chmod +x /dependencies/helm
 
 COPY artifacts/orbctl-Linux-x86_64 /orbctl
-COPY internal/charts /boom/charts
-COPY internal/helm /boom/helm
+COPY artifacts/gen-charts /gen-charts
+
+RUN cp /dependencies/helm /usr/local/bin/helm
+RUN mkdir -p /boom
+RUN /gen-charts -basepath "/boom"
+
 COPY dashboards /boom/dashboards
 
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:5000", "--accept-multiclient", "--" ]
 
 FROM alpine:3.11 as prod
 
-COPY --from=build /boom /boom
-COPY --from=build /dependencies /usr/local/bin/
+RUN adduser nobody nobody
+
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=build /etc_passwd /etc/passwd
-COPY --from=build --chown=65534:65534 /orbctl /orbctl
+
+COPY --from=build --chown=nobody:nobody /orbctl /orbctl
+COPY --from=build --chown=nobody:nobody /boom /boom
+COPY --from=build --chown=nobody:nobody /dependencies /usr/local/bin/
 
 USER nobody
 

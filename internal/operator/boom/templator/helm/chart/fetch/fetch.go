@@ -19,7 +19,7 @@ type ChartInfo struct {
 	IndexName string
 }
 
-func All(monitor mntr.Monitor, basePath string) error {
+func All(monitor mntr.Monitor, basePath string, newVersions bool) error {
 	allApps := bundles.GetAll()
 
 	monitor.Info("Init Helm")
@@ -83,9 +83,11 @@ func All(monitor mntr.Monitor, basePath string) error {
 		return err
 	}
 
-	monitor.Info("Checking newer chart versions")
-	if err := CompareVersions(monitor, basePath, charts); err != nil {
-		return err
+	if newVersions {
+		monitor.Info("Checking newer chart versions")
+		if err := CompareVersions(monitor, basePath, charts); err != nil {
+			return err
+		}
 	}
 
 	monitor.Info("Fetching all charts")

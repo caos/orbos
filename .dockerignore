@@ -1,5 +1,4 @@
 *
 !artifacts/orbctl-Linux-x86_64
-!artifacts/charts
-!artifacts/helm
+!artifacts/gen-charts
 !dashboards/
