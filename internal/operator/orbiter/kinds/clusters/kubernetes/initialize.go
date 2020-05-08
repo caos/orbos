@@ -3,12 +3,14 @@ package kubernetes
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type initializedPool struct {
@@ -93,7 +95,17 @@ func initialize(
 
 	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
 
-		node, getNodeErr := k8s.GetNode(machine.ID())
+		node, imErr := k8s.GetNode(machine.ID())
+
+		// Retry if kubeapi returns other error than "NotFound"
+		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(imErr) {
+			monitor.WithFields(map[string]interface{}{
+				"node":  machine.ID(),
+				"error": imErr.Error(),
+			}).Info("Could not determine node state")
+			time.Sleep(5 * time.Second)
+			node, imErr = k8s.GetNode(machine.ID())
+		}
 
 		current := &Machine{
 			Metadata: MachineMetadata{
@@ -104,14 +116,14 @@ func initialize(
 		}
 
 		reconcile := func() error { return nil }
-		if getNodeErr == nil {
+		if imErr == nil {
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s)
 			current.Joined = true
-			if !node.Spec.Unschedulable {
-				for _, cond := range node.Status.Conditions {
-					if cond.Type == v1.NodeReady {
+			for _, cond := range node.Status.Conditions {
+				if cond.Type == v1.NodeReady {
+					current.Ready = true
+					if !node.Spec.Unschedulable {
 						current.Online = true
-						break
 					}
 				}
 			}
@@ -201,6 +213,9 @@ func initialize(
 	}
 
 	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		if !machine.currentMachine.Ready {
+			curr.Status = "degraded"
+		}
 		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
 			curr.Status = "maintaining"
 			break

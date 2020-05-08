@@ -11,11 +11,8 @@ import (
 
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/ingestion"
-	"github.com/caos/orbos/internal/operator"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/watcher/cron"
-	"github.com/caos/orbos/internal/watcher/immediate"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
@@ -69,27 +66,6 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			}
 		}
 
-		op := operator.New(ctx, monitor, orbiter.Takeoff(
-			monitor,
-			gitClient,
-			pushEvents,
-			gitCommit,
-			orb.AdaptFunc(
-				orbFile,
-				gitCommit,
-				!recur,
-				deploy),
-		), []operator.Watcher{
-			immediate.New(monitor),
-			cron.New(monitor, "@every 10s"),
-		})
-
-		if err := op.Initialize(); err != nil {
-			panic(err)
-		}
-
-		executables.Populate()
-
 		if err := pushEvents([]*ingestion.EventRequest{{
 			CreationDate: ptypes.TimestampNow(),
 			Type:         "orbiter.tookoff",
@@ -101,14 +77,6 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		}}); err != nil {
 			panic(err)
 		}
-
-		monitor.WithFields(map[string]interface{}{
-			"version": version,
-			"commit":  gitCommit,
-			"destroy": destroy,
-			"verbose": verbose,
-			"repoURL": orbFile.URL,
-		}).Info("Orbiter took off")
 
 		started := float64(time.Now().UTC().Unix())
 
@@ -126,7 +94,32 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			}
 		}()
 
-		op.Run()
+		executables.Populate()
+
+		monitor.WithFields(map[string]interface{}{
+			"version": version,
+			"commit":  gitCommit,
+			"destroy": destroy,
+			"verbose": verbose,
+			"repoURL": orbFile.URL,
+		}).Info("Orbiter took off")
+
+		takeoffFunc := orbiter.Takeoff(
+			monitor,
+			gitClient,
+			pushEvents,
+			gitCommit,
+			orb.AdaptFunc(
+				orbFile,
+				gitCommit,
+				!recur,
+				deploy),
+		)
+
+		for {
+			takeoffFunc()
+			monitor.Info("Iteration done")
+		}
 
 		return nil
 	}
