@@ -16,7 +16,7 @@ type cmpSvcLB struct {
 	notifymasters string
 }
 
-func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) *cmpSvcLB {
+func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec) *cmpSvcLB {
 	return &cmpSvcLB{
 		MachinesService: svc,
 		dynamic:         curr,

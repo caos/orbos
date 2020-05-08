@@ -112,7 +112,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.SourcePools = sourcePools
 			current.Current.Addresses = addresses
-			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error {
+			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string) error {
 
 				vips, ok := desiredKind.Spec[forPool]
 				if !ok {
@@ -150,7 +150,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 							return cmp.ID() != machine.ID()
 						}, append([]infra.Machine(nil), []infra.Machine(forMachines)...)),
 						State:                "BACKUP",
-						CustomMasterNotifyer: notifyMaster != "",
+						CustomMasterNotifyer: notifyMaster != nil,
 					}
 					if idx == 0 {
 						machinesData[idx].State = "MASTER"
@@ -266,11 +266,6 @@ http {
 					if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
 						return err
 					}
-					kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
-
-					if d.CustomMasterNotifyer {
-						kaPkg.Config["notifymaster.sh"] = notifyMaster
-					}
 
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
@@ -306,6 +301,13 @@ http {
 					if na.Software == nil {
 						na.Software = &common.Software{}
 					}
+
+					kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+
+					if d.CustomMasterNotifyer {
+						kaPkg.Config["notifymaster.sh"] = notifyMaster(d.Self, d.Peers, d.VIPs)
+					}
+
 					na.Software.KeepaliveD = kaPkg
 
 					var ngxBuf bytes.Buffer

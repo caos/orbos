@@ -36,12 +36,14 @@ func query(
 	case *dynamiclbmodel.Current:
 		addresses = lbCurrent.Current.Addresses
 		desireLb = func(pool string) error {
-			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, "")
+			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, func(machine infra.Machine, peers infra.Machines, vips []*dynamiclbmodel.VIP) string {
+
+			})
 		}
 		for name, address := range lbCurrent.Current.Addresses {
 			current.Current.Ingresses[name] = address
 		}
-		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, "")
+		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired)
 		//	case *externallbmodel.Current:
 		//		for name, address := range lbCurrent.Current.Addresses {
 		//			current.Current.Ingresses[name] = address

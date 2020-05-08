@@ -12,6 +12,6 @@ type Current struct {
 	Current struct {
 		SourcePools map[string][]string
 		Addresses   map[string]*infra.Address
-		Desire      func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster string) error
+		Desire      func(pool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string) error
 	} `yaml:"-"`
 }
