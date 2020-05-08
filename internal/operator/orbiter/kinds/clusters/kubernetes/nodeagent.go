@@ -117,19 +117,20 @@ func nodeAgentFuncs(
 			}
 			if err := try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 				return errors.Wrapf(cmp.WriteFile(systemdPath, strings.NewReader(fmt.Sprintf(`[Unit]
-		Description=Node Agent
-		After=network.target
-		
-		[Service]
-		Type=simple
-		User=root
-		ExecStart=%s --repourl "%s" --id "%s"
-		Restart=always
-		RestartSec=10
-		
-		[Install]
-		WantedBy=multi-user.target
-		`, binary, repoURL, machine.infra.ID())), 600), "creating remote file %s failed", systemdPath)
+Description=Node Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=%s --repourl "%s" --id "%s"
+Restart=always
+RuntimeMaxSec=3600
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+`, binary, repoURL, machine.infra.ID())), 600), "creating remote file %s failed", systemdPath)
 			}); err != nil {
 				return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 			}
