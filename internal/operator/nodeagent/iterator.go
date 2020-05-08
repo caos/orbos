@@ -5,6 +5,7 @@ package nodeagent
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 
 	"gopkg.in/yaml.v3"
 
@@ -141,5 +142,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
+
+		debug.FreeOSMemory()
 	}
 }
