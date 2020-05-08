@@ -23,13 +23,16 @@ jobs:
         run: |
           export VERSION=${GITHUB_REF##*/}
 
-          export IMAGE=docker.pkg.github.com/caos/orbos/Orbos
+          export IMAGE=docker.pkg.github.com/caos/orbos/orbos
           export TAG_VERSION=${IMAGE}:${VERSION}
 
           go mod download
           mkdir -p ./artifacts
-          go run cmd/gen-charts/*.go -basepath "./artifacts"
           go run cmd/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" -githubclientid "${{ secrets.GITHUBOAUTHCLIENTID }}" -githubclientsecret "${{ secrets.GITHUBOAUTHCLIENTSECRET }}" --orbctl ./artifacts
+
+          mkdir -p ./internal/charts
+          mkdir -p ./internal/helm
+          go run cmd/gen-charts/*.go -basepath "./internal"
 
           echo "Publishing Orbos dev-version $VERSION"
           docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}

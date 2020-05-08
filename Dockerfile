@@ -18,8 +18,8 @@ RUN apk update && apk add git curl && \
     chmod +x /dependencies/helm
 
 COPY artifacts/orbctl-Linux-x86_64 /orbctl
-COPY artifacts/charts /boom/charts
-COPY artifacts/helm /boom/helm
+COPY internal/charts /boom/charts
+COPY internal/helm /boom/helm
 COPY dashboards /boom/dashboards
 
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:5000", "--accept-multiclient", "--" ]
