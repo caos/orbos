@@ -37,7 +37,7 @@ jobs:
           docker build --tag ${TAG_VERSION} --file ./Dockerfile .
           docker push ${TAG_VERSION}
 
-          echo "##[set-output name=relbranch;]$(echo ${BRANCH})"
+          echo "##[set-output name=relbranch;]$(echo ${VERSION})"
           curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/$BRANCH | jq .id))
       - name: Dev Release Create
         id: dev-release-create
