@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -13,11 +14,10 @@ import (
 	rbac "k8s.io/api/rbac/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 )
 
-func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orbiterversion string, boomversion string) error {
+func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiterversion string, boomversion string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,
@@ -102,7 +102,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orbiter.Orb, orb
 						Containers: []core.Container{{
 							Name:            "orbiter",
 							ImagePullPolicy: core.PullIfNotPresent,
-							Image:           "docker.pkg.github.com/caos/orbiter/orbiter:" + orbiterversion,
+							Image:           "docker.pkg.github.com/caos/orbos/orbiter:" + orbiterversion,
 							Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur", "--ingestion="},
 							VolumeMounts: []core.VolumeMount{{
 								Name:      "keys",

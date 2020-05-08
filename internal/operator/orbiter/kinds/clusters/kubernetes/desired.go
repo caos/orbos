@@ -2,12 +2,13 @@ package kubernetes
 
 import (
 	"fmt"
-	"regexp"
 
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
 var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
@@ -16,16 +17,14 @@ var ipRegex = fmt.Sprintf(`%s\.%s\.%s\.%s`, ipPartRegex, ipPartRegex, ipPartRege
 
 var cidrRegex = fmt.Sprintf(`%s/([1-2][0-9]|3[0-2]|[0-9])`, ipRegex)
 
-var cidrComp = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
-
 type DesiredV0 struct {
-	Common orbiter.Common `yaml:",inline"`
+	Common tree.Common `yaml:",inline"`
 	Spec   Spec
 }
 
 type Spec struct {
 	ControlPlane Pool
-	Kubeconfig   *orbiter.Secret `yaml:",omitempty"`
+	Kubeconfig   *secret.Secret `yaml:",omitempty"`
 	Networking   struct {
 		DNSDomain   string
 		Network     string
@@ -39,6 +38,24 @@ type Spec struct {
 		Boom       string
 	}
 	Workers []*Pool
+}
+
+func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{
+		Common: *desiredTree.Common,
+		Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: masterkey}},
+	}
+	if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+
+	return desiredKind, nil
+}
+
+func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
+	if desiredKind.Spec.Kubeconfig == nil {
+		desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: masterkey}
+	}
 }
 
 func (d *DesiredV0) validate() error {

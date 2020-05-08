@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"
@@ -225,10 +225,6 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 }
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {
-
-	defer func() {
-		err = errors.Wrapf(err, "getting node %s failed", id)
-	}()
 
 	api, err := c.nodeApi()
 	if err != nil {

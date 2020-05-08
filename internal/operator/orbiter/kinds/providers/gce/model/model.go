@@ -2,7 +2,7 @@
 
 package model
 
-import "github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+import "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 
 type HealthChecks struct {
 	Port int64

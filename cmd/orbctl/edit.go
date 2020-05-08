@@ -13,10 +13,10 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
-	"github.com/caos/orbiter/internal/git"
+	"github.com/caos/orbos/internal/git"
 )
 
-func editCommand(rv rootValues) *cobra.Command {
+func EditCommand(rv RootValues) *cobra.Command {
 	return &cobra.Command{
 		Use:     "edit [file]",
 		Short:   "Edit a file and push changes to the remote orb repository",

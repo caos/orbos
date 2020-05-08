@@ -10,13 +10,15 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/caos/orbiter/internal/executables"
+	"github.com/caos/orbos/internal/executables"
 )
 
 func main() {
 
 	version := flag.String("version", "none", "Path to the git repositorys path to the file containing orbiters current state")
 	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	githubClientID := flag.String("githubclientid", "none", "ClientID used for OAuth with github as store")
+	githubClientSecret := flag.String("githubclientsecret", "none", "ClientSecret used for OAuth with github as store")
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 
@@ -35,7 +37,7 @@ func main() {
 	path := curryJoinPath(cmdPath)
 
 	if err := executables.PreBuild(executables.Build(
-		*debug, *commit, *version,
+		*debug, *commit, *version, *githubClientID, *githubClientSecret,
 		executables.Bin{MainDir: path("nodeagent")},
 		executables.Bin{MainDir: path("health")},
 	)); err != nil {
@@ -50,7 +52,8 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	orbctlMain := path("orbctl")
-	orbctls := executables.Build(*debug, *commit, *version,
+	orbctls := executables.Build(
+		*debug, *commit, *version, *githubClientID, *githubClientSecret,
 		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),

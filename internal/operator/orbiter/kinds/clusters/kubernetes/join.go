@@ -8,8 +8,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 )
 
 func join(
@@ -145,7 +145,7 @@ nodeRegistration:
 		"path": kubeadmCfgPath,
 	}).Debug("Written file")
 
-	cmd := fmt.Sprintf("sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd")
+	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
 	resetStdout, err := joining.infra.Execute(nil, nil, cmd)
 	if err != nil {
 		return nil, errors.Wrapf(err, "executing %s failed", cmd)
@@ -183,7 +183,7 @@ nodeRegistration:
 		"stdout": string(initStdout),
 	}).Debug("Executed kubeadm init")
 
-	copyKubeconfigStdout, err := joining.infra.Execute(nil, nil, fmt.Sprintf("mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config"))
+	copyKubeconfigStdout, err := joining.infra.Execute(nil, nil, "mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config")
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(copyKubeconfigStdout),
 	}).Debug("Moved kubeconfig")

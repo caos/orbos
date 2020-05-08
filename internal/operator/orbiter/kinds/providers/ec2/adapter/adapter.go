@@ -8,10 +8,10 @@ import (
 	"google.golang.org/api/machine/v1"
 	"google.golang.org/api/option"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ec2/model"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ec2/model"
+	"github.com/caos/orbos/mntr"
 )
 
 type infraCurrent struct {

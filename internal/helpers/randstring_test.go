@@ -1,11 +1,11 @@
 package helpers_test
 
 import (
-	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbos/internal/helpers"
 	"testing"
 )
 
-func TestRandomStringRunes(t *testing.T){
+func TestRandomStringRunes(t *testing.T) {
 	expected := 5
 	str := helpers.RandomString(expected)
 	actual := len(str)

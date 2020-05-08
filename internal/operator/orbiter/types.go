@@ -7,12 +7,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Orb struct {
-	URL       string
-	Repokey   string
-	Masterkey string
-}
-
 var (
 	ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
 	ipRegex     = fmt.Sprintf(`%s\.%s\.%s\.%s`, ipPartRegex, ipPartRegex, ipPartRegex, ipPartRegex)

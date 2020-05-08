@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 type KubernetesVersion int

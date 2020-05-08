@@ -4,18 +4,21 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/tree"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/ingestion"
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/ingestion"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
-type EnsureFunc func(psf PushSecretsFunc) error
+type EnsureFunc func(psf push.Func) error
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
 
@@ -43,7 +46,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		treeDesired := trees[0]
-		treeCurrent := &Tree{}
+		treeCurrent := &tree.Tree{}
 
 		desiredNodeAgents := common.NodeAgentsDesiredKind{
 			Kind:    "nodeagent.caos.ch/NodeAgents",
@@ -80,14 +83,14 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			})
 		}, monitor.OnChange)
 
-		query, _, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
+		query, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
 		if err != nil {
 			monitor.Error(err)
 			return
 		}
 
 		if migrate {
-			if err := pushOrbiterYML(monitor, "Desired state migrated", gitClient, treeDesired); err != nil {
+			if err := push.YML(monitor, "Desired state migrated", gitClient, treeDesired, "orbiter.yml"); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -136,7 +139,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		events = make([]*event, 0)
-		if err := ensure(pushSecretsFunc(gitClient, treeDesired)); err != nil {
+		if err := ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
 			handleAdapterError(err)
 			return
 		}

@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/tree"
 )
 
 type CurrentCluster struct {
@@ -10,13 +10,14 @@ type CurrentCluster struct {
 }
 
 type Current struct {
-	Common  orbiter.Common `yaml:",inline"`
+	Common  tree.Common `yaml:",inline"`
 	Current *CurrentCluster
 }
 
 type Machine struct {
 	Joined             bool
 	Online             bool
+	Ready              bool
 	FirewallIsReady    bool
 	NodeAgentIsRunning bool
 	Metadata           MachineMetadata `yaml:",inline"`
