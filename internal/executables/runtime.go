@@ -128,10 +128,14 @@ func unpack(executable string) []byte {
 	if err != nil {
 		panic(errors.Wrap(err, "decoding node agent from base64 failed"))
 	}
-	gzipReader, err := gzip.NewReader(bytes.NewReader(gzipNodeAgent))
+	bytesReader := bytes.NewReader(gzipNodeAgent)
+
+	gzipReader, err := gzip.NewReader(bytesReader)
 	if err != nil {
 		panic(errors.Wrap(err, "ungzipping node agent failed"))
 	}
+	defer gzipReader.Close()
+
 	unpacked, err := ioutil.ReadAll(gzipReader)
 	if err != nil {
 		panic(errors.Wrap(err, "reading unpacked node agent failed"))
