@@ -12,6 +12,12 @@ func MarshalYAML(sth interface{}) []byte {
 	}
 	var buf bytes.Buffer
 	encoder := yaml.NewEncoder(&buf)
+
+	defer func() {
+		encoder.Close()
+		buf.Truncate(0)
+	}()
+
 	encoder.SetIndent(2)
 	if err := encoder.Encode(sth); err != nil {
 		panic(err)
