@@ -112,22 +112,29 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter took off")
 
-		takeoffFunc := orbiter.Takeoff(
-			monitor,
-			gitClient,
-			pushEvents,
-			gitCommit,
-			orb.AdaptFunc(
-				orbFile,
-				gitCommit,
-				!recur,
-				deploy),
-		)
+		intervalSeconds := 30
 
-		for {
-			takeoffFunc()
-			monitor.Info("Iteration done")
-		}
+		go func() {
+			for {
+				started := time.Now()
+				orbiter.Takeoff(
+					monitor,
+					gitClient,
+					pushEvents,
+					gitCommit,
+					orb.AdaptFunc(
+						orbFile,
+						gitCommit,
+						!recur,
+						deploy),
+				)()
+				monitor.WithFields(map[string]interface{}{
+					"took": time.Since(started),
+				}).Info("Iteration done")
+
+				time.Sleep(time.Duration(intervalSeconds) * time.Second)
+			}
+		}()
 
 		return nil
 	}

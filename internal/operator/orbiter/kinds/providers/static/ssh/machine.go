@@ -69,9 +69,9 @@ func (c *machine) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 		return nil, err
 	}
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
 	sess.Stdin = stdin
-	sess.Stderr = &buf
+	sess.Stderr = buf
 
 	envPre := ""
 	for key, value := range env {
@@ -111,8 +111,8 @@ func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) (er
 	if err != nil {
 		return errors.Wrapf(err, "ssh-ing to machine %s failed", c.ID())
 	}
-	var stderr bytes.Buffer
-	sess.Stderr = &stderr
+	stderr := new(bytes.Buffer)
+	sess.Stderr = stderr
 	if monitor.IsVerbose() {
 		sess.Stdout = os.Stdout
 	}
@@ -144,9 +144,9 @@ func (c *machine) ReadFile(path string, data io.Writer) (err error) {
 	if err != nil {
 		return errors.Wrapf(err, "ssh-ing to machine %s failed", c.ID())
 	}
-	var stderr bytes.Buffer
+	stderr := new(bytes.Buffer)
 	sess.Stdout = data
-	sess.Stderr = &stderr
+	sess.Stderr = stderr
 
 	if err := sess.Run(cmd); err != nil {
 		return errors.Wrapf(err, "executing %s with ssh on machine %s failed with stderr %s", cmd, c.ID(), stderr.String())
@@ -164,8 +164,8 @@ func (c *machine) open() (sess *sshlib.Session, close func() error, err error) {
 	}
 
 	ip := c.machine.IP()
-
 	address := fmt.Sprintf("%s:%d", ip, 22)
+
 	conn, err := sshlib.Dial("tcp", address, c.sshCfg)
 	if err != nil {
 		return nil, close, errors.Wrapf(err, "dialling tcp %s failed", address)
@@ -185,7 +185,7 @@ func (c *machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 func (c *machine) UseKey(keys ...[]byte) error {
 
-	var signers []sshlib.Signer
+	signers := make([]sshlib.Signer, 0)
 	for _, key := range keys {
 		signer, err := sshlib.ParsePrivateKey(key)
 		if err != nil {
@@ -194,9 +194,14 @@ func (c *machine) UseKey(keys ...[]byte) error {
 		signers = append(signers, signer)
 	}
 
+	publicKeys := make([]sshlib.AuthMethod, 0)
+	for _, signer := range signers {
+		publicKeys = append(publicKeys, sshlib.PublicKeys(signer))
+	}
+
 	c.sshCfg = &sshlib.ClientConfig{
 		User:            c.remoteUser,
-		Auth:            []sshlib.AuthMethod{sshlib.PublicKeys(signers...)},
+		Auth:            publicKeys,
 		HostKeyCallback: sshlib.InsecureIgnoreHostKey(),
 	}
 	return nil

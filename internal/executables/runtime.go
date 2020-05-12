@@ -107,8 +107,10 @@ func pack(built BuiltTuple) packedTuple {
 		return packedTuple(nil, err)
 	}
 
-	var gzipBuffer bytes.Buffer
-	gzipWriter := gzip.NewWriter(&gzipBuffer)
+	gzipBuffer := new(bytes.Buffer)
+	defer gzipBuffer.Reset()
+
+	gzipWriter := gzip.NewWriter(gzipBuffer)
 	_, err = io.Copy(gzipWriter, executable)
 	if err != nil {
 		return packedTuple(nil, errors.Wrap(err, "gzipping failed"))
