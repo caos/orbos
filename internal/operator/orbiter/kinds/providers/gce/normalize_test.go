@@ -18,7 +18,7 @@ func Test_normalize(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want []*normalizedLoadbalancing
+		want []*normalizedLoadbalancer
 	}{{
 		name: "It should normalize correctly",
 		args: args{
@@ -102,7 +102,7 @@ func Test_normalize(t *testing.T) {
 			orbID:      "dummyorb",
 			providerID: "dummyprovider",
 		},
-		want: []*normalizedLoadbalancing{{
+		want: []*normalizedLoadbalancer{{
 			ip:             "10.0.0.10",
 			forwardingRule: &forwardingRule{},
 			targetPools:    []*targetPool{},

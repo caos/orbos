@@ -79,18 +79,16 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	sshKey := fmt.Sprintf("orbiter:%s", m.desired.SSHKey.Public.Value)
 	createInstance := &compute.Instance{
-		Name: name,
-		Labels: map[string]string{
-			"orb":      m.orbID,
-			"provider": m.providerID,
-			"pool":     poolName,
-		},
+		Name:        name,
 		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.desired.Zone, cores, int(memory)),
 		NetworkInterfaces: []*compute.NetworkInterface{{
 			AccessConfigs: []*compute.AccessConfig{{ // Assigns an ephemeral external ip
 				Type: "ONE_TO_ONE_NAT",
 			}},
 		}},
+		Tags: &compute.Tags{
+			Items: networkTags(m.orbID, m.providerID, poolName),
+		},
 		Metadata: &compute.Metadata{
 			Items: []*compute.MetadataItems{{
 				Key:   "ssh-keys",
@@ -204,7 +202,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 
 	instances, err := m.client.Instances.
 		List(m.projectID, m.desired.Zone).
-		Filter(fmt.Sprintf("labels.orb:%s AND labels.provider:%s", m.orbID, m.providerID)).
+		Filter(fmt.Sprintf("tags:orb-%s AND tags:provider-%s", m.orbID, m.providerID)).
 		Fields("items(name,labels,selfLink,networkInterfaces(accessConfigs(natIP)))").
 		Do()
 	if err != nil {
@@ -261,5 +259,13 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 		m.cache.instances[pool] = cleanMachines
 		return nil
 
+	}
+}
+
+func networkTags(orbID, providerID, poolName string) []string {
+	return []string{
+		fmt.Sprintf("orb-%s", orbID),
+		fmt.Sprintf("provider-%s", providerID),
+		fmt.Sprintf("pool-%s", poolName),
 	}
 }

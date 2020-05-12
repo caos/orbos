@@ -7,16 +7,16 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-func operate(before func(), call func(...googleapi.CallOption) (*compute.Operation, error)) error {
-	before()
+func operate(beforeRetry func(), call func(...googleapi.CallOption) (*compute.Operation, error)) error {
 	op, err := call()
 	if err != nil {
 		return err
 	}
 
 	if op.Progress < 100 {
+		beforeRetry()
 		time.Sleep(time.Second)
-		return operate(before, call)
+		return operate(beforeRetry, call)
 	}
 	return nil
 }

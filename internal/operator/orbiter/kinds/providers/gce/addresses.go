@@ -36,87 +36,77 @@ func newAdressesService(
 	}
 }
 
-func (a *addressesSvc) query(loadbalancing []*normalizedLoadbalancing) (func() error, error) {
+func (s *addressesSvc) ensure(loadbalancing []*normalizedLoadbalancer) error {
 
-	gceAddresses, err := a.client.Addresses.
-		List(a.projectID, a.region).
-		Filter(fmt.Sprintf("addressType=EXTERNAL AND name:%s-%s-*", a.orbID, a.providerID)).
-		Fields("items(name,address)").
+	addresses := normalizedLoadbalancing(loadbalancing).uniqueAddresses()
+
+	gceAddresses, err := s.client.Addresses.
+		List(s.projectID, s.region).
+		Filter(fmt.Sprintf("addressType=EXTERNAL AND description:(orb=%s;provider=%s*)", s.orbID, s.providerID)).
+		Fields("items(address,description)").
 		Do()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var create []*compute.Address
+	var create []*address
 createLoop:
-	for _, address := range loadbalancing {
+	for _, address := range addresses {
 		for _, gceAddress := range gceAddresses.Items {
-			if gceAddress.Address == address.ip {
+			if gceAddress.Description == address.gce.Description {
+				address.gce = gceAddress
 				continue createLoop
 			}
 		}
 
-		create = append(create, &compute.Address{
-			Name:        fmt.Sprintf("orbos-%s", uuid.NewV1().String()),
-			AddressType: "EXTERNAL",
-		})
+		address.gce.Name = newName()
+		create = append(create, address)
 	}
 
 	var remove []*compute.Address
 removeLoop:
 	for _, gceAddress := range gceAddresses.Items {
-		for _, addressName := range loadbalancing {
-			if gceAddress.Address == addressName.ip {
+		for _, address := range addresses {
+			if gceAddress.Description == address.gce.Description {
 				continue removeLoop
 			}
 		}
 		remove = append(remove, gceAddress)
 	}
 
-	return func() error {
-		for _, address := range create {
-			if err := operate(
-				a.logAddressOpFunc("Creating external address", address),
-				a.client.Addresses.
-					Insert(a.projectID, a.region, address).
-					RequestId(uuid.NewV1().String()).
-					Do,
-			); err != nil {
-				return err
-			}
-
-			newAddr, err := a.client.Addresses.Get(a.projectID, a.region, address.Name).
-				Fields("address").
-				Do()
-			if err != nil {
-				return err
-			}
-
-			address.Address = newAddr.Address
+	for _, address := range create {
+		if err := operate(
+			address.log("Creating external address"),
+			s.client.Addresses.
+				Insert(s.projectID, s.region, address.gce).
+				RequestId(uuid.NewV1().String()).
+				Do,
+		); err != nil {
+			return err
 		}
 
-		for _, address := range remove {
-			if err := operate(
-				a.logAddressOpFunc("Removing external address", address),
-				a.client.Addresses.
-					Delete(a.projectID, a.region, address.Name).
-					RequestId(uuid.NewV1().String()).
-					Do,
-			); err != nil {
-				return err
-			}
+		newAddr, err := s.client.Addresses.Get(s.projectID, s.region, address.gce.Name).
+			Fields("address").
+			Do()
+		if err != nil {
+			return err
 		}
-
-		return nil
-
-	}, nil
-}
-
-func (a *addressesSvc) logAddressOpFunc(msg string, address *compute.Address) func() {
-	monitor := a.monitor.WithFields(map[string]interface{}{
-		"name": address.Name,
-	})
-	return func() {
-		monitor.Info(msg)
+		address.gce.Address = newAddr.Address
+		address.log("External address created")()
 	}
+
+	for _, address := range remove {
+		if err := operate(
+			removeLog(s.monitor, "external address", address.Address, false),
+			s.client.Addresses.
+				Delete(s.projectID, s.region, address.Name).
+				RequestId(uuid.NewV1().String()).
+				Do,
+		); err != nil {
+			return err
+		}
+		removeLog(s.monitor, "external address", address.Address, true)()
+	}
+
+	return nil
 }
