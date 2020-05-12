@@ -47,18 +47,20 @@ func GetQueryAndDestroyFuncs(
 		//				if desiredKind.Spec.ControlPlane.UpdatesDisabled {
 		//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
 		//				}
-
-		return static.AdaptFunc(
+		adaptFunc := static.AdaptFunc(
 			orb.Masterkey,
 			provID,
 			func() []*orbiter.CIDR {
 				monitor.Debug("Reading whitelist")
 				return <-whitelistChan
 			},
-		)(
+		)
+
+		q, d, b, err := adaptFunc(
 			monitor.WithFields(map[string]interface{}{"provider": provID}),
 			providerTree,
 			providerCurrent)
+		return q, d, b, err
 	default:
 		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}

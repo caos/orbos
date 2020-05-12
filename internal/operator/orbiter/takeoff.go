@@ -2,11 +2,9 @@ package orbiter
 
 import (
 	"fmt"
-	"net/http"
-	"runtime/debug"
-
 	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
+	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
@@ -164,6 +162,5 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
-		debug.FreeOSMemory()
 	}
 }

@@ -24,7 +24,9 @@ func GetQueryAndDestroyFunc(
 	//		case "orbiter.caos.ch/ExternalLoadBalancer":
 	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 	case "orbiter.caos.ch/DynamicLoadBalancer":
-		return dynamic.AdaptFunc(whitelist)(monitor, loadBalancingTree, loadBalacingCurrent)
+		adaptFunc := dynamic.AdaptFunc(whitelist)
+		q, d, b, err := adaptFunc(monitor, loadBalancingTree, loadBalacingCurrent)
+		return q, d, b, err
 	default:
 		return nil, nil, false, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
 	}
