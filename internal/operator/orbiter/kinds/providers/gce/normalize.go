@@ -49,9 +49,18 @@ type address struct {
 
 type normalizedLoadbalancing []*normalizedLoadbalancer
 
-func (n *normalizedLoadbalancing) uniqueAddresses() []*address {
-	// TODO
-	return nil
+func (n normalizedLoadbalancing) uniqueAddresses() []*address {
+	addresses := make([]*address, 0)
+loop:
+	for _, lb := range n {
+		for _, found := range addresses {
+			if lb.address == found {
+				continue loop
+			}
+		}
+		addresses = append(addresses, lb.address)
+	}
+	return addresses
 }
 
 func forwardingRuleDesc(lb *normalizedLoadbalancer) string {
@@ -115,4 +124,29 @@ func removeLog(monitor mntr.Monitor, resource, id string, removed bool) func() {
 	return func() {
 		monitor.Info(msg)
 	}
+}
+
+type context struct {
+	monitor         mntr.Monitor
+	orbID           string
+	providerID      string
+	projectID       string
+	region          string
+	client          *compute.Service
+	machinesService *machinesService
+}
+
+type ensureFunc func(*context, []*normalizedLoadbalancer) error
+
+func compose(ensure ensureFunc, next ...ensureFunc) ensureFunc {
+	newEnsureFunc := ensure
+	for _, fn := range append([]ensureFunc{ensure}, next...) {
+		newEnsureFunc = func(ctx *context, lb []*normalizedLoadbalancer) error {
+			if err := newEnsureFunc(ctx, lb); err != nil {
+				return err
+			}
+			return fn(ctx, lb)
+		}
+	}
+	return newEnsureFunc
 }

@@ -1,7 +1,7 @@
 package gce
 
 import (
-	"context"
+	ctxpkg "context"
 	"encoding/json"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
@@ -65,66 +65,54 @@ func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListF
 					return nil, err
 				}
 
-				machinesSvc, addressesSvc, err := services(monitor, &desiredKind.Spec, orbID, providerID)
+				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID)
 				if err != nil {
 					return nil, err
 				}
-
-				return query(
-					&desiredKind.Spec,
-					current,
-					monitor,
-					nodeAgentsDesired,
-					lbCurrent.Parsed,
-					machinesSvc,
-					addressesSvc,
-				)
+				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx)
 			}, func() error {
-				machinesSvc, addressesSvc, err := services(monitor, &desiredKind.Spec, orbID, providerID)
+				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID)
 				if err != nil {
 					return err
 				}
 
-				return destroy(
-					machinesSvc,
-					addressesSvc,
-					&desiredKind.Spec,
-				)
+				return destroy(&desiredKind.Spec, ctx)
 			}, migrate, nil
 	}
 }
 
-func services(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*machinesService, *addressesSvc, error) {
+func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*context, error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
 	credsOption := option.WithCredentialsJSON(jsonKey)
-	computeClient, err := compute.NewService(context.TODO(), credsOption)
+	computeClient, err := compute.NewService(ctxpkg.Background(), credsOption)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	key := struct {
 		ProjectID string `json:"project_id"`
 	}{}
 	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	monitor = monitor.WithField("projectID", key.ProjectID)
 
-	return newMachinesService(
+	return &context{
+		monitor:    monitor,
+		providerID: providerID,
+		orbID:      orbID,
+		projectID:  key.ProjectID,
+		region:     desired.Region,
+		client:     computeClient,
+		machinesService: newMachinesService(
 			monitor,
 			desired,
 			orbID,
 			providerID,
 			key.ProjectID,
 			computeClient,
-		), newAdressesService(
-			monitor,
-			orbID,
-			providerID,
-			key.ProjectID,
-			desired.Region,
-			computeClient,
-		), nil
+		),
+	}, nil
 }

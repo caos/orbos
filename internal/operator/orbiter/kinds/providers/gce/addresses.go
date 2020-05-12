@@ -5,44 +5,16 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/caos/orbiter/mntr"
 	"google.golang.org/api/compute/v1"
 )
 
-type addressesSvc struct {
-	monitor    mntr.Monitor
-	orbID      string
-	providerID string
-	projectID  string
-	region     string
-	client     *compute.Service
-}
-
-func newAdressesService(
-	monitor mntr.Monitor,
-	orbID string,
-	providerID string,
-	projectID string,
-	region string,
-	client *compute.Service,
-) *addressesSvc {
-	return &addressesSvc{
-		monitor:    monitor,
-		orbID:      orbID,
-		providerID: providerID,
-		projectID:  projectID,
-		region:     region,
-		client:     client,
-	}
-}
-
-func (s *addressesSvc) ensure(loadbalancing []*normalizedLoadbalancer) error {
+func ensureAddresses(context *context, loadbalancing []*normalizedLoadbalancer) error {
 
 	addresses := normalizedLoadbalancing(loadbalancing).uniqueAddresses()
 
-	gceAddresses, err := s.client.Addresses.
-		List(s.projectID, s.region).
-		Filter(fmt.Sprintf("addressType=EXTERNAL AND description:(orb=%s;provider=%s*)", s.orbID, s.providerID)).
+	gceAddresses, err := context.client.Addresses.
+		List(context.projectID, context.region).
+		Filter(fmt.Sprintf("addressType=EXTERNAL AND description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
 		Fields("items(address,description)").
 		Do()
 	if err != nil {
@@ -77,15 +49,15 @@ removeLoop:
 	for _, address := range create {
 		if err := operate(
 			address.log("Creating external address"),
-			s.client.Addresses.
-				Insert(s.projectID, s.region, address.gce).
+			context.client.Addresses.
+				Insert(context.projectID, context.region, address.gce).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
 
-		newAddr, err := s.client.Addresses.Get(s.projectID, s.region, address.gce.Name).
+		newAddr, err := context.client.Addresses.Get(context.projectID, context.region, address.gce.Name).
 			Fields("address").
 			Do()
 		if err != nil {
@@ -97,15 +69,15 @@ removeLoop:
 
 	for _, address := range remove {
 		if err := operate(
-			removeLog(s.monitor, "external address", address.Address, false),
-			s.client.Addresses.
-				Delete(s.projectID, s.region, address.Name).
+			removeLog(context.monitor, "external address", address.Address, false),
+			context.client.Addresses.
+				Delete(context.projectID, context.region, address.Name).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
-		removeLog(s.monitor, "external address", address.Address, true)()
+		removeLog(context.monitor, "external address", address.Address, true)()
 	}
 
 	return nil

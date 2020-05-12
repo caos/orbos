@@ -1,16 +1,23 @@
 package gce
 
-import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-)
+func destroy(desired *Spec, context *context) error {
 
-func destroy(machinesService core.MachinesService, addressesSvc *addressesSvc, desired *Spec) error {
-	pools, err := machinesService.ListPools()
+	if err := compose(
+		ensureForwardingRules,
+		ensureAddresses,
+		ensureTargetPools,
+		ensureHealthchecks,
+		ensureFirewall,
+	)(context, nil); err != nil {
+		return err
+	}
+
+	pools, err := context.machinesService.ListPools()
 	if err != nil {
 		return err
 	}
 	for _, pool := range pools {
-		machines, err := machinesService.List(pool)
+		machines, err := context.machinesService.List(pool)
 		if err != nil {
 			return err
 		}
@@ -19,9 +26,6 @@ func destroy(machinesService core.MachinesService, addressesSvc *addressesSvc, d
 				return err
 			}
 		}
-	}
-	if _, err := addressesSvc.ensure(nil); err != nil {
-		return err
 	}
 	desired.SSHKey = nil
 	return nil

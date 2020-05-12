@@ -4,25 +4,12 @@ import (
 	"fmt"
 
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/caos/orbiter/mntr"
-	"google.golang.org/api/compute/v1"
 )
 
-type forwardingRulesSvc struct {
-	monitor         mntr.Monitor
-	orbID           string
-	providerID      string
-	projectID       string
-	region          string
-	client          *compute.Service
-	machinesService *machinesService
-}
-
-func (s *forwardingRulesSvc) ensure(loadbalancing []*normalizedLoadbalancer) error {
-	gceRules, err := s.client.ForwardingRules.
-		List(s.projectID, s.region).
-		Filter(fmt.Sprintf("loadBalancingScheme=EXTERNAL AND description:(orb=%s;provider=%s*)", s.orbID, s.providerID)).
+func ensureForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) error {
+	gceRules, err := context.client.ForwardingRules.
+		List(context.projectID, context.region).
+		Filter(fmt.Sprintf("loadBalancingScheme=EXTERNAL AND description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
 		Fields("items(description,target,portRange,selfLink)").
 		Do()
 	if err != nil {
@@ -37,7 +24,7 @@ createLoop:
 				if gceRule.Target != lb.targetPool.gce.SelfLink || gceRule.PortRange != lb.forwardingRule.gce.PortRange {
 					if err := operate(
 						lb.forwardingRule.log("Patching forwarding rule"),
-						s.client.ForwardingRules.Patch(s.projectID, s.region, gceRule.Name, lb.forwardingRule.gce).
+						context.client.ForwardingRules.Patch(context.projectID, context.region, gceRule.Name, lb.forwardingRule.gce).
 							RequestId(uuid.NewV1().String()).
 							Do,
 					); err != nil {
@@ -69,8 +56,8 @@ removeLoop:
 	for _, rule := range create {
 		if err := operate(
 			rule.log("Creating forwarding rule"),
-			s.client.ForwardingRules.
-				Insert(s.projectID, s.region, rule.gce).
+			context.client.ForwardingRules.
+				Insert(context.projectID, context.region, rule.gce).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
@@ -82,15 +69,15 @@ removeLoop:
 
 	for _, forwardingRule := range remove {
 		if err := operate(
-			removeLog(s.monitor, "forwarding rule", forwardingRule, false),
-			s.client.ForwardingRules.
-				Delete(s.projectID, s.region, forwardingRule).
+			removeLog(context.monitor, "forwarding rule", forwardingRule, false),
+			context.client.ForwardingRules.
+				Delete(context.projectID, context.region, forwardingRule).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
-		removeLog(s.monitor, "forwarding rule", forwardingRule, true)()
+		removeLog(context.monitor, "forwarding rule", forwardingRule, true)()
 	}
 
 	return nil

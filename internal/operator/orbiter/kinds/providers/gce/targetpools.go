@@ -5,31 +5,20 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/caos/orbiter/mntr"
 	"google.golang.org/api/compute/v1"
 )
 
-type targetPoolsSvc struct {
-	monitor         mntr.Monitor
-	orbID           string
-	providerID      string
-	projectID       string
-	region          string
-	client          *compute.Service
-	machinesService *machinesService
-}
-
-func (s *targetPoolsSvc) ensure(loadbalancing []*normalizedLoadbalancer) error {
-	gcePools, err := s.client.TargetPools.
-		List(s.projectID, s.region).
-		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", s.orbID, s.providerID)).
+func ensureTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) error {
+	gcePools, err := context.client.TargetPools.
+		List(context.projectID, context.region).
+		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
 		Fields("items(description,instances,selfLink,name)").
 		Do()
 	if err != nil {
 		return err
 	}
 
-	allInstances, err := s.machinesService.instances()
+	allInstances, err := context.machinesService.instances()
 	if err != nil {
 		return err
 	}
@@ -64,10 +53,10 @@ createLoop:
 					richAddInstances := instances(addInstances)
 					if err := operate(
 						lb.targetPool.log("Adding instances to target pool", richAddInstances),
-						s.client.TargetPools.
+						context.client.TargetPools.
 							AddInstance(
-								s.projectID,
-								s.region,
+								context.projectID,
+								context.region,
 								gceTp.Name,
 								&compute.TargetPoolsAddInstanceRequest{Instances: richAddInstances.refs()},
 							).
@@ -82,9 +71,9 @@ createLoop:
 				if gceTp.HealthChecks[0] != lb.healthcheck.gce.SelfLink {
 					if err := operate(
 						lb.targetPool.log("Removing healthcheck", nil),
-						s.client.TargetPools.RemoveHealthCheck(
-							s.projectID,
-							s.region,
+						context.client.TargetPools.RemoveHealthCheck(
+							context.projectID,
+							context.region,
 							gceTp.Name,
 							&compute.TargetPoolsRemoveHealthCheckRequest{HealthChecks: []*compute.HealthCheckReference{{HealthCheck: gceTp.HealthChecks[0]}}},
 						).
@@ -96,9 +85,9 @@ createLoop:
 					lb.targetPool.log("Healthcheck removed", nil)()
 					if err := operate(
 						lb.targetPool.log("Adding healthcheck", nil),
-						s.client.TargetPools.AddHealthCheck(
-							s.projectID,
-							s.region,
+						context.client.TargetPools.AddHealthCheck(
+							context.projectID,
+							context.region,
 							gceTp.Name,
 							&compute.TargetPoolsAddHealthCheckRequest{HealthChecks: []*compute.HealthCheckReference{{HealthCheck: lb.healthcheck.gce.SelfLink}}},
 						).
@@ -139,15 +128,15 @@ removeLoop:
 	for _, targetPool := range create {
 		if err := operate(
 			targetPool.targetPool.log("Creating target pool", targetPool.instances),
-			s.client.TargetPools.
-				Insert(s.projectID, s.region, targetPool.targetPool.gce).
+			context.client.TargetPools.
+				Insert(context.projectID, context.region, targetPool.targetPool.gce).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
 
-		newTP, err := s.client.TargetPools.Get(s.projectID, s.region, targetPool.targetPool.gce.Name).
+		newTP, err := context.client.TargetPools.Get(context.projectID, context.region, targetPool.targetPool.gce.Name).
 			Fields("selfLink").
 			Do()
 		if err != nil {
@@ -160,15 +149,15 @@ removeLoop:
 
 	for _, targetPool := range remove {
 		if err := operate(
-			removeLog(s.monitor, "target pool", targetPool, false),
-			s.client.TargetPools.
-				Delete(s.projectID, s.region, targetPool).
+			removeLog(context.monitor, "target pool", targetPool, false),
+			context.client.TargetPools.
+				Delete(context.projectID, context.region, targetPool).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
-		removeLog(s.monitor, "target pool", targetPool, true)()
+		removeLog(context.monitor, "target pool", targetPool, true)()
 	}
 
 	return nil

@@ -4,24 +4,12 @@ import (
 	"fmt"
 
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/caos/orbiter/mntr"
-	"google.golang.org/api/compute/v1"
 )
 
-type healthchecksSvc struct {
-	monitor         mntr.Monitor
-	orbID           string
-	providerID      string
-	projectID       string
-	client          *compute.Service
-	machinesService *machinesService
-}
-
-func (s *healthchecksSvc) ensure(loadbalancing []*normalizedLoadbalancer) error {
-	gceHealthchecks, err := s.client.HttpHealthChecks.
-		List(s.projectID).
-		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", s.orbID, s.providerID)).
+func ensureHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) error {
+	gceHealthchecks, err := context.client.HttpHealthChecks.
+		List(context.projectID).
+		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
 		Fields("items(description,port,requestPath,selfLink)").
 		Do()
 	if err != nil {
@@ -37,7 +25,7 @@ createLoop:
 				if gceTp.Port != lb.healthcheck.gce.Port || gceTp.RequestPath != lb.healthcheck.gce.RequestPath {
 					if err := operate(
 						lb.healthcheck.log("Patching healthcheck"),
-						s.client.HttpHealthChecks.Patch(s.projectID, gceTp.Name, lb.healthcheck.gce).
+						context.client.HttpHealthChecks.Patch(context.projectID, gceTp.Name, lb.healthcheck.gce).
 							RequestId(uuid.NewV1().String()).
 							Do,
 					); err != nil {
@@ -68,15 +56,15 @@ removeLoop:
 	for _, healthcheck := range create {
 		if err := operate(
 			healthcheck.log("Creating healthcheck"),
-			s.client.HttpHealthChecks.
-				Insert(s.projectID, healthcheck.gce).
+			context.client.HttpHealthChecks.
+				Insert(context.projectID, healthcheck.gce).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
 
-		newHC, err := s.client.HttpHealthChecks.Get(s.projectID, healthcheck.gce.Name).
+		newHC, err := context.client.HttpHealthChecks.Get(context.projectID, healthcheck.gce.Name).
 			Fields("selfLink").
 			Do()
 		if err != nil {
@@ -89,15 +77,15 @@ removeLoop:
 
 	for _, healthcheck := range remove {
 		if err := operate(
-			removeLog(s.monitor, "healthcheck", healthcheck, false),
-			s.client.HttpHealthChecks.
-				Delete(s.projectID, healthcheck).
+			removeLog(context.monitor, "healthcheck", healthcheck, false),
+			context.client.HttpHealthChecks.
+				Delete(context.projectID, healthcheck).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
-		removeLog(s.monitor, "healthcheck", healthcheck, true)
+		removeLog(context.monitor, "healthcheck", healthcheck, true)
 	}
 
 	return nil

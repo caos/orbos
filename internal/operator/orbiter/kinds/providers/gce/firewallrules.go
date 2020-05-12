@@ -5,24 +5,12 @@ import (
 	"sort"
 
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/caos/orbiter/mntr"
-	"google.golang.org/api/compute/v1"
 )
 
-type firewallRulesSvc struct {
-	monitor         mntr.Monitor
-	orbID           string
-	providerID      string
-	projectID       string
-	client          *compute.Service
-	machinesService *machinesService
-}
-
-func (s *firewallRulesSvc) ensure(loadbalancing []*normalizedLoadbalancer) error {
-	gceFirewalls, err := s.client.Firewalls.
-		List(s.projectID).
-		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", s.orbID, s.providerID)).
+func ensureFirewall(context *context, loadbalancing []*normalizedLoadbalancer) error {
+	gceFirewalls, err := context.client.Firewalls.
+		List(context.projectID).
+		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
 		Fields("items(description,port,requestPath,selfLink)").
 		Do()
 	if err != nil {
@@ -39,7 +27,7 @@ createLoop:
 					!stringsEqual(gceFW.SourceRanges, lb.firewall.gce.SourceRanges) {
 					if err := operate(
 						lb.firewall.log("Patching firewall"),
-						s.client.Firewalls.Patch(s.projectID, gceFW.Name, lb.firewall.gce).RequestId(uuid.NewV1().String()).Do,
+						context.client.Firewalls.Patch(context.projectID, gceFW.Name, lb.firewall.gce).RequestId(uuid.NewV1().String()).Do,
 					); err != nil {
 						return err
 					}
@@ -68,8 +56,8 @@ removeLoop:
 	for _, firewall := range create {
 		if err := operate(
 			firewall.log("Creating firewall"),
-			s.client.Firewalls.
-				Insert(s.projectID, firewall.gce).
+			context.client.Firewalls.
+				Insert(context.projectID, firewall.gce).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
@@ -81,15 +69,15 @@ removeLoop:
 
 	for _, healthcheck := range remove {
 		if err := operate(
-			removeLog(s.monitor, "firewall", healthcheck, false),
-			s.client.Firewalls.
-				Delete(s.projectID, healthcheck).
+			removeLog(context.monitor, "firewall", healthcheck, false),
+			context.client.Firewalls.
+				Delete(context.projectID, healthcheck).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		); err != nil {
 			return err
 		}
-		removeLog(s.monitor, "firewall", healthcheck, true)()
+		removeLog(context.monitor, "firewall", healthcheck, true)()
 	}
 
 	return nil
