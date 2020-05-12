@@ -34,7 +34,6 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
-
 		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent)
 		if err != nil {
 			return nil, nil, migrate, err
@@ -56,13 +55,7 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				errChan := make(chan error)
-				go func() {
-					_, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
-					errChan <- err
-				}()
-				err = <-errChan
-				if err != nil {
+				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
 					return nil, err
 				}
 
