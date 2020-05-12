@@ -21,6 +21,21 @@ type EnsureFunc func(psf push.Func) error
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
 
+type retQuery struct {
+	ensure EnsureFunc
+	err    error
+}
+
+func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
+	retChan := make(chan retQuery)
+	go func() {
+		ensure, err := query()
+		retChan <- retQuery{ensure, err}
+	}()
+	ret := <-retChan
+	return ret.ensure, ret.err
+}
+
 type event struct {
 	commit string
 	files  []git.File

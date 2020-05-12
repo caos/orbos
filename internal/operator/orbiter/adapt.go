@@ -31,7 +31,7 @@ func parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err erro
 	return trees, nil
 }
 
-type ret struct {
+type retAdapt struct {
 	query   QueryFunc
 	destroy DestroyFunc
 	migrate bool
@@ -39,10 +39,10 @@ type ret struct {
 }
 
 func AdaptFuncGoroutine(adapt func() (QueryFunc, DestroyFunc, bool, error)) (QueryFunc, DestroyFunc, bool, error) {
-	retChan := make(chan ret)
+	retChan := make(chan retAdapt)
 	go func() {
 		query, destroy, migrate, err := adapt()
-		retChan <- ret{query, destroy, migrate, err}
+		retChan <- retAdapt{query, destroy, migrate, err}
 	}()
 	ret := <-retChan
 	return ret.query, ret.destroy, ret.migrate, ret.err

@@ -69,7 +69,12 @@ func query(
 			return nil, err
 		}
 		for _, machine := range machines {
-			if err := desireHostnameFunc(machine, pool); err != nil {
+			errChan := make(chan error)
+			go func() {
+				errChan <- desireHostnameFunc(machine, pool)
+			}()
+			err := <-errChan
+			if err != nil {
 				return nil, err
 			}
 		}

@@ -176,7 +176,7 @@ func AdaptFunc(
 				}()
 
 				for _, destroyer := range clusterDestroyers {
-					if err := destroyer(); err != nil {
+					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
 						return err
 					}
 				}
