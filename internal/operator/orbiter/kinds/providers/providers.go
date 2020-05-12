@@ -56,11 +56,10 @@ func GetQueryAndDestroyFuncs(
 			},
 		)
 
-		q, d, b, err := adaptFunc(
+		return adaptFunc(
 			monitor.WithFields(map[string]interface{}{"provider": provID}),
 			providerTree,
 			providerCurrent)
-		return q, d, b, err
 	default:
 		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}

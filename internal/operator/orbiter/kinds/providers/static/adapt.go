@@ -56,9 +56,16 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
+				errChan := make(chan error)
+				go func() {
+					_, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					errChan <- err
+				}()
+				err = <-errChan
+				if err != nil {
 					return nil, err
 				}
+
 				return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
 			}, func() error {
 				return destroy(monitor, desiredKind, current, id)
