@@ -35,6 +35,13 @@ func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
 	ret := <-retChan
 	return ret.ensure, ret.err
 }
+func EnsureFuncGoroutine(ensure func() error) error {
+	retChan := make(chan error)
+	go func() {
+		retChan <- ensure()
+	}()
+	return <-retChan
+}
 
 type event struct {
 	commit string
@@ -97,7 +104,10 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			})
 		}, monitor.OnChange)
 
-		query, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
+		adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
+			return adapt(monitor, treeDesired, treeCurrent)
+		}
+		query, _, migrate, err := AdaptFuncGoroutine(adaptFunc)
 		if err != nil {
 			monitor.Error(err)
 			return
@@ -130,7 +140,10 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			monitor.Error(gitClient.Push())
 		}
 
-		ensure, err := query(currentNodeAgents.Current, desiredNodeAgents.Spec.NodeAgents, nil)
+		queryFunc := func() (EnsureFunc, error) {
+			return query(currentNodeAgents.Current, desiredNodeAgents.Spec.NodeAgents, nil)
+		}
+		ensure, err := QueryFuncGoroutine(queryFunc)
 		if err != nil {
 			handleAdapterError(err)
 			return
@@ -153,7 +166,11 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		events = make([]*event, 0)
-		if err := ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
+
+		ensureFunc := func() error {
+			return ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml"))
+		}
+		if err := EnsureFuncGoroutine(ensureFunc); err != nil {
 			handleAdapterError(err)
 			return
 		}
