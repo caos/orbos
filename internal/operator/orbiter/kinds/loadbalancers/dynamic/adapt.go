@@ -112,6 +112,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.SourcePools = sourcePools
 			current.Current.Addresses = addresses
+			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string) error {
 
 				vips, ok := desiredKind.Spec[forPool]

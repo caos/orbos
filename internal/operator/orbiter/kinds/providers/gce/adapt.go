@@ -1,12 +1,14 @@
 package gce
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbiter/internal/tree"
 	"github.com/pkg/errors"
+	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -96,6 +98,11 @@ func services(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*m
 
 	jsonKey := []byte(desired.JSONKey.Value)
 	credsOption := option.WithCredentialsJSON(jsonKey)
+	computeClient, err := compute.NewService(context.TODO(), credsOption)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	key := struct {
 		ProjectID string `json:"project_id"`
 	}{}
@@ -111,13 +118,13 @@ func services(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*m
 			orbID,
 			providerID,
 			key.ProjectID,
-			credsOption,
+			computeClient,
 		), newAdressesService(
 			monitor,
 			orbID,
 			providerID,
 			key.ProjectID,
 			desired.Region,
-			credsOption,
+			computeClient,
 		), nil
 }

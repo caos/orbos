@@ -3,7 +3,6 @@ package gce
 import (
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbiter/internal/push"
@@ -28,41 +27,19 @@ func query(
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	current.Current.Ingresses = make(map[string]*infra.Address)
-	var desireLb func(pool string) error
 
-	var addresses map[string]*infra.Address
-
-	switch lbCurrent := lb.(type) {
-	case *dynamiclbmodel.Current:
-		addresses = lbCurrent.Current.Addresses
-		desireLb = func(pool string) error {
-			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, func(machine infra.Machine, peers infra.Machines, vips []*dynamiclbmodel.VIP) string {
-
-			})
-		}
-		for name, address := range lbCurrent.Current.Addresses {
-			current.Current.Ingresses[name] = address
-		}
-		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired)
-		//	case *externallbmodel.Current:
-		//		for name, address := range lbCurrent.Current.Addresses {
-		//			current.Current.Ingresses[name] = address
-		//		}
-	default:
-		return nil, errors.Errorf("Unknown load balancer of type %T", lb)
+	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
+	if !ok {
+		errors.Errorf("Unknown or unsupported load balancing of type %T", lb)
 	}
 
 	return func(psf push.Func) error {
-		changed, err := addressesSvc.ensure(addresses)
+		externalIPs, err := addressesSvc.ensure(lbCurrent.Current.Spec)
 		if err != nil {
 			return err
 		}
 
-		if changed {
-			if err := psf(monitor.WithField("ips", addresses)); err != nil {
-				return err
-			}
-		}
+		current.Current.Ingresses = ingresses
 
 		if desired.SSHKey != nil && desired.SSHKey.Private != nil && desired.SSHKey.Private.Value != "" && desired.SSHKey.Public != nil && desired.SSHKey.Public.Value != "" {
 			return nil
@@ -83,12 +60,6 @@ func query(
 		}
 
 		for _, pool := range pools {
-			if err := desireLb(pool); err != nil {
-				return err
-			}
-			if err != nil {
-				return err
-			}
 			machines, err := machinesSvc.List(pool)
 			if err != nil {
 				return err

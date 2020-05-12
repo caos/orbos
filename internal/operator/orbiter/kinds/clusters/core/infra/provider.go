@@ -3,6 +3,7 @@ package infra
 import (
 	"fmt"
 	"io"
+	"sort"
 )
 
 type Address struct {
@@ -66,3 +67,15 @@ func (c Machines) String() string {
 func (c Machines) Len() int           { return len(c) }
 func (c Machines) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 func (c Machines) Less(i, j int) bool { return c[i].ID() < c[j].ID() }
+
+func (c Machines) IDs() []string {
+	l := len(c)
+	machines := make([]Machine, l, l)
+	copy(machines, c)
+	sort.Sort(Machines(machines))
+	ids := make([]string, l, l)
+	for idx, machine := range machines {
+		ids[idx] = machine.ID()
+	}
+	return ids
+}
