@@ -137,7 +137,11 @@ func AdaptFunc(
 				providerEnsurers := make([]orbiter.EnsureFunc, 0)
 				queriedProviders := make(map[string]interface{})
 				for _, querier := range providerQueriers {
-					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					queryFunc := func() (orbiter.EnsureFunc, error) {
+						return querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					}
+					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+
 					if err != nil {
 						return nil, err
 					}
@@ -150,7 +154,11 @@ func AdaptFunc(
 
 				clusterEnsurers := make([]orbiter.EnsureFunc, 0)
 				for _, querier := range clusterQueriers {
-					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					queryFunc := func() (orbiter.EnsureFunc, error) {
+						return querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					}
+					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+
 					if err != nil {
 						return nil, err
 					}
@@ -163,7 +171,11 @@ func AdaptFunc(
 					}()
 
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
-						if err := ensurer(psf); err != nil {
+						ensureFunc := func() error {
+							return ensurer(psf)
+						}
+
+						if err := orbiter.EnsureFuncGoroutine(ensureFunc); err != nil {
 							return err
 						}
 					}
