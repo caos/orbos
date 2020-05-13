@@ -3,6 +3,7 @@ package ssh
 import (
 	"bytes"
 	"fmt"
+	"github.com/caos/orbos/internal/ssh"
 	"io"
 	"os"
 	"path/filepath"
@@ -185,18 +186,13 @@ func (c *machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 func (c *machine) UseKey(keys ...[]byte) error {
 
-	signers := make([]sshlib.Signer, 0)
-	for _, key := range keys {
-		signer, err := sshlib.ParsePrivateKey(key)
-		if err != nil {
-			return errors.Wrap(err, "parsing private key failed")
-		}
-		signers = append(signers, signer)
-	}
-
 	publicKeys := make([]sshlib.AuthMethod, 0)
-	for _, signer := range signers {
-		publicKeys = append(publicKeys, sshlib.PublicKeys(signer))
+	for _, key := range keys {
+		publicKey, err := ssh.PrivateKeyToPublicKey(key)
+		if err != nil {
+			return err
+		}
+		publicKeys = append(publicKeys, publicKey)
 	}
 
 	c.sshCfg = &sshlib.ClientConfig{
