@@ -261,6 +261,7 @@ http {
 
 				for _, d := range machinesData {
 					kaBuf := new(bytes.Buffer)
+					defer kaBuf.Reset()
 
 					if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
 						return err
@@ -308,6 +309,8 @@ http {
 					na.Software.KeepaliveD = kaPkg
 
 					ngxBuf := new(bytes.Buffer)
+					defer ngxBuf.Reset()
+
 					if err := nginxTemplate.Execute(ngxBuf, d); err != nil {
 						return err
 					}
