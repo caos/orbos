@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"runtime/debug"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -136,6 +137,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 				monitor.WithFields(map[string]interface{}{
 					"took": time.Since(started),
 				}).Info("Iteration done")
+				debug.FreeOSMemory()
 			}()
 
 			time.Sleep(time.Duration(intervalSeconds) * time.Second)
