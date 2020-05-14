@@ -6,7 +6,7 @@ We at CAOS believe that multicluster management, be it of Kubernetes, or any oth
 
 Our recommendation for customers is to build several smaller clusters instead of a few big multitenant ones. This is, because we firmly believe that separation of concern can not be achieved without a complex management within one cluster. The additional overhead can be easily mitigated by utilizing reproducible processes. Treat clusters as cattle, not pets.
 
-![ORBOS explained](./img/orbos-explained-flowchart-portraitmode.svg)
+![ORBOS explained](./img/orbos-explained-flowchart.svg)
 
 ## Priciples
 
