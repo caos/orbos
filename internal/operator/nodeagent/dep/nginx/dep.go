@@ -59,22 +59,12 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 		"nginx.conf": string(config),
 	}
 
-	enabled, err := dep.CurrentSysctlConfig(s.monitor, ipForwardCfg)
-	if err != nil {
+	if err := dep.CurrentSysctlConfig(s.monitor, ipForwardCfg, &pkg, true); err != nil {
 		return pkg, err
 	}
 
-	if !enabled {
-		pkg.Config[ipForwardCfg] = "0"
-	}
-
-	enabled, err = dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg)
-	if err != nil {
+	if err := dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg, &pkg, true); err != nil {
 		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "0"
 	}
 
 	return pkg, nil

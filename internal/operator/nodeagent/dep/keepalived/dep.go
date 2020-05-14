@@ -75,22 +75,13 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
 	}
-	enabled, err := dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg)
-	if err != nil {
+
+	if err := dep.CurrentSysctlConfig(s.monitor, ipForwardCfg, &pkg, true); err != nil {
 		return pkg, err
 	}
 
-	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "0"
-	}
-
-	enabled, err = dep.CurrentSysctlConfig(s.monitor, ipForwardCfg)
-	if err != nil {
+	if err := dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg, &pkg, true); err != nil {
 		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[ipForwardCfg] = "0"
 	}
 
 	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")

@@ -60,31 +60,16 @@ func (k *kubeletDep) Current() (common.Package, error) {
 		return pkg, err
 	}
 
-	enabled, err := dep.CurrentSysctlConfig(k.monitor, ipForwardCfg)
-	if err != nil {
+	if err := dep.CurrentSysctlConfig(k.monitor, ipForwardCfg, &pkg, true); err != nil {
 		return pkg, err
 	}
 
-	if !enabled {
-		pkg.Config[ipForwardCfg] = "0"
-	}
-
-	enabled, err = dep.CurrentSysctlConfig(k.monitor, iptables)
-	if err != nil {
+	if err := dep.CurrentSysctlConfig(k.monitor, iptables, &pkg, true); err != nil {
 		return pkg, err
 	}
 
-	if !enabled {
-		pkg.Config[iptables] = "0"
-	}
-
-	enabled, err = dep.CurrentSysctlConfig(k.monitor, ip6tables)
-	if err != nil {
+	if err := dep.CurrentSysctlConfig(k.monitor, ip6tables, &pkg, true); err != nil {
 		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[ip6tables] = "0"
 	}
 
 	return pkg, selinux.Current(k.os, &pkg)
