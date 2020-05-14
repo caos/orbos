@@ -1,25 +1,31 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/tree"
 	"os"
+
+	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
+var deployErrors int
+
 func AdaptFunc(
-	orb *orbiter.Orb,
+	orb *orb.Orb,
 	orbiterCommit string,
 	clusterID string,
 	oneoff bool,
 	deployOrbiterAndBoom bool,
-	destroyProviders func() (map[string]interface{}, error)) orbiter.AdaptFunc {
+	destroyProviders func() (map[string]interface{}, error),
+	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
 
-	var deployErrors int
-	return func(monitor mntr.Monitor, desiredTree *orbiter.Tree, currentTree *orbiter.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, secrets map[string]*orbiter.Secret, migrate bool, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -28,26 +34,32 @@ func AdaptFunc(
 			migrate = true
 		}
 
-		desiredKind := &DesiredV0{
-			Common: *desiredTree.Common,
-			Spec:   Spec{Kubeconfig: &orbiter.Secret{Masterkey: orb.Masterkey}},
-		}
-		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+		desiredKind, err := parseDesiredV0(desiredTree, orb.Masterkey)
+		if err != nil {
+			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
-		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+		if desiredKind.Spec.ControlPlane.Taints == nil {
+			taints := Taints([]Taint{{
+				Key:    "node-role.kubernetes.io/master",
+				Effect: core.TaintEffectNoSchedule,
+			}})
+			desiredKind.Spec.ControlPlane.Taints = &taints
+			migrate = true
 		}
 
-		if desiredKind.Spec.Kubeconfig == nil {
-			desiredKind.Spec.Kubeconfig = &orbiter.Secret{Masterkey: orb.Masterkey}
+		if err := desiredKind.validate(); err != nil {
+			return nil, nil, migrate, err
 		}
+
+		initializeNecessarySecrets(desiredKind, orb.Masterkey)
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
 		}
+
+		whitelist([]*orbiter.CIDR{&desiredKind.Spec.Networking.PodCidr})
 
 		var kc *string
 		if desiredKind.Spec.Kubeconfig.Value != "" {
@@ -60,7 +72,7 @@ func AdaptFunc(
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
-					"err":   err.Error(),
+					"error": err.Error(),
 				}).Info("Deploying Orbiter failed, awaiting next iteration")
 				if deployErrors > 50 {
 					panic(err)
@@ -76,7 +88,7 @@ func AdaptFunc(
 
 		current := &CurrentCluster{}
 		currentTree.Parsed = &Current{
-			Common: orbiter.Common{
+			Common: tree.Common{
 				Kind:    "orbiter.caos.ch/KubernetesCluster",
 				Version: "v0",
 			},
@@ -111,8 +123,6 @@ func AdaptFunc(
 				desiredKind.Spec.Kubeconfig = nil
 
 				return destroy(monitor, providers, k8sClient)
-			}, map[string]*orbiter.Secret{
-				"kubeconfig": desiredKind.Spec.Kubeconfig,
 			}, migrate, nil
 	}
 }

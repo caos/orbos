@@ -1,5 +1,3 @@
-//go:generate goderive .
-
 package main
 
 import (
@@ -7,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbos/internal/helpers"
 )
 
 type resultTuple func() (interface{}, error)

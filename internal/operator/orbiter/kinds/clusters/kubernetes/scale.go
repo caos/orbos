@@ -2,20 +2,20 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/push"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 )
 
 func ensureScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf orbiter.PushSecretsFunc,
+	psf push.Func,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
 	kubeAPI infra.Address,
@@ -163,6 +163,12 @@ nodes:
 		}
 
 		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
+
+		if k8sVersion.equals(V1x18x0) {
+			if _, err := certsCP.Execute(nil, nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
+				return false, errors.Wrap(err, "Working around kubeadm bug failed, see https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#not-possible-to-join-a-v1-18-node-to-a-v1-17-cluster-due-to-missing-rbac")
+			}
+		}
 	}
 
 	var certKey []byte

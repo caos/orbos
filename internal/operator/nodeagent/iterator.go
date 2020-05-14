@@ -5,12 +5,13 @@ package nodeagent
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 type Rebooter interface {
@@ -22,13 +23,9 @@ type event struct {
 	current *common.NodeAgentCurrent
 }
 
-func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
+func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
 
 	return func() {
-		if err := before(); err != nil {
-			panic(err)
-		}
-
 		if err := gitClient.Clone(); err != nil {
 			monitor.Error(err)
 			return
@@ -73,6 +70,10 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 				current: &clone,
 			})
 		}, monitor.OnChange)
+
+		if err := before(); err != nil {
+			panic(err)
+		}
 
 		ensure, err := query(monitor, nodeAgentCommit, firewallEnsurer, conv, *naDesired, curr)
 		if err != nil {
@@ -141,5 +142,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, rebooter Rebooter, no
 		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
+
+		debug.FreeOSMemory()
 	}
 }

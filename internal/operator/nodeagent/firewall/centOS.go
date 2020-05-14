@@ -9,9 +9,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/mntr"
 )
 
 func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
@@ -51,7 +51,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		}
 
 		for _, ign := range ignore {
-			desired[ign] = common.Allowed{
+			desired[ign] = &common.Allowed{
 				Port:     ign,
 				Protocol: "tcp",
 			}
@@ -78,50 +78,68 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			cmd.Stdout = os.Stdout
 		}
 
+		monitor.WithFields(map[string]interface{}{
+			"open":  strings.Join(addPorts, ";"),
+			"close": strings.Join(removePorts, ";"),
+		}).Debug("Firewall changes determined")
+
 		if cmd.Run() != nil || len(addPorts) == 0 && len(removePorts) == 0 {
+			monitor.Debug("Not changing firewall")
 			return current, nil, nil
 		}
 
-		return current, func() error {
-
-			errBuf.Reset()
-			cmd = exec.Command("systemctl", "enable", "firewalld")
-			cmd.Stderr = &errBuf
-
-			fullCmd := strings.Join(cmd.Args, " ")
-			if monitor.IsVerbose() {
-				fmt.Println(fullCmd)
-				cmd.Stdout = os.Stdout
-			}
-
-			if err := cmd.Run(); err != nil {
-				return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-			}
-
-			errBuf.Reset()
-			cmd = exec.Command("systemctl", "start", "firewalld")
-			cmd.Stderr = &errBuf
-
-			fullCmd = strings.Join(cmd.Args, " ")
-			if monitor.IsVerbose() {
-				fmt.Println(fullCmd)
-				cmd.Stdout = os.Stdout
-			}
-
-			if err := cmd.Run(); err != nil {
-				return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-			}
-
-			if err := changeFirewall(monitor, addPorts); err != nil {
-				return err
-			}
-
-			return changeFirewall(monitor, removePorts)
-		}, nil
+		return current, ensureFunc(monitor, append(removePorts, addPorts...)), nil
 	})
 }
 
-func changeFirewall(monitor mntr.Monitor, changes []string) error {
+func ensureFunc(monitor mntr.Monitor, changes []string) func() error {
+	return func() error {
+
+		var errBuf bytes.Buffer
+		cmd := exec.Command("systemctl", "enable", "firewalld")
+		cmd.Stderr = &errBuf
+
+		fullCmd := strings.Join(cmd.Args, " ")
+		if monitor.IsVerbose() {
+			fmt.Println(fullCmd)
+			cmd.Stdout = os.Stdout
+		}
+
+		if err := cmd.Run(); err != nil {
+			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+		}
+
+		errBuf.Reset()
+		cmd = exec.Command("systemctl", "start", "firewalld")
+		cmd.Stderr = &errBuf
+
+		fullCmd = strings.Join(cmd.Args, " ")
+		if monitor.IsVerbose() {
+			fmt.Println(fullCmd)
+			cmd.Stdout = os.Stdout
+		}
+
+		if err := cmd.Run(); err != nil {
+			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+		}
+
+		return changeFirewall(monitor, changes)
+	}
+}
+
+func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
+
+	changesMonitor := monitor.WithField("changes", strings.Join(changes, ";"))
+	changesMonitor.Debug("Changing firewall")
+
+	defer func() {
+		if err == nil {
+			changesMonitor.Debug("Firewall changed")
+		} else {
+			changesMonitor.Error(err)
+		}
+	}()
+
 	var errBuf bytes.Buffer
 	if len(changes) == 0 {
 		return nil

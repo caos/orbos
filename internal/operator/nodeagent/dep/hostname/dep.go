@@ -9,9 +9,9 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
 )
 
 type Installer interface {

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caos/orbiter/internal/helpers"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"
@@ -87,6 +87,23 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 		return err
 	}, func() error {
 		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) ApplyService(rsc *core.Service) error {
+	resources := c.set.CoreV1().Services(rsc.GetNamespace())
+	return c.apply("service", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		svc, err := resources.Get(rsc.Name, mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rsc.Spec.ClusterIP = svc.Spec.ClusterIP
+		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+		_, err = resources.Update(rsc)
 		return err
 	})
 }
@@ -208,10 +225,6 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 }
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {
-
-	defer func() {
-		err = errors.Wrapf(err, "getting node %s failed", id)
-	}()
 
 	api, err := c.nodeApi()
 	if err != nil {

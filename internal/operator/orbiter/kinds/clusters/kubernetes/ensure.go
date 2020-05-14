@@ -1,9 +1,9 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/mntr"
 )
 
 func ensure(
@@ -12,7 +12,7 @@ func ensure(
 	desired *DesiredV0,
 	curr *CurrentCluster,
 	kubeAPIAddress infra.Address,
-	psf orbiter.PushSecretsFunc,
+	psf push.Func,
 	k8sClient *Client,
 	oneoff bool,
 	controlplane initializedPool,
@@ -24,17 +24,21 @@ func ensure(
 	installNodeAgent func(*initializedMachine) error,
 ) (err error) {
 
-	initializedMachines := append(controlplaneMachines, workerMachines...)
-
 	initialized := true
 
-	for _, machine := range initializedMachines {
+	for _, machine := range append(controlplaneMachines, workerMachines...) {
+
+		if err := machine.reconcile(); err != nil {
+			return err
+		}
+
 		machineMonitor := monitor.WithField("machine", machine.infra.ID())
 		if !machine.currentMachine.NodeAgentIsRunning {
 			machineMonitor.Info("Node agent is not running on the correct version yet")
 			if err := installNodeAgent(machine); err != nil {
 				return err
 			}
+
 			initialized = false
 		}
 

@@ -1,0 +1,15 @@
+apiVersion: skaffold/v2alpha4
+kind: Config
+metadata:
+  name: orbiter
+build:
+  artifacts:
+  - image: eu.gcr.io/caos-240809/orbiter
+    context: .
+    custom:
+      buildCommand: DEBUG=true ./skaffold/build.sh
+deploy:
+  kubectl:
+    manifests:
+    - skaffold/deployment.yml
+    - skaffold/service.yml

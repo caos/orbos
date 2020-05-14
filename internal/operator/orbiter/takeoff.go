@@ -1,17 +1,25 @@
 package orbiter
 
 import (
-	"context"
 	"fmt"
+	"net/http"
+	"runtime/debug"
 
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/tree"
+
+	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/ingestion"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
-type EnsureFunc func(psf PushSecretsFunc) error
+type EnsureFunc func(psf push.Func) error
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
 
@@ -20,7 +28,15 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, orbiterCommit string, masterkey string, recur bool, adapt AdaptFunc) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
+
+	go func() {
+		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+		http.Handle("/metrics", promhttp.Handler())
+		if err := http.ListenAndServe(":9000", nil); err != nil {
+			panic(err)
+		}
+	}()
 
 	return func() {
 
@@ -31,7 +47,7 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 		}
 
 		treeDesired := trees[0]
-		treeCurrent := &Tree{}
+		treeCurrent := &tree.Tree{}
 
 		desiredNodeAgents := common.NodeAgentsDesiredKind{
 			Kind:    "nodeagent.caos.ch/NodeAgents",
@@ -61,20 +77,21 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 
 		events := make([]*event, 0)
 		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+			pushEvents([]*ingestion.EventRequest{mntr.EventRecord("orbiter", evt, fields)})
 			events = append(events, &event{
 				commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
 				files:  marshalCurrentFiles(),
 			})
 		}, monitor.OnChange)
 
-		query, _, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
+		query, _, migrate, err := adapt(monitor, treeDesired, treeCurrent)
 		if err != nil {
 			monitor.Error(err)
 			return
 		}
 
 		if migrate {
-			if err := pushOrbiterYML(monitor, "Desired state migrated", gitClient, treeDesired); err != nil {
+			if err := push.YML(monitor, "Desired state migrated", gitClient, treeDesired, "orbiter.yml"); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -123,7 +140,7 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 		}
 
 		events = make([]*event, 0)
-		if err := ensure(pushSecretsFunc(gitClient, treeDesired)); err != nil {
+		if err := ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
 			handleAdapterError(err)
 			return
 		}
@@ -147,5 +164,6 @@ func Takeoff(ctx context.Context, monitor mntr.Monitor, gitClient *git.Client, o
 		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
+		debug.FreeOSMemory()
 	}
 }

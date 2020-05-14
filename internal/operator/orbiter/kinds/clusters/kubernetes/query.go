@@ -1,12 +1,13 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/push"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 )
 
 func query(
@@ -76,7 +77,7 @@ func query(
 			firewallFunc(monitor, *desired, kubeAPIAddress.Port)(machine)
 		})
 
-	return func(psf orbiter.PushSecretsFunc) error {
+	return func(psf push.Func) error {
 		return ensure(
 			monitor,
 			clusterID,

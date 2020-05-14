@@ -2,11 +2,13 @@ package kubernetes
 
 import (
 	"fmt"
-	"regexp"
 
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
 var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
@@ -15,39 +17,14 @@ var ipRegex = fmt.Sprintf(`%s\.%s\.%s\.%s`, ipPartRegex, ipPartRegex, ipPartRege
 
 var cidrRegex = fmt.Sprintf(`%s/([1-2][0-9]|3[0-2]|[0-9])`, ipRegex)
 
-var cidrComp = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
-
-type cidr string
-
-/*
-type DesiredV1 struct {
-	Common orbiter.Common `yaml:",inline"`
-	Spec   struct {
-		Verbose           bool
-		KubernetesVersion string
-		Versions          struct {
-			Orbiter string
-			Boom    string
-		}
-		Networking struct {
-			DNSDomain   string
-			Network     string
-			ServiceCidr orbiter.CIDR
-			PodCidr     orbiter.CIDR
-		}
-		ControlPlane Pool
-		Workers      []*Pool
-	}
-}
-*/
 type DesiredV0 struct {
-	Common orbiter.Common `yaml:",inline"`
+	Common tree.Common `yaml:",inline"`
 	Spec   Spec
 }
 
 type Spec struct {
 	ControlPlane Pool
-	Kubeconfig   *orbiter.Secret `yaml:",omitempty"`
+	Kubeconfig   *secret.Secret `yaml:",omitempty"`
 	Networking   struct {
 		DNSDomain   string
 		Network     string
@@ -61,6 +38,24 @@ type Spec struct {
 		Boom       string
 	}
 	Workers []*Pool
+}
+
+func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{
+		Common: *desiredTree.Common,
+		Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: masterkey}},
+	}
+	if err := desiredTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+
+	return desiredKind, nil
+}
+
+func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
+	if desiredKind.Spec.Kubeconfig == nil {
+		desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: masterkey}
+	}
 }
 
 func (d *DesiredV0) validate() error {
@@ -111,38 +106,28 @@ type Pool struct {
 	Provider        string
 	Nodes           int
 	Pool            string
+	Taints          *Taints `yaml:"taints,omitempty"`
 }
 
-/*
-// UnmarshalYAML migrates desired states from v0 to v1:
-func (d *DesiredV1) UnmarshalYAML(node *yaml.Node) error {
-	defer func() {
-		d.Common.Version = "v1"
-	}()
-	switch d.Common.Version {
-	case "v1":
-		type latest DesiredV1
-		l := latest{}
-		if err := node.Decode(&l); err != nil {
-			return err
-		}
-		d.Common = l.Common
-		d.Spec = l.Spec
-		return nil
-	case "v0":
-		v0 := DesiredV0{}
-		if err := node.Decode(&v0); err != nil {
-			return err
-		}
-		d.Spec.Verbose = v0.Spec.Verbose
-		d.Spec.KubernetesVersion = v0.Spec.Versions.Kubernetes
-		d.Spec.Versions.Orbiter = v0.Spec.Versions.Orbiter
-		d.Spec.Versions.Boom = v0.Spec.Versions.Boom
-		d.Spec.Networking = v0.Spec.Networking
-		d.Spec.ControlPlane = v0.Spec.ControlPlane
-		d.Spec.Workers = v0.Spec.Workers
+type Taint struct {
+	Key    string           `yaml:"key"`
+	Value  string           `yaml:"value,omitempty"`
+	Effect core.TaintEffect `yaml:"effect"`
+}
+
+type Taints []Taint
+
+func (t *Taints) ToK8sTaints() []core.Taint {
+	if t == nil {
 		return nil
 	}
-	return errors.Errorf("Version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)
+	taints := make([]core.Taint, len(*t))
+	for idx, taint := range *t {
+		taints[idx] = core.Taint{
+			Key:    taint.Key,
+			Value:  taint.Value,
+			Effect: taint.Effect,
+		}
+	}
+	return taints
 }
-*/

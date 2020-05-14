@@ -27,7 +27,7 @@ clusters:
 providers:
   kvm:
     kind: orbiter.caos.ch/StaticProvider
-    version: v0
+    version: v1
     spec:
       pools:
         masters:
@@ -42,13 +42,14 @@ providers:
       remoteuser: orbiter
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
-      version: v0
+      version: v1
       spec:
         masters:
         - ip: 192.168.122.10
           transport:
           - name: kubeapi
             sourceport: 6443
+            whitelist: [ 0.0.0.0/0 ]
             destinations:
             - pool: masters
               port: 6443
@@ -56,32 +57,14 @@ providers:
                 code: 200
                 path: /healthz
                 protocol: https
-<<<<<<< HEAD
-=======
         workers:
->>>>>>> kickstart
         - ip: 192.168.122.11
+          whitelist: [ 0.0.0.0/0 ]
           transport:
           - name: httpsingress
             sourceport: 443
+            whitelist: [ 0.0.0.0/0 ]
             destinations:
-<<<<<<< HEAD
-            - pool: workers
-              port: 30443
-              healthchecks:
-                code: 200
-                path: /healthz
-                protocol: http
-          - name: httpingress
-            sourceport: 80
-            destinations:
-            - pool: workers
-              port: 30080
-              healthchecks:
-                code: 200
-                path: /healthz
-                protocol: https
-=======
             - healthchecks:
                 protocol: https
                 path: /ambassador/v0/check_ready
@@ -90,6 +73,7 @@ providers:
               pool: workers
           - name: httpingress
             sourceport: 80
+            whitelist: [ 0.0.0.0/0 ]
             destinations:
             - healthchecks:
                 protocol: http
@@ -97,4 +81,3 @@ providers:
                 code: 200
               port: 30080
               pool: workers
->>>>>>> kickstart

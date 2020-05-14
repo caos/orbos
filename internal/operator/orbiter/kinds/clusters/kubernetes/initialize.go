@@ -1,10 +1,16 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
+	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type initializedPool struct {
@@ -35,6 +41,7 @@ func (i *initializedPool) enhance(initialize initializeFunc) {
 type initializedMachine struct {
 	infra            infra.Machine
 	tier             Tier
+	reconcile        func() error
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
@@ -88,7 +95,17 @@ func initialize(
 
 	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
 
-		node, getNodeErr := k8s.GetNode(machine.ID())
+		node, imErr := k8s.GetNode(machine.ID())
+
+		// Retry if kubeapi returns other error than "NotFound"
+		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(imErr) {
+			monitor.WithFields(map[string]interface{}{
+				"node":  machine.ID(),
+				"error": imErr.Error(),
+			}).Info("Could not determine node state")
+			time.Sleep(5 * time.Second)
+			node, imErr = k8s.GetNode(machine.ID())
+		}
 
 		current := &Machine{
 			Metadata: MachineMetadata{
@@ -98,13 +115,15 @@ func initialize(
 			},
 		}
 
-		if getNodeErr == nil {
+		reconcile := func() error { return nil }
+		if imErr == nil {
+			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s)
 			current.Joined = true
-			if !node.Spec.Unschedulable {
-				for _, cond := range node.Status.Conditions {
-					if cond.Type == v1.NodeReady {
+			for _, cond := range node.Status.Conditions {
+				if cond.Type == v1.NodeReady {
+					current.Ready = true
+					if !node.Spec.Unschedulable {
 						current.Online = true
-						break
 					}
 				}
 			}
@@ -145,6 +164,7 @@ func initialize(
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
 			tier:             pool.tier,
+			reconcile:        reconcile,
 			currentMachine:   current,
 		}
 
@@ -193,6 +213,9 @@ func initialize(
 	}
 
 	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		if !machine.currentMachine.Ready {
+			curr.Status = "degraded"
+		}
 		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
 			curr.Status = "maintaining"
 			break
@@ -207,4 +230,68 @@ func initialize(
 			delete(nodeAgentsDesired, id)
 			delete(curr.Machines, id)
 		}, nil
+}
+
+func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client) func() error {
+	reconcileNode := false
+	reconcileMonitor := monitor.WithField("node", node.Name)
+	handleMaybe := func(maybeNode *v1.Node, maybeMonitor *mntr.Monitor) {
+		if maybeNode != nil {
+			reconcileNode = true
+			node = *maybeNode
+			reconcileMonitor = *maybeMonitor
+		}
+	}
+
+	handleMaybe(reconcileLabels(node, pool, reconcileMonitor))
+	handleMaybe(reconcileTaints(node, pool, reconcileMonitor))
+
+	if !reconcileNode {
+		return func() error { return nil }
+	}
+	return func() error {
+		reconcileMonitor.Info("Reconciling node")
+		return k8s.updateNode(&node)
+	}
+}
+
+func reconcileTaints(node v1.Node, pool Pool, monitor mntr.Monitor) (*v1.Node, *mntr.Monitor) {
+	desiredTaints := pool.Taints.ToK8sTaints()
+	newTaints := append([]core.Taint{}, desiredTaints...)
+	updateTaints := false
+outer:
+	for _, existing := range node.Spec.Taints {
+		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") {
+			newTaints = append(newTaints, existing)
+			continue
+		}
+		for _, des := range desiredTaints {
+			if existing.Key == des.Key &&
+				existing.Effect == des.Effect &&
+				existing.Value == des.Value {
+				continue outer
+			}
+		}
+		updateTaints = true
+		break
+	}
+	if !updateTaints && len(node.Spec.Taints) == len(newTaints) || pool.Taints == nil {
+		return nil, nil
+	}
+	node.Spec.Taints = newTaints
+	monitor = monitor.WithField("taints", desiredTaints)
+	return &node, &monitor
+}
+
+func reconcileLabels(node v1.Node, pool Pool, monitor mntr.Monitor) (*v1.Node, *mntr.Monitor) {
+	poolLabelKey := "orbos.ch/pool"
+	if node.Labels[poolLabelKey] == pool.Pool {
+		return nil, nil
+	}
+	monitor = monitor.WithField("label", fmt.Sprintf("%s=%s", poolLabelKey, pool.Pool))
+	if node.Labels == nil {
+		node.Labels = make(map[string]string)
+	}
+	node.Labels[poolLabelKey] = pool.Pool
+	return &node, &monitor
 }

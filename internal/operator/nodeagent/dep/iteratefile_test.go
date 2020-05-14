@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 )
 
 func TestIterateFile(t *testing.T) {
@@ -24,11 +24,12 @@ fourth line
 
 	var writer bytes.Buffer
 
-	if err := dep.Manipulate(reader, &writer, []string{"second"}, []string{"fourth line"}, func(line string) string {
+	if err := dep.Manipulate(reader, &writer, []string{"second"}, []string{"fourth line"}, func(line string) *string {
 		if strings.Contains(line, "third") {
-			return "#" + line
+			str := "#" + line
+			return &str
 		}
-		return line
+		return &line
 	}); err != nil {
 		t.Fatal(err)
 	}

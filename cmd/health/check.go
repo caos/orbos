@@ -1,15 +1,12 @@
+//go:generate goderive .
+
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
+	"github.com/caos/orbos/internal/helpers"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/AppsFlyer/go-sundheit/checks"
-	"github.com/pkg/errors"
 )
 
 func check(arg string) (string, error) {
@@ -42,19 +39,6 @@ func parseArg(args splitArgsTuple) (parsedArgsTuple, error) {
 	return deriveTupleParseArgs(url, int(expectStatus)), nil
 }
 
-func checkParsed(args parsedArgsTuple) (string, error) {
-	url, status := args()
-	msg, err := checks.Must(checks.NewHTTPCheck(checks.HTTPCheckConfig{
-		CheckName:      "check",
-		Timeout:        1 * time.Second,
-		URL:            url,
-		ExpectedStatus: status,
-		Client: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		},
-	})).Execute()
-	message := msg.(string)
-	return message, errors.Wrap(err, fmt.Sprintf("%s", message))
+func checkParsed(tuple parsedArgsTuple) (string, error) {
+	return helpers.Check(tuple())
 }

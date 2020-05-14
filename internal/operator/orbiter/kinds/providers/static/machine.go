@@ -1,24 +1,28 @@
 package static
 
 import (
+	"io"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/ssh"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
+var _ infra.Machine = (*machine)(nil)
+
 type machine struct {
+	active   bool
 	poolFile string
 	id       *string
 	ip       string
 	ssh      infra.Machine
 }
 
-func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, IP string) infra.Machine {
+func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, IP string) *machine {
 	cmp := &machine{poolFile: poolFile, id: id, ip: IP}
 	cmp.ssh = ssh.NewMachine(monitor, cmp, remoteUser)
-	return cmp.ssh
+	return cmp
 }
 
 func (c *machine) ID() string {
@@ -30,5 +34,23 @@ func (c *machine) IP() string {
 }
 
 func (c *machine) Remove() error {
-	return c.ssh.WriteFile(c.poolFile, strings.NewReader(""), 600)
+	if err := c.ssh.WriteFile(c.poolFile, strings.NewReader(""), 600); err != nil {
+		return err
+	}
+	c.active = false
+	return nil
+}
+
+func (c *machine) Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error) {
+	return c.ssh.Execute(env, stdin, cmd)
+}
+func (c *machine) WriteFile(path string, data io.Reader, permissions uint16) error {
+	return c.ssh.WriteFile(path, data, permissions)
+}
+func (c *machine) ReadFile(path string, data io.Writer) error {
+	return c.ssh.ReadFile(path, data)
+}
+
+func (c *machine) UseKey(keys ...[]byte) error {
+	return c.ssh.UseKey(keys...)
 }

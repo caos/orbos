@@ -7,12 +7,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Orb struct {
-	URL       string
-	Repokey   string
-	Masterkey string
-}
-
 var (
 	ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
 	ipRegex     = fmt.Sprintf(`%s\.%s\.%s\.%s`, ipPartRegex, ipPartRegex, ipPartRegex, ipPartRegex)
@@ -22,11 +16,15 @@ var (
 	compiledCIDR = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
 )
 
-type cidr string
-
 type IPAddress string
 
 type CIDR string
+
+type CIDRs []*CIDR
+
+func (c CIDRs) Len() int           { return len(c) }
+func (c CIDRs) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c CIDRs) Less(i, j int) bool { return *c[i] < *c[j] }
 
 func (c CIDR) Validate() error {
 	if !compiledCIDR.MatchString(string(c)) {

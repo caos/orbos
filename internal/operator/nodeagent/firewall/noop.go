@@ -1,8 +1,8 @@
 package firewall
 
 import (
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
 )
 
 func noopEnsurer() nodeagent.FirewallEnsurer {

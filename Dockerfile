@@ -1,14 +1,19 @@
 
-FROM alpine:3.6 as minimal
+FROM golang:1.14.0-alpine3.11 as build
 
-RUN apk add -U --no-cache ca-certificates && \
-    echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd
+RUN apk add -U --no-cache ca-certificates git && \
+    echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd && \
+    go get github.com/go-delve/delve/cmd/dlv
 
-FROM scratch
+COPY artifacts/orbctl-Linux-x86_64 /orbctl
 
-COPY --from=minimal /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=minimal /etc_passwd /etc/passwd
-COPY --chown=65534:65534 artifacts/orbctl-Linux-x86_64 /orbctl
+ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:5000", "--accept-multiclient", "--" ]
+
+FROM scratch as prod
+
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build /etc_passwd /etc/passwd
+COPY --from=build --chown=65534:65534 /orbctl /orbctl
 
 USER nobody
 

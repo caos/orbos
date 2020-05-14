@@ -3,7 +3,7 @@ package wrap
 import (
 	"io"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 type cmpLB struct {

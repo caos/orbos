@@ -7,8 +7,8 @@ import (
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
 )
 
 type initializedMachines []*initializedMachine
@@ -48,7 +48,7 @@ func ensureSoftware(
 				return zeroSW, zeroSW, errors.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
 
-			kubeletMinor, err := kubelet.ExtractMinor()
+			kubeletMinor, err := kubelet.ExtractMinor(monitor)
 			if err != nil {
 				return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from kubelet version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
@@ -59,21 +59,21 @@ func ensureSoftware(
 				continue
 			}
 
-			kubeletPatch, err := kubelet.ExtractPatch()
+			kubeletPatch, err := kubelet.ExtractPatch(monitor)
 			if err != nil {
 				return zeroSW, zeroSW, errors.Wrapf(err, "extracting patch from kubelet version %s from nodes %s info failed", nodeinfoKubelet, id)
 			}
-			overallLowKubeletMinor, err := overallLowKubelet.ExtractMinor()
+			tmpOverallLowKubeletMinor, err := overallLowKubelet.ExtractMinor(monitor)
 			if err != nil {
 				return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from overall kubelet version %s failed", overallLowKubelet)
 			}
-			overallLowKubeletPatch, err := overallLowKubelet.ExtractPatch()
+			tmpOverallLowKubeletPatch, err := overallLowKubelet.ExtractPatch(monitor)
 			if err != nil {
 				return zeroSW, zeroSW, errors.Wrapf(err, "extracting patch from overall kubelet version %s failed", overallLowKubelet)
 			}
 
-			if kubeletMinor < overallLowKubeletMinor ||
-				kubeletMinor == overallLowKubeletMinor && kubeletPatch < overallLowKubeletPatch {
+			if kubeletMinor < tmpOverallLowKubeletMinor ||
+				kubeletMinor == tmpOverallLowKubeletMinor && kubeletPatch < tmpOverallLowKubeletPatch {
 				overallLowKubelet = kubelet
 				overallLowKubeletMinor = kubeletMinor
 			}
@@ -88,7 +88,7 @@ func ensureSoftware(
 			return target, target, nil
 		}
 
-		targetMinor, err := target.ExtractMinor()
+		targetMinor, err := target.ExtractMinor(monitor)
 		if err != nil {
 			return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from target version %s failed", target)
 		}
@@ -98,10 +98,12 @@ func ensureSoftware(
 		}
 
 		overallLowKubeletSoftware := overallLowKubelet.DefineSoftware()
-		if targetMinor-overallLowKubeletMinor < 2 {
+		if (targetMinor - overallLowKubeletMinor) < 2 {
 			monitor.WithFields(map[string]interface{}{
-				"from": overallLowKubelet,
-				"to":   target,
+				"from":                   overallLowKubelet,
+				"to":                     target,
+				"targetMinor":            targetMinor,
+				"overallLowKubeletMinor": overallLowKubeletMinor,
 			}).Debug("Desired version can be reached directly")
 			return overallLowKubeletSoftware, target.DefineSoftware(), nil
 		}
