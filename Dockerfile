@@ -9,7 +9,7 @@ COPY artifacts/orbctl-Linux-x86_64 /orbctl
 
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:5000", "--accept-multiclient", "--" ]
 
-FROM alpine:3.11 as prod
+FROM scratch as prod
 
 ENV GODEBUG madvdontneed=1
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

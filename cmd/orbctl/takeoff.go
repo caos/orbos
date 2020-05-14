@@ -1,8 +1,6 @@
 package main
 
 import (
-	"log"
-	"net/http"
 	"runtime/debug"
 	"time"
 
@@ -16,8 +14,6 @@ import (
 	"github.com/caos/orbos/internal/ingestion"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-
-	_ "net/http/pprof"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
@@ -53,10 +49,6 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		pushEvents := func(_ []*ingestion.EventRequest) error {
 			return nil
 		}
-
-		go func() {
-			log.Println(http.ListenAndServe("localhost:6060", nil))
-		}()
 
 		if ingestionAddress != "" {
 			conn, err := grpc.Dial(ingestionAddress, grpc.WithInsecure())
