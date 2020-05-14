@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
-	"net/http"
-
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/yaml.v3"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gopkg.in/yaml.v3"
+	"net/http"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"

@@ -14,8 +14,11 @@ type Common struct {
 }
 
 func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
-	c.Original = node
-	err := node.Decode(&c.Common)
+	c.Original = new(yaml.Node)
+	*c.Original = *node
+
+	c.Common = new(Common)
+	err := c.Original.Decode(c.Common)
 	return err
 }
 

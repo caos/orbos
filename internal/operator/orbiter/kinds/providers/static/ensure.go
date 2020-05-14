@@ -59,8 +59,10 @@ func query(
 	}
 
 	for _, pool := range pools {
-
-		if err := desireLb(pool); err != nil {
+		desireLbFunc := func() error {
+			return desireLb(pool)
+		}
+		if err := orbiter.EnsureFuncGoroutine(desireLbFunc); err != nil {
 			return nil, err
 		}
 
@@ -69,12 +71,10 @@ func query(
 			return nil, err
 		}
 		for _, machine := range machines {
-			errChan := make(chan error)
-			go func() {
-				errChan <- desireHostnameFunc(machine, pool)
-			}()
-			err := <-errChan
-			if err != nil {
+			desireHostnameFuncFunc := func() error {
+				return desireHostnameFunc(machine, pool)
+			}
+			if err := orbiter.EnsureFuncGoroutine(desireHostnameFuncFunc); err != nil {
 				return nil, err
 			}
 		}
