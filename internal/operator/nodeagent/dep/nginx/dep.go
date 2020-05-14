@@ -1,7 +1,6 @@
 package nginx
 
 import (
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -46,8 +45,8 @@ func (*nginxDep) Equals(other nodeagent.Installer) bool {
 }
 
 const (
-	ipForwardCfg    = "/proc/sys/net/ipv4/ip_forward"
-	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
+	ipForwardCfg    = "net.ipv4.ip_nonlocal_bind"
+	nonlocalbindCfg = "net.ipv4.ip_forward"
 )
 
 func (s *nginxDep) Current() (pkg common.Package, err error) {
@@ -60,22 +59,22 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 		"nginx.conf": string(config),
 	}
 
-	enabled, err := s.currentSysctlConfig("net.ipv4.ip_nonlocal_bind")
-	if err != nil {
-		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "0"
-	}
-
-	enabled, err = s.currentSysctlConfig("net.ipv4.ip_forward")
+	enabled, err := dep.CurrentSysctlConfig(s.monitor, ipForwardCfg)
 	if err != nil {
 		return pkg, err
 	}
 
 	if !enabled {
 		pkg.Config[ipForwardCfg] = "0"
+	}
+
+	enabled, err = dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg)
+	if err != nil {
+		return pkg, err
+	}
+
+	if !enabled {
+		pkg.Config[nonlocalbindCfg] = "0"
 	}
 
 	return pkg, nil
@@ -118,9 +117,9 @@ module_hotfixes=true`), 0600); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile("/etc/sysctl.d/21-nginx.conf", []byte(`net.ipv4.ip_forward = 1
-net.ipv4.ip_nonlocal_bind = 1
-`), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile("/etc/sysctl.d/21-nginx.conf", []byte(fmt.Sprintf(`%s = 1
+%s = 1
+`, ipForwardCfg, nonlocalbindCfg)), os.ModePerm); err != nil {
 		return err
 	}
 
@@ -134,25 +133,4 @@ net.ipv4.ip_nonlocal_bind = 1
 	}
 
 	return s.systemd.Start("nginx")
-}
-
-func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {
-
-	var (
-		outBuf bytes.Buffer
-		errBuf bytes.Buffer
-	)
-
-	cmd := exec.Command("sysctl", property)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &outBuf
-
-	fullCmd := strings.Join(cmd.Args, " ")
-	n.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
-
-	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-	}
-
-	return outBuf.String() == fmt.Sprintf("%s = 1\n", property), nil
 }

@@ -48,11 +48,45 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+const (
+	ipForwardCfg = "net.ipv4.ip_forward"
+	iptables     = "net.bridge.bridge-nf-call-iptables"
+	ip6tables    = "net.bridge.bridge-nf-call-ip6tables"
+)
+
 func (k *kubeletDep) Current() (common.Package, error) {
 	pkg, err := k.common.Current()
 	if err != nil {
 		return pkg, err
 	}
+
+	enabled, err := dep.CurrentSysctlConfig(k.monitor, ipForwardCfg)
+	if err != nil {
+		return pkg, err
+	}
+
+	if !enabled {
+		pkg.Config[ipForwardCfg] = "0"
+	}
+
+	enabled, err = dep.CurrentSysctlConfig(k.monitor, iptables)
+	if err != nil {
+		return pkg, err
+	}
+
+	if !enabled {
+		pkg.Config[iptables] = "0"
+	}
+
+	enabled, err = dep.CurrentSysctlConfig(k.monitor, ip6tables)
+	if err != nil {
+		return pkg, err
+	}
+
+	if !enabled {
+		pkg.Config[ip6tables] = "0"
+	}
+
 	return pkg, selinux.Current(k.os, &pkg)
 }
 
@@ -80,15 +114,16 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 
 	file, err := os.Create("/etc/sysctl.d/22-k8s.conf")
 	if err != nil {
-		return errors.Wrap(err, "opening /etc/sysctl.d/22-k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
+		return errors.Wrap(err, "opening /etc/sysctl.d/22-k8s.conf failed")
 	}
 	defer file.Close()
 
-	file.Write(([]byte(`net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-		`)))
+	file.Write([]byte(fmt.Sprintf(`%s = 1
+%s = 1
+%s = 1
+		`, ipForwardCfg, ip6tables, iptables)))
 	if err != nil {
-		return errors.Wrap(err, "writing to /etc/sysctl.d/22-k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
+		return errors.Wrap(err, "writing to /etc/sysctl.d/22-k8s.conf failed")
 	}
 	file.Close()
 
@@ -100,7 +135,7 @@ net.bridge.bridge-nf-call-iptables = 1
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running sysctl --system in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed with stderr %s", errBuf.String())
+		return errors.Wrapf(err, "running sysctl --system failed with stderr %s", errBuf.String())
 	}
 
 	return k.ensurePackage(remove, install)

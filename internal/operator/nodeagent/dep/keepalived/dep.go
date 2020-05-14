@@ -49,8 +49,8 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 }
 
 const (
-	ipForwardCfg    = "/proc/sys/net/ipv4/ip_forward"
-	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
+	ipForwardCfg    = "net.ipv4.ip_forward"
+	nonlocalbindCfg = "net.ipv4.ip_nonlocal_bind"
 )
 
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
@@ -75,7 +75,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
 	}
-	enabled, err := s.currentSysctlConfig("net.ipv4.ip_nonlocal_bind")
+	enabled, err := dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg)
 	if err != nil {
 		return pkg, err
 	}
@@ -84,7 +84,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 		pkg.Config[nonlocalbindCfg] = "0"
 	}
 
-	enabled, err = s.currentSysctlConfig("net.ipv4.ip_forward")
+	enabled, err = dep.CurrentSysctlConfig(s.monitor, ipForwardCfg)
 	if err != nil {
 		return pkg, err
 	}
@@ -136,9 +136,9 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 		}
 	}
 
-	if err := ioutil.WriteFile("/etc/sysctl.d/20-keepalived.conf", []byte(`net.ipv4.ip_forward = 1
-net.ipv4.ip_nonlocal_bind = 1
-`), os.ModePerm); err != nil {
+	if err := ioutil.WriteFile("/etc/sysctl.d/20-keepalived.conf", []byte(fmt.Sprintf(`%s = 1
+%s = 1
+`, nonlocalbindCfg, ipForwardCfg)), os.ModePerm); err != nil {
 		return err
 	}
 
