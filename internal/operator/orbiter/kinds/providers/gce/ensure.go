@@ -24,6 +24,19 @@ func query(
 	}
 	current.Current.Ingresses = make(map[string]*infra.Address)
 	normalized := normalize(context.monitor, lbCurrent.Current.Spec, context.orbID, context.providerID)
+
+	ensureLB, err := chain(
+		context, normalized,
+		queryHealthchecks,
+		queryTargetPools,
+		queryAddresses,
+		queryForwardingRules,
+		queryFirewall,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	for _, lb := range normalized {
 		current.Current.Ingresses[lb.transport] = &infra.Address{
 			Location: lb.address.gce.Address,
@@ -33,26 +46,8 @@ func query(
 
 	return func(psf push.Func) error {
 
-		if err := chain(
-			context, normalized,
-			queryHealthchecks,
-			queryTargetPools,
-			queryAddresses,
-			queryForwardingRules,
-			queryFirewall,
-		); err != nil {
+		if err := ensureLB(); err != nil {
 			return err
-		}
-
-		for _, pool := range lbCurrent.Current.Spec {
-			for _, vip := range pool {
-				for _, src := range vip.Transport {
-					current.Current.Ingresses[src.Name] = &infra.Address{
-						Location: vip.IP,
-						Port:     uint16(src.SourcePort),
-					}
-				}
-			}
 		}
 
 		if desired.SSHKey != nil && desired.SSHKey.Private != nil && desired.SSHKey.Private.Value != "" && desired.SSHKey.Public != nil && desired.SSHKey.Public.Value != "" {

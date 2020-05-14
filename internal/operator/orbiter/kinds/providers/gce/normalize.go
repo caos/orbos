@@ -287,24 +287,25 @@ type context struct {
 
 type queryFunc func(*context, []*normalizedLoadbalancer) ([]func() error, error)
 
-func chain(ctx *context, lb []*normalizedLoadbalancer, query ...queryFunc) error {
+func chain(ctx *context, lb []*normalizedLoadbalancer, query ...queryFunc) (func() error, error) {
 	var operations []func() error
 	for _, fn := range query {
 
 		ensure, err := fn(ctx, lb)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		operations = append(operations, ensure...)
 	}
 
-	for _, operation := range operations {
-		if err := operation(); err != nil {
-			return err
+	return func() error {
+		for _, operation := range operations {
+			if err := operation(); err != nil {
+				return err
+			}
 		}
-	}
-
-	return nil
+		return nil
+	}, nil
 }
 
 func whitelistStrings(cidrs []*orbiter.CIDR) []string {
