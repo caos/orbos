@@ -2,8 +2,9 @@ package main
 
 import (
 	"context"
-	"github.com/caos/orbiter/internal/orb"
 	"io/ioutil"
+
+	"github.com/caos/orbiter/internal/orb"
 
 	"github.com/caos/orbiter/internal/git"
 	"github.com/caos/orbiter/mntr"

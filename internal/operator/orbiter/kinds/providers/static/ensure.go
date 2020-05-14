@@ -44,12 +44,20 @@ func query(
 	case *dynamiclbmodel.Current:
 
 		desireLb = func(pool string) error {
-			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, "")
+			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, nil)
 		}
-		for name, address := range lbCurrent.Current.Addresses {
-			current.Current.Ingresses[name] = address
+		for _, pool := range lbCurrent.Current.Spec {
+			for _, vip := range pool {
+				for _, src := range vip.Transport {
+					current.Current.Ingresses[src.Name] = &infra.Address{
+						Location: vip.IP,
+						Port:     uint16(src.SourcePort),
+					}
+				}
+			}
 		}
-		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired)
+
+		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, nil)
 		//	case *externallbmodel.Current:
 		//		for name, address := range lbCurrent.Current.Addresses {
 		//			current.Current.Ingresses[name] = address

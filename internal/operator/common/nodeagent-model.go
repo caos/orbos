@@ -177,9 +177,6 @@ func (f Firewall) Contains(other Firewall) bool {
 }
 
 func (f Firewall) IsContainedIn(ports []*Allowed) bool {
-	if len(f) > len(ports) {
-		return false
-	}
 checks:
 	for _, fwPort := range f {
 		for _, port := range ports {

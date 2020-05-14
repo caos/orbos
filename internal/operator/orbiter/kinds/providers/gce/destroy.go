@@ -2,13 +2,14 @@ package gce
 
 func destroy(desired *Spec, context *context) error {
 
-	if err := compose(
-		ensureForwardingRules,
-		ensureAddresses,
-		ensureTargetPools,
-		ensureHealthchecks,
-		ensureFirewall,
-	)(context, nil); err != nil {
+	if err := chain(
+		context, nil,
+		queryForwardingRules,
+		queryAddresses,
+		queryTargetPools,
+		queryHealthchecks,
+		queryFirewall,
+	); err != nil {
 		return err
 	}
 

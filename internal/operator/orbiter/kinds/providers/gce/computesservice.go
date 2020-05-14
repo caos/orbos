@@ -2,7 +2,6 @@ package gce
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
 
@@ -53,7 +52,6 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	id := uuid.NewV1().String()
-	name := fmt.Sprintf("orbos-%s", id)
 
 	// Calculate minimum cpu and memory according to the gce specs:
 	// https://cloud.google.com/machine/docs/instances/creating-instance-with-custom-machine-type#specifications
@@ -77,6 +75,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		memoryPerCore = float64(memory) / float64(cores)
 	}
 
+	name := newName()
 	sshKey := fmt.Sprintf("orbiter:%s", m.desired.SSHKey.Public.Value)
 	createInstance := &compute.Instance{
 		Name:        name,
@@ -88,6 +87,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		}},
 		Tags: &compute.Tags{
 			Items: networkTags(m.orbID, m.providerID, poolName),
+		},
+		Labels: map[string]string{
+			"orb":      m.orbID,
+			"provider": m.providerID,
+			"pool":     poolName,
 		},
 		Metadata: &compute.Metadata{
 			Items: []*compute.MetadataItems{{
@@ -111,15 +115,16 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		"zone": m.desired.Zone,
 	})
 
-	if err := operate(
+	if err := operateFunc(
 		func() { monitor.Info("Creating instance") },
 		m.client.Instances.Insert(m.projectID, m.desired.Zone, createInstance).RequestId(id).Do,
-	); err != nil {
+		nil,
+	)(); err != nil {
 		return nil, err
 	}
 
 	newInstance, err := m.client.Instances.Get(m.projectID, m.desired.Zone, createInstance.Name).
-		Fields("networkInterfaces(accessConfigs(natIP))").
+		Fields("selfLink,networkInterfaces(accessConfigs(natIP))").
 		Do()
 	if err != nil {
 		return nil, err
@@ -127,13 +132,13 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	infraMachine := newMachine(
 		m.monitor,
-		newInstance.Name,
+		createInstance.Name,
 		newInstance.NetworkInterfaces[0].AccessConfigs[0].NatIP,
 		newInstance.SelfLink,
 		poolName,
 		m.removeMachineFunc(
 			poolName,
-			newInstance.Name,
+			createInstance.Name,
 		),
 	)
 
@@ -148,22 +153,8 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
 	}
 
-	if err := configureGcloud(infraMachine, m.desired.JSONKey.Value); err != nil {
-		return nil, err
-	}
-
 	monitor.Info("Machine created")
 	return infraMachine, nil
-}
-
-func configureGcloud(machine infra.Machine, jsonKey string) error {
-	path := "/etc/orbiter/gce.json"
-	if err := machine.WriteFile(path, strings.NewReader(jsonKey), 400); err != nil {
-		return err
-	}
-
-	_, err := machine.Execute(nil, nil, fmt.Sprintf("gcloud auth activate-service-account --key-file %s", path))
-	return err
 }
 
 func (m *machinesService) ListPools() ([]string, error) {
@@ -202,7 +193,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 
 	instances, err := m.client.Instances.
 		List(m.projectID, m.desired.Zone).
-		Filter(fmt.Sprintf("tags:orb-%s AND tags:provider-%s", m.orbID, m.providerID)).
+		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.orbID, m.providerID)).
 		Fields("items(name,labels,selfLink,networkInterfaces(accessConfigs(natIP)))").
 		Do()
 	if err != nil {
@@ -235,30 +226,22 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 }
 
 func (m *machinesService) removeMachineFunc(pool, id string) func() error {
-	monitor := m.monitor.WithFields(map[string]interface{}{
-		"pool":     pool,
-		"instance": id,
-	})
 	return func() error {
 
-		if err := operate(
-			func() { monitor.Info("Deleting instance") },
-			m.client.Instances.Delete(m.projectID, m.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
-		); err != nil {
-			return err
-		}
 		cleanMachines := make([]*instance, 0)
 		for _, cachedMachine := range m.cache.instances[pool] {
 			if cachedMachine.id != id {
 				cleanMachines = append(cleanMachines, cachedMachine)
 			}
 		}
-
-		monitor.Info("Machine deleted")
-
 		m.cache.instances[pool] = cleanMachines
-		return nil
 
+		return removeResourceFunc(
+			m.monitor.WithField("pool", pool),
+			"instance",
+			id,
+			m.client.Instances.Delete(m.projectID, m.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
+		)()
 	}
 }
 

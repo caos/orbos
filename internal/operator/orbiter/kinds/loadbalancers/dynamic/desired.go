@@ -46,7 +46,9 @@ func (d *Desired) Validate() error {
 			if err := vip.validate(); err != nil {
 				return errors.Wrapf(err, "configuring vip for pool %s failed", pool)
 			}
-			ips = append(ips, *vip.IP)
+			if vip != nil && vip.IP != "" {
+				ips = append(ips, vip.IP)
+			}
 		}
 	}
 
@@ -58,7 +60,7 @@ func (d *Desired) Validate() error {
 }
 
 type VIP struct {
-	IP        *string
+	IP        string
 	Transport []*Source
 }
 
@@ -119,10 +121,6 @@ func (s *Source) validate() (err error) {
 		if err := cidr.Validate(); err != nil {
 			return err
 		}
-	}
-
-	if err := s.SourcePort.validate(); err != nil {
-		return err
 	}
 
 	for _, dest := range s.Destinations {

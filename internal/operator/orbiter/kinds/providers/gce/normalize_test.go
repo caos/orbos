@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 
+	"google.golang.org/api/compute/v1"
+
 	"github.com/caos/orbiter/internal/operator/orbiter"
 
 	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
@@ -24,7 +26,6 @@ func Test_normalize(t *testing.T) {
 		args: args{
 			spec: map[string][]*dynamic.VIP{
 				"pool1": {{
-					IP: strPtr("10.0.0.10"),
 					Transport: []*dynamic.Source{{
 						Name: "transport1",
 						Destinations: []*dynamic.Destination{{
@@ -42,7 +43,6 @@ func Test_normalize(t *testing.T) {
 					}},
 				}},
 				"pool2": {{
-					IP: strPtr("10.0.0.11"),
 					Transport: []*dynamic.Source{{
 						Name: "transport2",
 						Destinations: []*dynamic.Destination{{
@@ -59,7 +59,6 @@ func Test_normalize(t *testing.T) {
 						},
 					}},
 				}, {
-					IP: strPtr("10.0.0.12"),
 					Transport: []*dynamic.Source{{
 						Name: "transport3",
 						Destinations: []*dynamic.Destination{{
@@ -103,6 +102,9 @@ func Test_normalize(t *testing.T) {
 			providerID: "dummyprovider",
 		},
 		want: []*normalizedLoadbalancer{{
+			address: &address(&compute.Address{
+				Description: "orb=dummyorb;provider=dummyprovider",
+			}),
 			ip:             "10.0.0.10",
 			forwardingRule: &forwardingRule{},
 			targetPools:    []*targetPool{},

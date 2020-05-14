@@ -38,10 +38,11 @@ func query(
 		for providerPoolName, providerPool := range providerPools {
 			cloudPools[providerName][providerPoolName] = providerPool
 			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
-				kubeAPIAddress = providerIngresses["kubeapi"]
-				monitor.WithFields(map[string]interface{}{
-					"address": kubeAPIAddress,
-				}).Debug("Found kubernetes api address")
+				var ok bool
+				kubeAPIAddress, ok = providerIngresses["kubeapi"]
+				if !ok {
+					panic(errors.New("no externally reachable address named kubeapi found"))
+				}
 			}
 		}
 	}

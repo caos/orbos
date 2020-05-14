@@ -6,79 +6,71 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func ensureForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) error {
+func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
 	gceRules, err := context.client.ForwardingRules.
 		List(context.projectID, context.region).
-		Filter(fmt.Sprintf("loadBalancingScheme=EXTERNAL AND description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
-		Fields("items(description,target,portRange,selfLink)").
+		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
+		Fields("items(description,name,target,portRange,IPAddress)").
 		Do()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var create []*forwardingRule
+	var operations []func() error
+
+	assignRefs := func(lb *normalizedLoadbalancer) {
+		lb.forwardingRule.gce.Target = lb.targetPool.gce.SelfLink
+		lb.forwardingRule.gce.IPAddress = lb.address.gce.Address
+	}
+
 createLoop:
 	for _, lb := range loadbalancing {
 		for _, gceRule := range gceRules.Items {
 			if gceRule.Description == lb.forwardingRule.gce.Description {
-				if gceRule.Target != lb.targetPool.gce.SelfLink || gceRule.PortRange != lb.forwardingRule.gce.PortRange {
-					if err := operate(
-						lb.forwardingRule.log("Patching forwarding rule"),
+				assignRefs(lb)
+				if gceRule.Target != lb.forwardingRule.gce.Target || gceRule.PortRange != lb.forwardingRule.gce.PortRange || gceRule.IPAddress != lb.forwardingRule.gce.IPAddress {
+					operations = append(operations, operateFunc(
+						lb.forwardingRule.log("Patching forwarding rule", true),
 						context.client.ForwardingRules.Patch(context.projectID, context.region, gceRule.Name, lb.forwardingRule.gce).
 							RequestId(uuid.NewV1().String()).
 							Do,
-					); err != nil {
-						return err
-					}
-					lb.forwardingRule.log("Forwarding rule patched")()
+						toErrFunc(lb.forwardingRule.log("Forwarding rule patched", false)),
+					))
 				}
 				continue createLoop
 			}
 		}
 
 		lb.forwardingRule.gce.Name = newName()
-		lb.forwardingRule.gce.Target = lb.targetPool.gce.SelfLink
-		create = append(create, lb.forwardingRule)
+		operations = append(operations, operateFunc(
+			func(l *normalizedLoadbalancer) func() {
+				return func() {
+					assignRefs(l)
+					l.forwardingRule.log("Creating forwarding rule", true)()
+				}
+			}(lb),
+			context.client.ForwardingRules.
+				Insert(context.projectID, context.region, lb.forwardingRule.gce).
+				RequestId(uuid.NewV1().String()).
+				Do,
+			toErrFunc(lb.forwardingRule.log("Forwarding rule created", false)),
+		))
 	}
 
-	var remove []string
 removeLoop:
 
-	for _, gceTp := range gceRules.Items {
+	for _, rule := range gceRules.Items {
 		for _, lb := range loadbalancing {
-			if gceTp.Description == lb.forwardingRule.gce.Description {
+			if rule.Description == lb.forwardingRule.gce.Description {
 				continue removeLoop
 			}
 		}
-		remove = append(remove, gceTp.Name)
-	}
-
-	for _, rule := range create {
-		if err := operate(
-			rule.log("Creating forwarding rule"),
-			context.client.ForwardingRules.
-				Insert(context.projectID, context.region, rule.gce).
+		operations = append(operations, removeResourceFunc(
+			context.monitor, "forwarding rule", rule.Name, context.client.ForwardingRules.
+				Delete(context.projectID, context.region, rule.Name).
 				RequestId(uuid.NewV1().String()).
 				Do,
-		); err != nil {
-			return err
-		}
-
-		rule.log("Forwarding rule created")()
+		))
 	}
-
-	for _, forwardingRule := range remove {
-		if err := operate(
-			removeLog(context.monitor, "forwarding rule", forwardingRule, false),
-			context.client.ForwardingRules.
-				Delete(context.projectID, context.region, forwardingRule).
-				RequestId(uuid.NewV1().String()).
-				Do,
-		); err != nil {
-			return err
-		}
-		removeLog(context.monitor, "forwarding rule", forwardingRule, true)()
-	}
-
-	return nil
+	return operations, nil
 }

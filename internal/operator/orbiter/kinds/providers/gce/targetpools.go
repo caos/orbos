@@ -8,27 +8,27 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-func ensureTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) error {
+func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
 	gcePools, err := context.client.TargetPools.
 		List(context.projectID, context.region).
-		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
-		Fields("items(description,instances,selfLink,name)").
+		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
+		Fields("items(description,name,instances,selfLink,name)").
 		Do()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	allInstances, err := context.machinesService.instances()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	type creatableTargetPool struct {
-		instances  instances
-		targetPool *targetPool
+	assignRefs := func(lb *normalizedLoadbalancer) {
+		lb.targetPool.gce.HealthChecks = []string{lb.healthcheck.gce.SelfLink}
 	}
 
-	var create []*creatableTargetPool
+	var operations []func() error
+
 createLoop:
 	for _, lb := range loadbalancing {
 		var poolInstances []*instance
@@ -37,12 +37,13 @@ createLoop:
 		}
 		for _, gceTp := range gcePools.Items {
 			if gceTp.Description == lb.targetPool.gce.Description {
-
+				lb.targetPool.gce.SelfLink = gceTp.SelfLink
+				assignRefs(lb)
 				var addInstances []*instance
 			addInstanceLoop:
 				for _, instance := range poolInstances {
 					for _, tpInstance := range gceTp.Instances {
-						if instance.id == tpInstance {
+						if instance.url == tpInstance {
 							continue addInstanceLoop
 						}
 					}
@@ -51,8 +52,8 @@ createLoop:
 
 				if len(addInstances) > 0 {
 					richAddInstances := instances(addInstances)
-					if err := operate(
-						lb.targetPool.log("Adding instances to target pool", richAddInstances),
+					operations = append(operations, operateFunc(
+						lb.targetPool.log("Adding instances to target pool", true, richAddInstances),
 						context.client.TargetPools.
 							AddInstance(
 								context.projectID,
@@ -62,15 +63,13 @@ createLoop:
 							).
 							RequestId(uuid.NewV1().String()).
 							Do,
-					); err != nil {
-						return err
-					}
-					lb.targetPool.log("Instances added to target pool", richAddInstances)()
+						toErrFunc(lb.targetPool.log("Instances added to target pool", false, richAddInstances)),
+					))
 				}
 
-				if gceTp.HealthChecks[0] != lb.healthcheck.gce.SelfLink {
-					if err := operate(
-						lb.targetPool.log("Removing healthcheck", nil),
+				if len(gceTp.HealthChecks) > 0 && gceTp.HealthChecks[0] != lb.targetPool.gce.HealthChecks[0] {
+					operations = append(operations, operateFunc(
+						lb.targetPool.log("Removing healthcheck", true, nil),
 						context.client.TargetPools.RemoveHealthCheck(
 							context.projectID,
 							context.region,
@@ -79,12 +78,11 @@ createLoop:
 						).
 							RequestId(uuid.NewV1().String()).
 							Do,
-					); err != nil {
-						return err
-					}
-					lb.targetPool.log("Healthcheck removed", nil)()
-					if err := operate(
-						lb.targetPool.log("Adding healthcheck", nil),
+						toErrFunc(lb.targetPool.log("Healthcheck removed", false, nil)),
+					))
+
+					operations = append(operations, operateFunc(
+						lb.targetPool.log("Adding healthcheck", true, nil),
 						context.client.TargetPools.AddHealthCheck(
 							context.projectID,
 							context.region,
@@ -93,27 +91,45 @@ createLoop:
 						).
 							RequestId(uuid.NewV1().String()).
 							Do,
-					); err != nil {
-						return err
-					}
-					lb.targetPool.log("Healthcheck added", nil)()
+						toErrFunc(lb.targetPool.log("Healthcheck added", false, nil)),
+					))
 				}
-				lb.targetPool.gce = gceTp
 				continue createLoop
 			}
 		}
 
+		richInstances := instances(poolInstances)
 		lb.targetPool.gce.Name = newName()
-		lb.targetPool.gce.HealthChecks = []string{lb.healthcheck.gce.SelfLink}
-		lb.targetPool.gce.Instances = instances(poolInstances).strings(func(i *instance) string { return i.url })
+		lb.targetPool.gce.Instances = richInstances.strings(func(i *instance) string { return i.url })
 
-		create = append(create, &creatableTargetPool{
-			instances:  poolInstances,
-			targetPool: lb.targetPool,
-		})
+		operations = append(operations, operateFunc(
+			func(l *normalizedLoadbalancer) func() {
+				return func() {
+					assignRefs(l)
+					lb.targetPool.log("Creating target pool", true, richInstances)()
+				}
+			}(lb),
+			context.client.TargetPools.
+				Insert(context.projectID, context.region, lb.targetPool.gce).
+				RequestId(uuid.NewV1().String()).
+				Do,
+			func(pool *targetPool) func() error {
+				return func() error {
+					newTP, err := context.client.TargetPools.Get(context.projectID, context.region, pool.gce.Name).
+						Fields("selfLink").
+						Do()
+					if err != nil {
+						return err
+					}
+
+					pool.gce.SelfLink = newTP.SelfLink
+					pool.log("Target pool created", false, richInstances)()
+					return nil
+				}
+			}(lb.targetPool),
+		))
 	}
 
-	var remove []string
 removeLoop:
 
 	for _, gceTp := range gcePools.Items {
@@ -122,43 +138,10 @@ removeLoop:
 				continue removeLoop
 			}
 		}
-		remove = append(remove, gceTp.Name)
+		operations = append(operations, removeResourceFunc(context.monitor, "target pool", gceTp.Name, context.client.TargetPools.
+			Delete(context.projectID, context.region, gceTp.Name).
+			RequestId(uuid.NewV1().String()).
+			Do))
 	}
-
-	for _, targetPool := range create {
-		if err := operate(
-			targetPool.targetPool.log("Creating target pool", targetPool.instances),
-			context.client.TargetPools.
-				Insert(context.projectID, context.region, targetPool.targetPool.gce).
-				RequestId(uuid.NewV1().String()).
-				Do,
-		); err != nil {
-			return err
-		}
-
-		newTP, err := context.client.TargetPools.Get(context.projectID, context.region, targetPool.targetPool.gce.Name).
-			Fields("selfLink").
-			Do()
-		if err != nil {
-			return err
-		}
-
-		targetPool.targetPool.gce.SelfLink = newTP.SelfLink
-		targetPool.targetPool.log("Target pool created", targetPool.instances)()
-	}
-
-	for _, targetPool := range remove {
-		if err := operate(
-			removeLog(context.monitor, "target pool", targetPool, false),
-			context.client.TargetPools.
-				Delete(context.projectID, context.region, targetPool).
-				RequestId(uuid.NewV1().String()).
-				Do,
-		); err != nil {
-			return err
-		}
-		removeLog(context.monitor, "target pool", targetPool, true)()
-	}
-
-	return nil
+	return operations, nil
 }

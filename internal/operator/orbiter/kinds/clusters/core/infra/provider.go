@@ -7,12 +7,12 @@ import (
 )
 
 type Address struct {
-	Location *string
+	Location string
 	Port     uint16
 }
 
 func (a Address) String() string {
-	return fmt.Sprintf("%s:%d", *a.Location, a.Port)
+	return fmt.Sprintf("%s:%d", a.Location, a.Port)
 }
 
 type ProviderCurrent interface {

@@ -6,42 +6,61 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func ensureHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) error {
+func queryHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
 	gceHealthchecks, err := context.client.HttpHealthChecks.
 		List(context.projectID).
-		Filter(fmt.Sprintf("description:(orb=%s;provider=%s*)", context.orbID, context.providerID)).
-		Fields("items(description,port,requestPath,selfLink)").
+		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
+		Fields("items(description,name,port,requestPath,selfLink)").
 		Do()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	var create []*healthcheck
+	var operations []func() error
+
 createLoop:
 	for _, lb := range loadbalancing {
 
-		for _, gceTp := range gceHealthchecks.Items {
-			if gceTp.Description == lb.healthcheck.gce.Description {
-				if gceTp.Port != lb.healthcheck.gce.Port || gceTp.RequestPath != lb.healthcheck.gce.RequestPath {
-					if err := operate(
-						lb.healthcheck.log("Patching healthcheck"),
-						context.client.HttpHealthChecks.Patch(context.projectID, gceTp.Name, lb.healthcheck.gce).
+		for _, gceHC := range gceHealthchecks.Items {
+			if gceHC.Description == lb.healthcheck.gce.Description {
+				lb.healthcheck.gce.SelfLink = gceHC.SelfLink
+				if gceHC.Port != lb.healthcheck.gce.Port || gceHC.RequestPath != lb.healthcheck.gce.RequestPath {
+					operations = append(operations, operateFunc(
+						lb.healthcheck.log("Patching healthcheck", true),
+						context.client.HttpHealthChecks.Patch(context.projectID, gceHC.Name, lb.healthcheck.gce).
 							RequestId(uuid.NewV1().String()).
 							Do,
-					); err != nil {
-						return err
-					}
-					lb.healthcheck.log("Healthcheck patched")()
+						toErrFunc(lb.healthcheck.log("Healthcheck patched", false)),
+					))
 				}
 
 				continue createLoop
 			}
 		}
 		lb.healthcheck.gce.Name = newName()
-		create = append(create, lb.healthcheck)
+		operations = append(operations, operateFunc(
+			lb.healthcheck.log("Creating healthcheck", true),
+			context.client.HttpHealthChecks.
+				Insert(context.projectID, lb.healthcheck.gce).
+				RequestId(uuid.NewV1().String()).
+				Do,
+			func(hc *healthcheck) func() error {
+				return func() error {
+					newHC, newHCErr := context.client.HttpHealthChecks.Get(context.projectID, hc.gce.Name).
+						Fields("selfLink").
+						Do()
+					if newHCErr != nil {
+						return newHCErr
+					}
+
+					hc.gce.SelfLink = newHC.SelfLink
+					hc.log("Healthcheck created", false)()
+					return nil
+				}
+			}(lb.healthcheck),
+		))
 	}
 
-	var remove []string
 removeLoop:
 
 	for _, gceHC := range gceHealthchecks.Items {
@@ -50,43 +69,10 @@ removeLoop:
 				continue removeLoop
 			}
 		}
-		remove = append(remove, gceHC.Name)
+		operations = append(operations, removeResourceFunc(context.monitor, "healthcheck", gceHC.Name, context.client.HttpHealthChecks.
+			Delete(context.projectID, gceHC.Name).
+			RequestId(uuid.NewV1().String()).
+			Do))
 	}
-
-	for _, healthcheck := range create {
-		if err := operate(
-			healthcheck.log("Creating healthcheck"),
-			context.client.HttpHealthChecks.
-				Insert(context.projectID, healthcheck.gce).
-				RequestId(uuid.NewV1().String()).
-				Do,
-		); err != nil {
-			return err
-		}
-
-		newHC, err := context.client.HttpHealthChecks.Get(context.projectID, healthcheck.gce.Name).
-			Fields("selfLink").
-			Do()
-		if err != nil {
-			return err
-		}
-
-		healthcheck.gce.SelfLink = newHC.SelfLink
-		healthcheck.log("Healthcheck created")()
-	}
-
-	for _, healthcheck := range remove {
-		if err := operate(
-			removeLog(context.monitor, "healthcheck", healthcheck, false),
-			context.client.HttpHealthChecks.
-				Delete(context.projectID, healthcheck).
-				RequestId(uuid.NewV1().String()).
-				Do,
-		); err != nil {
-			return err
-		}
-		removeLog(context.monitor, "healthcheck", healthcheck, true)
-	}
-
-	return nil
+	return operations, nil
 }

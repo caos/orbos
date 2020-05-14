@@ -2,9 +2,10 @@ package kubernetes
 
 import (
 	"fmt"
+	"regexp"
+
 	"github.com/caos/orbiter/internal/secret"
 	"github.com/caos/orbiter/internal/tree"
-	"regexp"
 
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"

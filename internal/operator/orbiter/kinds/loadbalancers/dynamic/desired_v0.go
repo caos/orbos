@@ -36,7 +36,7 @@ func v0tov1(node *yaml.Node, d *Desired) error {
 }
 
 type VIPV0 struct {
-	IP        *string
+	IP        string
 	Whitelist []*orbiter.CIDR
 	Transport []*Source
 }
