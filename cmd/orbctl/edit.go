@@ -33,12 +33,7 @@ func EditCommand(rv RootValues) *cobra.Command {
 				panic(err)
 			}
 
-			file, err := gitClient.Read(args[0])
-			if err != nil {
-				panic(err)
-			}
-
-			edited, err := CaptureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(file))
+			edited, err := CaptureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(gitClient.Read(args[0])))
 			if err != nil {
 				panic(err)
 			}
