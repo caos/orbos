@@ -2,13 +2,9 @@ package keepalived
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
@@ -119,25 +115,4 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 	}
 
 	return s.systemd.Start("keepalived")
-}
-
-func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {
-
-	var (
-		outBuf bytes.Buffer
-		errBuf bytes.Buffer
-	)
-
-	cmd := exec.Command("sysctl", property)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &outBuf
-
-	fullCmd := strings.Join(cmd.Args, " ")
-	k.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
-
-	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-	}
-
-	return outBuf.String() == fmt.Sprintf("%s = 1\n", property), nil
 }

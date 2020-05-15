@@ -35,7 +35,7 @@ func (sysctlDep) Is(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (sysctlDep) String() string { return "NGINX" }
+func (sysctlDep) String() string { return "sysctl" }
 
 func (*sysctlDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*sysctlDep)
@@ -140,7 +140,10 @@ func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *comm
 	monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+		errStr := errBuf.String()
+		if !strings.Contains(errStr, "No such file or directory") {
+			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errStr)
+		}
 	}
 
 	if pkg.Config == nil {
