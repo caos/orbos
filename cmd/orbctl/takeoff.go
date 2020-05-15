@@ -105,7 +105,6 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter took off")
 
-		intervalSeconds := 60
 		adaptFunc := orb.AdaptFunc(
 			orbFile,
 			gitCommit,
@@ -120,19 +119,22 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			adaptFunc,
 		)
 
-		for {
-			started := time.Now()
+		takeoffChan := make(chan struct{})
+		go func() {
+			takeoffChan <- struct{}{}
+		}()
 
+		for range takeoffChan {
 			go func() {
+				started := time.Now()
 				takeoff()
 
 				monitor.WithFields(map[string]interface{}{
 					"took": time.Since(started),
 				}).Info("Iteration done")
 				debug.FreeOSMemory()
+				takeoffChan <- struct{}{}
 			}()
-
-			time.Sleep(time.Duration(intervalSeconds) * time.Second)
 		}
 
 		return nil
