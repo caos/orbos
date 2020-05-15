@@ -60,18 +60,6 @@ func (k *kubeletDep) Current() (common.Package, error) {
 		return pkg, err
 	}
 
-	if err := dep.CurrentSysctlConfig(k.monitor, ipForwardCfg, &pkg, true); err != nil {
-		return pkg, err
-	}
-
-	if err := dep.CurrentSysctlConfig(k.monitor, iptables, &pkg, true); err != nil {
-		return pkg, err
-	}
-
-	if err := dep.CurrentSysctlConfig(k.monitor, ip6tables, &pkg, true); err != nil {
-		return pkg, err
-	}
-
 	return pkg, selinux.Current(k.os, &pkg)
 }
 
@@ -96,32 +84,6 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 		return errors.Wrapf(err, "loading module br_netfilter while installing kubelet failed with stderr %s", errBuf.String())
 	}
 	errBuf.Reset()
-
-	file, err := os.Create("/etc/sysctl.d/22-k8s.conf")
-	if err != nil {
-		return errors.Wrap(err, "opening /etc/sysctl.d/22-k8s.conf failed")
-	}
-	defer file.Close()
-
-	file.Write([]byte(fmt.Sprintf(`%s = 1
-%s = 1
-%s = 1
-		`, ipForwardCfg, ip6tables, iptables)))
-	if err != nil {
-		return errors.Wrap(err, "writing to /etc/sysctl.d/22-k8s.conf failed")
-	}
-	file.Close()
-
-	cmd = exec.Command("sysctl", "--system")
-	cmd.Stderr = &errBuf
-	if k.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running sysctl --system failed with stderr %s", errBuf.String())
-	}
 
 	return k.ensurePackage(remove, install)
 }

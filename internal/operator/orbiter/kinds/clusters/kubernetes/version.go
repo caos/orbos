@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sysctl"
+
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/mntr"
 )
@@ -52,12 +54,18 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	//	if minor, err := k.ExtractMinor(); err != nil && minor <= 15 {
 	//		dockerVersion = "docker-ce v18.09.6"
 	//	}
+
+	sysctlPkg := common.Package{}
+	sysctl.SetProperty(&sysctlPkg, sysctl.IpForward, true)
+	sysctl.SetProperty(&sysctlPkg, sysctl.BridgeNfCallIptables, true)
+	sysctl.SetProperty(&sysctlPkg, sysctl.BridgeNfCallIp6tables, true)
 	return common.Software{
 		Swap:             common.Package{Version: "disabled"},
 		Containerruntime: common.Package{Version: dockerVersion},
 		Kubelet:          common.Package{Version: k.String()},
 		Kubeadm:          common.Package{Version: k.String()},
 		Kubectl:          common.Package{Version: k.String()},
+		Sysctl:           sysctlPkg,
 	}
 }
 
@@ -68,6 +76,7 @@ func KubernetesSoftware(current common.Software) common.Software {
 		Kubelet:          current.Kubelet,
 		Kubeadm:          current.Kubeadm,
 		Kubectl:          current.Kubectl,
+		Sysctl:           current.Sysctl,
 	}
 }
 

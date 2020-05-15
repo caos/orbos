@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sysctl"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
@@ -49,43 +50,37 @@ func (d *dependencies) Init() (func() error, error) {
 
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
 
-	dependencies := []*nodeagent.Dependency{
-		&nodeagent.Dependency{
-			Desired:   sw.Hostname,
-			Installer: hostname.New(),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Swap,
-			Installer: swap.New("/etc/fstab"),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.KeepaliveD,
-			Installer: keepalived.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.SSHD,
-			Installer: sshd.New(d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Nginx,
-			Installer: nginx.New(d.monitor, d.pm, d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Containerruntime,
-			Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Kubelet,
-			Installer: kubelet.New(d.monitor, d.os.OperatingSystem, d.pm, d.sysd),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Kubectl,
-			Installer: kubectl.New(d.os.OperatingSystem, d.pm),
-		},
-		&nodeagent.Dependency{
-			Desired:   sw.Kubeadm,
-			Installer: kubeadm.New(d.os.OperatingSystem, d.pm),
-		},
+	dependencies := []*nodeagent.Dependency{{
+		Desired:   sw.Sysctl,
+		Installer: sysctl.New(d.monitor),
+	}, {
+		Desired:   sw.Hostname,
+		Installer: hostname.New(),
+	}, {
+		Desired:   sw.Swap,
+		Installer: swap.New("/etc/fstab"),
+	}, {
+		Desired:   sw.KeepaliveD,
+		Installer: keepalived.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem, d.cipher),
+	}, {
+		Desired:   sw.SSHD,
+		Installer: sshd.New(d.sysd),
+	}, {
+		Desired:   sw.Nginx,
+		Installer: nginx.New(d.monitor, d.pm, d.sysd),
+	}, {
+		Desired:   sw.Containerruntime,
+		Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),
+	}, {
+		Desired:   sw.Kubelet,
+		Installer: kubelet.New(d.monitor, d.os.OperatingSystem, d.pm, d.sysd),
+	}, {
+		Desired:   sw.Kubectl,
+		Installer: kubectl.New(d.os.OperatingSystem, d.pm),
+	}, {
+		Desired:   sw.Kubeadm,
+		Installer: kubeadm.New(d.os.OperatingSystem, d.pm),
+	},
 	}
 
 	for key, dependency := range dependencies {
@@ -100,6 +95,8 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
+		case sysctl.Installer:
+			sw.Sysctl = pkg(*dependency)
 		case hostname.Installer:
 			sw.Hostname = pkg(*dependency)
 		case swap.Installer:

@@ -48,11 +48,6 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-const (
-	ipForwardCfg    = "net.ipv4.ip_forward"
-	nonlocalbindCfg = "net.ipv4.ip_nonlocal_bind"
-)
-
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	defer func() {
 		if err == nil {
@@ -74,14 +69,6 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	})
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
-	}
-
-	if err := dep.CurrentSysctlConfig(s.monitor, ipForwardCfg, &pkg, true); err != nil {
-		return pkg, err
-	}
-
-	if err := dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg, &pkg, true); err != nil {
-		return pkg, err
 	}
 
 	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")
@@ -125,17 +112,6 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0777); err != nil {
 			return err
 		}
-	}
-
-	if err := ioutil.WriteFile("/etc/sysctl.d/20-keepalived.conf", []byte(fmt.Sprintf(`%s = 1
-%s = 1
-`, nonlocalbindCfg, ipForwardCfg)), os.ModePerm); err != nil {
-		return err
-	}
-
-	cmd := exec.Command("sysctl", "--system")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
 	}
 
 	if err := s.systemd.Enable("keepalived"); err != nil {

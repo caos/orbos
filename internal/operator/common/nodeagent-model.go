@@ -30,6 +30,7 @@ type Software struct {
 	Nginx            Package `yaml:",omitempty"`
 	SSHD             Package `yaml:",omitempty"`
 	Hostname         Package `yaml:",omitempty"`
+	Sysctl           Package `yaml:",omitempty"`
 }
 
 func (s *Software) Merge(sw Software) {
@@ -70,6 +71,13 @@ func (s *Software) Merge(sw Software) {
 
 	if !sw.Hostname.Equals(zeroPkg) {
 		s.Hostname = sw.Hostname
+	}
+
+	if !sw.Sysctl.Equals(zeroPkg) && s.Sysctl.Config == nil {
+		s.Sysctl.Config = make(map[string]string)
+	}
+	for key, value := range sw.Sysctl.Config {
+		s.Sysctl.Config[key] = value
 	}
 }
 
@@ -117,7 +125,8 @@ func (this *Software) Contains(that Software) bool {
 		contains(this.Containerruntime, that.Containerruntime) &&
 		contains(this.KeepaliveD, that.KeepaliveD) &&
 		contains(this.Nginx, that.Nginx) &&
-		contains(this.Hostname, that.Hostname)
+		contains(this.Hostname, that.Hostname) &&
+		contains(this.Sysctl, that.Sysctl)
 }
 
 func contains(this, that Package) bool {
@@ -132,7 +141,8 @@ func (this *Software) Defines(that Software) bool {
 		defines(this.Containerruntime, that.Containerruntime) &&
 		defines(this.KeepaliveD, that.KeepaliveD) &&
 		defines(this.Nginx, that.Nginx) &&
-		defines(this.Hostname, that.Hostname)
+		defines(this.Hostname, that.Hostname) &&
+		defines(this.Sysctl, that.Sysctl)
 }
 
 func defines(this, that Package) bool {

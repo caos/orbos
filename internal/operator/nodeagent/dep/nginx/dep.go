@@ -1,13 +1,8 @@
 package nginx
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbiter/internal/operator/common"
 	"github.com/caos/orbiter/internal/operator/nodeagent"
@@ -44,11 +39,6 @@ func (*nginxDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-const (
-	ipForwardCfg    = "net.ipv4.ip_nonlocal_bind"
-	nonlocalbindCfg = "net.ipv4.ip_forward"
-)
-
 func (s *nginxDep) Current() (pkg common.Package, err error) {
 	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
 	if os.IsNotExist(err) {
@@ -57,14 +47,6 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 
 	pkg.Config = map[string]string{
 		"nginx.conf": string(config),
-	}
-
-	if err := dep.CurrentSysctlConfig(s.monitor, ipForwardCfg, &pkg, true); err != nil {
-		return pkg, err
-	}
-
-	if err := dep.CurrentSysctlConfig(s.monitor, nonlocalbindCfg, &pkg, true); err != nil {
-		return pkg, err
 	}
 
 	return pkg, nil
@@ -105,17 +87,6 @@ module_hotfixes=true`), 0600); err != nil {
 
 	if err := ioutil.WriteFile("/etc/nginx/nginx.conf", []byte(ensureCfg), 0600); err != nil {
 		return err
-	}
-
-	if err := ioutil.WriteFile("/etc/sysctl.d/21-nginx.conf", []byte(fmt.Sprintf(`%s = 1
-%s = 1
-`, ipForwardCfg, nonlocalbindCfg)), os.ModePerm); err != nil {
-		return err
-	}
-
-	cmd := exec.Command("sysctl", "--system")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
 	}
 
 	if err := s.systemd.Enable("nginx"); err != nil {

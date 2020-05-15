@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sysctl"
+
 	"github.com/caos/orbiter/internal/tree"
 
 	"github.com/caos/orbiter/internal/helpers"
@@ -351,6 +353,8 @@ http {
 						}
 					}
 					na.Software.Nginx = ngxPkg
+					sysctl.SetProperty(&na.Software.Sysctl, sysctl.IpForward, true)
+					sysctl.SetProperty(&na.Software.Sysctl, sysctl.NonLocalBind, true)
 				}
 				return nil
 			}
