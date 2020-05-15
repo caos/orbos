@@ -30,26 +30,29 @@ func GetQueryAndDestroyFuncs(
 
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
-		return kubernetes.AdaptFunc(
-			orb,
-			orbiterCommit,
-			clusterID,
-			oneoff,
-			deployOrbiterAndBoom,
-			destroyProviders,
-			func(whitelist []*orbiter.CIDR) {
-				go func() {
-					monitor.Debug("Sending whitelist")
-					whitelistChan <- whitelist
-					close(whitelistChan)
-				}()
-				monitor.Debug("Whitelist sent")
-			},
-		)(
-			monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-			clusterTree,
-			clusterCurrent,
-		)
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+			return kubernetes.AdaptFunc(
+				orb,
+				orbiterCommit,
+				clusterID,
+				oneoff,
+				deployOrbiterAndBoom,
+				destroyProviders,
+				func(whitelist []*orbiter.CIDR) {
+					go func() {
+						monitor.Debug("Sending whitelist")
+						whitelistChan <- whitelist
+						close(whitelistChan)
+					}()
+					monitor.Debug("Whitelist sent")
+				},
+			)(
+				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
+				clusterTree,
+				clusterCurrent,
+			)
+		}
+		return orbiter.AdaptFuncGoroutine(adaptFunc)
 		//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 	default:
 		return nil, nil, false, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"runtime/debug"
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
@@ -104,21 +105,36 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter took off")
 
-		takeoffFunc := orbiter.Takeoff(
+		adaptFunc := orb.AdaptFunc(
+			orbFile,
+			gitCommit,
+			!recur,
+			deploy)
+
+		takeoff := orbiter.Takeoff(
 			monitor,
 			gitClient,
 			pushEvents,
 			gitCommit,
-			orb.AdaptFunc(
-				orbFile,
-				gitCommit,
-				!recur,
-				deploy),
+			adaptFunc,
 		)
 
-		for {
-			takeoffFunc()
-			monitor.Info("Iteration done")
+		takeoffChan := make(chan struct{})
+		go func() {
+			takeoffChan <- struct{}{}
+		}()
+
+		for range takeoffChan {
+			go func() {
+				started := time.Now()
+				takeoff()
+
+				monitor.WithFields(map[string]interface{}{
+					"took": time.Since(started),
+				}).Info("Iteration done")
+				debug.FreeOSMemory()
+				takeoffChan <- struct{}{}
+			}()
 		}
 
 		return nil

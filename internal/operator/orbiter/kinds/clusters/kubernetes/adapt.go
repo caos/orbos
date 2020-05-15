@@ -120,7 +120,11 @@ func AdaptFunc(
 
 				desiredKind.Spec.Kubeconfig = nil
 
-				return destroy(monitor, providers, k8sClient)
+				destroyFunc := func() error {
+					return destroy(monitor, providers, k8sClient)
+				}
+
+				return orbiter.DestroyFuncGoroutine(destroyFunc)
 			}, migrate, nil
 	}
 }

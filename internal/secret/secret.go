@@ -18,6 +18,7 @@ type Secret struct {
 	Value      string
 	Masterkey  string `yaml:"-"`
 }
+type secretAlias Secret
 
 type Existing struct {
 	Name         string `json:"name" yaml:"name"`
@@ -33,14 +34,9 @@ type ExistingIDSecret struct {
 }
 
 func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
+	alias := new(secretAlias)
+	err := node.Decode(alias)
 
-	type Alias Secret
-	alias := &Alias{}
-	if err := node.Decode(alias); err != nil {
-		return err
-	}
-	s.Encryption = alias.Encryption
-	s.Encoding = alias.Encoding
 	if alias.Value == "" {
 		return nil
 	}
@@ -81,6 +77,8 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 		return errors.New("Decryption failed")
 	}
 	//	s.monitor.Info("Decoded and decrypted secret")
+	s.Encoding = alias.Encoding
+	s.Encryption = alias.Encryption
 	s.Value = string(cipherText)
 	return nil
 }
@@ -114,8 +112,7 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 	stream := cipher.NewCFBEncrypter(c, iv)
 	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(s.Value))
 
-	type Alias Secret
-	return &Alias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}, nil
+	return &secretAlias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText), Masterkey: ""}, nil
 }
 
 func ClearEmpty(secret *Secret) *Secret {

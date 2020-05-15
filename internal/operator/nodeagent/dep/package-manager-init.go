@@ -11,10 +11,10 @@ import (
 )
 
 func (p *PackageManager) debSpecificUpdatePackages() error {
-
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 	cmd := exec.Command("apt-get", "--assume-yes", "update")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -30,9 +30,12 @@ func (p *PackageManager) debSpecificUpdatePackages() error {
 }
 
 func (p *PackageManager) remSpecificUpdatePackages() error {
-	var errBuf bytes.Buffer
+
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	cmd := exec.Command("yum", "update", "-y")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -47,7 +50,7 @@ func (p *PackageManager) remSpecificUpdatePackages() error {
 
 	errBuf.Reset()
 	cmd = exec.Command("package-cleanup", "--cleandupes", "-y")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
