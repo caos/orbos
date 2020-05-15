@@ -3,11 +3,12 @@ package secret
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
-	"sort"
-	"strings"
 
 	"github.com/manifoldco/promptui"
 
@@ -28,13 +29,8 @@ func Parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err erro
 	}
 
 	for _, file := range files {
-		raw, err := gitClient.Read(file)
-		if err != nil {
-			return nil, err
-		}
-
 		tree := &tree.Tree{}
-		if err := yaml.Unmarshal([]byte(raw), tree); err != nil {
+		if err := yaml.Unmarshal(gitClient.Read(file), tree); err != nil {
 			return nil, err
 		}
 		trees = append(trees, tree)
