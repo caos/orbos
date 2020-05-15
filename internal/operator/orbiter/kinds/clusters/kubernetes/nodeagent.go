@@ -125,7 +125,8 @@ Type=simple
 User=root
 ExecStart=%s --repourl "%s" --id "%s"
 Restart=always
-MemoryMax=100M
+MemoryMax=250M
+MemoryLimit=250M
 RestartSec=10
 
 [Install]
