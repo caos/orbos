@@ -48,8 +48,9 @@ func query(
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
 					current.Current.Ingresses[src.Name] = &infra.Address{
-						Location: vip.IP,
-						Port:     uint16(src.SourcePort),
+						Location:    vip.IP,
+						Port:        uint16(src.SourcePort),
+						BindLocally: true,
 					}
 				}
 			}

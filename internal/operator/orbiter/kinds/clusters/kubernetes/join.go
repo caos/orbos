@@ -53,8 +53,10 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
 
-	intIP := joining.infra.IP()
-
+	listenIP := kubeAPI.Location
+	if kubeAPI.BindLocally {
+		listenIP = joining.infra.IP()
+	}
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
@@ -116,7 +118,7 @@ nodeRegistration:
   name: %s
 `,
 		joinToken,
-		intIP,
+		listenIP,
 		joining.infra.ID(),
 		kubeAPI,
 		kubernetesVersion,
@@ -133,7 +135,7 @@ nodeRegistration:
     advertiseAddress: %s
     bindPort: 6666
   certificateKey: %s
-`, intIP, certKey)
+`, listenIP, certKey)
 	}
 
 	if err := try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
