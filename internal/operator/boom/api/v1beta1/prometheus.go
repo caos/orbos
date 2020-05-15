@@ -1,6 +1,6 @@
 package v1beta1
 
-import "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/storage"
+import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
 
 type Prometheus struct {
 	Deploy  bool          `json:"deploy,omitempty" yaml:"deploy,omitempty"`

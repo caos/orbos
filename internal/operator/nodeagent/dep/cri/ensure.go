@@ -9,12 +9,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string) error {
-
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 	cmd := exec.Command("yum", "remove", "docker",
 		"docker-client",
 		"docker-client-latest",
@@ -23,7 +23,7 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		"docker-latest-logrotate",
 		"docker-logrotate",
 		"docker-engine")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if c.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -76,15 +76,15 @@ func (c *criDep) ensureUbuntu(runtime string, version string) error {
 		return errors.Wrap(err, "updating repository indices before installing docker-ce failed")
 	}
 
-	var (
-		buf    bytes.Buffer
-		errBuf bytes.Buffer
-	)
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
 
 	var versionLine string
 	cmd := exec.Command("apt-cache", "madison", runtime)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &buf
+	cmd.Stderr = errBuf
+	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
 		return errors.Wrapf(err, "running apt-cache madison %s failed with stderr %s", runtime, errBuf.String())
 	}

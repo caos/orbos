@@ -1,16 +1,16 @@
 package orb
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/push"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
@@ -137,7 +137,11 @@ func AdaptFunc(
 				providerEnsurers := make([]orbiter.EnsureFunc, 0)
 				queriedProviders := make(map[string]interface{})
 				for _, querier := range providerQueriers {
-					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					queryFunc := func() (orbiter.EnsureFunc, error) {
+						return querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					}
+					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+
 					if err != nil {
 						return nil, err
 					}
@@ -150,7 +154,11 @@ func AdaptFunc(
 
 				clusterEnsurers := make([]orbiter.EnsureFunc, 0)
 				for _, querier := range clusterQueriers {
-					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					queryFunc := func() (orbiter.EnsureFunc, error) {
+						return querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					}
+					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+
 					if err != nil {
 						return nil, err
 					}
@@ -163,7 +171,11 @@ func AdaptFunc(
 					}()
 
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
-						if err := ensurer(psf); err != nil {
+						ensureFunc := func() error {
+							return ensurer(psf)
+						}
+
+						if err := orbiter.EnsureFuncGoroutine(ensureFunc); err != nil {
 							return err
 						}
 					}
@@ -176,7 +188,7 @@ func AdaptFunc(
 				}()
 
 				for _, destroyer := range clusterDestroyers {
-					if err := destroyer(); err != nil {
+					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
 						return err
 					}
 				}

@@ -3,9 +3,9 @@ package static
 import (
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
 var _ infra.Machine = (*machine)(nil)

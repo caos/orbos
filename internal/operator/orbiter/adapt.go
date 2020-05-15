@@ -1,9 +1,9 @@
 package orbiter
 
 import (
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/tree"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"gopkg.in/yaml.v3"
 )
 
@@ -29,4 +29,21 @@ func parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err erro
 	}
 
 	return trees, nil
+}
+
+type retAdapt struct {
+	query   QueryFunc
+	destroy DestroyFunc
+	migrate bool
+	err     error
+}
+
+func AdaptFuncGoroutine(adapt func() (QueryFunc, DestroyFunc, bool, error)) (QueryFunc, DestroyFunc, bool, error) {
+	retChan := make(chan retAdapt)
+	go func() {
+		query, destroy, migrate, err := adapt()
+		retChan <- retAdapt{query, destroy, migrate, err}
+	}()
+	ret := <-retChan
+	return ret.query, ret.destroy, ret.migrate, ret.err
 }

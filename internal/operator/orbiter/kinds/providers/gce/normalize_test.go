@@ -6,9 +6,9 @@ import (
 
 	"google.golang.org/api/compute/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
 
 func Test_normalize(t *testing.T) {

@@ -1,6 +1,6 @@
 package static
 
-import "github.com/caos/orbiter/mntr"
+import "github.com/caos/orbos/mntr"
 
 func destroy(monitor mntr.Monitor, desired *DesiredV0, current *Current, id string) error {
 	machinesSvc := NewMachinesService(

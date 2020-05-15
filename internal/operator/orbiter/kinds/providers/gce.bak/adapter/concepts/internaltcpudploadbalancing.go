@@ -1,8 +1,8 @@
 package concepts
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/forwardingrule"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/forwardingrule"
 )
 
 func PlanInternalTCPUDPLoadBalancing(lbName string, resources *core.ResourceFactory, resourcesExecutor *core.Executor, firewallExecutor *core.Executor, services *Services, cfg *Config, ipCB func(lbName string, ip string), groupCB func(poolName string, group core.EnsuredGroup)) error {

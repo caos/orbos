@@ -1,10 +1,10 @@
 package wrap
 
 import (
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 )
 
 func desire(selfPool string, changesAllowed bool, curr dynamic.Current, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifymasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string) func() error {

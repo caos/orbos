@@ -2,15 +2,13 @@ package kubernetes
 
 import (
 	"fmt"
-	"regexp"
 
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/internal/tree"
-
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
 var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
@@ -18,8 +16,6 @@ var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
 var ipRegex = fmt.Sprintf(`%s\.%s\.%s\.%s`, ipPartRegex, ipPartRegex, ipPartRegex, ipPartRegex)
 
 var cidrRegex = fmt.Sprintf(`%s/([1-2][0-9]|3[0-2]|[0-9])`, ipRegex)
-
-var cidrComp = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
 
 type DesiredV0 struct {
 	Common tree.Common `yaml:",inline"`

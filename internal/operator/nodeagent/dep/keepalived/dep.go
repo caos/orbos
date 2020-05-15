@@ -6,12 +6,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/selinux"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
+	"github.com/caos/orbos/mntr"
 )
 
 type Installer interface {
@@ -55,8 +55,10 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 		return pkg, nil
 	}
 
-	var redacted bytes.Buffer
-	dep.Manipulate(bytes.NewReader(config), &redacted, nil, nil, func(line string) *string {
+	redacted := new(bytes.Buffer)
+	defer redacted.Reset()
+
+	dep.Manipulate(bytes.NewReader(config), redacted, nil, nil, func(line string) *string {
 		searchString := "auth_pass "
 		if strings.Contains(line, searchString) {
 			line = line[0:strings.Index(line, searchString)+len(searchString)] + "[ REDACTED ]"

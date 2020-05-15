@@ -1,12 +1,12 @@
 package clusters
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/internal/tree"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
 
@@ -30,26 +30,29 @@ func GetQueryAndDestroyFuncs(
 
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
-		return kubernetes.AdaptFunc(
-			orb,
-			orbiterCommit,
-			clusterID,
-			oneoff,
-			deployOrbiterAndBoom,
-			destroyProviders,
-			func(whitelist []*orbiter.CIDR) {
-				go func() {
-					monitor.Debug("Sending whitelist")
-					whitelistChan <- whitelist
-					close(whitelistChan)
-				}()
-				monitor.Debug("Whitelist sent")
-			},
-		)(
-			monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-			clusterTree,
-			clusterCurrent,
-		)
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+			return kubernetes.AdaptFunc(
+				orb,
+				orbiterCommit,
+				clusterID,
+				oneoff,
+				deployOrbiterAndBoom,
+				destroyProviders,
+				func(whitelist []*orbiter.CIDR) {
+					go func() {
+						monitor.Debug("Sending whitelist")
+						whitelistChan <- whitelist
+						close(whitelistChan)
+					}()
+					monitor.Debug("Whitelist sent")
+				},
+			)(
+				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
+				clusterTree,
+				clusterCurrent,
+			)
+		}
+		return orbiter.AdaptFuncGoroutine(adaptFunc)
 		//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 	default:
 		return nil, nil, false, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)

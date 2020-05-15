@@ -4,16 +4,16 @@ import (
 	ctxpkg "context"
 	"encoding/json"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {

@@ -4,13 +4,13 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/internal/tree"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
 
@@ -50,14 +50,21 @@ func GetQueryAndDestroyFuncs(
 			providerCurrent,
 		)
 	case "orbiter.caos.ch/StaticProvider":
-		return static.AdaptFunc(
-			orb.Masterkey,
-			provID,
-			wlFunc,
-		)(
-			monitor,
-			providerTree,
-			providerCurrent)
+
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+			return static.AdaptFunc(
+				orb.Masterkey,
+				provID,
+				func() []*orbiter.CIDR {
+					monitor.Debug("Reading whitelist")
+					return <-whitelistChan
+				},
+			)(
+				monitor.WithFields(map[string]interface{}{"provider": provID}),
+				providerTree,
+				providerCurrent)
+		}
+		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
 		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}

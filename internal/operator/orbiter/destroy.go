@@ -1,13 +1,21 @@
 package orbiter
 
 import (
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/tree"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 )
 
 type DestroyFunc func() error
+
+func DestroyFuncGoroutine(query func() error) error {
+	retChan := make(chan error)
+	go func() {
+		retChan <- query()
+	}()
+	return <-retChan
+}
 
 func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error {
 
@@ -19,12 +27,16 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error
 	treeDesired := trees[0]
 	treeCurrent := &tree.Tree{}
 
-	_, destroy, _, err := adapt(monitor, treeDesired, treeCurrent)
+	adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
+		return adapt(monitor, treeDesired, treeCurrent)
+	}
+
+	_, destroy, _, err := AdaptFuncGoroutine(adaptFunc)
 	if err != nil {
 		return err
 	}
 
-	if err := destroy(); err != nil {
+	if err := DestroyFuncGoroutine(destroy); err != nil {
 		return err
 	}
 

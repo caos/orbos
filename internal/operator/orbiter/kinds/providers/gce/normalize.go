@@ -7,15 +7,15 @@ import (
 
 	"google.golang.org/api/googleapi"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter"
 
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 
 	uuid "github.com/satori/go.uuid"
 
 	"google.golang.org/api/compute/v1"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
 
 type normalizedLoadbalancer struct {

@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbos/internal/helpers"
 	"strconv"
 	"strings"
 )
@@ -40,5 +40,5 @@ func parseArg(args splitArgsTuple) (parsedArgsTuple, error) {
 }
 
 func checkParsed(tuple parsedArgsTuple) (string, error) {
- 	return helpers.Check(tuple())
+	return helpers.Check(tuple())
 }

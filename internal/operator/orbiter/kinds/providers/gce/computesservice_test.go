@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbiter/internal/secret"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/mntr"
 )
 
 func TestComputeService(t *testing.T) {

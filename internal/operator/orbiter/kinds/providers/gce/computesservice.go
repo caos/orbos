@@ -3,12 +3,12 @@ package gce
 import (
 	"fmt"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/mntr"
 	"google.golang.org/api/compute/v1"
 )
 

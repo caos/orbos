@@ -1,20 +1,18 @@
 package static
 
 import (
-	"github.com/caos/orbiter/internal/push"
-	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	dynamiclbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 
-	//	externallbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external"
-
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
 func query(
@@ -67,8 +65,10 @@ func query(
 	}
 
 	for _, pool := range pools {
-
-		if err := desireLb(pool); err != nil {
+		desireLbFunc := func() error {
+			return desireLb(pool)
+		}
+		if err := orbiter.EnsureFuncGoroutine(desireLbFunc); err != nil {
 			return nil, err
 		}
 
@@ -77,7 +77,10 @@ func query(
 			return nil, err
 		}
 		for _, machine := range machines {
-			if err := desireHostnameFunc(machine, pool); err != nil {
+			desireHostnameFuncFunc := func() error {
+				return desireHostnameFunc(machine, pool)
+			}
+			if err := orbiter.EnsureFuncGoroutine(desireHostnameFuncFunc); err != nil {
 				return nil, err
 			}
 		}

@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
 )
 
 type Installer interface {
@@ -42,9 +42,11 @@ func (*sshdDep) Equals(other nodeagent.Installer) bool {
 
 func (s *sshdDep) Current() (pkg common.Package, err error) {
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	swapon := exec.Command("sshd", "-T")
-	swapon.Stdout = &buf
+	swapon.Stdout = buf
 	if err := swapon.Run(); err != nil {
 		return pkg, err
 	}

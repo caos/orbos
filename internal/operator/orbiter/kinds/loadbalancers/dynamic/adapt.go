@@ -7,20 +7,20 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sysctl"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/tree"
 
-	"github.com/caos/orbiter/internal/helpers"
+	"github.com/caos/orbos/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 )
 
 var probes = prometheus.NewGaugeVec(
@@ -138,11 +138,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					}
 					for _, machine := range machines {
 						cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-						addToWhitelists(false, vips, &cidr)
+						vips = addToWhitelists(false, vips, &cidr)
 					}
 				}
 
-				addToWhitelists(true, vips, wl...)
+				vips = addToWhitelists(true, vips, wl...)
 
 				machinesData := make([]Data, len(forMachines))
 				for idx, machine := range forMachines {
@@ -264,9 +264,10 @@ http {
 `))
 
 				for _, d := range machinesData {
+					kaBuf := new(bytes.Buffer)
+					defer kaBuf.Reset()
 
-					var kaBuf bytes.Buffer
-					if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
+					if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
 						return err
 					}
 
@@ -319,8 +320,10 @@ http {
 
 					na.Software.KeepaliveD = kaPkg
 
-					var ngxBuf bytes.Buffer
-					if err := nginxTemplate.Execute(&ngxBuf, d); err != nil {
+					ngxBuf := new(bytes.Buffer)
+					defer ngxBuf.Reset()
+
+					if err := nginxTemplate.Execute(ngxBuf, d); err != nil {
 						return err
 					}
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
@@ -363,15 +366,28 @@ http {
 	}
 }
 
-func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) {
-	for _, vip := range vips {
-		for _, src := range vip.Transport {
-			src.Whitelist = append(src.Whitelist, cidr...)
-			if makeUnique {
-				src.Whitelist = unique(src.Whitelist)
+func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP {
+	newVIPs := make([]*VIP, len(vips))
+	for vipIdx, vip := range vips {
+		newTransport := make([]*Source, len(vip.Transport))
+		for srcIdx, src := range vip.Transport {
+			newSource := &Source{
+				Name:         src.Name,
+				SourcePort:   src.SourcePort,
+				Destinations: src.Destinations,
+				Whitelist:    append(src.Whitelist, cidr...),
 			}
+			if makeUnique {
+				newSource.Whitelist = unique(src.Whitelist)
+			}
+			newTransport[srcIdx] = newSource
+		}
+		newVIPs[vipIdx] = &VIP{
+			IP:        vip.IP,
+			Transport: newTransport,
 		}
 	}
+	return newVIPs
 }
 
 func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {

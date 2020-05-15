@@ -6,12 +6,12 @@ import (
 	"context"
 	"os"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static"
-	staticconfig "github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/static/config"
-	logcontext "github.com/caos/orbiter/logging/context"
-	"github.com/caos/orbiter/logging/stdlib"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
+	staticconfig "github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static/config"
+	logcontext "github.com/caos/orbos/logging/context"
+	"github.com/caos/orbos/logging/stdlib"
 
 	"github.com/spf13/viper"
 )

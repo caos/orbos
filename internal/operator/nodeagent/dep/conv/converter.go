@@ -1,27 +1,27 @@
 package conv
 
 import (
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sysctl"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/cri"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/hostname"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/k8s/kubeadm"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/k8s/kubectl"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/k8s/kubelet"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/keepalived"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/nginx"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/sshd"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/swap"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/cri"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/hostname"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/k8s/kubeadm"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/k8s/kubectl"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/k8s/kubelet"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/keepalived"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/nginx"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sshd"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/swap"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
+	"github.com/caos/orbos/mntr"
 )
 
 type Converter interface {
-	Init() (func() error, error)
+	Init() func() error
 	nodeagent.Converter
 }
 
@@ -37,15 +37,17 @@ func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Conve
 	return &dependencies{monitor, os, nil, nil, cipher}
 }
 
-func (d *dependencies) Init() (func() error, error) {
+func (d *dependencies) Init() func() error {
 
 	d.pm = dep.NewPackageManager(d.monitor, d.os.OperatingSystem)
-	if err := d.pm.Init(); err != nil {
-		return d.pm.RefreshInstalled, err
-	}
-
 	d.sysd = dep.NewSystemD(d.monitor)
-	return d.pm.RefreshInstalled, nil
+
+	return func() error {
+		if err := d.pm.Init(); err != nil {
+			return err
+		}
+		return d.pm.RefreshInstalled()
+	}
 }
 
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {

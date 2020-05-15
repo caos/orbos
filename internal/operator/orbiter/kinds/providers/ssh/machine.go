@@ -6,9 +6,11 @@ import (
 	"io"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/ssh"
+
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/mntr"
 	sshlib "golang.org/x/crypto/ssh"
 )
 
@@ -53,9 +55,9 @@ func (c *Machine) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 		return nil, err
 	}
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
 	sess.Stdin = stdin
-	sess.Stderr = &buf
+	sess.Stderr = buf
 
 	envPre := ""
 	for key, value := range env {
@@ -116,9 +118,9 @@ func (c *Machine) ReadFile(path string, data io.Writer) (err error) {
 	if err != nil {
 		return err
 	}
-	var stderr bytes.Buffer
+	stderr := new(bytes.Buffer)
 	sess.Stdout = data
-	sess.Stderr = &stderr
+	sess.Stderr = stderr
 
 	if err := sess.Run(cmd); err != nil {
 		return fmt.Errorf("executing %s failed with stderr %s: %w", cmd, stderr.String(), err)
@@ -155,18 +157,18 @@ func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 func (c *Machine) UseKey(keys ...[]byte) error {
 
-	var signers []sshlib.Signer
+	publicKeys := make([]sshlib.AuthMethod, 0)
 	for _, key := range keys {
-		signer, err := sshlib.ParsePrivateKey(key)
+		publicKey, err := ssh.PrivateKeyToPublicKey(key)
 		if err != nil {
-			return errors.Wrap(err, "parsing private key failed")
+			return err
 		}
-		signers = append(signers, signer)
+		publicKeys = append(publicKeys, publicKey)
 	}
 
 	c.sshCfg = &sshlib.ClientConfig{
 		User:            c.remoteUser,
-		Auth:            []sshlib.AuthMethod{sshlib.PublicKeys(signers...)},
+		Auth:            publicKeys,
 		HostKeyCallback: sshlib.InsecureIgnoreHostKey(),
 	}
 	return nil

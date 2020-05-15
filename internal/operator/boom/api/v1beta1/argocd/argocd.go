@@ -1,9 +1,9 @@
 package argocd
 
 import (
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd/auth"
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/network"
-	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
+	"github.com/caos/orbos/internal/secret"
 	"reflect"
 )
 

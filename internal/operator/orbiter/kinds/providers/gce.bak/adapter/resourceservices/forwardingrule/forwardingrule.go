@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/backendservice"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/targetproxy"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/edge/api"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/gce/model"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/backendservice"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/adapter/resourceservices/targetproxy"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/edge/api"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce/model"
+	"github.com/caos/orbos/mntr"
 	"google.golang.org/api/machine/v1"
 )
 

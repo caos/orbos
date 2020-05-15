@@ -1,8 +1,8 @@
 package v1beta1
 
 import (
-	"github.com/caos/orbiter/internal/operator/boom/api/v1beta1/argocd"
-	grafana "github.com/caos/orbiter/internal/operator/boom/api/v1beta1/grafana"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	grafana "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
 )
 
 type Metadata struct {

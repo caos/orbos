@@ -1,14 +1,14 @@
 package gce
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/clusters/core/infra"
-	dynamiclbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbiter/internal/push"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/internal/push"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	//	externallbmodel "github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/external"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
 )
 
 func query(

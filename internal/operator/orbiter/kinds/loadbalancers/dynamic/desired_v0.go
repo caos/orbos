@@ -1,8 +1,8 @@
 package dynamic
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
 )
 

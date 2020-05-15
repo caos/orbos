@@ -8,29 +8,19 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/caos/orbiter/internal/git"
-	"github.com/caos/orbiter/internal/operator"
-	"github.com/caos/orbiter/internal/watcher/cron"
-	"github.com/caos/orbiter/internal/watcher/immediate"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/mntr"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/conv"
-	"github.com/caos/orbiter/internal/operator/nodeagent/firewall"
-	"github.com/caos/orbiter/internal/operator/nodeagent/rebooter/node"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/conv"
+	"github.com/caos/orbos/internal/operator/nodeagent/firewall"
 )
 
 var gitCommit string
 var version string
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
 
 func main() {
 
@@ -51,7 +41,7 @@ func main() {
 	flag.Parse()
 
 	if *printVersion {
-		fmt.Println(fmt.Sprintf("%s %s", version, gitCommit))
+		fmt.Printf("%s %s\n", version, gitCommit)
 		os.Exit(0)
 	}
 
@@ -89,12 +79,7 @@ func main() {
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-
-	converter := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
-	before, err := converter.Init()
-	if err != nil {
-		panic(err)
-	}
+	conv := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
 
 	ctx := context.Background()
 	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
@@ -102,25 +87,18 @@ func main() {
 		panic(err)
 	}
 
-	op := operator.New(
-		ctx,
+	itFunc := nodeagent.Iterator(
 		monitor,
-		nodeagent.Iterator(
-			monitor,
-			gitClient,
-			node.New(),
-			gitCommit,
-			*nodeAgentID,
-			firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
-			converter,
-			before),
-		[]operator.Watcher{
-			immediate.New(monitor),
-			cron.New(monitor, "@every 10s"),
-		})
+		gitClient,
+		gitCommit,
+		*nodeAgentID,
+		firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
+		conv,
+		conv.Init())
 
-	if err := op.Initialize(); err != nil {
-		panic(err)
+	for {
+		itFunc()
+		monitor.Info("Iteration done")
+		time.Sleep(10 * time.Second)
 	}
-	op.Run()
 }

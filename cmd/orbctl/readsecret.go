@@ -1,13 +1,13 @@
 package main
 
 import (
-	"github.com/caos/orbiter/internal/operator/boom/api"
-	"github.com/caos/orbiter/internal/secret"
+	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/secret"
 	"os"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
 func ReadSecretCommand(rv RootValues) *cobra.Command {

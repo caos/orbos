@@ -7,8 +7,8 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 )
 
 type Common struct {
@@ -54,7 +54,9 @@ gpgcheck=1
 repo_gpgcheck=1
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg`), 0600)
 
-		//		var errBuf bytes.Buffer
+		//		errBuf := new(bytes.Buffer)
+		//		defer errBuf.Reset()
+		//
 		//		cmd := exec.Command("yum-config-manager", "--save", "--setopt=kubernetes.skip_if_unavailable=true")
 		//		cmd.Stderr = &errBuf
 		//		if c.monitor.IsVerbose() {

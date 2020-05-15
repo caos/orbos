@@ -10,10 +10,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/mntr"
 )
 
 type Installer interface {
@@ -127,14 +127,14 @@ func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *comm
 
 	propertyStr := string(property)
 
-	var (
-		outBuf bytes.Buffer
-		errBuf bytes.Buffer
-	)
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 
 	cmd := exec.Command("sysctl", propertyStr)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &outBuf
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
 	monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")

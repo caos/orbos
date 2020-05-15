@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/mntr"
 )
 
 type SystemD struct {
@@ -22,9 +22,11 @@ func NewSystemD(monitor mntr.Monitor) *SystemD {
 
 func (s *SystemD) Disable(binary string) error {
 
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	cmd := exec.Command("systemctl", "stop", binary)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -35,7 +37,7 @@ func (s *SystemD) Disable(binary string) error {
 
 	errBuf.Reset()
 	cmd = exec.Command("systemctl", "disable", binary)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -48,17 +50,21 @@ func (s *SystemD) Disable(binary string) error {
 }
 
 func (s *SystemD) Start(binary string) error {
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	cmd := exec.Command("systemctl", "restart", binary)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	return errors.Wrapf(cmd.Run(), "restarting %s from systemd failed with stderr %s", binary, errBuf.String())
 }
 
 func (s *SystemD) Enable(binary string) error {
 
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	cmd := exec.Command("systemctl", "daemon-reload")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -69,7 +75,7 @@ func (s *SystemD) Enable(binary string) error {
 
 	errBuf.Reset()
 	cmd = exec.Command("systemctl", "enable", binary)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout

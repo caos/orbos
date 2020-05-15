@@ -3,16 +3,16 @@ package kubernetes
 import (
 	"os"
 
-	"github.com/caos/orbiter/internal/orb"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/tree"
 
 	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
 var deployErrors int
@@ -121,7 +121,11 @@ func AdaptFunc(
 
 				desiredKind.Spec.Kubeconfig = nil
 
-				return destroy(providers, k8sClient)
+				destroyFunc := func() error {
+					return destroy(providers, k8sClient)
+				}
+
+				return orbiter.DestroyFuncGoroutine(destroyFunc)
 			}, migrate, nil
 	}
 }

@@ -11,6 +11,7 @@ ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--li
 
 FROM scratch as prod
 
+ENV GODEBUG madvdontneed=1
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /etc_passwd /etc/passwd
 COPY --from=build --chown=65534:65534 /orbctl /orbctl

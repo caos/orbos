@@ -1,14 +1,14 @@
 package static
 
 import (
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers"
-	"github.com/caos/orbiter/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbiter/internal/tree"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbiter/internal/operator/common"
-	"github.com/caos/orbiter/internal/operator/orbiter"
-	"github.com/caos/orbiter/mntr"
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
@@ -34,7 +34,6 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
-
 		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent)
 		if err != nil {
 			return nil, nil, migrate, err
@@ -56,10 +55,18 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
+				lbQueryFunc := func() (orbiter.EnsureFunc, error) {
+					return lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
+				}
+
+				if _, err := orbiter.QueryFuncGoroutine(lbQueryFunc); err != nil {
 					return nil, err
 				}
-				return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+
+				queryFunc := func() (orbiter.EnsureFunc, error) {
+					return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+				}
+				return orbiter.QueryFuncGoroutine(queryFunc)
 			}, func() error {
 				return destroy(monitor, desiredKind, current, id)
 			}, migrate, nil

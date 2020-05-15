@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/caos/orbiter/internal/operator/nodeagent"
-	"github.com/caos/orbiter/internal/operator/nodeagent/rebooter"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/internal/operator/nodeagent/rebooter"
 )
 
 func New() nodeagent.Rebooter {
