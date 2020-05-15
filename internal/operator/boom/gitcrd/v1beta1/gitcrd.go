@@ -211,10 +211,8 @@ func (c *GitCrd) getCrdContent(masterkey string) (*toolsetsv1beta1.Toolset, erro
 	if err := c.git.Clone(); err != nil {
 		return nil, err
 	}
-	raw, err := c.git.Read(c.crdPath)
-	if err != nil {
-		return nil, err
-	}
+
+	raw := c.git.Read(c.crdPath)
 
 	desiredTree := &tree.Tree{}
 	if err := yaml.Unmarshal(raw, desiredTree); err != nil {

@@ -1,17 +1,14 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/internal/push"
-	"github.com/caos/orbos/internal/tree"
-	_ "net/http/pprof"
-
 	"fmt"
 	"net/http"
 
+	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/prometheus/client_golang/prometheus"
-	"gopkg.in/yaml.v3"
-
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -22,6 +19,28 @@ import (
 type EnsureFunc func(psf push.Func) error
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
+
+type retQuery struct {
+	ensure EnsureFunc
+	err    error
+}
+
+func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
+	retChan := make(chan retQuery)
+	go func() {
+		ensure, err := query()
+		retChan <- retQuery{ensure, err}
+	}()
+	ret := <-retChan
+	return ret.ensure, ret.err
+}
+func EnsureFuncGoroutine(ensure func() error) error {
+	retChan := make(chan error)
+	go func() {
+		retChan <- ensure()
+	}()
+	return <-retChan
+}
 
 type event struct {
 	commit string
@@ -53,10 +72,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			Kind:    "nodeagent.caos.ch/NodeAgents",
 			Version: "v0",
 		}
-		rawDesiredNodeAgents, err := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
-		if err != nil {
-			panic(err)
-		}
+		rawDesiredNodeAgents := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
 		yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents)
 		desiredNodeAgents.Kind = "nodeagent.caos.ch/NodeAgents"
 		desiredNodeAgents.Version = "v0"
@@ -84,7 +100,10 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			})
 		}, monitor.OnChange)
 
-		query, _, migrate, err := adapt(monitor, finishedChan, treeDesired, treeCurrent)
+		adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
+			return adapt(monitor, finishedChan, treeDesired, treeCurrent)
+		}
+		query, _, migrate, err := AdaptFuncGoroutine(adaptFunc)
 		if err != nil {
 			monitor.Error(err)
 			return
@@ -98,11 +117,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		currentNodeAgents := common.NodeAgentsCurrentKind{}
-		rawCurrentNodeAgents, err := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
-		if err != nil {
-			panic(err)
-		}
-		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
+		yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &currentNodeAgents)
 
 		if currentNodeAgents.Current == nil {
 			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
@@ -112,48 +127,61 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			monitor.Error(err)
 			//			monitor.Error(gitClient.Clone())
 			if commitErr := gitClient.Commit(mntr.CommitRecord([]*mntr.Field{{Pos: 0, Key: "err", Value: err.Error()}})); commitErr != nil {
-				panic(commitErr)
+				monitor.Error(err)
+				return
 			}
 			monitor.Error(gitClient.Push())
 		}
 
-		ensure, err := query(currentNodeAgents.Current, desiredNodeAgents.Spec.NodeAgents, nil)
+		queryFunc := func() (EnsureFunc, error) {
+			return query(currentNodeAgents.Current, desiredNodeAgents.Spec.NodeAgents, nil)
+		}
+		ensure, err := QueryFuncGoroutine(queryFunc)
 		if err != nil {
 			handleAdapterError(err)
 			return
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			panic(err)
+			monitor.Error(err)
+			return
 		}
 
 		reconciledCurrentStateMsg := "Current state reconciled"
 		currentReconciled, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()...)
 		if err != nil {
-			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			return
 		}
 
 		if currentReconciled {
 			if err := gitClient.Push(); err != nil {
-				panic(err)
+				monitor.Error(fmt.Errorf("Pushing event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+				return
 			}
 		}
 
 		events = make([]*event, 0)
-		if err := ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml")); err != nil {
+
+		ensureFunc := func() error {
+			return ensure(push.SecretsFunc(gitClient, treeDesired, "orbiter.yml"))
+		}
+		if err := EnsureFuncGoroutine(ensureFunc); err != nil {
 			handleAdapterError(err)
 			return
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			panic(err)
+			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			return
 		}
 
 		for _, event := range events {
 
 			changed, err := gitClient.StageAndCommit(event.commit, event.files...)
 			if err != nil {
-				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), event.commit))
+				monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", event.commit, err.Error()))
+				return
 			}
 
 			if !changed {

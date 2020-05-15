@@ -115,8 +115,9 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		if err := machine.UseKey(c.maintenanceKey, c.bootstrapKey); err != nil {
 			return nil, err
 		}
-		var buf bytes.Buffer
-		if err := machine.ReadFile(c.statusFile, &buf); err != nil {
+
+		buf := new(bytes.Buffer)
+		if err := machine.ReadFile(c.statusFile, buf); err != nil {
 			// treat as inactive
 		}
 		machine.active = strings.Contains(buf.String(), "active")

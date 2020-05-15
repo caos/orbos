@@ -64,8 +64,10 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 		return pkg, nil
 	}
 
-	var redacted bytes.Buffer
-	dep.Manipulate(bytes.NewReader(config), &redacted, nil, nil, func(line string) *string {
+	redacted := new(bytes.Buffer)
+	defer redacted.Reset()
+
+	dep.Manipulate(bytes.NewReader(config), redacted, nil, nil, func(line string) *string {
 		searchString := "auth_pass "
 		if strings.Contains(line, searchString) {
 			line = line[0:strings.Index(line, searchString)+len(searchString)] + "[ REDACTED ]"
@@ -156,14 +158,14 @@ net.ipv4.ip_nonlocal_bind = 1
 
 func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {
 
-	var (
-		outBuf bytes.Buffer
-		errBuf bytes.Buffer
-	)
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 
 	cmd := exec.Command("sysctl", property)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &outBuf
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
 	k.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")

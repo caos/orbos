@@ -12,6 +12,7 @@ import (
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
+
 	var (
 		verbose          bool
 		recur            bool
@@ -20,7 +21,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		ingestionAddress string
 		cmd              = &cobra.Command{
 			Use:   "takeoff",
-			Short: "Take off with orbiter and boom",
+			Short: "Launch an orbiter",
 			Long:  "Ensures a desired state",
 		}
 	)
@@ -130,12 +131,12 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, monitor, _, orbFile, errFunc := rv()
+		_, monitor, _, orbFile, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		return start.Boom(ctx, monitor, orbFile, localmode)
+		return start.Boom(monitor, orbFile, localmode)
 	}
 	return cmd
 }

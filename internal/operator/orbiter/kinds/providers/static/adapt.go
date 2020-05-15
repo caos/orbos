@@ -56,10 +56,18 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
+				lbQueryFunc := func() (orbiter.EnsureFunc, error) {
+					return lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
+				}
+
+				if _, err := orbiter.QueryFuncGoroutine(lbQueryFunc); err != nil {
 					return nil, err
 				}
-				return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+
+				queryFunc := func() (orbiter.EnsureFunc, error) {
+					return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+				}
+				return orbiter.QueryFuncGoroutine(queryFunc)
 			}, func() error {
 				return destroy(monitor, desiredKind, current, id)
 			}, migrate, nil

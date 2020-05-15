@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool, finishedChan chan bool) func() {
+func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool) func() {
 	appStruct := app.New(monitor, toolsDirectoryPath)
 	gitcrdMonitor := monitor.WithFields(map[string]interface{}{"type": "gitcrd"})
 
@@ -67,7 +67,7 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 	}
 }
 
-func TakeOffCurrentState(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, finishedChan chan bool) func() {
+func TakeOffCurrentState(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string) func() {
 	appStruct := app.New(monitor, toolsDirectoryPath)
 	gitcrdMonitor := monitor.WithFields(map[string]interface{}{"type": "gitcrd"})
 

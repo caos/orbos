@@ -138,14 +138,14 @@ net.ipv4.ip_nonlocal_bind = 1
 
 func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {
 
-	var (
-		outBuf bytes.Buffer
-		errBuf bytes.Buffer
-	)
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 
 	cmd := exec.Command("sysctl", property)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &outBuf
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
 	n.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")

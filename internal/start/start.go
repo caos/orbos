@@ -5,29 +5,25 @@ import (
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
-	"github.com/caos/orbos/internal/operator"
 	"github.com/caos/orbos/internal/operator/boom"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	orbconfig "github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/watcher/cron"
-	"github.com/caos/orbos/internal/watcher/immediate"
 	"github.com/caos/orbos/mntr"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
+	"runtime/debug"
 	"time"
 )
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, verbose bool, version string, gitClient *git.Client, orbFile *orbconfig.Orb, gitCommit string, ingestionAddress string) error {
 
 	finishedChan := make(chan bool)
-	ctxCancel, cancel := context.WithCancel(ctx)
 
 	pushEvents := func(_ []*ingestion.EventRequest) error {
 		return nil
 	}
-
 	if ingestionAddress != "" {
 		conn, err := grpc.Dial(ingestionAddress, grpc.WithInsecure())
 		if err != nil {
@@ -37,35 +33,13 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		ingc := ingestion.NewIngestionServiceClient(conn)
 
 		pushEvents = func(events []*ingestion.EventRequest) error {
-			_, err := ingc.PushEvents(ctxCancel, &ingestion.EventsRequest{
+			_, err := ingc.PushEvents(ctx, &ingestion.EventsRequest{
 				Orb:    orbFile.URL,
 				Events: events,
 			})
 			return err
 		}
 	}
-
-	op := operator.New(ctxCancel, monitor, orbiter.Takeoff(
-		monitor,
-		gitClient,
-		pushEvents,
-		gitCommit,
-		orb.AdaptFunc(
-			orbFile,
-			gitCommit,
-			!recur,
-			deploy),
-		finishedChan,
-	), []operator.Watcher{
-		immediate.New(monitor),
-		cron.New(monitor, "@every 10s"),
-	})
-
-	if err := op.Initialize(); err != nil {
-		panic(err)
-	}
-
-	executables.Populate()
 
 	if err := pushEvents([]*ingestion.EventRequest{{
 		CreationDate: ptypes.TimestampNow(),
@@ -78,14 +52,6 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 	}}); err != nil {
 		panic(err)
 	}
-
-	monitor.WithFields(map[string]interface{}{
-		"version": version,
-		"commit":  gitCommit,
-		"destroy": destroy,
-		"verbose": verbose,
-		"repoURL": orbFile.URL,
-	}).Info("Orbiter took off")
 
 	started := float64(time.Now().UTC().Unix())
 
@@ -103,66 +69,125 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		}
 	}()
 
+	executables.Populate()
+
+	monitor.WithFields(map[string]interface{}{
+		"version": version,
+		"commit":  gitCommit,
+		"destroy": destroy,
+		"verbose": verbose,
+		"repoURL": orbFile.URL,
+	}).Info("Orbiter took off")
+
+	takeoffChan := make(chan struct{})
 	go func() {
-		op.Run()
+		takeoffChan <- struct{}{}
 	}()
+
+	for range takeoffChan {
+		adaptFunc := orb.AdaptFunc(
+			orbFile,
+			gitCommit,
+			!recur,
+			deploy)
+
+		takeoff := orbiter.Takeoff(
+			monitor,
+			gitClient,
+			pushEvents,
+			gitCommit,
+			adaptFunc,
+			finishedChan,
+		)
+
+		go func() {
+			started := time.Now()
+			takeoff()
+
+			monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			}).Info("Iteration done")
+			debug.FreeOSMemory()
+			takeoffChan <- struct{}{}
+		}()
+	}
 
 	finished := false
 	for !finished {
 		finished = <-finishedChan
 	}
-	cancel()
 
 	return nil
 }
 
-func Boom(ctx context.Context, monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
-
-	finishedChan := make(chan bool)
-	ctxCancel, cancel := context.WithCancel(ctx)
-
-	op := operator.New(ctxCancel, monitor, boom.Takeoff(
-		monitor,
-		orbFile,
-		"/boom",
-		localmode,
-		finishedChan,
-	), []operator.Watcher{
-		immediate.New(monitor),
-		cron.New(monitor, "@every 60s"),
-	})
-
-	if err := op.Initialize(); err != nil {
-		panic(err)
-	}
-
+func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
+	takeoffChan := make(chan struct{})
 	go func() {
-		op.Run()
+		takeoffChan <- struct{}{}
 	}()
 
-	opMetrics := operator.New(ctxCancel, monitor, boom.TakeOffCurrentState(
-		monitor,
-		orbFile,
-		"/boom",
-		finishedChan,
-	), []operator.Watcher{
-		immediate.New(monitor),
-		cron.New(monitor, "@every 60s"),
-	})
+	for range takeoffChan {
+		boomChan := make(chan struct{})
+		currentChan := make(chan struct{})
 
-	if err := opMetrics.Initialize(); err != nil {
-		panic(err)
+		takeoffCurrent := boom.TakeOffCurrentState(
+			monitor,
+			orbFile,
+			"/boom",
+		)
+		go func() {
+			started := time.Now()
+			takeoffCurrent()
+
+			monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			}).Info("Iteration done")
+			debug.FreeOSMemory()
+
+			currentChan <- struct{}{}
+		}()
+
+		takeoff := boom.Takeoff(
+			monitor,
+			orbFile,
+			"/boom",
+			localmode,
+		)
+		go func() {
+			started := time.Now()
+			takeoff()
+
+			monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			}).Info("Iteration done")
+			debug.FreeOSMemory()
+
+			boomChan <- struct{}{}
+		}()
+
+		go func() {
+			<-currentChan
+			<-boomChan
+
+			takeoffChan <- struct{}{}
+		}()
 	}
 
+	return nil
+}
+
+func BoomMetrics(monitor mntr.Monitor, orbFile *orbconfig.Orb) error {
+
+	finishedChan := make(chan bool)
+
+	takeoffChan := make(chan struct{})
 	go func() {
-		opMetrics.Run()
+		takeoffChan <- struct{}{}
 	}()
 
 	finished := false
 	for !finished {
 		finished = <-finishedChan
 	}
-	cancel()
-
 	return nil
 }

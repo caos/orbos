@@ -31,6 +31,7 @@ FROM alpine:3.11 as prod
 
 RUN adduser nobody nobody
 
+ENV GODEBUG madvdontneed=1
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
 COPY --from=build --chown=nobody:nobody /orbctl /orbctl
