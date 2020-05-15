@@ -12,17 +12,12 @@ type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree
 func parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err error) {
 
 	if err := gitClient.Clone(); err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for _, file := range files {
-		raw, err := gitClient.Read(file)
-		if err != nil {
-			return nil, err
-		}
-
 		tree := &tree.Tree{}
-		if err := yaml.Unmarshal([]byte(raw), tree); err != nil {
+		if err := yaml.Unmarshal(gitClient.Read(file), tree); err != nil {
 			return nil, err
 		}
 		trees = append(trees, tree)

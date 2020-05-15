@@ -72,10 +72,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			Kind:    "nodeagent.caos.ch/NodeAgents",
 			Version: "v0",
 		}
-		rawDesiredNodeAgents, err := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
-		if err != nil {
-			panic(err)
-		}
+		rawDesiredNodeAgents := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
 		yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents)
 		desiredNodeAgents.Kind = "nodeagent.caos.ch/NodeAgents"
 		desiredNodeAgents.Version = "v0"
@@ -120,11 +117,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		currentNodeAgents := common.NodeAgentsCurrentKind{}
-		rawCurrentNodeAgents, err := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
-		if err != nil {
-			panic(err)
-		}
-		yaml.Unmarshal(rawCurrentNodeAgents, &currentNodeAgents)
+		yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &currentNodeAgents)
 
 		if currentNodeAgents.Current == nil {
 			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
@@ -134,7 +127,8 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			monitor.Error(err)
 			//			monitor.Error(gitClient.Clone())
 			if commitErr := gitClient.Commit(mntr.CommitRecord([]*mntr.Field{{Pos: 0, Key: "err", Value: err.Error()}})); commitErr != nil {
-				panic(commitErr)
+				monitor.Error(err)
+				return
 			}
 			monitor.Error(gitClient.Push())
 		}
@@ -149,18 +143,21 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			panic(err)
+			monitor.Error(err)
+			return
 		}
 
 		reconciledCurrentStateMsg := "Current state reconciled"
 		currentReconciled, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()...)
 		if err != nil {
-			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			return
 		}
 
 		if currentReconciled {
 			if err := gitClient.Push(); err != nil {
-				panic(err)
+				monitor.Error(fmt.Errorf("Pushing event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+				return
 			}
 		}
 
@@ -175,14 +172,16 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			panic(err)
+			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			return
 		}
 
 		for _, event := range events {
 
 			changed, err := gitClient.StageAndCommit(event.commit, event.files...)
 			if err != nil {
-				panic(fmt.Errorf("Commiting event failed with err %s: %s", err.Error(), event.commit))
+				monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", event.commit, err.Error()))
+				return
 			}
 
 			if !changed {
