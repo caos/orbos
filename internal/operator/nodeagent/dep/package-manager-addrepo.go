@@ -13,13 +13,14 @@ import (
 
 func (p *PackageManager) rembasedAdd(repo *Repository) error {
 
-	var (
-		errBuf bytes.Buffer
-		outBuf bytes.Buffer
-	)
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	outBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	cmd := exec.Command("yum-config-manager", "--add-repo", repo.Repository)
-	cmd.Stderr = &errBuf
-	cmd.Stdout = &outBuf
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
 	err := cmd.Run()
 
 	out := outBuf.String()
@@ -37,7 +38,9 @@ func (p *PackageManager) rembasedAdd(repo *Repository) error {
 
 func (p *PackageManager) debbasedAdd(repo *Repository) error {
 
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	resp, err := http.Get(repo.KeyURL)
 	if err != nil {
 		return errors.Wrapf(err, "getting key from url %s failed", repo.KeyURL)
@@ -45,7 +48,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 	defer resp.Body.Close()
 	cmd := exec.Command("apt-key", "add", "-")
 	cmd.Stdin = resp.Body
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -61,10 +64,12 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 	}).Debug("Added repository key from url")
 
 	if repo.KeyFingerprint != "" {
-		var buf bytes.Buffer
+		buf := new(bytes.Buffer)
+		defer buf.Reset()
+
 		cmd := exec.Command("apt-key", "fingerprint", repo.KeyFingerprint)
-		cmd.Stdout = &buf
-		cmd.Stderr = &errBuf
+		cmd.Stdout = buf
+		cmd.Stderr = errBuf
 		if err := cmd.Run(); err != nil {
 			return errors.Wrapf(err, "verifying fingerprint %s failed with stderr %s", repo.KeyFingerprint, errBuf.String())
 		}
@@ -102,7 +107,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 	}
 
 	cmd = exec.Command("add-apt-repository", "-y", repo.Repository)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -118,7 +123,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 	}).Debug("Added repository")
 
 	cmd = exec.Command("apt-get", strings.Fields("--assume-yes --allow-downgrades update")...)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout

@@ -66,9 +66,11 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 		return k.ensurePackage(remove, install)
 	}
 
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
 	cmd := exec.Command("modprobe", "br_netfilter")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if k.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -93,7 +95,7 @@ net.bridge.bridge-nf-call-iptables = 1
 	file.Close()
 
 	cmd = exec.Command("sysctl", "--system")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if k.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
