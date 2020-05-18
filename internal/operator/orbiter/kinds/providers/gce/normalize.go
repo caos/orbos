@@ -74,9 +74,9 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 	var normalized []*normalizedLoadbalancer
 
 	type normalizedDestination struct {
-		port   dynamic.Port
-		pools  []string
-		hcPath string
+		port  dynamic.Port
+		pools []string
+		hc    dynamic.HealthChecks
 	}
 
 	for _, ips := range spec {
@@ -95,9 +95,9 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 						}
 					}
 					normalizedDestinations = append(normalizedDestinations, &normalizedDestination{
-						port:   dest.Port,
-						pools:  []string{dest.Pool},
-						hcPath: dest.HealthChecks.Path,
+						port:  dest.Port,
+						pools: []string{dest.Pool},
+						hc:    dest.HealthChecks,
 					})
 				}
 
@@ -117,8 +117,8 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 					}
 					hc := &compute.HttpHealthCheck{
 						Description: description,
-						Port:        int64(dest.port),
-						RequestPath: dest.hcPath,
+						Port:        int64(dest.hc.Port),
+						RequestPath: dest.hc.Path,
 					}
 
 					poolsLen := len(dest.pools)

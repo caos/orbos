@@ -115,10 +115,12 @@ func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package
 	hcBinary := fmt.Sprintf("%s.sh", KubeAPIHealthzProxyProperty)
 	if _, ok := install.Config[KubeAPIHealthzProxyProperty]; ok {
 
-		ioutil.WriteFile(fmt.Sprintf("/usr/local/bin/%s", hcBinary), []byte(`#!/bin/bash
+		if err := ioutil.WriteFile(fmt.Sprintf("/usr/local/bin/%s", hcBinary), []byte(`#!/bin/bash
 
 kubectl proxy --accept-paths /healthz
-`), 700)
+`), 700); err != nil {
+			return err
+		}
 
 		if err := k.systemd.Enable(hcBinary); err != nil {
 			return err
