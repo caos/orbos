@@ -15,7 +15,7 @@ import (
 func join(
 	monitor mntr.Monitor,
 	joining *initializedMachine,
-	joinAt infra.Machine,
+	init bool,
 	desired DesiredV0,
 	kubeAPI *infra.Address,
 	joinToken string,
@@ -53,10 +53,7 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
 
-	listenIP := kubeAPI.Location
-	if kubeAPI.BindLocally {
-		listenIP = joining.infra.IP()
-	}
+	listenIP := kubeAPI.Bind(joining.infra.IP())
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
@@ -156,13 +153,8 @@ nodeRegistration:
 		"stdout": string(resetStdout),
 	}).Debug("Cleaned up machine")
 
-	if joinAt != nil {
-		joinAtIP := joinAt.IP()
-		if err != nil {
-			return nil, err
-		}
-
-		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAtIP, kubeAPI.Port, kubeadmCfgPath)
+	if !init {
+		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s --config %s", kubeAPI.Port, kubeAPI, kubeadmCfgPath)
 		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)

@@ -7,9 +7,9 @@ import (
 )
 
 type Address struct {
-	Location    string
-	Port        uint16
-	BindLocally bool `yaml:"-"`
+	Location string
+	Port     uint16
+	Bind     func(machineIP string) string `yaml:"-"`
 }
 
 func (a Address) String() string {

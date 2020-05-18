@@ -51,26 +51,30 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
 			return nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
-		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, migrate, err
-		}
-		desiredTree.Parsed = desiredKind
-
-		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
-				Version: "v0",
-			},
-		}
-		currentTree.Parsed = current
 
 		for _, pool := range desiredKind.Spec {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
-					if src.Name == "kubeapi" {
-						for _, dest := range src.Destinations {
+					for _, dest := range src.Destinations {
+						if dest.HealthChecks.Port == 0 {
+							dest.HealthChecks.Port = dest.Port
+							migrate = true
+						}
+						if src.Name == "kubeapi" {
 							if dest.Port != 6666 {
 								dest.Port = 6666
+								migrate = true
+							}
+							if dest.HealthChecks.Port != 8001 {
+								dest.HealthChecks.Port = 8001
+								migrate = true
+							}
+							if dest.HealthChecks.Path != "/healthz" {
+								dest.HealthChecks.Path = "/healthz"
+								migrate = true
+							}
+							if dest.HealthChecks.Protocol != "http" {
+								dest.HealthChecks.Protocol = "http"
 								migrate = true
 							}
 						}
@@ -83,6 +87,19 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 			}
 		}
+
+		if err := desiredKind.Validate(); err != nil {
+			return nil, nil, migrate, err
+		}
+		desiredTree.Parsed = desiredKind
+
+		current := &Current{
+			Common: &tree.Common{
+				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
+				Version: "v0",
+			},
+		}
+		currentTree.Parsed = current
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
 

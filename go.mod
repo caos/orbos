@@ -8,6 +8,7 @@ require (
 	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
 	github.com/aws/aws-sdk-go v1.29.15
 	github.com/caos/oidc v0.6.0
+	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/golang/protobuf v1.3.5
 	github.com/google/go-github/v31 v31.0.0

@@ -39,9 +39,11 @@ func query(
 
 	for _, lb := range normalized {
 		current.Current.Ingresses[lb.transport] = &infra.Address{
-			Location:    lb.address.gce.Address,
-			Port:        uint16(lb.healthcheck.gce.Port),
-			BindLocally: false,
+			Location: lb.address.gce.Address,
+			Port:     uint16(lb.healthcheck.gce.Port),
+			Bind: func(_ string) string {
+				return "0.0.0.0"
+			},
 		}
 	}
 

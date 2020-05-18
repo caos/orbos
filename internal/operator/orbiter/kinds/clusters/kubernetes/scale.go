@@ -192,7 +192,7 @@ nodes:
 		joinKubeconfig, err := join(
 			monitor,
 			joinCP,
-			certsCP,
+			doKubeadmInit,
 			*desired,
 			kubeAPI,
 			jointoken,
@@ -217,7 +217,7 @@ nodes:
 		if _, err := join(
 			monitor,
 			worker,
-			certsCP,
+			false,
 			*desired,
 			kubeAPI,
 			string(jointoken),

@@ -60,7 +60,7 @@ func (d *Desired) Validate() error {
 }
 
 type VIP struct {
-	IP        string
+	IP        string `yaml:",omitempty"`
 	Transport []*Source
 }
 
@@ -91,18 +91,19 @@ type HealthChecks struct {
 	Protocol string
 	Path     string
 	Code     uint16
+	Port     Port `yaml:",omitempty"`
 }
 
 func (h *HealthChecks) validate() error {
 	if h.Protocol == "" {
 		return errors.New("no protocol configured")
 	}
-	return nil
+	return h.Port.validate()
 }
 
 type Source struct {
 	Name         string
-	SourcePort   Port
+	SourcePort   Port `yaml:",omitempty"`
 	Destinations []*Destination
 	Whitelist    []*orbiter.CIDR
 }

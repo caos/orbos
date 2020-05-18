@@ -129,9 +129,14 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 								IPProtocol: "tcp",
 								Ports:      []string{fmt.Sprintf("%d", dest.port)},
 							}},
-							Description:  description,
-							SourceRanges: whitelistStrings(src.Whitelist),
-							TargetTags:   networkTags(orbID, providerID, pool),
+							Description: description,
+							SourceRanges: append(whitelistStrings(src.Whitelist),
+								// healthcheck sources, see https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
+								"35.191.0.0/16",
+								"209.85.152.0/22",
+								"209.85.204.0/22",
+							),
+							TargetTags: networkTags(orbID, providerID, pool),
 						}
 						firewalls[poolIdx] = &firewall{
 							log: func(msg string, debug bool) func() {

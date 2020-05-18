@@ -3,6 +3,7 @@ package kubelet
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -34,6 +35,8 @@ func New(monitor mntr.Monitor, os dep.OperatingSystem, manager *dep.PackageManag
 	return &kubeletDep{os, monitor, k8s.New(os, manager, "kubelet"), systemd}
 }
 
+const KubeAPIHealthzProxyProperty string = "kubeapihealthzproxy"
+
 func (kubeletDep) isKubelet() {}
 
 func (kubeletDep) Is(other nodeagent.Installer) bool {
@@ -48,16 +51,17 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-const (
-	ipForwardCfg = "net.ipv4.ip_forward"
-	iptables     = "net.bridge.bridge-nf-call-iptables"
-	ip6tables    = "net.bridge.bridge-nf-call-ip6tables"
-)
-
 func (k *kubeletDep) Current() (common.Package, error) {
 	pkg, err := k.common.Current()
 	if err != nil {
 		return pkg, err
+	}
+
+	if k.systemd.Active(KubeAPIHealthzProxyProperty) {
+		if pkg.Config == nil {
+			pkg.Config = make(map[string]string)
+		}
+		pkg.Config[KubeAPIHealthzProxyProperty] = "active"
 	}
 
 	return pkg, selinux.Current(k.os, &pkg)
@@ -91,6 +95,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 }
 
 func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package) error {
+
 	if err := k.common.Ensure(remove, install); err != nil {
 		return err
 	}
@@ -99,5 +104,27 @@ func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package
 		return err
 	}
 
-	return k.systemd.Start("kubelet")
+	if err := k.systemd.Start("kubelet"); err != nil {
+		return err
+	}
+
+	if install.Config[KubeAPIHealthzProxyProperty] == install.Config[KubeAPIHealthzProxyProperty] {
+		return nil
+	}
+
+	hcBinary := fmt.Sprintf("%s.sh", KubeAPIHealthzProxyProperty)
+	if _, ok := install.Config[KubeAPIHealthzProxyProperty]; ok {
+
+		ioutil.WriteFile(fmt.Sprintf("/usr/local/bin/%s", hcBinary), []byte(`#!/bin/bash
+
+kubectl proxy --accept-paths /healthz
+`), 700)
+
+		if err := k.systemd.Enable(hcBinary); err != nil {
+			return err
+		}
+		return k.systemd.Start(hcBinary)
+	}
+	return k.systemd.Disable(hcBinary)
+
 }
