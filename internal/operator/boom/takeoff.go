@@ -14,6 +14,27 @@ import (
 	"time"
 )
 
+var initial bool = true
+
+func metrics(monitor mntr.Monitor) {
+	metricsport := "2112"
+
+	http.Handle("/metrics", promhttp.Handler())
+	address := strings.Join([]string{":", metricsport}, "")
+	go func() {
+		if err := http.ListenAndServe(address, nil); err != nil {
+			monitor.Error(errors.Wrap(err, "error while serving metrics endpoint"))
+		}
+
+		monitor.WithFields(map[string]interface{}{
+			"port":     metricsport,
+			"endpoint": "/metrics",
+		}).Info("Started metrics")
+	}()
+
+	initial = false
+}
+
 func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool) func() {
 	appStruct := app.New(monitor, toolsDirectoryPath)
 	gitcrdMonitor := monitor.WithFields(map[string]interface{}{"type": "gitcrd"})
@@ -32,26 +53,15 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 		clientgo.InConfig = false
 	}
 
+	if initial {
+		metrics(monitor)
+	}
+
 	gconfig.DashboardsDirectoryPath = "/boom/dashboards"
 
 	if err := appStruct.AddGitCrd(gitcrdConf); err != nil {
 		monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
 	}
-
-	metricsport := "2112"
-
-	http.Handle("/metrics", promhttp.Handler())
-	address := strings.Join([]string{":", metricsport}, "")
-	go func() {
-		if err := http.ListenAndServe(address, nil); err != nil {
-			monitor.Error(errors.Wrap(err, "error while serving metrics endpoint"))
-		}
-
-		monitor.WithFields(map[string]interface{}{
-			"port":     metricsport,
-			"endpoint": "/metrics",
-		}).Info("Started metrics")
-	}()
 
 	return func() {
 		// TODO: use a function scoped error variable
