@@ -18,6 +18,7 @@ import (
 )
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, verbose bool, version string, gitClient *git.Client, orbFile *orbconfig.Orb, gitCommit string, ingestionAddress string) error {
+	orbiter.Metrics()
 
 	finishedChan := make(chan bool)
 
@@ -123,6 +124,8 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 }
 
 func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
+	boom.Metrics(monitor)
+
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}

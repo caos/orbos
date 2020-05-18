@@ -14,9 +14,7 @@ import (
 	"time"
 )
 
-var initial bool = true
-
-func metrics(monitor mntr.Monitor) {
+func Metrics(monitor mntr.Monitor) {
 	metricsport := "2112"
 
 	http.Handle("/metrics", promhttp.Handler())
@@ -31,8 +29,6 @@ func metrics(monitor mntr.Monitor) {
 			"endpoint": "/metrics",
 		}).Info("Started metrics")
 	}()
-
-	initial = false
 }
 
 func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool) func() {
@@ -51,10 +47,6 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 
 	if localMode {
 		clientgo.InConfig = false
-	}
-
-	if initial {
-		metrics(monitor)
 	}
 
 	gconfig.DashboardsDirectoryPath = "/boom/dashboards"

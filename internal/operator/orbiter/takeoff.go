@@ -46,9 +46,7 @@ type event struct {
 	files  []git.File
 }
 
-var initial bool = true
-
-func metrics() {
+func Metrics() {
 	go func() {
 		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
 		http.Handle("/metrics", promhttp.Handler())
@@ -56,13 +54,9 @@ func metrics() {
 			panic(err)
 		}
 	}()
-	initial = false
 }
 
 func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc, finishedChan chan bool) func() {
-	if initial {
-		metrics()
-	}
 
 	return func() {
 
