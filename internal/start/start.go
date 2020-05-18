@@ -79,38 +79,40 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		"repoURL": orbFile.URL,
 	}).Info("Orbiter took off")
 
-	takeoffChan := make(chan struct{})
 	go func() {
-		takeoffChan <- struct{}{}
-	}()
-
-	for range takeoffChan {
-		adaptFunc := orb.AdaptFunc(
-			orbFile,
-			gitCommit,
-			!recur,
-			deploy)
-
-		takeoff := orbiter.Takeoff(
-			monitor,
-			gitClient,
-			pushEvents,
-			gitCommit,
-			adaptFunc,
-			finishedChan,
-		)
-
+		takeoffChan := make(chan struct{})
 		go func() {
-			started := time.Now()
-			takeoff()
-
-			monitor.WithFields(map[string]interface{}{
-				"took": time.Since(started),
-			}).Info("Iteration done")
-			debug.FreeOSMemory()
 			takeoffChan <- struct{}{}
 		}()
-	}
+
+		for range takeoffChan {
+			adaptFunc := orb.AdaptFunc(
+				orbFile,
+				gitCommit,
+				!recur,
+				deploy)
+
+			takeoff := orbiter.Takeoff(
+				monitor,
+				gitClient,
+				pushEvents,
+				gitCommit,
+				adaptFunc,
+				finishedChan,
+			)
+
+			go func() {
+				started := time.Now()
+				takeoff()
+
+				monitor.WithFields(map[string]interface{}{
+					"took": time.Since(started),
+				}).Info("Iteration done")
+				debug.FreeOSMemory()
+				takeoffChan <- struct{}{}
+			}()
+		}
+	}()
 
 	finished := false
 	for !finished {

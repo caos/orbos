@@ -59,8 +59,9 @@ func query(
 	}
 
 	for _, pool := range pools {
+		copyDesireLb := desireLb
 		desireLbFunc := func() error {
-			return desireLb(pool)
+			return copyDesireLb(pool)
 		}
 		if err := orbiter.EnsureFuncGoroutine(desireLbFunc); err != nil {
 			return nil, err

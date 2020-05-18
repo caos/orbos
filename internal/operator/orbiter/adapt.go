@@ -9,7 +9,7 @@ import (
 
 type AdaptFunc func(monitor mntr.Monitor, finishedChan chan bool, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, bool, error)
 
-func parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err error) {
+func Parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err error) {
 
 	if err := gitClient.Clone(); err != nil {
 		return nil, err

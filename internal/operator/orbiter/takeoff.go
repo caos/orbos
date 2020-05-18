@@ -59,7 +59,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 
 	return func() {
 
-		trees, err := parse(gitClient, "orbiter.yml")
+		trees, err := Parse(gitClient, "orbiter.yml")
 		if err != nil {
 			monitor.Error(err)
 			return

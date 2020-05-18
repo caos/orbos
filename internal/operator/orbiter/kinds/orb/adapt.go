@@ -23,7 +23,7 @@ func AdaptFunc(
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind, err := parseDesiredV0(desiredTree)
+		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
