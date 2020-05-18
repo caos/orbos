@@ -95,6 +95,7 @@ func (c *GitCrd) SetBundle(conf *bundleconfig.Config) {
 		BundleName:        conf.BundleName,
 		BaseDirectoryPath: conf.BaseDirectoryPath,
 		Templator:         conf.Templator,
+		Orb:               conf.Orb,
 	}
 
 	c.crd.SetBundle(bundleConf)
