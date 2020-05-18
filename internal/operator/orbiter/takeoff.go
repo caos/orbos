@@ -2,13 +2,12 @@ package orbiter
 
 import (
 	"fmt"
-	"net/http"
-
 	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
+	"net/http"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -47,8 +46,9 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc, finishedChan chan bool) func() {
+var initial bool = true
 
+func metrics() {
 	go func() {
 		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
 		http.Handle("/metrics", promhttp.Handler())
@@ -56,6 +56,13 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			panic(err)
 		}
 	}()
+	initial = false
+}
+
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc, finishedChan chan bool) func() {
+	if initial {
+		metrics()
+	}
 
 	return func() {
 
