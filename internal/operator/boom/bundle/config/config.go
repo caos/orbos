@@ -7,6 +7,7 @@ import (
 
 type Config struct {
 	Monitor           mntr.Monitor
+	Orb               string
 	CrdName           string
 	BundleName        name.Bundle
 	BaseDirectoryPath string

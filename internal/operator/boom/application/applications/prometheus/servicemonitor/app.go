@@ -7,7 +7,7 @@ type ConfigEndpoint struct {
 	Scheme            string
 	Path              string
 	BearerTokenFile   string
-	MetricRelabelings []*ConfigMetricRelabeling
+	MetricRelabelings []*ConfigRelabeling
 	Relabelings       []*ConfigRelabeling
 	TLSConfig         *ConfigTLSConfig
 	HonorLabels       bool
@@ -19,14 +19,6 @@ type ConfigTLSConfig struct {
 }
 
 type ConfigRelabeling struct {
-	Action       string
-	Regex        string
-	SourceLabels []string
-	TargetLabel  string
-	Replacement  string
-}
-
-type ConfigMetricRelabeling struct {
 	Action       string
 	Regex        string
 	SourceLabels []string

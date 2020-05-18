@@ -34,8 +34,9 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	if toolsetCRDSpec.PrometheusNodeExporter != nil && toolsetCRDSpec.PrometheusNodeExporter.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusNodeExporter) {
+	nodeExporterDeployed := toolsetCRDSpec.PrometheusNodeExporter != nil && toolsetCRDSpec.PrometheusNodeExporter.Deploy &&
+		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusNodeExporter)
+	if nodeExporterDeployed {
 		provider := &Provider{
 			ConfigMaps: []string{
 				"grafana-dashboard-node-cluster-rsrc-use",
@@ -57,13 +58,38 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	if toolsetCRDSpec.KubeStateMetrics != nil && toolsetCRDSpec.KubeStateMetrics.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.KubeStateMetrics) {
+	kubeStateMetricsDeployed := toolsetCRDSpec.KubeStateMetrics != nil && toolsetCRDSpec.KubeStateMetrics.Deploy &&
+		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.KubeStateMetrics)
+	if kubeStateMetricsDeployed {
 		provider := &Provider{
 			ConfigMaps: []string{
 				"grafana-persistentvolumesusage",
 			},
 			Folder: filepath.Join(dashboardsfolder, "persistentvolumesusage"),
+		}
+		providers = append(providers, provider)
+	}
+
+	if toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Boom {
+		provider := &Provider{
+			ConfigMaps: []string{
+				"grafana-dashboard-boom",
+			},
+			Folder: filepath.Join(dashboardsfolder, "boom"),
+		}
+		providers = append(providers, provider)
+	}
+
+	systemdExporterDeployed := toolsetCRDSpec.PrometheusSystemdExporter != nil && toolsetCRDSpec.PrometheusSystemdExporter.Deploy &&
+		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusSystemdExporter)
+	if systemdExporterDeployed && kubeStateMetricsDeployed && nodeExporterDeployed {
+		provider := &Provider{
+			ConfigMaps: []string{
+				"grafana-dashboard-cluster-health",
+				"grafana-dashboard-instance-health",
+				"grafana-dashboard-probes-health",
+			},
+			Folder: filepath.Join(dashboardsfolder, "health"),
 		}
 		providers = append(providers, provider)
 	}

@@ -50,6 +50,10 @@ func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL st
 	return newClient
 }
 
+func (g *Client) GetURL() string {
+	return g.repoURL
+}
+
 func (g *Client) Init(deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {

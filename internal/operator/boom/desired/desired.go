@@ -1,8 +1,8 @@
 package desired
 
 import (
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	yamlfile "github.com/caos/orbos/internal/utils/yaml"
+	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +13,6 @@ import (
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 )
 
 func Apply(monitor mntr.Monitor, resultFilePath, namespace string, appName name.Application, force bool) error {
@@ -75,13 +74,13 @@ func prepareAdditionalFiles(resultFilePath, namespace string, appName name.Appli
 	resultFileKustomizePath := filepath.Join(resultFileDirPath, "kustomization.yaml")
 	resultFileTransformerPath := filepath.Join(resultFileDirPath, "transformer.yaml")
 
-	if helper2.FileExists(resultFileKustomizePath) {
+	if helper.FileExists(resultFileKustomizePath) {
 		if err := os.Remove(resultFileKustomizePath); err != nil {
 			return err
 		}
 	}
 
-	if helper2.FileExists(resultFileTransformerPath) {
+	if helper.FileExists(resultFileTransformerPath) {
 		if err := os.Remove(resultFileTransformerPath); err != nil {
 			return err
 		}

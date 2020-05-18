@@ -178,6 +178,7 @@ type Config struct {
 	OIDC                        string `yaml:"oidc.config,omitempty"`
 	Dex                         string `yaml:"dex.config,omitempty"`
 	Repositories                string `yaml:"repositories,omitempty"`
+	RepositoryCredentials       string `yaml:"repository.credentials,omitempty"`
 	ConfigManagementPlugins     string `yaml:"configManagementPlugins,omitempty"`
 }
 
@@ -252,10 +253,9 @@ type Secret struct {
 	} `yaml:"argocdServerTlsConfig"`
 }
 type Configs struct {
-	KnownHosts            *Data   `yaml:"knownHosts"`
-	TLSCerts              *Data   `yaml:"tlsCerts"`
-	RepositoryCredentials *Data   `yaml:"repositoryCredentials"`
-	Secret                *Secret `yaml:"secret"`
+	KnownHosts *Data   `yaml:"knownHosts"`
+	TLSCerts   *Data   `yaml:"tlsCerts"`
+	Secret     *Secret `yaml:"secret"`
 }
 
 type Values struct {

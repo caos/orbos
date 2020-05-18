@@ -60,6 +60,7 @@ func NewBundle(templator name.Templator) *Bundle {
 
 	bundleConf := &config.Config{
 		Monitor:           monitor,
+		Orb:               "testsuite",
 		CrdName:           "caos_test",
 		BaseDirectoryPath: baseDirectoryPath,
 		Templator:         templator,

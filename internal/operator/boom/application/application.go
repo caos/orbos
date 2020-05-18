@@ -20,6 +20,8 @@ import (
 	prometheusnodeexporterinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator"
 	prometheusoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/info"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter"
+	prometheussystemdexporterinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
@@ -43,7 +45,7 @@ type YAMLApplication interface {
 	GetYaml(mntr.Monitor, *v1beta1.ToolsetSpec) interface{}
 }
 
-func New(monitor mntr.Monitor, appName name.Application) Application {
+func New(monitor mntr.Monitor, appName name.Application, orb string) Application {
 	switch appName {
 	case ambassadorinfo.GetName():
 		return ambassador.New(monitor)
@@ -59,8 +61,10 @@ func New(monitor mntr.Monitor, appName name.Application) Application {
 		return loggingoperator.New(monitor)
 	case prometheusnodeexporterinfo.GetName():
 		return prometheusnodeexporter.New(monitor)
+	case prometheussystemdexporterinfo.GetName():
+		return prometheussystemdexporter.New()
 	case prometheusinfo.GetName():
-		return prometheus.New(monitor)
+		return prometheus.New(monitor, orb)
 	case lokiinfo.GetName():
 		return loki.New(monitor)
 	}

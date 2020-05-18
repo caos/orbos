@@ -128,19 +128,22 @@ type RelabelConfig struct {
 	Replacement  string   `yaml:"replacement,omitempty"`
 }
 
-type MetricRelabelConfig struct {
-	Regex  string `yaml:"regex,omitempty"`
-	Action string `yaml:"action,omitempty"`
+type ValuesRelabelConfig struct {
+	Action       string   `yaml:"action,omitempty"`
+	Regex        string   `yaml:"regex,omitempty"`
+	SourceLabels []string `yaml:"sourceLabels,omitempty"`
+	TargetLabel  string   `yaml:"targetLabel,omitempty"`
+	Replacement  string   `yaml:"replacement,omitempty"`
 }
 
 type AdditionalScrapeConfig struct {
-	JobName              string                 `yaml:"job_name,omitempty"`
-	KubernetesSdConfigs  []*KubernetesSdConfig  `yaml:"kubernetes_sd_configs,omitempty"`
-	Scheme               string                 `yaml:"scheme,omitempty"`
-	TLSConfig            *TLSConfig             `yaml:"tls_config,omitempty"`
-	RelabelConfigs       []*RelabelConfig       `yaml:"relabel_configs,omitempty"`
-	MetricRelabelConfigs []*MetricRelabelConfig `yaml:"metric_relabel_configs,omitempty"`
-	BearerTokenFile      string                 `yaml:"bearer_token_file,omitempty"`
+	JobName              string                `yaml:"job_name,omitempty"`
+	KubernetesSdConfigs  []*KubernetesSdConfig `yaml:"kubernetes_sd_configs,omitempty"`
+	Scheme               string                `yaml:"scheme,omitempty"`
+	TLSConfig            *TLSConfig            `yaml:"tls_config,omitempty"`
+	RelabelConfigs       []*RelabelConfig      `yaml:"relabel_configs,omitempty"`
+	MetricRelabelConfigs []*RelabelConfig      `yaml:"metric_relabel_configs,omitempty"`
+	BearerTokenFile      string                `yaml:"bearer_token_file,omitempty"`
 }
 
 type PrometheusSpec struct {
@@ -183,7 +186,7 @@ type PrometheusSpec struct {
 	PodAntiAffinityTopologyKey              string                    `yaml:"podAntiAffinityTopologyKey,omitempty"`
 	Affinity                                struct{}                  `yaml:"affinity,omitempty"`
 	RemoteRead                              []interface{}             `yaml:"remoteRead,omitempty"`
-	RemoteWrite                             []interface{}             `yaml:"remoteWrite,omitempty"`
+	RemoteWrite                             []*RemoteWrite            `yaml:"remoteWrite,omitempty"`
 	RemoteWriteDashboards                   bool                      `yaml:"remoteWriteDashboards,omitempty"`
 	Resources                               struct{}                  `yaml:"resources,omitempty"`
 	StorageSpec                             *StorageSpec              `yaml:"storageSpec,omitempty"`
@@ -195,6 +198,22 @@ type PrometheusSpec struct {
 	Thanos                                  struct{}                  `yaml:"thanos,omitempty"`
 	Containers                              []interface{}             `yaml:"containers,omitempty"`
 	AdditionalScrapeConfigsExternal         bool                      `yaml:"additionalScrapeConfigsExternal,omitempty"`
+}
+
+type RemoteWrite struct {
+	URL                 string                 `yaml:"url,omitempty"`
+	BasicAuth           *BasicAuth             `yaml:"basicAuth,omitempty"`
+	WriteRelabelConfigs []*ValuesRelabelConfig `yaml:"writeRelabelConfigs,omitempty"`
+}
+
+type BasicAuth struct {
+	Username *SecretKeySelector `yaml:"username,omitempty"`
+	Password *SecretKeySelector `yaml:"password,omitempty"`
+}
+
+type SecretKeySelector struct {
+	Name string `yaml:"name,omitempty"`
+	Key  string `yaml:"key,omitempty"`
 }
 
 type ServiceAccount struct {

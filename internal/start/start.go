@@ -180,19 +180,3 @@ func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
 
 	return nil
 }
-
-func BoomMetrics(monitor mntr.Monitor, orbFile *orbconfig.Orb) error {
-
-	finishedChan := make(chan bool)
-
-	takeoffChan := make(chan struct{})
-	go func() {
-		takeoffChan <- struct{}{}
-	}()
-
-	finished := false
-	for !finished {
-		finished = <-finishedChan
-	}
-	return nil
-}

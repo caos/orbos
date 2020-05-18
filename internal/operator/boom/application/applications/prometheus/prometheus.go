@@ -10,11 +10,13 @@ import (
 
 type Prometheus struct {
 	monitor mntr.Monitor
+	orb     string
 }
 
-func New(monitor mntr.Monitor) *Prometheus {
+func New(monitor mntr.Monitor, orb string) *Prometheus {
 	return &Prometheus{
 		monitor: monitor,
+		orb:     orb,
 	}
 }
 

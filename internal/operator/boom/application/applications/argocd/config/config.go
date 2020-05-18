@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/auth"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/plugin"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
 	"github.com/caos/orbos/mntr"
@@ -11,6 +12,7 @@ import (
 
 type Config struct {
 	Repositories            string `yaml:"repositories,omitempty"`
+	Credentials             string `yaml:"repository.credentials,omitempty"`
 	Connectors              string `yaml:"connectors,omitempty"`
 	OIDC                    string `yaml:"oidc,omitempty"`
 	ConfigManagementPlugins string `yaml:"configManagementPlugins,omitempty"`
@@ -28,6 +30,12 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Config {
 	data2, err := yaml.Marshal(repos)
 	if err == nil {
 		conf.Repositories = string(data2)
+	}
+
+	creds := credential.GetFromSpec(monitor, spec)
+	data3, err := yaml.Marshal(creds)
+	if err == nil {
+		conf.Credentials = string(data3)
 	}
 
 	oidc, err := auth.GetOIDC(spec.Auth)

@@ -1,9 +1,13 @@
 package bundle
 
 import (
+	"errors"
+	"fmt"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"sync"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/internal/operator/boom/metrics"
+
 	"github.com/caos/orbos/internal/operator/boom/application"
 	"github.com/caos/orbos/internal/operator/boom/bundle/bundles"
 	"github.com/caos/orbos/internal/operator/boom/bundle/config"
@@ -15,7 +19,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/templator/yaml"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -25,6 +28,8 @@ var (
 type Bundle struct {
 	baseDirectoryPath string
 	crdName           string
+	predefinedBundle  name.Bundle
+	orb               string
 	Applications      map[name.Application]application.Application
 	HelmTemplator     templator.Templator
 	YamlTemplator     templator.Templator
@@ -36,15 +41,20 @@ func New(conf *config.Config) *Bundle {
 	helmTemplator := helperTemp.NewTemplator(conf.Monitor, conf.CrdName, conf.BaseDirectoryPath, helm.GetName())
 	yamlTemplator := helperTemp.NewTemplator(conf.Monitor, conf.CrdName, conf.BaseDirectoryPath, yaml.GetName())
 
-	b := &Bundle{
+	return &Bundle{
 		crdName:           conf.CrdName,
+		orb:               conf.Orb,
 		baseDirectoryPath: conf.BaseDirectoryPath,
 		monitor:           conf.Monitor,
 		HelmTemplator:     helmTemplator,
 		YamlTemplator:     yamlTemplator,
 		Applications:      apps,
+		predefinedBundle:  "",
 	}
-	return b
+}
+
+func (b *Bundle) GetPredefinedBundle() string {
+	return b.predefinedBundle.String()
 }
 
 func (b *Bundle) CleanUp() error {
@@ -63,14 +73,14 @@ func (b *Bundle) GetApplications() map[name.Application]application.Application 
 
 func (b *Bundle) AddApplicationsByBundleName(name name.Bundle) error {
 
-	names := bundles.Get(name)
-	if names == nil {
-		return errors.Errorf("No bundle known with name %s", name)
+	appNames := bundles.Get(name)
+	if appNames == nil {
+		return fmt.Errorf("No bundle known with name %s", name)
 	}
+	b.predefinedBundle = name
 
-	bnew := b
-	for _, name := range names {
-		if err := bnew.AddApplicationByName(name); err != nil {
+	for _, appName := range appNames {
+		if err := b.AddApplicationByName(appName); err != nil {
 			return err
 		}
 	}
@@ -79,7 +89,7 @@ func (b *Bundle) AddApplicationsByBundleName(name name.Bundle) error {
 
 func (b *Bundle) AddApplicationByName(appName name.Application) error {
 
-	app := application.New(b.monitor, appName)
+	app := application.New(b.monitor, appName, b.orb)
 	return b.AddApplication(app)
 }
 
@@ -113,7 +123,7 @@ func (b *Bundle) Reconcile(currentResourceList []*clientgo.Resource, spec *v1bet
 		}
 		for appName, errChan := range errList {
 			if err := <-errChan; err != nil {
-				return errors.Wrapf(err, "Error while reconciling application %s", appName.String())
+				return fmt.Errorf("Error while reconciling application %s: %w", appName.String(), err)
 			}
 		}
 		wg.Wait()
@@ -158,19 +168,25 @@ func (b *Bundle) ReconcileApplication(currentResourceList []*clientgo.Resource, 
 
 	_, usedHelm := app.(application.HelmApplication)
 	if usedHelm {
+		templatorName := helm.GetName()
 		err := b.HelmTemplator.Template(app, spec, resultFunc)
 		if err != nil {
+			metrics.FailureReconcilingApplication(appName.String(), templatorName.String(), deploy)
 			errChan <- err
 			return
 		}
+		metrics.SuccessfulReconcilingApplication(appName.String(), templatorName.String(), deploy)
 	}
 	_, usedYaml := app.(application.YAMLApplication)
 	if usedYaml {
+		templatorName := yaml.GetName()
 		err := b.YamlTemplator.Template(app, spec, resultFunc)
 		if err != nil {
+			metrics.FailureReconcilingApplication(appName.String(), templatorName.String(), deploy)
 			errChan <- err
 			return
 		}
+		metrics.SuccessfulReconcilingApplication(appName.String(), templatorName.String(), deploy)
 	}
 
 	monitor.Info("Done")

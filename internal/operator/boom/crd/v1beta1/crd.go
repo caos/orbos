@@ -2,6 +2,7 @@ package v1beta1
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/operator/boom/metrics"
 
 	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
@@ -117,4 +118,9 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 	}
 
 	c.status = c.bundle.Reconcile(currentResourceList, toolsetCRD.Spec)
+	if c.status != nil {
+		metrics.FailureReconcilingBundle(c.bundle.GetPredefinedBundle())
+		return
+	}
+	metrics.SuccessfulReconcilingBundle(c.bundle.GetPredefinedBundle())
 }

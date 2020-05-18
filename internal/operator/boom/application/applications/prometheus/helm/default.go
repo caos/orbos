@@ -55,6 +55,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 				RunAsUser:    1000,
 				FsGroup:      2000,
 			},
+			RemoteWrite: nil,
 		},
 	}
 

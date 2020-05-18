@@ -109,6 +109,13 @@ func (c *GitCrd) CleanUp() {
 	c.status = os.RemoveAll(c.crdDirectoryPath)
 }
 
+func (c *GitCrd) GetRepoURL() string {
+	return c.git.GetURL()
+}
+func (c *GitCrd) GetRepoCRDPath() string {
+	return c.crdPath
+}
+
 func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey string) {
 	if c.status != nil {
 		return

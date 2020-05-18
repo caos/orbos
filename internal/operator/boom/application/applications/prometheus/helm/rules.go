@@ -83,7 +83,84 @@ groups:
         )
       )
     record: :node_memory_MemAvailable_bytes:sum
-  `
+- name: caos.rules
+  rules:
+   - expr: dist_node_boot_time_seconds
+     record: caos_node_boot_time_seconds
+   - expr: min(min_over_time(caos_systemd_unit_active[5m])) by (instance)
+     record: caos_systemd_ryg
+   - expr: avg(max_over_time(caos_probe{type="Upstream",name!="httpingress"}[1m])) by (name)
+     record: caos_upstream_probe_ryg
+   - expr: max_over_time(caos_probe{type="VIP"}[1m])
+     record: caos_vip_probe_ryg
+   - expr: sum(1 - avg(rate(dist_node_cpu_seconds_total[5m])))
+     record: caos_cluster_cpu_utilisation_5m
+   - expr: 100 - (avg by (instance) (irate(dist_node_cpu_seconds_total[5m])) * 100)
+     record: caos_node_cpu_utilisation_5m
+   - expr: (clamp_max(clamp_min(100-caos_node_cpu_utilisation_5m, 10),30)-10)/20
+     record: caos_node_cpu_ryg
+   - expr: |-
+       sum by (instance) (100 -
+       (
+         dist_node_memory_MemAvailable_bytes
+       /
+         dist_node_memory_MemTotal_bytes
+       * 100
+       ))
+     record: caos_node_memory_utilisation
+   - expr: (clamp_max(clamp_min(100-caos_node_memory_utilisation, 10),30)-10)/20
+     record: caos_node_memory_ryg
+   - expr: |-
+      100 - (
+       min by (instance) (dist_node_filesystem_avail_bytes)
+       / min by (instance) (dist_node_filesystem_size_bytes)
+       * 100)
+     record: caos_node_disk_utilisation
+   - expr: dist_kube_node_status_condition
+     record: caos_node_ready
+   - expr: min_over_time(caos_node_ready[5m])
+     record: caos_k8s_node_ryg
+   - expr: dist_etcd_server_has_leader or on(instance) up{job="caos_remote_etcd"}
+     record: caos_etcd_server_has_leader_and_is_up
+   - expr: min_over_time(caos_etcd_server_has_leader_and_is_up[5m])
+     record: caos_etcd_ryg
+   - expr: |-
+       clamp_max(
+         clamp_min(
+           (
+             max_over_time(dist_kube_deployment_status_replicas_available[5m]) -
+             dist_kube_deployment_spec_replicas or
+             max_over_time(dist_kube_statefulset_status_replicas_ready[5m]) -
+             dist_kube_statefulset_replicas or
+             max_over_time(dist_kube_daemonset_status_number_available[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled
+           ) + 
+           1,
+           0
+         ),
+         1
+       )
+     record: caos_ready_pods_ryg
+   - expr: |-
+       clamp_max(
+         clamp_min(
+           (
+             max_over_time(dist_kube_deployment_status_replicas[5m]) -
+             dist_kube_deployment_spec_replicas or
+             max_over_time(dist_kube_statefulset_status_replicas_current[5m]) -
+             dist_kube_statefulset_replicas or
+             max_over_time(dist_kube_daemonset_status_current_number_scheduled[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled
+           ) +
+           1,
+           0
+         ),
+         1
+       )          
+     record: caos_scheduled_pods_ryg
+   - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(caos|kube)-system"}) * min(caos_scheduled_pods_ryg{namespace=~"(caos|kube)-system"})
+     record: caos_orb_ryg
+`
 
 	struc := &AdditionalPrometheusRules{
 		AdditionalLabels: labels,

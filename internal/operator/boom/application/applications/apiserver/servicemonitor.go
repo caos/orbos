@@ -8,8 +8,8 @@ import (
 func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	monitorlabels := labels.GetMonitorLabels(instanceName, "prometheus")
 
-	metricRelabelings := make([]*servicemonitor.ConfigMetricRelabeling, 0)
-	relabeling := &servicemonitor.ConfigMetricRelabeling{
+	metricRelabelings := make([]*servicemonitor.ConfigRelabeling, 0)
+	relabeling := &servicemonitor.ConfigRelabeling{
 		Action:       "keep",
 		Regex:        "default;kubernetes;https",
 		SourceLabels: []string{"__meta_kubernetes_namespace", "__meta_kubernetes_service_name", "__meta_kubernetes_endpoint_port_name"},

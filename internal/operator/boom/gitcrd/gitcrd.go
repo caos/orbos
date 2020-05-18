@@ -21,6 +21,8 @@ type GitCrd interface {
 	CleanUp()
 	GetStatus() error
 	SetBackStatus()
+	GetRepoURL() string
+	GetRepoCRDPath() string
 }
 
 func New(conf *config.Config) (GitCrd, error) {

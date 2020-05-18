@@ -8,6 +8,7 @@ func getScrapeConfigs() []*helm.AdditionalScrapeConfig {
 
 	adconfigs = append(adconfigs, getNodes())
 	adconfigs = append(adconfigs, getCadvisor())
+	adconfigs = append(adconfigs, getEtcd())
 
 	return adconfigs
 
@@ -94,5 +95,44 @@ func getCadvisor() *helm.AdditionalScrapeConfig {
 			CaFile: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 		},
 		RelabelConfigs: relabelings,
+	}
+}
+
+func getEtcd() *helm.AdditionalScrapeConfig {
+
+	sdconfig := &helm.KubernetesSdConfig{
+		Role: "node",
+	}
+
+	relabelings := []*helm.RelabelConfig{{
+		Action:       "replace",
+		SourceLabels: []string{"__address__"},
+		TargetLabel:  "__address__",
+		Regex:        "(.*):.*",
+		Replacement:  "${1}:2381",
+	}, {
+		Action:       "keep",
+		Regex:        "true",
+		SourceLabels: []string{"__meta_kubernetes_node_labelpresent_node_role_kubernetes_io_master"},
+	}}
+
+	metricRelabelConfigs := []*helm.RelabelConfig{{
+		Action:       "keep",
+		Regex:        "etcd_server_has_leader",
+		SourceLabels: []string{"__name__"},
+	}, {
+		Action:       "replace",
+		SourceLabels: []string{"__name__"},
+		TargetLabel:  "__name__",
+		Regex:        "etcd_server_has_leader",
+		Replacement:  "dist_etcd_server_has_leader",
+	}}
+
+	return &helm.AdditionalScrapeConfig{
+		JobName:              "caos_remote_etcd",
+		Scheme:               "http",
+		KubernetesSdConfigs:  []*helm.KubernetesSdConfig{sdconfig},
+		RelabelConfigs:       relabelings,
+		MetricRelabelConfigs: metricRelabelConfigs,
 	}
 }
