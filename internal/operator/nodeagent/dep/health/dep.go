@@ -16,7 +16,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-const dir string = "/lib/systemd/system/health.wants"
+const dir string = "/lib/systemd/system"
 
 type Installer interface {
 	isHealth()
@@ -51,6 +51,9 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 
 	files, _ := ioutil.ReadDir(dir)
 	for _, file := range files {
+		if !strings.HasPrefix(file.Name(), "orbos.health.") {
+			continue
+		}
 		content, err := ioutil.ReadFile(filepath.Join(dir, file.Name()))
 		if err != nil {
 			return pkg, err
@@ -62,7 +65,7 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 		}
 
 		if s.systemd.Active(file.Name()) {
-			pkg.Config[match[0]] = match[1]
+			pkg.Config[match[0]] = unquote(match[1])
 		}
 	}
 	return pkg, nil
@@ -72,21 +75,18 @@ func (s *healthDep) Ensure(_ common.Package, ensure common.Package) error {
 
 	files, _ := ioutil.ReadDir(dir)
 	for _, file := range files {
-		s.systemd.Disable(file.Name())
-	}
-
-	if err := os.RemoveAll(dir); err != nil {
-		return err
-	}
-
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return err
+		if strings.HasPrefix(file.Name(), "orbos.health.") {
+			s.systemd.Disable(file.Name())
+		}
+		if err := os.Remove(filepath.Join(dir, file.Name())); err != nil {
+			return err
+		}
 	}
 
 	var i int
 	for location, args := range ensure.Config {
 		i++
-		svc := fmt.Sprintf("health.%d.service", i)
+		svc := fmt.Sprintf("orbos.health.%d.service", i)
 		if err := ioutil.WriteFile(filepath.Join(dir, svc), []byte(fmt.Sprintf(`
 [Unit]
 Description=Healthchecks Proxy
@@ -103,16 +103,27 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-`, location, quote(args))), 600); err != nil {
+`, location, quote(args))), 0600); err != nil {
 			return err
 		}
 
 		if err := s.systemd.Enable(svc); err != nil {
 			return err
 		}
+		if err := s.systemd.Start(svc); err != nil {
+			return err
+		}
 	}
 
 	return nil
+}
+
+func unquote(args string) string {
+	s := strings.Split(args, " ")
+	for idx, a := range s {
+		s[idx] = strings.Trim(a, `"`)
+	}
+	return strings.Join(s, " ")
 }
 
 func quote(args string) string {
