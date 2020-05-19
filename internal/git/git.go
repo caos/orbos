@@ -106,6 +106,18 @@ func (g *Client) clone() error {
 	return nil
 }
 
+func (g *Client) Exists(path string) bool {
+	if err := g.Clone(); err != nil {
+		return false
+	}
+
+	of := g.Read(path)
+	if of != nil && len(of) > 0 {
+		return true
+	}
+	return false
+}
+
 func (g *Client) Read(path string) []byte {
 	readmonitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,

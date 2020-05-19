@@ -11,6 +11,8 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"io/ioutil"
+	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"strings"
 )
 
@@ -48,7 +50,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		if len(gitClient.Read("orbiter.yml")) > 0 {
+		if gitClient.Exists("orbiter.yml") {
 			if err := start.Orbiter(ctx, monitor, recur, destroy, deploy, verbose, version, gitClient, orbFile, gitCommit, ingestionAddress); err != nil {
 				return err
 			}
@@ -85,7 +87,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 				}
 				monitor.Info("Read kubeconfig for boom deployment")
 
-				if err := deployBoom(monitor, gitClient, value); err != nil {
+				if err := deployBoom(monitor, gitClient, &value); err != nil {
 					return err
 				}
 			}
@@ -95,8 +97,24 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			if kubeconfig == "" {
 				return errors.New("Error to deploy BOOM as no kubeconfig is provided")
 			}
+			value, err := ioutil.ReadFile(kubeconfig)
+			if err != nil {
+				return err
+			}
+			str := string(value)
 
-			if err := deployBoom(monitor, gitClient, kubeconfig); err != nil {
+			k8sClient := kubernetes.NewK8sClient(monitor, &str)
+			if k8sClient.Available() {
+				if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient, orbFile); err != nil {
+					monitor.Info("failed to apply common resources into k8s-cluster")
+					return err
+				}
+				monitor.Info("Applied common resources")
+			} else {
+				monitor.Info("Failed to connect to k8s")
+			}
+
+			if err := deployBoom(monitor, gitClient, &str); err != nil {
 				return err
 			}
 		}
@@ -105,9 +123,9 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig string) error {
-	if len(gitClient.Read("boom.yml")) > 0 {
-		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+	if gitClient.Exists("boom.yml") {
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
 		if k8sClient.Available() {
 			if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
