@@ -65,10 +65,11 @@ func query(
 						lb.healthcheck.gce.Host,
 						lb.healthcheck.gce.Port,
 						lb.healthcheck.gce.RequestPath)] = fmt.Sprintf(
-						"%d@%s://%s%s",
+						"%d@%s://%s:%d%s",
 						lb.healthcheck.desired.Code,
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
+						lb.healthcheck.gce.Port,
 						lb.healthcheck.desired.Path,
 					)
 				}

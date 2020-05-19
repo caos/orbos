@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 
@@ -15,7 +16,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-const dir string = "/etc/systemd/system/health.wants"
+const dir string = "/lib/systemd/system/health.wants"
 
 type Installer interface {
 	isHealth()
@@ -78,7 +79,7 @@ func (s *healthDep) Ensure(_ common.Package, ensure common.Package) error {
 		return err
 	}
 
-	if err := os.MkdirAll(dir, 700); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}
 
@@ -102,7 +103,7 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-`, location, args)), 600); err != nil {
+`, location, quote(args))), 600); err != nil {
 			return err
 		}
 
@@ -112,4 +113,12 @@ WantedBy=multi-user.target
 	}
 
 	return nil
+}
+
+func quote(args string) string {
+	s := strings.Split(args, " ")
+	for idx, a := range s {
+		s[idx] = fmt.Sprintf(`"%s"`, a)
+	}
+	return strings.Join(s, " ")
 }
