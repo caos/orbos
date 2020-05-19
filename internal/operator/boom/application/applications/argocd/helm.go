@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
 	"strings"
 
@@ -13,10 +14,12 @@ import (
 )
 
 func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) ([]interface{}, error) {
-	repoSecrets := repository.GetSecrets(toolsetCRDSpec.Argocd)
 	addedSecrets := customimage.GetSecrets(toolsetCRDSpec.Argocd)
+	repoSecrets := repository.GetSecrets(toolsetCRDSpec.Argocd)
+	credSecrets := credential.GetSecrets(toolsetCRDSpec.Argocd)
 
 	addedSecrets = append(addedSecrets, repoSecrets...)
+	addedSecrets = append(addedSecrets, credSecrets...)
 	return addedSecrets, nil
 }
 
@@ -82,6 +85,9 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 	conf := config.GetFromSpec(monitor, spec)
 	if conf.Repositories != "" && conf.Repositories != "[]\n" {
 		values.Server.Config.Repositories = conf.Repositories
+	}
+	if conf.Credentials != "" && conf.Credentials != "[]\n" {
+		values.Server.Config.RepositoryCredentials = conf.Credentials
 	}
 
 	if conf.ConfigManagementPlugins != "" {
