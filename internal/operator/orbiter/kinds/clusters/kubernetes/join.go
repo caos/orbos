@@ -153,7 +153,7 @@ nodeRegistration:
 		"stdout": string(resetStdout),
 	}).Debug("Cleaned up machine")
 
-	if joinAt == nil {
+	if joinAt != nil {
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAt.IP(), kubeAPI.Port, kubeadmCfgPath)
 		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
 		if err != nil {
