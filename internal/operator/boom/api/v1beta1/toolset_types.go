@@ -43,18 +43,19 @@ type ToolsetMetadata struct {
 func (t *ToolsetSpec) MarshalYAML() (interface{}, error) {
 	type Alias ToolsetSpec
 	return &Alias{
-		ForceApply:             t.ForceApply,
-		CurrentStateFolder:     t.CurrentStateFolder,
-		PreApply:               t.PreApply,
-		PostApply:              t.PostApply,
-		PrometheusOperator:     t.PrometheusOperator,
-		LoggingOperator:        t.LoggingOperator,
-		PrometheusNodeExporter: t.PrometheusNodeExporter,
-		Grafana:                grafana.ClearEmpty(t.Grafana),
-		Ambassador:             t.Ambassador,
-		KubeStateMetrics:       t.KubeStateMetrics,
-		Argocd:                 argocd.ClearEmpty(t.Argocd),
-		Prometheus:             t.Prometheus,
-		Loki:                   t.Loki,
+		ForceApply:                t.ForceApply,
+		CurrentStateFolder:        t.CurrentStateFolder,
+		PreApply:                  t.PreApply,
+		PostApply:                 t.PostApply,
+		PrometheusOperator:        t.PrometheusOperator,
+		LoggingOperator:           t.LoggingOperator,
+		PrometheusNodeExporter:    t.PrometheusNodeExporter,
+		PrometheusSystemdExporter: t.PrometheusSystemdExporter,
+		Grafana:                   grafana.ClearEmpty(t.Grafana),
+		Ambassador:                t.Ambassador,
+		KubeStateMetrics:          t.KubeStateMetrics,
+		Argocd:                    argocd.ClearEmpty(t.Argocd),
+		Prometheus:                t.Prometheus,
+		Loki:                      t.Loki,
 	}, nil
 }

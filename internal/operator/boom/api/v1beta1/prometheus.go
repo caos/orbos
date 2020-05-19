@@ -3,7 +3,7 @@ package v1beta1
 import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
 
 type Prometheus struct {
-	Deploy      bool          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Deploy      bool          `json:"deploy" yaml:"deploy"`
 	Metrics     *Metrics      `json:"metrics,omitempty" yaml:"metrics,omitempty"`
 	Storage     *storage.Spec `json:"storage,omitempty" yaml:"storage,omitempty"`
 	RemoteWrite *RemoteWrite  `json:"remoteWrite,omitempty" yaml:"remoteWrite,omitempty"`

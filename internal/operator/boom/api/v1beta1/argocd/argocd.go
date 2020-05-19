@@ -2,37 +2,27 @@ package argocd
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/repository"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
 	"github.com/caos/orbos/internal/secret"
 	"reflect"
 )
 
 type Argocd struct {
-	Deploy       bool             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	CustomImage  *CustomImage     `json:"customImage,omitempty" yaml:"customImage,omitempty"`
-	Network      *network.Network `json:"network,omitempty" yaml:"network,omitempty"`
-	Auth         *auth.Auth       `json:"auth,omitempty" yaml:"auth,omitempty"`
-	Rbac         *Rbac            `json:"rbacConfig,omitempty" yaml:"rbacConfig,omitempty"`
-	Repositories []*Repository    `json:"repositories,omitempty" yaml:"repositories,omitempty"`
-	Credentials  []*Repository    `json:"credentials,omitempty" yaml:"credentials,omitempty"`
-	KnownHosts   []string         `json:"knownHosts,omitempty" yaml:"knownHosts,omitempty"`
+	Deploy       bool                     `json:"deploy" yaml:"deploy"`
+	CustomImage  *CustomImage             `json:"customImage,omitempty" yaml:"customImage,omitempty"`
+	Network      *network.Network         `json:"network,omitempty" yaml:"network,omitempty"`
+	Auth         *auth.Auth               `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Rbac         *Rbac                    `json:"rbacConfig,omitempty" yaml:"rbacConfig,omitempty"`
+	Repositories []*repository.Repository `json:"repositories,omitempty" yaml:"repositories,omitempty"`
+	Credentials  []*repository.Repository `json:"credentials,omitempty" yaml:"credentials,omitempty"`
+	KnownHosts   []string                 `json:"knownHosts,omitempty" yaml:"knownHosts,omitempty"`
 }
 
 type Rbac struct {
 	Csv     string   `json:"policy.csv,omitempty" yaml:"policy.csv,omitempty"`
 	Default string   `json:"policy.default,omitempty" yaml:"policy.default,omitempty"`
 	Scopes  []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
-}
-
-type Repository struct {
-	Name                      string           `json:"name,omitempty" yaml:"name,omitempty"`
-	URL                       string           `json:"url,omitempty" yaml:"url,omitempty"`
-	Username                  *secret.Secret   `yaml:"username,omitempty"`
-	ExistingUsernameSecret    *secret.Existing `json:"existingUsernameSecret,omitempty" yaml:"existingUsernameSecret,omitempty"`
-	Password                  *secret.Secret   `yaml:"password,omitempty"`
-	ExistingPasswordSecret    *secret.Existing `json:"existingPasswordSecret,omitempty" yaml:"existingPasswordSecret,omitempty"`
-	Certificate               *secret.Secret   `yaml:"certificate,omitempty"`
-	ExistingCertificateSecret *secret.Existing `json:"existingCertificateSecret,omitempty" yaml:"existingCertificateSecret,omitempty"`
 }
 
 type CustomImage struct {
@@ -55,18 +45,33 @@ func ClearEmpty(x *Argocd) *Argocd {
 		return nil
 	}
 
+	repos := make([]*repository.Repository, 0)
+	for _, v := range x.Repositories {
+		if p := repository.ClearEmpty(v); p != nil {
+			repos = append(repos, v)
+		}
+	}
+
+	creds := make([]*repository.Repository, 0)
+	for _, v := range x.Credentials {
+		if p := repository.ClearEmpty(v); p != nil {
+			creds = append(creds, v)
+		}
+	}
+
 	marshaled := Argocd{
 		Deploy:       x.Deploy,
 		CustomImage:  x.CustomImage,
 		Network:      x.Network,
 		Auth:         auth.ClearEmpty(x.Auth),
 		Rbac:         x.Rbac,
-		Repositories: x.Repositories,
+		Repositories: repos,
+		Credentials:  creds,
 		KnownHosts:   x.KnownHosts,
 	}
 
 	if reflect.DeepEqual(marshaled, Argocd{}) {
-		return nil
+		return &Argocd{}
 	}
 	return &marshaled
 }
