@@ -45,7 +45,7 @@ func (*healthDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-var r = regexp.MustCompile(`^ExecStart=/usr/local/bin/health --http ([^\s]+) (.*)$`)
+var r = regexp.MustCompile(`ExecStart=/usr/local/bin/health --http ([^\s]+) (.*)`)
 
 func (s *healthDep) Current() (pkg common.Package, err error) {
 
@@ -76,10 +76,12 @@ func (s *healthDep) Ensure(_ common.Package, ensure common.Package) error {
 	files, _ := ioutil.ReadDir(dir)
 	for _, file := range files {
 		if strings.HasPrefix(file.Name(), "orbos.health.") {
-			s.systemd.Disable(file.Name())
-		}
-		if err := os.Remove(filepath.Join(dir, file.Name())); err != nil {
-			return err
+			if err := s.systemd.Disable(file.Name()); err != nil {
+				return err
+			}
+			if err := os.Remove(filepath.Join(dir, file.Name())); err != nil {
+				return err
+			}
 		}
 	}
 

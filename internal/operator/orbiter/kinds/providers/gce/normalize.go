@@ -69,6 +69,12 @@ loop:
 	return addresses
 }
 
+func (n normalizedLoadbalancing) Len() int      { return len(n) }
+func (n normalizedLoadbalancing) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
+func (n normalizedLoadbalancing) Less(i, j int) bool {
+	return n[i].forwardingRule.gce.Description < n[j].forwardingRule.gce.Description
+}
+
 // normalize returns a normalizedLoadBalancing for each unique destination port and ip combination
 // whereas only one random configured healthcheck is relevant
 func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, providerID string) []*normalizedLoadbalancer {
@@ -118,7 +124,6 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 					}
 					hc := &compute.HttpHealthCheck{
 						Description: description,
-						Port:        int64(dest.port),
 						RequestPath: dest.hc.Path,
 						Host:        "127.0.0.1",
 					}
@@ -241,6 +246,14 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 			}
 		}
 	}
+
+	var hcPort int64 = 6700
+	for _, lb := range normalized {
+		lb.healthcheck.gce.Port = hcPort
+		hcPort++
+	}
+
+	sort.Sort(normalizedLoadbalancing(normalized))
 	return normalized
 }
 

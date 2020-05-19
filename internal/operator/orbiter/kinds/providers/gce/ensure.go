@@ -2,6 +2,7 @@ package gce
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -69,7 +70,7 @@ func query(
 						lb.healthcheck.desired.Code,
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
-						lb.healthcheck.gce.Port,
+						strings.Split(lb.forwardingRule.gce.PortRange, "-")[0],
 						lb.healthcheck.desired.Path,
 					)
 				}
