@@ -2,14 +2,7 @@ package gce
 
 func destroy(desired *Spec, context *context) error {
 
-	destroyLB, err := chain(
-		context, nil,
-		queryForwardingRules,
-		queryAddresses,
-		queryTargetPools,
-		queryHealthchecks,
-		queryFirewall,
-	)
+	destroyLB, err := queryResources(context, nil)
 	if err != nil {
 		return err
 	}

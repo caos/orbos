@@ -24,6 +24,7 @@ type machinesService struct {
 	cache      struct {
 		instances map[string][]*instance
 	}
+	onCreate func(pool string, machine infra.Machine)
 }
 
 func newMachinesService(
@@ -153,6 +154,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
 	}
 
+	m.onCreate(poolName, infraMachine)
 	monitor.Info("Machine created")
 	return infraMachine, nil
 }

@@ -31,6 +31,7 @@ type Software struct {
 	SSHD             Package `yaml:",omitempty"`
 	Hostname         Package `yaml:",omitempty"`
 	Sysctl           Package `yaml:",omitempty"`
+	Health           Package `yaml:",omitempty"`
 }
 
 func (s *Software) Merge(sw Software) {
@@ -79,6 +80,12 @@ func (s *Software) Merge(sw Software) {
 	for key, value := range sw.Sysctl.Config {
 		s.Sysctl.Config[key] = value
 	}
+	if !sw.Health.Equals(zeroPkg) && s.Health.Config == nil {
+		s.Health.Config = make(map[string]string)
+	}
+	for key, value := range sw.Health.Config {
+		s.Health.Config[key] = value
+	}
 }
 
 type Package struct {
@@ -126,7 +133,8 @@ func (this *Software) Contains(that Software) bool {
 		contains(this.KeepaliveD, that.KeepaliveD) &&
 		contains(this.Nginx, that.Nginx) &&
 		contains(this.Hostname, that.Hostname) &&
-		contains(this.Sysctl, that.Sysctl)
+		contains(this.Sysctl, that.Sysctl) &&
+		contains(this.Health, that.Health)
 }
 
 func contains(this, that Package) bool {
@@ -142,7 +150,8 @@ func (this *Software) Defines(that Software) bool {
 		defines(this.KeepaliveD, that.KeepaliveD) &&
 		defines(this.Nginx, that.Nginx) &&
 		defines(this.Hostname, that.Hostname) &&
-		defines(this.Sysctl, that.Sysctl)
+		defines(this.Sysctl, that.Sysctl) &&
+		defines(this.Health, that.Health)
 }
 
 func defines(this, that Package) bool {

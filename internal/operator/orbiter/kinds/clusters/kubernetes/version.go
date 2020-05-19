@@ -5,8 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/k8s/kubelet"
-
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -64,13 +62,10 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	return common.Software{
 		Swap:             common.Package{Version: "disabled"},
 		Containerruntime: common.Package{Version: dockerVersion},
-		Kubelet: common.Package{
-			Version: k.String(),
-			Config:  map[string]string{kubelet.KubeAPIHealthzProxyProperty: "active"},
-		},
-		Kubeadm: common.Package{Version: k.String()},
-		Kubectl: common.Package{Version: k.String()},
-		Sysctl:  sysctlPkg,
+		Kubelet:          common.Package{Version: k.String()},
+		Kubeadm:          common.Package{Version: k.String()},
+		Kubectl:          common.Package{Version: k.String()},
+		Sysctl:           sysctlPkg,
 	}
 }
 

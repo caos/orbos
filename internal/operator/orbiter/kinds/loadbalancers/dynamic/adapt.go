@@ -56,17 +56,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
 					for _, dest := range src.Destinations {
-						if dest.HealthChecks.Port == 0 {
-							dest.HealthChecks.Port = dest.Port
-							migrate = true
-						}
 						if src.Name == "kubeapi" {
 							if dest.Port != 6666 {
 								dest.Port = 6666
-								migrate = true
-							}
-							if dest.HealthChecks.Port != 8001 {
-								dest.HealthChecks.Port = 8001
 								migrate = true
 							}
 							if dest.HealthChecks.Path != "/healthz" {

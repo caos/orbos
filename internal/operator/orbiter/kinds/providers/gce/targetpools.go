@@ -8,26 +8,28 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
+var _ queryFunc = queryTargetPools
+
+func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gcePools, err := context.client.TargetPools.
 		List(context.projectID, context.region).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
 		Fields("items(description,name,instances,selfLink,name)").
 		Do()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	allInstances, err := context.machinesService.instances()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	assignRefs := func(lb *normalizedLoadbalancer) {
 		lb.targetPool.gce.HealthChecks = []string{lb.healthcheck.gce.SelfLink}
 	}
 
-	var operations []func() error
+	var ensure []func() error
 
 createLoop:
 	for _, lb := range loadbalancing {
@@ -52,7 +54,7 @@ createLoop:
 
 				if len(addInstances) > 0 {
 					richAddInstances := instances(addInstances)
-					operations = append(operations, operateFunc(
+					ensure = append(ensure, operateFunc(
 						lb.targetPool.log("Adding instances to target pool", true, richAddInstances),
 						context.client.TargetPools.
 							AddInstance(
@@ -68,7 +70,7 @@ createLoop:
 				}
 
 				if len(gceTp.HealthChecks) > 0 && gceTp.HealthChecks[0] != lb.targetPool.gce.HealthChecks[0] {
-					operations = append(operations, operateFunc(
+					ensure = append(ensure, operateFunc(
 						lb.targetPool.log("Removing healthcheck", true, nil),
 						context.client.TargetPools.RemoveHealthCheck(
 							context.projectID,
@@ -81,7 +83,7 @@ createLoop:
 						toErrFunc(lb.targetPool.log("Healthcheck removed", false, nil)),
 					))
 
-					operations = append(operations, operateFunc(
+					ensure = append(ensure, operateFunc(
 						lb.targetPool.log("Adding healthcheck", true, nil),
 						context.client.TargetPools.AddHealthCheck(
 							context.projectID,
@@ -102,7 +104,7 @@ createLoop:
 		lb.targetPool.gce.Name = newName()
 		lb.targetPool.gce.Instances = richInstances.strings(func(i *instance) string { return i.url })
 
-		operations = append(operations, operateFunc(
+		ensure = append(ensure, operateFunc(
 			func(l *normalizedLoadbalancer) func() {
 				return func() {
 					assignRefs(l)
@@ -130,18 +132,18 @@ createLoop:
 		))
 	}
 
+	var remove []func() error
 removeLoop:
-
 	for _, gceTp := range gcePools.Items {
 		for _, lb := range loadbalancing {
 			if gceTp.Description == lb.targetPool.gce.Description {
 				continue removeLoop
 			}
 		}
-		operations = append(operations, removeResourceFunc(context.monitor, "target pool", gceTp.Name, context.client.TargetPools.
+		remove = append(remove, removeResourceFunc(context.monitor, "target pool", gceTp.Name, context.client.TargetPools.
 			Delete(context.projectID, context.region, gceTp.Name).
 			RequestId(uuid.NewV1().String()).
 			Do))
 	}
-	return operations, nil
+	return ensure, remove, nil
 }

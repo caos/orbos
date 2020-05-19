@@ -6,19 +6,28 @@ import (
 	"github.com/caos/orbos/internal/tree"
 )
 
-func addPools(current *Current, desired *Spec, machinesSvc core.MachinesService) error {
+func initPools(current *Current, desired *Spec, machinesSvc *machinesService) error {
 	current.Current.pools = make(map[string]infra.Pool)
 	for pool := range desired.Pools {
 		current.Current.pools[pool] = core.NewPool(pool, nil, machinesSvc)
 	}
 
-	unconfiguredPools, err := machinesSvc.ListPools()
+	pools, err := machinesSvc.ListPools()
 	if err != nil {
 		return nil
 	}
-	for _, unconfiguredPool := range unconfiguredPools {
-		if _, ok := current.Current.pools[unconfiguredPool]; !ok {
-			current.Current.pools[unconfiguredPool] = core.NewPool(unconfiguredPool, nil, machinesSvc)
+	for _, pool := range pools {
+		// Also return pools that are not configured
+		if _, ok := current.Current.pools[pool]; !ok {
+			current.Current.pools[pool] = core.NewPool(pool, nil, machinesSvc)
+		}
+		// initialize existing machines
+		machines, err := machinesSvc.List(pool)
+		if err != nil {
+			return err
+		}
+		for _, machine := range machines {
+			machinesSvc.onCreate(pool, machine)
 		}
 	}
 	return nil

@@ -40,8 +40,9 @@ type targetPool struct {
 	destPools []string
 }
 type healthcheck struct {
-	log StandardLogFunc
-	gce *compute.HttpHealthCheck
+	log     StandardLogFunc
+	gce     *compute.HttpHealthCheck
+	desired dynamic.HealthChecks
 }
 type firewall struct {
 	log StandardLogFunc
@@ -117,8 +118,9 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 					}
 					hc := &compute.HttpHealthCheck{
 						Description: description,
-						Port:        int64(dest.hc.Port),
+						Port:        int64(dest.port),
 						RequestPath: dest.hc.Path,
+						Host:        "127.0.0.1",
 					}
 
 					poolsLen := len(dest.pools)
@@ -210,7 +212,8 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 									level(msg)
 								}
 							},
-							gce: hc,
+							gce:     hc,
+							desired: dest.hc,
 						},
 						firewalls: firewalls,
 						address:   address,
@@ -290,21 +293,40 @@ type context struct {
 	machinesService *machinesService
 }
 
-type queryFunc func(*context, []*normalizedLoadbalancer) ([]func() error, error)
+func queryResources(context *context, normalized []*normalizedLoadbalancer) (func() error, error) {
+	return chainInEnsureOrder(
+		context, normalized,
+		queryHealthchecks,
+		queryTargetPools,
+		queryAddresses,
+		queryForwardingRules,
+		queryFirewall,
+	)
+}
 
-func chain(ctx *context, lb []*normalizedLoadbalancer, query ...queryFunc) (func() error, error) {
-	var operations []func() error
+type queryFunc func(*context, []*normalizedLoadbalancer) ([]func() error, []func() error, error)
+
+func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...queryFunc) (func() error, error) {
+	var ensureOperations []func() error
+	var removeOperations []func() error
 	for _, fn := range query {
 
-		ensure, err := fn(ctx, lb)
+		ensure, remove, err := fn(ctx, lb)
 		if err != nil {
 			return nil, err
 		}
-		operations = append(operations, ensure...)
+		ensureOperations = append(ensureOperations, ensure...)
+		removeOperations = append(removeOperations, remove...)
 	}
 
 	return func() error {
-		for _, operation := range operations {
+		// reverse remove operations
+		for i := 0; i < len(removeOperations)/2; i++ {
+			j := len(removeOperations) - i - 1
+			removeOperations[i], removeOperations[j] = removeOperations[j], removeOperations[i]
+		}
+
+		for _, operation := range append(ensureOperations, removeOperations...) {
 			if err := operation(); err != nil {
 				return err
 			}

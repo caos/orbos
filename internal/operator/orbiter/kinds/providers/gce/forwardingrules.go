@@ -6,18 +6,19 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
+var _ queryFunc = queryForwardingRules
+
+func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceRules, err := context.client.ForwardingRules.
 		List(context.projectID, context.region).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
 		Fields("items(description,name,target,portRange,IPAddress)").
 		Do()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var operations []func() error
-
+	var ensure []func() error
 	assignRefs := func(lb *normalizedLoadbalancer) {
 		lb.forwardingRule.gce.Target = lb.targetPool.gce.SelfLink
 		lb.forwardingRule.gce.IPAddress = lb.address.gce.Address
@@ -29,7 +30,7 @@ createLoop:
 			if gceRule.Description == lb.forwardingRule.gce.Description {
 				assignRefs(lb)
 				if gceRule.Target != lb.forwardingRule.gce.Target || gceRule.PortRange != lb.forwardingRule.gce.PortRange || gceRule.IPAddress != lb.forwardingRule.gce.IPAddress {
-					operations = append(operations, operateFunc(
+					ensure = append(ensure, operateFunc(
 						lb.forwardingRule.log("Patching forwarding rule", true),
 						context.client.ForwardingRules.Patch(context.projectID, context.region, gceRule.Name, lb.forwardingRule.gce).
 							RequestId(uuid.NewV1().String()).
@@ -42,7 +43,7 @@ createLoop:
 		}
 
 		lb.forwardingRule.gce.Name = newName()
-		operations = append(operations, operateFunc(
+		ensure = append(ensure, operateFunc(
 			func(l *normalizedLoadbalancer) func() {
 				return func() {
 					assignRefs(l)
@@ -57,20 +58,21 @@ createLoop:
 		))
 	}
 
-removeLoop:
+	var remove []func() error
 
+removeLoop:
 	for _, rule := range gceRules.Items {
 		for _, lb := range loadbalancing {
 			if rule.Description == lb.forwardingRule.gce.Description {
 				continue removeLoop
 			}
 		}
-		operations = append(operations, removeResourceFunc(
+		remove = append(remove, removeResourceFunc(
 			context.monitor, "forwarding rule", rule.Name, context.client.ForwardingRules.
 				Delete(context.projectID, context.region, rule.Name).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		))
 	}
-	return operations, nil
+	return ensure, remove, nil
 }

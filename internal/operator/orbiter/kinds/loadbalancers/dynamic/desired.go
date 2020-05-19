@@ -91,14 +91,13 @@ type HealthChecks struct {
 	Protocol string
 	Path     string
 	Code     uint16
-	Port     Port `yaml:",omitempty"`
 }
 
 func (h *HealthChecks) validate() error {
 	if h.Protocol == "" {
 		return errors.New("no protocol configured")
 	}
-	return h.Port.validate()
+	return nil
 }
 
 type Source struct {

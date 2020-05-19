@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/health"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -56,6 +57,9 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		Desired:   sw.Sysctl,
 		Installer: sysctl.New(d.monitor),
 	}, {
+		Desired:   sw.Health,
+		Installer: health.New(d.monitor, d.sysd),
+	}, {
 		Desired:   sw.Hostname,
 		Installer: hostname.New(),
 	}, {
@@ -99,6 +103,8 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
 		case sysctl.Installer:
 			sw.Sysctl = pkg(*dependency)
+		case health.Installer:
+			sw.Health = pkg(*dependency)
 		case hostname.Installer:
 			sw.Hostname = pkg(*dependency)
 		case swap.Installer:

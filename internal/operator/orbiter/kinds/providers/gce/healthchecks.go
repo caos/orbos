@@ -6,17 +6,19 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func queryHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
+var _ queryFunc = queryHealthchecks
+
+func queryHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceHealthchecks, err := context.client.HttpHealthChecks.
 		List(context.projectID).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
 		Fields("items(description,name,port,requestPath,selfLink)").
 		Do()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var operations []func() error
+	var ensure []func() error
 
 createLoop:
 	for _, lb := range loadbalancing {
@@ -25,7 +27,7 @@ createLoop:
 			if gceHC.Description == lb.healthcheck.gce.Description {
 				lb.healthcheck.gce.SelfLink = gceHC.SelfLink
 				if gceHC.Port != lb.healthcheck.gce.Port || gceHC.RequestPath != lb.healthcheck.gce.RequestPath {
-					operations = append(operations, operateFunc(
+					ensure = append(ensure, operateFunc(
 						lb.healthcheck.log("Patching healthcheck", true),
 						context.client.HttpHealthChecks.Patch(context.projectID, gceHC.Name, lb.healthcheck.gce).
 							RequestId(uuid.NewV1().String()).
@@ -38,7 +40,7 @@ createLoop:
 			}
 		}
 		lb.healthcheck.gce.Name = newName()
-		operations = append(operations, operateFunc(
+		ensure = append(ensure, operateFunc(
 			lb.healthcheck.log("Creating healthcheck", true),
 			context.client.HttpHealthChecks.
 				Insert(context.projectID, lb.healthcheck.gce).
@@ -61,18 +63,18 @@ createLoop:
 		))
 	}
 
+	var remove []func() error
 removeLoop:
-
 	for _, gceHC := range gceHealthchecks.Items {
 		for _, lb := range loadbalancing {
 			if gceHC.Description == lb.healthcheck.gce.Description {
 				continue removeLoop
 			}
 		}
-		operations = append(operations, removeResourceFunc(context.monitor, "healthcheck", gceHC.Name, context.client.HttpHealthChecks.
+		remove = append(remove, removeResourceFunc(context.monitor, "healthcheck", gceHC.Name, context.client.HttpHealthChecks.
 			Delete(context.projectID, gceHC.Name).
 			RequestId(uuid.NewV1().String()).
 			Do))
 	}
-	return operations, nil
+	return ensure, remove, nil
 }

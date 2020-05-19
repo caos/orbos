@@ -7,18 +7,19 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func queryFirewall(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
+var _ queryFunc = queryFirewall
+
+func queryFirewall(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceFirewalls, err := context.client.Firewalls.
 		List(context.projectID).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
 		Fields("items(description,name,allowed,targetTags,sourceRanges)").
 		Do()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var operations []func() error
-
+	var ensure []func() error
 createLoop:
 	for _, lb := range loadbalancing {
 		for _, fw := range lb.firewalls {
@@ -27,7 +28,7 @@ createLoop:
 					if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
 						!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
 						!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
-						operations = append(operations, operateFunc(
+						ensure = append(ensure, operateFunc(
 							fw.log("Patching firewall", true),
 							context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do,
 							toErrFunc(fw.log("Firewall patched", false)),
@@ -37,7 +38,7 @@ createLoop:
 				}
 			}
 			fw.gce.Name = newName()
-			operations = append(operations, operateFunc(
+			ensure = append(ensure, operateFunc(
 				fw.log("Creating firewall", true),
 				context.client.Firewalls.
 					Insert(context.projectID, fw.gce).
@@ -48,6 +49,7 @@ createLoop:
 		}
 	}
 
+	var remove []func() error
 removeLoop:
 	for _, gceTp := range gceFirewalls.Items {
 		for _, lb := range loadbalancing {
@@ -57,12 +59,12 @@ removeLoop:
 				}
 			}
 		}
-		operations = append(operations, removeResourceFunc(context.monitor, "firewall", gceTp.Name, context.client.Firewalls.
+		remove = append(remove, removeResourceFunc(context.monitor, "firewall", gceTp.Name, context.client.Firewalls.
 			Delete(context.projectID, gceTp.Name).
 			RequestId(uuid.NewV1().String()).
 			Do))
 	}
-	return operations, nil
+	return ensure, remove, nil
 }
 
 func stringsEqual(first, second []string) bool {

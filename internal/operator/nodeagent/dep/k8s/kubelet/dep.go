@@ -3,7 +3,6 @@ package kubelet
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -35,8 +34,6 @@ func New(monitor mntr.Monitor, os dep.OperatingSystem, manager *dep.PackageManag
 	return &kubeletDep{os, monitor, k8s.New(os, manager, "kubelet"), systemd}
 }
 
-const KubeAPIHealthzProxyProperty string = "kubeapihealthzproxy"
-
 func (kubeletDep) isKubelet() {}
 
 func (kubeletDep) Is(other nodeagent.Installer) bool {
@@ -55,13 +52,6 @@ func (k *kubeletDep) Current() (common.Package, error) {
 	pkg, err := k.common.Current()
 	if err != nil {
 		return pkg, err
-	}
-
-	if k.systemd.Active(KubeAPIHealthzProxyProperty) {
-		if pkg.Config == nil {
-			pkg.Config = make(map[string]string)
-		}
-		pkg.Config[KubeAPIHealthzProxyProperty] = "active"
 	}
 
 	return pkg, selinux.Current(k.os, &pkg)
@@ -104,29 +94,5 @@ func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package
 		return err
 	}
 
-	if err := k.systemd.Start("kubelet"); err != nil {
-		return err
-	}
-
-	if install.Config[KubeAPIHealthzProxyProperty] == install.Config[KubeAPIHealthzProxyProperty] {
-		return nil
-	}
-
-	hcBinary := fmt.Sprintf("%s.sh", KubeAPIHealthzProxyProperty)
-	if _, ok := install.Config[KubeAPIHealthzProxyProperty]; ok {
-
-		if err := ioutil.WriteFile(fmt.Sprintf("/usr/local/bin/%s", hcBinary), []byte(`#!/bin/bash
-
-kubectl proxy --accept-paths /healthz
-`), 700); err != nil {
-			return err
-		}
-
-		if err := k.systemd.Enable(hcBinary); err != nil {
-			return err
-		}
-		return k.systemd.Start(hcBinary)
-	}
-	return k.systemd.Disable(hcBinary)
-
+	return k.systemd.Start("kubelet")
 }

@@ -6,7 +6,9 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func queryAddresses(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, error) {
+var _ queryFunc = queryAddresses
+
+func queryAddresses(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 
 	addresses := normalizedLoadbalancing(loadbalancing).uniqueAddresses()
 
@@ -16,10 +18,10 @@ func queryAddresses(context *context, loadbalancing []*normalizedLoadbalancer) (
 		Fields("items(address,name,description)").
 		Do()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var operations []func() error
+	var ensure []func() error
 
 createLoop:
 	for _, addr := range addresses {
@@ -31,7 +33,7 @@ createLoop:
 		}
 
 		addr.gce.Name = newName()
-		operations = append(operations, operateFunc(
+		ensure = append(ensure, operateFunc(
 			addr.log("Creating external address", true),
 			context.client.Addresses.
 				Insert(context.projectID, context.region, addr.gce).
@@ -52,6 +54,7 @@ createLoop:
 			}(addr)))
 	}
 
+	var remove []func() error
 removeLoop:
 	for _, gceAddress := range gceAddresses.Items {
 		for _, address := range addresses {
@@ -59,10 +62,10 @@ removeLoop:
 				continue removeLoop
 			}
 		}
-		operations = append(operations, removeResourceFunc(context.monitor, "external address", gceAddress.Name, context.client.Addresses.
+		remove = append(remove, removeResourceFunc(context.monitor, "external address", gceAddress.Name, context.client.Addresses.
 			Delete(context.projectID, context.region, gceAddress.Name).
 			RequestId(uuid.NewV1().String()).
 			Do))
 	}
-	return operations, nil
+	return ensure, remove, nil
 }

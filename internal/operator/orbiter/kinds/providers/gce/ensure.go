@@ -1,6 +1,9 @@
 package gce
 
 import (
+	"fmt"
+
+	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
@@ -16,6 +19,7 @@ func query(
 	current *Current,
 	lb interface{},
 	context *context,
+	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
@@ -25,14 +29,7 @@ func query(
 	current.Current.Ingresses = make(map[string]*infra.Address)
 	normalized := normalize(context.monitor, lbCurrent.Current.Spec, context.orbID, context.providerID)
 
-	ensureLB, err := chain(
-		context, normalized,
-		queryHealthchecks,
-		queryTargetPools,
-		queryAddresses,
-		queryForwardingRules,
-		queryFirewall,
-	)
+	ensureLB, err := queryResources(context, normalized)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +43,39 @@ func query(
 			},
 		}
 	}
+
+	desireHealthcheck := func(pool string, machine infra.Machine) {
+		machineID := machine.ID()
+		na, ok := nodeAgentsDesired[machineID]
+		if !ok {
+			na = &common.NodeAgentSpec{}
+			nodeAgentsDesired[machineID] = na
+		}
+		if na.Software == nil {
+			na.Software = &common.Software{}
+		}
+		if na.Software.Health.Config == nil {
+			na.Software.Health.Config = make(map[string]string)
+		}
+		for _, lb := range normalized {
+			for _, destPool := range lb.targetPool.destPools {
+				if pool == destPool {
+					na.Software.Health.Config[fmt.Sprintf(
+						"%s:%d%s",
+						lb.healthcheck.gce.Host,
+						lb.healthcheck.gce.Port,
+						lb.healthcheck.gce.RequestPath)] = fmt.Sprintf(
+						"%d@%s://%s%s",
+						lb.healthcheck.desired.Code,
+						lb.healthcheck.desired.Protocol,
+						machine.IP(),
+						lb.healthcheck.desired.Path,
+					)
+				}
+			}
+		}
+	}
+	context.machinesService.onCreate = desireHealthcheck
 
 	return func(psf push.Func) error {
 
@@ -67,5 +97,5 @@ func query(
 		}
 
 		return nil
-	}, addPools(current, desired, context.machinesService)
+	}, initPools(current, desired, context.machinesService)
 }

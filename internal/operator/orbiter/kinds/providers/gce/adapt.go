@@ -69,7 +69,7 @@ func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListF
 				if err != nil {
 					return nil, err
 				}
-				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx)
+				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsDesired)
 			}, func() error {
 				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID)
 				if err != nil {
