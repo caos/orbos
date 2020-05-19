@@ -15,7 +15,7 @@ import (
 func join(
 	monitor mntr.Monitor,
 	joining *initializedMachine,
-	init bool,
+	joinAt infra.Machine,
 	desired DesiredV0,
 	kubeAPI *infra.Address,
 	joinToken string,
@@ -153,8 +153,8 @@ nodeRegistration:
 		"stdout": string(resetStdout),
 	}).Debug("Cleaned up machine")
 
-	if !init {
-		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s --config %s", kubeAPI.Port, kubeAPI, kubeadmCfgPath)
+	if joinAt == nil {
+		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAt.IP(), kubeAPI.Port, kubeadmCfgPath)
 		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
