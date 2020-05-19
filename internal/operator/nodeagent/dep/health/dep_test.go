@@ -22,7 +22,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/health --http 0.0.0.0:6702/healthz "200@http://34.78.197.0:6666/healthz"
+ExecStart=/usr/local/bin/health --http 0.0.0.0:6702/healthz "200@https://34.78.197.0:6666/healthz"
 Restart=always
 MemoryMax=20M
 MemoryLimit=20M
@@ -33,7 +33,7 @@ WantedBy=multi-user.target
 `),
 		},
 		want:  "0.0.0.0:6702/healthz",
-		want1: `"200@http://34.78.197.0:6666/healthz"`,
+		want1: `"200@https://34.78.197.0:6666/healthz"`,
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

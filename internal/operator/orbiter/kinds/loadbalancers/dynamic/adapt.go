@@ -65,8 +65,8 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 								dest.HealthChecks.Path = "/healthz"
 								migrate = true
 							}
-							if dest.HealthChecks.Protocol != "http" {
-								dest.HealthChecks.Protocol = "http"
+							if dest.HealthChecks.Protocol != "https" {
+								dest.HealthChecks.Protocol = "https"
 								migrate = true
 							}
 						}
