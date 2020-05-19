@@ -2,6 +2,7 @@ package gce
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -27,7 +28,6 @@ func query(
 	if !ok {
 		errors.Errorf("Unknown or unsupported load balancing of type %T", lb)
 	}
-	current.Current.Ingresses = make(map[string]*infra.Address)
 	normalized := normalize(context.monitor, lbCurrent.Current.Spec, context.orbID, context.providerID)
 
 	ensureLB, err := queryResources(context, normalized)
@@ -35,10 +35,11 @@ func query(
 		return nil, err
 	}
 
+	current.Current.Ingresses = make(map[string]*infra.Address)
 	for _, lb := range normalized {
 		current.Current.Ingresses[lb.transport] = &infra.Address{
 			Location: lb.address.gce.Address,
-			Port:     uint16(lb.healthcheck.gce.Port),
+			Port:     lbPort(lb),
 			Bind: func(_ string) string {
 				return "0.0.0.0"
 			},
@@ -58,21 +59,31 @@ func query(
 		if na.Software.Health.Config == nil {
 			na.Software.Health.Config = make(map[string]string)
 		}
+		if na.Firewall == nil {
+			fw := common.Firewall(make(map[string]*common.Allowed))
+			na.Firewall = &fw
+		}
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
 				if pool == destPool {
 					na.Software.Health.Config[fmt.Sprintf(
 						"%s:%d%s",
-						lb.healthcheck.gce.Host,
+						"0.0.0.0",
 						lb.healthcheck.gce.Port,
 						lb.healthcheck.gce.RequestPath)] = fmt.Sprintf(
 						"%d@%s://%s:%d%s",
 						lb.healthcheck.desired.Code,
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
-						strings.Split(lb.forwardingRule.gce.PortRange, "-")[0],
+						lbPort(lb),
 						lb.healthcheck.desired.Path,
 					)
+					na.Firewall.Merge(map[string]*common.Allowed{
+						lb.healthcheck.gce.Description: {
+							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
+							Protocol: "tcp",
+						},
+					})
 				}
 			}
 		}
@@ -100,4 +111,12 @@ func query(
 
 		return nil
 	}, initPools(current, desired, context.machinesService)
+}
+
+func lbPort(lb *normalizedLoadbalancer) uint16 {
+	port, err := strconv.Atoi(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0])
+	if err != nil {
+		panic(err)
+	}
+	return uint16(port)
 }

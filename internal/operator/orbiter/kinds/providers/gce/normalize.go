@@ -125,7 +125,6 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 					hc := &compute.HttpHealthCheck{
 						Description: description,
 						RequestPath: dest.hc.Path,
-						Host:        "127.0.0.1",
 					}
 
 					poolsLen := len(dest.pools)
@@ -247,13 +246,14 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 		}
 	}
 
+	sort.Sort(normalizedLoadbalancing(normalized))
+
 	var hcPort int64 = 6700
 	for _, lb := range normalized {
 		lb.healthcheck.gce.Port = hcPort
 		hcPort++
 	}
 
-	sort.Sort(normalizedLoadbalancing(normalized))
 	return normalized
 }
 

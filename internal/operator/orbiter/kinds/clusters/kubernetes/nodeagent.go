@@ -160,12 +160,12 @@ WantedBy=multi-user.target
 				"command": daemonReload,
 			}).Debug("Executed command")
 
-			stopSystemd := fmt.Sprintf("if sudo systemctl is-active %s; then sudo systemctl stop %s;fi", systemdEntry, systemdEntry)
+			stopSystemd := fmt.Sprintf("sudo systemctl stop %s orbos.health*", systemdEntry)
 			if err := try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine.infra, func(cmp infra.Machine) error {
 				_, cbErr := cmp.Execute(nil, nil, stopSystemd)
 				return errors.Wrapf(cbErr, "running command %s remotely failed", stopSystemd)
 			}); err != nil {
-				return errors.Wrap(err, "remotely stopping Node Agent by systemd failed")
+				return errors.Wrap(err, "remotely stopping systemd services failed")
 			}
 			monitor.WithFields(map[string]interface{}{
 				"command": stopSystemd,
