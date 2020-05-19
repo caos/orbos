@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -84,18 +85,18 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 				}
 				monitor.Info("Read kubeconfig for boom deployment")
 
-				if err := deployBoom(monitor, value); err != nil {
+				if err := deployBoom(monitor, gitClient, value); err != nil {
 					return err
 				}
 			}
 		}
 
-		if !orbiterIncluded && len(gitClient.Read("boom.yml")) > 0 {
+		if !orbiterIncluded {
 			if kubeconfig == "" {
 				return errors.New("Error to deploy BOOM as no kubeconfig is provided")
 			}
 
-			if err := deployBoom(monitor, kubeconfig); err != nil {
+			if err := deployBoom(monitor, gitClient, kubeconfig); err != nil {
 				return err
 			}
 		}
@@ -104,17 +105,21 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func deployBoom(monitor mntr.Monitor, kubeconfig string) error {
-	k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig string) error {
+	if len(gitClient.Read("boom.yml")) > 0 {
+		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 
-	if k8sClient.Available() {
-		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
-			monitor.Info("failed to deploy boom into k8s-cluster")
-			return err
+		if k8sClient.Available() {
+			if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
+				monitor.Info("failed to deploy boom into k8s-cluster")
+				return err
+			}
+			monitor.Info("Deployed boom")
+		} else {
+			monitor.Info("Failed to connect to k8s")
 		}
-		monitor.Info("Deployed boom")
 	} else {
-		monitor.Info("Failed to connect to k8s")
+		monitor.Info("No BOOM deployed as no boom.yml present")
 	}
 	return nil
 }
