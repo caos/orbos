@@ -59,16 +59,21 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 			return pkg, err
 		}
 
-		match := r.FindStringSubmatch(string(content))
 		if pkg.Config == nil {
 			pkg.Config = make(map[string]string)
 		}
 
 		if s.systemd.Active(file.Name()) {
-			pkg.Config[match[0]] = unquote(match[1])
+			http, checks := extractArguments(content)
+			pkg.Config[http] = unquote(checks)
 		}
 	}
 	return pkg, nil
+}
+
+func extractArguments(content []byte) (string, string) {
+	match := r.FindStringSubmatch(string(content))
+	return match[1], match[2]
 }
 
 func (s *healthDep) Ensure(_ common.Package, ensure common.Package) error {
