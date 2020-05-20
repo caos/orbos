@@ -25,6 +25,8 @@ type event struct {
 
 func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
 
+	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, conv)
+
 	return func() {
 		if err := gitClient.Clone(); err != nil {
 			monitor.Error(err)
@@ -37,7 +39,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 		}
 
 		if desired.Spec.NodeAgents == nil {
-			monitor.Error(errors.New("No desired node agents found"))
+			monitor.Error(errors.New("no desired node agents found"))
 			return
 		}
 
@@ -70,7 +72,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			panic(err)
 		}
 
-		ensure, err := query(monitor, nodeAgentCommit, firewallEnsurer, conv, *naDesired, curr)
+		ensure, err := doQuery(*naDesired, curr)
 		if err != nil {
 			monitor.Error(err)
 			return
