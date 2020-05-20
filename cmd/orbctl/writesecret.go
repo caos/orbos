@@ -52,7 +52,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 
 		secretFunc := func(operator string) secret.Func {
 			if operator == "boom" {
-				return api.SecretFunc(orbconfig)
+				return api.SecretsFunc(orbconfig)
 			} else if operator == "orbiter" {
 				return orb.SecretsFunc(orbconfig)
 			}

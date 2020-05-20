@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -32,11 +34,13 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 
 			secretFunc := func(operator string) secret.Func {
 				if operator == "boom" {
-					return api.SecretFunc(orbconfig)
+					return api.SecretsFunc(orbconfig)
 				} else if operator == "orbiter" {
 					return orb.SecretsFunc(orbconfig)
 				}
-				return nil
+				return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+					return make(map[string]*secret.Secret), nil
+				}
 			}
 
 			value, err := secret.Read(

@@ -20,9 +20,11 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"strings"
 )
 
 func ParseToolset(desiredTree *tree.Tree, masterkey string) (*v1beta1.Toolset, error) {
+	copyTree := desiredTree
 	desiredKind := &v1beta1.Toolset{
 		Spec: &v1beta1.ToolsetSpec{
 			Grafana: &grafana.Grafana{
@@ -75,20 +77,35 @@ func ParseToolset(desiredTree *tree.Tree, masterkey string) (*v1beta1.Toolset, e
 						},
 					},
 				},
-				//Repositories: []*v1beta1.ArgocdRepository{{
-				//	Username:    &secret.Secret{Masterkey: masterkey},
-				//	Password:    &secret.Secret{Masterkey: masterkey},
-				//	Certificate: &secret.Secret{Masterkey: masterkey},
-				//}},
-				//CustomImage: &v1beta1.ArgocdCustomImage{
-				//	GopassStores: []*v1beta1.ArgocdGopassStore{{
-				//		SSHKey: &secret.Secret{Masterkey: masterkey},
-				//		GPGKey: &secret.Secret{Masterkey: masterkey},
-				//	},
-				//	},
-				//},
 			},
 		},
+	}
+
+	if err := copyTree.Original.Decode(desiredKind); err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+
+	if desiredKind.Spec.Argocd != nil && desiredKind.Spec.Argocd.Credentials != nil {
+		for _, value := range desiredKind.Spec.Argocd.Credentials {
+			value.Username = initIfNil(value.Username, masterkey)
+			value.Password = initIfNil(value.Password, masterkey)
+			value.Certificate = initIfNil(value.Certificate, masterkey)
+		}
+	}
+
+	if desiredKind.Spec.Argocd != nil && desiredKind.Spec.Argocd.Repositories != nil {
+		for _, value := range desiredKind.Spec.Argocd.Repositories {
+			value.Username = initIfNil(value.Username, masterkey)
+			value.Password = initIfNil(value.Password, masterkey)
+			value.Certificate = initIfNil(value.Certificate, masterkey)
+		}
+	}
+
+	if desiredKind.Spec.Argocd != nil && desiredKind.Spec.Argocd.CustomImage != nil && desiredKind.Spec.Argocd.CustomImage.GopassStores != nil {
+		for _, value := range desiredKind.Spec.Argocd.CustomImage.GopassStores {
+			value.SSHKey = initIfNil(value.SSHKey, masterkey)
+			value.GPGKey = initIfNil(value.GPGKey, masterkey)
+		}
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
@@ -98,7 +115,7 @@ func ParseToolset(desiredTree *tree.Tree, masterkey string) (*v1beta1.Toolset, e
 	return desiredKind, nil
 }
 
-func SecretFunc(orb *orbconfig.Orb) secret.Func {
+func SecretsFunc(orb *orbconfig.Orb) secret.Func {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -110,12 +127,12 @@ func SecretFunc(orb *orbconfig.Orb) secret.Func {
 		}
 		desiredTree.Parsed = desiredKind
 
-		return getSecretsMap(desiredKind), nil
+		return getSecretsMap(desiredKind, orb.Masterkey), nil
 	}
 }
 
-func getSecretsMap(desiredKind *v1beta1.Toolset) map[string]*secret.Secret {
-	return map[string]*secret.Secret{
+func getSecretsMap(desiredKind *v1beta1.Toolset, masterkey string) map[string]*secret.Secret {
+	ret := map[string]*secret.Secret{
 		"argocd.sso.google.clientid":           desiredKind.Spec.Argocd.Auth.GoogleConnector.Config.ClientID,
 		"argocd.sso.google.clientsecret":       desiredKind.Spec.Argocd.Auth.GoogleConnector.Config.ClientSecret,
 		"argocd.sso.google.serviceaccountjson": desiredKind.Spec.Argocd.Auth.GoogleConnector.Config.ServiceAccountJSON,
@@ -138,4 +155,64 @@ func getSecretsMap(desiredKind *v1beta1.Toolset) map[string]*secret.Secret {
 		"grafana.admin.username": desiredKind.Spec.Grafana.Admin.Username,
 		"grafana.admin.password": desiredKind.Spec.Grafana.Admin.Password,
 	}
+
+	if desiredKind.Spec.Argocd != nil && desiredKind.Spec.Argocd.Credentials != nil {
+		for _, value := range desiredKind.Spec.Argocd.Credentials {
+			base := strings.Join([]string{"argocd", "credential", value.Name}, ".")
+
+			key := strings.Join([]string{base, "username"}, ".")
+			value.Username = initIfNil(value.Username, masterkey)
+			ret[key] = value.Username
+
+			key = strings.Join([]string{base, "password"}, ".")
+			value.Password = initIfNil(value.Password, masterkey)
+			ret[key] = value.Password
+
+			key = strings.Join([]string{base, "certificate"}, ".")
+			value.Certificate = initIfNil(value.Certificate, masterkey)
+			ret[key] = value.Certificate
+		}
+	}
+
+	if desiredKind.Spec.Argocd != nil && desiredKind.Spec.Argocd.Repositories != nil {
+		for _, value := range desiredKind.Spec.Argocd.Repositories {
+			base := strings.Join([]string{"argocd", "repository", value.Name}, ".")
+
+			key := strings.Join([]string{base, "username"}, ".")
+			value.Username = initIfNil(value.Username, masterkey)
+			ret[key] = value.Username
+
+			key = strings.Join([]string{base, "password"}, ".")
+			value.Password = initIfNil(value.Password, masterkey)
+			ret[key] = value.Password
+
+			key = strings.Join([]string{base, "certificate"}, ".")
+			value.Certificate = initIfNil(value.Certificate, masterkey)
+			ret[key] = value.Certificate
+		}
+	}
+
+	if desiredKind.Spec.Argocd != nil && desiredKind.Spec.Argocd.CustomImage != nil && desiredKind.Spec.Argocd.CustomImage.GopassStores != nil {
+		for _, value := range desiredKind.Spec.Argocd.CustomImage.GopassStores {
+			base := strings.Join([]string{"argocd", "gopass", value.StoreName}, ".")
+
+			key := strings.Join([]string{base, "ssh"}, ".")
+			value.SSHKey = initIfNil(value.SSHKey, masterkey)
+			ret[key] = value.SSHKey
+
+			key = strings.Join([]string{base, "gpg"}, ".")
+			value.GPGKey = initIfNil(value.GPGKey, masterkey)
+			ret[key] = value.GPGKey
+		}
+	}
+
+	return ret
+}
+
+func initIfNil(sec *secret.Secret, masterkey string) *secret.Secret {
+	if sec == nil {
+		return &secret.Secret{Masterkey: masterkey}
+	}
+	sec.Masterkey = masterkey
+	return sec
 }

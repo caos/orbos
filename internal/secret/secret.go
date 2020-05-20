@@ -71,7 +71,11 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
-		return errors.New("Master key size must be between 1 and 32 characters")
+		s.Encoding = alias.Encoding
+		s.Encryption = alias.Encryption
+		s.Value = string(cipherText)
+		return nil
+		//return errors.New("Master key size must be between 1 and 32 characters")
 	}
 
 	masterKey := make([]byte, 32)

@@ -70,7 +70,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 				path := strings.Join([]string{"orbiter", clustername, "kubeconfig"}, ".")
 				secretFunc := func(operator string) secret.Func {
 					if operator == "boom" {
-						return api.SecretFunc(orbFile)
+						return api.SecretsFunc(orbFile)
 					} else if operator == "orbiter" {
 						return orb.SecretsFunc(orbFile)
 					}

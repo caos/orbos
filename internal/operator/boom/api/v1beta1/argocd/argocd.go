@@ -48,14 +48,14 @@ func ClearEmpty(x *Argocd) *Argocd {
 	repos := make([]*repository.Repository, 0)
 	for _, v := range x.Repositories {
 		if p := repository.ClearEmpty(v); p != nil {
-			repos = append(repos, v)
+			repos = append(repos, p)
 		}
 	}
 
 	creds := make([]*repository.Repository, 0)
 	for _, v := range x.Credentials {
 		if p := repository.ClearEmpty(v); p != nil {
-			creds = append(creds, v)
+			creds = append(creds, p)
 		}
 	}
 
