@@ -29,12 +29,18 @@ func main() {
 
 	rootCmd, rootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
+
+	takeoff := TakeoffCommand(rootValues)
+	takeoff.AddCommand(
+		StartBoom(rootValues),
+		StartOrbiter(rootValues),
+	)
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
 		EditCommand(rootValues),
-		TakeoffCommand(rootValues),
 		TeardownCommand(rootValues),
+		takeoff,
 	)
 
 	if err := rootCmd.Execute(); err != nil {

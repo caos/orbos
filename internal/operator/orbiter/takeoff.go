@@ -2,13 +2,12 @@ package orbiter
 
 import (
 	"fmt"
-	"net/http"
-
 	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
+	"net/http"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -47,8 +46,7 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
-
+func Metrics() {
 	go func() {
 		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
 		http.Handle("/metrics", promhttp.Handler())
@@ -56,10 +54,13 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 			panic(err)
 		}
 	}()
+}
+
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc, finishedChan chan bool) func() {
 
 	return func() {
 
-		trees, err := parse(gitClient, "orbiter.yml")
+		trees, err := Parse(gitClient, "orbiter.yml")
 		if err != nil {
 			monitor.Error(err)
 			return
@@ -101,7 +102,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events
 		}, monitor.OnChange)
 
 		adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
-			return adapt(monitor, treeDesired, treeCurrent)
+			return adapt(monitor, finishedChan, treeDesired, treeCurrent)
 		}
 		query, _, migrate, err := AdaptFuncGoroutine(adaptFunc)
 		if err != nil {

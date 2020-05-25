@@ -8,6 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.29.15
 	github.com/caos/oidc v0.6.0
 	github.com/fatih/color v1.9.0 // indirect
+	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.3.4
 	github.com/google/go-github/v31 v31.0.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
@@ -15,10 +16,11 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
-	github.com/robfig/cron v1.2.0
+	github.com/robfig/cron v1.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.6
 	github.com/spf13/viper v1.4.0
+	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/oauth2 v0.0.0-20191122200657-5d9234df094c
 	google.golang.org/api v0.4.0
@@ -29,7 +31,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71
 	k8s.io/api v0.17.3
 	k8s.io/apimachinery v0.17.3
-	k8s.io/client-go v0.17.0
-	k8s.io/code-generator v0.17.3 // indirect
+	k8s.io/client-go v0.17.3
 	k8s.io/kubectl v0.17.0
+	sigs.k8s.io/controller-runtime v0.4.0 // indirect
 )

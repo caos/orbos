@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: caos-system
+
+configMapGenerator:
+- name: grafana-dashboard-cluster-health
+  files:
+  - json/cluster-health.json
+- name: grafana-dashboard-instance-health
+  files:
+  - json/instance-health.json
+- name: grafana-dashboard-probes-health
+  files:
+    - json/probes-health.json
+
+generatorOptions:
+ disableNameSuffixHash: true

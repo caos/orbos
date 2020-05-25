@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -46,6 +48,10 @@ func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL st
 		newClient.progress = os.Stdout
 	}
 	return newClient
+}
+
+func (g *Client) GetURL() string {
+	return g.repoURL
 }
 
 func (g *Client) Init(deploykey []byte) error {
@@ -100,6 +106,18 @@ func (g *Client) clone() error {
 	return nil
 }
 
+func (g *Client) Exists(path string) bool {
+	if err := g.Clone(); err != nil {
+		return false
+	}
+
+	of := g.Read(path)
+	if of != nil && len(of) > 0 {
+		return true
+	}
+	return false
+}
+
 func (g *Client) Read(path string) []byte {
 	readmonitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
@@ -124,12 +142,47 @@ func (g *Client) Read(path string) []byte {
 	return fileBytes
 }
 
+func (g *Client) ReadYamlIntoStruct(path string, struc interface{}) error {
+	data := g.Read(path)
+
+	return errors.Wrapf(yaml.Unmarshal(data, struc), "Error while unmarshaling yaml %s to struct", path)
+}
+
+func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
+	monitor := g.monitor.WithFields(map[string]interface{}{
+		"path": path,
+	})
+	monitor.Debug("Reading folder")
+	dirBytes := make(map[string][]byte, 0)
+	files, err := g.fs.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(errors.Cause(err)) {
+			return make(map[string][]byte, 0), nil
+		}
+		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+	}
+	for _, file := range files {
+		filePath := filepath.Join(path, file.Name())
+		fileBytes := g.Read(filePath)
+		dirBytes[file.Name()] = fileBytes
+	}
+
+	if monitor.IsVerbose() {
+		monitor.Debug("Folder read")
+		fmt.Println(dirBytes)
+	}
+	return dirBytes, nil
+}
+
 type File struct {
 	Path    string
 	Content []byte
 }
 
 func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
+	if g.stage(files...) {
+		return false, nil
+	}
 
 	if g.stage(files...) {
 		return false, nil

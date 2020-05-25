@@ -35,7 +35,6 @@ type Spec struct {
 	Versions struct {
 		Kubernetes string
 		Orbiter    string
-		Boom       string
 	}
 	Workers []*Pool
 }

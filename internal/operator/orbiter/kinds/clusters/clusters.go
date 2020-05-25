@@ -17,10 +17,11 @@ func GetQueryAndDestroyFuncs(
 	clusterTree *tree.Tree,
 	orbiterCommit string,
 	oneoff bool,
-	deployOrbiterAndBoom bool,
+	deployOrbiter bool,
 	clusterCurrent *tree.Tree,
 	destroyProviders func() (map[string]interface{}, error),
 	whitelistChan chan []*orbiter.CIDR,
+	finishedChan chan bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -36,7 +37,7 @@ func GetQueryAndDestroyFuncs(
 				orbiterCommit,
 				clusterID,
 				oneoff,
-				deployOrbiterAndBoom,
+				deployOrbiter,
 				destroyProviders,
 				func(whitelist []*orbiter.CIDR) {
 					go func() {
@@ -48,6 +49,7 @@ func GetQueryAndDestroyFuncs(
 				},
 			)(
 				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
+				finishedChan,
 				clusterTree,
 				clusterCurrent,
 			)

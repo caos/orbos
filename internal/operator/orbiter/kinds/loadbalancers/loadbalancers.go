@@ -13,6 +13,7 @@ func GetQueryAndDestroyFunc(
 	whitelist dynamic.WhiteListFunc,
 	loadBalancingTree *tree.Tree,
 	loadBalacingCurrent *tree.Tree,
+	finishedChan chan bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -25,7 +26,7 @@ func GetQueryAndDestroyFunc(
 	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 	case "orbiter.caos.ch/DynamicLoadBalancer":
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
-			return dynamic.AdaptFunc(whitelist)(monitor, loadBalancingTree, loadBalacingCurrent)
+			return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
 		}
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:

@@ -86,14 +86,16 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 
 	secret.Value = value
 
-	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, "yml"}, "."))(monitor)
+	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
 }
 
 func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Secret {
 	ret := make(map[string]*Secret, len(secrets))
-	for k, v := range secrets {
-		key := strings.Join([]string{prefix, k}, ".")
-		ret[key] = v
+	if secrets != nil {
+		for k, v := range secrets {
+			key := strings.Join([]string{prefix, k}, ".")
+			ret[key] = v
+		}
 	}
 
 	return ret
@@ -102,31 +104,49 @@ func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Sec
 func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path string, items func(map[string]*Secret) []string) (*Secret, *tree.Tree, string, error) {
 	getOperatorSecrets := func(operator string) (map[string]*Secret, *tree.Tree, error) {
 		file := strings.Join([]string{operator, yml}, ".")
-		trees, err := Parse(gitClient, file)
-		if err != nil {
-			return nil, nil, err
-		}
 
-		treeDesired := trees[0]
-		secrets, err := secretFunc(operator)(monitor, treeDesired)
-		if err != nil {
-			return nil, nil, err
+		if gitClient.Exists(file) {
+			trees, err := Parse(gitClient, file)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			treeDesired := trees[0]
+			secretsFunc := secretFunc(operator)
+			if secretsFunc == nil {
+				return nil, nil, errors.New("Operator unknown")
+			}
+			secrets, err := secretsFunc(monitor, treeDesired)
+			if err != nil {
+				return nil, nil, err
+			}
+			return addSecretsPrefix(operator, secrets), treeDesired, nil
 		}
-		return addSecretsPrefix(operator, secrets), treeDesired, nil
+		return nil, nil, nil
 	}
+
+	secretsAll := make(map[string]*Secret, 0)
 
 	secretsOrbiter, treeDesiredOrbiter, err := getOperatorSecrets(orbiter)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	secretsAll := secretsOrbiter
+	if secretsOrbiter != nil && len(secretsOrbiter) > 0 {
+		for k, v := range secretsOrbiter {
+			secretsAll[k] = v
+		}
+	}
 
 	secretsBoom, treeDesiredBoom, err := getOperatorSecrets(boom)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	for k, v := range secretsBoom {
-		secretsAll[k] = v
+	if secretsBoom != nil && len(secretsBoom) > 0 {
+		for k, v := range secretsBoom {
+			if k != "" && v != nil {
+				secretsAll[k] = v
+			}
+		}
 	}
 
 	if path != "" {
@@ -165,7 +185,7 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 	if strings.HasPrefix(result, orbiter) {
 		return sec, treeDesiredOrbiter, orbiter, err
 	} else if strings.HasPrefix(result, boom) {
-		return sec, treeDesiredBoom, orbiter, err
+		return sec, treeDesiredBoom, boom, err
 	}
 
 	return nil, nil, "", errors.New("Operator unknown")

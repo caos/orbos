@@ -17,6 +17,7 @@ func GetQueryAndDestroyFuncs(
 	providerTree *tree.Tree,
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
+	finishedChan chan bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -58,6 +59,7 @@ func GetQueryAndDestroyFuncs(
 				},
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
+				finishedChan,
 				providerTree,
 				providerCurrent)
 		}

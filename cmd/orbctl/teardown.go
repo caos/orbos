@@ -48,29 +48,34 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		logger.WithFields(map[string]interface{}{
-			"version": version,
-			"commit":  gitCommit,
-			"repoURL": orbFile.URL,
-		}).Info("Destroying Orb")
+		if gitClient.Exists("orbiter.yml") {
+			logger.WithFields(map[string]interface{}{
+				"version": version,
+				"commit":  gitCommit,
+				"repoURL": orbFile.URL,
+			}).Info("Destroying Orb")
 
-		fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
-		var response string
-		fmt.Scanln(&response)
+			fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
+			var response string
+			fmt.Scanln(&response)
 
-		if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
-			logger.Info("Not touching Orb")
-			return nil
+			if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
+				logger.Info("Not touching Orb")
+				return nil
+			}
+			finishedChan := make(chan bool)
+			return orbiter.Destroy(
+				logger,
+				gitClient,
+				orb.AdaptFunc(
+					orbFile,
+					gitCommit,
+					true,
+					false),
+				finishedChan,
+			)
 		}
-
-		return orbiter.Destroy(
-			logger,
-			gitClient,
-			orb.AdaptFunc(
-				orbFile,
-				gitCommit,
-				true,
-				false))
+		return nil
 	}
 	return cmd
 }
