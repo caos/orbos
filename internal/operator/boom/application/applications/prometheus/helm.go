@@ -28,7 +28,7 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 	ingestionSecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
 	if getSecretErr != nil && !ingestionSecretAbsent {
 		// TODO: Better error handling?
-		panic(getSecretErr)
+		monitor.Error(getSecretErr)
 	}
 
 	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), toolsetCRDSpec)
@@ -73,7 +73,7 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = config.AdditionalScrapeConfigs
 	}
 
-	if !ingestionSecretAbsent {
+	if getSecretErr == nil && !ingestionSecretAbsent {
 		if values.Prometheus.PrometheusSpec.ExternalLabels == nil {
 			values.Prometheus.PrometheusSpec.ExternalLabels = make(map[string]string)
 		}
