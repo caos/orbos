@@ -6,6 +6,8 @@ import (
 )
 
 func Reconcile(monitor mntr.Monitor, kubeconfig *string, version string) error {
+	recMonitor := monitor.WithField("version", version)
+
 	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 	if *kubeconfig == "" {
 		err := k8sClient.RefreshLocal()
@@ -16,12 +18,12 @@ func Reconcile(monitor mntr.Monitor, kubeconfig *string, version string) error {
 
 	if k8sClient.Available() {
 		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
-			monitor.Info("Failed to deploy boom into k8s-cluster")
+			recMonitor.Info("Failed to deploy boom into k8s-cluster")
 			return err
 		}
-		monitor.Info("Applied boom")
+		recMonitor.Info("Applied boom")
 	} else {
-		monitor.Info("Failed to connect to k8s")
+		recMonitor.Info("Failed to connect to k8s")
 	}
 
 	return nil
