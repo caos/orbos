@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/boom/app"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
@@ -125,16 +126,8 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
 	if gitClient.Exists("boom.yml") {
-		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
-
-		if k8sClient.Available() {
-			if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
-				monitor.Info("failed to deploy boom into k8s-cluster")
-				return err
-			}
-			monitor.Info("Deployed boom")
-		} else {
-			monitor.Info("Failed to connect to k8s")
+		if err := app.SelfReconcile(monitor, kubeconfig, version); err != nil {
+			return err
 		}
 	} else {
 		monitor.Info("No BOOM deployed as no boom.yml present")
@@ -195,7 +188,7 @@ func StartBoom(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		return start.Boom(monitor, orbFile, localmode)
+		return start.Boom(monitor, orbFile, localmode, version)
 	}
 	return cmd
 }

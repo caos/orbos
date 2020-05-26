@@ -90,7 +90,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		return err
 	}
 
-	if err := client.ApplyRole(&rbac.Role{
+	/*if err := client.ApplyRole(&rbac.Role{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom-leader-election-role",
 			Namespace: "caos-system",
@@ -122,11 +122,11 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		}},
 	}); err != nil {
 		return err
-	}
+	}*/
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-manager-role",
+			Name: "boom-role",
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -137,7 +137,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		return err
 	}
 
-	if err := client.ApplyRoleBinding(&rbac.RoleBinding{
+	/*if err := client.ApplyRoleBinding(&rbac.RoleBinding{
 		ObjectMeta: mach.ObjectMeta{
 			Namespace: "caos-system",
 			Name:      "boom-leader-election-rolebinding",
@@ -154,10 +154,11 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		}},
 	}); err != nil {
 		return err
-	}
+	}*/
+
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-manager-rolebinding",
+			Name: "boom-rolebinding",
 		},
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",

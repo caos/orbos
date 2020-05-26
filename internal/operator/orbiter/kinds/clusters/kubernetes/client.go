@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"fmt"
 	"io"
+	"k8s.io/client-go/rest"
 	"strings"
 	"sync"
 	"time"
@@ -224,6 +225,13 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 	}
 
 	c.set, err = kubernetes.NewForConfig(restCfg)
+	return err
+}
+
+func (c *Client) RefreshLocal() (err error) {
+	config, err := rest.InClusterConfig()
+
+	c.set, err = kubernetes.NewForConfig(config)
 	return err
 }
 
