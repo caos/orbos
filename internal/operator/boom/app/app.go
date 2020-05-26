@@ -1,7 +1,6 @@
 package app
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"strings"
 
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
@@ -94,28 +93,6 @@ func (a *App) getCurrent(monitor mntr.Monitor) ([]*clientgo.Resource, error) {
 	metrics.SuccessfulReadingCurrentState()
 
 	return current.Get(a.monitor, resourceInfoList), nil
-}
-
-func SelfReconcile(monitor mntr.Monitor, kubeconfig *string, version string) error {
-	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
-	if *kubeconfig == "" {
-		err := k8sClient.RefreshLocal()
-		if err != nil {
-			return err
-		}
-	}
-
-	if k8sClient.Available() {
-		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
-			monitor.Info("failed to deploy boom into k8s-cluster")
-			return err
-		}
-		monitor.Info("Deployed boom")
-	} else {
-		monitor.Info("Failed to connect to k8s")
-	}
-
-	return nil
 }
 
 func (a *App) ReconcileGitCrds(masterkey string) error {

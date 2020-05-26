@@ -23,6 +23,7 @@ type Metadata struct {
 }
 
 type ToolsetSpec struct {
+	BoomVersion               string                     `json:"boomVersion,omitempty" yaml:"boomVersion,omitemepty"`
 	ForceApply                bool                       `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
 	CurrentStateFolder        string                     `json:"currentStatePath,omitempty" yaml:"currentStatePath,omitempty"`
 	PreApply                  *PreApply                  `json:"preApply,omitempty" yaml:"preApply,omitempty"`

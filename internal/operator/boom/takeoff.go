@@ -55,21 +55,11 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 		monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
 	}
 
-	dummyKubeconfig := ""
-
 	return func() {
 			// TODO: use a function scoped error variable
 			started := time.Now()
-			goErr := app.SelfReconcile(monitor, &dummyKubeconfig, version)
+			goErr := appStruct.ReconcileGitCrds(orb.Masterkey)
 			recMonitor := monitor.WithFields(map[string]interface{}{
-				"took": time.Since(started),
-			})
-			if goErr != nil {
-				recMonitor.Error(goErr)
-			}
-
-			goErr = appStruct.ReconcileGitCrds(orb.Masterkey)
-			recMonitor = monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			})
 			if goErr != nil {

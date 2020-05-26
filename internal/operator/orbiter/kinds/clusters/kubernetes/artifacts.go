@@ -126,7 +126,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-role",
+			Name: "boom-clusterrole",
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -158,7 +158,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-rolebinding",
+			Name: "boom-clusterrolebinding",
 		},
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
