@@ -48,7 +48,7 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		if gitClient.Exists("orbiter.yml") {
+		if existsFileInGit(gitClient, "orbiter.yml") {
 			logger.WithFields(map[string]interface{}{
 				"version": version,
 				"commit":  gitCommit,

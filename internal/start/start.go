@@ -2,22 +2,26 @@ package start
 
 import (
 	"context"
+	"errors"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
 	"github.com/caos/orbos/internal/operator/boom"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbconfig "github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/mntr"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
 	"runtime/debug"
+	"strings"
 	"time"
 )
 
-func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, verbose bool, version string, gitClient *git.Client, orbFile *orbconfig.Orb, gitCommit string, ingestionAddress string) error {
+func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, verbose bool, version string, gitClient *git.Client, orbFile *orbconfig.Orb, gitCommit string, ingestionAddress string) ([]string, error) {
 	orbiter.Metrics()
 
 	finishedChan := make(chan bool)
@@ -120,7 +124,35 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		finished = <-finishedChan
 	}
 
-	return nil
+	kubeconfigs := make([]string, 0)
+
+	orbTree, err := orbiter.Parse(gitClient, "orbiter.yml")
+	if err != nil {
+		return nil, errors.New("Failed to parse orbiter.yml")
+	}
+
+	orbDef, err := orb.ParseDesiredV0(orbTree[0])
+	if err != nil {
+		return nil, errors.New("Failed to parse orbiter.yml")
+	}
+
+	for clustername, _ := range orbDef.Clusters {
+		path := strings.Join([]string{"orbiter", clustername, "kubeconfig"}, ".")
+
+		value, err := secret.Read(
+			monitor,
+			gitClient,
+			secretfuncs.Get(orbFile),
+			path)
+		if err != nil || value == "" {
+			return nil, errors.New("Failed to get kubeconfig")
+		}
+		monitor.Info("Read kubeconfig for boom deployment")
+
+		kubeconfigs = append(kubeconfigs, value)
+	}
+
+	return kubeconfigs, nil
 }
 
 func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
