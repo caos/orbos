@@ -83,9 +83,12 @@ apiVersion: kubeadm.k8s.io/v1beta2
 kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
+  certSANs:
+  - "%s"
+  - "%s"
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
-controlPlaneEndpoint: %s
+controlPlaneEndpoint: %s:%d
 controllerManager: {}
 dns:
   type: CoreDNS
@@ -101,38 +104,48 @@ networking:
   podSubnet: %s
   serviceSubnet: %s
 scheduler: {}
----
+`,
+		joinToken,
+		listenIP,
+		joining.infra.ID(),
+		joining.infra.IP(),
+		kubeAPI.Location,
+		joining.infra.IP(),
+		kubeAPI.Port,
+		kubernetesVersion,
+		desired.Spec.Networking.DNSDomain,
+		desired.Spec.Networking.PodCidr,
+		desired.Spec.Networking.ServiceCidr)
+
+	if joinAt != nil {
+		kubeadmCfg += fmt.Sprintf(`---
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: JoinConfiguration
 caCertPath: /etc/kubernetes/pki/ca.crt
 discovery:
   bootstrapToken:
-    apiServerEndpoint: %s
+    apiServerEndpoint: %s:%d
     token: %s
     unsafeSkipCAVerification: true
   timeout: 5m0s
 nodeRegistration:
   name: %s
 `,
-		joinToken,
-		listenIP,
-		joining.infra.ID(),
-		kubeAPI,
-		kubernetesVersion,
-		desired.Spec.Networking.DNSDomain,
-		desired.Spec.Networking.PodCidr,
-		desired.Spec.Networking.ServiceCidr,
-		kubeAPI,
-		joinToken,
-		joining.infra.ID())
+			joinAt.IP(),
+			kubeAPI.Port,
+			joinToken,
+			joining.infra.ID())
 
-	if joining.tier == Controlplane {
-		kubeadmCfg += fmt.Sprintf(`controlPlane:
+		if joining.tier == Controlplane {
+			kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
     advertiseAddress: %s
     bindPort: 6666
   certificateKey: %s
-`, listenIP, certKey)
+`,
+				listenIP,
+				certKey)
+		}
 	}
 
 	if err := try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
@@ -167,7 +180,6 @@ nodeRegistration:
 		return nil, nil
 	}
 
-	kubeconfig := new(bytes.Buffer)
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
 	if err != nil {
@@ -189,14 +201,14 @@ nodeRegistration:
 		return nil, err
 	}
 
+	kubeconfig := new(bytes.Buffer)
 	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfig); err != nil {
 		return nil, err
 	}
+	kc := strings.Replace(kubeconfig.String(), joining.infra.IP(), kubeAPI.Location, 1)
 
 	joining.currentMachine.Joined = true
 	monitor.Changed("Cluster initialized")
-
-	kc := kubeconfig.String()
 
 	return &kc, nil
 }
