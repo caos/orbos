@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/caos/orbos/internal/operator/secretfuncs"
+	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"io/ioutil"
 	"os"
 
@@ -39,7 +41,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		_, logger, gitClient, orbconfig, errFunc := rv()
+		ctx, monitor, orbConfigPath, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -49,10 +51,28 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			path = args[0]
 		}
 
+		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			return err
+		}
+
+		gitClientConf := &orbgit.Config{
+			Comitter:  "orbctl",
+			Email:     "orbctl@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "writesecret",
+		}
+
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		defer cleanUp()
+		if err != nil {
+			return err
+		}
+
 		if err := secret.Write(
-			logger,
+			monitor,
 			gitClient,
-			secretfuncs.Get(orbconfig),
+			secretfuncs.Get(orbConfig),
 			path,
 			s); err != nil {
 			panic(err)

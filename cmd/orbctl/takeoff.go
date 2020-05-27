@@ -3,7 +3,9 @@ package main
 import (
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -38,14 +40,43 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, gitClient, orbFile, errFunc := rv()
+		ctx, monitor, orbConfigPath, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
+		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			return err
+		}
+
+		gitClientConf := &orbgit.Config{
+			Comitter:  "orbctl",
+			Email:     "orbctl@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "takeoff",
+		}
+
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		defer cleanUp()
+		if err != nil {
+			return err
+		}
+
 		allKubeconfigs := make([]string, 0)
 		if existsFileInGit(gitClient, "orbiter.yml") {
-			kubeconfigs, err := start.Orbiter(ctx, monitor, recur, destroy, deploy, verbose, version, gitClient, orbFile, gitCommit, ingestionAddress)
+			orbiterConfig := &start.OrbiterConfig{
+				Recur:            recur,
+				Destroy:          destroy,
+				Deploy:           deploy,
+				Verbose:          verbose,
+				Version:          version,
+				OrbConfigPath:    orbConfigPath,
+				GitCommit:        gitCommit,
+				IngestionAddress: ingestionAddress,
+			}
+
+			kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
 			if err != nil {
 				return err
 			}
@@ -64,7 +95,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		for _, kubeconfig := range allKubeconfigs {
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
-				if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient, orbFile); err != nil {
+				if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient, orbConfig); err != nil {
 					monitor.Info("failed to apply common resources into k8s-cluster")
 					return err
 				}
@@ -125,12 +156,41 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, gitClient, orbFile, errFunc := rv()
+		ctx, monitor, orbConfigPath, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		_, err := start.Orbiter(ctx, monitor, recur, destroy, deploy, verbose, version, gitClient, orbFile, gitCommit, ingestionAddress)
+		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			return err
+		}
+
+		gitClientConf := &orbgit.Config{
+			Comitter:  "orbctl",
+			Email:     "orbctl@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "takeoff",
+		}
+
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		defer cleanUp()
+		if err != nil {
+			return err
+		}
+
+		orbiterConfig := &start.OrbiterConfig{
+			Recur:            recur,
+			Destroy:          destroy,
+			Deploy:           deploy,
+			Verbose:          verbose,
+			Version:          version,
+			OrbConfigPath:    orbConfigPath,
+			GitCommit:        gitCommit,
+			IngestionAddress: ingestionAddress,
+		}
+
+		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
 		return err
 	}
 	return cmd
@@ -150,12 +210,12 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, _, orbFile, errFunc := rv()
+		_, monitor, orbConfigPath, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		return start.Boom(monitor, orbFile, localmode)
+		return start.Boom(monitor, orbConfigPath, localmode)
 	}
 	return cmd
 }

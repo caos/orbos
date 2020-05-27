@@ -78,7 +78,7 @@ func (g *githubAPI) Login() *githubAPI {
 
 func (g *githubAPI) LoginOAuth() *githubAPI {
 	port := "9999"
-	callbackPath := "/orbos/oauth/callback"
+	callbackPath := "/orbctl/github/callback"
 
 	rpConfig := &rp.Config{
 		ClientID:     ClientID,

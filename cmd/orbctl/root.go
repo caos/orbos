@@ -2,17 +2,11 @@ package main
 
 import (
 	"context"
-	"github.com/caos/orbos/internal/orb"
-	"io/ioutil"
-
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, *git.Client, *orb.Orb, errFunc)
+type RootValues func() (context.Context, mntr.Monitor, string, errFunc)
 
 type errFunc func(cmd *cobra.Command) error
 
@@ -53,7 +47,7 @@ $ orbctl -f ~/.orb/myorb [command]
 	flags.StringVarP(&orbconfig, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, mntr.Monitor, *git.Client, *orb.Orb, errFunc) {
+	return cmd, func() (context.Context, mntr.Monitor, string, errFunc) {
 
 		monitor := mntr.Monitor{
 			OnInfo:   mntr.LogMessage,
@@ -65,35 +59,6 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor = monitor.Verbose()
 		}
 
-		content, err := ioutil.ReadFile(orbconfig)
-		if err != nil {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, err)
-		}
-
-		orbStruct := &orb.Orb{}
-		if err := yaml.Unmarshal(content, orbStruct); err != nil {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, err)
-		}
-
-		if orbStruct.URL == "" {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no URL configured"))
-		}
-
-		if orbStruct.Repokey == "" {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no repokey configured"))
-		}
-
-		if orbStruct.Masterkey == "" {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no masterkey configured"))
-		}
-
-		ctx := context.Background()
-
-		gitClient := git.New(ctx, monitor, "Orbiter", "orbiter@caos.ch", orbStruct.URL)
-		if err := gitClient.Init([]byte(orbStruct.Repokey)); err != nil {
-			panic(err)
-		}
-
-		return ctx, monitor, gitClient, orbStruct, nil
+		return context.Background(), monitor, orbconfig, nil
 	}
 }

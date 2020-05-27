@@ -25,7 +25,7 @@ func main() {
 
 	github.ClientID = githubClientID
 	github.ClientSecret = githubClientSecret
-	github.Key = RandStringBytes(20)
+	github.Key = RandStringBytes(32)
 
 	rootCmd, rootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
