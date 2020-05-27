@@ -110,7 +110,7 @@ func query(
 		}
 
 		return nil
-	}, initPools(current, desired, context.machinesService)
+	}, initPools(current, desired, context, normalized)
 }
 
 func lbPort(lb *normalizedLoadbalancer) uint16 {

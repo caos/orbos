@@ -40,11 +40,11 @@ func (i *initializedPool) enhance(initialize initializeFunc) {
 
 type initializedMachine struct {
 	infra            infra.Machine
-	tier             Tier
 	reconcile        func() error
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
+	pool             *initializedPool
 }
 
 func initialize(
@@ -163,9 +163,9 @@ func initialize(
 			infra:            machine,
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
-			tier:             pool.tier,
 			reconcile:        reconcile,
 			currentMachine:   current,
+			pool:             &pool,
 		}
 
 		postInit(initMachine)

@@ -35,7 +35,7 @@ type forwardingRule struct {
 }
 
 type targetPool struct {
-	log       func(msg string, debug bool, instances instances) func()
+	log       func(msg string, debug bool, instances []*instance) func()
 	gce       *compute.TargetPool
 	destPools []string
 }
@@ -182,10 +182,10 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 							gce: fwr,
 						},
 						targetPool: &targetPool{
-							log: func(msg string, debug bool, instances instances) func() {
+							log: func(msg string, debug bool, insts []*instance) func() {
 								localMonitor := destMonitor
-								if len(instances) > 0 {
-									localMonitor = localMonitor.WithField("instances", instances.strings(func(i *instance) string { return i.id }))
+								if len(insts) > 0 {
+									localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.id }))
 								}
 								if tp.Name != "" {
 									localMonitor = localMonitor.WithField("id", tp.Name)

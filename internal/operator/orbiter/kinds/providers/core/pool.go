@@ -2,17 +2,20 @@ package core
 
 import "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 
+/*
 type EnsuredGroup interface {
 	EnsureMembers(machine []infra.Machine) error
 	AddMember(machine infra.Machine) error
 }
-
+*/
+// TODO: Do we still need this?
 type MachinesService interface {
 	ListPools() ([]string, error)
 	List(poolName string) (infra.Machines, error)
 	Create(poolName string) (infra.Machine, error)
 }
 
+/*
 type pool struct {
 	poolName string
 	groups   []EnsuredGroup
@@ -45,16 +48,17 @@ func (p *pool) GetMachines() (infra.Machines, error) {
 
 func (p *pool) AddMachine() (infra.Machine, error) {
 
-	newMachine, err := p.svc.Create(p.poolName)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, group := range p.groups {
-		if err := group.AddMember(newMachine); err != nil {
+	newMachine, err :=
+	return p.svc.Create(p.poolName)
+		if err != nil {
 			return nil, err
 		}
-	}
+		for _, group := range p.groups {
+			if err := group.AddMember(newMachine); err != nil {
+				return nil, err
+			}
+		}
 
-	return newMachine, nil
+		return newMachine, nil
 }
+*/

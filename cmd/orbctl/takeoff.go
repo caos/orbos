@@ -88,7 +88,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 					Type:         "orbiter.running",
 					Data: &structpb.Struct{
 						Fields: map[string]*structpb.Value{
-							"since": &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: started}},
+							"since": {Kind: &structpb.Value_NumberValue{NumberValue: started}},
 						},
 					},
 				}})

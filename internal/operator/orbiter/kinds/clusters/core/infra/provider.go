@@ -28,6 +28,7 @@ type Ingress struct {
 
 type Pool interface {
 	EnsureMembers() error
+	EnsureMember(Machine) error
 	GetMachines() (Machines, error)
 	AddMachine() (Machine, error)
 }

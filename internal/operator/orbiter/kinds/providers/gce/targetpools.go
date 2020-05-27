@@ -20,11 +20,6 @@ func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer)
 		return nil, nil, err
 	}
 
-	allInstances, err := context.machinesService.instances()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	assignRefs := func(lb *normalizedLoadbalancer) {
 		lb.targetPool.gce.HealthChecks = []string{lb.healthcheck.gce.SelfLink}
 	}
@@ -33,42 +28,11 @@ func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer)
 
 createLoop:
 	for _, lb := range loadbalancing {
-		var poolInstances []*instance
-		for _, destPool := range lb.targetPool.destPools {
-			poolInstances = append(poolInstances, allInstances[destPool]...)
-		}
 		for _, gceTp := range gcePools.Items {
 			if gceTp.Description == lb.targetPool.gce.Description {
 				lb.targetPool.gce.SelfLink = gceTp.SelfLink
+				lb.targetPool.gce.Name = gceTp.Name
 				assignRefs(lb)
-				var addInstances []*instance
-			addInstanceLoop:
-				for _, instance := range poolInstances {
-					for _, tpInstance := range gceTp.Instances {
-						if instance.url == tpInstance {
-							continue addInstanceLoop
-						}
-					}
-					addInstances = append(addInstances, instance)
-				}
-
-				if len(addInstances) > 0 {
-					richAddInstances := instances(addInstances)
-					ensure = append(ensure, operateFunc(
-						lb.targetPool.log("Adding instances to target pool", true, richAddInstances),
-						context.client.TargetPools.
-							AddInstance(
-								context.projectID,
-								context.region,
-								gceTp.Name,
-								&compute.TargetPoolsAddInstanceRequest{Instances: richAddInstances.refs()},
-							).
-							RequestId(uuid.NewV1().String()).
-							Do,
-						toErrFunc(lb.targetPool.log("Instances added to target pool", false, richAddInstances)),
-					))
-				}
-
 				if len(gceTp.HealthChecks) > 0 && gceTp.HealthChecks[0] != lb.targetPool.gce.HealthChecks[0] {
 					ensure = append(ensure, operateFunc(
 						lb.targetPool.log("Removing healthcheck", true, nil),
@@ -100,15 +64,13 @@ createLoop:
 			}
 		}
 
-		richInstances := instances(poolInstances)
 		lb.targetPool.gce.Name = newName()
-		lb.targetPool.gce.Instances = richInstances.strings(func(i *instance) string { return i.url })
 
 		ensure = append(ensure, operateFunc(
 			func(l *normalizedLoadbalancer) func() {
 				return func() {
 					assignRefs(l)
-					lb.targetPool.log("Creating target pool", true, richInstances)()
+					lb.targetPool.log("Creating target pool", true, nil)()
 				}
 			}(lb),
 			context.client.TargetPools.
@@ -125,7 +87,7 @@ createLoop:
 					}
 
 					pool.gce.SelfLink = newTP.SelfLink
-					pool.log("Target pool created", false, richInstances)()
+					pool.log("Target pool created", false, nil)()
 					return nil
 				}
 			}(lb.targetPool),

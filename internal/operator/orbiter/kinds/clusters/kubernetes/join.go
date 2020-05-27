@@ -20,12 +20,18 @@ func join(
 	kubeAPI *infra.Address,
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
-	certKey string) (*string, error) {
+	certKey string) (kubeconfig *string, err error) {
+
+	defer func() {
+		if err != nil {
+			err = joining.pool.infra.EnsureMember(joining.infra)
+		}
+	}()
 
 	var installNetwork func() error
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
-		"tier":    joining.tier,
+		"tier":    joining.pool.tier,
 	})
 
 	switch desired.Spec.Networking.Network {
@@ -88,7 +94,7 @@ apiServer:
   - "%s"
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
-controlPlaneEndpoint: %s:%d
+controlPlaneEndpoint: %s
 controllerManager: {}
 dns:
   type: CoreDNS
@@ -110,8 +116,7 @@ scheduler: {}
 		joining.infra.ID(),
 		joining.infra.IP(),
 		kubeAPI.Location,
-		joining.infra.IP(),
-		kubeAPI.Port,
+		kubeAPI,
 		kubernetesVersion,
 		desired.Spec.Networking.DNSDomain,
 		desired.Spec.Networking.PodCidr,
@@ -136,7 +141,7 @@ nodeRegistration:
 			joinToken,
 			joining.infra.ID())
 
-		if joining.tier == Controlplane {
+		if joining.pool.tier == Controlplane {
 			kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
     advertiseAddress: %s
@@ -201,11 +206,11 @@ nodeRegistration:
 		return nil, err
 	}
 
-	kubeconfig := new(bytes.Buffer)
-	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfig); err != nil {
+	kubeconfigBuf := new(bytes.Buffer)
+	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfigBuf); err != nil {
 		return nil, err
 	}
-	kc := strings.Replace(kubeconfig.String(), joining.infra.IP(), kubeAPI.Location, 1)
+	kc := kubeconfigBuf.String()
 
 	joining.currentMachine.Joined = true
 	monitor.Changed("Cluster initialized")

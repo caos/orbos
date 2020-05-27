@@ -29,6 +29,7 @@ createLoop:
 		for _, gceRule := range gceRules.Items {
 			if gceRule.Description == lb.forwardingRule.gce.Description {
 				assignRefs(lb)
+				lb.forwardingRule.gce.Name = gceRule.Name
 				if gceRule.Target != lb.forwardingRule.gce.Target || gceRule.PortRange != lb.forwardingRule.gce.PortRange || gceRule.IPAddress != lb.forwardingRule.gce.IPAddress {
 					ensure = append(ensure, operateFunc(
 						lb.forwardingRule.log("Patching forwarding rule", true),

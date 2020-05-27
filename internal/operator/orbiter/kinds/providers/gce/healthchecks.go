@@ -25,6 +25,7 @@ createLoop:
 
 		for _, gceHC := range gceHealthchecks.Items {
 			if gceHC.Description == lb.healthcheck.gce.Description {
+				lb.healthcheck.gce.Name = gceHC.Name
 				lb.healthcheck.gce.SelfLink = gceHC.SelfLink
 				if gceHC.Port != lb.healthcheck.gce.Port || gceHC.RequestPath != lb.healthcheck.gce.RequestPath {
 					ensure = append(ensure, operateFunc(

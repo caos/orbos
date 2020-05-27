@@ -214,7 +214,7 @@ func ensureSoftware(
 			}, nil
 		}
 
-		isControlplane := machine.tier == Controlplane
+		isControlplane := machine.pool.tier == Controlplane
 		k8sNode, err := k8sClient.GetNode(id)
 		if err != nil {
 			return nil, err

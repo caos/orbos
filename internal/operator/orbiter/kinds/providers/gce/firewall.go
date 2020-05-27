@@ -25,6 +25,7 @@ createLoop:
 		for _, fw := range lb.firewalls {
 			for _, gceFW := range gceFirewalls.Items {
 				if gceFW.Description == fw.gce.Description {
+					fw.gce.Name = gceFW.Name
 					if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
 						!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
 						!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
