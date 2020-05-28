@@ -40,6 +40,7 @@ func main() {
 		WriteSecretCommand(rootValues),
 		EditCommand(rootValues),
 		TeardownCommand(rootValues),
+		ConfigCommand(rootValues),
 		takeoff,
 	)
 

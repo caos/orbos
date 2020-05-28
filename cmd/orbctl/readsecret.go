@@ -45,7 +45,7 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 			value, err := secret.Read(
 				monitor,
 				gitClient,
-				secretfuncs.Get(orbConfig),
+				secretfuncs.GetSecrets(orbConfig),
 				path)
 			if err != nil {
 				panic(err)

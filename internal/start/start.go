@@ -179,7 +179,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		value, err := secret.Read(
 			monitor,
 			orbctlGit,
-			secretfuncs.Get(orbFile),
+			secretfuncs.GetSecrets(orbFile),
 			path)
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")

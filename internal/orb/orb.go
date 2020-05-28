@@ -4,10 +4,11 @@ import (
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
+	"os"
 )
 
 type Orb struct {
-	Path      string
+	Path      string `yaml:"-"`
 	URL       string
 	Repokey   string
 	Masterkey string
@@ -27,4 +28,13 @@ func ParseOrbConfig(orbConfigPath string) (*Orb, error) {
 
 	orb.Path = orbConfigPath
 	return orb, nil
+}
+
+func (o *Orb) WriteBackOrbConfig() error {
+	data, err := yaml.Marshal(o)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(o.Path, data, os.ModePerm)
 }

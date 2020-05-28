@@ -67,12 +67,23 @@ func AdaptFunc(
 		k8sClient := NewK8sClient(monitor, kc)
 
 		if k8sClient.Available() && deployOrbiter {
-			if err := EnsureCommonArtifacts(monitor, k8sClient, orb); err != nil {
+			if err := EnsureCommonArtifacts(monitor, k8sClient); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
 					"error": err.Error(),
 				}).Info("Applying Common failed, awaiting next iteration")
+			}
+			if deployErrors > 50 {
+				panic(err)
+			}
+
+			if err := EnsureConfigArtifacts(monitor, k8sClient, orb); err != nil {
+				deployErrors++
+				monitor.WithFields(map[string]interface{}{
+					"count": deployErrors,
+					"error": err.Error(),
+				}).Info("Applying configuration failed, awaiting next iteration")
 			}
 			if deployErrors > 50 {
 				panic(err)
@@ -84,15 +95,15 @@ func AdaptFunc(
 					"count": deployErrors,
 					"error": err.Error(),
 				}).Info("Deploying Orbiter failed, awaiting next iteration")
-				if deployErrors > 50 {
-					panic(err)
-				}
 			} else {
 				if oneoff {
 					monitor.Info("Deployed Orbiter takes over control")
 					finished = true
 				}
 				deployErrors = 0
+			}
+			if deployErrors > 50 {
+				panic(err)
 			}
 		}
 

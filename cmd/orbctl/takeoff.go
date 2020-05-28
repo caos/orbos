@@ -89,11 +89,17 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		for _, kubeconfig := range allKubeconfigs {
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
-				if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient, orbConfig); err != nil {
+				if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
 					monitor.Info("failed to apply common resources into k8s-cluster")
 					return err
 				}
 				monitor.Info("Applied common resources")
+
+				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
+					monitor.Info("failed to apply configuration resources into k8s-cluster")
+					return err
+				}
+				monitor.Info("Applied configuration resources")
 			} else {
 				monitor.Info("Failed to connect to k8s")
 			}
