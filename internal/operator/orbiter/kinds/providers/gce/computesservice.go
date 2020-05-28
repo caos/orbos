@@ -75,29 +75,12 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	name := newName()
-	sshKey := fmt.Sprintf("orbiter:%s", m.desired.SSHKey.Public.Value)
 	createInstance := &compute.Instance{
-		Name:        name,
-		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.desired.Zone, cores, int(memory)),
-		NetworkInterfaces: []*compute.NetworkInterface{{
-			AccessConfigs: []*compute.AccessConfig{{ // Assigns an ephemeral external ip
-				Type: "ONE_TO_ONE_NAT",
-			}},
-		}},
-		Tags: &compute.Tags{
-			Items: networkTags(m.orbID, m.providerID, poolName),
-		},
-		Labels: map[string]string{
-			"orb":      m.orbID,
-			"provider": m.providerID,
-			"pool":     poolName,
-		},
-		Metadata: &compute.Metadata{
-			Items: []*compute.MetadataItems{{
-				Key:   "ssh-keys",
-				Value: &sshKey,
-			}},
-		},
+		Name:              name,
+		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.desired.Zone, cores, int(memory)),
+		Tags:              &compute.Tags{Items: networkTags(m.orbID, m.providerID, poolName)},
+		NetworkInterfaces: []*compute.NetworkInterface{{}},
+		Labels:            map[string]string{"orb": m.orbID, "provider": m.providerID, "pool": poolName},
 		Disks: []*compute.AttachedDisk{{
 			AutoDelete: true,
 			Boot:       true,
@@ -106,9 +89,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 				SourceImage: desired.OSImage,
 			}},
 		},
-		Scheduling: &compute.Scheduling{
-			Preemptible: desired.Preemptible,
-		},
+		Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
 	}
 
 	monitor := m.monitor.WithFields(map[string]interface{}{
@@ -126,7 +107,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	newInstance, err := m.client.Instances.Get(m.projectID, m.desired.Zone, createInstance.Name).
-		Fields("selfLink,networkInterfaces(accessConfigs(natIP))").
+		Fields("selfLink,networkInterfaces(networkIP)").
 		Do()
 	if err != nil {
 		return nil, err
@@ -135,7 +116,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	infraMachine := newMachine(
 		m.monitor,
 		createInstance.Name,
-		newInstance.NetworkInterfaces[0].AccessConfigs[0].NatIP,
+		newInstance.NetworkInterfaces[0].NetworkIP,
 		newInstance.SelfLink,
 		poolName,
 		m.removeMachineFunc(
@@ -143,10 +124,6 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			createInstance.Name,
 		),
 	)
-
-	if err := infraMachine.UseKey([]byte(m.desired.SSHKey.Private.Value)); err != nil {
-		return nil, err
-	}
 
 	if m.cache.instances != nil {
 		if _, ok := m.cache.instances[poolName]; !ok {
@@ -197,7 +174,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 	instances, err := m.client.Instances.
 		List(m.projectID, m.desired.Zone).
 		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.orbID, m.providerID)).
-		Fields("items(name,labels,selfLink,networkInterfaces(accessConfigs(natIP)))").
+		Fields("items(name,labels,selfLink,networkInterfaces(networkIP))").
 		Do()
 	if err != nil {
 		return nil, err
@@ -213,14 +190,11 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		mach := newMachine(
 			m.monitor,
 			inst.Name,
-			inst.NetworkInterfaces[0].AccessConfigs[0].NatIP,
+			inst.NetworkInterfaces[0].NetworkIP,
 			inst.SelfLink,
 			pool,
 			m.removeMachineFunc(pool, inst.Name),
 		)
-		if err := mach.UseKey([]byte(m.desired.SSHKey.Private.Value)); err != nil {
-			return nil, err
-		}
 		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
 	}
 

@@ -8,7 +8,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbos/internal/push"
 	"github.com/pkg/errors"
 
@@ -91,25 +90,7 @@ func query(
 	context.machinesService.onCreate = desireHealthcheck
 
 	return func(psf push.Func) error {
-
-		if err := ensureLB(); err != nil {
-			return err
-		}
-
-		if desired.SSHKey != nil && desired.SSHKey.Private != nil && desired.SSHKey.Private.Value != "" && desired.SSHKey.Public != nil && desired.SSHKey.Public.Value != "" {
-			return nil
-		}
-		private, public, err := ssh.Generate()
-		if err != nil {
-			return err
-		}
-		desired.SSHKey.Private.Value = private
-		desired.SSHKey.Public.Value = public
-		if err := psf(context.monitor.WithField("secret", "sshkey")); err != nil {
-			return err
-		}
-
-		return nil
+		return ensureLB()
 	}, initPools(current, desired, context, normalized)
 }
 

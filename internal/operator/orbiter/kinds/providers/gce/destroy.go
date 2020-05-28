@@ -26,6 +26,5 @@ func destroy(desired *Spec, context *context) error {
 			}
 		}
 	}
-	desired.SSHKey = nil
 	return nil
 }
