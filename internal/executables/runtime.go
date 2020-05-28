@@ -32,7 +32,7 @@ func PreBuilt(mainDir string) ([]byte, error) {
 	return executable, nil
 }
 
-func PreBuild(builds <-chan BuiltTuple) (err error) {
+func PreBuild(packables <-chan PackableTuple) (err error) {
 	sp := selfPath()
 	tmpFile := filepath.Join(sp, "prebuilt.tmp")
 	outFile := filepath.Join(sp, "prebuilt.go")
@@ -55,15 +55,15 @@ func init() {
 		return err
 	}
 
-	for pt := range deriveFmapPack(pack, builds) {
-		bin, packed, packErr := pt()
+	for pt := range deriveFmapPack(pack, packables) {
+		packable, packed, packErr := pt()
 		err = helpers.Concat(err, packErr)
 		if err != nil {
 			continue
 		}
 
 		if _, err = prebuilt.WriteString(fmt.Sprintf(`
-		"%s": unpack("%s"),`, filepath.Base(bin.MainDir), *packed)); err != nil {
+		"%s": unpack("%s"),`, packable.key, *packed)); err != nil {
 			continue
 		}
 	}
@@ -81,28 +81,31 @@ func init() {
 	return err
 }
 
-func packedTupleFunc(bin Bin) func(*string, error) packedTuple {
+func packedTupleFunc(packable *Packable) func(*string, error) packedTuple {
 	return func(packed *string, err error) packedTuple {
-		return deriveTuplePacked(bin, packed, err)
+		return deriveTuplePacked(packable, packed, err)
 	}
 }
 
-type packedTuple func() (Bin, *string, error)
+type Packable struct {
+	key  string
+	data io.ReadCloser
+}
 
-func pack(built BuiltTuple) packedTuple {
+type PackableTuple func() (*Packable, error)
 
-	bin, err := built()
-	packedTuple := packedTupleFunc(bin)
+type packedTuple func() (*Packable, *string, error)
 
+func pack(packableTuple PackableTuple) packedTuple {
+
+	packable, err := packableTuple()
 	defer func() {
-		os.Remove(bin.OutDir)
+		if packable != nil {
+			packable.data.Close()
+		}
 	}()
 
-	if err != nil {
-		return packedTuple(nil, err)
-	}
-
-	executable, err := os.Open(bin.OutDir)
+	packedTuple := packedTupleFunc(packable)
 	if err != nil {
 		return packedTuple(nil, err)
 	}
@@ -111,9 +114,13 @@ func pack(built BuiltTuple) packedTuple {
 	defer gzipBuffer.Reset()
 
 	gzipWriter := gzip.NewWriter(gzipBuffer)
-	_, err = io.Copy(gzipWriter, executable)
+	_, err = io.Copy(gzipWriter, packable.data)
 	if err != nil {
 		return packedTuple(nil, errors.Wrap(err, "gzipping failed"))
+	}
+
+	if err := packable.data.Close(); err != nil {
+		return packedTuple(nil, errors.Wrap(err, "closing data failed"))
 	}
 
 	if err := gzipWriter.Close(); err != nil {

@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	"github.com/pkg/errors"
 )
 
@@ -24,6 +26,18 @@ type BuiltTuple func() (bin Bin, err error)
 
 func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bins ...Bin) <-chan BuiltTuple {
 	return deriveFmap(curryBuild(debug, gitCommit, version, githubClientID, githubClientSecret), toChan(bins))
+}
+
+func PackableFromBuilt(built BuiltTuple) PackableTuple {
+	bin, err := built()
+
+	file, openErr := os.Open(bin.OutDir)
+	err = helpers.Concat(err, openErr)
+
+	return deriveTuplePackable(&Packable{
+		key:  filepath.Base(bin.MainDir),
+		data: file,
+	}, err)
 }
 
 func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecret string) func(bin Bin) BuiltTuple {
@@ -46,7 +60,15 @@ func toChan(bins []Bin) <-chan Bin {
 	return binChan
 }
 
-func build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bin Bin) BuiltTuple {
+func build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bin Bin) (bt BuiltTuple) {
+
+	defer func() {
+		if _, err := bt(); err != nil {
+			fmt.Printf("Building %s failed\n", bin.OutDir)
+			return
+		}
+		fmt.Printf("Successfully built %s\n", bin.OutDir)
+	}()
 
 	if bin.OutDir == "" {
 		bin.OutDir = filepath.Join(os.TempDir(), filepath.Base(bin.MainDir))

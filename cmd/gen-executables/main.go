@@ -36,11 +36,22 @@ func main() {
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
-	if err := executables.PreBuild(executables.Build(
+	builds := executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
 		executables.Bin{MainDir: path("nodeagent")},
 		executables.Bin{MainDir: path("health")},
-	)); err != nil {
+	)
+
+	packables := make(chan executables.PackableTuple, 0)
+
+	go func() {
+		for build := range builds {
+			packables <- executables.PackableFromBuilt(build)
+		}
+		close(packables)
+	}()
+
+	if err := executables.PreBuild(packables); err != nil {
 		panic(err)
 	}
 
@@ -63,13 +74,9 @@ func main() {
 
 	var hasErr bool
 	for orbctl := range orbctls {
-		bin, err := orbctl()
-		if err != nil {
+		if _, err := orbctl(); err != nil {
 			hasErr = true
-			fmt.Printf("Building %s failed\n", bin.OutDir)
-			continue
 		}
-		fmt.Printf("Successfully built %s\n", bin.OutDir)
 	}
 	if hasErr {
 		panic("Building orbctl failed")

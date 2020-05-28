@@ -45,6 +45,10 @@ func newMachinesService(
 	}
 }
 
+func (m *machinesService) ensure() error {
+	return nil
+}
+
 func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	desired, ok := m.desired.Pools[poolName]
