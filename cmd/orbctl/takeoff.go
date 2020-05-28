@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/caos/orbos/mntr"
@@ -40,14 +39,9 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfigPath, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
-		}
-
-		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-		if err != nil {
-			return err
 		}
 
 		gitClientConf := &orbgit.Config{
@@ -71,7 +65,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 				Deploy:           deploy,
 				Verbose:          verbose,
 				Version:          version,
-				OrbConfigPath:    orbConfigPath,
+				OrbConfigPath:    orbConfig.Path,
 				GitCommit:        gitCommit,
 				IngestionAddress: ingestionAddress,
 			}
@@ -156,14 +150,9 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfigPath, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
-		}
-
-		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-		if err != nil {
-			return err
 		}
 
 		gitClientConf := &orbgit.Config{
@@ -185,7 +174,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			Deploy:           deploy,
 			Verbose:          verbose,
 			Version:          version,
-			OrbConfigPath:    orbConfigPath,
+			OrbConfigPath:    orbConfig.Path,
 			GitCommit:        gitCommit,
 			IngestionAddress: ingestionAddress,
 		}
@@ -210,12 +199,12 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfigPath, errFunc := rv()
+		_, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		return start.Boom(monitor, orbConfigPath, localmode)
+		return start.Boom(monitor, orbConfig.Path, localmode)
 	}
 	return cmd
 }

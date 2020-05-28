@@ -5,13 +5,18 @@ import (
 	"context"
 	"fmt"
 	"github.com/caos/oidc/pkg/cli"
+	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
+	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
+	"github.com/ghodss/yaml"
 	"github.com/google/go-github/v31/github"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
@@ -76,7 +81,13 @@ func (g *githubAPI) Login() *githubAPI {
 	return g
 }
 
-func (g *githubAPI) LoginOAuth() *githubAPI {
+const (
+	githubToken = "ghtoken"
+)
+
+func (g *githubAPI) LoginOAuth(folderPath string) *githubAPI {
+	filePath := filepath.Join(folderPath, githubToken)
+	ctx := context.Background()
 	port := "9999"
 	callbackPath := "/orbctl/github/callback"
 
@@ -88,21 +99,65 @@ func (g *githubAPI) LoginOAuth() *githubAPI {
 		Endpoints:    githubOAuth.Endpoint,
 	}
 
-	oauth2Client := cli.CodeFlowForClient(rpConfig, []byte(Key), callbackPath, port)
+	if helper.FileExists(filePath) {
+		token := new(oidc.Tokens)
 
-	g.monitor.Info("Finished CodeFlow")
+		data, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			g.status = err
+			return g
+		}
 
-	client := github.NewClient(oauth2Client)
+		if err := yaml.Unmarshal(data, token); err != nil {
+			g.status = err
+			return g
+		}
 
-	ctx := context.Background()
-	_, _, g.status = client.Users.Get(ctx, "")
-	if g.GetStatus() != nil {
-		return g
+		client := github.NewClient(cli.TokenForClient(rpConfig, []byte(Key), token))
+		_, _, g.status = client.Users.Get(ctx, "")
+		if g.status != nil {
+			if err := os.Remove(filePath); err != nil {
+				g.status = err
+				return g
+			}
+			g.client = nil
+		} else {
+			g.client = client
+		}
 	}
 
-	g.monitor.Info("Successful CodeFlow")
+	if g.client == nil {
 
-	g.client = client
+		token := cli.CodeFlow(rpConfig, []byte(Key), callbackPath, port)
+
+		g.monitor.Info("Finished CodeFlow")
+
+		oauth2Client := cli.TokenForClient(rpConfig, []byte(Key), token)
+
+		client := github.NewClient(oauth2Client)
+
+		_, _, g.status = client.Users.Get(ctx, "")
+		if g.status != nil {
+			g.monitor.Info("Failed CodeFlow")
+			return g
+		}
+
+		data, err := yaml.Marshal(token)
+		if err != nil {
+			g.status = err
+			g.monitor.Error(err)
+			return g
+		}
+
+		if err := ioutil.WriteFile(filePath, data, os.ModePerm); err != nil {
+			g.status = err
+			g.monitor.Error(err)
+			return g
+		}
+
+		g.monitor.Info("Successful CodeFlow")
+		g.client = client
+	}
 	return g
 }
 

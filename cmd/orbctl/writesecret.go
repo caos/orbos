@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/caos/orbos/internal/operator/secretfuncs"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"io/ioutil"
@@ -41,7 +40,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		ctx, monitor, orbConfigPath, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -49,11 +48,6 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
-		}
-
-		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-		if err != nil {
-			return err
 		}
 
 		gitClientConf := &orbgit.Config{

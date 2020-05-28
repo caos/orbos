@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/caos/orbos/internal/operator/secretfuncs"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"os"
@@ -20,7 +19,7 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctx, monitor, orbConfigPath, errFunc := rv()
+			ctx, monitor, orbConfig, errFunc := rv()
 			if errFunc != nil {
 				return errFunc(cmd)
 			}
@@ -28,11 +27,6 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 			path := ""
 			if len(args) > 0 {
 				path = args[0]
-			}
-
-			orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-			if err != nil {
-				return err
 			}
 
 			gitClientConf := &orbgit.Config{

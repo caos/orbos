@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/orb"
+	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/stores/github"
 	"github.com/caos/orbos/mntr"
 	"math/rand"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -16,7 +17,7 @@ import (
 type Config struct {
 	Comitter  string
 	Email     string
-	OrbConfig *orb.Orb
+	OrbConfig *orbconfig.Orb
 	Action    string
 }
 
@@ -25,11 +26,13 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config) (*git
 	deployKeyDelete := func() {}
 
 	if conf.OrbConfig.Repokey == "" {
+		dir := filepath.Dir(conf.OrbConfig.Path)
+
 		deployKeyPrivLocal, deployKeyPub, err := ssh.Generate()
 		if err != nil {
 			return nil, deployKeyDelete, errors.New("failed to generate ssh key for deploy key")
 		}
-		g := github.New(monitor).LoginOAuth()
+		g := github.New(monitor).LoginOAuth(dir)
 		if g.GetStatus() != nil {
 			return nil, deployKeyDelete, errors.New("failed github oauth login ")
 		}

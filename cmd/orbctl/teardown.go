@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"strings"
 
@@ -44,14 +43,9 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, monitor, orbConfigPath, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
-		}
-
-		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-		if err != nil {
-			return err
 		}
 
 		gitClientConf := &orbgit.Config{

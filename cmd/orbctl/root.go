@@ -2,11 +2,12 @@ package main
 
 import (
 	"context"
+	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/spf13/cobra"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, string, errFunc)
+type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, errFunc)
 
 type errFunc func(cmd *cobra.Command) error
 
@@ -22,8 +23,8 @@ func curryErrFunc(rootCmd *cobra.Command, err error) errFunc {
 func RootCommand() (*cobra.Command, RootValues) {
 
 	var (
-		verbose   bool
-		orbconfig string
+		verbose       bool
+		orbConfigPath string
 	)
 
 	cmd := &cobra.Command{
@@ -44,10 +45,10 @@ $ orbctl -f ~/.orb/myorb [command]
 	}
 
 	flags := cmd.PersistentFlags()
-	flags.StringVarP(&orbconfig, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
+	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, mntr.Monitor, string, errFunc) {
+	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, errFunc) {
 
 		monitor := mntr.Monitor{
 			OnInfo:   mntr.LogMessage,
@@ -59,6 +60,11 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor = monitor.Verbose()
 		}
 
-		return context.Background(), monitor, orbconfig, nil
+		orbConfig, err := orb.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			monitor.Error(err)
+		}
+
+		return context.Background(), monitor, orbConfig, nil
 	}
 }

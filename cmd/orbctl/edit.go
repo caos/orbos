@@ -4,7 +4,6 @@ package main
 
 import (
 	"bytes"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"io"
 	"io/ioutil"
@@ -26,14 +25,9 @@ func EditCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctx, monitor, orbConfigPath, errFunc := rv()
+			ctx, monitor, orbConfig, errFunc := rv()
 			if errFunc != nil {
 				return errFunc(cmd)
-			}
-
-			orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-			if err != nil {
-				return err
 			}
 
 			gitClientConf := &orbgit.Config{
