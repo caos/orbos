@@ -5,13 +5,13 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	"google.golang.org/api/googleapi"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 
 	"github.com/caos/orbos/mntr"
-
-	uuid "github.com/satori/go.uuid"
 
 	"google.golang.org/api/compute/v1"
 
@@ -258,7 +258,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 }
 
 func newName() string {
-	return fmt.Sprintf("orbos-%s", uuid.NewV1().String())
+	return "orbos-" + helpers.RandomStringRunes(6, []rune("abcdefghijklmnopqrstuvwxyz0123456789"))
 }
 
 func removeLog(monitor mntr.Monitor, resource, id string, removed bool, debug bool) func() {
