@@ -19,6 +19,7 @@ type Pool struct {
 	MinCPUCores int
 	MinMemoryGB int
 	StorageGB   int
+	Preemptible bool
 }
 
 func (p Pool) validate() error {

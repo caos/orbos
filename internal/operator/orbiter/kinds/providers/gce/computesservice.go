@@ -47,7 +47,7 @@ func newMachinesService(
 
 func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
-	resources, ok := m.desired.Pools[poolName]
+	desired, ok := m.desired.Pools[poolName]
 	if !ok {
 		return nil, fmt.Errorf("Pool %s is not configured", poolName)
 	}
@@ -56,13 +56,13 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	// Calculate minimum cpu and memory according to the gce specs:
 	// https://cloud.google.com/machine/docs/instances/creating-instance-with-custom-machine-type#specifications
-	cores := resources.MinCPUCores
+	cores := desired.MinCPUCores
 	if cores > 1 {
 		if cores%2 != 0 {
 			cores++
 		}
 	}
-	memory := float64(resources.MinMemoryGB * 1024)
+	memory := float64(desired.MinMemoryGB * 1024)
 	memoryPerCore := memory / float64(cores)
 	minMemPerCore := 922
 	maxMemPerCore := 6656
@@ -104,9 +104,12 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			AutoDelete: true,
 			Boot:       true,
 			InitializeParams: &compute.AttachedDiskInitializeParams{
-				DiskSizeGb:  int64(resources.StorageGB),
-				SourceImage: resources.OSImage,
+				DiskSizeGb:  int64(desired.StorageGB),
+				SourceImage: desired.OSImage,
 			}},
+		},
+		Scheduling: &compute.Scheduling{
+			Preemptible: desired.Preemptible,
 		},
 	}
 
