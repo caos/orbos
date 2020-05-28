@@ -52,8 +52,6 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		return nil, fmt.Errorf("Pool %s is not configured", poolName)
 	}
 
-	id := newName()
-
 	// Calculate minimum cpu and memory according to the gce specs:
 	// https://cloud.google.com/machine/docs/instances/creating-instance-with-custom-machine-type#specifications
 	cores := desired.MinCPUCores
@@ -121,7 +119,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	if err := operateFunc(
 		func() { monitor.Info("Creating instance") },
-		m.client.Instances.Insert(m.projectID, m.desired.Zone, createInstance).RequestId(id).Do,
+		m.client.Instances.Insert(m.projectID, m.desired.Zone, createInstance).RequestId(uuid.NewV1().String()).Do,
 		nil,
 	)(); err != nil {
 		return nil, err
