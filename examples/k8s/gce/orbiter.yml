@@ -6,9 +6,9 @@ clusters:
     version: v0
     spec:
       controlplane:
-        nodes: 1
-        pool: masters
-        provider: kvm
+        nodes: 3
+        pool: standard
+        provider: gce
         updatesdisabled: false
       networking:
         dnsdomain: cluster.orbitertest
@@ -20,35 +20,49 @@ clusters:
         orbiter: v0.15.2
         boom: v0.9.19
       workers:
-      - nodes: 1
-        pool: workers
-        provider: kvm
+      - nodes: 2
+        pool: highmem
+        provider: gce
+        updatesdisabled: false
+      - nodes: 2
+        pool: highcpu
+        provider: gce
         updatesdisabled: false
 providers:
-  kvm:
-    kind: orbiter.caos.ch/StaticProvider
+  gce:
+    kind: orbiter.caos.ch/GCEProvider
     version: v1
     spec:
+      verbose: false
+      project: caos-240809
+      region: europe-west6
+      zone: europe-west6-b
       pools:
-        masters:
-        - ip: 192.168.122.61
-          id: first
-          hostname: master01
-        workers:
-        - ip: 192.168.122.83
-          id: second
-          hostname: worker01
-      remotepublickeypath: /home/orbiter/.ssh/authorized_keys
-      remoteuser: orbiter
+        standard:
+          osimage: projects/centos-cloud/global/images/centos-7-v20200429
+          preemptible: true
+          mincpucores: 2
+          minmemorygb: 5
+          storagegb: 15
+        highmem:
+          osimage: projects/centos-cloud/global/images/centos-7-v20200429
+          preemptible: false
+          mincpucores: 2
+          minmemorygb: 10
+          storagegb: 15
+        highcpu:
+          osimage: projects/centos-cloud/global/images/centos-7-v20200429
+          preemptible: false
+          mincpucores: 4
+          minmemorygb: 5
+          storagegb: 15
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
       version: v1
       spec:
         masters:
-        - ip: 192.168.122.10
-          transport:
+        - transport:
           - name: kubeapi
-            sourceport: 6443
             whitelist: [ 0.0.0.0/0 ]
             destinations:
             - pool: masters
@@ -58,11 +72,9 @@ providers:
                 path: /healthz
                 protocol: https
         workers:
-        - ip: 192.168.122.11
-          whitelist: [ 0.0.0.0/0 ]
+        - whitelist: [ 0.0.0.0/0 ]
           transport:
           - name: httpsingress
-            sourceport: 443
             whitelist: [ 0.0.0.0/0 ]
             destinations:
             - healthchecks:
@@ -72,7 +84,6 @@ providers:
               port: 30443
               pool: workers
           - name: httpingress
-            sourceport: 80
             whitelist: [ 0.0.0.0/0 ]
             destinations:
             - healthchecks:
