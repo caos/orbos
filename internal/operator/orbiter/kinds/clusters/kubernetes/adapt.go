@@ -17,7 +17,7 @@ var deployErrors int
 func AdaptFunc(
 	orb *orb.Orb,
 	orbiterCommit string,
-	id string,
+	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
 	destroyProviders func() (map[string]interface{}, error),
@@ -119,7 +119,9 @@ func AdaptFunc(
 		finishedChan <- finished
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
-				ensureFunc, err := query(monitor,
+				ensureFunc, err := query(
+					monitor,
+					clusterID,
 					desiredKind,
 					current,
 					providers,
