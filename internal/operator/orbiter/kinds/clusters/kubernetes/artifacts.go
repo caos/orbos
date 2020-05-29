@@ -17,17 +17,9 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiterversion string, boomversion string) error {
+func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 
-	monitor.WithFields(map[string]interface{}{
-		"orbiter": orbiterversion,
-		"boom":    boomversion,
-	}).Debug("Ensuring artifacts")
-
-	orbfile, err := yaml.Marshal(orb)
-	if err != nil {
-		return err
-	}
+	monitor.Debug("Ensuring common artifacts")
 
 	if err := client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
@@ -35,18 +27,6 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 			Labels: map[string]string{
 				"name": "caos-system",
 			},
-		},
-	}); err != nil {
-		return err
-	}
-
-	if err := client.ApplySecret(&core.Secret{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "caos",
-			Namespace: "caos-system",
-		},
-		StringData: map[string]string{
-			"orbconfig": string(orbfile),
 		},
 	}); err != nil {
 		return err
@@ -70,113 +50,38 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 	}); err != nil {
 		return err
 	}
-	if orbiterversion != "" {
-		if err := client.ApplyDeployment(&apps.Deployment{
-			ObjectMeta: mach.ObjectMeta{
-				Name:      "orbiter",
-				Namespace: "caos-system",
-				Labels: map[string]string{
-					"app.kubernetes.io/instance":   "orbiter",
-					"app.kubernetes.io/part-of":    "orbos",
-					"app.kubernetes.io/component":  "orbiter",
-					"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-				},
-			},
-			Spec: apps.DeploymentSpec{
-				Replicas: int32Ptr(1),
-				Selector: &mach.LabelSelector{
-					MatchLabels: map[string]string{
-						"app": "orbiter",
-					},
-				},
-				Template: core.PodTemplateSpec{
-					ObjectMeta: mach.ObjectMeta{
-						Labels: map[string]string{
-							"app": "orbiter",
-						},
-					},
-					Spec: core.PodSpec{
-						ImagePullSecrets: []core.LocalObjectReference{{
-							Name: "public-github-packages",
-						}},
-						Containers: []core.Container{{
-							Name:            "orbiter",
-							ImagePullPolicy: core.PullIfNotPresent,
-							Image:           "docker.pkg.github.com/caos/orbos/orbiter:" + orbiterversion,
-							Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur", "--ingestion="},
-							VolumeMounts: []core.VolumeMount{{
-								Name:      "keys",
-								ReadOnly:  true,
-								MountPath: "/etc/orbiter",
-							}},
-							Ports: []core.ContainerPort{{
-								Name:          "metrics",
-								ContainerPort: 9000,
-							}},
-							Resources: core.ResourceRequirements{
-								Limits: core.ResourceList{
-									"cpu":    resource.MustParse("500m"),
-									"memory": resource.MustParse("500Mi"),
-								},
-								Requests: core.ResourceList{
-									"cpu":    resource.MustParse("250m"),
-									"memory": resource.MustParse("250Mi"),
-								},
-							},
-						}},
-						Volumes: []core.Volume{{
-							Name: "keys",
-							VolumeSource: core.VolumeSource{
-								Secret: &core.SecretVolumeSource{
-									SecretName: "caos",
-									Optional:   boolPtr(false),
-								},
-							},
-						}},
-						NodeSelector: map[string]string{
-							"node-role.kubernetes.io/master": "",
-						},
-						Tolerations: []core.Toleration{{
-							Operator: "Exists",
-						}},
-					},
-				},
-			},
-		}); err != nil {
-			return err
-		}
-		monitor.WithFields(map[string]interface{}{
-			"version": orbiterversion,
-		}).Debug("Orbiter deployment ensured")
 
-		if err := client.ApplyService(&core.Service{
-			ObjectMeta: mach.ObjectMeta{
-				Name:      "orbiter",
-				Namespace: "caos-system",
-				Labels: map[string]string{
-					"app.kubernetes.io/instance":   "orbiter",
-					"app.kubernetes.io/part-of":    "orbos",
-					"app.kubernetes.io/component":  "orbiter",
-					"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-				},
-			},
-			Spec: core.ServiceSpec{
-				Ports: []core.ServicePort{{
-					Name:       "metrics",
-					Protocol:   "TCP",
-					Port:       9000,
-					TargetPort: intstr.FromInt(9000),
-				}},
-				Selector: map[string]string{
-					"app": "orbiter",
-				},
-				Type: core.ServiceTypeClusterIP,
-			},
-		}); err != nil {
-			return err
-		}
-		monitor.Debug("Orbiter service ensured")
+	return nil
+}
+
+func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
+	monitor.Debug("Ensuring configuration artifacts")
+
+	orbfile, err := yaml.Marshal(orb)
+	if err != nil {
+		return err
 	}
+
+	if err := client.ApplySecret(&core.Secret{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "caos",
+			Namespace: "caos-system",
+		},
+		StringData: map[string]string{
+			"orbconfig": string(orbfile),
+		},
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string) error {
+
+	monitor.WithFields(map[string]interface{}{
+		"boom": boomversion,
+	}).Debug("Ensuring boom artifacts")
 
 	if boomversion == "" {
 		return nil
@@ -274,7 +179,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 		return err
 	}
 
-	err = client.ApplyDeployment(&apps.Deployment{
+	if err := client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom",
 			Namespace: "caos-system",
@@ -310,15 +215,9 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/boom/boom:%s", boomversion),
-						Command:         []string{"/boom"},
-						Args: []string{
-							"--metrics=true",
-							"--metricsport", "2112",
-							"--enable-leader-election",
-							"--git-orbconfig", "/secrets/orbconfig",
-							"--git-crd-path", "boom.yml",
-						},
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", boomversion),
+						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
+						Args:            []string{},
 						Ports: []core.ContainerPort{{
 							Name:          "metrics",
 							ContainerPort: 2112,
@@ -352,12 +251,12 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 				},
 			},
 		},
-	})
-	if err == nil {
-		monitor.WithFields(map[string]interface{}{
-			"version": boomversion,
-		}).Debug("Boom deployment ensured")
+	}); err != nil {
+		return err
 	}
+	monitor.WithFields(map[string]interface{}{
+		"version": boomversion,
+	}).Debug("Boom deployment ensured")
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
@@ -389,7 +288,125 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 	}
 	monitor.Debug("Boom service ensured")
 
-	return err
+	return nil
+}
+
+func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion string) error {
+	monitor.WithFields(map[string]interface{}{
+		"orbiter": orbiterversion,
+	}).Debug("Ensuring orbiter artifacts")
+
+	if orbiterversion == "" {
+		return nil
+	}
+
+	if err := client.ApplyDeployment(&apps.Deployment{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "orbiter",
+			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":   "orbiter",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "orbiter",
+				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+			},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &mach.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "orbiter",
+				},
+			},
+			Template: core.PodTemplateSpec{
+				ObjectMeta: mach.ObjectMeta{
+					Labels: map[string]string{
+						"app": "orbiter",
+					},
+				},
+				Spec: core.PodSpec{
+					ImagePullSecrets: []core.LocalObjectReference{{
+						Name: "public-github-packages",
+					}},
+					Containers: []core.Container{{
+						Name:            "orbiter",
+						ImagePullPolicy: core.PullIfNotPresent,
+						Image:           "docker.pkg.github.com/caos/orbos/orbos:" + orbiterversion,
+						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
+						VolumeMounts: []core.VolumeMount{{
+							Name:      "keys",
+							ReadOnly:  true,
+							MountPath: "/etc/orbiter",
+						}},
+						Ports: []core.ContainerPort{{
+							Name:          "metrics",
+							ContainerPort: 9000,
+						}},
+						Resources: core.ResourceRequirements{
+							Limits: core.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Requests: core.ResourceList{
+								"cpu":    resource.MustParse("250m"),
+								"memory": resource.MustParse("250Mi"),
+							},
+						},
+					}},
+					Volumes: []core.Volume{{
+						Name: "keys",
+						VolumeSource: core.VolumeSource{
+							Secret: &core.SecretVolumeSource{
+								SecretName: "caos",
+								Optional:   boolPtr(false),
+							},
+						},
+					}},
+					NodeSelector: map[string]string{
+						"node-role.kubernetes.io/master": "",
+					},
+					Tolerations: []core.Toleration{{
+						Operator: "Exists",
+					}},
+				},
+			},
+		},
+	}); err != nil {
+		return err
+	}
+	monitor.WithFields(map[string]interface{}{
+		"version": orbiterversion,
+	}).Debug("Orbiter deployment ensured")
+
+	if err := client.ApplyService(&core.Service{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "orbiter",
+			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":   "orbiter",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "orbiter",
+				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+			},
+		},
+		Spec: core.ServiceSpec{
+			Ports: []core.ServicePort{{
+				Name:       "metrics",
+				Protocol:   "TCP",
+				Port:       9000,
+				TargetPort: intstr.FromInt(9000),
+			}},
+			Selector: map[string]string{
+				"app": "orbiter",
+			},
+			Type: core.ServiceTypeClusterIP,
+		},
+	}); err != nil {
+		return err
+	}
+	monitor.Debug("Orbiter service ensured")
+
+	return nil
 }
 
 func int32Ptr(i int32) *int32 { return &i }

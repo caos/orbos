@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -42,35 +43,52 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-
-		_, logger, gitClient, orbFile, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		logger.WithFields(map[string]interface{}{
-			"version": version,
-			"commit":  gitCommit,
-			"repoURL": orbFile.URL,
-		}).Info("Destroying Orb")
-
-		fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
-		var response string
-		fmt.Scanln(&response)
-
-		if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
-			logger.Info("Not touching Orb")
-			return nil
+		gitClientConf := &orbgit.Config{
+			Comitter:  "orbctl",
+			Email:     "orbctl@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "takeoff",
 		}
 
-		return orbiter.Destroy(
-			logger,
-			gitClient,
-			orb.AdaptFunc(
-				orbFile,
-				gitCommit,
-				true,
-				false))
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		defer cleanUp()
+		if err != nil {
+			return err
+		}
+
+		if existsFileInGit(gitClient, "orbiter.yml") {
+			monitor.WithFields(map[string]interface{}{
+				"version": version,
+				"commit":  gitCommit,
+				"repoURL": orbConfig.URL,
+			}).Info("Destroying Orb")
+
+			fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
+			var response string
+			fmt.Scanln(&response)
+
+			if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
+				monitor.Info("Not touching Orb")
+				return nil
+			}
+			finishedChan := make(chan bool)
+			return orbiter.Destroy(
+				monitor,
+				gitClient,
+				orb.AdaptFunc(
+					orbConfig,
+					gitCommit,
+					true,
+					false),
+				finishedChan,
+			)
+		}
+		return nil
 	}
 	return cmd
 }

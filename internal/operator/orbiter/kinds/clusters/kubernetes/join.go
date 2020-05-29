@@ -175,7 +175,7 @@ nodeRegistration:
 		return nil, nil
 	}
 
-	var kubeconfig bytes.Buffer
+	kubeconfig := new(bytes.Buffer)
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
 	if err != nil {
@@ -197,7 +197,7 @@ nodeRegistration:
 		return nil, err
 	}
 
-	if err := joining.infra.ReadFile("${HOME}/.kube/config", &kubeconfig); err != nil {
+	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfig); err != nil {
 		return nil, err
 	}
 

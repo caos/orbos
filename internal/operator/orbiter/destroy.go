@@ -9,9 +9,16 @@ import (
 
 type DestroyFunc func() error
 
-func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error {
+func DestroyFuncGoroutine(query func() error) error {
+	retChan := make(chan error)
+	go func() {
+		retChan <- query()
+	}()
+	return <-retChan
+}
 
-	trees, err := parse(gitClient, "orbiter.yml")
+func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan bool) error {
+	trees, err := Parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return err
 	}
@@ -19,7 +26,11 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error
 	treeDesired := trees[0]
 	treeCurrent := &tree.Tree{}
 
-	_, destroy, _, err := adapt(monitor, treeDesired, treeCurrent)
+	adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
+		return adapt(monitor, finishedChan, treeDesired, treeCurrent)
+	}
+
+	_, destroy, _, err := AdaptFuncGoroutine(adaptFunc)
 	if err != nil {
 		return err
 	}

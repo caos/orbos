@@ -17,14 +17,14 @@ import (
 func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.Allowed, func() error, error) {
 
-		var (
-			outBuf bytes.Buffer
-			errBuf bytes.Buffer
-		)
+		outBuf := new(bytes.Buffer)
+		defer outBuf.Reset()
+		errBuf := new(bytes.Buffer)
+		defer errBuf.Reset()
 
 		cmd := exec.Command("firewall-cmd", "--list-ports")
-		cmd.Stderr = &errBuf
-		cmd.Stdout = &outBuf
+		cmd.Stderr = errBuf
+		cmd.Stdout = outBuf
 
 		if err := cmd.Run(); err != nil {
 			return nil, nil, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
@@ -88,43 +88,48 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			return current, nil, nil
 		}
 
-		return current, ensureFunc(monitor, append(removePorts, addPorts...)), nil
+		return current, func() error {
+			if err := ensure(monitor, addPorts); err != nil {
+				return err
+			}
+			return ensure(monitor, removePorts)
+		}, nil
 	})
 }
 
-func ensureFunc(monitor mntr.Monitor, changes []string) func() error {
-	return func() error {
+func ensure(monitor mntr.Monitor, changes []string) error {
 
-		var errBuf bytes.Buffer
-		cmd := exec.Command("systemctl", "enable", "firewalld")
-		cmd.Stderr = &errBuf
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 
-		fullCmd := strings.Join(cmd.Args, " ")
-		if monitor.IsVerbose() {
-			fmt.Println(fullCmd)
-			cmd.Stdout = os.Stdout
-		}
+	cmd := exec.Command("systemctl", "enable", "firewalld")
+	cmd.Stderr = errBuf
 
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-		}
-
-		errBuf.Reset()
-		cmd = exec.Command("systemctl", "start", "firewalld")
-		cmd.Stderr = &errBuf
-
-		fullCmd = strings.Join(cmd.Args, " ")
-		if monitor.IsVerbose() {
-			fmt.Println(fullCmd)
-			cmd.Stdout = os.Stdout
-		}
-
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-		}
-
-		return changeFirewall(monitor, changes)
+	fullCmd := strings.Join(cmd.Args, " ")
+	if monitor.IsVerbose() {
+		fmt.Println(fullCmd)
+		cmd.Stdout = os.Stdout
 	}
+
+	if err := cmd.Run(); err != nil {
+		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+	}
+
+	errBuf.Reset()
+	cmd = exec.Command("systemctl", "start", "firewalld")
+	cmd.Stderr = errBuf
+
+	fullCmd = strings.Join(cmd.Args, " ")
+	if monitor.IsVerbose() {
+		fmt.Println(fullCmd)
+		cmd.Stdout = os.Stdout
+	}
+
+	if err := cmd.Run(); err != nil {
+		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+	}
+
+	return changeFirewall(monitor, changes)
 }
 
 func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
@@ -140,14 +145,15 @@ func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
 		}
 	}()
 
-	var errBuf bytes.Buffer
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 	if len(changes) == 0 {
 		return nil
 	}
 
 	errBuf.Reset()
 	cmd := exec.Command("firewall-cmd", append([]string{"--permanent"}, changes...)...)
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
 	if monitor.IsVerbose() {
@@ -161,7 +167,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
 
 	errBuf.Reset()
 	cmd = exec.Command("firewall-cmd", "--reload")
-	cmd.Stderr = &errBuf
+	cmd.Stderr = errBuf
 	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout

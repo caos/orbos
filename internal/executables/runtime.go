@@ -107,8 +107,10 @@ func pack(built BuiltTuple) packedTuple {
 		return packedTuple(nil, err)
 	}
 
-	var gzipBuffer bytes.Buffer
-	gzipWriter := gzip.NewWriter(&gzipBuffer)
+	gzipBuffer := new(bytes.Buffer)
+	defer gzipBuffer.Reset()
+
+	gzipWriter := gzip.NewWriter(gzipBuffer)
 	_, err = io.Copy(gzipWriter, executable)
 	if err != nil {
 		return packedTuple(nil, errors.Wrap(err, "gzipping failed"))
@@ -128,10 +130,14 @@ func unpack(executable string) []byte {
 	if err != nil {
 		panic(errors.Wrap(err, "decoding node agent from base64 failed"))
 	}
-	gzipReader, err := gzip.NewReader(bytes.NewReader(gzipNodeAgent))
+	bytesReader := bytes.NewReader(gzipNodeAgent)
+
+	gzipReader, err := gzip.NewReader(bytesReader)
 	if err != nil {
 		panic(errors.Wrap(err, "ungzipping node agent failed"))
 	}
+	defer gzipReader.Close()
+
 	unpacked, err := ioutil.ReadAll(gzipReader)
 	if err != nil {
 		panic(errors.Wrap(err, "reading unpacked node agent failed"))

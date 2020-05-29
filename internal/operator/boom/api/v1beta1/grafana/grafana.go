@@ -9,7 +9,7 @@ import (
 )
 
 type Grafana struct {
-	Deploy             bool             `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Deploy             bool             `json:"deploy" yaml:"deploy"`
 	Admin              *admin.Admin     `json:"admin,omitempty" yaml:"admin,omitempty"`
 	Datasources        []*Datasource    `json:"datasources,omitempty" yaml:"datasources,omitempty"`
 	DashboardProviders []*Provider      `json:"dashboardproviders,omitempty" yaml:"dashboardproviders,omitempty"`
@@ -46,7 +46,7 @@ func ClearEmpty(x *Grafana) *Grafana {
 		Auth:               auth.ClearEmpty(x.Auth),
 	}
 	if reflect.DeepEqual(marshaled, Grafana{}) {
-		return nil
+		return &Grafana{}
 	}
 	return &marshaled
 }

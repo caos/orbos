@@ -62,13 +62,15 @@ var (
 	Bionic  OperatingSystemMajor = OperatingSystemMajor{Ubuntu, "bionic"}
 	CentOS7 OperatingSystemMajor = OperatingSystemMajor{CentOS, "7"}
 
-//	Debian OperatingSystem = OperatingSystem{DebianBased}
+	//	Debian OperatingSystem = OperatingSystem{DebianBased}
 )
 
 func GetOperatingSystem() (OperatingSystemMajor, error) {
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	hostnamectl := exec.Command("hostnamectl")
-	hostnamectl.Stdout = &buf
+	hostnamectl.Stdout = buf
 
 	if err := hostnamectl.Run(); err != nil {
 		return Unknown, errors.Wrap(err, "running hostnamectl in order to get operating system information failed")

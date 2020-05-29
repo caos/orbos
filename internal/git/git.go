@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
-	"strings"
+	"path/filepath"
 	"time"
 
 	"github.com/pkg/errors"
@@ -47,6 +48,10 @@ func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL st
 		newClient.progress = os.Stdout
 	}
 	return newClient
+}
+
+func (g *Client) GetURL() string {
+	return g.repoURL
 }
 
 func (g *Client) Init(deploykey []byte) error {
@@ -95,13 +100,13 @@ func (g *Client) clone() error {
 
 	g.workTree, err = g.repo.Worktree()
 	if err != nil {
-		return errors.Wrapf(err, "getting worktree from repository with url %s failed", g.repoURL)
+		panic(err)
 	}
 
 	return nil
 }
 
-func (g *Client) Read(path string) ([]byte, error) {
+func (g *Client) Read(path string) []byte {
 	readmonitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
 	})
@@ -109,20 +114,52 @@ func (g *Client) Read(path string) ([]byte, error) {
 	file, err := g.fs.Open(path)
 	if err != nil {
 		if os.IsNotExist(errors.Cause(err)) {
-			return make([]byte, 0), nil
+			return make([]byte, 0)
 		}
-		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+		panic(err)
 	}
 	defer file.Close()
 	fileBytes, err := ioutil.ReadAll(file)
 	if err != nil {
-		return nil, errors.Wrapf(err, "reading %s from worktree failed", path)
+		panic(err)
 	}
 	if readmonitor.IsVerbose() {
 		readmonitor.Debug("File read")
 		fmt.Println(string(fileBytes))
 	}
-	return fileBytes, nil
+	return fileBytes
+}
+
+func (g *Client) ReadYamlIntoStruct(path string, struc interface{}) error {
+	data := g.Read(path)
+
+	return errors.Wrapf(yaml.Unmarshal(data, struc), "Error while unmarshaling yaml %s to struct", path)
+}
+
+func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
+	monitor := g.monitor.WithFields(map[string]interface{}{
+		"path": path,
+	})
+	monitor.Debug("Reading folder")
+	dirBytes := make(map[string][]byte, 0)
+	files, err := g.fs.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(errors.Cause(err)) {
+			return make(map[string][]byte, 0), nil
+		}
+		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+	}
+	for _, file := range files {
+		filePath := filepath.Join(path, file.Name())
+		fileBytes := g.Read(filePath)
+		dirBytes[file.Name()] = fileBytes
+	}
+
+	if monitor.IsVerbose() {
+		monitor.Debug("Folder read")
+		fmt.Println(dirBytes)
+	}
+	return dirBytes, nil
 }
 
 type File struct {
@@ -131,12 +168,7 @@ type File struct {
 }
 
 func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
-	clean, err := g.stage(files...)
-	if err != nil {
-		return false, err
-	}
-
-	if clean {
+	if g.stage(files...) {
 		return false, nil
 	}
 
@@ -161,51 +193,7 @@ func (g *Client) UpdateRemote(msg string, files ...File) error {
 	return g.Push()
 }
 
-func (g *Client) UpdateRemoteUntilItWorks(msg string, path string, overwrite func([]byte) ([]byte, error), force bool) ([]byte, error) {
-
-	if err := g.Clone(); err != nil {
-		return nil, errors.Wrap(err, "recloning before committing changes failed")
-	}
-
-	newContent, err := g.Read(path)
-	if err != nil && !force {
-		return nil, errors.Wrap(err, "reloading file before committing changes failed")
-	}
-
-	overwritten, err := overwrite(newContent)
-	if err != nil {
-		return nil, err
-	}
-
-	clean, err := g.stage(File{Path: path, Content: overwritten})
-	if err != nil {
-		return nil, err
-	}
-
-	if clean {
-		g.monitor.Info("No changes")
-		return overwritten, nil
-	}
-
-	if err := g.Commit(msg); err != nil {
-		return nil, err
-	}
-
-	if err := g.Push(); err != nil && strings.Contains(err.Error(), "command error on refs/heads/master: cannot lock ref 'refs/heads/master': is at ") {
-		g.monitor.Debug("Undoing latest commit")
-		if resetErr := g.workTree.Reset(&gogit.ResetOptions{
-			Mode: gogit.HardReset,
-		}); resetErr != nil {
-			return overwritten, errors.Wrap(resetErr, "undoing the latest commit failed")
-		}
-
-		newLatestFiles, err := g.UpdateRemoteUntilItWorks(msg, path, overwrite, force)
-		return newLatestFiles, errors.Wrap(err, "pushing failed")
-	}
-	return overwritten, nil
-}
-
-func (g *Client) stage(files ...File) (bool, error) {
+func (g *Client) stage(files ...File) bool {
 	for _, f := range files {
 		updatemonitor := g.monitor.WithFields(map[string]interface{}{
 			"path": f.Path,
@@ -215,26 +203,27 @@ func (g *Client) stage(files ...File) (bool, error) {
 
 		file, err := g.fs.Create(f.Path)
 		if err != nil {
-			return true, errors.Wrapf(err, "creating file %s in worktree failed", f.Path)
+			panic(err)
 		}
+		//noinspection GoDeferInLoop
 		defer file.Close()
 
 		if _, err := io.Copy(file, bytes.NewReader(f.Content)); err != nil {
-			return true, errors.Wrapf(err, "writing file %s in worktree failed", f.Path)
+			panic(err)
 		}
 
 		_, err = g.workTree.Add(f.Path)
 		if err != nil {
-			return true, errors.Wrapf(err, "staging worktree changes in file %s failed", f.Path)
+			panic(err)
 		}
 	}
 
 	status, err := g.workTree.Status()
 	if err != nil {
-		return true, errors.Wrap(err, "querying worktree status failed")
+		panic(err)
 	}
 
-	return status.IsClean(), nil
+	return status.IsClean()
 }
 
 func (g *Client) Commit(msg string) error {
