@@ -112,14 +112,6 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 								Name:      "keys",
 								ReadOnly:  true,
 								MountPath: "/etc/orbiter",
-							}, {
-								Name:      "artifacts",
-								ReadOnly:  false,
-								MountPath: "/.orb",
-							}, {
-								Name:      "config",
-								ReadOnly:  false,
-								MountPath: "/.config",
 							}},
 							Ports: []core.ContainerPort{{
 								Name:          "metrics",
@@ -143,16 +135,6 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 									SecretName: "caos",
 									Optional:   boolPtr(false),
 								},
-							},
-						}, {
-							Name: "artifacts",
-							VolumeSource: core.VolumeSource{
-								EmptyDir: &core.EmptyDirVolumeSource{},
-							},
-						}, {
-							Name: "config",
-							VolumeSource: core.VolumeSource{
-								EmptyDir: &core.EmptyDirVolumeSource{},
 							},
 						}},
 						NodeSelector: map[string]string{

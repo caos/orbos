@@ -1,6 +1,6 @@
 FROM golang:1.14.4-alpine3.11 as build
 
-RUN apk add -U --no-cache ca-certificates git && \
+RUN apk add -U --no-cache ca-certificates git openssh && \
     echo "nobody:x:65534:65534:Nobody:/:" > /etc_passwd && \
     go get github.com/go-delve/delve/cmd/dlv
 
@@ -13,9 +13,12 @@ FROM python:3.8.3-alpine3.11 as prod
 RUN apk add openssh
 
 ENV GODEBUG madvdontneed=1
+ENV HOME /home/nobody
+
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /etc_passwd /etc/passwd
 COPY --from=build --chown=65534:65534 /orbctl /orbctl
+COPY --from=build --chown=65534:65534 /home /home
 
 USER nobody
 
