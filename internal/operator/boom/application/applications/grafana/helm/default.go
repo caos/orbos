@@ -97,8 +97,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 		},
 		FullnameOverride: "grafana",
-		Alertmanager: &DisabledTool{
-			Enabled: false,
+		Alertmanager: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 		Grafana: grafana,
 		KubeAPIServer: &DisabledTool{
@@ -172,8 +174,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 				Enabled: false,
 			},
 		},
-		Prometheus: &DisabledTool{
-			Enabled: false,
+		Prometheus: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 	}
 }
