@@ -90,8 +90,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 				PspEnabled: true,
 			},
 		},
-		Alertmanager: &DisabledTool{
-			Enabled: false,
+		Alertmanager: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 		Grafana: &DisabledTool{
 			Enabled: false,
