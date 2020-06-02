@@ -37,6 +37,7 @@ type ToolsetSpec struct {
 	Argocd                    *argocd.Argocd             `json:"argocd,omitempty" yaml:"argocd,omitempty"`
 	Prometheus                *Prometheus                `json:"prometheus,omitempty" yaml:"prometheus,omitempty"`
 	Loki                      *Loki                      `json:"loki,omitempty" yaml:"loki,omitempty"`
+	MetricsServer             *MetricsServer             `json:"metrics-server,omitempty" yaml:"metrics-server,omitempty"`
 }
 
 type Toolset struct {

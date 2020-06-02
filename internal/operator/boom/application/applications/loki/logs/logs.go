@@ -11,6 +11,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
 	lologs "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logs"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
+	mslogs "github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/logs"
 	plogs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/logs"
 	pnelogs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/logs"
 	pologs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/logs"
@@ -107,6 +108,11 @@ func getAllFlows(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, outputNames []stri
 	if toolsetCRDSpec.Loki != nil && toolsetCRDSpec.Loki.Deploy &&
 		(toolsetCRDSpec.Loki.Logs == nil || toolsetCRDSpec.Loki.Logs.Loki) {
 		flows = append(flows, logging.NewFlow(getLokiFlow(outputNames)))
+	}
+
+	if toolsetCRDSpec.MetricsServer != nil && toolsetCRDSpec.MetricsServer.Deploy &&
+		(toolsetCRDSpec.Loki.Logs == nil || toolsetCRDSpec.Loki.Logs.MetricsServer) {
+		flows = append(flows, logging.NewFlow(mslogs.GetFlow(outputNames)))
 	}
 
 	return flows

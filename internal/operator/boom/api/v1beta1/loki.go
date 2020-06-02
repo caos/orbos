@@ -19,4 +19,5 @@ type Logs struct {
 	LoggingOperator        bool `json:"logging-operator" yaml:"logging-operator"`
 	Loki                   bool `json:"loki"`
 	Prometheus             bool `json:"prometheus"`
+	MetricsServer          bool `json:"metrics-server"`
 }
