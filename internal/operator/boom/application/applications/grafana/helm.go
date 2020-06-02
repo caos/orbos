@@ -168,6 +168,10 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta
 		}
 	}
 
+	if toolset.Grafana.Plugins != nil && len(toolset.Grafana.Plugins) > 0 {
+		values.Grafana.Plugins = append(values.Grafana.Plugins, toolset.Grafana.Plugins...)
+	}
+
 	return values
 }
 

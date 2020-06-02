@@ -16,6 +16,7 @@ type Grafana struct {
 	Storage            *storage.Spec    `json:"storage,omitempty" yaml:"storage,omitempty"`
 	Network            *network.Network `json:"network,omitempty" yaml:"network,omitempty"`
 	Auth               *auth.Auth       `json:"auth,omitempty" yaml:"auth,omitempty"`
+	Plugins            []string         `json:"plugins,omitempty" yaml:"plugins,omitempty"`
 }
 
 func (x *Grafana) MarshalYAML() (interface{}, error) {
