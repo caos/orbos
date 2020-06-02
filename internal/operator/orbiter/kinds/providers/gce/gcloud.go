@@ -162,12 +162,7 @@ func refresh(ctx *context) error {
 			file.Close()
 			return false, nil
 		default:
-			return false, fmt.Errorf("%s : %c %s %s\n",
-				"Unable to figure out file type",
-				header.Typeflag,
-				"in file",
-				name,
-			)
+			return false, nil
 		}
 	})
 }

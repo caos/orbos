@@ -42,6 +42,8 @@ spec:
             containerPort: 2345
           imagePullPolicy: IfNotPresent
           name: orbiter
+          securityContext:
+            runAsGroup: 65534
           resources:
             limits:
               memory: 500Mi
@@ -55,6 +57,9 @@ spec:
             - mountPath: /etc/orbiter
               name: keys
               readOnly: true
+            - mountPath: /root/.orb
+              name: artifacts
+              readOnly: false
       dnsPolicy: ClusterFirst
       imagePullSecrets:
         - name: gcr
@@ -72,3 +77,6 @@ spec:
             defaultMode: 420
             optional: false
             secretName: caos
+        - name: artifacts
+          hostPath:
+            path: "/var/orbiter/artifacts"
