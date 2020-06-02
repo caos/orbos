@@ -1,6 +1,8 @@
 package gce
 
 import (
+	"fmt"
+
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
@@ -42,7 +44,8 @@ func ensureCloudNAT(c *context) error {
 				c.monitor.Debug("Creating Cloud NAT Router")
 			},
 			computeOpCall(svc.Routers.Insert(c.projectID, c.desired.Region, &compute.Router{
-				Name: CLOUD_NAT_NAME,
+				Name:    CLOUD_NAT_NAME,
+				Network: fmt.Sprintf("projects/%s/global/networks/default", c.projectID),
 				Nats: []*compute.RouterNat{{
 					Name:                          CLOUD_NAT_NAME,
 					NatIpAllocateOption:           "AUTO_ONLY",
