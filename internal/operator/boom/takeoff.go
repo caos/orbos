@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -31,13 +32,17 @@ func Metrics(monitor mntr.Monitor) {
 	}()
 }
 
-func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool) func() {
-	appStruct := app.New(monitor, toolsDirectoryPath)
+func Takeoff(monitor mntr.Monitor, orb *orb.Orb, basePath string, localMode bool) func() {
+	//toolsDirectoryPath := filepath.Join(basePath, "tools")
+	crdDirectoryPath := filepath.Join(basePath, "crd")
+	gconfig.DashboardsDirectoryPath = filepath.Join(basePath, "dashboards")
+
+	appStruct := app.New(monitor, basePath)
 	gitcrdMonitor := monitor.WithFields(map[string]interface{}{"type": "gitcrd"})
 
 	gitcrdConf := &gitcrdconfig.Config{
 		Monitor:          gitcrdMonitor,
-		CrdDirectoryPath: "/boom/crd",
+		CrdDirectoryPath: crdDirectoryPath,
 		CrdUrl:           orb.URL,
 		PrivateKey:       []byte(orb.Repokey),
 		CrdPath:          "boom.yml",
@@ -48,8 +53,6 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 	if localMode {
 		clientgo.InConfig = false
 	}
-
-	gconfig.DashboardsDirectoryPath = "/boom/dashboards"
 
 	if err := appStruct.AddGitCrd(gitcrdConf); err != nil {
 		monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
