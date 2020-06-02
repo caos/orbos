@@ -100,14 +100,14 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 						ImagePullSecrets: []core.LocalObjectReference{{
 							Name: "public-github-packages",
 						}},
+						SecurityContext: &core.PodSecurityContext{
+							FSGroup: int64Ptr(65534),
+						},
 						Containers: []core.Container{{
 							Name:            "orbiter",
 							ImagePullPolicy: core.PullIfNotPresent,
 							Image:           "docker.pkg.github.com/caos/orbos/orbiter:" + orbiterversion,
 							Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "--recur", "--ingestion="},
-							SecurityContext: &core.SecurityContext{
-								RunAsGroup: int64Ptr(65534),
-							},
 							VolumeMounts: []core.VolumeMount{{
 								Name:      "keys",
 								ReadOnly:  true,
