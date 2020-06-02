@@ -10,6 +10,8 @@ ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--li
 
 FROM python:3.8.3-alpine3.11 as prod
 
+RUN apk add openssh
+
 ENV GODEBUG madvdontneed=1
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=build /etc_passwd /etc/passwd
