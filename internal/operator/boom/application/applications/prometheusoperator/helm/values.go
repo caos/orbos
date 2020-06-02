@@ -130,27 +130,33 @@ type PrometheusOperatorValues struct {
 	HyperkubeImage                *Image             `yaml:"hyperkubeImage"`
 }
 
+type DisabledToolServicePerReplica struct {
+	Enabled           bool
+	ServicePerReplica *DisabledTool `yaml:"servicePerReplica"`
+	IngressPerReplica *DisabledTool `yaml:"ingressPerReplica"`
+}
+
 type Values struct {
-	NameOverride              string                    `yaml:"nameOverride,omitempty"`
-	FullnameOverride          string                    `yaml:"fullnameOverride,omitempty"`
-	CommonLabels              map[string]string         `yaml:"commonLabels"`
-	DefaultRules              *DefaultRules             `yaml:"defaultRules"`
-	AdditionalPrometheusRules []interface{}             `yaml:"additionalPrometheusRules"`
-	Global                    *Global                   `yaml:"global"`
-	Alertmanager              *DisabledTool             `yaml:"alertmanager"`
-	Grafana                   *DisabledTool             `yaml:"grafana"`
-	KubeAPIServer             *DisabledTool             `yaml:"kubeApiServer"`
-	Kubelet                   *DisabledTool             `yaml:"kubelet"`
-	KubeControllerManager     *DisabledTool             `yaml:"kubeControllerManager"`
-	CoreDNS                   *DisabledTool             `yaml:"coreDns"`
-	KubeDNS                   *DisabledTool             `yaml:"kubeDns"`
-	KubeEtcd                  *DisabledTool             `yaml:"kubeEtcd"`
-	KubeScheduler             *DisabledTool             `yaml:"kubeScheduler"`
-	KubeProxy                 *DisabledTool             `yaml:"kubeProxy"`
-	KubeStateMetricsScrap     *DisabledTool             `yaml:"kubeStateMetrics"`
-	KubeStateMetrics          *DisabledTool             `yaml:"kube-state-metrics"`
-	NodeExporter              *DisabledTool             `yaml:"nodeExporter"`
-	PrometheusNodeExporter    *DisabledTool             `yaml:"prometheus-node-exporter"`
-	PrometheusOperator        *PrometheusOperatorValues `yaml:"prometheusOperator"`
-	Prometheus                *DisabledTool             `yaml:"prometheus"`
+	NameOverride              string                         `yaml:"nameOverride,omitempty"`
+	FullnameOverride          string                         `yaml:"fullnameOverride,omitempty"`
+	CommonLabels              map[string]string              `yaml:"commonLabels"`
+	DefaultRules              *DefaultRules                  `yaml:"defaultRules"`
+	AdditionalPrometheusRules []interface{}                  `yaml:"additionalPrometheusRules"`
+	Global                    *Global                        `yaml:"global"`
+	Alertmanager              *DisabledToolServicePerReplica `yaml:"alertmanager"`
+	Grafana                   *DisabledTool                  `yaml:"grafana"`
+	KubeAPIServer             *DisabledTool                  `yaml:"kubeApiServer"`
+	Kubelet                   *DisabledTool                  `yaml:"kubelet"`
+	KubeControllerManager     *DisabledTool                  `yaml:"kubeControllerManager"`
+	CoreDNS                   *DisabledTool                  `yaml:"coreDns"`
+	KubeDNS                   *DisabledTool                  `yaml:"kubeDns"`
+	KubeEtcd                  *DisabledTool                  `yaml:"kubeEtcd"`
+	KubeScheduler             *DisabledTool                  `yaml:"kubeScheduler"`
+	KubeProxy                 *DisabledTool                  `yaml:"kubeProxy"`
+	KubeStateMetricsScrap     *DisabledTool                  `yaml:"kubeStateMetrics"`
+	KubeStateMetrics          *DisabledTool                  `yaml:"kube-state-metrics"`
+	NodeExporter              *DisabledTool                  `yaml:"nodeExporter"`
+	PrometheusNodeExporter    *DisabledTool                  `yaml:"prometheus-node-exporter"`
+	PrometheusOperator        *PrometheusOperatorValues      `yaml:"prometheusOperator"`
+	Prometheus                *DisabledToolServicePerReplica `yaml:"prometheus"`
 }
