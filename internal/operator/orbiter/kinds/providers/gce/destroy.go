@@ -26,5 +26,5 @@ func destroy(desired *Spec, context *context) error {
 			}
 		}
 	}
-	return nil
+	return destroyCloudNAT(context)
 }

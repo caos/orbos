@@ -283,7 +283,7 @@ func removeResourceFunc(monitor mntr.Monitor, resource, id string, call func(...
 	return func() error {
 		if err := operateFunc(
 			removeLog(monitor, resource, id, false, true),
-			call,
+			computeOpCall(call),
 			nil,
 		)(); err != nil {
 			googleErr, ok := err.(*googleapi.Error)
@@ -294,16 +294,6 @@ func removeResourceFunc(monitor mntr.Monitor, resource, id string, call func(...
 		removeLog(monitor, resource, id, true, false)()
 		return nil
 	}
-}
-
-type context struct {
-	monitor         mntr.Monitor
-	orbID           string
-	providerID      string
-	projectID       string
-	region          string
-	client          *compute.Service
-	machinesService *machinesService
 }
 
 func queryResources(context *context, normalized []*normalizedLoadbalancer) (func() error, error) {

@@ -1,15 +1,10 @@
 package gce
 
 import (
-	ctxpkg "context"
-	"encoding/json"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
-	"google.golang.org/api/compute/v1"
-	"google.golang.org/api/option"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -79,40 +74,4 @@ func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListF
 				return destroy(&desiredKind.Spec, ctx)
 			}, migrate, nil
 	}
-}
-
-func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*context, error) {
-
-	jsonKey := []byte(desired.JSONKey.Value)
-	credsOption := option.WithCredentialsJSON(jsonKey)
-	computeClient, err := compute.NewService(ctxpkg.Background(), credsOption)
-	if err != nil {
-		return nil, err
-	}
-
-	key := struct {
-		ProjectID string `json:"project_id"`
-	}{}
-	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
-		return nil, err
-	}
-
-	monitor = monitor.WithField("projectID", key.ProjectID)
-
-	return &context{
-		monitor:    monitor,
-		providerID: providerID,
-		orbID:      orbID,
-		projectID:  key.ProjectID,
-		region:     desired.Region,
-		client:     computeClient,
-		machinesService: newMachinesService(
-			monitor,
-			desired,
-			orbID,
-			providerID,
-			key.ProjectID,
-			computeClient,
-		),
-	}, nil
 }

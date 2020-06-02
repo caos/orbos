@@ -8,50 +8,28 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
 	"google.golang.org/api/compute/v1"
 )
 
 var _ core.MachinesService = (*machinesService)(nil)
 
 type machinesService struct {
-	monitor    mntr.Monitor
-	desired    *Spec
-	providerID string
-	orbID      string
-	projectID  string
-	client     *compute.Service
-	cache      struct {
+	context *context
+	cache   struct {
 		instances map[string][]*instance
 	}
 	onCreate func(pool string, machine infra.Machine)
 }
 
-func newMachinesService(
-	monitor mntr.Monitor,
-	desired *Spec,
-	orbID string,
-	providerID string,
-	projectID string,
-	client *compute.Service,
-) *machinesService {
+func newMachinesService(context *context) *machinesService {
 	return &machinesService{
-		monitor:    monitor,
-		desired:    desired,
-		providerID: providerID,
-		orbID:      orbID,
-		projectID:  projectID,
-		client:     client,
+		context: context,
 	}
-}
-
-func (m *machinesService) ensure() error {
-	return nil
 }
 
 func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
-	desired, ok := m.desired.Pools[poolName]
+	desired, ok := m.context.desired.Pools[poolName]
 	if !ok {
 		return nil, fmt.Errorf("Pool %s is not configured", poolName)
 	}
@@ -81,10 +59,10 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	name := newName()
 	createInstance := &compute.Instance{
 		Name:              name,
-		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.desired.Zone, cores, int(memory)),
-		Tags:              &compute.Tags{Items: networkTags(m.orbID, m.providerID, poolName)},
+		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
+		Tags:              &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
 		NetworkInterfaces: []*compute.NetworkInterface{{}},
-		Labels:            map[string]string{"orb": m.orbID, "provider": m.providerID, "pool": poolName},
+		Labels:            map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
 		Disks: []*compute.AttachedDisk{{
 			AutoDelete: true,
 			Boot:       true,
@@ -96,21 +74,21 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
 	}
 
-	monitor := m.monitor.WithFields(map[string]interface{}{
+	monitor := m.context.monitor.WithFields(map[string]interface{}{
 		"name": name,
 		"pool": poolName,
-		"zone": m.desired.Zone,
+		"zone": m.context.desired.Zone,
 	})
 
 	if err := operateFunc(
 		func() { monitor.Info("Creating instance") },
-		m.client.Instances.Insert(m.projectID, m.desired.Zone, createInstance).RequestId(uuid.NewV1().String()).Do,
+		computeOpCall(m.context.client.Instances.Insert(m.context.projectID, m.context.desired.Zone, createInstance).RequestId(uuid.NewV1().String()).Do),
 		nil,
 	)(); err != nil {
 		return nil, err
 	}
 
-	newInstance, err := m.client.Instances.Get(m.projectID, m.desired.Zone, createInstance.Name).
+	newInstance, err := m.context.client.Instances.Get(m.context.projectID, m.context.desired.Zone, createInstance.Name).
 		Fields("selfLink,networkInterfaces(networkIP)").
 		Do()
 	if err != nil {
@@ -118,7 +96,8 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	infraMachine := newMachine(
-		m.monitor,
+		m.context,
+		monitor,
 		createInstance.Name,
 		newInstance.NetworkInterfaces[0].NetworkIP,
 		newInstance.SelfLink,
@@ -175,9 +154,9 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		return m.cache.instances, nil
 	}
 
-	instances, err := m.client.Instances.
-		List(m.projectID, m.desired.Zone).
-		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.orbID, m.providerID)).
+	instances, err := m.context.client.Instances.
+		List(m.context.projectID, m.context.desired.Zone).
+		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.context.orbID, m.context.providerID)).
 		Fields("items(name,labels,selfLink,networkInterfaces(networkIP))").
 		Do()
 	if err != nil {
@@ -186,13 +165,14 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 
 	m.cache.instances = make(map[string][]*instance)
 	for _, inst := range instances.Items {
-		if inst.Labels["orb"] != m.orbID || inst.Labels["provider"] != m.providerID {
+		if inst.Labels["orb"] != m.context.orbID || inst.Labels["provider"] != m.context.providerID {
 			continue
 		}
 
 		pool := inst.Labels["pool"]
 		mach := newMachine(
-			m.monitor,
+			m.context,
+			m.context.monitor.WithFields(toFields(inst.Labels)),
 			inst.Name,
 			inst.NetworkInterfaces[0].NetworkIP,
 			inst.SelfLink,
@@ -204,6 +184,14 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 
 	return m.cache.instances, nil
 
+}
+
+func toFields(labels map[string]string) map[string]interface{} {
+	fields := make(map[string]interface{})
+	for key, label := range labels {
+		fields[key] = label
+	}
+	return fields
 }
 
 func (m *machinesService) removeMachineFunc(pool, id string) func() error {
@@ -218,10 +206,10 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 		m.cache.instances[pool] = cleanMachines
 
 		return removeResourceFunc(
-			m.monitor.WithField("pool", pool),
+			m.context.monitor.WithField("pool", pool),
 			"instance",
 			id,
-			m.client.Instances.Delete(m.projectID, m.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
+			m.context.client.Instances.Delete(m.context.projectID, m.context.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
 		)()
 	}
 }

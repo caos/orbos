@@ -64,15 +64,15 @@ func (i *infraPool) ensureMembers(machine infra.Machine) error {
 
 				if err := operateFunc(
 					n.targetPool.log("Adding instances to target pool", true, addInstances),
-					i.context.client.TargetPools.
+					computeOpCall(i.context.client.TargetPools.
 						AddInstance(
 							i.context.projectID,
-							i.context.region,
+							i.context.desired.Region,
 							n.targetPool.gce.Name,
 							&compute.TargetPoolsAddInstanceRequest{Instances: instances(addInstances).refs()},
 						).
 						RequestId(uuid.NewV1().String()).
-						Do,
+						Do),
 					toErrFunc(n.targetPool.log("Instances added to target pool", false, addInstances)),
 				)(); err != nil {
 					return err

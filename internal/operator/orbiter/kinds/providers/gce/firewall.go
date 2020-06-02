@@ -31,7 +31,7 @@ createLoop:
 						!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
 						ensure = append(ensure, operateFunc(
 							fw.log("Patching firewall", true),
-							context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do,
+							computeOpCall(context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do),
 							toErrFunc(fw.log("Firewall patched", false)),
 						))
 					}
@@ -41,10 +41,10 @@ createLoop:
 			fw.gce.Name = newName()
 			ensure = append(ensure, operateFunc(
 				fw.log("Creating firewall", true),
-				context.client.Firewalls.
+				computeOpCall(context.client.Firewalls.
 					Insert(context.projectID, fw.gce).
 					RequestId(uuid.NewV1().String()).
-					Do,
+					Do),
 				toErrFunc(fw.log("Firewall created", false)),
 			))
 		}

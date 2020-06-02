@@ -13,7 +13,7 @@ func queryAddresses(context *context, loadbalancing []*normalizedLoadbalancer) (
 	addresses := normalizedLoadbalancing(loadbalancing).uniqueAddresses()
 
 	gceAddresses, err := context.client.Addresses.
-		List(context.projectID, context.region).
+		List(context.projectID, context.desired.Region).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
 		Fields("items(address,name,description)").
 		Do()
@@ -35,13 +35,13 @@ createLoop:
 		addr.gce.Name = newName()
 		ensure = append(ensure, operateFunc(
 			addr.log("Creating external address", true),
-			context.client.Addresses.
-				Insert(context.projectID, context.region, addr.gce).
+			computeOpCall(context.client.Addresses.
+				Insert(context.projectID, context.desired.Region, addr.gce).
 				RequestId(uuid.NewV1().String()).
-				Do,
+				Do),
 			func(a *address) func() error {
 				return func() error {
-					newAddr, newAddrErr := context.client.Addresses.Get(context.projectID, context.region, a.gce.Name).
+					newAddr, newAddrErr := context.client.Addresses.Get(context.projectID, context.desired.Region, a.gce.Name).
 						Fields("address").
 						Do()
 					if newAddrErr != nil {
@@ -63,7 +63,7 @@ removeLoop:
 			}
 		}
 		remove = append(remove, removeResourceFunc(context.monitor, "external address", gceAddress.Name, context.client.Addresses.
-			Delete(context.projectID, context.region, gceAddress.Name).
+			Delete(context.projectID, context.desired.Region, gceAddress.Name).
 			RequestId(uuid.NewV1().String()).
 			Do))
 	}

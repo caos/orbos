@@ -90,10 +90,21 @@ func query(
 	context.machinesService.onCreate = desireHealthcheck
 
 	return func(psf push.Func) error {
-		if err := context.machinesService.ensure(); err != nil {
+
+		if err := ensureGcloud(context); err != nil {
 			return err
 		}
+
+		if err := ensureIdentityAwareProxyAPIEnabled(context); err != nil {
+			return err
+		}
+
+		if err := ensureCloudNAT(context); err != nil {
+			return err
+		}
+
 		return ensureLB()
+
 	}, initPools(current, desired, context, normalized)
 }
 

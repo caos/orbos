@@ -73,6 +73,11 @@ func (c *Machine) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 	return output, nil
 }
 
+func WriteFileCommands(user, path string, permissions uint16) (string, string) {
+	return fmt.Sprintf("sudo mkdir -p %s && sudo chown -R %s %s", filepath.Dir(path), user, filepath.Dir(path)),
+		fmt.Sprintf("sudo sh -c 'cat > %s && chmod %d %s && chown %s %s'", path, permissions, path, user, path)
+}
+
 func (c *Machine) WriteFile(path string, data io.Reader, permissions uint16) (err error) {
 
 	monitor := c.monitor.WithFields(map[string]interface{}{
@@ -89,11 +94,13 @@ func (c *Machine) WriteFile(path string, data io.Reader, permissions uint16) (er
 
 	monitor.Debug("Trying to write file with ssh")
 
-	if _, err := c.Execute(nil, nil, fmt.Sprintf("sudo mkdir -p %s && sudo chown -R %s %s", filepath.Dir(path), c.remoteUser, filepath.Dir(path))); err != nil {
+	ensurePath, writeFile := WriteFileCommands(c.remoteUser, path, permissions)
+
+	if _, err := c.Execute(nil, nil, ensurePath); err != nil {
 		return err
 	}
 
-	_, err = c.Execute(nil, data, fmt.Sprintf("sudo sh -c 'cat > %s && chmod %d %s && chown %s %s'", path, permissions, path, c.remoteUser, path))
+	_, err = c.Execute(nil, data, writeFile)
 	return err
 }
 

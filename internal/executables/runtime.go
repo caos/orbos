@@ -24,10 +24,10 @@ func Populate() {
 	populate()
 }
 
-func PreBuilt(mainDir string) ([]byte, error) {
-	executable, ok := executables[mainDir]
+func PreBuilt(name string) ([]byte, error) {
+	executable, ok := executables[name]
 	if !ok {
-		return nil, errors.Errorf("%s was not prebuilt", mainDir)
+		return nil, errors.Errorf("%s was not prebuilt", name)
 	}
 	return executable, nil
 }
@@ -58,14 +58,13 @@ func init() {
 	for pt := range deriveFmapPack(pack, packables) {
 		packable, packed, packErr := pt()
 		err = helpers.Concat(err, packErr)
-		if err != nil {
+		if packErr != nil {
 			continue
 		}
 
-		if _, err = prebuilt.WriteString(fmt.Sprintf(`
-		"%s": unpack("%s"),`, packable.key, *packed)); err != nil {
-			continue
-		}
+		_, packErr = prebuilt.WriteString(fmt.Sprintf(`
+		"%s": unpack("%s"),`, packable.key, *packed))
+		err = helpers.Concat(err, packErr)
 	}
 
 	if err != nil {
@@ -81,20 +80,27 @@ func init() {
 	return err
 }
 
-func packedTupleFunc(packable *Packable) func(*string, error) packedTuple {
+func packedTupleFunc(packable *packable) func(*string, error) packedTuple {
 	return func(packed *string, err error) packedTuple {
 		return deriveTuplePacked(packable, packed, err)
 	}
 }
 
-type Packable struct {
+type packable struct {
 	key  string
 	data io.ReadCloser
 }
 
-type PackableTuple func() (*Packable, error)
+type PackableTuple func() (*packable, error)
 
-type packedTuple func() (*Packable, *string, error)
+func NewPackableTuple(key string, data io.ReadCloser) PackableTuple {
+	return deriveTuplePackable(&packable{
+		key:  key,
+		data: data,
+	}, nil)
+}
+
+type packedTuple func() (*packable, *string, error)
 
 func pack(packableTuple PackableTuple) packedTuple {
 

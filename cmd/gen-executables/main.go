@@ -36,22 +36,11 @@ func main() {
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
-	builds := executables.Build(
+	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
-		executables.Bin{MainDir: path("nodeagent")},
-		executables.Bin{MainDir: path("health")},
-	)
-
-	packables := make(chan executables.PackableTuple, 0)
-
-	go func() {
-		for build := range builds {
-			packables <- executables.PackableFromBuilt(build)
-		}
-		close(packables)
-	}()
-
-	if err := executables.PreBuild(packables); err != nil {
+		executables.Buildable{MainDir: path("nodeagent")},
+		executables.Buildable{MainDir: path("health")},
+	))); err != nil {
 		panic(err)
 	}
 
@@ -83,7 +72,7 @@ func main() {
 	}
 }
 
-func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
+func orbctlBin(mainPath, outPath, goos, goarch string) executables.Buildable {
 
 	arch := "x86_64"
 	os := strings.ToUpper(goos[0:1]) + goos[1:]
@@ -99,7 +88,7 @@ func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
 		outdir += ".exe"
 	}
 
-	return executables.Bin{
+	return executables.Buildable{
 		MainDir: mainPath,
 		OutDir:  outdir,
 		Env:     map[string]string{"GOOS": goos, "GOARCH": goarch},
