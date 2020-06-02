@@ -115,7 +115,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 							}, {
 								Name:      "artifacts",
 								ReadOnly:  false,
-								MountPath: "/root/.orb",
+								MountPath: "/.orb",
 							}},
 							Ports: []core.ContainerPort{{
 								Name:          "metrics",
