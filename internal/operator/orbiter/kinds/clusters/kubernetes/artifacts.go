@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -108,6 +109,10 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 								Name:      "keys",
 								ReadOnly:  true,
 								MountPath: "/etc/orbiter",
+							}, {
+								Name:      "artifacts",
+								ReadOnly:  false,
+								MountPath: "/.orb",
 							}},
 							Ports: []core.ContainerPort{{
 								Name:          "metrics",
@@ -130,6 +135,13 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 								Secret: &core.SecretVolumeSource{
 									SecretName: "caos",
 									Optional:   boolPtr(false),
+								},
+							},
+						}, {
+							Name: "artifacts",
+							VolumeSource: core.VolumeSource{
+								HostPath: &core.HostPathVolumeSource{
+									Path: "/var/orbiter/artifacts",
 								},
 							},
 						}},
