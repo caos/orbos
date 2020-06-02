@@ -3,6 +3,7 @@ package argocd
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
+	"github.com/caos/orbos/internal/utils/helper"
 	"strings"
 
 	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
@@ -36,6 +37,21 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 				return err
 			}
 		}
+	}
+
+	if err := helper.DeleteFirstResourceFromYaml(
+		resultFilePath,
+		"apiextensions.k8s.io/v1beta1",
+		"CustomResourceDefinition",
+		"appprojects.argoproj.io"); err != nil {
+		return err
+	}
+
+	if err := helper.DeleteFirstResourceFromYaml(resultFilePath,
+		"apiextensions.k8s.io/v1beta1",
+		"CustomResourceDefinition",
+		"applications.argoproj.io"); err != nil {
+		return err
 	}
 
 	return nil

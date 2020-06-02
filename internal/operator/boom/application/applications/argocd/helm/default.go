@@ -118,6 +118,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		Dex: &Dex{
 			Enabled: false,
+			ServiceAccount: &ServiceAccount{
+				Create: false,
+				Name:   "argocd-dex-server",
+			},
 		},
 		Redis: &Redis{
 			Enabled: true,
@@ -129,6 +133,19 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 			ContainerPort: 6379,
 			ServicePort:   6379,
+		},
+		RedisHA: &RedisHA{
+			Enabled:           false,
+			Exporter:          &Exporter{Enabled: false},
+			PersistenteVolume: &PV{Enabled: false},
+			Redis: &RedisHAC{
+				MasterGroupName: "argocd",
+				Config:          &RedisHAConfig{Save: "\"\\\"\\\"\""},
+			},
+			HAProxy: &HAProxy{
+				Enabled: false,
+				Metrics: &HAProxyMetrics{Enabled: false},
+			},
 		},
 		Server: &Server{
 			Image: &Image{
