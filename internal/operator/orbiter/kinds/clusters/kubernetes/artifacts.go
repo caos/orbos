@@ -143,9 +143,7 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 						}, {
 							Name: "artifacts",
 							VolumeSource: core.VolumeSource{
-								HostPath: &core.HostPathVolumeSource{
-									Path: "/var/orbiter/artifacts",
-								},
+								EmptyDir: &core.EmptyDirVolumeSource{},
 							},
 						}},
 						NodeSelector: map[string]string{
