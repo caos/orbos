@@ -6,7 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ queryFunc = queryHealthchecks
+var _ ensureLBFunc = queryHealthchecks
 
 func queryHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceHealthchecks, err := context.client.HttpHealthChecks.

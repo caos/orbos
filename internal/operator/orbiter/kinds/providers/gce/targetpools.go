@@ -8,7 +8,7 @@ import (
 	"google.golang.org/api/compute/v1"
 )
 
-var _ queryFunc = queryTargetPools
+var _ ensureLBFunc = queryTargetPools
 
 func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gcePools, err := context.client.TargetPools.

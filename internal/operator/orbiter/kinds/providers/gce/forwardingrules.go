@@ -6,7 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ queryFunc = queryForwardingRules
+var _ ensureLBFunc = queryForwardingRules
 
 func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceRules, err := context.client.ForwardingRules.

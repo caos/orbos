@@ -6,7 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ queryFunc = queryAddresses
+var _ ensureLBFunc = queryAddresses
 
 func queryAddresses(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 
