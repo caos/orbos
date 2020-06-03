@@ -15,6 +15,7 @@ import (
 	plogs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/logs"
 	pnelogs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/logs"
 	pologs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/logs"
+	pselogs "github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/logs"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
@@ -113,6 +114,11 @@ func getAllFlows(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, outputNames []stri
 	if toolsetCRDSpec.MetricsServer != nil && toolsetCRDSpec.MetricsServer.Deploy &&
 		(toolsetCRDSpec.Loki.Logs == nil || toolsetCRDSpec.Loki.Logs.MetricsServer) {
 		flows = append(flows, logging.NewFlow(mslogs.GetFlow(outputNames)))
+	}
+
+	if toolsetCRDSpec.PrometheusSystemdExporter != nil && toolsetCRDSpec.PrometheusSystemdExporter.Deploy &&
+		(toolsetCRDSpec.Loki.Logs == nil || toolsetCRDSpec.Loki.Logs.PrometheusSystemdExporter) {
+		flows = append(flows, logging.NewFlow(pselogs.GetFlow(outputNames)))
 	}
 
 	return flows
