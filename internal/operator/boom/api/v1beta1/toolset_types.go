@@ -25,8 +25,8 @@ type Metadata struct {
 type ToolsetSpec struct {
 	ForceApply                bool                       `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
 	CurrentStateFolder        string                     `json:"currentStatePath,omitempty" yaml:"currentStatePath,omitempty"`
-	PreApply                  *PreApply                  `json:"preApply,omitempty" yaml:"preApply,omitempty"`
-	PostApply                 *PostApply                 `json:"postApply,omitempty" yaml:"postApply,omitempty"`
+	PreApply                  *Apply                     `json:"preApply,omitempty" yaml:"preApply,omitempty"`
+	PostApply                 *Apply                     `json:"postApply,omitempty" yaml:"postApply,omitempty"`
 	PrometheusOperator        *PrometheusOperator        `json:"prometheus-operator,omitempty" yaml:"prometheus-operator,omitempty"`
 	LoggingOperator           *LoggingOperator           `json:"logging-operator,omitempty" yaml:"logging-operator,omitempty"`
 	PrometheusNodeExporter    *PrometheusNodeExporter    `json:"prometheus-node-exporter,omitempty" yaml:"prometheus-node-exporter,omitempty"`
