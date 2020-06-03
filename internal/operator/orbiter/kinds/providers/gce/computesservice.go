@@ -56,6 +56,28 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		memoryPerCore = float64(memory) / float64(cores)
 	}
 
+	disks := []*compute.AttachedDisk{{
+		Type:       "PERSISTENT",
+		AutoDelete: true,
+		Boot:       true,
+		InitializeParams: &compute.AttachedDiskInitializeParams{
+			DiskSizeGb:  int64(desired.StorageGB),
+			SourceImage: desired.OSImage,
+		}},
+	}
+
+	for i := 0; i < int(desired.LocalSSDs); i++ {
+		disks = append(disks, &compute.AttachedDisk{
+			Type:       "SCRATCH",
+			AutoDelete: true,
+			Boot:       false,
+			Interface:  "NVME",
+			InitializeParams: &compute.AttachedDiskInitializeParams{
+				DiskType: fmt.Sprintf("zones/%s/diskTypes/local-ssd", m.context.desired.Zone),
+			},
+		})
+	}
+
 	name := newName()
 	createInstance := &compute.Instance{
 		Name:              name,
@@ -63,15 +85,8 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Tags:              &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
 		NetworkInterfaces: []*compute.NetworkInterface{{}},
 		Labels:            map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
-		Disks: []*compute.AttachedDisk{{
-			AutoDelete: true,
-			Boot:       true,
-			InitializeParams: &compute.AttachedDiskInitializeParams{
-				DiskSizeGb:  int64(desired.StorageGB),
-				SourceImage: desired.OSImage,
-			}},
-		},
-		Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
+		Disks:             disks,
+		Scheduling:        &compute.Scheduling{Preemptible: desired.Preemptible},
 	}
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
@@ -215,9 +230,12 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 }
 
 func networkTags(orbID, providerID, poolName string) []string {
-	return []string{
+	tags := []string{
 		fmt.Sprintf("orb-%s", orbID),
 		fmt.Sprintf("provider-%s", providerID),
-		fmt.Sprintf("pool-%s", poolName),
 	}
+	if poolName != "" {
+		tags = append(tags, fmt.Sprintf("pool-%s", poolName))
+	}
+	return tags
 }

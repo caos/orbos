@@ -20,6 +20,7 @@ type Pool struct {
 	MinMemoryGB int
 	StorageGB   int
 	Preemptible bool
+	LocalSSDs   uint8
 }
 
 func (p Pool) validate() error {
