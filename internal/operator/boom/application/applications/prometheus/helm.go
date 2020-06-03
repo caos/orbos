@@ -24,14 +24,14 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		return nil
 	}
 
-	_, getSecretErr := clientgo.GetSecret("grafana-cloud", "caos-system")
+	_, getSecretErr := clientgo.GetSecret("grafana-cloud", info.GetNamespace())
 	ingestionSecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
 	if getSecretErr != nil && !ingestionSecretAbsent {
 		// TODO: Better error handling?
 		monitor.Error(getSecretErr)
 	}
 
-	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), toolsetCRDSpec)
+	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), info.GetNamespace(), toolsetCRDSpec)
 
 	values := helm.DefaultValues(p.GetImageTags())
 
@@ -51,12 +51,6 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		}
 
 		values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
-	}
-
-	if config.MonitorLabels != nil {
-		values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{
-			MatchLabels: config.MonitorLabels,
-		}
 	}
 
 	if config.ServiceMonitors != nil {
@@ -116,14 +110,20 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 			},
 		})
 	}
-
-	ruleLabels := labels.GetRuleLabels(info.GetInstanceName())
+	ruleLabels := labels.GetRuleLabels(info.GetInstanceName(), info.GetName())
 	rules, _ := helm.GetDefaultRules(ruleLabels)
-
-	values.Prometheus.PrometheusSpec.RuleSelector = &helm.RuleSelector{MatchLabels: ruleLabels}
 	values.DefaultRules.Labels = ruleLabels
 	values.KubeTargetVersionOverride = version
 	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
+
+	if config.RuleLabels != nil {
+		values.Prometheus.PrometheusSpec.RuleSelector = &helm.RuleSelector{MatchLabels: config.RuleLabels}
+	}
+
+	if config.MonitorLabels != nil {
+		values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{MatchLabels: config.MonitorLabels}
+		values.Prometheus.PrometheusSpec.PodMonitorSelector = &helm.MonitorSelector{MatchLabels: config.MonitorLabels}
+	}
 
 	values.FullnameOverride = info.GetInstanceName()
 
