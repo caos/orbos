@@ -100,9 +100,6 @@ func ensureArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb, orbiter
 						ImagePullSecrets: []core.LocalObjectReference{{
 							Name: "public-github-packages",
 						}},
-						SecurityContext: &core.PodSecurityContext{
-							FSGroup: int64Ptr(65534),
-						},
 						Containers: []core.Container{{
 							Name:            "orbiter",
 							ImagePullPolicy: core.PullIfNotPresent,

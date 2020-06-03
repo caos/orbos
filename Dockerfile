@@ -9,15 +9,16 @@ ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--li
 
 FROM python:3.8.3-alpine3.11 as prod
 
-RUN apk add openssh && mkdir -p /home/nobody && chown -R 65534:65534 /home/nobody
+RUN apk add openssh && \
+    addgroup -S -g 1000 orbiter && \
+    adduser -S -u 1000 orbiter -G orbiter
 
-ENV GODEBUG="madvdontneed=1" \
-    HOME="/home/nobody"
+ENV GODEBUG madvdontneed=1
 
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=build --chown=65534:65534 /orbctl /orbctl
+COPY --from=build --chown=1000:1000 /orbctl /orbctl
 
-USER nobody
+USER orbiter
 
 ENTRYPOINT [ "/orbctl" ]
 CMD [ "--help" ]
