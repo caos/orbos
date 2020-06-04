@@ -90,43 +90,14 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		return err
 	}
 
-	if err := client.ApplyRole(&rbac.Role{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom-leader-election-role",
-			Namespace: "caos-system",
-		},
-		Rules: []rbac.PolicyRule{{
-			APIGroups: []string{""},
-			Resources: []string{"configmaps"},
-			Verbs: []string{
-				"get",
-				"list",
-				"watch",
-				"create",
-				"update",
-				"patch",
-				"delete",
-			},
-		}, {
-			APIGroups: []string{""},
-			Resources: []string{"configmaps/status"},
-			Verbs: []string{
-				"get",
-				"update",
-				"patch",
-			},
-		}, {
-			APIGroups: []string{""},
-			Resources: []string{"events"},
-			Verbs:     []string{"create"},
-		}},
-	}); err != nil {
-		return err
-	}
-
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-manager-role",
+			Name: "boom-clusterrole",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":  "boom",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "boom",
+			},
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -137,32 +108,20 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		return err
 	}
 
-	if err := client.ApplyRoleBinding(&rbac.RoleBinding{
-		ObjectMeta: mach.ObjectMeta{
-			Namespace: "caos-system",
-			Name:      "boom-leader-election-rolebinding",
-		},
-		RoleRef: rbac.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     "boom-leader-election-role",
-		},
-		Subjects: []rbac.Subject{{
-			Kind:      "ServiceAccount",
-			Name:      "boom",
-			Namespace: "caos-system",
-		}},
-	}); err != nil {
-		return err
-	}
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-manager-rolebinding",
+			Name: "boom-clusterrolebinding",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":  "boom",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "boom",
+			},
 		},
+
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "boom-manager-role",
+			Name:     "boom-clusterrole",
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
@@ -181,7 +140,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 				"app.kubernetes.io/instance":   "boom",
 				"app.kubernetes.io/part-of":    "orbos",
 				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				"app.kubernetes.io/managed-by": "boom.caos.ch",
 			},
 		},
 		Spec: apps.DeploymentSpec{

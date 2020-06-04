@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"fmt"
 	"io"
+	"k8s.io/client-go/rest"
 	"strings"
 	"sync"
 	"time"
@@ -49,9 +50,11 @@ type Client struct {
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
 	kc := &Client{monitor: monitor}
-	err := kc.Refresh(kubeconfig)
-	if err != nil {
-		monitor.Error(err)
+	if *kubeconfig != "" {
+		err := kc.Refresh(kubeconfig)
+		if err != nil {
+			monitor.Error(err)
+		}
 	}
 	return kc
 }
@@ -224,6 +227,13 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 	}
 
 	c.set, err = kubernetes.NewForConfig(restCfg)
+	return err
+}
+
+func (c *Client) RefreshLocal() (err error) {
+	config, err := rest.InClusterConfig()
+
+	c.set, err = kubernetes.NewForConfig(config)
 	return err
 }
 
