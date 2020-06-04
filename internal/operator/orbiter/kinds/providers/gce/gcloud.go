@@ -4,7 +4,6 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -103,9 +102,14 @@ func gcloudSession(ctx *context, do func(binary string) error) error {
 	return nil
 }
 
-func refresh(ctx *context) error {
+func refresh(ctx *context) (err error) {
 
-	fmt.Println("Refreshing gcloud")
+	ctx.monitor.Debug("Refreshing gcloud")
+	defer func() {
+		if err != nil {
+			ctx.monitor.Info("gcloud refreshed")
+		}
+	}()
 
 	dir := sdkDir()
 

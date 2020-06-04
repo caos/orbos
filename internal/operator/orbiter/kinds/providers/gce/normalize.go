@@ -251,6 +251,14 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 		Description:  fmt.Sprintf("%s;allow-internal", providerDescription),
 		SourceRanges: []string{"10.128.0.0/9"},
 		TargetTags:   networkTags(orbID, providerID, ""),
+	}, monitor), toInternalFirewall(&compute.Firewall{
+		Allowed: []*compute.FirewallAllowed{{
+			IPProtocol: "tcp",
+			Ports:      []string{"22"},
+		}},
+		Description:  fmt.Sprintf("%s;allow-ssh-through-iap", providerDescription),
+		SourceRanges: []string{"35.235.240.0/20"},
+		TargetTags:   networkTags(orbID, providerID, ""),
 	}, monitor))
 }
 
