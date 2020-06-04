@@ -36,6 +36,23 @@ func SecretsFunc(orb *orbconfig.Orb) secret.Func {
 	}
 }
 
+func RewriteFunc(orb *orbconfig.Orb, newMasterkey string) secret.Func {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+		defer func() {
+			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+		}()
+
+		desiredKind, err := ParseToolset(desiredTree, orb.Masterkey)
+		if err != nil {
+			return nil, errors.Wrap(err, "parsing desired state failed")
+		}
+		desiredKind = v1beta1.ReplaceMasterkey(desiredKind, newMasterkey)
+		desiredTree.Parsed = desiredKind
+
+		return getSecretsMap(desiredKind, orb.Masterkey), nil
+	}
+}
+
 func getSecretsMap(desiredKind *v1beta1.Toolset, masterkey string) map[string]*secret.Secret {
 	ret := map[string]*secret.Secret{
 		"argocd.sso.google.clientid":           desiredKind.Spec.Argocd.Auth.GoogleConnector.Config.ClientID,

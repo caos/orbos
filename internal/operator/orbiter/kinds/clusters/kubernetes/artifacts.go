@@ -17,14 +17,9 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
+func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 
 	monitor.Debug("Ensuring common artifacts")
-
-	orbfile, err := yaml.Marshal(orb)
-	if err != nil {
-		return err
-	}
 
 	if err := client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
@@ -32,18 +27,6 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 			Labels: map[string]string{
 				"name": "caos-system",
 			},
-		},
-	}); err != nil {
-		return err
-	}
-
-	if err := client.ApplySecret(&core.Secret{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "caos",
-			Namespace: "caos-system",
-		},
-		StringData: map[string]string{
-			"orbconfig": string(orbfile),
 		},
 	}); err != nil {
 		return err
@@ -63,6 +46,29 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 				}
 		}
 }`,
+		},
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
+	monitor.Debug("Ensuring configuration artifacts")
+
+	orbfile, err := yaml.Marshal(orb)
+	if err != nil {
+		return err
+	}
+
+	if err := client.ApplySecret(&core.Secret{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "caos",
+			Namespace: "caos-system",
+		},
+		StringData: map[string]string{
+			"orbconfig": string(orbfile),
 		},
 	}); err != nil {
 		return err
