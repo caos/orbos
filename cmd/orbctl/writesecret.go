@@ -1,12 +1,11 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -50,19 +49,10 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			path = args[0]
 		}
 
-		secretFunc := func(operator string) secret.Func {
-			if operator == "boom" {
-				return api.SecretsFunc(orbconfig)
-			} else if operator == "orbiter" {
-				return orb.SecretsFunc(orbconfig)
-			}
-			return nil
-		}
-
 		if err := secret.Write(
 			logger,
 			gitClient,
-			secretFunc,
+			secretfuncs.Get(orbconfig),
 			path,
 			s); err != nil {
 			panic(err)

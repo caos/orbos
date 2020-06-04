@@ -101,11 +101,23 @@ func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Sec
 	return ret
 }
 
+func existsFileInGit(g *git.Client, path string) bool {
+	if err := g.Clone(); err != nil {
+		return false
+	}
+
+	of := g.Read(path)
+	if of != nil && len(of) > 0 {
+		return true
+	}
+	return false
+}
+
 func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path string, items func(map[string]*Secret) []string) (*Secret, *tree.Tree, string, error) {
 	getOperatorSecrets := func(operator string) (map[string]*Secret, *tree.Tree, error) {
 		file := strings.Join([]string{operator, yml}, ".")
 
-		if gitClient.Exists(file) {
+		if existsFileInGit(gitClient, file) {
 			trees, err := Parse(gitClient, file)
 			if err != nil {
 				return nil, nil, err
