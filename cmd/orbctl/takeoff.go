@@ -2,9 +2,7 @@ package main
 
 import (
 	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
-	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
@@ -86,7 +84,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 }
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
-	if gitClient.Exists("boom.yml") {
+	if existsFileInGit(gitClient, "boom.yml") {
 		if err := cmd.Reconcile(monitor, kubeconfig, version); err != nil {
 			return err
 		}
