@@ -42,6 +42,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			Action:    "config",
 		}
 
+		monitor.Info("Start connection with git-repository")
 		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
 		defer cleanUp()
 		if err != nil {
@@ -50,7 +51,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 
 		allKubeconfigs := make([]string, 0)
 		if existsFileInGit(gitClient, "orbiter.yml") {
+			monitor.Info("Orbiter.yml existing...")
 			if masterkey != "" {
+				monitor.Info("Read and rewrite orbiter.yml with new masterkey")
 				if err := secret.Rewrite(
 					monitor,
 					gitClient,
@@ -60,6 +63,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				}
 			}
 		} else {
+			monitor.Info("No orbiter.yml existent, reading kubeconfig from path provided as parameter")
 			if kubeconfig == "" {
 				return errors.New("Error to change config as no kubeconfig is provided")
 			}
@@ -73,12 +77,15 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		changedConfig := new(orbc.Orb)
 		*changedConfig = *orbConfig
 		if repoURL != "" {
+			monitor.Info("Change repository url in current orbconfig")
 			changedConfig.URL = repoURL
 		}
 
 		if masterkey != "" {
+			monitor.Info("Change masterkey in current orbconfig")
 			changedConfig.Masterkey = masterkey
 			if existsFileInGit(gitClient, "boom.yml") {
+				monitor.Info("Read and rewrite boom.yml with new masterkey")
 				if err := secret.Rewrite(
 					monitor,
 					gitClient,
@@ -88,6 +95,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				}
 			}
 
+			monitor.Info("Writeback current orbconfig to local orbconfig")
 			if err := changedConfig.WriteBackOrbConfig(); err != nil {
 				monitor.Info("failed to change local configuration")
 				return err
@@ -97,6 +105,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		for _, kubeconfig := range allKubeconfigs {
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
+				monitor.Info("Ensure current orbconfig in kubernetes cluster")
 				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, changedConfig); err != nil {
 					monitor.Info("failed to apply configuration resources into k8s-cluster")
 					return err
