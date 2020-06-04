@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kustomize"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -313,29 +314,32 @@ func recursiveFolder(monitor mntr.Monitor, folderPath string, deploy bool) error
 func getFilesInDirectory(dirPath string) ([]string, error) {
 	files := make([]string, 0)
 
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	})
+	infos, err := ioutil.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
 	}
+
+	for _, info := range infos {
+		if !info.IsDir() {
+			files = append(files, filepath.Join(dirPath, info.Name()))
+		}
+	}
+
 	return files, err
 }
 
 func getDirsInDirectory(dirPath string) ([]string, error) {
 	dirs := make([]string, 0)
 
-	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			dirs = append(dirs, path)
-		}
-		return nil
-	})
+	infos, err := ioutil.ReadDir(dirPath)
 	if err != nil {
 		return nil, err
+	}
+
+	for _, info := range infos {
+		if info.IsDir() {
+			dirs = append(dirs, filepath.Join(dirPath, info.Name()))
+		}
 	}
 	return dirs, err
 }
