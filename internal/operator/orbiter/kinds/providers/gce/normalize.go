@@ -244,7 +244,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 			IPProtocol: "udp",
 			Ports:      []string{"0-65535"},
 		}, {
-			IPProtocol: "icpm",
+			IPProtocol: "icmp",
 		}, {
 			IPProtocol: "ipip",
 		}},

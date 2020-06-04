@@ -71,7 +71,7 @@ func AdaptFunc(masterkey, providerID, orbID string, whitelist dynamic.WhiteListF
 					return err
 				}
 
-				return destroy(&desiredKind.Spec, ctx)
+				return destroy(ctx)
 			}, migrate, nil
 	}
 }
