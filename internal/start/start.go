@@ -192,7 +192,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 	return kubeconfigs, nil
 }
 
-func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool) error {
+func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version string) error {
 	boom.Metrics(monitor)
 
 	takeoffChan := make(chan struct{})
@@ -210,10 +210,12 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool) error {
 		boomChan := make(chan struct{})
 		currentChan := make(chan struct{})
 
-		takeoffCurrent := boom.TakeOffCurrentState(
+		takeoff, takeoffCurrent := boom.Takeoff(
 			monitor,
 			orbConfig,
 			"/boom",
+			localmode,
+			version,
 		)
 		go func() {
 			started := time.Now()
@@ -226,13 +228,6 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool) error {
 
 			currentChan <- struct{}{}
 		}()
-
-		takeoff := boom.Takeoff(
-			monitor,
-			orbConfig,
-			"/boom",
-			localmode,
-		)
 		go func() {
 			started := time.Now()
 			takeoff()

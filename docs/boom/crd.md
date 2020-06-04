@@ -2,8 +2,11 @@
 
 ## Structure
 
+BOOM reconciles itself if a boomVersion is defined, if no boomVersion is defined there is no reconciling.
+
 | Parameter                          | Description                                                                     | Default                           |
 | ---------------------------------- | ------------------------------------------------------------------------------- | --------------------------------- |
+| `boomVersion`                      | Version of BOOM which should be reconciled                                      |                                   |
 | `currentStatePath`                 | Relative folder path where the currentstate is written to                       |                                   |
 | `forceApply`                       | Flag if --force should be used by apply of resources                            |                                   |
 | `preApply`                         | Spec for the yaml-files applied before applications                             |                                   |

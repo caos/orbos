@@ -17,7 +17,6 @@
 
 ### [BOOM](docs/boom/boom.md)
 
-> We are currently integrating BOOM into ORBOS see our [Progress](https://github.com/caos/orbos/milestone/1)
 
 ## License
 

@@ -31,7 +31,7 @@ func Metrics(monitor mntr.Monitor) {
 	}()
 }
 
-func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool) func() {
+func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, localMode bool, version string) (func(), func()) {
 	appStruct := app.New(monitor, toolsDirectoryPath)
 	gitcrdMonitor := monitor.WithFields(map[string]interface{}{"type": "gitcrd"})
 
@@ -56,46 +56,25 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 	}
 
 	return func() {
-		// TODO: use a function scoped error variable
-		started := time.Now()
-		goErr := appStruct.ReconcileGitCrds(orb.Masterkey)
-		recMonitor := monitor.WithFields(map[string]interface{}{
-			"took": time.Since(started),
-		})
-		if goErr != nil {
-			recMonitor.Error(goErr)
+			// TODO: use a function scoped error variable
+			started := time.Now()
+			goErr := appStruct.ReconcileGitCrds(orb.Masterkey)
+			recMonitor := monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			})
+			if goErr != nil {
+				recMonitor.Error(goErr)
+			}
+			recMonitor.Info("Reconciling iteration done")
+		}, func() {
+			started := time.Now()
+			goErr := appStruct.WriteBackCurrentState(orb.Masterkey)
+			recMonitor := monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			})
+			if goErr != nil {
+				recMonitor.Error(goErr)
+			}
+			recMonitor.Info("Current state iteration done")
 		}
-		recMonitor.Info("Reconciling iteration done")
-	}
-}
-
-func TakeOffCurrentState(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string) func() {
-	appStruct := app.New(monitor, toolsDirectoryPath)
-	gitcrdMonitor := monitor.WithFields(map[string]interface{}{"type": "gitcrd"})
-
-	gitcrdConf := &gitcrdconfig.Config{
-		Monitor:          gitcrdMonitor,
-		CrdDirectoryPath: "/tmp/crd",
-		CrdUrl:           orb.URL,
-		PrivateKey:       []byte(orb.Repokey),
-		CrdPath:          "boom.yml",
-		User:             "Boom",
-		Email:            "boom@caos.ch",
-	}
-
-	if err := appStruct.AddGitCrd(gitcrdConf); err != nil {
-		monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
-	}
-
-	return func() {
-		started := time.Now()
-		goErr := appStruct.WriteBackCurrentState(orb.Masterkey)
-		recMonitor := monitor.WithFields(map[string]interface{}{
-			"took": time.Since(started),
-		})
-		if goErr != nil {
-			recMonitor.Error(goErr)
-		}
-		recMonitor.Info("Current state iteration done")
-	}
 }
