@@ -8,7 +8,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbos/internal/push"
 	"github.com/pkg/errors"
 
@@ -28,9 +27,9 @@ func query(
 	if !ok {
 		errors.Errorf("Unknown or unsupported load balancing of type %T", lb)
 	}
-	normalized := normalize(context.monitor, lbCurrent.Current.Spec, context.orbID, context.providerID)
+	normalized, firewalls := normalize(context.monitor, lbCurrent.Current.Spec, context.orbID, context.providerID)
 
-	ensureLB, err := queryResources(context, normalized)
+	ensureLB, err := queryResources(context, normalized, firewalls)
 	if err != nil {
 		return nil, err
 	}
@@ -92,24 +91,20 @@ func query(
 
 	return func(psf push.Func) error {
 
-		if err := ensureLB(); err != nil {
+		if err := ensureGcloud(context); err != nil {
 			return err
 		}
 
-		if desired.SSHKey != nil && desired.SSHKey.Private != nil && desired.SSHKey.Private.Value != "" && desired.SSHKey.Public != nil && desired.SSHKey.Public.Value != "" {
-			return nil
-		}
-		private, public, err := ssh.Generate()
-		if err != nil {
-			return err
-		}
-		desired.SSHKey.Private.Value = private
-		desired.SSHKey.Public.Value = public
-		if err := psf(context.monitor.WithField("secret", "sshkey")); err != nil {
+		if err := ensureIdentityAwareProxyAPIEnabled(context); err != nil {
 			return err
 		}
 
-		return nil
+		if err := ensureCloudNAT(context); err != nil {
+			return err
+		}
+
+		return ensureLB()
+
 	}, initPools(current, desired, context, normalized)
 }
 

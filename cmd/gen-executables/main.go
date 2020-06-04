@@ -36,11 +36,11 @@ func main() {
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
-	if err := executables.PreBuild(executables.Build(
+	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
-		executables.Bin{MainDir: path("nodeagent")},
-		executables.Bin{MainDir: path("health")},
-	)); err != nil {
+		executables.Buildable{MainDir: path("nodeagent")},
+		executables.Buildable{MainDir: path("health")},
+	))); err != nil {
 		panic(err)
 	}
 
@@ -63,20 +63,16 @@ func main() {
 
 	var hasErr bool
 	for orbctl := range orbctls {
-		bin, err := orbctl()
-		if err != nil {
+		if _, err := orbctl(); err != nil {
 			hasErr = true
-			fmt.Printf("Building %s failed\n", bin.OutDir)
-			continue
 		}
-		fmt.Printf("Successfully built %s\n", bin.OutDir)
 	}
 	if hasErr {
 		panic("Building orbctl failed")
 	}
 }
 
-func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
+func orbctlBin(mainPath, outPath, goos, goarch string) executables.Buildable {
 
 	arch := "x86_64"
 	os := strings.ToUpper(goos[0:1]) + goos[1:]
@@ -92,7 +88,7 @@ func orbctlBin(mainPath, outPath, goos, goarch string) executables.Bin {
 		outdir += ".exe"
 	}
 
-	return executables.Bin{
+	return executables.Buildable{
 		MainDir: mainPath,
 		OutDir:  outdir,
 		Env:     map[string]string{"GOOS": goos, "GOARCH": goarch},

@@ -6,7 +6,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ queryFunc = queryHealthchecks
+var _ ensureLBFunc = queryHealthchecks
 
 func queryHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceHealthchecks, err := context.client.HttpHealthChecks.
@@ -30,9 +30,9 @@ createLoop:
 				if gceHC.Port != lb.healthcheck.gce.Port || gceHC.RequestPath != lb.healthcheck.gce.RequestPath {
 					ensure = append(ensure, operateFunc(
 						lb.healthcheck.log("Patching healthcheck", true),
-						context.client.HttpHealthChecks.Patch(context.projectID, gceHC.Name, lb.healthcheck.gce).
+						computeOpCall(context.client.HttpHealthChecks.Patch(context.projectID, gceHC.Name, lb.healthcheck.gce).
 							RequestId(uuid.NewV1().String()).
-							Do,
+							Do),
 						toErrFunc(lb.healthcheck.log("Healthcheck patched", false)),
 					))
 				}
@@ -43,10 +43,10 @@ createLoop:
 		lb.healthcheck.gce.Name = newName()
 		ensure = append(ensure, operateFunc(
 			lb.healthcheck.log("Creating healthcheck", true),
-			context.client.HttpHealthChecks.
+			computeOpCall(context.client.HttpHealthChecks.
 				Insert(context.projectID, lb.healthcheck.gce).
 				RequestId(uuid.NewV1().String()).
-				Do,
+				Do),
 			func(hc *healthcheck) func() error {
 				return func() error {
 					newHC, newHCErr := context.client.HttpHealthChecks.Get(context.projectID, hc.gce.Name).

@@ -20,6 +20,7 @@ type Pool struct {
 	MinMemoryGB int
 	StorageGB   int
 	Preemptible bool
+	LocalSSDs   uint8
 }
 
 func (p Pool) validate() error {
@@ -53,7 +54,6 @@ type SSHKey struct {
 type Spec struct {
 	Verbose bool
 	JSONKey *secret.Secret `yaml:",omitempty"`
-	SSHKey  *SSHKey        `yaml:",omitempty"`
 	Region  string
 	Zone    string
 	Pools   map[string]*Pool
@@ -85,10 +85,6 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*Desired, error) 
 		Common: desiredTree.Common,
 		Spec: Spec{
 			JSONKey: &secret.Secret{Masterkey: masterkey},
-			SSHKey: &SSHKey{
-				Private: &secret.Secret{Masterkey: masterkey},
-				Public:  &secret.Secret{Masterkey: masterkey},
-			},
 		},
 	}
 
@@ -102,11 +98,5 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*Desired, error) 
 func initializeNecessarySecrets(desiredKind *Desired, masterkey string) {
 	if desiredKind.Spec.JSONKey == nil {
 		desiredKind.Spec.JSONKey = &secret.Secret{Masterkey: masterkey}
-	}
-	if desiredKind.Spec.SSHKey == nil {
-		desiredKind.Spec.SSHKey = &SSHKey{
-			Private: &secret.Secret{Masterkey: masterkey},
-			Public:  &secret.Secret{Masterkey: masterkey},
-		}
 	}
 }

@@ -22,7 +22,6 @@ type normalizedLoadbalancer struct {
 	forwardingRule *forwardingRule // unique
 	targetPool     *targetPool     // unique
 	healthcheck    *healthcheck    // unique
-	firewalls      []*firewall     // Each pool has its own firewall
 	address        *address        // The same externalIP reference appears in multiple normalizedLoadbalancer references
 	transport      string
 }
@@ -77,14 +76,17 @@ func (n normalizedLoadbalancing) Less(i, j int) bool {
 
 // normalize returns a normalizedLoadBalancing for each unique destination port and ip combination
 // whereas only one random configured healthcheck is relevant
-func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, providerID string) []*normalizedLoadbalancer {
+func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, providerID string) ([]*normalizedLoadbalancer, []*firewall) {
 	var normalized []*normalizedLoadbalancer
+	var firewalls []*firewall
 
 	type normalizedDestination struct {
 		port  dynamic.Port
 		pools []string
 		hc    dynamic.HealthChecks
 	}
+
+	providerDescription := fmt.Sprintf("orb=%s;provider=%s", orbID, providerID)
 
 	for _, ips := range spec {
 		for _, ip := range ips {
@@ -109,58 +111,22 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 				}
 
 				for _, dest := range normalizedDestinations {
-					description := fmt.Sprintf("orb=%s;provider=%s;transport=%s;port=%d", orbID, providerID, src.Name, dest.port)
+					destDescription := fmt.Sprintf("%s;transport=%s;port=%d", providerDescription, src.Name, dest.port)
 					destMonitor := monitor.WithFields(map[string]interface{}{
 						"transport": src.Name,
 						"port":      dest.port,
 					})
 					fwr := &compute.ForwardingRule{
-						Description:         description,
+						Description:         destDescription,
 						LoadBalancingScheme: "EXTERNAL",
 						PortRange:           fmt.Sprintf("%d-%d", dest.port, dest.port),
 					}
 					tp := &compute.TargetPool{
-						Description: description,
+						Description: destDescription,
 					}
 					hc := &compute.HttpHealthCheck{
-						Description: description,
+						Description: destDescription,
 						RequestPath: dest.hc.Path,
-					}
-
-					poolsLen := len(dest.pools)
-					firewalls := make([]*firewall, poolsLen, poolsLen)
-					for poolIdx, pool := range dest.pools {
-						fw := &compute.Firewall{
-							Allowed: []*compute.FirewallAllowed{{
-								IPProtocol: "tcp",
-								Ports:      []string{fmt.Sprintf("%d", dest.port)},
-							}},
-							Description: description,
-							SourceRanges: append(whitelistStrings(src.Whitelist),
-								// healthcheck sources, see https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
-								"35.191.0.0/16",
-								"209.85.152.0/22",
-								"209.85.204.0/22",
-							),
-							TargetTags: networkTags(orbID, providerID, pool),
-						}
-						firewalls[poolIdx] = &firewall{
-							log: func(msg string, debug bool) func() {
-								localMonitor := destMonitor
-								if fw.Name != "" {
-									localMonitor = localMonitor.WithField("id", fw.Name)
-								}
-								level := localMonitor.Info
-								if debug {
-									level = localMonitor.Debug
-								}
-
-								return func() {
-									level(msg)
-								}
-							},
-							gce: fw,
-						}
 					}
 
 					normalized = append(normalized, &normalizedLoadbalancer{
@@ -219,10 +185,26 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 							gce:     hc,
 							desired: dest.hc,
 						},
-						firewalls: firewalls,
 						address:   address,
 						transport: src.Name,
 					})
+
+					for _, pool := range dest.pools {
+						firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
+							Allowed: []*compute.FirewallAllowed{{
+								IPProtocol: "tcp",
+								Ports:      []string{fmt.Sprintf("%d", dest.port)},
+							}},
+							Description: destDescription,
+							SourceRanges: append(whitelistStrings(src.Whitelist),
+								// healthcheck sources, see https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
+								"35.191.0.0/16",
+								"209.85.152.0/22",
+								"209.85.204.0/22",
+							),
+							TargetTags: networkTags(orbID, providerID, pool),
+						}, destMonitor))
+					}
 				}
 			}
 			sort.Strings(addressTransports)
@@ -254,7 +236,49 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 		hcPort++
 	}
 
-	return normalized
+	return normalized, append(firewalls, toInternalFirewall(&compute.Firewall{
+		Allowed: []*compute.FirewallAllowed{{
+			IPProtocol: "tcp",
+			Ports:      []string{"0-65535"},
+		}, {
+			IPProtocol: "udp",
+			Ports:      []string{"0-65535"},
+		}, {
+			IPProtocol: "icmp",
+		}, {
+			IPProtocol: "ipip",
+		}},
+		Description:  fmt.Sprintf("%s;allow-internal", providerDescription),
+		SourceRanges: []string{"10.128.0.0/9"},
+		TargetTags:   networkTags(orbID, providerID, ""),
+	}, monitor), toInternalFirewall(&compute.Firewall{
+		Allowed: []*compute.FirewallAllowed{{
+			IPProtocol: "tcp",
+			Ports:      []string{"22"},
+		}},
+		Description:  fmt.Sprintf("%s;allow-ssh-through-iap", providerDescription),
+		SourceRanges: []string{"35.235.240.0/20"},
+		TargetTags:   networkTags(orbID, providerID, ""),
+	}, monitor))
+}
+
+func toInternalFirewall(fw *compute.Firewall, monitor mntr.Monitor) *firewall {
+	return &firewall{
+		log: func(msg string, debug bool) func() {
+			if fw.Name != "" {
+				monitor = monitor.WithField("id", fw.Name)
+			}
+			level := monitor.Info
+			if debug {
+				level = monitor.Debug
+			}
+
+			return func() {
+				level(msg)
+			}
+		},
+		gce: fw,
+	}
 }
 
 func newName() string {
@@ -283,7 +307,7 @@ func removeResourceFunc(monitor mntr.Monitor, resource, id string, call func(...
 	return func() error {
 		if err := operateFunc(
 			removeLog(monitor, resource, id, false, true),
-			call,
+			computeOpCall(call),
 			nil,
 		)(); err != nil {
 			googleErr, ok := err.(*googleapi.Error)
@@ -296,30 +320,38 @@ func removeResourceFunc(monitor mntr.Monitor, resource, id string, call func(...
 	}
 }
 
-type context struct {
-	monitor         mntr.Monitor
-	orbID           string
-	providerID      string
-	projectID       string
-	region          string
-	client          *compute.Service
-	machinesService *machinesService
-}
-
-func queryResources(context *context, normalized []*normalizedLoadbalancer) (func() error, error) {
-	return chainInEnsureOrder(
+func queryResources(context *context, normalized []*normalizedLoadbalancer, firewalls []*firewall) (func() error, error) {
+	lb, err := chainInEnsureOrder(
 		context, normalized,
 		queryHealthchecks,
 		queryTargetPools,
 		queryAddresses,
 		queryForwardingRules,
-		queryFirewall,
 	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	ensureFW, removeFW, err := queryFirewall(context, firewalls)
+	if err != nil {
+		return nil, err
+	}
+	return func() error {
+		for _, operation := range append(append(lb, ensureFW...), removeFW...) {
+			if err := operation(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}, nil
 }
 
-type queryFunc func(*context, []*normalizedLoadbalancer) ([]func() error, []func() error, error)
+type ensureLBFunc func(*context, []*normalizedLoadbalancer) ([]func() error, []func() error, error)
 
-func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...queryFunc) (func() error, error) {
+type ensureFWFunc func(*context, []*firewall) ([]func() error, []func() error, error)
+
+func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...ensureLBFunc) ([]func() error, error) {
 	var ensureOperations []func() error
 	var removeOperations []func() error
 	for _, fn := range query {
@@ -332,20 +364,12 @@ func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...que
 		removeOperations = append(removeOperations, remove...)
 	}
 
-	return func() error {
-		// reverse remove operations
-		for i := 0; i < len(removeOperations)/2; i++ {
-			j := len(removeOperations) - i - 1
-			removeOperations[i], removeOperations[j] = removeOperations[j], removeOperations[i]
-		}
+	for i := 0; i < len(removeOperations)/2; i++ {
+		j := len(removeOperations) - i - 1
+		removeOperations[i], removeOperations[j] = removeOperations[j], removeOperations[i]
+	}
 
-		for _, operation := range append(ensureOperations, removeOperations...) {
-			if err := operation(); err != nil {
-				return err
-			}
-		}
-		return nil
-	}, nil
+	return append(ensureOperations, removeOperations...), nil
 }
 
 func whitelistStrings(cidrs []*orbiter.CIDR) []string {

@@ -7,9 +7,9 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ queryFunc = queryFirewall
+var _ ensureFWFunc = queryFirewall
 
-func queryFirewall(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
+func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []func() error, error) {
 	gceFirewalls, err := context.client.Firewalls.
 		List(context.projectID).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
@@ -21,43 +21,39 @@ func queryFirewall(context *context, loadbalancing []*normalizedLoadbalancer) ([
 
 	var ensure []func() error
 createLoop:
-	for _, lb := range loadbalancing {
-		for _, fw := range lb.firewalls {
-			for _, gceFW := range gceFirewalls.Items {
-				if gceFW.Description == fw.gce.Description {
-					fw.gce.Name = gceFW.Name
-					if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
-						!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
-						!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
-						ensure = append(ensure, operateFunc(
-							fw.log("Patching firewall", true),
-							context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do,
-							toErrFunc(fw.log("Firewall patched", false)),
-						))
-					}
-					continue createLoop
+	for _, fw := range firewalls {
+		for _, gceFW := range gceFirewalls.Items {
+			if gceFW.Description == fw.gce.Description {
+				fw.gce.Name = gceFW.Name
+				if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
+					!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
+					!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
+					ensure = append(ensure, operateFunc(
+						fw.log("Patching firewall", true),
+						computeOpCall(context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do),
+						toErrFunc(fw.log("Firewall patched", false)),
+					))
 				}
+				continue createLoop
 			}
-			fw.gce.Name = newName()
-			ensure = append(ensure, operateFunc(
-				fw.log("Creating firewall", true),
-				context.client.Firewalls.
-					Insert(context.projectID, fw.gce).
-					RequestId(uuid.NewV1().String()).
-					Do,
-				toErrFunc(fw.log("Firewall created", false)),
-			))
 		}
+		fw.gce.Name = newName()
+		ensure = append(ensure, operateFunc(
+			fw.log("Creating firewall", true),
+			computeOpCall(context.client.Firewalls.
+				Insert(context.projectID, fw.gce).
+				RequestId(uuid.NewV1().String()).
+				Do),
+			toErrFunc(fw.log("Firewall created", false)),
+		))
 	}
 
 	var remove []func() error
 removeLoop:
 	for _, gceTp := range gceFirewalls.Items {
-		for _, lb := range loadbalancing {
-			for _, fw := range lb.firewalls {
-				if gceTp.Description == fw.gce.Description {
-					continue removeLoop
-				}
+		for _, fw := range firewalls {
+			if gceTp.Description == fw.gce.Description {
+				continue removeLoop
 			}
 		}
 		remove = append(remove, removeResourceFunc(context.monitor, "firewall", gceTp.Name, context.client.Firewalls.

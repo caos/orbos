@@ -6,11 +6,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-var _ queryFunc = queryForwardingRules
+var _ ensureLBFunc = queryForwardingRules
 
 func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceRules, err := context.client.ForwardingRules.
-		List(context.projectID, context.region).
+		List(context.projectID, context.desired.Region).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
 		Fields("items(description,name,target,portRange,IPAddress)").
 		Do()
@@ -33,9 +33,9 @@ createLoop:
 				if gceRule.Target != lb.forwardingRule.gce.Target || gceRule.PortRange != lb.forwardingRule.gce.PortRange || gceRule.IPAddress != lb.forwardingRule.gce.IPAddress {
 					ensure = append(ensure, operateFunc(
 						lb.forwardingRule.log("Patching forwarding rule", true),
-						context.client.ForwardingRules.Patch(context.projectID, context.region, gceRule.Name, lb.forwardingRule.gce).
+						computeOpCall(context.client.ForwardingRules.Patch(context.projectID, context.desired.Region, gceRule.Name, lb.forwardingRule.gce).
 							RequestId(uuid.NewV1().String()).
-							Do,
+							Do),
 						toErrFunc(lb.forwardingRule.log("Forwarding rule patched", false)),
 					))
 				}
@@ -51,10 +51,10 @@ createLoop:
 					l.forwardingRule.log("Creating forwarding rule", true)()
 				}
 			}(lb),
-			context.client.ForwardingRules.
-				Insert(context.projectID, context.region, lb.forwardingRule.gce).
+			computeOpCall(context.client.ForwardingRules.
+				Insert(context.projectID, context.desired.Region, lb.forwardingRule.gce).
 				RequestId(uuid.NewV1().String()).
-				Do,
+				Do),
 			toErrFunc(lb.forwardingRule.log("Forwarding rule created", false)),
 		))
 	}
@@ -70,7 +70,7 @@ removeLoop:
 		}
 		remove = append(remove, removeResourceFunc(
 			context.monitor, "forwarding rule", rule.Name, context.client.ForwardingRules.
-				Delete(context.projectID, context.region, rule.Name).
+				Delete(context.projectID, context.desired.Region, rule.Name).
 				RequestId(uuid.NewV1().String()).
 				Do,
 		))

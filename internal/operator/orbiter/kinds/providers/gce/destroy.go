@@ -1,8 +1,8 @@
 package gce
 
-func destroy(desired *Spec, context *context) error {
+func destroy(context *context) error {
 
-	destroyLB, err := queryResources(context, nil)
+	destroyLB, err := queryResources(context, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -26,6 +26,5 @@ func destroy(desired *Spec, context *context) error {
 			}
 		}
 	}
-	desired.SSHKey = nil
-	return nil
+	return destroyCloudNAT(context)
 }

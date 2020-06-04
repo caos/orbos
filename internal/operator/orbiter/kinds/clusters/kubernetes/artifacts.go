@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"

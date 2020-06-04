@@ -13,7 +13,7 @@ if [[ "$DEBUG" == "true" ]]; then
 fi
 
 docker build --tag $IMAGE --target $TARGET .
-[[ $PUSH_IMAGE=true ]] && docker push $IMAGE
+[[ "$PUSH_IMAGE" == "true" ]] && docker push $IMAGE
 rm -rf ./artifacts/*
 
 
