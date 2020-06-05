@@ -6,15 +6,22 @@ import (
 )
 
 type Auth struct {
-	ClientID                   *secret.Secret   `yaml:"clientID,omitempty"`
-	ExistingClientIDSecret     *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret               *secret.Secret   `yaml:"clientSecret,omitempty"`
+	ClientID *secret.Secret `yaml:"clientID,omitempty"`
+	//Existing secret with the clientID
+	ExistingClientIDSecret *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
+	ClientSecret           *secret.Secret   `yaml:"clientSecret,omitempty"`
+	//Existing secret with the clientSecret
 	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
-	Scopes                     []string         `json:"scopes,omitempty" yaml:"scopes,omitempty"`
-	AuthURL                    string           `json:"authURL,omitempty" yaml:"authURL,omitempty"`
-	TokenURL                   string           `json:"tokenURL,omitempty" yaml:"tokenURL,omitempty"`
-	APIURL                     string           `json:"apiURL,omitempty" yaml:"apiURL,omitempty"`
-	AllowedDomains             []string         `json:"allowedDomains,omitempty" yaml:"allowedDomains,omitempty"`
+	//Used scopes for the OAuth-flow
+	Scopes []string `json:"scopes,omitempty" yaml:"scopes,omitempty"`
+	//Auth-endpoint
+	AuthURL string `json:"authURL,omitempty" yaml:"authURL,omitempty"`
+	//Token-endpoint
+	TokenURL string `json:"tokenURL,omitempty" yaml:"tokenURL,omitempty"`
+	//Userinfo-endpoint
+	APIURL string `json:"apiURL,omitempty" yaml:"apiURL,omitempty"`
+	//Domains allowed to login
+	AllowedDomains []string `json:"allowedDomains,omitempty" yaml:"allowedDomains,omitempty"`
 }
 
 func ClearEmpty(g *Auth) *Auth {

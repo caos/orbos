@@ -24,8 +24,7 @@ import (
 var (
 	fullToolset = &v1beta1.Toolset{
 		Metadata: &v1beta1.Metadata{
-			Name:      "caos_test",
-			Namespace: "caos-system",
+			Name: "caos_test",
 		},
 		Spec: &v1beta1.ToolsetSpec{
 			Ambassador: &v1beta1.Ambassador{
@@ -50,8 +49,7 @@ var (
 	}
 	changedToolset = &v1beta1.Toolset{
 		Metadata: &v1beta1.Metadata{
-			Name:      "caos_test",
-			Namespace: "caos-system",
+			Name: "caos_test",
 		},
 		Spec: &v1beta1.ToolsetSpec{
 			Ambassador: &v1beta1.Ambassador{
