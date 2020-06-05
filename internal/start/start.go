@@ -161,9 +161,13 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		finished = <-finishedChan
 	}
 
+	return GetKubeconfigs(monitor, orbctlGit, orbFile)
+}
+
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
-	orbTree, err := orbiter.Parse(orbctlGit, "orbiter.yml")
+	orbTree, err := orbiter.Parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return nil, errors.New("Failed to parse orbiter.yml")
 	}
@@ -178,7 +182,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 
 		value, err := secret.Read(
 			monitor,
-			orbctlGit,
+			gitClient,
 			secretfuncs.GetSecrets(orbFile),
 			path)
 		if err != nil || value == "" {

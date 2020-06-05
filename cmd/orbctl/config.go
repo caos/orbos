@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbc "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/spf13/cobra"
 	"io/ioutil"
@@ -50,8 +51,19 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		allKubeconfigs := make([]string, 0)
-		if existsFileInGit(gitClient, "orbiter.yml") {
-			monitor.Info("Orbiter.yml existing...")
+		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
+		if err != nil {
+			return err
+		}
+
+		if foundOrbiter {
+			monitor.Info("Reading kubeconfigs from orbiter.yml")
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			if err != nil {
+				return err
+			}
+			allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
+
 			if masterkey != "" {
 				monitor.Info("Read and rewrite orbiter.yml with new masterkey")
 				if err := secret.Rewrite(
@@ -76,15 +88,21 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 
 		changedConfig := new(orbc.Orb)
 		*changedConfig = *orbConfig
+		if masterkey != "" {
+			monitor.Info("Change masterkey in current orbconfig")
+			changedConfig.Masterkey = masterkey
+		}
 		if repoURL != "" {
 			monitor.Info("Change repository url in current orbconfig")
 			changedConfig.URL = repoURL
 		}
 
 		if masterkey != "" {
-			monitor.Info("Change masterkey in current orbconfig")
-			changedConfig.Masterkey = masterkey
-			if existsFileInGit(gitClient, "boom.yml") {
+			foundBoom, err := existsFileInGit(gitClient, "boom.yml")
+			if err != nil {
+				return err
+			}
+			if foundBoom {
 				monitor.Info("Read and rewrite boom.yml with new masterkey")
 				if err := secret.Rewrite(
 					monitor,
@@ -99,7 +117,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		if masterkey != "" || repoURL != "" {
 			monitor.Info("Writeback current orbconfig to local orbconfig")
 			if err := changedConfig.WriteBackOrbConfig(); err != nil {
-				monitor.Info("failed to change local configuration")
+				monitor.Info("Failed to change local configuration")
 				return err
 			}
 		}
@@ -109,7 +127,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if k8sClient.Available() {
 				monitor.Info("Ensure current orbconfig in kubernetes cluster")
 				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, changedConfig); err != nil {
-					monitor.Info("failed to apply configuration resources into k8s-cluster")
+					monitor.Info("Failed to apply configuration resources into k8s-cluster")
 					return err
 				}
 
