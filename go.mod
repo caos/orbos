@@ -10,7 +10,7 @@ require (
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
-	github.com/golang/protobuf v1.3.4
+	github.com/golang/protobuf v1.3.5
 	github.com/google/go-github/v31 v31.0.0
 	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
 	github.com/manifoldco/promptui v0.7.0
@@ -23,9 +23,9 @@ require (
 	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
-	golang.org/x/oauth2 v0.0.0-20191122200657-5d9234df094c
-	google.golang.org/api v0.4.0
-	google.golang.org/grpc v1.27.1
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	google.golang.org/api v0.26.0
+	google.golang.org/grpc v1.28.0
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.8
