@@ -94,7 +94,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 					return err
 				}
 			}
+		}
 
+		if masterkey != "" || repoURL != "" {
 			monitor.Info("Writeback current orbconfig to local orbconfig")
 			if err := changedConfig.WriteBackOrbConfig(); err != nil {
 				monitor.Info("failed to change local configuration")
@@ -112,6 +114,8 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				}
 
 				monitor.Info("Applied configuration resources")
+			} else {
+				monitor.Info("No connection to the k8s-cluster possible")
 			}
 		}
 
