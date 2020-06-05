@@ -66,7 +66,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		}},
 	}
 
-	diskNames := []string
+	diskNames := make([]string, desired.LocalSSDs)
 	for i := 0; i < int(desired.LocalSSDs); i++ {
 		name := fmt.Sprintf("nvme0n%d", i+1)
 		disks = append(disks, &compute.AttachedDisk{
@@ -79,7 +79,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			},
 			DeviceName: name,
 		})
-		diskNames = append(diskNames, name)
+		diskNames[i]=name
 	}
 
 	name := newName()
