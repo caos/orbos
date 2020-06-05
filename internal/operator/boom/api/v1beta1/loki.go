@@ -3,7 +3,7 @@ package v1beta1
 import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
 
 type Loki struct {
-	Deploy        bool          `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	Deploy        bool          `json:"deploy" yaml:"deploy"`
 	Logs          *Logs         `json:"logs,omitempty" yaml:"logs,omitempty"`
 	Storage       *storage.Spec `json:"storage,omitempty" yaml:"storage,omitempty"`
 	ClusterOutput bool          `json:"clusterOutput,omitempty" yaml:"clusterOutput,omitempty"`

@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: caos-system
+
+configMapGenerator:
+- name: grafana-dashboard-ambassador-envoy-global
+  files:
+  - json/ambassador-envoy-global.json
+- name: grafana-dashboard-ambassador-envoy-ingress
+  files:
+  - json/ambassador-envoy-ingress.json
+- name: grafana-dashboard-ambassador-envoy-service
+  files:
+  - json/ambassador-envoy-service.json
+
+generatorOptions:
+ disableNameSuffixHash: true
