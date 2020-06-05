@@ -66,7 +66,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		}},
 	}
 
+	diskNames := []string
 	for i := 0; i < int(desired.LocalSSDs); i++ {
+		name := fmt.Sprintf("nvme0n%d", i+1)
 		disks = append(disks, &compute.AttachedDisk{
 			Type:       "SCRATCH",
 			AutoDelete: true,
@@ -75,7 +77,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			InitializeParams: &compute.AttachedDiskInitializeParams{
 				DiskType: fmt.Sprintf("zones/%s/diskTypes/local-ssd", m.context.desired.Zone),
 			},
+			DeviceName: name,
 		})
+		diskNames = append(diskNames, name)
 	}
 
 	name := newName()
@@ -122,6 +126,21 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			createInstance.Name,
 		),
 	)
+
+	for _, name := range diskNames {
+		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
+		if _, err := infraMachine.Execute(
+			nil,
+			nil,
+			fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-%s` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, name, mountPoint),
+			); err != nil {
+			if cleanupErr := infraMachine.Remove(); cleanupErr != nil {
+				panic(cleanupErr)
+			}
+			return nil, err
+		}
+		monitor.WithField("mountpoint", mountPoint).Info("Disk formatted")
+	}
 
 	if m.cache.instances != nil {
 		if _, ok := m.cache.instances[poolName]; !ok {
