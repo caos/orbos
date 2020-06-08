@@ -17,9 +17,8 @@ func DestroyFuncGoroutine(query func() error) error {
 	return <-retChan
 }
 
-func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error {
-
-	trees, err := parse(gitClient, "orbiter.yml")
+func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan bool) error {
+	trees, err := Parse(gitClient, "orbiter.yml")
 	if err != nil {
 		return err
 	}
@@ -28,7 +27,7 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error
 	treeCurrent := &tree.Tree{}
 
 	adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
-		return adapt(monitor, treeDesired, treeCurrent)
+		return adapt(monitor, finishedChan, treeDesired, treeCurrent)
 	}
 
 	_, destroy, _, err := AdaptFuncGoroutine(adaptFunc)
@@ -36,7 +35,7 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) error
 		return err
 	}
 
-	if err := DestroyFuncGoroutine(destroy); err != nil {
+	if err := destroy(); err != nil {
 		return err
 	}
 
