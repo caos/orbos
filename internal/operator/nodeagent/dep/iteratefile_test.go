@@ -22,9 +22,10 @@ fourth line
 
 	reader := strings.NewReader(from)
 
-	var writer bytes.Buffer
+	writer := new(bytes.Buffer)
+	defer writer.Reset()
 
-	if err := dep.Manipulate(reader, &writer, []string{"second"}, []string{"fourth line"}, func(line string) *string {
+	if err := dep.Manipulate(reader, writer, []string{"second"}, []string{"fourth line"}, func(line string) *string {
 		if strings.Contains(line, "third") {
 			str := "#" + line
 			return &str

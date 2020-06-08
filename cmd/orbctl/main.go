@@ -25,16 +25,23 @@ func main() {
 
 	github.ClientID = githubClientID
 	github.ClientSecret = githubClientSecret
-	github.Key = RandStringBytes(20)
+	github.Key = RandStringBytes(32)
 
 	rootCmd, rootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
+
+	takeoff := TakeoffCommand(rootValues)
+	takeoff.AddCommand(
+		StartBoom(rootValues),
+		StartOrbiter(rootValues),
+	)
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
 		EditCommand(rootValues),
-		TakeoffCommand(rootValues),
 		TeardownCommand(rootValues),
+		ConfigCommand(rootValues),
+		takeoff,
 	)
 
 	if err := rootCmd.Execute(); err != nil {

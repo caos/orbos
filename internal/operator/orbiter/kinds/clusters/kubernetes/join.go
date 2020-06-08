@@ -14,6 +14,7 @@ import (
 
 func join(
 	monitor mntr.Monitor,
+	clusterID string,
 	joining *initializedMachine,
 	joinAt infra.Machine,
 	desired DesiredV0,
@@ -85,7 +86,7 @@ kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
 certificatesDir: /etc/kubernetes/pki
-clusterName: kubernetes
+clusterName: %s
 controlPlaneEndpoint: %s
 controllerManager: {}
 dns:
@@ -118,6 +119,7 @@ nodeRegistration:
 		joinToken,
 		intIP,
 		joining.infra.ID(),
+		clusterID,
 		kubeAPI,
 		kubernetesVersion,
 		desired.Spec.Networking.DNSDomain,
@@ -173,7 +175,7 @@ nodeRegistration:
 		return nil, nil
 	}
 
-	var kubeconfig bytes.Buffer
+	kubeconfig := new(bytes.Buffer)
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
 	if err != nil {
@@ -195,14 +197,14 @@ nodeRegistration:
 		return nil, err
 	}
 
-	if err := joining.infra.ReadFile("${HOME}/.kube/config", &kubeconfig); err != nil {
+	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfig); err != nil {
 		return nil, err
 	}
 
 	joining.currentMachine.Joined = true
 	monitor.Changed("Cluster initialized")
 
-	kc := kubeconfig.String()
+	kc := strings.ReplaceAll(kubeconfig.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
 
 	return &kc, nil
 }

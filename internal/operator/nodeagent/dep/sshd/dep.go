@@ -42,9 +42,11 @@ func (*sshdDep) Equals(other nodeagent.Installer) bool {
 
 func (s *sshdDep) Current() (pkg common.Package, err error) {
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	swapon := exec.Command("sshd", "-T")
-	swapon.Stdout = &buf
+	swapon.Stdout = buf
 	if err := swapon.Run(); err != nil {
 		return pkg, err
 	}

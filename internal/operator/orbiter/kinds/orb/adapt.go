@@ -17,13 +17,13 @@ func AdaptFunc(
 	orb *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
-	deployOrbiterAndBoom bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	deployOrbiter bool) orbiter.AdaptFunc {
+	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind, err := parseDesiredV0(desiredTree)
+		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
@@ -60,6 +60,7 @@ func AdaptFunc(
 				providerTree,
 				providerCurrent,
 				whitelistChan,
+				finishedChan,
 			)
 
 			if err != nil {
@@ -107,10 +108,11 @@ func AdaptFunc(
 				clusterTree,
 				orbiterCommit,
 				oneoff,
-				deployOrbiterAndBoom,
+				deployOrbiter,
 				clusterCurrent,
 				destroyProviders,
 				whitelistChan,
+				finishedChan,
 			)
 
 			if err != nil {
@@ -137,7 +139,11 @@ func AdaptFunc(
 				providerEnsurers := make([]orbiter.EnsureFunc, 0)
 				queriedProviders := make(map[string]interface{})
 				for _, querier := range providerQueriers {
-					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					queryFunc := func() (orbiter.EnsureFunc, error) {
+						return querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
+					}
+					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+
 					if err != nil {
 						return nil, err
 					}
@@ -150,7 +156,11 @@ func AdaptFunc(
 
 				clusterEnsurers := make([]orbiter.EnsureFunc, 0)
 				for _, querier := range clusterQueriers {
-					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					queryFunc := func() (orbiter.EnsureFunc, error) {
+						return querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
+					}
+					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+
 					if err != nil {
 						return nil, err
 					}
@@ -163,7 +173,11 @@ func AdaptFunc(
 					}()
 
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
-						if err := ensurer(psf); err != nil {
+						ensureFunc := func() error {
+							return ensurer(psf)
+						}
+
+						if err := orbiter.EnsureFuncGoroutine(ensureFunc); err != nil {
 							return err
 						}
 					}
@@ -176,7 +190,7 @@ func AdaptFunc(
 				}()
 
 				for _, destroyer := range clusterDestroyers {
-					if err := destroyer(); err != nil {
+					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
 						return err
 					}
 				}

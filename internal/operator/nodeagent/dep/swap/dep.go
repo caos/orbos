@@ -43,9 +43,11 @@ func (*swapDep) Equals(other nodeagent.Installer) bool {
 
 func (s *swapDep) Current() (pkg common.Package, err error) {
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	swapon := exec.Command("swapon", "--summary")
-	swapon.Stdout = &buf
+	swapon.Stdout = buf
 	if err := swapon.Run(); err != nil {
 		return pkg, err
 	}
@@ -72,9 +74,11 @@ func (s *swapDep) Current() (pkg common.Package, err error) {
 }
 
 func (s *swapDep) Ensure(remove common.Package, ensure common.Package) error {
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	swapoff := exec.Command("swapoff", "--all")
-	swapoff.Stderr = &buf
+	swapoff.Stderr = buf
 	if err := swapoff.Run(); err != nil {
 		return errors.Wrapf(err, "Disabling swap failed with standard error: %s", buf.String())
 	}
