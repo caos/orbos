@@ -1,0 +1,105 @@
+name: Dev-Release
+on:
+  push:
+    branches-ignore:
+      - master
+jobs:
+  dev-release:
+    name: Dev-Release Orbos
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Source Checkout Dev
+        id: source-checkout-dev
+        uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - name: Dev-Release
+        id: dev-release
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GO111MODULE: on
+          CGO_ENABLED: 0
+        run: |
+          export VERSION=${GITHUB_REF##*/}
+
+          export IMAGE=docker.pkg.github.com/caos/orbos/orbos
+          export TAG_VERSION=${IMAGE}:${VERSION}
+
+          go mod download
+          mkdir -p ./artifacts
+          go run cmd/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" -githubclientid "${{ secrets.GITHUBOAUTHCLIENTID }}" -githubclientsecret "${{ secrets.GITHUBOAUTHCLIENTSECRET }}" --orbctl ./artifacts
+
+          CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/gen-charts/*.go
+
+          echo "Publishing Orbos dev-version $VERSION"
+          docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
+          docker build --tag ${TAG_VERSION} --file ./Dockerfile .
+          docker push ${TAG_VERSION}
+
+          echo "##[set-output name=relbranch;]$(echo ${VERSION})"
+          curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/$VERSION | jq .id))
+      - name: Dev Release Create
+        id: dev-release-create
+        uses: actions/create-release@v1
+        if: steps.dev-release.outputs.relbranch != null
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.dev-release.outputs.relbranch }}
+          release_name: Branch ${{ steps.dev-release.outputs.relbranch }}
+          body: |
+            This is a release from a development branch.
+            Do not use these artifacts in production.
+          draft: false
+          prerelease: true
+      - name: Upload Darwin Dev Release Asset
+        uses: actions/upload-release-asset@v1.0.1
+        if: steps.dev-release.outputs.relbranch != null
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
+          asset_path: ./artifacts/orbctl-Darwin-x86_64
+          asset_name: orbctl Darwin x86_64
+          asset_content_type: application/octet-stream
+      - name: Upload FreeBSD Dev Release Asset
+        if: steps.dev-release.outputs.relbranch != null
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
+          asset_path: ./artifacts/orbctl-FreeBSD-x86_64
+          asset_name: orbctl FreeBSD x86_64
+          asset_content_type: application/octet-stream
+      - name: Upload Linux Dev Release Asset
+        if: steps.dev-release.outputs.relbranch != null
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
+          asset_path: ./artifacts/orbctl-Linux-x86_64
+          asset_name: orbctl Linux x86_64
+          asset_content_type: application/octet-stream
+      - name: Upload OpenBSD Dev Release Asset
+        if: steps.dev-release.outputs.relbranch != null
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
+          asset_path: ./artifacts/orbctl-OpenBSD-x86_64
+          asset_name: orbctl OpenBSD x86_64
+          asset_content_type: application/octet-stream
+      - name: Upload Windows Dev Release Asset
+        if: steps.dev-release.outputs.relbranch != null
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.dev-release-create.outputs.upload_url }}
+          asset_path: ./artifacts/orbctl-Windows-x86_64.exe
+          asset_name: orbctl Windows x86_64
+          asset_content_type: application/octet-stream

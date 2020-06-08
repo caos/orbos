@@ -5,6 +5,7 @@ package nodeagent
 import (
 	"errors"
 	"fmt"
+	"runtime/debug"
 
 	"gopkg.in/yaml.v3"
 
@@ -30,13 +31,8 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			return
 		}
 
-		desiredBytes, err := gitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
-		if err != nil {
-			panic(err)
-		}
-
 		desired := common.NodeAgentsDesiredKind{}
-		if err := yaml.Unmarshal(desiredBytes, &desired); err != nil {
+		if err := yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-desired.yml"), &desired); err != nil {
 			panic(err)
 		}
 
@@ -84,14 +80,8 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			if err := gitClient.Clone(); err != nil {
 				panic(err)
 			}
-
-			currentNodeagents, err := gitClient.Read("caos-internal/orbiter/node-agents-current.yml")
-			if err != nil {
-				panic(err)
-			}
-
 			current := common.NodeAgentsCurrentKind{}
-			yaml.Unmarshal(currentNodeagents, &current)
+			yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &current)
 			current.Kind = "nodeagent.caos.ch/NodeAgents"
 			current.Version = "v0"
 			if current.Current == nil {
@@ -141,5 +131,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
+
+		debug.FreeOSMemory()
 	}
 }

@@ -41,9 +41,11 @@ func (*hostnameDep) Equals(other nodeagent.Installer) bool {
 
 func (s *hostnameDep) Current() (pkg common.Package, err error) {
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	cmd := exec.Command("hostname")
-	cmd.Stdout = &buf
+	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
 		return pkg, err
 	}
@@ -60,9 +62,11 @@ func (s *hostnameDep) Ensure(remove common.Package, ensure common.Package) error
 		return nil
 	}
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
+
 	cmd := exec.Command("hostnamectl", "set-hostname", newHostname)
-	cmd.Stdout = &buf
+	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
 		return err
 	}

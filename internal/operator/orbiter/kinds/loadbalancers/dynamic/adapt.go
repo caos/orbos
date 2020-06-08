@@ -35,7 +35,7 @@ func init() {
 type WhiteListFunc func() []*orbiter.CIDR
 
 func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -260,9 +260,10 @@ http {
 `))
 
 				for _, d := range machinesData {
+					kaBuf := new(bytes.Buffer)
+					defer kaBuf.Reset()
 
-					var kaBuf bytes.Buffer
-					if err := keepaliveDTemplate.Execute(&kaBuf, d); err != nil {
+					if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
 						return err
 					}
 					kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
@@ -307,8 +308,10 @@ http {
 					}
 					na.Software.KeepaliveD = kaPkg
 
-					var ngxBuf bytes.Buffer
-					if err := nginxTemplate.Execute(&ngxBuf, d); err != nil {
+					ngxBuf := new(bytes.Buffer)
+					defer ngxBuf.Reset()
+
+					if err := nginxTemplate.Execute(ngxBuf, d); err != nil {
 						return err
 					}
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}

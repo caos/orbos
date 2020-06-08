@@ -2,10 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
-	"regexp"
-
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
@@ -17,8 +16,6 @@ var ipPartRegex = `([0-9]|[1-9][0-9]|1[0-9][0-9]|2[0-4][0-9]|25[0-5])`
 var ipRegex = fmt.Sprintf(`%s\.%s\.%s\.%s`, ipPartRegex, ipPartRegex, ipPartRegex, ipPartRegex)
 
 var cidrRegex = fmt.Sprintf(`%s/([1-2][0-9]|3[0-2]|[0-9])`, ipRegex)
-
-var cidrComp = regexp.MustCompile(fmt.Sprintf(`^(%s)$`, cidrRegex))
 
 type DesiredV0 struct {
 	Common tree.Common `yaml:",inline"`
@@ -38,7 +35,6 @@ type Spec struct {
 	Versions struct {
 		Kubernetes string
 		Orbiter    string
-		Boom       string
 	}
 	Workers []*Pool
 }
@@ -53,6 +49,18 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error
 	}
 
 	return desiredKind, nil
+}
+
+func rewriteMasterkeyDesiredV0(old *DesiredV0, masterkey string) *DesiredV0 {
+	if old != nil {
+		newD := new(DesiredV0)
+		*newD = *old
+		if newD.Spec.Kubeconfig != nil {
+			newD.Spec.Kubeconfig.Masterkey = masterkey
+		}
+		return newD
+	}
+	return old
 }
 
 func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {

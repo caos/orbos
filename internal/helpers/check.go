@@ -14,8 +14,8 @@ import (
 func Check(url string, status int) (string, error) {
 
 	urlParts := strings.Split(url, "://")
-	if urlParts[0]== "tcp"{
-		return check(checks.NewPingCheck("tcp",checks.NewDialPinger("tcp", urlParts[1]),2*time.Second))
+	if urlParts[0] == "tcp" {
+		return check(checks.NewPingCheck("tcp", checks.NewDialPinger("tcp", urlParts[1]), 2*time.Second))
 	}
 
 	return check(checks.NewHTTPCheck(checks.HTTPCheckConfig{
@@ -33,7 +33,7 @@ func Check(url string, status int) (string, error) {
 	}))
 }
 
-func check(check checks.Check, err error) (string, error){
+func check(check checks.Check, err error) (string, error) {
 	msg, err := checks.Must(check, err).Execute()
 	message, ok := msg.(string)
 	if !ok {
