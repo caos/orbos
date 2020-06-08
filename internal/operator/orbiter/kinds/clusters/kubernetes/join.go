@@ -12,6 +12,13 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+type CloudIntegration int
+
+const (
+	None CloudIntegration = iota
+	GCE
+)
+
 func join(
 	monitor mntr.Monitor,
 	joining *initializedMachine,
@@ -20,7 +27,8 @@ func join(
 	kubeAPI *infra.Address,
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
-	certKey string) (kubeconfig *string, err error) {
+	certKey string,
+	integrate CloudIntegration) (kubeconfig *string, err error) {
 
 	defer func() {
 		if err != nil {
