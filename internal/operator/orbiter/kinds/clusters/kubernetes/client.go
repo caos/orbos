@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"fmt"
 	"io"
+	"k8s.io/client-go/rest"
 	"strings"
 	"sync"
 	"time"
@@ -49,7 +50,10 @@ type Client struct {
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
 	kc := &Client{monitor: monitor}
-	kc.Refresh(kubeconfig)
+		err := kc.Refresh(kubeconfig)
+		if err != nil {
+		    // do nothing
+		}
 	return kc
 }
 
@@ -224,11 +228,14 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 	return err
 }
 
-func (c *Client) GetNode(id string) (node *core.Node, err error) {
+func (c *Client) RefreshLocal() (err error) {
+	config, err := rest.InClusterConfig()
 
-	defer func() {
-		err = errors.Wrapf(err, "getting node %s failed", id)
-	}()
+	c.set, err = kubernetes.NewForConfig(config)
+	return err
+}
+
+func (c *Client) GetNode(id string) (node *core.Node, err error) {
 
 	api, err := c.nodeApi()
 	if err != nil {

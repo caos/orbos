@@ -60,9 +60,10 @@ func TestBuildAndParseNodeAgent(t *testing.T) {
 	}
 	unpackedExecutable.Close()
 
-	var buf bytes.Buffer
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
 	cmd := exec.Command(unpackedPath, "-version")
-	cmd.Stdout = &buf
+	cmd.Stdout = buf
 
 	if err := cmd.Run(); err != nil {
 		t.Fatal(err)

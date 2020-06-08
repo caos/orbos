@@ -12,7 +12,7 @@ import (
 )
 
 func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -35,7 +35,7 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
 
-		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent)
+		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
 		if err != nil {
 			return nil, nil, migrate, err
 		}
@@ -56,10 +56,18 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
+				lbQueryFunc := func() (orbiter.EnsureFunc, error) {
+					return lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
+				}
+
+				if _, err := orbiter.QueryFuncGoroutine(lbQueryFunc); err != nil {
 					return nil, err
 				}
-				return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+
+				queryFunc := func() (orbiter.EnsureFunc, error) {
+					return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+				}
+				return orbiter.QueryFuncGoroutine(queryFunc)
 			}, func() error {
 				return destroy(monitor, desiredKind, current, id)
 			}, migrate, nil

@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -40,7 +40,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		_, logger, gitClient, orbconfig, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -50,19 +50,23 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			path = args[0]
 		}
 
-		secretFunc := func(operator string) secret.Func {
-			if operator == "boom" {
-				return api.SecretFunc(orbconfig)
-			} else if operator == "orbiter" {
-				return orb.SecretsFunc(orbconfig)
-			}
-			return nil
+		gitClientConf := &orbgit.Config{
+			Comitter:  "orbctl",
+			Email:     "orbctl@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "writesecret",
+		}
+
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		defer cleanUp()
+		if err != nil {
+			return err
 		}
 
 		if err := secret.Write(
-			logger,
+			monitor,
 			gitClient,
-			secretFunc,
+			secretfuncs.GetSecrets(orbConfig),
 			path,
 			s); err != nil {
 			panic(err)

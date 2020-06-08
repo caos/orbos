@@ -8,11 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/operator"
-	"github.com/caos/orbos/internal/watcher/cron"
-	"github.com/caos/orbos/internal/watcher/immediate"
 	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -23,13 +21,6 @@ import (
 
 var gitCommit string
 var version string
-
-func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
-	}
-	return fallback
-}
 
 func main() {
 
@@ -50,7 +41,7 @@ func main() {
 	flag.Parse()
 
 	if *printVersion {
-		fmt.Println(fmt.Sprintf("%s %s", version, gitCommit))
+		fmt.Printf("%s %s\n", version, gitCommit)
 		os.Exit(0)
 	}
 
@@ -96,24 +87,18 @@ func main() {
 		panic(err)
 	}
 
-	op := operator.New(
-		ctx,
+	itFunc := nodeagent.Iterator(
 		monitor,
-		nodeagent.Iterator(
-			monitor,
-			gitClient,
-			gitCommit,
-			*nodeAgentID,
-			firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
-			conv,
-			conv.Init()),
-		[]operator.Watcher{
-			immediate.New(monitor),
-			cron.New(monitor, "@every 10s"),
-		})
+		gitClient,
+		gitCommit,
+		*nodeAgentID,
+		firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
+		conv,
+		conv.Init())
 
-	if err := op.Initialize(); err != nil {
-		panic(err)
+	for {
+		itFunc()
+		monitor.Info("Iteration done")
+		time.Sleep(10 * time.Second)
 	}
-	op.Run()
 }
