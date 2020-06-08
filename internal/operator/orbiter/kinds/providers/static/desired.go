@@ -67,6 +67,28 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error
 	return desiredKind, nil
 }
 
+func rewriteMasterkeyDesiredV0(old *DesiredV0, masterkey string) *DesiredV0 {
+	if old != nil {
+		newD := new(DesiredV0)
+		*newD = *old
+
+		if newD.Spec.Keys.BootstrapKeyPrivate != nil {
+			newD.Spec.Keys.BootstrapKeyPrivate.Masterkey = masterkey
+		}
+		if newD.Spec.Keys.BootstrapKeyPublic != nil {
+			newD.Spec.Keys.BootstrapKeyPublic.Masterkey = masterkey
+		}
+		if newD.Spec.Keys.MaintenanceKeyPrivate != nil {
+			newD.Spec.Keys.MaintenanceKeyPrivate.Masterkey = masterkey
+		}
+		if newD.Spec.Keys.MaintenanceKeyPublic != nil {
+			newD.Spec.Keys.MaintenanceKeyPublic.Masterkey = masterkey
+		}
+		return newD
+	}
+	return old
+}
+
 func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
 	if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
 		desiredKind.Spec.Keys.BootstrapKeyPrivate = &secret.Secret{Masterkey: masterkey}

@@ -14,6 +14,7 @@ import (
 
 func join(
 	monitor mntr.Monitor,
+	clusterID string,
 	joining *initializedMachine,
 	joinAt infra.Machine,
 	desired DesiredV0,
@@ -85,7 +86,7 @@ kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
 certificatesDir: /etc/kubernetes/pki
-clusterName: kubernetes
+clusterName: %s
 controlPlaneEndpoint: %s
 controllerManager: {}
 dns:
@@ -118,6 +119,7 @@ nodeRegistration:
 		joinToken,
 		intIP,
 		joining.infra.ID(),
+		clusterID,
 		kubeAPI,
 		kubernetesVersion,
 		desired.Spec.Networking.DNSDomain,
@@ -202,7 +204,7 @@ nodeRegistration:
 	joining.currentMachine.Joined = true
 	monitor.Changed("Cluster initialized")
 
-	kc := kubeconfig.String()
+	kc := strings.ReplaceAll(kubeconfig.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
 
 	return &kc, nil
 }

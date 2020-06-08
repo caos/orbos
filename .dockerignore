@@ -1,2 +1,4 @@
 *
 !artifacts/orbctl-Linux-x86_64
+!artifacts/gen-charts
+!dashboards/

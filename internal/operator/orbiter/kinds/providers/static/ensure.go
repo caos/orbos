@@ -13,7 +13,7 @@ import (
 
 	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static/ssh"
+	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -59,8 +59,9 @@ func query(
 	}
 
 	for _, pool := range pools {
+		copyDesireLb := desireLb
 		desireLbFunc := func() error {
-			return desireLb(pool)
+			return copyDesireLb(pool)
 		}
 		if err := orbiter.EnsureFuncGoroutine(desireLbFunc); err != nil {
 			return nil, err
