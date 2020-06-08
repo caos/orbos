@@ -88,45 +88,48 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			return current, nil, nil
 		}
 
-		return current, ensureFunc(monitor, append(removePorts, addPorts...)), nil
+		return current, func() error {
+			if err := ensure(monitor, addPorts); err != nil {
+				return err
+			}
+			return ensure(monitor, removePorts)
+		}, nil
 	})
 }
 
-func ensureFunc(monitor mntr.Monitor, changes []string) func() error {
-	return func() error {
+func ensure(monitor mntr.Monitor, changes []string) error {
 
-		errBuf := new(bytes.Buffer)
-		defer errBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
 
-		cmd := exec.Command("systemctl", "enable", "firewalld")
-		cmd.Stderr = errBuf
+	cmd := exec.Command("systemctl", "enable", "firewalld")
+	cmd.Stderr = errBuf
 
-		fullCmd := strings.Join(cmd.Args, " ")
-		if monitor.IsVerbose() {
-			fmt.Println(fullCmd)
-			cmd.Stdout = os.Stdout
-		}
-
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-		}
-
-		errBuf.Reset()
-		cmd = exec.Command("systemctl", "start", "firewalld")
-		cmd.Stderr = errBuf
-
-		fullCmd = strings.Join(cmd.Args, " ")
-		if monitor.IsVerbose() {
-			fmt.Println(fullCmd)
-			cmd.Stdout = os.Stdout
-		}
-
-		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-		}
-
-		return changeFirewall(monitor, changes)
+	fullCmd := strings.Join(cmd.Args, " ")
+	if monitor.IsVerbose() {
+		fmt.Println(fullCmd)
+		cmd.Stdout = os.Stdout
 	}
+
+	if err := cmd.Run(); err != nil {
+		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+	}
+
+	errBuf.Reset()
+	cmd = exec.Command("systemctl", "start", "firewalld")
+	cmd.Stderr = errBuf
+
+	fullCmd = strings.Join(cmd.Args, " ")
+	if monitor.IsVerbose() {
+		fmt.Println(fullCmd)
+		cmd.Stdout = os.Stdout
+	}
+
+	if err := cmd.Run(); err != nil {
+		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+	}
+
+	return changeFirewall(monitor, changes)
 }
 
 func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {

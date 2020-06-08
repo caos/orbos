@@ -14,7 +14,7 @@ type DesiredV0 struct {
 	Providers map[string]*tree.Tree
 }
 
-func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
+func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{Common: desiredTree.Common}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
