@@ -33,8 +33,6 @@ require (
 	k8s.io/api v0.18.3
 	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v0.18.3
-	k8s.io/code-generator v0.17.3 // indirect
 	k8s.io/kubectl v0.18.3
-	sigs.k8s.io/structured-merge-diff v0.0.0-20190525122527-15d366b2352e // indirect
 	sigs.k8s.io/controller-runtime v0.4.0 // indirect
 )
