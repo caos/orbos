@@ -1,19 +1,16 @@
-package kubernetes
+package infra
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	"os/exec"
 	"sync"
 	"time"
-
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
 )
 
-func try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machine infra.Machine, callback func(cmp infra.Machine) error) error {
+func Try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machine Machine, callback func(cmp Machine) error) error {
 	var err error
 	timedOut := helpers.Retry(timer, interval, func() bool {
 		err = callback(machine)
@@ -48,19 +45,19 @@ func try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machin
 	return nil
 }
 
-func operateConcurrently(machines []infra.Machine, cb func(infra.Machine) error) error {
+func OperateConcurrently(machines []Machine, cb func(Machine) error) error {
 	var wg sync.WaitGroup
 	wg.Add(len(machines))
 	syncronizer := helpers.NewSynchronizer(&wg)
 	for _, machine := range machines {
-		go func(cmp infra.Machine) {
+		go func(cmp Machine) {
 			syncronizer.Done(errors.Wrapf(cb(cmp), "operating concurrently on machine %s failed", cmp.ID()))
 		}(machine)
 	}
 	wg.Wait()
 
 	if syncronizer.IsError() {
-		return errors.Wrapf(syncronizer, "operating concurrently on machines %s", infra.Machines(machines))
+		return errors.Wrapf(syncronizer, "operating concurrently on machines %s", Machines(machines))
 	}
 
 	return nil

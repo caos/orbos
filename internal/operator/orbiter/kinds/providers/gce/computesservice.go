@@ -2,6 +2,7 @@ package gce
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -129,11 +130,14 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	for _, name := range diskNames {
 		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
-		if _, err := infraMachine.Execute(
-			nil,
-			nil,
-			fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-%s` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, name, mountPoint),
-			); err != nil {
+		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10 *time.Second, infraMachine, func(m infra.Machine) error {
+			_, formatErr := m.Execute(
+				nil,
+				nil,
+				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-%s` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, name, mountPoint),
+			)
+			return formatErr
+		}); err != nil {
 			if cleanupErr := infraMachine.Remove(); cleanupErr != nil {
 				panic(cleanupErr)
 			}

@@ -45,7 +45,7 @@ func join(
 	switch desired.Spec.Networking.Network {
 	case "cilium":
 		installNetwork = func() error {
-			return try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
+			return infra.Try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml")
 				monitor.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
@@ -55,7 +55,7 @@ func join(
 		}
 	case "calico":
 		installNetwork = func() error {
-			return try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
+			return infra.Try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 				applyStdout, applyErr := cmp.Execute(nil, nil, fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr))
 				monitor.WithFields(map[string]interface{}{
 					"stdout": string(applyStdout),
@@ -161,7 +161,7 @@ nodeRegistration:
 		}
 	}
 
-	if err := try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
+	if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
 	}); err != nil {
 		return nil, err
