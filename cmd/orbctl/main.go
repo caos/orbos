@@ -41,6 +41,7 @@ func main() {
 		EditCommand(rootValues),
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
+		APICommand(rootValues),
 		takeoff,
 	)
 

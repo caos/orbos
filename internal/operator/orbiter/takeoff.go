@@ -2,7 +2,7 @@ package orbiter
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -15,7 +15,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type EnsureFunc func(psf push.Func) error
+type EnsureFunc func(psf api.SecretFunc) error
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
 
@@ -59,13 +59,11 @@ func Metrics() {
 func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 
 	return func() {
-		trees, err := Parse(conf.GitClient, "orbiter.yml")
+		treeDesired, err := api.ReadOrbiterYml(conf.GitClient)
 		if err != nil {
 			monitor.Error(err)
 			return
 		}
-
-		treeDesired := trees[0]
 		treeCurrent := &tree.Tree{}
 
 		desiredNodeAgents := common.NodeAgentsDesiredKind{
@@ -113,7 +111,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 
 		if migrate {
-			if err := push.YML(monitor, "Desired state migrated", conf.GitClient, treeDesired, "orbiter.yml"); err != nil {
+			if err := api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -170,7 +168,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		events = make([]*event, 0)
 
 		ensureFunc := func() error {
-			return ensure(push.SecretsFunc(conf.GitClient, treeDesired, "orbiter.yml"))
+			return ensure(api.OrbiterSecretFunc(conf.GitClient, treeDesired))
 		}
 		if err := EnsureFuncGoroutine(ensureFunc); err != nil {
 			handleAdapterError(err)

@@ -24,14 +24,14 @@ type secretAlias Secret
 type Existing struct {
 	Name         string `json:"name" yaml:"name"`
 	Key          string `json:"key" yaml:"key"`
-	InternalName string `json:"internalName" yaml:"internalName"`
+	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
 type ExistingIDSecret struct {
 	Name         string `json:"name" yaml:"name"`
 	IDKey        string `json:"idKey" yaml:"idKey"`
 	SecretKey    string `json:"secretKey" yaml:"secretKey"`
-	InternalName string `json:"internalName" yaml:"internalName"`
+	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
 func (s *Secret) UnmarshalYAMLWithExisting(node *yaml.Node, existing *Existing) error {

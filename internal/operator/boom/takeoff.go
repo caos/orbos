@@ -40,7 +40,6 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 		CrdDirectoryPath: "/boom/crd",
 		CrdUrl:           orb.URL,
 		PrivateKey:       []byte(orb.Repokey),
-		CrdPath:          "boom.yml",
 		User:             "Boom",
 		Email:            "boom@caos.ch",
 	}

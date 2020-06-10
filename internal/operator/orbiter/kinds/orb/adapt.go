@@ -1,10 +1,10 @@
 package orb
 
 import (
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
@@ -167,7 +167,7 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf push.Func) (err error) {
+				return func(psf api.SecretFunc) (err error) {
 					defer func() {
 						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 					}()

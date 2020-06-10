@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -59,7 +60,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		}
 
 		allKubeconfigs := make([]string, 0)
-		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
+		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {
 			return err
 		}
@@ -119,7 +120,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 }
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
-	foundBoom, err := existsFileInGit(gitClient, "boom.yml")
+	foundBoom, err := api.ExistsBoomYml(gitClient)
 	if err != nil {
 		return err
 	}
@@ -214,16 +215,4 @@ func StartBoom(rv RootValues) *cobra.Command {
 		return start.Boom(monitor, orbConfig.Path, localmode, version)
 	}
 	return cmd
-}
-
-func existsFileInGit(g *git.Client, path string) (bool, error) {
-	if err := g.Clone(); err != nil {
-		return false, err
-	}
-
-	of := g.Read(path)
-	if of != nil && len(of) > 0 {
-		return true, nil
-	}
-	return false, nil
 }

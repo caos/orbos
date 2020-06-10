@@ -3,10 +3,10 @@ package secret
 import (
 	"errors"
 	"fmt"
+	"github.com/caos/orbos/internal/api"
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
 
@@ -79,7 +79,14 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, op
 		return nil
 	}
 
-	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
+	if operator == "orbiter" {
+		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+	} else if operator == "boom" {
+		return api.BoomSecretFunc(gitClient, tree)(monitor)
+	}
+
+	monitor.Info("No secrets written")
+	return nil
 }
 
 func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path, value string) error {
@@ -90,7 +97,14 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 
 	secret.Value = value
 
-	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
+	if operator == "orbiter" {
+		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+	} else if operator == "boom" {
+		return api.BoomSecretFunc(gitClient, tree)(monitor)
+	}
+
+	monitor.Info("No secrets written")
+	return nil
 }
 
 func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Secret {

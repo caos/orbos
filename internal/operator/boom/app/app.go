@@ -18,7 +18,7 @@ import (
 
 type App struct {
 	ToolsDirectoryPath string
-	GitCrds            []gitcrd.GitCrd
+	GitCrds            []*gitcrd.GitCrd
 	Crds               map[string]crd.Crd
 	monitor            mntr.Monitor
 }
@@ -31,7 +31,7 @@ func New(monitor mntr.Monitor, toolsDirectoryPath string) *App {
 	}
 
 	app.Crds = make(map[string]crd.Crd, 0)
-	app.GitCrds = make([]gitcrd.GitCrd, 0)
+	app.GitCrds = make([]*gitcrd.GitCrd, 0)
 
 	return app
 }
@@ -134,10 +134,10 @@ func (a *App) WriteBackCurrentState(masterkey string) error {
 
 		crdGit.WriteBackCurrentState(currentResourceList, masterkey)
 		if err := crdGit.GetStatus(); err != nil {
-			metrics.FailedWritingCurrentState(crdGit.GetRepoURL(), crdGit.GetRepoCRDPath())
+			metrics.FailedWritingCurrentState(crdGit.GetRepoURL())
 			return err
 		}
-		metrics.SuccessfulWriteCurrentState(crdGit.GetRepoURL(), crdGit.GetRepoCRDPath())
+		metrics.SuccessfulWriteCurrentState(crdGit.GetRepoURL())
 	}
 	return nil
 }

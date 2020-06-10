@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -167,12 +168,12 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
-	orbTree, err := orbiter.Parse(gitClient, "orbiter.yml")
+	orbTree, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
 		return nil, errors.New("Failed to parse orbiter.yml")
 	}
 
-	orbDef, err := orb.ParseDesiredV0(orbTree[0])
+	orbDef, err := orb.ParseDesiredV0(orbTree)
 	if err != nil {
 		return nil, errors.New("Failed to parse orbiter.yml")
 	}

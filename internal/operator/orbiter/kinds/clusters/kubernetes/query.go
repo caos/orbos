@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -77,7 +77,7 @@ func query(
 			firewallFunc(monitor, *desired, kubeAPIAddress.Port)(machine)
 		})
 
-	return func(psf push.Func) error {
+	return func(psf api.SecretFunc) error {
 		return ensure(
 			monitor,
 			clusterID,
