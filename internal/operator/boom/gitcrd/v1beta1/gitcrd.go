@@ -2,6 +2,7 @@ package v1beta1
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/tree"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"os"
@@ -132,21 +133,44 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey s
 		return
 	}
 
+	if toolsetCRD.Spec.BoomVersion != "" {
+		dummyKubeconfig := ""
+		if err := cmd.Reconcile(monitor, &dummyKubeconfig, toolsetCRD.Spec.BoomVersion); err != nil {
+			c.status = err
+			return
+		}
+	}
+
 	// pre-steps
 	if toolsetCRD.Spec.PreApply != nil && toolsetCRD.Spec.PreApply.Deploy == true {
 		pre := toolsetCRD.Spec.PreApply
 		if pre.Folder == "" {
 			c.status = errors.New("PreApply defined but no folder provided")
+			return
 		}
-		if !helper2.FolderExists(pre.Folder) {
+
+		folderExists, err := c.git.ExistsFolder(pre.Folder)
+		if err != nil {
+			c.status = err
+			return
+		}
+		if !folderExists {
 			c.status = errors.New("PreApply provided folder is nonexistent")
+			return
 		}
-		if empty, err := helper2.FolderEmpty(pre.Folder); empty == true || err != nil {
+
+		folderEmpty, err := c.git.EmptyFolder(pre.Folder)
+		if err != nil {
+			c.status = err
+			return
+		}
+		if folderEmpty {
 			c.status = errors.New("PreApply provided folder is empty")
+			return
 		}
 
 		c.gitMutex.Lock()
-		err := helper2.CopyFolderToLocal(c.git, c.crdDirectoryPath, pre.Folder)
+		err = helper2.CopyFolderToLocal(c.git, c.crdDirectoryPath, pre.Folder)
 		c.gitMutex.Unlock()
 		if err != nil {
 			c.status = err
@@ -157,6 +181,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey s
 			c.status = err
 			return
 		}
+
 	}
 
 	c.crd.Reconcile(currentResourceList, toolsetCRD)
@@ -172,15 +197,29 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey s
 		if post.Folder == "" {
 			c.status = errors.New("PostApply defined but no folder provided")
 		}
-		if !helper2.FolderExists(post.Folder) {
-			c.status = errors.New("PostApply provided folder is nonexistent")
+
+		folderExists, err := c.git.ExistsFolder(post.Folder)
+		if err != nil {
+			c.status = err
+			return
 		}
-		if empty, err := helper2.FolderEmpty(post.Folder); empty == true || err != nil {
+		if !folderExists {
+			c.status = errors.New("PostApply provided folder is nonexistent")
+			return
+		}
+
+		folderEmpty, err := c.git.EmptyFolder(post.Folder)
+		if err != nil {
+			c.status = err
+			return
+		}
+		if folderEmpty {
 			c.status = errors.New("PostApply provided folder is empty")
+			return
 		}
 
 		c.gitMutex.Lock()
-		err := helper2.CopyFolderToLocal(c.git, c.crdDirectoryPath, post.Folder)
+		err = helper2.CopyFolderToLocal(c.git, c.crdDirectoryPath, post.Folder)
 		c.gitMutex.Unlock()
 		if err != nil {
 			c.status = err

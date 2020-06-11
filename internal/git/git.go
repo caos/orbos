@@ -136,6 +136,37 @@ func (g *Client) ReadYamlIntoStruct(path string, struc interface{}) error {
 	return errors.Wrapf(yaml.Unmarshal(data, struc), "Error while unmarshaling yaml %s to struct", path)
 }
 
+func (g *Client) ExistsFolder(path string) (bool, error) {
+	monitor := g.monitor.WithFields(map[string]interface{}{
+		"path": path,
+	})
+	monitor.Debug("Reading folder")
+	_, err := g.fs.ReadDir(path)
+	if err != nil {
+		if os.IsNotExist(errors.Cause(err)) {
+			return false, nil
+		}
+		return false, errors.Wrapf(err, "opening %s from worktree failed", path)
+	}
+
+	return true, nil
+}
+
+func (g *Client) EmptyFolder(path string) (bool, error) {
+	monitor := g.monitor.WithFields(map[string]interface{}{
+		"path": path,
+	})
+	monitor.Debug("Reading folder")
+	files, err := g.fs.ReadDir(path)
+	if err != nil {
+		return false, errors.Wrapf(err, "opening %s from worktree failed", path)
+	}
+	if len(files) == 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
 	monitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,

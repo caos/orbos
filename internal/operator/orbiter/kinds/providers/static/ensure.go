@@ -13,7 +13,7 @@ import (
 
 	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static/ssh"
+	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
 )
 

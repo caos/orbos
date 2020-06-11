@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -42,17 +43,33 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-
-		_, logger, gitClient, orbFile, errFunc := rv()
+		ctx, monitor, orbConfig, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		if existsFileInGit(gitClient, "orbiter.yml") {
-			logger.WithFields(map[string]interface{}{
+		gitClientConf := &orbgit.Config{
+			Comitter:  "orbctl",
+			Email:     "orbctl@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "takeoff",
+		}
+
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		defer cleanUp()
+		if err != nil {
+			return err
+		}
+
+		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
+		if err != nil {
+			return err
+		}
+		if foundOrbiter {
+			monitor.WithFields(map[string]interface{}{
 				"version": version,
 				"commit":  gitCommit,
-				"repoURL": orbFile.URL,
+				"repoURL": orbConfig.URL,
 			}).Info("Destroying Orb")
 
 			fmt.Println("Are you absolutely sure you want to destroy all clusters and providers in this Orb? [y/N]")
@@ -60,15 +77,15 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			fmt.Scanln(&response)
 
 			if !contains([]string{"y", "yes"}, strings.ToLower(response)) {
-				logger.Info("Not touching Orb")
+				monitor.Info("Not touching Orb")
 				return nil
 			}
 			finishedChan := make(chan bool)
 			return orbiter.Destroy(
-				logger,
+				monitor,
 				gitClient,
 				orb.AdaptFunc(
-					orbFile,
+					orbConfig,
 					gitCommit,
 					true,
 					false),
