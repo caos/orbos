@@ -2,8 +2,11 @@
 
 ## Structure
 
+BOOM reconciles itself if a boomVersion is defined, if no boomVersion is defined there is no reconciling.
+
 | Parameter                          | Description                                                                     | Default                           |
 | ---------------------------------- | ------------------------------------------------------------------------------- | --------------------------------- |
+| `boomVersion`                      | Version of BOOM which should be reconciled                                      |                                   |
 | `currentStatePath`                 | Relative folder path where the currentstate is written to                       |                                   |
 | `forceApply`                       | Flag if --force should be used by apply of resources                            |                                   |
 | `preApply`                         | Spec for the yaml-files applied before applications                             |                                   |
@@ -61,9 +64,9 @@
 | ---------------------------------- | ------------------------------------------------------------------------------- | --------------------------------- |
 | `deploy`                           | Flag if tool should be deployed                                                 | false                             |
 | `admin`                            | Spec for the definition of the admin account                                    | nil                               |
-| `admin.existingSecret`             | Name of the secret which contains the admin account                             |                                   |
-| `admin.userKey`                    | Key of the username in the secret                                               |                                   |
-| `admin.passwordKey`                | Key of the password in the secret                                               |                                   |
+| `admin.existingSecret.name`        | Name of the secret which contains the admin account                             |                                   |
+| `admin.existingSecret.idKey`       | Key of the username in the secret                                               |                                   |
+| `admin.existingSecret.secretKey`   | Key of the password in the secret                                               |                                   |
 | `admin`                            | Spec for the definition of the admin account                                    |                                   |
 | `datasources`                      | Spec for additional datasources                                                 | nil                               |
 | `datasources.name`                 | Name of the datasource                                                          |                                   |
