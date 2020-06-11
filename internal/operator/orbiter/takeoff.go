@@ -47,15 +47,17 @@ type event struct {
 	files  []git.File
 }
 
-func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, pushEvents func(events []*ingestion.EventRequest) error, orbiterCommit string, adapt AdaptFunc, serveMetrics bool) func() {
 
-	go func() {
-		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
-		http.Handle("/metrics", promhttp.Handler())
-		if err := http.ListenAndServe(":9000", nil); err != nil {
-			panic(err)
-		}
-	}()
+	if serveMetrics {
+		go func() {
+			prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+			http.Handle("/metrics", promhttp.Handler())
+			if err := http.ListenAndServe(":9000", nil); err != nil {
+				panic(err)
+			}
+		}()
+	}
 
 	return func() {
 

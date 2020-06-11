@@ -117,6 +117,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			pushEvents,
 			gitCommit,
 			adaptFunc,
+			recur,
 		)
 
 		takeoffChan := make(chan struct{})
