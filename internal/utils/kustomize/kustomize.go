@@ -28,22 +28,36 @@ type FieldSpec struct {
 }
 
 type Kustomize struct {
-	path  string
-	apply bool
-	force bool
+	path   string
+	apply  bool
+	delete bool
+	force  bool
 }
 
-func New(path string, apply bool, force bool) (*Kustomize, error) {
+func New(path string) (*Kustomize, error) {
 	abspath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Kustomize{
-		path:  abspath,
-		apply: apply,
-		force: force,
+		path:   abspath,
+		apply:  false,
+		delete: false,
+		force:  false,
 	}, nil
+}
+
+func (k *Kustomize) Apply(force bool) *Kustomize {
+	k.apply = true
+	k.delete = false
+	k.force = force
+	return k
+}
+func (k *Kustomize) Delete() *Kustomize {
+	k.apply = false
+	k.delete = true
+	return k
 }
 
 func (k *Kustomize) Build() exec.Cmd {
@@ -53,6 +67,8 @@ func (k *Kustomize) Build() exec.Cmd {
 		if k.force {
 			all = strings.Join([]string{all, "--force"}, " ")
 		}
+	} else if k.delete {
+		all = strings.Join([]string{all, "| kubectl delete -f -"}, " ")
 	}
 
 	cmd := exec.Command("/bin/sh", "-c", all)

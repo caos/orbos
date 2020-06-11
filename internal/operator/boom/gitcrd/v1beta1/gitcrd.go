@@ -136,11 +136,14 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey s
 	}
 
 	// pre-steps
-	if toolsetCRD.Spec.PreApply != nil && toolsetCRD.Spec.PreApply.Deploy == true {
-		if err := c.applyFolder(monitor, toolsetCRD.Spec.PreApply); err != nil {
+	if toolsetCRD.Spec.PreApply != nil {
+		preapplymonitor := monitor.WithField("application", "preapply")
+		preapplymonitor.Info("Start")
+		if err := c.applyFolder(preapplymonitor, toolsetCRD.Spec.PreApply, toolsetCRD.Spec.ForceApply); err != nil {
 			c.status = errors.Wrap(err, "Preapply failed")
 			return
 		}
+		preapplymonitor.Info("Done")
 	}
 
 	c.crd.Reconcile(currentResourceList, toolsetCRD)
@@ -151,15 +154,18 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey s
 	}
 
 	// post-steps
-	if toolsetCRD.Spec.PostApply != nil && toolsetCRD.Spec.PostApply.Deploy == true {
-		if err := c.applyFolder(monitor, toolsetCRD.Spec.PostApply); err != nil {
+	if toolsetCRD.Spec.PostApply != nil {
+		preapplymonitor := monitor.WithField("application", "postapply")
+		preapplymonitor.Info("Start")
+		if err := c.applyFolder(monitor, toolsetCRD.Spec.PostApply, toolsetCRD.Spec.ForceApply); err != nil {
 			c.status = errors.Wrap(err, "Postapply failed")
 			return
 		}
+		preapplymonitor.Info("Done")
 	}
 }
 
-func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta1.Apply) error {
+func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta1.Apply, force bool) error {
 	if apply.Folder == "" {
 		return errors.New("No folder provided")
 	}
@@ -180,7 +186,7 @@ func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta1.Apply)
 		return errors.New("Provided folder is empty")
 	}
 
-	if err := useFolder(monitor, apply.Deploy, localFolder); err != nil {
+	if err := useFolder(monitor, apply.Deploy, localFolder, force); err != nil {
 		return err
 	}
 	return nil
@@ -265,7 +271,7 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource,
 	c.status = c.git.UpdateRemote("current state changed", file)
 }
 
-func useFolder(monitor mntr.Monitor, deploy bool, folderPath string) error {
+func useFolder(monitor mntr.Monitor, deploy bool, folderPath string, force bool) error {
 
 	files, err := getFilesInDirectory(folderPath)
 	if err != nil {
@@ -280,18 +286,25 @@ func useFolder(monitor mntr.Monitor, deploy bool, folderPath string) error {
 	}
 
 	if kustomizeFile {
-		command, err := kustomize.New(folderPath, true, false)
+		command, err := kustomize.New(folderPath)
 		if err != nil {
 			return err
 		}
+		command = command.Apply(force)
+		if !deploy {
+			command = command.Delete()
+		}
 		return helper.Run(monitor, command.Build())
 	} else {
-		return recursiveFolder(monitor, folderPath, deploy)
+		return recursiveFolder(monitor, folderPath, deploy, force)
 	}
 }
 
-func recursiveFolder(monitor mntr.Monitor, folderPath string, deploy bool) error {
+func recursiveFolder(monitor mntr.Monitor, folderPath string, deploy, force bool) error {
 	command := kubectl.NewApply(folderPath).Build()
+	if force {
+		command = kubectl.NewApply(folderPath).Force().Build()
+	}
 	if !deploy {
 		command = kubectl.NewDelete(folderPath).Build()
 	}
@@ -303,7 +316,7 @@ func recursiveFolder(monitor mntr.Monitor, folderPath string, deploy bool) error
 
 	for _, folder := range folders {
 		if folderPath != folder {
-			if err := recursiveFolder(monitor, filepath.Join(folderPath, folder), deploy); err != nil {
+			if err := recursiveFolder(monitor, filepath.Join(folderPath, folder), deploy, force); err != nil {
 				return err
 			}
 		}
