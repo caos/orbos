@@ -41,15 +41,19 @@ func query(
 	switch lbCurrent := lb.(type) {
 	case *dynamiclbmodel.Current:
 
+		mapVIP := func(vip *dynamiclbmodel.VIP) string {
+			return vip.IP
+		}
+
 		desireLb = func(pool string) error {
-			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, nil)
+			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, true, nil, mapVIP)
 		}
 		for _, pool := range lbCurrent.Current.Spec {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
 					current.Current.Ingresses[src.Name] = &infra.Address{
-						Location: vip.IP,
-						Port:     uint16(src.SourcePort),
+						Location:     vip.IP,
+						ExternalPort: uint16(src.SourcePort),
 						Bind: func(machineIP string) string {
 							return machineIP
 						},
@@ -58,7 +62,7 @@ func query(
 			}
 		}
 
-		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, nil)
+		machinesSvc = wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, true, nil, mapVIP)
 		//	case *externallbmodel.Current:
 		//		for name, address := range lbCurrent.Current.Addresses {
 		//			current.Current.Ingresses[name] = address

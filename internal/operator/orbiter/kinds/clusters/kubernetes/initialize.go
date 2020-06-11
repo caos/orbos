@@ -151,9 +151,9 @@ func initialize(
 		}
 
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
-		if !naSpec.Software.Defines(k8sSoftware) {
+		if !softwareDefines(*naSpec.Software, k8sSoftware) {
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
-			if !naSpec.Software.Contains(k8sSoftware) {
+			if !softwareContains(*naSpec.Software, k8sSoftware) {
 				naSpec.Software.Merge(k8sSoftware)
 				machineMonitor.Changed("Kubernetes software desired")
 			}

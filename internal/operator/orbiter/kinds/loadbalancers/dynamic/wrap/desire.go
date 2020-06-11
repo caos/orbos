@@ -7,7 +7,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 )
 
-func desire(selfPool string, changesAllowed bool, curr dynamic.Current, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifymasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string) func() error {
+func desire(selfPool string, curr dynamic.Current, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, vrrp bool, notifymasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) func() error {
 	return func() error {
 		update := []string{selfPool}
 	sources:
@@ -21,7 +21,7 @@ func desire(selfPool string, changesAllowed bool, curr dynamic.Current, svc core
 		}
 
 		for _, pool := range update {
-			if err := curr.Current.Desire(pool, svc, nodeagents, notifymasters); err != nil {
+			if err := curr.Current.Desire(pool, svc, nodeagents, vrrp, notifymasters, vip); err != nil {
 				return err
 			}
 		}

@@ -51,24 +51,26 @@ const (
 	BridgeNfCallIp6tables SysctlPropery = "net.bridge.bridge-nf-call-ip6tables"
 )
 
+func Contains(this common.Package, that common.Package) bool {
+	if that.Config == nil {
+		return true
+	}
+
+	for thatKey, thatValue := range that.Config {
+		if this.Config == nil {
+			return false
+		}
+		if thisValue, ok := this.Config[thatKey]; !ok || thatValue != thisValue {
+			return false
+		}
+	}
+	return true
+}
+
 func SetProperty(pkg *common.Package, propery SysctlPropery, enable bool) {
 
 	if pkg.Config == nil {
 		pkg.Config = make(map[string]string)
-	}
-
-	if _, ok := pkg.Config[string(IpForward)]; !ok {
-		pkg.Config[string(IpForward)] = "0"
-	}
-
-	if _, ok := pkg.Config[string(NonLocalBind)]; !ok {
-		pkg.Config[string(NonLocalBind)] = "0"
-	}
-	if _, ok := pkg.Config[string(BridgeNfCallIptables)]; !ok {
-		pkg.Config[string(BridgeNfCallIptables)] = "0"
-	}
-	if _, ok := pkg.Config[string(BridgeNfCallIp6tables)]; !ok {
-		pkg.Config[string(BridgeNfCallIp6tables)] = "0"
 	}
 
 	state := "0"

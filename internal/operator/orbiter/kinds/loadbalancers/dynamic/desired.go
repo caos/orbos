@@ -117,6 +117,10 @@ func (s *Source) validate() (err error) {
 		return errors.Errorf("source with port %d has no name", s.SourcePort)
 	}
 
+	if err := s.SourcePort.validate(); err != nil {
+		return errors.Wrapf(err, "configuring sourceport for transport %s failed", s.Name)
+	}
+
 	for _, cidr := range s.Whitelist {
 		if err := cidr.Validate(); err != nil {
 			return err
@@ -141,7 +145,7 @@ type Destination struct {
 func (d *Destination) validate() error {
 
 	if d.Pool == "" {
-		return errors.New("destination with port %d has no pool configured")
+		return errors.Errorf("destination with port %d has no pool configured", d.Port)
 	}
 
 	if err := d.Port.validate(); err != nil {

@@ -75,7 +75,7 @@ bootstrapTokens:
   - authentication
 localAPIEndpoint:
   advertiseAddress: %s
-  bindPort: 6666
+  bindPort: %d
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
   name: %s
@@ -115,6 +115,7 @@ scheduler: {}
 `,
 		joinToken,
 		listenIP,
+		kubeAPI.InternalPort,
 		joining.infra.ID(),
 		joining.infra.IP(),
 		kubeAPI.Location,
@@ -139,7 +140,7 @@ nodeRegistration:
   name: %s
 `,
 			joinAt.IP(),
-			kubeAPI.Port,
+			kubeAPI.InternalPort,
 			joinToken,
 			joining.infra.ID())
 
@@ -147,10 +148,11 @@ nodeRegistration:
 			kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
     advertiseAddress: %s
-    bindPort: 6666
+    bindPort: %d
   certificateKey: %s
 `,
 				listenIP,
+				kubeAPI.InternalPort,
 				certKey)
 		}
 	}
@@ -174,7 +176,7 @@ nodeRegistration:
 	}).Debug("Cleaned up machine")
 
 	if joinAt != nil {
-		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.Port, joinAt.IP(), kubeAPI.Port, kubeadmCfgPath)
+		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.ExternalPort, joinAt.IP(), kubeAPI.ExternalPort, kubeadmCfgPath)
 		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
@@ -187,7 +189,7 @@ nodeRegistration:
 		return nil, nil
 	}
 
-	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.Port, kubeadmCfgPath)
+	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.InternalPort, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
 	if err != nil {
 		return nil, err

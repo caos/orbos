@@ -74,7 +74,7 @@ func query(
 		k8sClient,
 		func(machine *initializedMachine) {
 			queryNodeAgent(machine)
-			firewallFunc(monitor, *desired, kubeAPIAddress.Port)(machine)
+			firewallFunc(monitor, *desired, kubeAPIAddress.ExternalPort)(machine)
 		})
 
 	return func(psf push.Func) error {

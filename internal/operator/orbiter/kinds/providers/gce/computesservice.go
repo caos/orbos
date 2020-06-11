@@ -80,7 +80,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			},
 			DeviceName: name,
 		})
-		diskNames[i]=name
+		diskNames[i] = name
 	}
 
 	name := newName()
@@ -130,7 +130,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	for _, name := range diskNames {
 		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
-		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10 *time.Second, infraMachine, func(m infra.Machine) error {
+		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10*time.Second, infraMachine, func(m infra.Machine) error {
 			_, formatErr := m.Execute(
 				nil,
 				nil,
@@ -252,13 +252,13 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 	}
 }
 
-func networkTags(orbID, providerID, poolName string) []string {
+func networkTags(orbID, providerID string, poolName ...string) []string {
 	tags := []string{
 		fmt.Sprintf("orb-%s", orbID),
 		fmt.Sprintf("provider-%s", providerID),
 	}
-	if poolName != "" {
-		tags = append(tags, fmt.Sprintf("pool-%s", poolName))
+	for _, pool := range poolName {
+		tags = append(tags, fmt.Sprintf("pool-%s", pool))
 	}
 	return tags
 }

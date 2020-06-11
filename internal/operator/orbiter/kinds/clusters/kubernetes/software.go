@@ -133,3 +133,39 @@ func (k KubernetesVersion) extractNumber(monitor mntr.Monitor, position int) (in
 
 	return int(version), nil
 }
+
+func softwareContains(this common.Software, that common.Software) bool {
+	return contains(this.Swap, that.Swap) &&
+		contains(this.Kubelet, that.Kubelet) &&
+		contains(this.Kubeadm, that.Kubeadm) &&
+		contains(this.Kubectl, that.Kubectl) &&
+		contains(this.Containerruntime, that.Containerruntime) &&
+		contains(this.KeepaliveD, that.KeepaliveD) &&
+		contains(this.Nginx, that.Nginx) &&
+		contains(this.Hostname, that.Hostname) &&
+		sysctl.Contains(this.Sysctl, that.Sysctl) &&
+		contains(this.Health, that.Health)
+}
+
+func contains(this, that common.Package) bool {
+	return that.Version == "" && that.Config == nil || common.PackageEquals(this, that)
+}
+
+func softwareDefines(this common.Software, that common.Software) bool {
+	return defines(this.Swap, that.Swap) &&
+		defines(this.Kubelet, that.Kubelet) &&
+		defines(this.Kubeadm, that.Kubeadm) &&
+		defines(this.Kubectl, that.Kubectl) &&
+		defines(this.Containerruntime, that.Containerruntime) &&
+		defines(this.KeepaliveD, that.KeepaliveD) &&
+		defines(this.Nginx, that.Nginx) &&
+		defines(this.Hostname, that.Hostname) &&
+		defines(this.Sysctl, that.Sysctl) &&
+		defines(this.Health, that.Health)
+}
+
+func defines(this, that common.Package) bool {
+	zeroPkg := common.Package{}
+	defines := common.PackageEquals(that, zeroPkg) || !common.PackageEquals(this, zeroPkg)
+	return defines
+}

@@ -37,10 +37,11 @@ func query(
 	current.Current.Ingresses = make(map[string]*infra.Address)
 	for _, lb := range normalized {
 		current.Current.Ingresses[lb.transport] = &infra.Address{
-			Location: lb.address.gce.Address,
-			Port:     lbPort(lb),
-			Bind: func(_ string) string {
-				return "0.0.0.0"
+			Location:     lb.address.gce.Address,
+			InternalPort: internalPort(lb),
+			ExternalPort: externalPort(lb),
+			Bind: func(machineIP string) string {
+				return machineIP
 			},
 		}
 	}
@@ -74,7 +75,7 @@ func query(
 						lb.healthcheck.desired.Code,
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
-						lbPort(lb),
+						internalPort(lb),
 						lb.healthcheck.desired.Path,
 					)
 					na.Firewall.Merge(map[string]*common.Allowed{
@@ -105,10 +106,14 @@ func query(
 
 		return ensureLB()
 
-	}, initPools(current, desired, context, normalized)
+	}, initPools(current, desired, context, normalized, lbCurrent, nodeAgentsDesired)
 }
 
-func lbPort(lb *normalizedLoadbalancer) uint16 {
+func internalPort(lb *normalizedLoadbalancer) uint16 {
+	return lb.port
+}
+
+func externalPort(lb *normalizedLoadbalancer) uint16 {
 	port, err := strconv.Atoi(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0])
 	if err != nil {
 		panic(err)

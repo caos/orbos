@@ -24,6 +24,7 @@ type normalizedLoadbalancer struct {
 	healthcheck    *healthcheck    // unique
 	address        *address        // The same externalIP reference appears in multiple normalizedLoadbalancer references
 	transport      string
+	port           uint16
 }
 
 type StandardLogFunc func(msg string, debug bool) func()
@@ -42,7 +43,9 @@ type healthcheck struct {
 	log     StandardLogFunc
 	gce     *compute.HttpHealthCheck
 	desired dynamic.HealthChecks
+	pools   []string
 }
+
 type firewall struct {
 	log StandardLogFunc
 	gce *compute.Firewall
@@ -74,17 +77,25 @@ func (n normalizedLoadbalancing) Less(i, j int) bool {
 	return n[i].forwardingRule.gce.Description < n[j].forwardingRule.gce.Description
 }
 
+type normalizedDestination struct {
+	port  dynamic.Port
+	pools []string
+	hc    dynamic.HealthChecks
+}
+
+type sortableDestinations []*normalizedDestination
+
+func (n sortableDestinations) Len() int      { return len(n) }
+func (n sortableDestinations) Swap(i, j int) { n[i], n[j] = n[j], n[i] }
+func (n sortableDestinations) Less(i, j int) bool {
+	return n[i].port < n[j].port || n[i].hc.Protocol < n[i].hc.Protocol || n[i].hc.Path < n[i].hc.Path || n[i].hc.Code < n[i].hc.Code
+}
+
 // normalize returns a normalizedLoadBalancing for each unique destination port and ip combination
 // whereas only one random configured healthcheck is relevant
 func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, providerID string) ([]*normalizedLoadbalancer, []*firewall) {
 	var normalized []*normalizedLoadbalancer
 	var firewalls []*firewall
-
-	type normalizedDestination struct {
-		port  dynamic.Port
-		pools []string
-		hc    dynamic.HealthChecks
-	}
 
 	providerDescription := fmt.Sprintf("orb=%s;provider=%s", orbID, providerID)
 
@@ -98,7 +109,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 			normalizeDestinationsLoop:
 				for _, dest := range src.Destinations {
 					for _, normalizedDest := range normalizedDestinations {
-						if dest.Port == normalizedDest.port {
+						if dest.Port == normalizedDest.port && dest.HealthChecks == normalizedDest.hc {
 							normalizedDest.pools = append(normalizedDest.pools, dest.Pool)
 							continue normalizeDestinationsLoop
 						}
@@ -110,17 +121,21 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 					})
 				}
 
-				for _, dest := range normalizedDestinations {
-					destDescription := fmt.Sprintf("%s;transport=%s;port=%d", providerDescription, src.Name, dest.port)
+				sort.Sort(sortableDestinations(normalizedDestinations))
+
+				for idx, dest := range normalizedDestinations {
+					sort.Strings(dest.pools)
+					destDescription := fmt.Sprintf("%s;transport=%s;pools=%s;idx=%d", providerDescription, src.Name, dest.pools, idx+1)
 					destMonitor := monitor.WithFields(map[string]interface{}{
 						"transport": src.Name,
-						"port":      dest.port,
+						"pools":     dest.pools,
 					})
 					fwr := &compute.ForwardingRule{
 						Description:         destDescription,
 						LoadBalancingScheme: "EXTERNAL",
-						PortRange:           fmt.Sprintf("%d-%d", dest.port, dest.port),
+						PortRange:           fmt.Sprintf("%d-%d", src.SourcePort, src.SourcePort),
 					}
+
 					tp := &compute.TargetPool{
 						Description: destDescription,
 					}
@@ -130,6 +145,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 					}
 
 					normalized = append(normalized, &normalizedLoadbalancer{
+						port: uint16(dest.port),
 						forwardingRule: &forwardingRule{
 							log: func(msg string, debug bool) func() {
 								localMonitor := destMonitor
@@ -169,7 +185,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 						},
 						healthcheck: &healthcheck{
 							log: func(msg string, debug bool) func() {
-								localMonitor := destMonitor
+								localMonitor := destMonitor.WithField("port", dest.port)
 								if hc.Name != "" {
 									localMonitor = localMonitor.WithField("id", hc.Name)
 								}
@@ -184,27 +200,21 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 							},
 							gce:     hc,
 							desired: dest.hc,
+							pools:   dest.pools,
 						},
 						address:   address,
 						transport: src.Name,
 					})
 
-					for _, pool := range dest.pools {
-						firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
-							Allowed: []*compute.FirewallAllowed{{
-								IPProtocol: "tcp",
-								Ports:      []string{fmt.Sprintf("%d", dest.port)},
-							}},
-							Description: destDescription,
-							SourceRanges: append(whitelistStrings(src.Whitelist),
-								// healthcheck sources, see https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
-								"35.191.0.0/16",
-								"209.85.152.0/22",
-								"209.85.204.0/22",
-							),
-							TargetTags: networkTags(orbID, providerID, pool),
-						}, destMonitor))
-					}
+					firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
+						Allowed: []*compute.FirewallAllowed{{
+							IPProtocol: "tcp",
+							Ports:      []string{fmt.Sprintf("%d", src.SourcePort)},
+						}},
+						Description:  destDescription,
+						SourceRanges: whitelistStrings(src.Whitelist),
+						TargetTags:   networkTags(orbID, providerID, dest.pools...),
+					}, destMonitor))
 				}
 			}
 			sort.Strings(addressTransports)
@@ -233,6 +243,20 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 	var hcPort int64 = 6700
 	for _, lb := range normalized {
 		lb.healthcheck.gce.Port = hcPort
+		firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
+			Allowed: []*compute.FirewallAllowed{{
+				IPProtocol: "tcp",
+				Ports:      []string{fmt.Sprintf("%d", hcPort)},
+			}},
+			Description: fmt.Sprintf("%s;healthchecks", lb.healthcheck.gce.Description),
+			SourceRanges: []string{
+				// healthcheck sources, see https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
+				"35.191.0.0/16",
+				"209.85.152.0/22",
+				"209.85.204.0/22",
+			},
+			TargetTags: networkTags(orbID, providerID, lb.healthcheck.pools...),
+		}, monitor))
 		hcPort++
 	}
 
@@ -250,7 +274,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 		}},
 		Description:  fmt.Sprintf("%s;allow-internal", providerDescription),
 		SourceRanges: []string{"10.128.0.0/9"},
-		TargetTags:   networkTags(orbID, providerID, ""),
+		TargetTags:   networkTags(orbID, providerID),
 	}, monitor), toInternalFirewall(&compute.Firewall{
 		Allowed: []*compute.FirewallAllowed{{
 			IPProtocol: "tcp",
@@ -258,7 +282,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 		}},
 		Description:  fmt.Sprintf("%s;allow-ssh-through-iap", providerDescription),
 		SourceRanges: []string{"35.235.240.0/20"},
-		TargetTags:   networkTags(orbID, providerID, ""),
+		TargetTags:   networkTags(orbID, providerID),
 	}, monitor))
 }
 

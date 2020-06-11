@@ -7,13 +7,14 @@ import (
 )
 
 type Address struct {
-	Location string
-	Port     uint16
-	Bind     func(machineIP string) string `yaml:"-"`
+	Location     string
+	ExternalPort uint16
+	InternalPort uint16
+	Bind         func(machineIP string) string `yaml:"-"`
 }
 
 func (a Address) String() string {
-	return fmt.Sprintf("%s:%d", a.Location, a.Port)
+	return fmt.Sprintf("%s:%d", a.Location, a.ExternalPort)
 }
 
 type ProviderCurrent interface {

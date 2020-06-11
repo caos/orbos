@@ -2,6 +2,7 @@ package gce
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/compute/v1"
 )
@@ -12,13 +13,15 @@ type infraPool struct {
 	pool       string
 	normalized []*normalizedLoadbalancer
 	context    *context
+	machines   core.MachinesService
 }
 
-func newInfraPool(pool string, context *context, normalized []*normalizedLoadbalancer) *infraPool {
+func newInfraPool(pool string, context *context, normalized []*normalizedLoadbalancer, machines core.MachinesService) *infraPool {
 	return &infraPool{
 		pool:       pool,
 		normalized: normalized,
 		context:    context,
+		machines:   machines,
 	}
 }
 
@@ -84,9 +87,9 @@ func (i *infraPool) ensureMembers(machine infra.Machine) error {
 }
 
 func (i *infraPool) GetMachines() (infra.Machines, error) {
-	return i.context.machinesService.List(i.pool)
+	return i.machines.List(i.pool)
 }
 
 func (i *infraPool) AddMachine() (infra.Machine, error) {
-	return i.context.machinesService.Create(i.pool)
+	return i.machines.Create(i.pool)
 }

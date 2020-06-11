@@ -103,8 +103,8 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				for _, vip := range pool {
 					for _, src := range vip.Transport {
 						addresses[src.Name] = &infra.Address{
-							Location: vip.IP,
-							Port:     uint16(src.SourcePort),
+							Location:     vip.IP,
+							ExternalPort: uint16(src.SourcePort),
 						}
 					destinations:
 						for _, dest := range src.Destinations {
@@ -124,7 +124,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.SourcePools = sourcePools
 			current.Current.Spec = desiredKind.Spec
-			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string) error {
+			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, vrrp bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, vip func(*VIP) string) error {
 
 				vips, ok := desiredKind.Spec[forPool]
 				if !ok {
@@ -189,6 +189,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}).Debug("Executed command")
 						return user, nil
 					},
+					"vip": vip,
 					//						"healthcmd": vrrpHealthChecksScript,
 					//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
 					//							return deriveFmap(func(src model.Source) []string {
@@ -211,7 +212,7 @@ vrrp_sync_group VG1 {
 {{ end }}    }
 }
 
-{{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ $vip.IP }} {
+{{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ vip $vip }} {
 	script       "/usr/local/bin/health 200@http://127.0.0.1:29999/ready"
 	interval 2   # check every 2 seconds
 	fall 15      # require 2 failures for KO
@@ -232,12 +233,12 @@ vrrp_instance VI_{{ $idx }} {
 		auth_pass [ REDACTED ]
 	}
 	track_script {
-		chk_{{ $vip.IP }}
+		chk_{{ vip $vip }}
 	}
 
-{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ $vip.IP }}"
+{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ vip $vip }}"
 {{ else }}	virtual_ipaddress {
-		{{ $vip.IP }}
+		{{ vip $vip }}
 	}
 {{ end }}
 }
@@ -253,7 +254,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 		server {{ $machine.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
 	}
 	server {
-		listen {{ $vip.IP }}:{{ $src.SourcePort }};
+		listen {{ vip $vip }}:{{ $src.SourcePort }};
 {{ range $white := $src.Whitelist }}		allow {{ $white }};
 {{ end }}
 		deny all;
@@ -273,45 +274,7 @@ http {
 `))
 
 				for _, d := range machinesData {
-					kaBuf := new(bytes.Buffer)
-					defer kaBuf.Reset()
 
-					if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
-						return err
-					}
-
-					for _, vip := range d.VIPs {
-						if vip.IP == "" {
-							return errors.New("No IP configured")
-						}
-						for _, transport := range vip.Transport {
-							if err := transport.SourcePort.validate(); err != nil {
-								return err
-							}
-							for _, machine := range forMachines {
-								deepNa, ok := nodeagents[machine.ID()]
-								if !ok {
-									deepNa = &common.NodeAgentSpec{}
-									nodeagents[machine.ID()] = deepNa
-								}
-								if deepNa.Firewall == nil {
-									deepNa.Firewall = &common.Firewall{}
-								}
-								fw := *deepNa.Firewall
-								fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = &common.Allowed{
-									Port:     fmt.Sprintf("%d", transport.SourcePort),
-									Protocol: "tcp",
-								}
-
-								if transport.SourcePort == 22 {
-									if deepNa.Software == nil {
-										deepNa.Software = &common.Software{}
-									}
-									deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
-								}
-							}
-						}
-					}
 					na, ok := nodeagents[d.Self.ID()]
 					if !ok {
 						na = &common.NodeAgentSpec{}
@@ -321,13 +284,55 @@ http {
 						na.Software = &common.Software{}
 					}
 
-					kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+					if vrrp {
+						kaBuf := new(bytes.Buffer)
+						defer kaBuf.Reset()
 
-					if d.CustomMasterNotifyer {
-						kaPkg.Config["notifymaster.sh"] = notifyMaster(d.Self, d.Peers, d.VIPs)
+						if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
+							return err
+						}
+
+						for _, vip := range d.VIPs {
+							if vip.IP == "" {
+								return errors.New("No IP configured")
+							}
+							for _, transport := range vip.Transport {
+								if err := transport.SourcePort.validate(); err != nil {
+									return err
+								}
+								for _, machine := range forMachines {
+									deepNa, ok := nodeagents[machine.ID()]
+									if !ok {
+										deepNa = &common.NodeAgentSpec{}
+										nodeagents[machine.ID()] = deepNa
+									}
+									if deepNa.Firewall == nil {
+										deepNa.Firewall = &common.Firewall{}
+									}
+									fw := *deepNa.Firewall
+									fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = &common.Allowed{
+										Port:     fmt.Sprintf("%d", transport.SourcePort),
+										Protocol: "tcp",
+									}
+
+									if transport.SourcePort == 22 {
+										if deepNa.Software == nil {
+											deepNa.Software = &common.Software{}
+										}
+										deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
+									}
+								}
+							}
+						}
+
+						kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+
+						if d.CustomMasterNotifyer {
+							kaPkg.Config["notifymaster.sh"] = notifyMaster(d.Self, d.Peers, d.VIPs)
+						}
+
+						na.Software.KeepaliveD = kaPkg
 					}
-
-					na.Software.KeepaliveD = kaPkg
 
 					ngxBuf := new(bytes.Buffer)
 					defer ngxBuf.Reset()
