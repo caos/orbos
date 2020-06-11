@@ -50,10 +50,10 @@ type Client struct {
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
 	kc := &Client{monitor: monitor}
-		err := kc.Refresh(kubeconfig)
-		if err != nil {
-		    // do nothing
-		}
+	err := kc.Refresh(kubeconfig)
+	if err != nil {
+		// do nothing
+	}
 	return kc
 }
 

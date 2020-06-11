@@ -10,6 +10,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -37,7 +38,7 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 
 	gitcrdConf := &gitcrdconfig.Config{
 		Monitor:          gitcrdMonitor,
-		CrdDirectoryPath: "/boom/crd",
+		CrdDirectoryPath: filepath.Join(toolsDirectoryPath, "crd"),
 		CrdUrl:           orb.URL,
 		PrivateKey:       []byte(orb.Repokey),
 		CrdPath:          "boom.yml",
@@ -49,7 +50,7 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 		clientgo.InConfig = false
 	}
 
-	gconfig.DashboardsDirectoryPath = "/boom/dashboards"
+	gconfig.DashboardsDirectoryPath = filepath.Join(toolsDirectoryPath, "dashboards")
 
 	if err := appStruct.AddGitCrd(gitcrdConf); err != nil {
 		monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
