@@ -40,6 +40,9 @@ func (*nginxDep) Equals(other nodeagent.Installer) bool {
 }
 
 func (s *nginxDep) Current() (pkg common.Package, err error) {
+	if !s.systemd.Active("nginx") {
+		return pkg, err
+	}
 	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
 	if os.IsNotExist(err) {
 		return pkg, nil

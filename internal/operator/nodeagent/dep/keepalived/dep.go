@@ -45,6 +45,10 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 }
 
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
+	if !s.systemd.Active("keepalived") {
+		return pkg, err
+	}
+
 	defer func() {
 		if err == nil {
 			err = selinux.Current(s.os, &pkg)

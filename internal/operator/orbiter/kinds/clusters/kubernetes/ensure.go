@@ -33,7 +33,7 @@ func ensure(
 
 		machineMonitor := monitor.WithField("machine", machine.infra.ID())
 		if !machine.currentMachine.NodeAgentIsRunning {
-			machineMonitor.Info("Node agent is not running on the correct version yet")
+			machineMonitor.Info("Node Agent is not running on the correct version yet")
 			if err := installNodeAgent(machine); err != nil {
 				return err
 			}
