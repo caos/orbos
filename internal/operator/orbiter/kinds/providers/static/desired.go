@@ -28,6 +28,16 @@ type Keys struct {
 	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
 }
 
+func (k *Keys) MarshalYAML() (interface{}, error) {
+	type Alias Keys
+	return &Alias{
+		BootstrapKeyPrivate:   secret.ClearEmpty(k.BootstrapKeyPrivate),
+		BootstrapKeyPublic:    secret.ClearEmpty(k.BootstrapKeyPublic),
+		MaintenanceKeyPrivate: secret.ClearEmpty(k.MaintenanceKeyPrivate),
+		MaintenanceKeyPublic:  secret.ClearEmpty(k.MaintenanceKeyPublic),
+	}, nil
+}
+
 func (d DesiredV0) validate() error {
 	if d.Spec.RemoteUser == "" {
 		return errors.New("No remote user provided")
