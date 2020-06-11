@@ -59,7 +59,11 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		}
 
 		allKubeconfigs := make([]string, 0)
-		if existsFileInGit(gitClient, "orbiter.yml") {
+		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
+		if err != nil {
+			return err
+		}
+		if foundOrbiter {
 			orbiterConfig := &start.OrbiterConfig{
 				Recur:            recur,
 				Destroy:          destroy,
@@ -115,7 +119,11 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 }
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
-	if existsFileInGit(gitClient, "boom.yml") {
+	foundBoom, err := existsFileInGit(gitClient, "boom.yml")
+	if err != nil {
+		return err
+	}
+	if foundBoom {
 		if err := cmd.Reconcile(monitor, kubeconfig, version); err != nil {
 			return err
 		}
@@ -208,14 +216,14 @@ func StartBoom(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func existsFileInGit(g *git.Client, path string) bool {
+func existsFileInGit(g *git.Client, path string) (bool, error) {
 	if err := g.Clone(); err != nil {
-		return false
+		return false, err
 	}
 
 	of := g.Read(path)
 	if of != nil && len(of) > 0 {
-		return true
+		return true, nil
 	}
-	return false
+	return false, nil
 }

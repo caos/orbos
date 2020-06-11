@@ -24,6 +24,8 @@ type Grafana struct {
 	Network *network.Network `json:"network,omitempty" yaml:"network,omitempty"`
 	//Authorization and Authentication configuration for SSO
 	Auth *auth.Auth `json:"auth,omitempty" yaml:"auth,omitempty"`
+	//List of plugins which get added to the grafana instance
+	Plugins []string `json:"plugins,omitempty" yaml:"plugins,omitempty"`
 }
 
 func (x *Grafana) MarshalYAML() (interface{}, error) {

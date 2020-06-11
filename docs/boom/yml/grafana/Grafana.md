@@ -13,3 +13,4 @@
 | storage            | Spec to define how the persistence should be handled , [here](storage/Spec.md)       |         |             |
 | network            | Network configuration, used for SSO and external access , [here](network/Network.md) |         |             |
 | auth               | Authorization and Authentication configuration for SSO , [here](auth/Auth.md)        |         |             |
+| plugins            | List of plugins which get added to the grafana instance                              |         | X           |

@@ -20,6 +20,8 @@ import (
 type Metadata struct {
 	//Name of the overlay
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	//Namespace as information, has currently no influence for the applied resources
+	Namespace string `json:"namespace,omitempty" yaml:"namespace,omitempty"`
 }
 
 // ToolsetSpec: BOOM reconciles itself if a boomVersion is defined, if no boomVersion is defined there is no reconciling.
@@ -30,10 +32,10 @@ type ToolsetSpec struct {
 	ForceApply bool `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
 	//Flag if --force should be used by apply of resources
 	CurrentStateFolder string `json:"currentStatePath,omitempty" yaml:"currentStatePath,omitempty"`
-	//Spec for the yaml-files applied before applications
-	PreApply *PreApply `json:"preApply,omitempty" yaml:"preApply,omitempty"`
-	//Spec for the yaml-files applied after applications
-	PostApply *PostApply `json:"postApply,omitempty" yaml:"postApply,omitempty"`
+	//Spec for the yaml-files applied before the applications, for example used secrets
+	PreApply *Apply `json:"preApply,omitempty" yaml:"preApply,omitempty"`
+	//Spec for the yaml-files applied after the applications, for example additional crds for the applications
+	PostApply *Apply `json:"postApply,omitempty" yaml:"postApply,omitempty"`
 	//Spec for the Prometheus-Operator
 	PrometheusOperator *PrometheusOperator `json:"prometheus-operator,omitempty" yaml:"prometheus-operator,omitempty"`
 	//Spec for the Banzaicloud Logging-Operator

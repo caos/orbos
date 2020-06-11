@@ -23,10 +23,11 @@ func Apply(monitor mntr.Monitor, resultFilePath, namespace string, appName name.
 	}
 
 	// apply resources
-	cmd, err := kustomize.New(resultFileDirPath, true, force)
+	cmd, err := kustomize.New(resultFileDirPath)
 	if err != nil {
 		return err
 	}
+	cmd = cmd.Apply(force)
 
 	return errors.Wrapf(helper.Run(monitor, cmd.Build()), "Failed to apply with file %s", resultFilePath)
 }
@@ -39,7 +40,7 @@ func Get(monitor mntr.Monitor, resultFilePath, namespace string, appName name.Ap
 	}
 
 	// apply resources
-	cmd, err := kustomize.New(resultFileDirPath, false, false)
+	cmd, err := kustomize.New(resultFileDirPath)
 	if err != nil {
 		return nil, err
 	}

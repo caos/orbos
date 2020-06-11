@@ -116,8 +116,8 @@ func AdaptFunc(
 			Current: current,
 		}
 
-                go func(){
-		    finishedChan <- finished
+		go func() {
+			finishedChan <- finished
 		}()
 
 		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
