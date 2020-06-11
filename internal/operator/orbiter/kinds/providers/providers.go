@@ -67,7 +67,6 @@ func GetQueryAndDestroyFuncs(
 	default:
 		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
-
 }
 
 func GetSecrets(
@@ -82,6 +81,29 @@ func GetSecrets(
 	case "orbiter.caos.ch/StaticProvider":
 		return static.SecretsFunc(
 			masterkey,
+		)(
+			monitor,
+			providerTree,
+		)
+	default:
+		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+	}
+}
+
+func RewriteMasterkey(
+	monitor mntr.Monitor,
+	oldMasterkey string,
+	newMasterkey string,
+	providerTree *tree.Tree,
+) (
+	map[string]*secret.Secret,
+	error,
+) {
+	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/StaticProvider":
+		return static.RewriteFunc(
+			oldMasterkey,
+			newMasterkey,
 		)(
 			monitor,
 			providerTree,

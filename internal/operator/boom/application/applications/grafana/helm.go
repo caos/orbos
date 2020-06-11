@@ -168,6 +168,10 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta
 		}
 	}
 
+	if toolset.Grafana.Plugins != nil && len(toolset.Grafana.Plugins) > 0 {
+		values.Grafana.Plugins = append(values.Grafana.Plugins, toolset.Grafana.Plugins...)
+	}
+
 	return values
 }
 
@@ -175,7 +179,7 @@ func getKustomizeOutput(folders []string) ([]string, error) {
 	ret := make([]string, len(folders))
 	for n, folder := range folders {
 
-		cmd, err := kustomize.New(folder, false, false)
+		cmd, err := kustomize.New(folder)
 		if err != nil {
 			return nil, err
 		}

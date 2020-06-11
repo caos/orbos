@@ -12,6 +12,7 @@ import (
 	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/caos/orbos/mntr"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
@@ -21,16 +22,31 @@ import (
 	"time"
 )
 
-func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, verbose bool, version string, gitClient *git.Client, orbFile *orbconfig.Orb, gitCommit string, ingestionAddress string) ([]string, error) {
+type OrbiterConfig struct {
+	Recur            bool
+	Destroy          bool
+	Deploy           bool
+	Verbose          bool
+	Version          string
+	OrbConfigPath    string
+	GitCommit        string
+	IngestionAddress string
+}
+
+func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
 	orbiter.Metrics()
 
 	finishedChan := make(chan bool)
+	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
+	if err != nil {
+		panic(err)
+	}
 
 	pushEvents := func(_ []*ingestion.EventRequest) error {
 		return nil
 	}
-	if ingestionAddress != "" {
-		conn, err := grpc.Dial(ingestionAddress, grpc.WithInsecure())
+	if conf.IngestionAddress != "" {
+		conn, err := grpc.Dial(conf.IngestionAddress, grpc.WithInsecure())
 		if err != nil {
 			panic(err)
 		}
@@ -51,7 +67,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		Type:         "orbiter.tookoff",
 		Data: &structpb.Struct{
 			Fields: map[string]*structpb.Value{
-				"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: gitCommit}},
+				"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: conf.GitCommit}},
 			},
 		},
 	}}); err != nil {
@@ -77,10 +93,10 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 	executables.Populate()
 
 	monitor.WithFields(map[string]interface{}{
-		"version": version,
-		"commit":  gitCommit,
-		"destroy": destroy,
-		"verbose": verbose,
+		"version": conf.Version,
+		"commit":  conf.GitCommit,
+		"destroy": conf.Destroy,
+		"verbose": conf.Verbose,
 		"repoURL": orbFile.URL,
 	}).Info("Orbiter took off")
 
@@ -91,20 +107,40 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		}()
 
 		for range takeoffChan {
+			orbConfig, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
+			if err != nil {
+				monitor.Error(err)
+				return
+			}
+
+			gitClientConf := &orbgit.Config{
+				Comitter:  "orbiter",
+				Email:     "orbiter@caos.ch",
+				OrbConfig: orbConfig,
+				Action:    "iteration",
+			}
+
+			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+			if err != nil {
+				monitor.Error(err)
+				return
+			}
+
 			adaptFunc := orb.AdaptFunc(
 				orbFile,
-				gitCommit,
-				!recur,
-				deploy)
+				conf.GitCommit,
+				!conf.Recur,
+				conf.Deploy)
 
-			takeoff := orbiter.Takeoff(
-				monitor,
-				gitClient,
-				pushEvents,
-				gitCommit,
-				adaptFunc,
-				finishedChan,
-			)
+			takeoffConf := &orbiter.Config{
+				OrbiterCommit: conf.GitCommit,
+				GitClient:     gitClient,
+				Adapt:         adaptFunc,
+				FinishedChan:  finishedChan,
+				PushEvents:    pushEvents,
+			}
+
+			takeoff := orbiter.Takeoff(monitor, takeoffConf)
 
 			go func() {
 				started := time.Now()
@@ -116,6 +152,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 				debug.FreeOSMemory()
 				takeoffChan <- struct{}{}
 			}()
+			cleanUp()
 		}
 	}()
 
@@ -124,6 +161,10 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		finished = <-finishedChan
 	}
 
+	return GetKubeconfigs(monitor, orbctlGit, orbFile)
+}
+
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := orbiter.Parse(gitClient, "orbiter.yml")
@@ -142,7 +183,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 		value, err := secret.Read(
 			monitor,
 			gitClient,
-			secretfuncs.Get(orbFile),
+			secretfuncs.GetSecrets(orbFile),
 			path)
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")
@@ -155,7 +196,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, recur, destroy, deploy, 
 	return kubeconfigs, nil
 }
 
-func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
+func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version string) error {
 	boom.Metrics(monitor)
 
 	takeoffChan := make(chan struct{})
@@ -164,13 +205,21 @@ func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
 	}()
 
 	for range takeoffChan {
+		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			monitor.Error(err)
+			return err
+		}
+
 		boomChan := make(chan struct{})
 		currentChan := make(chan struct{})
 
-		takeoffCurrent := boom.TakeOffCurrentState(
+		takeoff, takeoffCurrent := boom.Takeoff(
 			monitor,
-			orbFile,
+			orbConfig,
 			"/boom",
+			localmode,
+			version,
 		)
 		go func() {
 			started := time.Now()
@@ -183,13 +232,6 @@ func Boom(monitor mntr.Monitor, orbFile *orbconfig.Orb, localmode bool) error {
 
 			currentChan <- struct{}{}
 		}()
-
-		takeoff := boom.Takeoff(
-			monitor,
-			orbFile,
-			"/boom",
-			localmode,
-		)
 		go func() {
 			started := time.Now()
 			takeoff()

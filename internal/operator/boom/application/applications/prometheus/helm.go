@@ -27,8 +27,7 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 	_, getSecretErr := clientgo.GetSecret("grafana-cloud", info.GetNamespace())
 	ingestionSecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
 	if getSecretErr != nil && !ingestionSecretAbsent {
-		// TODO: Better error handling?
-		monitor.Error(getSecretErr)
+		monitor.Info("Not sending telemetry data to MISSION as secret grafana-cloud is missing in namespace caos-system")
 	}
 
 	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), info.GetNamespace(), toolsetCRDSpec)
