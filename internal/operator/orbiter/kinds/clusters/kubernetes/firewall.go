@@ -20,22 +20,7 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (
 			},
 		}
 
-		if machine.pool.tier == Workers {
-			fw["node-ports"] = &common.Allowed{
-				Port:     fmt.Sprintf("%d-%d", 30000, 32767),
-				Protocol: "tcp",
-			}
-		}
-
 		if machine.pool.tier == Controlplane {
-			fw["kubeapi-external"] = &common.Allowed{
-				Port:     fmt.Sprintf("%d", kubeAPIPort),
-				Protocol: "tcp",
-			}
-			fw["kubeapi-internal"] = &common.Allowed{
-				Port:     fmt.Sprintf("%d", 6666),
-				Protocol: "tcp",
-			}
 			fw["etcd"] = &common.Allowed{
 				Port:     fmt.Sprintf("%d-%d", 2379, 2381),
 				Protocol: "tcp",

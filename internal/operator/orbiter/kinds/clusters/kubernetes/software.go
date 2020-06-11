@@ -56,9 +56,9 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	//	}
 
 	sysctlPkg := common.Package{}
-	sysctl.SetProperty(&sysctlPkg, sysctl.IpForward, true)
-	sysctl.SetProperty(&sysctlPkg, sysctl.BridgeNfCallIptables, true)
-	sysctl.SetProperty(&sysctlPkg, sysctl.BridgeNfCallIp6tables, true)
+	sysctl.Enable(&sysctlPkg, sysctl.IpForward)
+	sysctl.Enable(&sysctlPkg, sysctl.BridgeNfCallIptables)
+	sysctl.Enable(&sysctlPkg, sysctl.BridgeNfCallIp6tables)
 	return common.Software{
 		Swap:             common.Package{Version: "disabled"},
 		Containerruntime: common.Package{Version: dockerVersion},

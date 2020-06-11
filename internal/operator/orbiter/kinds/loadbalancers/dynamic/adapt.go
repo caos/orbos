@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -57,10 +58,6 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				for _, src := range vip.Transport {
 					for _, dest := range src.Destinations {
 						if src.Name == "kubeapi" {
-							if dest.Port != 6666 {
-								dest.Port = 6666
-								migrate = true
-							}
 							if dest.HealthChecks.Path != "/healthz" {
 								dest.HealthChecks.Path = "/healthz"
 								migrate = true
@@ -126,6 +123,27 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, hyperconverged bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) error {
 
+				desireNodeAgent := func(machine infra.Machine, fw common.Firewall) {
+					deepNa, ok := nodeagents[machine.ID()]
+					if !ok {
+						deepNa = &common.NodeAgentSpec{}
+						nodeagents[machine.ID()] = deepNa
+					}
+					if deepNa.Firewall == nil {
+						deepNa.Firewall = &common.Firewall{}
+					}
+					deepNa.Firewall.Merge(fw)
+
+					for _, port := range fw.Ports() {
+						if portInt, parseErr := strconv.ParseInt(port.Port, 10, 16); parseErr == nil && portInt == 22 {
+							if deepNa.Software == nil {
+								deepNa.Software = &common.Software{}
+							}
+							deepNa.Software.SSHD.Config = map[string]string{"listenaddress": "127.0.0.1"}
+						}
+					}
+				}
+
 				vips, ok := desiredKind.Spec[forPool]
 				if !ok {
 					return nil
@@ -187,7 +205,6 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 							}
 						}
 					}
-
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
@@ -324,50 +341,17 @@ stream { {{ range $nat := .NATs }}
 
 					ngxBuf := new(bytes.Buffer)
 					defer ngxBuf.Reset()
-
 					if !hyperconverged {
 						if err := nginxNATTemplate.Execute(ngxBuf, d); err != nil {
 							return err
 						}
+
 					} else {
 						kaBuf := new(bytes.Buffer)
 						defer kaBuf.Reset()
 
 						if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
 							return err
-						}
-
-						for _, vip := range d.VIPs {
-							if vip.IP == "" {
-								return errors.New("No IP configured")
-							}
-							for _, transport := range vip.Transport {
-								if err := transport.SourcePort.validate(); err != nil {
-									return err
-								}
-								for _, machine := range forMachines {
-									deepNa, ok := nodeagents[machine.ID()]
-									if !ok {
-										deepNa = &common.NodeAgentSpec{}
-										nodeagents[machine.ID()] = deepNa
-									}
-									if deepNa.Firewall == nil {
-										deepNa.Firewall = &common.Firewall{}
-									}
-									fw := *deepNa.Firewall
-									fw[fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort)] = &common.Allowed{
-										Port:     fmt.Sprintf("%d", transport.SourcePort),
-										Protocol: "tcp",
-									}
-
-									if transport.SourcePort == 22 {
-										if deepNa.Software == nil {
-											deepNa.Software = &common.Software{}
-										}
-										deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
-									}
-								}
-							}
 						}
 
 						kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
@@ -381,30 +365,48 @@ stream { {{ range $nat := .NATs }}
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return err
 						}
-						for _, vip := range d.VIPs {
-							for _, transport := range vip.Transport {
-								probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
-								for _, dest := range transport.Destinations {
+					}
+
+					for _, vip := range d.VIPs {
+						for _, transport := range vip.Transport {
+							srcFW := map[string]*common.Allowed{
+								fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): {
+									Port:     fmt.Sprintf("%d", transport.SourcePort),
+									Protocol: "tcp",
+								},
+							}
+							if !hyperconverged {
+								desireNodeAgent(d.Self, srcFW)
+							} else {
+								for _, machine := range forMachines {
+									desireNodeAgent(machine, srcFW)
+								}
+							}
+							probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
+							for _, dest := range transport.Destinations {
+
+								upstreamProbe := func(machine infra.Machine) {
+									probe("Upstream", machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
+								}
+
+								destFW := map[string]*common.Allowed{
+									fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): {
+										Port:     fmt.Sprintf("%d", dest.Port),
+										Protocol: "tcp",
+									},
+								}
+
+								if !hyperconverged {
+									desireNodeAgent(d.Self, destFW)
+									upstreamProbe(d.Self)
+								} else {
 									destMachines, err := svc.List(dest.Pool)
 									if err != nil {
 										return err
 									}
 									for _, machine := range destMachines {
-
-										deepNa, ok := nodeagents[machine.ID()]
-										if !ok {
-											deepNa = &common.NodeAgentSpec{}
-											nodeagents[machine.ID()] = deepNa
-										}
-										if deepNa.Firewall == nil {
-											deepNa.Firewall = &common.Firewall{}
-										}
-										fw := *deepNa.Firewall
-										fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = &common.Allowed{
-											Port:     fmt.Sprintf("%d", dest.Port),
-											Protocol: "tcp",
-										}
-										probe("Upstream", machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
+										desireNodeAgent(machine, destFW)
+										upstreamProbe(machine)
 									}
 								}
 							}
@@ -412,8 +414,9 @@ stream { {{ range $nat := .NATs }}
 					}
 					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					na.Software.Nginx = ngxPkg
-					sysctl.SetProperty(&na.Software.Sysctl, sysctl.IpForward, true)
-					sysctl.SetProperty(&na.Software.Sysctl, sysctl.NonLocalBind, true)
+					sysctl.Enable(&na.Software.Sysctl, sysctl.IpForward)
+					sysctl.Enable(&na.Software.Sysctl, sysctl.NonLocalBind)
+					return nil
 				}
 				return nil
 			}

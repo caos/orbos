@@ -60,25 +60,34 @@ func Contains(this common.Package, that common.Package) bool {
 		if this.Config == nil {
 			return false
 		}
-		if thisValue, ok := this.Config[thatKey]; !ok || thatValue != thisValue {
+		if thisValue, ok := this.Config[thatKey]; !ok || thatValue == "1" && thisValue != "1" {
 			return false
 		}
 	}
 	return true
 }
 
-func SetProperty(pkg *common.Package, propery SysctlPropery, enable bool) {
+func Enable(pkg *common.Package, property SysctlPropery) {
 
 	if pkg.Config == nil {
 		pkg.Config = make(map[string]string)
 	}
 
-	state := "0"
-	if enable {
-		state = "1"
+	if _, ok := pkg.Config[string(IpForward)]; !ok {
+		pkg.Config[string(IpForward)] = "0"
 	}
 
-	pkg.Config[string(propery)] = state
+	if _, ok := pkg.Config[string(NonLocalBind)]; !ok {
+		pkg.Config[string(NonLocalBind)] = "0"
+	}
+	if _, ok := pkg.Config[string(BridgeNfCallIptables)]; !ok {
+		pkg.Config[string(BridgeNfCallIptables)] = "0"
+	}
+	if _, ok := pkg.Config[string(BridgeNfCallIp6tables)]; !ok {
+		pkg.Config[string(BridgeNfCallIp6tables)] = "0"
+	}
+
+	pkg.Config[string(property)] = "1"
 }
 
 func (s *sysctlDep) Current() (pkg common.Package, err error) {
