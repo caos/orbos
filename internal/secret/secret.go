@@ -13,24 +13,37 @@ import (
 	"unicode/utf8"
 )
 
+// Secret: Secret handled with orbctl so no manual changes are required
 type Secret struct {
+	//Used encryption for the secret
 	Encryption string
-	Encoding   string
-	Value      string
-	Masterkey  string `yaml:"-"`
+	//Used encoding for the secret
+	Encoding string
+	//Value after encryption and encoding
+	Value     string
+	Masterkey string `yaml:"-"`
 }
 type secretAlias Secret
 
+// Existing: Used secret that has to be already existing in the cluster
 type Existing struct {
-	Name         string `json:"name" yaml:"name"`
-	Key          string `json:"key" yaml:"key"`
+	//Name of the Secret
+	Name string `json:"name" yaml:"name"`
+	//Key in the secret from where the value should be used
+	Key string `json:"key" yaml:"key"`
+	//Name which should be used internal, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName" yaml:"internalName"`
 }
 
+// Existing: Used secret that has to be already existing in the cluster and should contain id/username and secret/password
 type ExistingIDSecret struct {
-	Name         string `json:"name" yaml:"name"`
-	IDKey        string `json:"idKey" yaml:"idKey"`
-	SecretKey    string `json:"secretKey" yaml:"secretKey"`
+	//Name of the Secret
+	Name string `json:"name" yaml:"name"`
+	//Key in the secret which contains the ID
+	IDKey string `json:"idKey" yaml:"idKey"`
+	//Key in the secret which contains the secret
+	SecretKey string `json:"secretKey" yaml:"secretKey"`
+	//Name which should be used internal, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName" yaml:"internalName"`
 }
 

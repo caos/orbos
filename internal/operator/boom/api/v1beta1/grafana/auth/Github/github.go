@@ -6,12 +6,16 @@ import (
 )
 
 type Auth struct {
-	ClientID                   *secret.Secret   `yaml:"clientID,omitempty"`
-	ExistingClientIDSecret     *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret               *secret.Secret   `yaml:"clientSecret,omitempty"`
+	ClientID *secret.Secret `yaml:"clientID,omitempty"`
+	//Existing secret with the clientID
+	ExistingClientIDSecret *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
+	ClientSecret           *secret.Secret   `yaml:"clientSecret,omitempty"`
+	//Existing secret with the clientSecret
 	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
-	AllowedOrganizations       []string         `json:"allowedOrganizations,omitempty" yaml:"allowedOrganizations,omitempty"`
-	TeamIDs                    []string         `json:"teamIDs,omitempty" yaml:"teamIDs,omitempty"`
+	// Organizations allowed to login
+	AllowedOrganizations []string `json:"allowedOrganizations,omitempty" yaml:"allowedOrganizations,omitempty"`
+	// TeamIDs where the user is required to have at least one membership
+	TeamIDs []string `json:"teamIDs,omitempty" yaml:"teamIDs,omitempty"`
 }
 
 func ClearEmpty(g *Auth) *Auth {

@@ -9,9 +9,13 @@ import (
 )
 
 type Auth struct {
-	Google       *google.Auth  `json:"google,omitempty" yaml:"google,omitempty"`
-	Github       *github.Auth  `json:"github,omitempty" yaml:"github,omitempty"`
-	Gitlab       *gitlab.Auth  `json:"gitlab,omitempty" yaml:"gitlab,omitempty"`
+	//Configuration for SSO with Google
+	Google *google.Auth `json:"google,omitempty" yaml:"google,omitempty"`
+	//Configuration for SSO with Github
+	Github *github.Auth `json:"github,omitempty" yaml:"github,omitempty"`
+	//Configuration for SSO with Gitlab
+	Gitlab *gitlab.Auth `json:"gitlab,omitempty" yaml:"gitlab,omitempty"`
+	//Configuration for SSO with an generic OAuth provider
 	GenericOAuth *generic.Auth `json:"genericOAuth,omitempty" yaml:"genericOAuth,omitempty"`
 }
 
