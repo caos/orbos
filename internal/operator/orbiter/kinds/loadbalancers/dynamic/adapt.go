@@ -124,7 +124,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.SourcePools = sourcePools
 			current.Current.Spec = desiredKind.Spec
-			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, vrrp bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, vip func(*VIP) string) error {
+			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, hyperconverged bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) error {
 
 				vips, ok := desiredKind.Spec[forPool]
 				if !ok {
@@ -167,6 +167,27 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					if idx == 0 {
 						machinesData[idx].State = "MASTER"
 					}
+
+					for _, ignoredHyperConvergedDeployPool := range desiredKind.Spec {
+						for _, vip := range ignoredHyperConvergedDeployPool {
+							for _, src := range vip.Transport {
+								for _, dest := range src.Destinations {
+									if dest.Pool == forPool {
+										machinesData[idx].NATs = append(machinesData[idx].NATs, &NAT{
+											Name: src.Name,
+											From: []string{
+												fmt.Sprintf("%s:%d", mapVIP(vip), src.SourcePort),  // VIP
+												fmt.Sprintf("%s:%d", machine.IP(), src.SourcePort), // Node IP
+											},
+											To: fmt.Sprintf("127.0.0.1:%d", dest.Port),
+										})
+										break
+									}
+								}
+							}
+						}
+					}
+
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
@@ -189,7 +210,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}).Debug("Executed command")
 						return user, nil
 					},
-					"vip": vip,
+					"vip": mapVIP,
 					//						"healthcmd": vrrpHealthChecksScript,
 					//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
 					//							return deriveFmap(func(src model.Source) []string {
@@ -245,7 +266,7 @@ vrrp_instance VI_{{ $idx }} {
 {{ end }}
 `))
 
-				nginxTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+				nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
 	worker_connections  4096;  ## Default: 1024
 }
 
@@ -273,6 +294,23 @@ http {
 }
 `))
 
+				nginxNATTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+	worker_connections  4096;  ## Default: 1024
+}
+
+stream { {{ range $nat := .NATs }}
+	upstream {{ $nat.Name }} {
+		server {{ $nat.To }};
+	}
+
+{{ range $from := $nat.From }}	server {
+		listen {{ $from }};
+		proxy_pass {{ $nat.Name }};
+	}
+{{ end }}{{ end }}}
+
+`))
+
 				for _, d := range machinesData {
 
 					na, ok := nodeagents[d.Self.ID()]
@@ -284,7 +322,14 @@ http {
 						na.Software = &common.Software{}
 					}
 
-					if vrrp {
+					ngxBuf := new(bytes.Buffer)
+					defer ngxBuf.Reset()
+
+					if !hyperconverged {
+						if err := nginxNATTemplate.Execute(ngxBuf, d); err != nil {
+							return err
+						}
+					} else {
 						kaBuf := new(bytes.Buffer)
 						defer kaBuf.Reset()
 
@@ -332,43 +377,40 @@ http {
 						}
 
 						na.Software.KeepaliveD = kaPkg
-					}
 
-					ngxBuf := new(bytes.Buffer)
-					defer ngxBuf.Reset()
+						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
+							return err
+						}
+						for _, vip := range d.VIPs {
+							for _, transport := range vip.Transport {
+								probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
+								for _, dest := range transport.Destinations {
+									destMachines, err := svc.List(dest.Pool)
+									if err != nil {
+										return err
+									}
+									for _, machine := range destMachines {
 
-					if err := nginxTemplate.Execute(ngxBuf, d); err != nil {
-						return err
-					}
-					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
-					for _, vip := range d.VIPs {
-						for _, transport := range vip.Transport {
-							probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
-							for _, dest := range transport.Destinations {
-								destMachines, err := svc.List(dest.Pool)
-								if err != nil {
-									return err
-								}
-								for _, machine := range destMachines {
-
-									deepNa, ok := nodeagents[machine.ID()]
-									if !ok {
-										deepNa = &common.NodeAgentSpec{}
-										nodeagents[machine.ID()] = deepNa
+										deepNa, ok := nodeagents[machine.ID()]
+										if !ok {
+											deepNa = &common.NodeAgentSpec{}
+											nodeagents[machine.ID()] = deepNa
+										}
+										if deepNa.Firewall == nil {
+											deepNa.Firewall = &common.Firewall{}
+										}
+										fw := *deepNa.Firewall
+										fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = &common.Allowed{
+											Port:     fmt.Sprintf("%d", dest.Port),
+											Protocol: "tcp",
+										}
+										probe("Upstream", machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
 									}
-									if deepNa.Firewall == nil {
-										deepNa.Firewall = &common.Firewall{}
-									}
-									fw := *deepNa.Firewall
-									fw[fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port)] = &common.Allowed{
-										Port:     fmt.Sprintf("%d", dest.Port),
-										Protocol: "tcp",
-									}
-									probe("Upstream", machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
 								}
 							}
 						}
 					}
+					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					na.Software.Nginx = ngxPkg
 					sysctl.SetProperty(&na.Software.Sysctl, sysctl.IpForward, true)
 					sysctl.SetProperty(&na.Software.Sysctl, sysctl.NonLocalBind, true)
@@ -418,6 +460,12 @@ func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {
 	}).Set(success)
 }
 
+type NAT struct {
+	Name string
+	From []string
+	To   string
+}
+
 type Data struct {
 	VIPs                 []*VIP
 	State                string
@@ -425,6 +473,7 @@ type Data struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
+	NATs                 []*NAT
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {

@@ -185,7 +185,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 						},
 						healthcheck: &healthcheck{
 							log: func(msg string, debug bool) func() {
-								localMonitor := destMonitor.WithField("port", dest.port)
+								localMonitor := destMonitor
 								if hc.Name != "" {
 									localMonitor = localMonitor.WithField("id", hc.Name)
 								}
