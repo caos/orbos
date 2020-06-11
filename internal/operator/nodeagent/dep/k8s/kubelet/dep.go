@@ -49,9 +49,6 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 }
 
 func (k *kubeletDep) Current() (pkg common.Package, err error) {
-	if !k.systemd.Active("kubelet") {
-		return pkg, err
-	}
 
 	pkg, err = k.common.Current()
 	if err != nil {
