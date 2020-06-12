@@ -125,7 +125,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 							if deepNa.Software == nil {
 								deepNa.Software = &common.Software{}
 							}
-							deepNa.Software.SSHD.Config = map[string]string{"listenaddress": "127.0.0.1"}
+							deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
 						}
 					}
 				}
@@ -183,7 +183,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 												fmt.Sprintf("%s:%d", mapVIP(vip), src.FrontendPort),  // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), src.FrontendPort), // Node IP
 											},
-											To: fmt.Sprintf("127.0.0.1:%d", src.BackendPort),
+											To: fmt.Sprintf("%s:%d", machine.IP(), src.BackendPort),
 										})
 										break
 									}

@@ -73,7 +73,7 @@ bootstrapTokens:
   - signing
   - authentication
 localAPIEndpoint:
-  advertiseAddress: 127.0.0.1
+  advertiseAddress: %s
   bindPort: %d
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
@@ -91,7 +91,6 @@ kind: ClusterConfiguration
 apiServer:
   timeoutForControlPlane: 4m0s
   certSANs:
-  - "%s"
   - "%s"
 certificatesDir: /etc/kubernetes/pki
 clusterName: kubernetes
@@ -113,9 +112,9 @@ networking:
 scheduler: {}
 `,
 		joinToken,
+		joining.infra.IP(),
 		kubeAPI.BackendPort,
 		joining.infra.ID(),
-		joining.infra.IP(),
 		kubeAPI.Location,
 		kubeAPI,
 		kubernetesVersion,
@@ -145,10 +144,11 @@ nodeRegistration:
 		if joining.pool.tier == Controlplane {
 			kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
-    advertiseAddress: 127.0.0.1
+    advertiseAddress: %s
     bindPort: %d
   certificateKey: %s
 `,
+				joining.infra.IP(),
 				kubeAPI.BackendPort,
 				certKey)
 		}

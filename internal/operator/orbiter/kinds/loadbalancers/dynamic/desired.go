@@ -117,11 +117,15 @@ func (s *Transport) validate() (err error) {
 	}
 
 	if err := s.FrontendPort.validate(); err != nil {
-		return errors.Wrapf(err, "configuring frontend port for transport %s failed", s.Name)
+		return errors.Wrap(err, "configuring frontend port failed")
 	}
 
 	if err := s.BackendPort.validate(); err != nil {
-		return errors.Wrapf(err, "configuring backend port for transport %s failed", s.Name)
+		return errors.Wrap(err, "configuring backend port failed")
+	}
+
+	if s.FrontendPort == s.BackendPort {
+		return errors.New("frontend port and backend port must not be equal")
 	}
 
 	for _, cidr := range s.Whitelist {
@@ -131,11 +135,11 @@ func (s *Transport) validate() (err error) {
 	}
 
 	if len(s.BackendPools) < 1 {
-		return errors.Errorf("transport %s must have at least one target pool", s.Name)
+		return errors.New("at least one target pool is needed")
 	}
 
 	if err := s.HealthChecks.validate(); err != nil {
-		return errors.Wrapf(err, "configuring health checks for transport %s failed", s.Name)
+		return errors.Wrap(err, "configuring health checks failed")
 	}
 
 	return nil
