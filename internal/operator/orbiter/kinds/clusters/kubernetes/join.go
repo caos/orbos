@@ -22,13 +22,7 @@ func join(
 	kubeAPI *infra.Address,
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
-	certKey string) (kubeconfig *string, err error) {
-
-	defer func() {
-		if err == nil {
-			err = joining.pool.infra.EnsureMember(joining.infra)
-		}
-	}()
+	certKey string) (*string, error) {
 
 	var installNetwork func() error
 	monitor = monitor.WithFields(map[string]interface{}{
@@ -183,7 +177,11 @@ nodeRegistration:
 		}).Debug("Executed kubeadm join")
 		joining.currentMachine.Joined = true
 		monitor.Changed("Node joined")
-		return nil, nil
+		return nil, joining.pool.infra.EnsureMember(joining.infra)
+	}
+
+	if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {
+		return nil, err
 	}
 
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.BackendPort, kubeadmCfgPath)
