@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
+	"reflect"
 )
 
 type DesiredV0 struct {
@@ -18,7 +19,7 @@ type Spec struct {
 	RemoteUser          string
 	RemotePublicKeyPath string
 	Pools               map[string][]*Machine
-	Keys                Keys
+	Keys                *Keys
 }
 
 type Keys struct {
@@ -26,6 +27,35 @@ type Keys struct {
 	BootstrapKeyPublic    *secret.Secret `yaml:",omitempty"`
 	MaintenanceKeyPrivate *secret.Secret `yaml:",omitempty"`
 	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
+}
+
+func (s *Spec) MarshalYAML() (interface{}, error) {
+	type Alias Spec
+	return &Alias{
+		Verbose:             s.Verbose,
+		RemoteUser:          s.RemoteUser,
+		RemotePublicKeyPath: s.RemotePublicKeyPath,
+		Pools:               s.Pools,
+		Keys:                ClearEmptyKeys(s.Keys),
+	}, nil
+}
+
+func ClearEmptyKeys(x *Keys) *Keys {
+	if x == nil {
+		return nil
+	}
+
+	marshaled := Keys{
+		BootstrapKeyPrivate:   secret.ClearEmpty(x.BootstrapKeyPrivate),
+		BootstrapKeyPublic:    secret.ClearEmpty(x.BootstrapKeyPublic),
+		MaintenanceKeyPrivate: secret.ClearEmpty(x.MaintenanceKeyPrivate),
+		MaintenanceKeyPublic:  secret.ClearEmpty(x.MaintenanceKeyPublic),
+	}
+
+	if reflect.DeepEqual(marshaled, Keys{}) {
+		return nil
+	}
+	return &marshaled
 }
 
 func (k *Keys) MarshalYAML() (interface{}, error) {
@@ -61,7 +91,7 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error
 	desiredKind := &DesiredV0{
 		Common: desiredTree.Common,
 		Spec: Spec{
-			Keys: Keys{
+			Keys: &Keys{
 				BootstrapKeyPrivate:   &secret.Secret{Masterkey: masterkey},
 				BootstrapKeyPublic:    &secret.Secret{Masterkey: masterkey},
 				MaintenanceKeyPrivate: &secret.Secret{Masterkey: masterkey},
