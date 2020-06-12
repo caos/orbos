@@ -73,7 +73,7 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		Installer: sshd.New(d.sysd),
 	}, {
 		Desired:   sw.Nginx,
-		Installer: nginx.New(d.monitor, d.pm, d.sysd),
+		Installer: nginx.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem),
 	}, {
 		Desired:   sw.Containerruntime,
 		Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),

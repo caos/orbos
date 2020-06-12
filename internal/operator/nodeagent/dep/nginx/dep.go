@@ -4,6 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
@@ -19,10 +21,11 @@ type nginxDep struct {
 	manager *dep.PackageManager
 	systemd *dep.SystemD
 	monitor mntr.Monitor
+	os      dep.OperatingSystem
 }
 
-func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &nginxDep{manager, systemd, monitor}
+func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem) Installer {
+	return &nginxDep{manager, systemd, monitor, os}
 }
 
 func (nginxDep) isNgninx() {}
@@ -56,6 +59,10 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 }
 
 func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
+
+	if err := selinux.EnsurePermissive(s.monitor, s.os, remove); err != nil {
+		return err
+	}
 
 	ensureCfg, ok := ensure.Config["nginx.conf"]
 	if !ok {
