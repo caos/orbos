@@ -26,7 +26,7 @@ func Test_normalize(t *testing.T) {
 		args: args{
 			spec: map[string][]*dynamic.VIP{
 				"pool1": {{
-					Transport: []*dynamic.Source{{
+					Transport: []*dynamic.Transport{{
 						Name: "transport1",
 						Destinations: []*dynamic.Destination{{
 							HealthChecks: dynamic.HealthChecks{
@@ -43,7 +43,7 @@ func Test_normalize(t *testing.T) {
 					}},
 				}},
 				"pool2": {{
-					Transport: []*dynamic.Source{{
+					Transport: []*dynamic.Transport{{
 						Name: "transport2",
 						Destinations: []*dynamic.Destination{{
 							HealthChecks: dynamic.HealthChecks{
@@ -59,7 +59,7 @@ func Test_normalize(t *testing.T) {
 						},
 					}},
 				}, {
-					Transport: []*dynamic.Source{{
+					Transport: []*dynamic.Transport{{
 						Name: "transport3",
 						Destinations: []*dynamic.Destination{{
 							HealthChecks: dynamic.HealthChecks{

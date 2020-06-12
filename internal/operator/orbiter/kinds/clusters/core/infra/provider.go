@@ -8,12 +8,12 @@ import (
 
 type Address struct {
 	Location     string
-	ExternalPort uint16
-	InternalPort uint16
+	FrontendPort uint16
+	BackendPort  uint16
 }
 
 func (a Address) String() string {
-	return fmt.Sprintf("%s:%d", a.Location, a.ExternalPort)
+	return fmt.Sprintf("%s:%d", a.Location, a.FrontendPort)
 }
 
 type ProviderCurrent interface {

@@ -189,7 +189,6 @@ nodes:
 			monitor.Info("Refreshed certs")
 		}
 
-		monitor.Info("HIER")
 		var joinKubeconfig *string
 		joinKubeconfig, err = join(
 			monitor,

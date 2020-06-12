@@ -5,7 +5,7 @@ package adapter
 import (
 	"context"
 
-	"github.com/caos/orbos/internal/core/operator/orbiter"
+	"github.com/caos/orbiter/internal/core/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external/model"
 )
 

@@ -24,7 +24,7 @@ type normalizedLoadbalancer struct {
 	healthcheck    *healthcheck    // unique
 	address        *address        // The same externalIP reference appears in multiple normalizedLoadbalancer references
 	transport      string
-	port           uint16
+	backendPort    uint16
 }
 
 type StandardLogFunc func(msg string, debug bool) func()
@@ -91,7 +91,7 @@ func (n sortableDestinations) Less(i, j int) bool {
 	return n[i].port < n[j].port || n[i].hc.Protocol < n[i].hc.Protocol || n[i].hc.Path < n[i].hc.Path || n[i].hc.Code < n[i].hc.Code
 }
 
-// normalize returns a normalizedLoadBalancing for each unique destination port and ip combination
+// normalize returns a normalizedLoadBalancing for each unique destination backendPort and ip combination
 // whereas only one random configured healthcheck is relevant
 func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, providerID string) ([]*normalizedLoadbalancer, []*firewall) {
 	var normalized []*normalizedLoadbalancer
@@ -105,117 +105,95 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 			addressTransports := make([]string, 0)
 			for _, src := range ip.Transport {
 				addressTransports = append(addressTransports, src.Name)
-				var normalizedDestinations []*normalizedDestination
-			normalizeDestinationsLoop:
-				for _, dest := range src.Destinations {
-					for _, normalizedDest := range normalizedDestinations {
-						if dest.Port == normalizedDest.port && dest.HealthChecks == normalizedDest.hc {
-							normalizedDest.pools = append(normalizedDest.pools, dest.Pool)
-							continue normalizeDestinationsLoop
-						}
-					}
-					normalizedDestinations = append(normalizedDestinations, &normalizedDestination{
-						port:  dest.Port,
-						pools: []string{dest.Pool},
-						hc:    dest.HealthChecks,
-					})
+				destDescription := fmt.Sprintf("%s;transport=%s", providerDescription, src.Name)
+				destMonitor := monitor.WithFields(map[string]interface{}{
+					"transport": src.Name,
+				})
+				fwr := &compute.ForwardingRule{
+					Description:         destDescription,
+					LoadBalancingScheme: "EXTERNAL",
+					PortRange:           fmt.Sprintf("%d-%d", src.FrontendPort, src.FrontendPort),
 				}
 
-				sort.Sort(sortableDestinations(normalizedDestinations))
-
-				for idx, dest := range normalizedDestinations {
-					sort.Strings(dest.pools)
-					destDescription := fmt.Sprintf("%s;transport=%s;pools=%s;idx=%d", providerDescription, src.Name, dest.pools, idx+1)
-					destMonitor := monitor.WithFields(map[string]interface{}{
-						"transport": src.Name,
-						"pools":     dest.pools,
-					})
-					fwr := &compute.ForwardingRule{
-						Description:         destDescription,
-						LoadBalancingScheme: "EXTERNAL",
-						PortRange:           fmt.Sprintf("%d-%d", src.SourcePort, src.SourcePort),
-					}
-
-					tp := &compute.TargetPool{
-						Description: destDescription,
-					}
-					hc := &compute.HttpHealthCheck{
-						Description: destDescription,
-						RequestPath: dest.hc.Path,
-					}
-
-					normalized = append(normalized, &normalizedLoadbalancer{
-						port: uint16(dest.port),
-						forwardingRule: &forwardingRule{
-							log: func(msg string, debug bool) func() {
-								localMonitor := destMonitor
-								if fwr.Name != "" {
-									localMonitor = localMonitor.WithField("id", fwr.Name)
-								}
-								level := localMonitor.Info
-								if debug {
-									level = localMonitor.Debug
-								}
-
-								return func() {
-									level(msg)
-								}
-							},
-							gce: fwr,
-						},
-						targetPool: &targetPool{
-							log: func(msg string, debug bool, insts []*instance) func() {
-								localMonitor := destMonitor
-								if len(insts) > 0 {
-									localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.id }))
-								}
-								if tp.Name != "" {
-									localMonitor = localMonitor.WithField("id", tp.Name)
-								}
-								level := localMonitor.Info
-								if debug {
-									level = localMonitor.Debug
-								}
-								return func() {
-									level(msg)
-								}
-							},
-							gce:       tp,
-							destPools: dest.pools,
-						},
-						healthcheck: &healthcheck{
-							log: func(msg string, debug bool) func() {
-								localMonitor := destMonitor
-								if hc.Name != "" {
-									localMonitor = localMonitor.WithField("id", hc.Name)
-								}
-								level := localMonitor.Info
-								if debug {
-									level = localMonitor.Debug
-								}
-
-								return func() {
-									level(msg)
-								}
-							},
-							gce:     hc,
-							desired: dest.hc,
-							pools:   dest.pools,
-						},
-						address:   address,
-						transport: src.Name,
-					})
-
-					firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
-						Allowed: []*compute.FirewallAllowed{{
-							IPProtocol: "tcp",
-							Ports:      []string{fmt.Sprintf("%d", src.SourcePort)},
-						}},
-						Description:  destDescription,
-						SourceRanges: whitelistStrings(src.Whitelist),
-						TargetTags:   networkTags(orbID, providerID, dest.pools...),
-					}, destMonitor))
+				tp := &compute.TargetPool{
+					Description: destDescription,
 				}
+				hc := &compute.HttpHealthCheck{
+					Description: destDescription,
+					RequestPath: src.HealthChecks.Path,
+				}
+
+				normalized = append(normalized, &normalizedLoadbalancer{
+					backendPort: uint16(src.BackendPort),
+					forwardingRule: &forwardingRule{
+						log: func(msg string, debug bool) func() {
+							localMonitor := destMonitor
+							if fwr.Name != "" {
+								localMonitor = localMonitor.WithField("id", fwr.Name)
+							}
+							level := localMonitor.Info
+							if debug {
+								level = localMonitor.Debug
+							}
+
+							return func() {
+								level(msg)
+							}
+						},
+						gce: fwr,
+					},
+					targetPool: &targetPool{
+						log: func(msg string, debug bool, insts []*instance) func() {
+							localMonitor := destMonitor
+							if len(insts) > 0 {
+								localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.id }))
+							}
+							if tp.Name != "" {
+								localMonitor = localMonitor.WithField("id", tp.Name)
+							}
+							level := localMonitor.Info
+							if debug {
+								level = localMonitor.Debug
+							}
+							return func() {
+								level(msg)
+							}
+						},
+						gce:       tp,
+						destPools: src.BackendPools,
+					},
+					healthcheck: &healthcheck{
+						log: func(msg string, debug bool) func() {
+							localMonitor := destMonitor
+							if hc.Name != "" {
+								localMonitor = localMonitor.WithField("id", hc.Name)
+							}
+							level := localMonitor.Info
+							if debug {
+								level = localMonitor.Debug
+							}
+
+							return func() {
+								level(msg)
+							}
+						},
+						gce:     hc,
+						desired: src.HealthChecks,
+						pools:   src.BackendPools,
+					},
+					address:   address,
+					transport: src.Name,
+				})
+
+				firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
+					Allowed: []*compute.FirewallAllowed{{
+						IPProtocol: "tcp",
+						Ports:      []string{fmt.Sprintf("%d", src.FrontendPort)},
+					}},
+					Description:  destDescription,
+					SourceRanges: whitelistStrings(src.Whitelist),
+					TargetTags:   networkTags(orbID, providerID, src.BackendPools...),
+				}, destMonitor))
 			}
 			sort.Strings(addressTransports)
 			address.gce = &compute.Address{

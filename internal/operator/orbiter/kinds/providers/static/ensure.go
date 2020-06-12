@@ -48,15 +48,14 @@ func query(
 		desireLb = func(pool string) error {
 			return lbCurrent.Current.Desire(pool, machinesSvc, nodeAgentsDesired, true, nil, mapVIP)
 		}
+
 		for _, pool := range lbCurrent.Current.Spec {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
-					for _, dest := range src.Destinations {
-						current.Current.Ingresses[src.Name] = &infra.Address{
-							Location:     vip.IP,
-							ExternalPort: uint16(src.SourcePort),
-							InternalPort: uint16(dest.Port),
-						}
+					current.Current.Ingresses[src.Name] = &infra.Address{
+						Location:     vip.IP,
+						FrontendPort: uint16(src.FrontendPort),
+						BackendPort:  uint16(src.BackendPort),
 					}
 				}
 			}

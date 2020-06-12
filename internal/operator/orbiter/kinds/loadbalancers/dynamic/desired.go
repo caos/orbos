@@ -17,10 +17,10 @@ type Desired struct {
 
 func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
 	defer func() {
-		d.Common.Version = "v1"
+		d.Common.Version = "v2"
 	}()
 	switch d.Common.Version {
-	case "v1":
+	case "v2":
 		type latest Desired
 		l := latest{}
 		if err := node.Decode(&l); err != nil {
@@ -28,8 +28,22 @@ func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
 		}
 		d.Spec = l.Spec
 		return nil
+	case "v1":
+		v1 := &DesiredV1{}
+		if err := node.Decode(v1); err != nil {
+			return err
+		}
+
+		d.Spec = v1tov2(v1).Spec
+		return nil
 	case "v0":
-		return v0tov1(node, d)
+		v0 := &DesiredV0{}
+		if err := node.Decode(v0); err != nil {
+			return err
+		}
+
+		d.Spec = v1tov2(v0tov1(v0)).Spec
+		return nil
 	}
 	return errors.Errorf("Version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)
 }
@@ -61,7 +75,7 @@ func (d *Desired) Validate() error {
 
 type VIP struct {
 	IP        string `yaml:",omitempty"`
-	Transport []*Source
+	Transport []*Transport
 }
 
 func (v *VIP) validate() error {
@@ -74,14 +88,6 @@ func (v *VIP) validate() error {
 		if err := source.validate(); err != nil {
 			return errors.Wrapf(err, "configuring sources for vip %s failed", v.IP)
 		}
-	}
-
-	withDestinations := len(deriveFilterSources(func(src *Source) bool {
-		return len(src.Destinations) > 0
-	}, append([]*Source(nil), v.Transport...)))
-
-	if withDestinations != 0 && withDestinations != len(v.Transport) {
-		return errors.Errorf("sources of vip %s must eighter all have configured destinations or none", v.IP)
 	}
 
 	return nil
@@ -100,25 +106,22 @@ func (h *HealthChecks) validate() error {
 	return nil
 }
 
-type Source struct {
-	Name         string
-	SourcePort   Port `yaml:",omitempty"`
-	Destinations []*Destination
-	Whitelist    []*orbiter.CIDR
-}
-
-func (s *Source) validate() (err error) {
+func (s *Transport) validate() (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "source %s is invalid", s.Name)
 	}()
 
 	if s.Name == "" {
-		return errors.Errorf("source with port %d has no name", s.SourcePort)
+		return errors.Errorf("source with port %d has no name", s.FrontendPort)
 	}
 
-	if err := s.SourcePort.validate(); err != nil {
-		return errors.Wrapf(err, "configuring sourceport for transport %s failed", s.Name)
+	if err := s.FrontendPort.validate(); err != nil {
+		return errors.Wrapf(err, "configuring frontend port for transport %s failed", s.Name)
+	}
+
+	if err := s.BackendPort.validate(); err != nil {
+		return errors.Wrapf(err, "configuring backend port for transport %s failed", s.Name)
 	}
 
 	for _, cidr := range s.Whitelist {
@@ -127,32 +130,24 @@ func (s *Source) validate() (err error) {
 		}
 	}
 
-	for _, dest := range s.Destinations {
-		if err := dest.validate(); err != nil {
-			return err
-		}
+	if len(s.BackendPools) < 1 {
+		return errors.Errorf("transport %s must have at least one target pool", s.Name)
+	}
+
+	if err := s.HealthChecks.validate(); err != nil {
+		return errors.Wrapf(err, "configuring health checks for transport %s failed", s.Name)
 	}
 
 	return nil
 }
 
-type Destination struct {
+type Transport struct {
+	Name         string
+	FrontendPort Port
+	BackendPort  Port
+	BackendPools []string
+	Whitelist    []*orbiter.CIDR
 	HealthChecks HealthChecks
-	Port         Port
-	Pool         string
-}
-
-func (d *Destination) validate() error {
-
-	if d.Pool == "" {
-		return errors.Errorf("destination with port %d has no pool configured", d.Port)
-	}
-
-	if err := d.Port.validate(); err != nil {
-		return errors.Wrapf(err, "configuring port for destination with pool %s failed", d.Pool)
-	}
-
-	return errors.Wrapf(d.HealthChecks.validate(), "configuring healthchecks for destination with pool %s failed", d.Pool)
 }
 
 type Port uint16

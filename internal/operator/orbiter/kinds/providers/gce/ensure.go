@@ -38,8 +38,8 @@ func query(
 	for _, lb := range normalized {
 		current.Current.Ingresses[lb.transport] = &infra.Address{
 			Location:     lb.address.gce.Address,
-			InternalPort: internalPort(lb),
-			ExternalPort: externalPort(lb),
+			BackendPort:  internalPort(lb),
+			FrontendPort: externalPort(lb),
 		}
 	}
 
@@ -107,7 +107,7 @@ func query(
 }
 
 func internalPort(lb *normalizedLoadbalancer) uint16 {
-	return lb.port
+	return lb.backendPort
 }
 
 func externalPort(lb *normalizedLoadbalancer) uint16 {

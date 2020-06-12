@@ -45,7 +45,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
-		if desiredTree.Common.Version != "v1" {
+		if desiredTree.Common.Version != "v2" {
 			migrate = true
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
@@ -55,22 +55,21 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 		for _, pool := range desiredKind.Spec {
 			for _, vip := range pool {
-				for _, src := range vip.Transport {
-					for _, dest := range src.Destinations {
-						if src.Name == "kubeapi" {
-							if dest.HealthChecks.Path != "/healthz" {
-								dest.HealthChecks.Path = "/healthz"
-								migrate = true
-							}
-							if dest.HealthChecks.Protocol != "https" {
-								dest.HealthChecks.Protocol = "https"
-								migrate = true
-							}
+				for _, t := range vip.Transport {
+					sort.Strings(t.BackendPools)
+					if t.Name == "kubeapi" {
+						if t.HealthChecks.Path != "/healthz" {
+							t.HealthChecks.Path = "/healthz"
+							migrate = true
+						}
+						if t.HealthChecks.Protocol != "https" {
+							t.HealthChecks.Protocol = "https"
+							migrate = true
 						}
 					}
-					if len(src.Whitelist) == 0 {
+					if len(t.Whitelist) == 0 {
 						allIPs := orbiter.CIDR("0.0.0.0/0")
-						src.Whitelist = []*orbiter.CIDR{&allIPs}
+						t.Whitelist = []*orbiter.CIDR{&allIPs}
 						migrate = true
 					}
 				}
@@ -94,32 +93,19 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			wl := whitelist()
 
-			sourcePools := make(map[string][]string)
 			addresses := make(map[string]*infra.Address)
 			for _, pool := range desiredKind.Spec {
 				for _, vip := range pool {
-					for _, src := range vip.Transport {
-						addresses[src.Name] = &infra.Address{
+					for _, t := range vip.Transport {
+						addresses[t.Name] = &infra.Address{
 							Location:     vip.IP,
-							ExternalPort: uint16(src.SourcePort),
-						}
-					destinations:
-						for _, dest := range src.Destinations {
-							if _, ok := sourcePools[dest.Pool]; !ok {
-								sourcePools[dest.Pool] = make([]string, 0)
-							}
-							for _, existing := range sourcePools[dest.Pool] {
-								if dest.Pool == existing {
-									continue destinations
-								}
-							}
-							sourcePools[dest.Pool] = append(sourcePools[dest.Pool], dest.Pool)
+							FrontendPort: uint16(t.FrontendPort),
+							BackendPort:  uint16(t.BackendPort),
 						}
 					}
 				}
 			}
 
-			current.Current.SourcePools = sourcePools
 			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, nodeagents map[string]*common.NodeAgentSpec, hyperconverged bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) error {
 
@@ -189,15 +175,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					for _, ignoredHyperConvergedDeployPool := range desiredKind.Spec {
 						for _, vip := range ignoredHyperConvergedDeployPool {
 							for _, src := range vip.Transport {
-								for _, dest := range src.Destinations {
-									if dest.Pool == forPool {
+								for _, dest := range src.BackendPools {
+									if dest == forPool {
 										machinesData[idx].NATs = append(machinesData[idx].NATs, &NAT{
 											Name: src.Name,
 											From: []string{
-												fmt.Sprintf("%s:%d", mapVIP(vip), src.SourcePort),  // VIP
-												fmt.Sprintf("%s:%d", machine.IP(), src.SourcePort), // Node IP
+												fmt.Sprintf("%s:%d", mapVIP(vip), src.FrontendPort),  // VIP
+												fmt.Sprintf("%s:%d", machine.IP(), src.FrontendPort), // Node IP
 											},
-											To: fmt.Sprintf("127.0.0.1:%d", dest.Port),
+											To: fmt.Sprintf("127.0.0.1:%d", src.BackendPort),
 										})
 										break
 									}
@@ -228,15 +214,6 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						return user, nil
 					},
 					"vip": mapVIP,
-					//						"healthcmd": vrrpHealthChecksScript,
-					//						"upstreamHealthchecks": deriveFmap(vip model.VIP) []string {
-					//							return deriveFmap(func(src model.Source) []string {
-					//
-					//								if src.HealthChecks != nil {
-					//									return fmt.Sprintf(check, src.HealthChecks.Protocol)
-					//								}
-					//							}, vip.Transport)
-					//						},
 				})
 
 				keepaliveDTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}global_defs {
@@ -288,11 +265,11 @@ vrrp_instance VI_{{ $idx }} {
 }
 
 stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
-	upstream {{ $src.Name }} {    {{ range $dest := $src.Destinations }}{{ range $machine := forMachines $dest.Pool }}
-		server {{ $machine.IP }}:{{ $dest.Port }}; # {{ $dest.Pool }}{{end}}{{ end }}
+	upstream {{ $src.Name }} {    {{ range $dest := $src.BackendPools }}{{ range $machine := forMachines $dest }}
+		server {{ $machine.IP }}:{{ $src.BackendPort }}; # {{ $dest }}{{end}}{{ end }}
 	}
 	server {
-		listen {{ vip $vip }}:{{ $src.SourcePort }};
+		listen {{ vip $vip }}:{{ $src.FrontendPort }};
 {{ range $white := $src.Whitelist }}		allow {{ $white }};
 {{ end }}
 		deny all;
@@ -370,8 +347,8 @@ stream { {{ range $nat := .NATs }}
 					for _, vip := range d.VIPs {
 						for _, transport := range vip.Transport {
 							srcFW := map[string]*common.Allowed{
-								fmt.Sprintf("%s-%d-src", transport.Name, transport.SourcePort): {
-									Port:     fmt.Sprintf("%d", transport.SourcePort),
+								fmt.Sprintf("%s-%d-src", transport.Name, transport.FrontendPort): {
+									Port:     fmt.Sprintf("%d", transport.FrontendPort),
 									Protocol: "tcp",
 								},
 							}
@@ -382,16 +359,16 @@ stream { {{ range $nat := .NATs }}
 									desireNodeAgent(machine, srcFW)
 								}
 							}
-							probe("VIP", vip.IP, uint16(transport.SourcePort), transport.Destinations[0].HealthChecks, *transport)
-							for _, dest := range transport.Destinations {
+							probe("VIP", vip.IP, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
+							for _, dest := range transport.BackendPools {
 
 								upstreamProbe := func(machine infra.Machine) {
-									probe("Upstream", machine.IP(), uint16(dest.Port), dest.HealthChecks, *transport)
+									probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
 								}
 
 								destFW := map[string]*common.Allowed{
-									fmt.Sprintf("%s-%d-dest", transport.Name, dest.Port): {
-										Port:     fmt.Sprintf("%d", dest.Port),
+									fmt.Sprintf("%s-%d-dest", transport.Name, transport.BackendPort): {
+										Port:     fmt.Sprintf("%d", transport.BackendPort),
 										Protocol: "tcp",
 									},
 								}
@@ -400,7 +377,7 @@ stream { {{ range $nat := .NATs }}
 									desireNodeAgent(d.Self, destFW)
 									upstreamProbe(d.Self)
 								} else {
-									destMachines, err := svc.List(dest.Pool)
+									destMachines, err := svc.List(dest)
 									if err != nil {
 										return err
 									}
@@ -428,13 +405,15 @@ stream { {{ range $nat := .NATs }}
 func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP {
 	newVIPs := make([]*VIP, len(vips))
 	for vipIdx, vip := range vips {
-		newTransport := make([]*Source, len(vip.Transport))
+		newTransport := make([]*Transport, len(vip.Transport))
 		for srcIdx, src := range vip.Transport {
-			newSource := &Source{
+			newSource := &Transport{
 				Name:         src.Name,
-				SourcePort:   src.SourcePort,
-				Destinations: src.Destinations,
+				FrontendPort: src.FrontendPort,
+				BackendPort:  src.BackendPort,
+				BackendPools: src.BackendPools,
 				Whitelist:    append(src.Whitelist, cidr...),
+				HealthChecks: src.HealthChecks,
 			}
 			if makeUnique {
 				newSource.Whitelist = unique(src.Whitelist)
@@ -449,7 +428,7 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 	return newVIPs
 }
 
-func probe(probeType, ip string, port uint16, hc HealthChecks, source Source) {
+func probe(probeType, ip string, port uint16, hc HealthChecks, source Transport) {
 	vipProbe := fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path)
 	_, err := helpers.Check(vipProbe, int(hc.Code))
 	var success float64

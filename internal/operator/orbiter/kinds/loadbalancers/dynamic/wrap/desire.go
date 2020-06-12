@@ -11,18 +11,26 @@ func desire(selfPool string, curr dynamic.Current, svc core.MachinesService, nod
 	return func() error {
 		update := []string{selfPool}
 	sources:
-		for _, source := range curr.Current.SourcePools[selfPool] {
-			for _, existing := range update {
-				if source == existing {
-					continue sources
+		for deployPool, pool := range curr.Current.Spec {
+			for _, vip := range pool {
+				for _, transport := range vip.Transport {
+					for _, target := range transport.BackendPools {
+						if target == selfPool {
+							update = append(update, deployPool)
+							continue sources
+						}
+					}
 				}
 			}
-			update = append(update, source)
 		}
 
+		unique := make(map[string]struct{})
 		for _, pool := range update {
-			if err := curr.Current.Desire(pool, svc, nodeagents, vrrp, notifymasters, vip); err != nil {
-				return err
+			if _, seen := unique[pool]; !seen {
+				unique[pool] = struct{}{}
+				if err := curr.Current.Desire(pool, svc, nodeagents, vrrp, notifymasters, vip); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
