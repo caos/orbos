@@ -60,7 +60,18 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config) (*git
 
 	gitClient := git.New(ctx, monitor, conf.Comitter, conf.Email, conf.OrbConfig.URL)
 	if err := gitClient.Init([]byte(deployKeyPriv)); err != nil {
-		panic(err)
+		monitor.Error(err)
+		return nil, deployKeyDelete, err
+	}
+
+	if err := gitClient.ReadCheck(); err != nil {
+		monitor.Error(err)
+		return gitClient, deployKeyDelete, err
+	}
+
+	if err := gitClient.WriteCheck(generateRandom()); err != nil {
+		monitor.Error(err)
+		return gitClient, deployKeyDelete, err
 	}
 
 	return gitClient, deployKeyDelete, nil

@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -21,6 +23,10 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+)
+
+const (
+	writeCheckTag = "writecheck"
 )
 
 type Client struct {
@@ -67,6 +73,75 @@ func (g *Client) Init(deploykey []byte) error {
 
 	// TODO: Fix
 	g.auth.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+	return nil
+}
+
+func (g *Client) ReadCheck() error {
+	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{g.repoURL},
+	})
+
+	// We can then use every Remote functions to retrieve wanted information
+	_, err := rem.List(&gogit.ListOptions{
+		Auth: g.auth,
+	})
+	if err != nil {
+		return errors.Wrap(err, "Read-check failed")
+	}
+
+	g.monitor.Debug("Read-check successful")
+	return nil
+}
+
+func (g *Client) WriteCheck(id string) error {
+	if err := g.clone(); err != nil {
+		return err
+	}
+
+	head, err := g.repo.Head()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get head")
+	}
+	localWriteCheckTag := strings.Join([]string{writeCheckTag, id}, "-")
+
+	ref, err := g.repo.CreateTag(localWriteCheckTag, head.Hash(), nil)
+	if err != nil {
+		return errors.Wrap(err, "Write-check failed")
+	}
+	fmt.Println(*ref)
+
+	if err := g.repo.Push(&gogit.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("+refs/tags/" + localWriteCheckTag + ":refs/tags/" + localWriteCheckTag),
+		},
+		Auth: g.auth,
+	}); err != nil {
+		return errors.Wrap(err, "Write-check failed")
+	}
+
+	g.monitor.Debug("Write-check successful")
+
+	if err := g.clone(); err != nil {
+		return err
+	}
+
+	if err := g.repo.DeleteTag(localWriteCheckTag); err != nil {
+		return errors.Wrap(err, "Write-check cleanup delete tag failed")
+	}
+
+	if err := g.repo.Push(&gogit.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec(":refs/tags/" + localWriteCheckTag),
+		},
+		Auth: g.auth,
+	}); err != nil {
+		return errors.Wrap(err, "Write-check cleanup failed")
+	}
+
+	g.monitor.Debug("Write-check cleanup successful")
 	return nil
 }
 
