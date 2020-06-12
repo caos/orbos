@@ -10,7 +10,6 @@ type Address struct {
 	Location     string
 	ExternalPort uint16
 	InternalPort uint16
-	Bind         func(machineIP string) string `yaml:"-"`
 }
 
 func (a Address) String() string {

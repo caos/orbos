@@ -189,7 +189,9 @@ nodes:
 			monitor.Info("Refreshed certs")
 		}
 
-		joinKubeconfig, err := join(
+		monitor.Info("HIER")
+		var joinKubeconfig *string
+		joinKubeconfig, err = join(
 			monitor,
 			joinCP,
 			certsCP,

@@ -40,9 +40,6 @@ func query(
 			Location:     lb.address.gce.Address,
 			InternalPort: internalPort(lb),
 			ExternalPort: externalPort(lb),
-			Bind: func(_ string) string {
-				return "127.0.0.1"
-			},
 		}
 	}
 

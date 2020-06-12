@@ -51,12 +51,12 @@ func query(
 		for _, pool := range lbCurrent.Current.Spec {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
-					current.Current.Ingresses[src.Name] = &infra.Address{
-						Location:     vip.IP,
-						ExternalPort: uint16(src.SourcePort),
-						Bind: func(machineIP string) string {
-							return machineIP
-						},
+					for _, dest := range src.Destinations {
+						current.Current.Ingresses[src.Name] = &infra.Address{
+							Location:     vip.IP,
+							ExternalPort: uint16(src.SourcePort),
+							InternalPort: uint16(dest.Port),
+						}
 					}
 				}
 			}

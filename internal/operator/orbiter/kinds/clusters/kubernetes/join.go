@@ -25,7 +25,7 @@ func join(
 	certKey string) (kubeconfig *string, err error) {
 
 	defer func() {
-		if err != nil {
+		if err == nil {
 			err = joining.pool.infra.EnsureMember(joining.infra)
 		}
 	}()
@@ -61,7 +61,6 @@ func join(
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
 
-	listenIP := kubeAPI.Bind(joining.infra.IP())
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
@@ -74,7 +73,7 @@ bootstrapTokens:
   - signing
   - authentication
 localAPIEndpoint:
-  advertiseAddress: %s
+  advertiseAddress: 127.0.0.1
   bindPort: %d
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
@@ -114,7 +113,6 @@ networking:
 scheduler: {}
 `,
 		joinToken,
-		listenIP,
 		kubeAPI.InternalPort,
 		joining.infra.ID(),
 		joining.infra.IP(),
@@ -147,11 +145,10 @@ nodeRegistration:
 		if joining.pool.tier == Controlplane {
 			kubeadmCfg += fmt.Sprintf(`controlPlane:
   localAPIEndpoint:
-    advertiseAddress: %s
+    advertiseAddress: 127.0.0.1
     bindPort: %d
   certificateKey: %s
 `,
-				listenIP,
 				kubeAPI.InternalPort,
 				certKey)
 		}
