@@ -26,9 +26,10 @@ type instance struct {
 	pool    string
 	remove  func() error
 	context *context
+	start   bool
 }
 
-func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error) *instance {
+func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool) *instance {
 	return &instance{
 		Monitor: monitor,
 		id:      id,
@@ -37,6 +38,7 @@ func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string
 		pool:    pool,
 		remove:  remove,
 		context: context,
+		start:   start,
 	}
 }
 

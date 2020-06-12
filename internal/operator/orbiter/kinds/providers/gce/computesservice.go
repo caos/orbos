@@ -28,6 +28,28 @@ func newMachinesService(context *context) *machinesService {
 	}
 }
 
+func (m *machinesService) restartPreemptibleMachines() error {
+	pools, err := m.instances()
+	if err != nil {
+		return err
+	}
+
+	for _, pool := range pools {
+		for _, instance := range pool {
+			if instance.start {
+				if err := operateFunc(
+					func() { instance.Monitor.Debug("Restarting preemptible instance") },
+					computeOpCall(m.context.client.Instances.Start(m.context.projectID, m.context.desired.Zone, instance.ID()).RequestId(uuid.NewV1().String()).Do),
+					func() error { instance.Monitor.Info("Preemptible instance restarted"); return nil },
+				)(); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	desired, ok := m.context.desired.Pools[poolName]
@@ -126,6 +148,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			poolName,
 			createInstance.Name,
 		),
+		false,
 	)
 
 	for _, name := range diskNames {
@@ -195,7 +218,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 	instances, err := m.context.client.Instances.
 		List(m.context.projectID, m.context.desired.Zone).
 		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.context.orbID, m.context.providerID)).
-		Fields("items(name,labels,selfLink,networkInterfaces(networkIP))").
+		Fields("items(name,labels,selfLink,status,scheduling(preemptible),networkInterfaces(networkIP))").
 		Do()
 	if err != nil {
 		return nil, err
@@ -216,6 +239,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 			inst.SelfLink,
 			pool,
 			m.removeMachineFunc(pool, inst.Name),
+			inst.Status == "STOPPED" && inst.Scheduling.Preemptible,
 		)
 		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
 	}
