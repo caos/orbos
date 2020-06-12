@@ -183,7 +183,7 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbcon
 		value, err := secret.Read(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(orbFile),
+			secretfuncs.GetSecrets(),
 			path)
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")

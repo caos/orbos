@@ -2,7 +2,6 @@ package github
 
 import (
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type Auth struct {
@@ -16,35 +15,4 @@ type Auth struct {
 	AllowedOrganizations []string `json:"allowedOrganizations,omitempty" yaml:"allowedOrganizations,omitempty"`
 	// TeamIDs where the user is required to have at least one membership
 	TeamIDs []string `json:"teamIDs,omitempty" yaml:"teamIDs,omitempty"`
-}
-
-func ClearEmpty(g *Auth) *Auth {
-	if g == nil {
-		return nil
-	}
-
-	marshaled := Auth{
-		ClientID:                   secret.ClearEmpty(g.ClientID),
-		ExistingClientIDSecret:     g.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(g.ClientSecret),
-		ExistingClientSecretSecret: g.ExistingClientSecretSecret,
-		AllowedOrganizations:       g.AllowedOrganizations,
-		TeamIDs:                    g.TeamIDs,
-	}
-	if reflect.DeepEqual(marshaled, Auth{}) {
-		return nil
-	}
-	return &marshaled
-}
-
-func (g *Auth) MarshalYAML() (interface{}, error) {
-	type Alias Auth
-	return &Alias{
-		ClientID:                   secret.ClearEmpty(g.ClientID),
-		ExistingClientIDSecret:     g.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(g.ClientSecret),
-		ExistingClientSecretSecret: g.ExistingClientSecretSecret,
-		AllowedOrganizations:       g.AllowedOrganizations,
-		TeamIDs:                    g.TeamIDs,
-	}, nil
 }

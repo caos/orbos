@@ -53,7 +53,7 @@ func Read(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path 
 	secret, _, _, err := findSecret(monitor, gitClient, secretFunc, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0)
 		for key, sec := range secrets {
-			if sec.Value != "" {
+			if sec != nil && sec.Value != "" {
 				items = append(items, key)
 			}
 		}

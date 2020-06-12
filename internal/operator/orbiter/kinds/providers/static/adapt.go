@@ -11,12 +11,12 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
+func AdaptFunc(id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
-		desiredKind, err := parseDesiredV0(desiredTree, masterkey)
+		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
@@ -29,8 +29,6 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, migrate, err
 		}
-
-		initializeNecessarySecrets(desiredKind, masterkey)
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
@@ -65,7 +63,7 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc) orb
 				}
 
 				queryFunc := func() (orbiter.EnsureFunc, error) {
-					return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, masterkey, monitor, id)
+					return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, monitor, id)
 				}
 				return orbiter.QueryFuncGoroutine(queryFunc)
 			}, func() error {

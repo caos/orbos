@@ -3,7 +3,6 @@ package providers
 import (
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -12,7 +11,6 @@ import (
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
-	orb *orb.Orb,
 	provID string,
 	providerTree *tree.Tree,
 	providerCurrent *tree.Tree,
@@ -51,7 +49,6 @@ func GetQueryAndDestroyFuncs(
 
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
 			return static.AdaptFunc(
-				orb.Masterkey,
 				provID,
 				func() []*orbiter.CIDR {
 					monitor.Debug("Reading whitelist")
@@ -71,7 +68,6 @@ func GetQueryAndDestroyFuncs(
 
 func GetSecrets(
 	monitor mntr.Monitor,
-	masterkey string,
 	providerTree *tree.Tree,
 ) (
 	map[string]*secret.Secret,
@@ -79,9 +75,7 @@ func GetSecrets(
 ) {
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/StaticProvider":
-		return static.SecretsFunc(
-			masterkey,
-		)(
+		return static.SecretsFunc()(
 			monitor,
 			providerTree,
 		)
@@ -92,7 +86,6 @@ func GetSecrets(
 
 func RewriteMasterkey(
 	monitor mntr.Monitor,
-	oldMasterkey string,
 	newMasterkey string,
 	providerTree *tree.Tree,
 ) (
@@ -102,7 +95,6 @@ func RewriteMasterkey(
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/StaticProvider":
 		return static.RewriteFunc(
-			oldMasterkey,
 			newMasterkey,
 		)(
 			monitor,

@@ -3,7 +3,6 @@ package orb
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
@@ -11,8 +10,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func SecretsFunc(
-	orb *orb.Orb) secret.Func {
+func SecretsFunc() secret.Func {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -30,7 +28,6 @@ func SecretsFunc(
 
 			providerSecrets, err := providers.GetSecrets(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
-				orb.Masterkey,
 				providerTree,
 			)
 			if err != nil {
@@ -46,7 +43,6 @@ func SecretsFunc(
 
 			clusterSecrets, err := clusters.GetSecrets(
 				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-				orb,
 				clusterTree,
 			)
 			if err != nil {
@@ -62,8 +58,7 @@ func SecretsFunc(
 	}
 }
 
-func RewriteFunc(
-	orb *orb.Orb, newMasterkey string) secret.Func {
+func RewriteFunc(newMasterkey string) secret.Func {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -81,7 +76,6 @@ func RewriteFunc(
 
 			providerSecrets, err := providers.RewriteMasterkey(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
-				orb.Masterkey,
 				newMasterkey,
 				providerTree,
 			)
@@ -98,7 +92,6 @@ func RewriteFunc(
 
 			clusterSecrets, err := clusters.RewriteMasterkey(
 				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-				orb,
 				newMasterkey,
 				clusterTree,
 			)

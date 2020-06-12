@@ -23,7 +23,6 @@ func query(
 
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	lb interface{},
-	masterkey string,
 
 	monitor mntr.Monitor,
 	id string,
@@ -88,8 +87,8 @@ func query(
 			if err != nil {
 				return err
 			}
-			desired.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey, Value: priv}
-			desired.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey, Value: pub}
+			desired.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Value: priv}
+			desired.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Value: pub}
 			if err := psf(monitor.WithField("type", "maintenancekey")); err != nil {
 				return err
 			}

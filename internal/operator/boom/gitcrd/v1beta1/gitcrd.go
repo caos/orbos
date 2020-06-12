@@ -225,7 +225,7 @@ func (c *GitCrd) getCrdContent(masterkey string) (*toolsetsv1beta1.Toolset, erro
 		return nil, err
 	}
 
-	desiredKind, err := api.ParseToolset(desiredTree, masterkey)
+	desiredKind, err := api.ParseToolset(desiredTree)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}

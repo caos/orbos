@@ -66,7 +66,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		if err := secret.Write(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(orbConfig),
+			secretfuncs.GetSecrets(),
 			path,
 			s); err != nil {
 			panic(err)

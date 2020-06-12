@@ -33,7 +33,7 @@ func AdaptFunc(
 			migrate = true
 		}
 
-		desiredKind, err := parseDesiredV0(desiredTree, orb.Masterkey)
+		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
 			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
@@ -51,8 +51,6 @@ func AdaptFunc(
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, migrate, err
 		}
-
-		initializeNecessarySecrets(desiredKind, orb.Masterkey)
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()

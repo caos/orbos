@@ -2,7 +2,6 @@ package google
 
 import (
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type Connector struct {
@@ -12,23 +11,6 @@ type Connector struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	//Configuration for the google provider
 	Config *Config `json:"config,omitempty" yaml:"config,omitempty"`
-}
-
-func ClearEmpty(x *Connector) *Connector {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := Connector{
-		ID:     x.ID,
-		Name:   x.Name,
-		Config: ClearEmptyConfig(x.Config),
-	}
-
-	if reflect.DeepEqual(marshaled, Connector{}) {
-		return nil
-	}
-	return &marshaled
 }
 
 type Config struct {
@@ -49,28 +31,4 @@ type Config struct {
 	ServiceAccountFilePath string `json:"serviceAccountFilePath,omitempty" yaml:"serviceAccountFilePath,omitempty"`
 	//Email of a G Suite admin to impersonate
 	AdminEmail string `json:"adminEmail,omitempty" yaml:"adminEmail,omitempty"`
-}
-
-func ClearEmptyConfig(x *Config) *Config {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := Config{
-		ClientID:                         secret.ClearEmpty(x.ClientID),
-		ExistingClientIDSecret:           x.ExistingClientIDSecret,
-		ClientSecret:                     secret.ClearEmpty(x.ClientSecret),
-		ExistingClientSecretSecret:       x.ExistingClientSecretSecret,
-		HostedDomains:                    x.HostedDomains,
-		Groups:                           x.Groups,
-		ServiceAccountJSON:               secret.ClearEmpty(x.ServiceAccountJSON),
-		ExistingServiceAccountJSONSecret: x.ExistingServiceAccountJSONSecret,
-		ServiceAccountFilePath:           x.ServiceAccountFilePath,
-		AdminEmail:                       x.AdminEmail,
-	}
-
-	if reflect.DeepEqual(marshaled, Config{}) {
-		return nil
-	}
-	return &marshaled
 }

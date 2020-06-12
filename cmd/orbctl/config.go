@@ -69,7 +69,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				if err := secret.Rewrite(
 					monitor,
 					gitClient,
-					secretfuncs.GetRewrite(orbConfig, masterkey),
+					secretfuncs.GetRewrite(masterkey),
 					"orbiter"); err != nil {
 					panic(err)
 				}
@@ -107,7 +107,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				if err := secret.Rewrite(
 					monitor,
 					gitClient,
-					secretfuncs.GetRewrite(orbConfig, masterkey),
+					secretfuncs.GetRewrite(masterkey),
 					"boom"); err != nil {
 					return err
 				}

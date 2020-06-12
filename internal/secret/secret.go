@@ -13,6 +13,8 @@ import (
 	"unicode/utf8"
 )
 
+var Masterkey = "empty"
+
 // Secret: Secret handled with orbctl so no manual changes are required
 type Secret struct {
 	//Used encryption for the secret
@@ -20,8 +22,7 @@ type Secret struct {
 	//Used encoding for the secret
 	Encoding string
 	//Value after encryption and encoding
-	Value     string
-	Masterkey string `yaml:"-"`
+	Value string
 }
 type secretAlias Secret
 
@@ -80,13 +81,13 @@ func unmarshal(s *Secret) (string, error) {
 		return "", err
 	}
 
-	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return "", nil
 		//return errors.New("Master key size must be between 1 and 32 characters")
 	}
 
 	masterKeyLocal := make([]byte, 32)
-	for idx, char := range []byte(strings.Trim(s.Masterkey, "\n")) {
+	for idx, char := range []byte(strings.Trim(Masterkey, "\n")) {
 		masterKeyLocal[idx] = char
 	}
 
@@ -116,7 +117,7 @@ func unmarshal(s *Secret) (string, error) {
 }
 
 func (s *Secret) Unmarshal(masterkey string) error {
-	s.Masterkey = masterkey
+	Masterkey = masterkey
 
 	unm, err := unmarshal(s)
 	if err != nil {
@@ -139,7 +140,7 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 	s.Encryption = alias.Encryption
 	s.Value = alias.Value
 
-	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return nil
 		//return errors.New("Master key size must be between 1 and 32 characters")
 	}
@@ -162,12 +163,12 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 		return nil, nil
 	}
 
-	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return nil, errors.New("Master key size must be between 1 and 32 characters")
 	}
 
 	masterKey := make([]byte, 32)
-	for idx, char := range []byte(strings.Trim(s.Masterkey, "\n")) {
+	for idx, char := range []byte(strings.Trim(Masterkey, "\n")) {
 		masterKey[idx] = char
 	}
 
@@ -185,20 +186,12 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 	stream := cipher.NewCFBEncrypter(c, iv)
 	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(s.Value))
 
-	return &secretAlias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText), Masterkey: ""}, nil
+	return &secretAlias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}, nil
 }
 
-func ClearEmpty(secret *Secret) *Secret {
-	if secret != nil && secret.Value == "" {
-		return nil
-	}
-	return secret
-}
-
-func InitIfNil(sec *Secret, masterkey string) *Secret {
+func InitIfNil(sec *Secret) *Secret {
 	if sec == nil {
-		return &Secret{Masterkey: masterkey}
+		return &Secret{}
 	}
-	sec.Masterkey = masterkey
 	return sec
 }

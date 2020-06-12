@@ -2,7 +2,6 @@ package google
 
 import (
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type Auth struct {
@@ -14,33 +13,4 @@ type Auth struct {
 	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//Domains allowed to login
 	AllowedDomains []string `json:"allowedDomains,omitempty" yaml:"allowedDomains,omitempty"`
-}
-
-func ClearEmpty(x *Auth) *Auth {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := Auth{
-		ClientID:                   secret.ClearEmpty(x.ClientID),
-		ExistingClientIDSecret:     x.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(x.ClientSecret),
-		ExistingClientSecretSecret: x.ExistingClientSecretSecret,
-		AllowedDomains:             x.AllowedDomains,
-	}
-	if reflect.DeepEqual(marshaled, Auth{}) {
-		return nil
-	}
-	return &marshaled
-}
-
-func (g *Auth) MarshalYAML() (interface{}, error) {
-	type Alias Auth
-	return &Alias{
-		ClientID:                   secret.ClearEmpty(g.ClientID),
-		ExistingClientIDSecret:     g.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(g.ClientSecret),
-		ExistingClientSecretSecret: g.ExistingClientSecretSecret,
-		AllowedDomains:             g.AllowedDomains,
-	}, nil
 }

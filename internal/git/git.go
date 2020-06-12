@@ -109,12 +109,11 @@ func (g *Client) WriteCheck(id string) error {
 	if err != nil {
 		return errors.Wrap(err, "Write-check failed")
 	}
-	fmt.Println(*ref)
 
 	if err := g.repo.Push(&gogit.PushOptions{
 		RemoteName: "origin",
 		RefSpecs: []config.RefSpec{
-			config.RefSpec("+refs/tags/" + localWriteCheckTag + ":refs/tags/" + localWriteCheckTag),
+			config.RefSpec("+" + ref.Name() + ":" + ref.Name()),
 		},
 		Auth: g.auth,
 	}); err != nil {
@@ -134,7 +133,7 @@ func (g *Client) WriteCheck(id string) error {
 	if err := g.repo.Push(&gogit.PushOptions{
 		RemoteName: "origin",
 		RefSpecs: []config.RefSpec{
-			config.RefSpec(":refs/tags/" + localWriteCheckTag),
+			config.RefSpec(":" + ref.Name()),
 		},
 		Auth: g.auth,
 	}); err != nil {

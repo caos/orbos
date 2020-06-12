@@ -63,7 +63,6 @@ func GetQueryAndDestroyFuncs(
 
 func GetSecrets(
 	monitor mntr.Monitor,
-	orb *orb.Orb,
 	clusterTree *tree.Tree,
 ) (
 	map[string]*secret.Secret,
@@ -72,9 +71,7 @@ func GetSecrets(
 
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
-		return kubernetes.SecretFunc(
-			orb,
-		)(
+		return kubernetes.SecretFunc()(
 			monitor,
 			clusterTree,
 		)
@@ -85,7 +82,6 @@ func GetSecrets(
 
 func RewriteMasterkey(
 	monitor mntr.Monitor,
-	orb *orb.Orb,
 	newMasterkey string,
 	clusterTree *tree.Tree,
 ) (
@@ -96,7 +92,6 @@ func RewriteMasterkey(
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
 		return kubernetes.RewriteFunc(
-			orb,
 			newMasterkey,
 		)(
 			monitor,

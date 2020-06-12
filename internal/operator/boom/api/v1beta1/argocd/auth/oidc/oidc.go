@@ -2,7 +2,6 @@ package oidc
 
 import (
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type OIDC struct {
@@ -27,26 +26,4 @@ type Claim struct {
 	Essential bool `json:"essential,omitempty" yaml:"essential,omitempty"`
 	//Required values of the claim, otherwise hte login will fail
 	Values []string `json:"values,omitempty" yaml:"values,omitempty"`
-}
-
-func ClearEmpty(x *OIDC) *OIDC {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := OIDC{
-		Name:                       x.Name,
-		Issuer:                     x.Issuer,
-		ClientID:                   secret.ClearEmpty(x.ClientID),
-		ExistingClientIDSecret:     x.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(x.ClientSecret),
-		ExistingClientSecretSecret: x.ExistingClientSecretSecret,
-		RequestedScopes:            x.RequestedScopes,
-		RequestedIDTokenClaims:     x.RequestedIDTokenClaims,
-	}
-
-	if reflect.DeepEqual(marshaled, OIDC{}) {
-		return nil
-	}
-	return &marshaled
 }

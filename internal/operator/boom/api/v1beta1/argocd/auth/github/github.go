@@ -2,7 +2,6 @@ package github
 
 import (
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type Connector struct {
@@ -12,23 +11,6 @@ type Connector struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	//Configuration for the github provider
 	Config *Config `json:"config,omitempty" yaml:"config,omitempty"`
-}
-
-func ClearEmpty(x *Connector) *Connector {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := Connector{
-		ID:     x.ID,
-		Name:   x.Name,
-		Config: ClearEmptyConfig(x.Config),
-	}
-
-	if reflect.DeepEqual(marshaled, Connector{}) {
-		return nil
-	}
-	return &marshaled
 }
 
 type Config struct {
@@ -53,26 +35,4 @@ type Org struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	//Name of the required team in the organization
 	Teams []string `json:"teams,omitempty" yaml:"teams,omitempty"`
-}
-
-func ClearEmptyConfig(x *Config) *Config {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := Config{
-		ClientID:                   secret.ClearEmpty(x.ClientID),
-		ExistingClientIDSecret:     x.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(x.ClientSecret),
-		ExistingClientSecretSecret: x.ExistingClientSecretSecret,
-		Orgs:                       x.Orgs,
-		LoadAllGroups:              x.LoadAllGroups,
-		TeamNameField:              x.TeamNameField,
-		UseLoginAsID:               x.UseLoginAsID,
-	}
-
-	if reflect.DeepEqual(marshaled, Config{}) {
-		return nil
-	}
-	return &marshaled
 }

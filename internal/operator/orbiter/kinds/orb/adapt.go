@@ -55,7 +55,6 @@ func AdaptFunc(
 			//			providerID := id + provID
 			query, destroy, migrateLocal, err := providers.GetQueryAndDestroyFuncs(
 				monitor,
-				orb,
 				provID,
 				providerTree,
 				providerCurrent,

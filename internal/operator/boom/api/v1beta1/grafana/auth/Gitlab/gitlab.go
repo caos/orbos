@@ -2,7 +2,6 @@ package gitlab
 
 import (
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type Auth struct {
@@ -14,33 +13,4 @@ type Auth struct {
 	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//Groups of gitlab allowed to login
 	AllowedGroups []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
-}
-
-func ClearEmpty(g *Auth) *Auth {
-	if g == nil {
-		return nil
-	}
-
-	marshaled := Auth{
-		ClientID:                   secret.ClearEmpty(g.ClientID),
-		ExistingClientIDSecret:     g.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(g.ClientSecret),
-		ExistingClientSecretSecret: g.ExistingClientSecretSecret,
-		AllowedGroups:              g.AllowedGroups,
-	}
-	if reflect.DeepEqual(marshaled, Auth{}) {
-		return nil
-	}
-	return &marshaled
-}
-
-func (g *Auth) MarshalYAML() (interface{}, error) {
-	type Alias Auth
-	return &Alias{
-		ClientID:                   secret.ClearEmpty(g.ClientID),
-		ExistingClientIDSecret:     g.ExistingClientIDSecret,
-		ClientSecret:               secret.ClearEmpty(g.ClientSecret),
-		ExistingClientSecretSecret: g.ExistingClientSecretSecret,
-		AllowedGroups:              g.AllowedGroups,
-	}, nil
 }
