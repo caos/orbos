@@ -3,27 +3,24 @@ module github.com/caos/orbos
 go 1.14
 
 require (
-	cloud.google.com/go v0.56.0
+	cloud.google.com/go v0.56.0 // indirect
 	cloud.google.com/go/storage v1.6.0
 	github.com/AppsFlyer/go-sundheit v0.1.1
-	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
 	github.com/aws/aws-sdk-go v1.29.15
-	github.com/docker/docker v0.7.3-0.20190327010347-be7ac8be2ae0
-	github.com/golang/protobuf v1.3.5
 	github.com/caos/oidc v0.6.1
-	github.com/fatih/color v1.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
+	github.com/golang/protobuf v1.3.5
 	github.com/google/go-github/v31 v31.0.0
-	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
+	github.com/googleapis/gnostic v0.3.1 // indirect
+	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/manifoldco/promptui v0.7.0
-	github.com/mitchellh/mapstructure v1.1.2
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.0.0
-	github.com/robfig/cron v1.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.6
-	github.com/spf13/viper v1.4.0
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
@@ -37,5 +34,4 @@ require (
 	k8s.io/apimachinery v0.17.3
 	k8s.io/client-go v0.17.3
 	k8s.io/kubectl v0.17.0
-	sigs.k8s.io/controller-runtime v0.4.0 // indirect
 )
