@@ -239,7 +239,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 			inst.SelfLink,
 			pool,
 			m.removeMachineFunc(pool, inst.Name),
-			inst.Status == "STOPPED" && inst.Scheduling.Preemptible,
+			inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
 		)
 		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
 	}

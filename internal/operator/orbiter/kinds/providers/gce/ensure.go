@@ -101,6 +101,10 @@ func query(
 			return err
 		}
 
+		if err := context.machinesService.restartPreemptibleMachines(); err != nil {
+			return err
+		}
+
 		return ensureLB()
 
 	}, initPools(current, desired, context, normalized, lbCurrent, nodeAgentsDesired)
