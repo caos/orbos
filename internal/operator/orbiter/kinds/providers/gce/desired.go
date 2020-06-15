@@ -24,6 +24,11 @@ type Pool struct {
 }
 
 func (p Pool) validate() error {
+
+	if p.Preemptible {
+		return errors.New("Premptible pools are not yet supported")
+	}
+
 	if p.MinCPUCores == 0 {
 		return errors.New("no cpu cores configured")
 	}
