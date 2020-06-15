@@ -2,18 +2,14 @@ package main
 
 import (
 	"context"
-	"io/ioutil"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, *git.Client, *orb.Orb, errFunc)
+type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, errFunc)
 
 type errFunc func(cmd *cobra.Command) error
 
@@ -29,8 +25,8 @@ func curryErrFunc(rootCmd *cobra.Command, err error) errFunc {
 func RootCommand() (*cobra.Command, RootValues) {
 
 	var (
-		verbose   bool
-		orbconfig string
+		verbose       bool
+		orbConfigPath string
 	)
 
 	cmd := &cobra.Command{
@@ -51,10 +47,10 @@ $ orbctl -f ~/.orb/myorb [command]
 	}
 
 	flags := cmd.PersistentFlags()
-	flags.StringVarP(&orbconfig, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
+	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, mntr.Monitor, *git.Client, *orb.Orb, errFunc) {
+	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, errFunc) {
 
 		monitor := mntr.Monitor{
 			OnInfo:   mntr.LogMessage,
@@ -66,35 +62,11 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor = monitor.Verbose()
 		}
 
-		content, err := ioutil.ReadFile(orbconfig)
+		orbConfig, err := orb.ParseOrbConfig(orbConfigPath)
 		if err != nil {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, err)
+			monitor.Error(err)
 		}
 
-		orbStruct := &orb.Orb{}
-		if err := yaml.Unmarshal(content, orbStruct); err != nil {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, err)
-		}
-
-		if orbStruct.URL == "" {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no URL configured"))
-		}
-
-		if orbStruct.Repokey == "" {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no repokey configured"))
-		}
-
-		if orbStruct.Masterkey == "" {
-			return nil, monitor, nil, nil, curryErrFunc(cmd, errors.New("orbconfig has no masterkey configured"))
-		}
-
-		ctx := context.Background()
-
-		gitClient := git.New(ctx, monitor, "Orbiter", "orbiter@caos.ch", orbStruct.URL)
-		if err := gitClient.Init([]byte(orbStruct.Repokey)); err != nil {
-			panic(err)
-		}
-
-		return ctx, monitor, gitClient, orbStruct, nil
+		return context.Background(), monitor, orbConfig, nil
 	}
 }

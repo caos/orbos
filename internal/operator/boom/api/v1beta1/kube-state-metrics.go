@@ -1,6 +1,10 @@
 package v1beta1
 
 type KubeStateMetrics struct {
-	Deploy       bool `json:"deploy,omitempty" yaml:"deploy,omitempty"`
-	ReplicaCount int  `json:"replicaCount,omitempty" yaml:"replicaCount,omitempty"`
+	//Flag if tool should be deployed
+	//@default: false
+	Deploy bool `json:"deploy" yaml:"deploy"`
+	//Number of replicas used for deployment
+	//@default: 1
+	ReplicaCount int `json:"replicaCount,omitempty" yaml:"replicaCount,omitempty"`
 }

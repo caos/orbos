@@ -16,6 +16,7 @@ type CloudIntegration int
 
 func join(
 	monitor mntr.Monitor,
+	clusterID string,
 	joining *initializedMachine,
 	joinAt infra.Machine,
 	desired DesiredV0,
@@ -87,7 +88,7 @@ apiServer:
   certSANs:
   - "%s"
 certificatesDir: /etc/kubernetes/pki
-clusterName: kubernetes
+clusterName: %s
 controlPlaneEndpoint: %s
 controllerManager: {}
 dns:
@@ -110,6 +111,7 @@ scheduler: {}
 		kubeAPI.BackendPort,
 		joining.infra.ID(),
 		kubeAPI.Location,
+		clusterID,
 		kubeAPI,
 		kubernetesVersion,
 		desired.Spec.Networking.DNSDomain,
@@ -209,10 +211,11 @@ nodeRegistration:
 	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfigBuf); err != nil {
 		return nil, err
 	}
-	kc := kubeconfigBuf.String()
 
 	joining.currentMachine.Joined = true
 	monitor.Changed("Cluster initialized")
+
+	kc := strings.ReplaceAll(kubeconfigBuf.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
 
 	return &kc, nil
 }

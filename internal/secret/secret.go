@@ -6,62 +6,97 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"github.com/caos/orbos/internal/utils/clientgo"
 	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 	"unicode/utf8"
 )
 
+// Secret: Secret handled with orbctl so no manual changes are required
 type Secret struct {
+	//Used encryption for the secret
 	Encryption string
-	Encoding   string
-	Value      string
-	Masterkey  string `yaml:"-"`
+	//Used encoding for the secret
+	Encoding string
+	//Value after encryption and encoding
+	Value     string
+	Masterkey string `yaml:"-"`
 }
 type secretAlias Secret
 
+// Existing: Used secret that has to be already existing in the cluster
 type Existing struct {
-	Name         string `json:"name" yaml:"name"`
-	Key          string `json:"key" yaml:"key"`
+	//Name of the Secret
+	Name string `json:"name" yaml:"name"`
+	//Key in the secret from where the value should be used
+	Key string `json:"key" yaml:"key"`
+	//Name which should be used internal, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName" yaml:"internalName"`
 }
 
+// Existing: Used secret that has to be already existing in the cluster and should contain id/username and secret/password
 type ExistingIDSecret struct {
-	Name         string `json:"name" yaml:"name"`
-	IDKey        string `json:"idKey" yaml:"idKey"`
-	SecretKey    string `json:"secretKey" yaml:"secretKey"`
+	//Name of the Secret
+	Name string `json:"name" yaml:"name"`
+	//Key in the secret which contains the ID
+	IDKey string `json:"idKey" yaml:"idKey"`
+	//Key in the secret which contains the secret
+	SecretKey string `json:"secretKey" yaml:"secretKey"`
+	//Name which should be used internal, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName" yaml:"internalName"`
 }
 
-func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
-	alias := new(secretAlias)
-	err := node.Decode(alias)
-
-	if alias.Value == "" {
-		return nil
+func (s *Secret) UnmarshalYAMLWithExisting(node *yaml.Node, existing *Existing) error {
+	if err := s.UnmarshalYAML(node); err != nil {
+		return err
 	}
 
-	cipherText, err := base64.URLEncoding.DecodeString(alias.Value)
+	if s.Value == "" {
+		if existing != nil && existing.Name != "" && existing.Key != "" {
+			secret, err := clientgo.GetSecret(existing.Name, "caos-system")
+			if err != nil {
+				return errors.New("Error while reading existing secret")
+			}
+
+			value, found := secret.Data[existing.Key]
+			if !found {
+				return errors.New("Error while reading existing secret, key non-existent")
+			}
+			s.Value = string(value)
+		}
+	}
+
+	return nil
+}
+
+func unmarshal(s *Secret) (string, error) {
+	if s.Value == "" {
+		return "", nil
+	}
+
+	cipherText, err := base64.URLEncoding.DecodeString(s.Value)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
-		return errors.New("Master key size must be between 1 and 32 characters")
+		return "", nil
+		//return errors.New("Master key size must be between 1 and 32 characters")
 	}
 
-	masterKey := make([]byte, 32)
+	masterKeyLocal := make([]byte, 32)
 	for idx, char := range []byte(strings.Trim(s.Masterkey, "\n")) {
-		masterKey[idx] = char
+		masterKeyLocal[idx] = char
 	}
 
-	block, err := aes.NewCipher(masterKey)
+	block, err := aes.NewCipher(masterKeyLocal)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if len(cipherText) < aes.BlockSize {
-		return errors.New("Ciphertext block size is too short")
+		return "", errors.New("Ciphertext block size is too short")
 	}
 
 	//IV needs to be unique, but doesn't have to be secure.
@@ -74,12 +109,50 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 	stream.XORKeyStream(cipherText, cipherText)
 
 	if !utf8.Valid(cipherText) {
-		return errors.New("Decryption failed")
+		return "", errors.New("Decryption failed")
 	}
+	//	s.monitor.Info("Decoded and decrypted secret")
+	return string(cipherText), nil
+}
+
+func (s *Secret) Unmarshal(masterkey string) error {
+	s.Masterkey = masterkey
+
+	unm, err := unmarshal(s)
+	if err != nil {
+		return err
+	}
+
+	s.Value = unm
+	return nil
+}
+
+func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
+	alias := new(secretAlias)
+	err := node.Decode(alias)
+
+	if alias.Value == "" {
+		return nil
+	}
+
+	s.Encoding = alias.Encoding
+	s.Encryption = alias.Encryption
+	s.Value = alias.Value
+
+	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+		return nil
+		//return errors.New("Master key size must be between 1 and 32 characters")
+	}
+
+	unmarshalled, err := unmarshal(s)
+	if err != nil {
+		return err
+	}
+
 	//	s.monitor.Info("Decoded and decrypted secret")
 	s.Encoding = alias.Encoding
 	s.Encryption = alias.Encryption
-	s.Value = string(cipherText)
+	s.Value = unmarshalled
 	return nil
 }
 
@@ -120,4 +193,12 @@ func ClearEmpty(secret *Secret) *Secret {
 		return nil
 	}
 	return secret
+}
+
+func InitIfNil(sec *Secret, masterkey string) *Secret {
+	if sec == nil {
+		return &Secret{Masterkey: masterkey}
+	}
+	sec.Masterkey = masterkey
+	return sec
 }

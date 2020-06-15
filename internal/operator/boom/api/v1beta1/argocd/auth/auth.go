@@ -9,9 +9,13 @@ import (
 )
 
 type Auth struct {
-	OIDC            *oidc.OIDC        `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	//Configuration for SSO with a generic OIDC provider
+	OIDC *oidc.OIDC `json:"oidc,omitempty" yaml:"oidc,omitempty"`
+	//Configuration for SSO with Github
 	GithubConnector *github.Connector `json:"github,omitempty" yaml:"github,omitempty"`
+	//Configuration for SSO with Gitlab
 	GitlabConnector *gitlab.Connector `json:"gitlab,omitempty" yaml:"gitlab,omitempty"`
+	//Configuration for SSO with Google
 	GoogleConnector *google.Connector `json:"google,omitempty" yaml:"google,omitempty"`
 }
 

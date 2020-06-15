@@ -8,6 +8,7 @@ import (
 
 func ensure(
 	monitor mntr.Monitor,
+	clusterID string,
 	desired *DesiredV0,
 	curr *CurrentCluster,
 	kubeAPIAddress *infra.Address,
@@ -66,6 +67,7 @@ func ensure(
 	var scalingDone bool
 	scalingDone, err = ensureScale(
 		monitor,
+		clusterID,
 		desired,
 		psf,
 		controlplane,

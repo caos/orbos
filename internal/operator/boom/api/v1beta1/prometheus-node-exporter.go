@@ -1,5 +1,7 @@
 package v1beta1
 
 type PrometheusNodeExporter struct {
-	Deploy bool `json:"deploy,omitempty" yaml:"deploy,omitempty"`
+	//Flag if tool should be deployed
+	//@default: false
+	Deploy bool `json:"deploy" yaml:"deploy"`
 }

@@ -1,13 +1,12 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/utils/orbgit"
 	"os"
 
 	"github.com/spf13/cobra"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
 func ReadSecretCommand(rv RootValues) *cobra.Command {
@@ -20,7 +19,7 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			_, logger, gitClient, orbconfig, errFunc := rv()
+			ctx, monitor, orbConfig, errFunc := rv()
 			if errFunc != nil {
 				return errFunc(cmd)
 			}
@@ -30,19 +29,23 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				path = args[0]
 			}
 
-			secretFunc := func(operator string) secret.Func {
-				if operator == "boom" {
-					return api.SecretFunc(orbconfig)
-				} else if operator == "orbiter" {
-					return orb.SecretsFunc(orbconfig)
-				}
-				return nil
+			gitClientConf := &orbgit.Config{
+				Comitter:  "orbctl",
+				Email:     "orbctl@caos.ch",
+				OrbConfig: orbConfig,
+				Action:    "readsecret",
+			}
+
+			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+			defer cleanUp()
+			if err != nil {
+				return err
 			}
 
 			value, err := secret.Read(
-				logger,
+				monitor,
 				gitClient,
-				secretFunc,
+				secretfuncs.GetSecrets(orbConfig),
 				path)
 			if err != nil {
 				panic(err)

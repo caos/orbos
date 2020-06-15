@@ -90,7 +90,7 @@ func build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 			"all=-N -l")
 	}
 
-	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s -X main.githubclientid=%s -X main.githubclientsecret=%s", gitCommit, version, githubClientID, githubClientSecret)
+	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s -X main.githubClientID=%s -X main.githubClientSecret=%s", gitCommit, version, githubClientID, githubClientSecret)
 
 	cmdEnv := os.Environ()
 	for k, v := range bin.Env {

@@ -35,7 +35,6 @@ type Spec struct {
 	Versions struct {
 		Kubernetes string
 		Orbiter    string
-		Boom       string
 	}
 	Workers []*Pool
 }
@@ -50,6 +49,18 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error
 	}
 
 	return desiredKind, nil
+}
+
+func rewriteMasterkeyDesiredV0(old *DesiredV0, masterkey string) *DesiredV0 {
+	if old != nil {
+		newD := new(DesiredV0)
+		*newD = *old
+		if newD.Spec.Kubeconfig != nil {
+			newD.Spec.Kubeconfig.Masterkey = masterkey
+		}
+		return newD
+	}
+	return old
 }
 
 func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {

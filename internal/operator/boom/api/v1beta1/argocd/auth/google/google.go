@@ -6,8 +6,11 @@ import (
 )
 
 type Connector struct {
-	ID     string  `json:"id,omitempty" yaml:"id,omitempty"`
-	Name   string  `json:"name,omitempty" yaml:"name,omitempty"`
+	//Internal id of the google provider
+	ID string `json:"id,omitempty" yaml:"id,omitempty"`
+	//Internal name of the google provider
+	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	//Configuration for the google provider
 	Config *Config `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
@@ -29,16 +32,23 @@ func ClearEmpty(x *Connector) *Connector {
 }
 
 type Config struct {
-	ClientID                         *secret.Secret   `yaml:"clientID,omitempty"`
-	ExistingClientIDSecret           *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret                     *secret.Secret   `yaml:"clientSecret,omitempty"`
-	ExistingClientSecretSecret       *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
-	HostedDomains                    []string         `json:"hostedDomains,omitempty" yaml:"hostedDomains,omitempty"`
-	Groups                           []string         `json:"groups,omitempty" yaml:"groups,omitempty"`
-	ServiceAccountJSON               *secret.Secret   `yaml:"serviceAccountJSON,omitempty"`
+	ClientID *secret.Secret `yaml:"clientID,omitempty"`
+	//Existing secret with the clientID
+	ExistingClientIDSecret *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
+	ClientSecret           *secret.Secret   `yaml:"clientSecret,omitempty"`
+	//Existing secret with the clientSecret
+	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
+	//List of hosted domains which are permitted to login
+	HostedDomains []string `json:"hostedDomains,omitempty" yaml:"hostedDomains,omitempty"`
+	//List of groups in the hosted domains which are permitted to login
+	Groups             []string       `json:"groups,omitempty" yaml:"groups,omitempty"`
+	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
+	//Existing secret with the JSON of the service account
 	ExistingServiceAccountJSONSecret *secret.Existing `json:"existingServiceAccountJSONSecret,omitempty" yaml:"existingServiceAccountJSONSecret,omitempty"`
-	ServiceAccountFilePath           string           `json:"serviceAccountFilePath,omitempty" yaml:"serviceAccountFilePath,omitempty"`
-	AdminEmail                       string           `json:"adminEmail,omitempty" yaml:"adminEmail,omitempty"`
+	//File where the serviceAccountJSON will get persisted to impersonate G Suite admin
+	ServiceAccountFilePath string `json:"serviceAccountFilePath,omitempty" yaml:"serviceAccountFilePath,omitempty"`
+	//Email of a G Suite admin to impersonate
+	AdminEmail string `json:"adminEmail,omitempty" yaml:"adminEmail,omitempty"`
 }
 
 func ClearEmptyConfig(x *Config) *Config {

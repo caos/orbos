@@ -38,9 +38,15 @@ func main() {
 
 	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
+<<<<<<< HEAD
 		executables.Buildable{MainDir: path("nodeagent")},
 		executables.Buildable{MainDir: path("health")},
 	))); err != nil {
+=======
+		executables.Bin{MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
+		executables.Bin{MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
+	)); err != nil {
+>>>>>>> master
 		panic(err)
 	}
 
@@ -91,7 +97,7 @@ func orbctlBin(mainPath, outPath, goos, goarch string) executables.Buildable {
 	return executables.Buildable{
 		MainDir: mainPath,
 		OutDir:  outdir,
-		Env:     map[string]string{"GOOS": goos, "GOARCH": goarch},
+		Env:     map[string]string{"GOOS": goos, "GOARCH": goarch, "CGO_ENABLED": "0"},
 	}
 }
 
