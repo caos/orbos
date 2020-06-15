@@ -20,11 +20,11 @@ require (
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.6
-	github.com/spf13/viper v1.4.0
+	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.5.1
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/oauth2 v0.0.0-20191122200657-5d9234df094c
-	google.golang.org/api v0.4.0
+	google.golang.org/api v0.13.0
 	google.golang.org/grpc v1.27.1
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
