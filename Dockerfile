@@ -29,6 +29,7 @@ ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--li
 FROM python:3.8.3-alpine3.11 as prod
 
 RUN apk update && \
+    apk add openssh && \
     addgroup -S -g 1000 orbiter && \
     adduser -S -u 1000 orbiter -G orbiter
 
