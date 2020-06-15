@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/tree"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"io/ioutil"
 	"os"
@@ -18,7 +19,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/gitcrd/v1beta1/config"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -301,12 +301,22 @@ func useFolder(monitor mntr.Monitor, deploy bool, folderPath string, force bool)
 }
 
 func recursiveFolder(monitor mntr.Monitor, folderPath string, deploy, force bool) error {
-	command := kubectl.NewApply(folderPath).Build()
-	if force {
-		command = kubectl.NewApply(folderPath).Force().Build()
+	files, err := getFilesInDirectory(folderPath)
+	if err != nil {
+		return err
 	}
-	if !deploy {
-		command = kubectl.NewDelete(folderPath).Build()
+	for _, file := range files {
+		command := kubectl.NewApply(file).Build()
+		if force {
+			command = kubectl.NewApply(file).Force().Build()
+		}
+		if !deploy {
+			command = kubectl.NewDelete(file).Build()
+		}
+
+		if err := helper.Run(monitor, command); err != nil {
+			return err
+		}
 	}
 
 	folders, err := getDirsInDirectory(folderPath)
@@ -316,12 +326,12 @@ func recursiveFolder(monitor mntr.Monitor, folderPath string, deploy, force bool
 
 	for _, folder := range folders {
 		if folderPath != folder {
-			if err := recursiveFolder(monitor, filepath.Join(folderPath, folder), deploy, force); err != nil {
+			if err := recursiveFolder(monitor, folder, deploy, force); err != nil {
 				return err
 			}
 		}
 	}
-	return helper.Run(monitor, command)
+	return nil
 }
 
 func getFilesInDirectory(dirPath string) ([]string, error) {

@@ -167,7 +167,7 @@ func (g *Client) EmptyFolder(path string) (bool, error) {
 	return false, nil
 }
 
-func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
+func (g *Client) ReadFolder(path string) (map[string][]byte, []string, error) {
 	monitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
 	})
@@ -176,21 +176,26 @@ func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
 	files, err := g.fs.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(errors.Cause(err)) {
-			return make(map[string][]byte, 0), nil
+			return make(map[string][]byte, 0), nil, nil
 		}
-		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+		return nil, nil, errors.Wrapf(err, "opening %s from worktree failed", path)
 	}
+	subdirs := make([]string, 0)
 	for _, file := range files {
-		filePath := filepath.Join(path, file.Name())
-		fileBytes := g.Read(filePath)
-		dirBytes[file.Name()] = fileBytes
+		if !file.IsDir() {
+			filePath := filepath.Join(path, file.Name())
+			fileBytes := g.Read(filePath)
+			dirBytes[file.Name()] = fileBytes
+		} else {
+			subdirs = append(subdirs, file.Name())
+		}
 	}
 
 	if monitor.IsVerbose() {
 		monitor.Debug("Folder read")
 		fmt.Println(dirBytes)
 	}
-	return dirBytes, nil
+	return dirBytes, subdirs, nil
 }
 
 type File struct {
