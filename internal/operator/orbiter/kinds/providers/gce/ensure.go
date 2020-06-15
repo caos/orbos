@@ -43,7 +43,7 @@ func query(
 		}
 	}
 
-	desireHealthcheck := func(pool string, machine infra.Machine) {
+	desireNodeAgent := func(pool string, machine infra.Machine) {
 		machineID := machine.ID()
 		na, ok := nodeAgentsDesired[machineID]
 		if !ok {
@@ -60,6 +60,17 @@ func query(
 			fw := common.Firewall(make(map[string]*common.Allowed))
 			na.Firewall = &fw
 		}
+		lbCurrent.Current.Desire(pool, context.machinesService, nodeAgentsDesired, false, nil, func(vip *dynamiclbmodel.VIP) string {
+			for _, transport := range vip.Transport {
+				for _, lb := range normalized {
+					if lb.transport == transport.Name {
+						return lb.address.gce.Address
+					}
+				}
+			}
+			return "UNKNOWN"
+		})
+
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
 				if pool == destPool {
@@ -81,11 +92,12 @@ func query(
 							Protocol: "tcp",
 						},
 					})
+					break
 				}
 			}
 		}
 	}
-	context.machinesService.onCreate = desireHealthcheck
+	context.machinesService.onCreate = desireNodeAgent
 
 	return func(psf push.Func) error {
 
@@ -105,8 +117,25 @@ func query(
 			return err
 		}
 
-		return ensureLB()
+		pools, err := context.machinesService.ListPools()
+		if err != nil {
+			return err
+		}
 
+		if err := ensureLB(); err != nil {
+			return err
+		}
+
+		for _, pool := range pools {
+			machines, err := context.machinesService.List(pool)
+			if err != nil {
+				return err
+			}
+			for _, machine := range machines {
+				desireNodeAgent(pool, machine)
+			}
+		}
+		return nil
 	}, initPools(current, desired, context, normalized, lbCurrent, nodeAgentsDesired)
 }
 
