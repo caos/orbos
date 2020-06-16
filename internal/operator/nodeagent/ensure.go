@@ -96,9 +96,16 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 			}
 
 			ensureDep := ensureFunc(monitor, conv, curr)
+			reverse(divergentSw)
 			_, err := deriveTraverse(ensureDep, divergentSw)
 			return err
 		}, nil
+	}
+}
+
+func reverse(s []*Dependency) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
 	}
 }
 
