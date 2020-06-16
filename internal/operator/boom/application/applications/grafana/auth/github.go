@@ -17,6 +17,10 @@ func GetGithubAuthConfig(spec *github.Auth) (map[string]string, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	teamIds := strings.Join(spec.TeamIDs, " ")
 	allowedOrganizations := strings.Join(spec.AllowedOrganizations, " ")
 

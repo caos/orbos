@@ -17,6 +17,10 @@ func GetGitlabAuthConfig(spec *gitlab.Auth) (map[string]string, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	allowedGroups := strings.Join(spec.AllowedGroups, " ")
 
 	return map[string]string{

@@ -2,6 +2,7 @@ package v1beta1
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/tree"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kubectl"
@@ -133,6 +134,14 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource, masterkey s
 	if err != nil {
 		c.status = err
 		return
+	}
+
+	if toolsetCRD.Spec != nil && toolsetCRD.Spec.BoomVersion != "" {
+		dummyKubeconfig := ""
+		if err := cmd.Reconcile(monitor, &dummyKubeconfig, toolsetCRD.Spec.BoomVersion); err != nil {
+			c.status = err
+			return
+		}
 	}
 
 	// pre-steps
