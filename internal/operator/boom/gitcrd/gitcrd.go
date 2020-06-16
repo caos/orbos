@@ -2,6 +2,7 @@ package gitcrd
 
 import (
 	"context"
+	"github.com/caos/orbos/internal/utils/random"
 	"strings"
 
 	"github.com/caos/orbos/internal/git"
@@ -29,21 +30,31 @@ func New(conf *config.Config) (GitCrd, error) {
 
 	conf.Monitor.Info("New GitCRD")
 
-	git := git.New(context.Background(), conf.Monitor, conf.User, conf.Email, conf.CrdUrl)
-	err := git.Init(conf.PrivateKey)
+	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email, conf.CrdUrl)
+	err := gitClient.Init(conf.PrivateKey)
 	if err != nil {
 		conf.Monitor.Error(err)
 		return nil, err
 	}
 
-	err = git.Clone()
+	if err := gitClient.ReadCheck(); err != nil {
+		conf.Monitor.Error(err)
+		return nil, err
+	}
+
+	if err := gitClient.WriteCheck(random.Generate()); err != nil {
+		conf.Monitor.Error(err)
+		return nil, err
+	}
+
+	err = gitClient.Clone()
 	if err != nil {
 		conf.Monitor.Error(err)
 		return nil, err
 	}
 
 	crdFileStruct := &helper.Resource{}
-	if err := git.ReadYamlIntoStruct(conf.CrdPath, crdFileStruct); err != nil {
+	if err := gitClient.ReadYamlIntoStruct(conf.CrdPath, crdFileStruct); err != nil {
 		conf.Monitor.Error(err)
 		return nil, err
 	}
@@ -70,7 +81,7 @@ func New(conf *config.Config) (GitCrd, error) {
 
 	v1beta1conf := &v1beta1config.Config{
 		Monitor:          monitor,
-		Git:              git,
+		Git:              gitClient,
 		CrdDirectoryPath: conf.CrdDirectoryPath,
 		CrdPath:          conf.CrdPath,
 	}

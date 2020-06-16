@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/internal/utils/orbgit"
+	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -172,6 +173,16 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
 		defer cleanUp()
 		if err != nil {
+			return err
+		}
+
+		if err := gitClient.ReadCheck(); err != nil {
+			monitor.Error(err)
+			return err
+		}
+
+		if err := gitClient.WriteCheck(random.Generate()); err != nil {
+			monitor.Error(err)
 			return err
 		}
 

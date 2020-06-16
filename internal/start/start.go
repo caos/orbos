@@ -13,6 +13,7 @@ import (
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/utils/orbgit"
+	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
@@ -122,6 +123,16 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 
 			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
 			if err != nil {
+				monitor.Error(err)
+				return
+			}
+
+			if err := gitClient.ReadCheck(); err != nil {
+				monitor.Error(err)
+				return
+			}
+
+			if err := gitClient.WriteCheck(random.Generate()); err != nil {
 				monitor.Error(err)
 				return
 			}

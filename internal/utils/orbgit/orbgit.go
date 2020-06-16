@@ -7,11 +7,10 @@ import (
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/stores/github"
+	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
-	"math/rand"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 type Config struct {
@@ -41,7 +40,7 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config) (*git
 			return nil, deployKeyDelete, errors.New("failed to get github repository")
 		}
 
-		desc := strings.Join([]string{"orbos", conf.Action, generateRandom()}, "-")
+		desc := strings.Join([]string{"orbos", conf.Action, random.Generate()}, "-")
 
 		if err := g.CreateDeployKey(repo, desc, deployKeyPub).GetStatus(); err != nil {
 			return nil, deployKeyDelete, errors.New("failed to create deploy keys in repository")
@@ -64,28 +63,5 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config) (*git
 		return nil, deployKeyDelete, err
 	}
 
-	if err := gitClient.ReadCheck(); err != nil {
-		monitor.Error(err)
-		return gitClient, deployKeyDelete, err
-	}
-
-	if err := gitClient.WriteCheck(generateRandom()); err != nil {
-		monitor.Error(err)
-		return gitClient, deployKeyDelete, err
-	}
-
 	return gitClient, deployKeyDelete, nil
-}
-
-func generateRandom() string {
-	rand.Seed(time.Now().UnixNano())
-	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-		"abcdefghijklmnopqrstuvwxyz" +
-		"0123456789")
-	length := 8
-	var b strings.Builder
-	for i := 0; i < length; i++ {
-		b.WriteRune(chars[rand.Intn(len(chars))])
-	}
-	return b.String()
 }
