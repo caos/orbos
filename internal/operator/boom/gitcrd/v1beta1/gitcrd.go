@@ -50,7 +50,6 @@ func New(conf *config.Config) (*GitCrd, error) {
 		crdPath:          conf.CrdPath,
 		git:              &gitConf,
 		monitor:          monitor,
-		gitMutex:         sync.Mutex{},
 	}
 
 	crdConf := &crdconfig.Config{
@@ -170,9 +169,7 @@ func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta1.Apply,
 		return errors.New("No folder provided")
 	}
 
-	c.gitMutex.Lock()
 	err := helper2.CopyFolderToLocal(c.git, c.crdDirectoryPath, apply.Folder)
-	c.gitMutex.Unlock()
 	if err != nil {
 		return err
 	}
@@ -193,13 +190,6 @@ func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta1.Apply,
 }
 
 func (c *GitCrd) getCrdMetadata() (*toolsetsv1beta1.ToolsetMetadata, error) {
-	c.gitMutex.Lock()
-	defer c.gitMutex.Unlock()
-
-	if err := c.git.Clone(); err != nil {
-		return nil, err
-	}
-
 	toolsetCRD := &toolsetsv1beta1.ToolsetMetadata{}
 	err := c.git.ReadYamlIntoStruct(c.crdPath, toolsetCRD)
 	if err != nil {
@@ -211,13 +201,6 @@ func (c *GitCrd) getCrdMetadata() (*toolsetsv1beta1.ToolsetMetadata, error) {
 }
 
 func (c *GitCrd) getCrdContent(masterkey string) (*toolsetsv1beta1.Toolset, error) {
-	c.gitMutex.Lock()
-	defer c.gitMutex.Unlock()
-
-	if err := c.git.Clone(); err != nil {
-		return nil, err
-	}
-
 	raw := c.git.Read(c.crdPath)
 
 	desiredTree := &tree.Tree{}
@@ -266,8 +249,6 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource,
 		Content: content,
 	}
 
-	c.gitMutex.Lock()
-	defer c.gitMutex.Unlock()
 	c.status = c.git.UpdateRemote("current state changed", file)
 }
 

@@ -9,10 +9,6 @@ import (
 )
 
 func CopyFolderToLocal(git *git.Client, tempDirectory, folderRelativePath string) error {
-	if err := git.Clone(); err != nil {
-		return err
-	}
-
 	folderPath := filepath.Join(tempDirectory, folderRelativePath)
 
 	if err := RecreatePath(folderPath); err != nil {

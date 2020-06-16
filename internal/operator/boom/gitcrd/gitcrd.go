@@ -2,6 +2,7 @@ package gitcrd
 
 import (
 	"context"
+	"github.com/caos/orbos/internal/operator/boom/metrics"
 	"github.com/caos/orbos/internal/utils/random"
 	"strings"
 
@@ -50,8 +51,10 @@ func New(conf *config.Config) (GitCrd, error) {
 	err = gitClient.Clone()
 	if err != nil {
 		conf.Monitor.Error(err)
+		metrics.FailedGitClone(conf.CrdUrl)
 		return nil, err
 	}
+	metrics.SuccessfulGitClone(conf.CrdUrl)
 
 	crdFileStruct := &helper.Resource{}
 	if err := gitClient.ReadYamlIntoStruct(conf.CrdPath, crdFileStruct); err != nil {
