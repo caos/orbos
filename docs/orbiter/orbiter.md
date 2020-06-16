@@ -86,8 +86,8 @@ EOF
 
 ```bash
 # Add the bootstrap key pair to the remote secrets file. For simplicity, we use the repokey here.
-orbctl writesecret kvm.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
-orbctl writesecret kvm.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
+orbctl writesecret orbiter.kvm.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
+orbctl writesecret orbiter.kvm.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
 ```
 
 ### Bootstrap your local Kubernetes cluster
@@ -100,7 +100,7 @@ orbctl takeoff
 
 ```bash
 mkdir -p ~/.kube
-orbctl readsecret k8s.kubeconfig > ~/.kube/config
+orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config
 ```
 
 > Wait for grafana to become running
