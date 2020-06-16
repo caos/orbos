@@ -168,6 +168,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}) {
 							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
 							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
+							machineMonitor.Changed("sysctl desired")
 						}
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
