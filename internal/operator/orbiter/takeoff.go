@@ -185,11 +185,17 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		ensureFunc := func() *EnsureResult {
 			return ensure(push.RewriteDesiredFunc(conf.GitClient, treeDesired, "orbiter.yml"))
 		}
-		if result := EnsureFuncGoroutine(ensureFunc); result.Err != nil {
+		result := EnsureFuncGoroutine(ensureFunc)
+		if result.Err != nil {
 			handleAdapterError(err)
 			return
 		}
 
+		if result.Done {
+			monitor.Info("Desired state is ensured")
+		} else {
+			monitor.Info("Desired state is not yet ensured")
+		}
 		if err := conf.GitClient.Clone(); err != nil {
 			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 			return

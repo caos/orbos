@@ -38,11 +38,11 @@ func (i *CmpSvcLB) InitializeDesiredNodeAgents() (bool, error) {
 	done := true
 	for _, pool := range pools {
 		poolDone, err := i.desire(pool)
-		if err != nil {
-			return poolDone, err
-		}
 		if !poolDone {
 			done = false
+		}
+		if err != nil {
+			return done, err
 		}
 	}
 	return done, nil

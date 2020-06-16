@@ -183,7 +183,7 @@ func AdaptFunc(
 						}
 					}
 
-					return nil
+					return orbiter.ToEnsureResult(true, nil)
 				}, nil
 			}, func() error {
 				defer func() {

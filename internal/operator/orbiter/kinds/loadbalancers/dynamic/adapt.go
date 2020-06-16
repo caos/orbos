@@ -109,7 +109,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
 
-				var done bool
+				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
 					machineMonitor := monitor.WithField("machine", machine.ID())
 					deepNa, ok := nodeagents[machine.ID()]
