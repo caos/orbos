@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.56.0 // indirect
 	cloud.google.com/go/storage v1.6.0
 	github.com/AppsFlyer/go-sundheit v0.1.1
+	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
 	github.com/aws/aws-sdk-go v1.29.15
 	github.com/caos/oidc v0.6.1
 	github.com/ghodss/yaml v1.0.0
