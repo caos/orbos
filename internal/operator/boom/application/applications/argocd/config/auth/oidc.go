@@ -35,6 +35,10 @@ func GetOIDC(spec *auth.Auth) (string, error) {
 		return "", err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return "", nil
+	}
+
 	var claims map[string]*Claim
 	if len(spec.OIDC.RequestedIDTokenClaims) > 0 {
 		claims = make(map[string]*Claim, 0)

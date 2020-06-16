@@ -17,6 +17,10 @@ func GetGoogleAuthConfig(spec *google.Auth) (map[string]string, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	domains := strings.Join(spec.AllowedDomains, " ")
 
 	return map[string]string{
