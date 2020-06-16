@@ -19,7 +19,7 @@ type machinesService struct {
 	cache   struct {
 		instances map[string][]*instance
 	}
-	onCreate func(pool string, machine infra.Machine)
+	onCreate func(pool string, machine infra.Machine) error
 }
 
 func newMachinesService(context *context) *machinesService {

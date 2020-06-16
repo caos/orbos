@@ -19,9 +19,6 @@ func query(
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	k8sClient *Client,
-	repoURL string,
-	repoKey string,
-	orbiterCommit string,
 	oneoff bool) (orbiter.EnsureFunc, error) {
 
 	current.Machines = make(map[string]*Machine)
@@ -58,13 +55,6 @@ func query(
 		}
 	}
 
-	queryNodeAgent, installNodeAgent := nodeAgentFuncs(
-		monitor,
-		orbiterCommit,
-		repoURL,
-		repoKey,
-	)
-
 	controlplane, controlplaneMachines, workers, workerMachines, initializeMachine, uninitializeMachine, err := initialize(
 		monitor,
 		current,
@@ -74,16 +64,14 @@ func query(
 		cloudPools,
 		k8sClient,
 		func(machine *initializedMachine) {
-			queryNodeAgent(machine)
 			firewallFunc(monitor, *desired, kubeAPIAddress.FrontendPort)(machine)
 		})
 
-	return func(psf push.Func) error {
-		return ensure(
+	return func(psf push.Func) *orbiter.EnsureResult {
+		return orbiter.ToEnsureResult(ensure(
 			monitor,
 			clusterID,
 			desired,
-			current,
 			kubeAPIAddress,
 			psf,
 			k8sClient,
@@ -93,8 +81,7 @@ func query(
 			workers,
 			workerMachines,
 			initializeMachine,
-			uninitializeMachine,
-			installNodeAgent)
+			uninitializeMachine))
 	}, err
 }
 

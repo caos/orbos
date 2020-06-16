@@ -24,6 +24,7 @@ func GetQueryAndDestroyFuncs(
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan bool,
+	orbiterCommit, repoURL, repoKey string,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -45,6 +46,7 @@ func GetQueryAndDestroyFuncs(
 			provID,
 			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(orb.URL, "git@"), ".git"), "-"),
 			wlFunc,
+			orbiterCommit, repoURL, repoKey,
 		)(
 			monitor,
 			finishedChan,
@@ -61,6 +63,7 @@ func GetQueryAndDestroyFuncs(
 					monitor.Debug("Reading whitelist")
 					return <-whitelistChan
 				},
+				orbiterCommit, repoURL, repoKey,
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				finishedChan,

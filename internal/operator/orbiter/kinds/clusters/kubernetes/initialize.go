@@ -216,7 +216,7 @@ func initialize(
 		if !machine.currentMachine.Ready {
 			curr.Status = "degraded"
 		}
-		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
+		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.FirewallIsReady {
 			curr.Status = "maintaining"
 			break
 		}

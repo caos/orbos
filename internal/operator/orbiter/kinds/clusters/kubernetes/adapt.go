@@ -16,7 +16,6 @@ var deployErrors int
 
 func AdaptFunc(
 	orb *orb.Orb,
-	orbiterCommit string,
 	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
@@ -130,9 +129,6 @@ func AdaptFunc(
 					nodeAgentsCurrent,
 					nodeAgentsDesired,
 					k8sClient,
-					orb.URL,
-					orb.Repokey,
-					orbiterCommit,
 					oneoff)
 				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 			}, func() error {

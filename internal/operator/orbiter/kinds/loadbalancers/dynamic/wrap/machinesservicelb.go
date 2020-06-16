@@ -7,9 +7,9 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 )
 
-var _ core.MachinesService = (*cmpSvcLB)(nil)
+var _ core.MachinesService = (*CmpSvcLB)(nil)
 
-type cmpSvcLB struct {
+type CmpSvcLB struct {
 	core.MachinesService
 	dynamic       dynamic.Current
 	nodeagents    map[string]*common.NodeAgentSpec
@@ -18,8 +18,8 @@ type cmpSvcLB struct {
 	vip           func(*dynamic.VIP) string
 }
 
-func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, vrrp bool, notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) *cmpSvcLB {
-	return &cmpSvcLB{
+func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, vrrp bool, notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) *CmpSvcLB {
+	return &CmpSvcLB{
 		MachinesService: svc,
 		dynamic:         curr,
 		nodeagents:      nodeagents,
@@ -29,12 +29,38 @@ func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents 
 	}
 }
 
-func (i *cmpSvcLB) Create(poolName string) (infra.Machine, error) {
+func (i *CmpSvcLB) InitializeDesiredNodeAgents() (bool, error) {
+	pools, err := i.ListPools()
+	if err != nil {
+		return false, err
+	}
+
+	done := true
+	for _, pool := range pools {
+		poolDone, err := i.desire(pool)
+		if err != nil {
+			return poolDone, err
+		}
+		if !poolDone {
+			done = false
+		}
+	}
+	return done, nil
+}
+
+func (i *CmpSvcLB) Create(poolName string) (infra.Machine, error) {
 	cmp, err := i.MachinesService.Create(poolName)
 	if err != nil {
 		return nil, err
 	}
 
-	desireFunc := desire(poolName, i.dynamic, i.MachinesService, i.nodeagents, i.vrrp, i.notifyMasters, i.vip)
-	return machine(cmp, desireFunc), desireFunc()
+	_, err = i.desire(poolName)
+	return machine(cmp, func() error {
+		_, err := i.desire(poolName)
+		return err
+	}), err
+}
+
+func (c *CmpSvcLB) desire(selfPool string) (bool, error) {
+	return c.dynamic.Current.Desire(selfPool, c, c.vrrp, c.notifyMasters, c.vip)
 }

@@ -5,6 +5,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
@@ -20,7 +25,11 @@ func query(
 	current *Current,
 	lb interface{},
 	context *context,
+	currentNodeAgents map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	orbiterCommit,
+	repoURL,
+	repoKey string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
@@ -43,7 +52,10 @@ func query(
 		}
 	}
 
-	desireNodeAgent := func(pool string, machine infra.Machine) {
+	queryNA, installNA := core.NodeAgentFuncs(context.monitor, orbiterCommit, repoURL, repoKey, currentNodeAgents)
+
+	desireNodeAgent := func(pool string, machine infra.Machine) error {
+
 		machineID := machine.ID()
 		na, ok := nodeAgentsDesired[machineID]
 		if !ok {
@@ -60,16 +72,6 @@ func query(
 			fw := common.Firewall(make(map[string]*common.Allowed))
 			na.Firewall = &fw
 		}
-		lbCurrent.Current.Desire(pool, context.machinesService, nodeAgentsDesired, false, nil, func(vip *dynamiclbmodel.VIP) string {
-			for _, transport := range vip.Transport {
-				for _, lb := range normalized {
-					if lb.transport == transport.Name {
-						return lb.address.gce.Address
-					}
-				}
-			}
-			return "UNKNOWN"
-		})
 
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
@@ -96,47 +98,69 @@ func query(
 				}
 			}
 		}
-	}
-	context.machinesService.onCreate = desireNodeAgent
+		running, err := queryNA(machine)
+		if err != nil {
+			return err
+		}
+		if !running {
+			return installNA(machine)
+		}
 
-	return func(psf push.Func) error {
+		return nil
+	}
+
+	context.machinesService.onCreate = desireNodeAgent
+	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, nodeAgentsDesired, false, nil, func(vip *dynamic.VIP) string {
+		for _, transport := range vip.Transport {
+			address, ok := current.Current.Ingresses[transport.Name]
+			if ok {
+				return address.Location
+			}
+		}
+		panic(fmt.Errorf("external address for %v is not ensured", vip))
+	})
+
+	return func(psf push.Func) *orbiter.EnsureResult {
 
 		if err := ensureGcloud(context); err != nil {
-			return err
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		if err := ensureIdentityAwareProxyAPIEnabled(context); err != nil {
-			return err
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		if err := ensureCloudNAT(context); err != nil {
-			return err
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		if err := context.machinesService.restartPreemptibleMachines(); err != nil {
-			return err
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		pools, err := context.machinesService.ListPools()
 		if err != nil {
-			return err
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		if err := ensureLB(); err != nil {
-			return err
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		for _, pool := range pools {
 			machines, err := context.machinesService.List(pool)
 			if err != nil {
-				return err
+				return orbiter.ToEnsureResult(false, err)
 			}
 			for _, machine := range machines {
-				desireNodeAgent(pool, machine)
+				if err := desireNodeAgent(pool, machine); err != nil {
+					return orbiter.ToEnsureResult(false, err)
+				}
 			}
 		}
-		return nil
-	}, initPools(current, desired, context, normalized, lbCurrent, nodeAgentsDesired)
+
+		return orbiter.ToEnsureResult(wrappedMachines.InitializeDesiredNodeAgents())
+	}, initPools(current, desired, context, normalized, wrappedMachines)
 }
 
 func internalPort(lb *normalizedLoadbalancer) uint16 {

@@ -23,7 +23,7 @@ func ensureScale(
 	k8sVersion KubernetesVersion,
 	k8sClient *Client,
 	oneoff bool,
-	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error),
+	initializeMachine func(infra.Machine, initializedPool) initializedMachine,
 	uninitializeMachine uninitializeMachineFunc) (changed bool, err error) {
 
 	wCount := 0
@@ -48,9 +48,7 @@ func ensureScale(
 				return false, err
 			}
 			for _, machine := range machines {
-				if _, err := initializeMachine(machine, pool); err != nil {
-					return false, err
-				}
+				initializeMachine(machine, pool)
 			}
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
