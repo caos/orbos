@@ -1,7 +1,7 @@
 package static
 
 import (
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 
@@ -80,7 +80,7 @@ func query(
 		}
 	}
 
-	return func(psf push.Func) error {
+	return func(psf api.SecretFunc) error {
 		if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
 			(desired.Spec.Keys.MaintenanceKeyPublic == nil || desired.Spec.Keys.MaintenanceKeyPublic.Value == "") {
 			priv, pub, err := ssh.Generate()

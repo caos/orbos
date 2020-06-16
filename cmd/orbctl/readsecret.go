@@ -36,7 +36,7 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				Action:    "readsecret",
 			}
 
-			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, false)
 			defer cleanUp()
 			if err != nil {
 				return err

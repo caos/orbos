@@ -5,13 +5,12 @@
 package application
 
 import (
-	reflect "reflect"
-
-	v1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	v1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	name "github.com/caos/orbos/internal/operator/boom/name"
 	chart "github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/mntr"
+	mntr "github.com/caos/orbos/mntr"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockApplication is a mock of Application interface
@@ -38,7 +37,7 @@ func (m *MockApplication) EXPECT() *MockApplicationMockRecorder {
 }
 
 // Deploy mocks base method
-func (m *MockApplication) Deploy(arg0 *v1beta1.ToolsetSpec) bool {
+func (m *MockApplication) Deploy(arg0 *v1beta2.ToolsetSpec) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Deploy", arg0)
 	ret0, _ := ret[0].(bool)
@@ -89,7 +88,7 @@ func (m *MockHelmApplication) EXPECT() *MockHelmApplicationMockRecorder {
 }
 
 // Deploy mocks base method
-func (m *MockHelmApplication) Deploy(arg0 *v1beta1.ToolsetSpec) bool {
+func (m *MockHelmApplication) Deploy(arg0 *v1beta2.ToolsetSpec) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Deploy", arg0)
 	ret0, _ := ret[0].(bool)
@@ -159,7 +158,7 @@ func (mr *MockHelmApplicationMockRecorder) GetImageTags() *gomock.Call {
 }
 
 // SpecToHelmValues mocks base method
-func (m *MockHelmApplication) SpecToHelmValues(arg0 mntr.Monitor, arg1 *v1beta1.ToolsetSpec) interface{} {
+func (m *MockHelmApplication) SpecToHelmValues(arg0 mntr.Monitor, arg1 *v1beta2.ToolsetSpec) interface{} {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SpecToHelmValues", arg0, arg1)
 	ret0, _ := ret[0].(interface{})
@@ -196,7 +195,7 @@ func (m *MockYAMLApplication) EXPECT() *MockYAMLApplicationMockRecorder {
 }
 
 // Deploy mocks base method
-func (m *MockYAMLApplication) Deploy(arg0 *v1beta1.ToolsetSpec) bool {
+func (m *MockYAMLApplication) Deploy(arg0 *v1beta2.ToolsetSpec) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Deploy", arg0)
 	ret0, _ := ret[0].(bool)
@@ -224,7 +223,7 @@ func (mr *MockYAMLApplicationMockRecorder) GetName() *gomock.Call {
 }
 
 // GetYaml mocks base method
-func (m *MockYAMLApplication) GetYaml(arg0 mntr.Monitor, arg1 *v1beta1.ToolsetSpec) interface{} {
+func (m *MockYAMLApplication) GetYaml(arg0 mntr.Monitor, arg1 *v1beta2.ToolsetSpec) interface{} {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetYaml", arg0, arg1)
 	ret0, _ := ret[0].(interface{})

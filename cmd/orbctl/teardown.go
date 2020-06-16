@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"strings"
 
@@ -55,13 +56,13 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			Action:    "takeoff",
 		}
 
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
 		defer cleanUp()
 		if err != nil {
 			return err
 		}
 
-		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
+		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {
 			return err
 		}

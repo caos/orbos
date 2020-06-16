@@ -129,7 +129,7 @@ func getVolAndVolMount(storeName string, ty string, secret *secret.Secret, exist
 		name = existent.Name
 		key = existent.Key
 	} else {
-		//TODO
+		return nil, nil
 	}
 
 	return getVol(internalName, name, key), getVolMount(internalName)

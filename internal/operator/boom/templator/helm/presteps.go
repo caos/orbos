@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/internal/utils/yaml"
 	"github.com/caos/orbos/mntr"
@@ -10,10 +10,10 @@ import (
 
 type TemplatorPreSteps interface {
 	templator.HelmApplication
-	HelmPreApplySteps(mntr.Monitor, *v1beta1.ToolsetSpec) ([]interface{}, error)
+	HelmPreApplySteps(mntr.Monitor, *v1beta2.ToolsetSpec) ([]interface{}, error)
 }
 
-func (h *Helm) preApplySteps(app interface{}, spec *v1beta1.ToolsetSpec) error {
+func (h *Helm) preApplySteps(app interface{}, spec *v1beta2.ToolsetSpec) error {
 
 	pre, ok := app.(TemplatorPreSteps)
 	if ok {

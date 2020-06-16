@@ -20,8 +20,7 @@ import (
 func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1beta1.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
-		// TODO: Better error handling?
-		return nil
+		return err
 	}
 
 	_, getSecretErr := clientgo.GetSecret("grafana-cloud", "caos-system")

@@ -20,7 +20,7 @@ type Config struct {
 	Action    string
 }
 
-func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config) (*git.Client, func(), error) {
+func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, checks bool) (*git.Client, func(), error) {
 	deployKeyPriv := ""
 	deployKeyDelete := func() {}
 
@@ -61,6 +61,22 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config) (*git
 	if err := gitClient.Init([]byte(deployKeyPriv)); err != nil {
 		monitor.Error(err)
 		return nil, deployKeyDelete, err
+	}
+
+	if checks {
+		if err := gitClient.ReadCheck(); err != nil {
+			monitor.Error(err)
+			return nil, deployKeyDelete, err
+		}
+
+		if err := gitClient.WriteCheck(random.Generate()); err != nil {
+			monitor.Error(err)
+			return nil, deployKeyDelete, err
+		}
+	}
+
+	if err := gitClient.Clone(); err != nil {
+		return gitClient, deployKeyDelete, err
 	}
 
 	return gitClient, deployKeyDelete, nil

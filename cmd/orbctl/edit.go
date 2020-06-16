@@ -37,14 +37,10 @@ func EditCommand(rv RootValues) *cobra.Command {
 				Action:    "takeoff",
 			}
 
-			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, false)
 			defer cleanUp()
 			if err != nil {
 				return err
-			}
-
-			if err := gitClient.Clone(); err != nil {
-				panic(err)
 			}
 
 			edited, err := CaptureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(gitClient.Read(args[0])))

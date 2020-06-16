@@ -18,7 +18,7 @@ import (
 
 type App struct {
 	ToolsDirectoryPath string
-	GitCrds            []gitcrd.GitCrd
+	GitCrds            []*gitcrd.GitCrd
 	Crds               map[string]crd.Crd
 	monitor            mntr.Monitor
 }
@@ -31,7 +31,7 @@ func New(monitor mntr.Monitor, toolsDirectoryPath string) *App {
 	}
 
 	app.Crds = make(map[string]crd.Crd, 0)
-	app.GitCrds = make([]gitcrd.GitCrd, 0)
+	app.GitCrds = make([]*gitcrd.GitCrd, 0)
 
 	return app
 }
@@ -95,7 +95,7 @@ func (a *App) getCurrent(monitor mntr.Monitor) ([]*clientgo.Resource, error) {
 	return current.Get(a.monitor, resourceInfoList), nil
 }
 
-func (a *App) ReconcileGitCrds(masterkey string) error {
+func (a *App) Reconcile() error {
 	monitor := a.monitor.WithFields(map[string]interface{}{
 		"action": "reconciling",
 	})
@@ -109,7 +109,7 @@ func (a *App) ReconcileGitCrds(masterkey string) error {
 			return err
 		}
 
-		crdGit.Reconcile(currentResourceList, masterkey)
+		crdGit.Reconcile(currentResourceList)
 		if err := crdGit.GetStatus(); err != nil {
 			return err
 		}
@@ -117,7 +117,7 @@ func (a *App) ReconcileGitCrds(masterkey string) error {
 	return nil
 }
 
-func (a *App) WriteBackCurrentState(masterkey string) error {
+func (a *App) WriteBackCurrentState() error {
 
 	monitor := a.monitor.WithFields(map[string]interface{}{
 		"action": "current",
@@ -132,12 +132,12 @@ func (a *App) WriteBackCurrentState(masterkey string) error {
 			return err
 		}
 
-		crdGit.WriteBackCurrentState(currentResourceList, masterkey)
+		crdGit.WriteBackCurrentState(currentResourceList)
 		if err := crdGit.GetStatus(); err != nil {
-			metrics.FailedWritingCurrentState(crdGit.GetRepoURL(), crdGit.GetRepoCRDPath())
+			metrics.FailedWritingCurrentState(crdGit.GetRepoURL())
 			return err
 		}
-		metrics.SuccessfulWriteCurrentState(crdGit.GetRepoURL(), crdGit.GetRepoCRDPath())
+		metrics.SuccessfulWriteCurrentState(crdGit.GetRepoURL())
 	}
 	return nil
 }

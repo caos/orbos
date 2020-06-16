@@ -1,14 +1,13 @@
 package yaml
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/yaml"
 	"path/filepath"
-
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 )
 
-func (y *YAML) Template(appInterface interface{}, spec *v1beta1.ToolsetSpec, resultFunc func(string, string) error) error {
+func (y *YAML) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, resultFunc func(string, string) error) error {
 	app, err := checkTemplatorInterface(appInterface)
 	if err != nil {
 		return err

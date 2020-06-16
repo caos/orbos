@@ -33,7 +33,7 @@ type Existing struct {
 	//Key in the secret from where the value should be used
 	Key string `json:"key" yaml:"key"`
 	//Name which should be used internal, should be unique for the volume and volumemounts
-	InternalName string `json:"internalName" yaml:"internalName"`
+	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
 // Existing: Used secret that has to be already existing in the cluster and should contain id/username and secret/password
@@ -45,7 +45,7 @@ type ExistingIDSecret struct {
 	//Key in the secret which contains the secret
 	SecretKey string `json:"secretKey" yaml:"secretKey"`
 	//Name which should be used internal, should be unique for the volume and volumemounts
-	InternalName string `json:"internalName" yaml:"internalName"`
+	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
 func (s *Secret) UnmarshalYAMLWithExisting(node *yaml.Node, existing *Existing) error {

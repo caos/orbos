@@ -41,7 +41,6 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 		CrdDirectoryPath: filepath.Join(toolsDirectoryPath, "crd"),
 		CrdUrl:           orb.URL,
 		PrivateKey:       []byte(orb.Repokey),
-		CrdPath:          "boom.yml",
 		User:             "Boom",
 		Email:            "boom@caos.ch",
 	}
@@ -59,7 +58,7 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 	return func() {
 			// TODO: use a function scoped error variable
 			started := time.Now()
-			goErr := appStruct.ReconcileGitCrds(orb.Masterkey)
+			goErr := appStruct.Reconcile()
 			recMonitor := monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			})
@@ -69,7 +68,7 @@ func Takeoff(monitor mntr.Monitor, orb *orb.Orb, toolsDirectoryPath string, loca
 			recMonitor.Info("Reconciling iteration done")
 		}, func() {
 			started := time.Now()
-			goErr := appStruct.WriteBackCurrentState(orb.Masterkey)
+			goErr := appStruct.WriteBackCurrentState()
 			recMonitor := monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			})

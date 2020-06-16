@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbc "github.com/caos/orbos/internal/orb"
@@ -44,14 +45,14 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		monitor.Info("Start connection with git-repository")
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, false)
 		defer cleanUp()
 		if err != nil {
 			return err
 		}
 
 		allKubeconfigs := make([]string, 0)
-		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
+		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {
 			return err
 		}
@@ -98,7 +99,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		if masterkey != "" {
-			foundBoom, err := existsFileInGit(gitClient, "boom.yml")
+			foundBoom, err := api.ExistsBoomYml(gitClient)
 			if err != nil {
 				return err
 			}

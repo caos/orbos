@@ -1,6 +1,7 @@
 package orbiter
 
 import (
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/tree"
@@ -18,12 +19,11 @@ func DestroyFuncGoroutine(query func() error) error {
 }
 
 func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan bool) error {
-	trees, err := Parse(gitClient, "orbiter.yml")
+	treeDesired, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
 		return err
 	}
 
-	treeDesired := trees[0]
 	treeCurrent := &tree.Tree{}
 
 	adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {

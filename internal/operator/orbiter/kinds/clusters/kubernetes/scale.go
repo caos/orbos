@@ -2,8 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/push"
-
+	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -15,7 +14,7 @@ func ensureScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf push.Func,
+	psf api.SecretFunc,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
 	kubeAPI infra.Address,

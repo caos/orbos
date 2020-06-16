@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -13,7 +14,6 @@ import (
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/utils/orbgit"
-	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
@@ -121,18 +121,8 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 				Action:    "iteration",
 			}
 
-			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
 			if err != nil {
-				monitor.Error(err)
-				return
-			}
-
-			if err := gitClient.ReadCheck(); err != nil {
-				monitor.Error(err)
-				return
-			}
-
-			if err := gitClient.WriteCheck(random.Generate()); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -178,12 +168,12 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
-	orbTree, err := orbiter.Parse(gitClient, "orbiter.yml")
+	orbTree, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
 		return nil, errors.New("Failed to parse orbiter.yml")
 	}
 
-	orbDef, err := orb.ParseDesiredV0(orbTree[0])
+	orbDef, err := orb.ParseDesiredV0(orbTree)
 	if err != nil {
 		return nil, errors.New("Failed to parse orbiter.yml")
 	}

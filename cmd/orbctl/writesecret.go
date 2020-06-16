@@ -57,7 +57,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			Action:    "writesecret",
 		}
 
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
+		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, false)
 		defer cleanUp()
 		if err != nil {
 			return err
