@@ -19,7 +19,7 @@ type machinesService struct {
 	maintenanceKey    []byte
 	maintenanceKeyPub []byte
 	statusFile        string
-	desireHostname    func(machine infra.Machine, pool string) error
+	onCreate          func(machine infra.Machine, pool string) error
 	cache             map[string]cachedMachines
 }
 
@@ -31,7 +31,7 @@ func NewMachinesService(
 	maintenanceKey []byte,
 	maintenanceKeyPub []byte,
 	id string,
-	desireHostname func(machine infra.Machine, pool string) error) core.MachinesService {
+	onCreate func(machine infra.Machine, pool string) error) core.MachinesService {
 	return &machinesService{
 		monitor,
 		desired,
@@ -39,7 +39,7 @@ func NewMachinesService(
 		maintenanceKey,
 		maintenanceKeyPub,
 		filepath.Join("/var/orbiter", id),
-		desireHostname,
+		onCreate,
 		nil,
 	}
 }
@@ -55,13 +55,13 @@ func (c *machinesService) ListPools() ([]string, error) {
 	return pools, nil
 }
 
-func (c *machinesService) List(poolName string, active bool) (infra.Machines, error) {
+func (c *machinesService) List(poolName string) (infra.Machines, error) {
 	pool, err := c.cachedPool(poolName)
 	if err != nil {
 		return nil, err
 	}
 
-	return pool.Machines(active), nil
+	return pool.Machines(), nil
 }
 
 func (c *machinesService) Create(poolName string) (infra.Machine, error) {
@@ -85,7 +85,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 				return nil, err
 			}
 
-			if err := c.desireHostname(machine, poolName); err != nil {
+			if err := c.onCreate(machine, poolName); err != nil {
 				return nil, err
 			}
 
@@ -134,10 +134,10 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 type cachedMachines []*machine
 
-func (c cachedMachines) Machines(activeOnly bool) infra.Machines {
+func (c cachedMachines) Machines() infra.Machines {
 	machines := make([]infra.Machine, 0)
 	for _, machine := range c {
-		if !activeOnly || machine.active {
+		if machine.active {
 			machines = append(machines, machine)
 		}
 	}

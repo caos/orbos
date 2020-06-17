@@ -10,8 +10,7 @@ func ensure(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	curr *CurrentCluster,
-	kubeAPIAddress infra.Address,
+	kubeAPIAddress *infra.Address,
 	psf api.SecretFunc,
 	k8sClient *Client,
 	oneoff bool,
@@ -21,26 +20,17 @@ func ensure(
 	workerMachines []*initializedMachine,
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
-	installNodeAgent func(*initializedMachine) error,
-) (err error) {
+) (done bool, err error) {
 
 	initialized := true
 
 	for _, machine := range append(controlplaneMachines, workerMachines...) {
 
 		if err := machine.reconcile(); err != nil {
-			return err
+			return false, err
 		}
 
 		machineMonitor := monitor.WithField("machine", machine.infra.ID())
-		if !machine.currentMachine.NodeAgentIsRunning {
-			machineMonitor.Info("Node agent is not running on the correct version yet")
-			if err := installNodeAgent(machine); err != nil {
-				return err
-			}
-
-			initialized = false
-		}
 
 		if !machine.currentMachine.FirewallIsReady {
 			initialized = false
@@ -49,7 +39,7 @@ func ensure(
 	}
 
 	if !initialized {
-		return nil
+		return false, nil
 	}
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
@@ -61,7 +51,7 @@ func ensure(
 		workerMachines)
 	if err != nil || !upgradingDone {
 		monitor.Info("Upgrading is not done yet")
-		return err
+		return upgradingDone, err
 	}
 
 	var scalingDone bool
@@ -76,18 +66,15 @@ func ensure(
 		targetVersion,
 		k8sClient,
 		oneoff,
-		func(created infra.Machine, pool initializedPool) (initializedMachine, error) {
+		func(created infra.Machine, pool initializedPool) initializedMachine {
 			machine := initializeMachine(created, pool)
 			target := targetVersion.DefineSoftware()
 			machine.desiredNodeagent.Software = &target
-			if machine.currentMachine.NodeAgentIsRunning {
-				return *machine, nil
-			}
-			return *machine, installNodeAgent(machine)
+			return *machine
 		},
 		uninitializeMachine)
 	if !scalingDone {
 		monitor.Info("Scaling is not done yet")
 	}
-	return err
+	return scalingDone, err
 }

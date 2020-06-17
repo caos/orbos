@@ -17,12 +17,12 @@ func ensureScale(
 	psf api.SecretFunc,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
-	kubeAPI infra.Address,
+	kubeAPI *infra.Address,
 	k8sVersion KubernetesVersion,
 	k8sClient *Client,
 	oneoff bool,
-	initializeMachine func(infra.Machine, initializedPool) (initializedMachine, error),
-	uninitializeMachine uninitializeMachineFunc) (bool, error) {
+	initializeMachine func(infra.Machine, initializedPool) initializedMachine,
+	uninitializeMachine uninitializeMachineFunc) (changed bool, err error) {
 
 	wCount := 0
 	for _, w := range workerPools {
@@ -46,9 +46,7 @@ func ensureScale(
 				return false, err
 			}
 			for _, machine := range machines {
-				if _, err := initializeMachine(machine, pool); err != nil {
-					return false, err
-				}
+				initializeMachine(machine, pool)
 			}
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
@@ -62,7 +60,7 @@ func ensureScale(
 				uninitializeMachine(id)
 				monitor.WithFields(map[string]interface{}{
 					"machine": id,
-					"tier":    machine.tier,
+					"tier":    machine.pool.tier,
 				}).Changed("Machine removed")
 			}
 		}
@@ -110,11 +108,11 @@ func ensureScale(
 nodes:
 	for _, machine := range machines {
 
-		isJoinedControlPlane := machine.tier == Controlplane && machine.currentMachine.Joined
+		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
 
 		machineMonitor := monitor.WithFields(map[string]interface{}{
 			"machine": machine.infra.ID(),
-			"tier":    machine.tier,
+			"tier":    machine.pool.tier,
 		})
 
 		if isJoinedControlPlane && machine.currentMachine.Online {
@@ -136,7 +134,7 @@ nodes:
 			continue nodes
 		}
 
-		if machine.tier == Controlplane && joinCP == nil {
+		if machine.pool.tier == Controlplane && joinCP == nil {
 			joinCP = machine
 			continue nodes
 		}
@@ -188,7 +186,8 @@ nodes:
 			monitor.Info("Refreshed certs")
 		}
 
-		joinKubeconfig, err := join(
+		var joinKubeconfig *string
+		joinKubeconfig, err = join(
 			monitor,
 			clusterID,
 			joinCP,
@@ -198,6 +197,10 @@ nodes:
 			jointoken,
 			k8sVersion,
 			string(certKey))
+
+		if err != nil {
+			return false, err
+		}
 
 		if joinKubeconfig == nil || err != nil {
 			return false, err
@@ -221,10 +224,16 @@ nodes:
 			certsCP,
 			*desired,
 			kubeAPI,
-			string(jointoken),
+			jointoken,
 			k8sVersion,
 			""); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
+		}
+	}
+
+	for _, pool := range append(workerPools, controlplanePool) {
+		if err := pool.infra.EnsureMembers(); err != nil {
+			return false, err
 		}
 	}
 

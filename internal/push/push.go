@@ -9,10 +9,10 @@ import (
 
 type Func func(monitor mntr.Monitor) error
 
-func SecretsFunc(gitClient *git.Client, desired *tree.Tree, path string) Func {
+func RewriteDesiredFunc(gitClient *git.Client, desired *tree.Tree, path string) Func {
 	return func(monitor mntr.Monitor) error {
-		monitor.Info("Writing secret")
-		return YML(monitor, "Secret written", gitClient, desired, path)
+		monitor.Info("Rewriting desired state")
+		return YML(monitor, "Desired state rewritten", gitClient, desired, path)
 	}
 }
 

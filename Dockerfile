@@ -1,12 +1,11 @@
+FROM golang:1.14.4-alpine3.11 as build
 
-FROM golang:1.14.0-alpine3.11 as build
-
-RUN apk add -U --no-cache ca-certificates git && \
+RUN apk update && \
+    apk add -U --no-cache ca-certificates git curl openssh && \
     go get github.com/go-delve/delve/cmd/dlv
 
 # Runtime dependencies
-RUN apk update && apk add git curl && \
-    mkdir /dependencies && \
+RUN mkdir /dependencies && \
     curl -L "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv3.4.0/kustomize_v3.4.0_linux_amd64.tar.gz" |tar xvz && \
     mv ./kustomize /dependencies/kustomize && \
     curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl && \
@@ -25,20 +24,23 @@ RUN /gen-charts -basepath "/boom"
 
 COPY dashboards /boom/dashboards
 
-ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:5000", "--accept-multiclient", "--" ]
+ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "--" ]
 
-FROM alpine:3.11 as prod
+FROM python:3.8.3-alpine3.11 as prod
 
-RUN adduser nobody nobody
+RUN apk update && \
+    apk add openssh && \
+    addgroup -S -g 1000 orbiter && \
+    adduser -S -u 1000 orbiter -G orbiter
 
 ENV GODEBUG madvdontneed=1
+
 COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=build --chown=1000:1000 /orbctl /orbctl
+COPY --from=build --chown=1000:1000 /boom /boom
+COPY --from=build --chown=1000:1000 /dependencies /usr/local/bin/
 
-COPY --from=build --chown=nobody:nobody /orbctl /orbctl
-COPY --from=build --chown=nobody:nobody /boom /boom
-COPY --from=build --chown=nobody:nobody /dependencies /usr/local/bin/
-
-USER nobody
+USER orbiter
 
 ENTRYPOINT [ "/orbctl" ]
 CMD [ "--help" ]

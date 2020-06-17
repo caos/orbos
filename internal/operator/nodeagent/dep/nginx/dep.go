@@ -1,14 +1,10 @@
 package nginx
 
 import (
-	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -25,10 +21,11 @@ type nginxDep struct {
 	manager *dep.PackageManager
 	systemd *dep.SystemD
 	monitor mntr.Monitor
+	os      dep.OperatingSystem
 }
 
-func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &nginxDep{manager, systemd, monitor}
+func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem) Installer {
+	return &nginxDep{manager, systemd, monitor, os}
 }
 
 func (nginxDep) isNgninx() {}
@@ -45,12 +42,10 @@ func (*nginxDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-const (
-	ipForwardCfg    = "/proc/sys/net/ipv4/ip_forward"
-	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
-)
-
 func (s *nginxDep) Current() (pkg common.Package, err error) {
+	if !s.systemd.Active("nginx") {
+		return pkg, err
+	}
 	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
 	if os.IsNotExist(err) {
 		return pkg, nil
@@ -60,28 +55,14 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 		"nginx.conf": string(config),
 	}
 
-	enabled, err := s.currentSysctlConfig("net.ipv4.ip_nonlocal_bind")
-	if err != nil {
-		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "0"
-	}
-
-	enabled, err = s.currentSysctlConfig("net.ipv4.ip_forward")
-	if err != nil {
-		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[ipForwardCfg] = "0"
-	}
-
 	return pkg, nil
 }
 
 func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
+
+	if err := selinux.EnsurePermissive(s.monitor, s.os, remove); err != nil {
+		return err
+	}
 
 	ensureCfg, ok := ensure.Config["nginx.conf"]
 	if !ok {
@@ -118,41 +99,9 @@ module_hotfixes=true`), 0600); err != nil {
 		return err
 	}
 
-	if err := ioutil.WriteFile("/etc/sysctl.d/01-keepalived.conf", []byte(`net.ipv4.ip_forward = 1
-net.ipv4.ip_nonlocal_bind = 1
-`), os.ModePerm); err != nil {
-		return err
-	}
-
-	cmd := exec.Command("sysctl", "--system")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
-	}
-
 	if err := s.systemd.Enable("nginx"); err != nil {
 		return err
 	}
 
 	return s.systemd.Start("nginx")
-}
-
-func (n *nginxDep) currentSysctlConfig(property string) (bool, error) {
-
-	outBuf := new(bytes.Buffer)
-	defer outBuf.Reset()
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-
-	cmd := exec.Command("sysctl", property)
-	cmd.Stderr = errBuf
-	cmd.Stdout = outBuf
-
-	fullCmd := strings.Join(cmd.Args, " ")
-	n.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
-
-	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-	}
-
-	return outBuf.String() == fmt.Sprintf("%s = 1\n", property), nil
 }

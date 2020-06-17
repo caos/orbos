@@ -3,6 +3,7 @@ module github.com/caos/orbos
 go 1.14
 
 require (
+	cloud.google.com/go/storage v1.6.0
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
 	github.com/aws/aws-sdk-go v1.31.12
@@ -12,7 +13,8 @@ require (
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github/v31 v31.0.0
-	github.com/goombaio/dag v0.0.0-20181006234417-a8874b1f72ff
+	github.com/googleapis/gnostic v0.3.1 // indirect
+	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mitchellh/mapstructure v1.3.2
 	github.com/pkg/errors v0.9.1

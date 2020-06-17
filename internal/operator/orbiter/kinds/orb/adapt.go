@@ -60,6 +60,7 @@ func AdaptFunc(
 				providerCurrent,
 				whitelistChan,
 				finishedChan,
+				orbiterCommit, orb.URL, orb.Repokey,
 			)
 
 			if err != nil {
@@ -166,18 +167,18 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf api.SecretFunc) (err error) {
+				return func(psf api.SecretFunc) *orbiter.EnsureResult {
 					defer func() {
 						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 					}()
 
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
-						ensureFunc := func() error {
+						ensureFunc := func() *orbiter.EnsureResult {
 							return ensurer(psf)
 						}
 
-						if err := orbiter.EnsureFuncGoroutine(ensureFunc); err != nil {
-							return err
+						if result := orbiter.EnsureFuncGoroutine(ensureFunc); result.Err != nil || !result.Done {
+							return result
 						}
 					}
 

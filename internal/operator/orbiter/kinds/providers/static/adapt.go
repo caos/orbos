@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func AdaptFunc(id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
+func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -63,7 +63,7 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc) orbiter.AdaptFunc {
 				}
 
 				queryFunc := func() (orbiter.EnsureFunc, error) {
-					return query(desiredKind, current, nodeAgentsDesired, lbCurrent.Parsed, monitor, id)
+					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, id, orbiterCommit, repoURL, repoKey)
 				}
 				return orbiter.QueryFuncGoroutine(queryFunc)
 			}, func() error {

@@ -30,6 +30,8 @@ type Software struct {
 	Nginx            Package `yaml:",omitempty"`
 	SSHD             Package `yaml:",omitempty"`
 	Hostname         Package `yaml:",omitempty"`
+	Sysctl           Package `yaml:",omitempty"`
+	Health           Package `yaml:",omitempty"`
 }
 
 func (s *Software) Merge(sw Software) {
@@ -71,6 +73,19 @@ func (s *Software) Merge(sw Software) {
 	if !sw.Hostname.Equals(zeroPkg) {
 		s.Hostname = sw.Hostname
 	}
+
+	if !sw.Sysctl.Equals(zeroPkg) && s.Sysctl.Config == nil {
+		s.Sysctl.Config = make(map[string]string)
+	}
+	for key, value := range sw.Sysctl.Config {
+		s.Sysctl.Config[key] = value
+	}
+	if !sw.Health.Equals(zeroPkg) && s.Health.Config == nil {
+		s.Health.Config = make(map[string]string)
+	}
+	for key, value := range sw.Health.Config {
+		s.Health.Config[key] = value
+	}
 }
 
 type Package struct {
@@ -101,44 +116,12 @@ func configEquals(this, that map[string]string) bool {
 }
 
 func (p Package) Equals(other Package) bool {
-	return packageEquals(p, other)
+	return PackageEquals(p, other)
 }
-func packageEquals(this, that Package) bool {
+func PackageEquals(this, that Package) bool {
 	equals := this.Version == that.Version &&
 		configEquals(this.Config, that.Config)
 	return equals
-}
-
-func (this *Software) Contains(that Software) bool {
-	return contains(this.Swap, that.Swap) &&
-		contains(this.Kubelet, that.Kubelet) &&
-		contains(this.Kubeadm, that.Kubeadm) &&
-		contains(this.Kubectl, that.Kubectl) &&
-		contains(this.Containerruntime, that.Containerruntime) &&
-		contains(this.KeepaliveD, that.KeepaliveD) &&
-		contains(this.Nginx, that.Nginx) &&
-		contains(this.Hostname, that.Hostname)
-}
-
-func contains(this, that Package) bool {
-	return that.Version == "" && that.Config == nil || packageEquals(this, that)
-}
-
-func (this *Software) Defines(that Software) bool {
-	return defines(this.Swap, that.Swap) &&
-		defines(this.Kubelet, that.Kubelet) &&
-		defines(this.Kubeadm, that.Kubeadm) &&
-		defines(this.Kubectl, that.Kubectl) &&
-		defines(this.Containerruntime, that.Containerruntime) &&
-		defines(this.KeepaliveD, that.KeepaliveD) &&
-		defines(this.Nginx, that.Nginx) &&
-		defines(this.Hostname, that.Hostname)
-}
-
-func defines(this, that Package) bool {
-	zeroPkg := Package{}
-	defines := packageEquals(that, zeroPkg) || !packageEquals(this, zeroPkg)
-	return defines
 }
 
 type Firewall map[string]*Allowed
@@ -177,9 +160,6 @@ func (f Firewall) Contains(other Firewall) bool {
 }
 
 func (f Firewall) IsContainedIn(ports []*Allowed) bool {
-	if len(f) > len(ports) {
-		return false
-	}
 checks:
 	for _, fwPort := range f {
 		for _, port := range ports {

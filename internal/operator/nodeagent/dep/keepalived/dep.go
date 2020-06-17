@@ -2,13 +2,9 @@ package keepalived
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -48,12 +44,11 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-const (
-	ipForwardCfg    = "/proc/sys/net/ipv4/ip_forward"
-	nonlocalbindCfg = "/proc/sys/net/ipv4/ip_nonlocal_bind"
-)
-
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
+	if !s.systemd.Active("keepalived") {
+		return pkg, err
+	}
+
 	defer func() {
 		if err == nil {
 			err = selinux.Current(s.os, &pkg)
@@ -76,23 +71,6 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	})
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
-	}
-	enabled, err := s.currentSysctlConfig("net.ipv4.ip_nonlocal_bind")
-	if err != nil {
-		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[nonlocalbindCfg] = "0"
-	}
-
-	enabled, err = s.currentSysctlConfig("net.ipv4.ip_forward")
-	if err != nil {
-		return pkg, err
-	}
-
-	if !enabled {
-		pkg.Config[ipForwardCfg] = "0"
 	}
 
 	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")
@@ -138,41 +116,9 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 		}
 	}
 
-	if err := ioutil.WriteFile("/etc/sysctl.d/01-keepalived.conf", []byte(`net.ipv4.ip_forward = 1
-net.ipv4.ip_nonlocal_bind = 1
-`), os.ModePerm); err != nil {
-		return err
-	}
-
-	cmd := exec.Command("sysctl", "--system")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
-	}
-
 	if err := s.systemd.Enable("keepalived"); err != nil {
 		return err
 	}
 
 	return s.systemd.Start("keepalived")
-}
-
-func (k *keepaliveDDep) currentSysctlConfig(property string) (bool, error) {
-
-	outBuf := new(bytes.Buffer)
-	defer outBuf.Reset()
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-
-	cmd := exec.Command("sysctl", property)
-	cmd.Stderr = errBuf
-	cmd.Stdout = outBuf
-
-	fullCmd := strings.Join(cmd.Args, " ")
-	k.monitor.WithFields(map[string]interface{}{"cmd": fullCmd}).Debug("Executing")
-
-	if err := cmd.Run(); err != nil {
-		return false, errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-	}
-
-	return outBuf.String() == fmt.Sprintf("%s = 1\n", property), nil
 }

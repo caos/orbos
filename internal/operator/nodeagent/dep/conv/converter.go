@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/health"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -16,6 +17,7 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/nginx"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sshd"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/swap"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -52,6 +54,12 @@ func (d *dependencies) Init() func() error {
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
 
 	dependencies := []*nodeagent.Dependency{{
+		Desired:   sw.Sysctl,
+		Installer: sysctl.New(d.monitor),
+	}, {
+		Desired:   sw.Health,
+		Installer: health.New(d.monitor, d.sysd),
+	}, {
 		Desired:   sw.Hostname,
 		Installer: hostname.New(),
 	}, {
@@ -65,7 +73,7 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 		Installer: sshd.New(d.sysd),
 	}, {
 		Desired:   sw.Nginx,
-		Installer: nginx.New(d.monitor, d.pm, d.sysd),
+		Installer: nginx.New(d.monitor, d.pm, d.sysd, d.os.OperatingSystem),
 	}, {
 		Desired:   sw.Containerruntime,
 		Installer: cri.New(d.monitor, d.os, d.pm, d.sysd),
@@ -93,6 +101,10 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
+		case sysctl.Installer:
+			sw.Sysctl = pkg(*dependency)
+		case health.Installer:
+			sw.Health = pkg(*dependency)
 		case hostname.Installer:
 			sw.Hostname = pkg(*dependency)
 		case swap.Installer:

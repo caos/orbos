@@ -2,17 +2,23 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
 )
 
-type resultTuple func() (interface{}, error)
-
 func main() {
 
 	args := os.Args[1:]
+
+	location := ""
+	if args[0] == "--http" {
+		location = args[1]
+		args = args[2:]
+	}
 
 	defer func() {
 		err := recover()
@@ -26,6 +32,33 @@ func main() {
 		panic("No arguments")
 	}
 
+	if location == "" {
+		messages, err := executeChecks(args)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf(messages)
+		os.Exit(0)
+	}
+
+	pathStart := strings.Index(location, "/")
+	listen := location[0:pathStart]
+	path := location[pathStart:]
+	http.HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
+		messages, err := executeChecks(args)
+		if err != nil {
+			writer.WriteHeader(http.StatusServiceUnavailable)
+		}
+		writer.Write([]byte(messages))
+		request.Body.Close()
+	})
+	fmt.Printf("Serving healthchecks at %s", location)
+	if err := http.ListenAndServe(listen, nil); err != nil {
+		panic(err)
+	}
+}
+
+func executeChecks(args []string) (string, error) {
 	messages := ""
 	var err error
 	var wg sync.WaitGroup
@@ -42,11 +75,7 @@ func main() {
 
 	wg.Wait()
 
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Printf(messages)
+	return messages, err
 }
 
 func toChan(args []string) <-chan string {

@@ -35,7 +35,9 @@ type OrbiterConfig struct {
 }
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
-	orbiter.Metrics()
+	if conf.Recur {
+		orbiter.Metrics()
+	}
 
 	finishedChan := make(chan bool)
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)

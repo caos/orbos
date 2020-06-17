@@ -15,7 +15,19 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type EnsureFunc func(psf api.SecretFunc) error
+func ToEnsureResult(done bool, err error) *EnsureResult {
+	return &EnsureResult{
+		Err:  err,
+		Done: done,
+	}
+}
+
+type EnsureResult struct {
+	Err  error
+	Done bool
+}
+
+type EnsureFunc func(psf api.SecretFunc) *EnsureResult
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
 
@@ -33,8 +45,9 @@ func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
 	ret := <-retChan
 	return ret.ensure, ret.err
 }
-func EnsureFuncGoroutine(ensure func() error) error {
-	retChan := make(chan error)
+
+func EnsureFuncGoroutine(ensure func() *EnsureResult) *EnsureResult {
+	retChan := make(chan *EnsureResult)
 	go func() {
 		retChan <- ensure()
 	}()
@@ -167,11 +180,11 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 
 		events = make([]*event, 0)
 
-		ensureFunc := func() error {
+		ensureFunc := func() *EnsureResult {
 			return ensure(api.OrbiterSecretFunc(conf.GitClient, treeDesired))
 		}
-		if err := EnsureFuncGoroutine(ensureFunc); err != nil {
-			handleAdapterError(err)
+		if result := EnsureFuncGoroutine(ensureFunc); result.Err != nil {
+			handleAdapterError(result.Err)
 			return
 		}
 

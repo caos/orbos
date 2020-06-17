@@ -7,7 +7,7 @@ build:
   - image: eu.gcr.io/caos-240809/orbiter
     context: .
     custom:
-      buildCommand: DEBUG=true ./skaffold/build.sh
+      buildCommand: DEBUG=false ./skaffold/build.sh
 deploy:
   kubectl:
     manifests:

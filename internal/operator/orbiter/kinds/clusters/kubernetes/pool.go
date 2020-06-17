@@ -53,7 +53,7 @@ func cleanupMachines(monitor mntr.Monitor, pool infra.Pool, k8s *Client) (err er
 		return err
 	}
 
-	machines, err := pool.GetMachines(true)
+	machines, err := pool.GetMachines()
 	if err != nil {
 		return err
 	}

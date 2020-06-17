@@ -1,13 +1,19 @@
 package providers
 
 import (
+	"regexp"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
+
+var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -16,36 +22,35 @@ func GetQueryAndDestroyFuncs(
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan bool,
+	orbiterCommit, repoURL, repoKey string,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
 	bool,
 	error,
 ) {
+
+	monitor = monitor.WithFields(map[string]interface{}{"provider": provID})
+
+	wlFunc := func() []*orbiter.CIDR {
+		monitor.Debug("Reading whitelist")
+		return <-whitelistChan
+	}
+
 	switch providerTree.Common.Kind {
-	//			case "orbiter.caos.ch/GCEProvider":
-	//				var lbs map[string]*infra.Ingress
-	//
-	//				if !kind.Spec.Destroyed && kind.Spec.ControlPlane.Provider == depID {
-	//					lbs = map[string]*infra.Ingress{
-	//						"kubeapi": &infra.Ingress{
-	//							Pools:            []string{kind.Spec.ControlPlane.Pool},
-	//							HealthChecksPath: "/healthz",
-	//						},
-	//					}
-	//				}
-	//				subassemblers[provIdx] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providermonitor, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.AdaptFunc(
+			provID,
+			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"),
+			wlFunc,
+			orbiterCommit, repoURL, repoKey,
+		)(
+			monitor,
+			finishedChan,
+			providerTree,
+			providerCurrent,
+		)
 	case "orbiter.caos.ch/StaticProvider":
-		//				updatesDisabled := make([]string, 0)
-		//				for _, pool := range desiredKind.Spec.Workers {
-		//					if pool.UpdatesDisabled {
-		//						updatesDisabled = append(updatesDisabled, pool.Pool)
-		//					}
-		//				}
-		//
-		//				if desiredKind.Spec.ControlPlane.UpdatesDisabled {
-		//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
-		//				}
 
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
 			return static.AdaptFunc(
@@ -54,6 +59,7 @@ func GetQueryAndDestroyFuncs(
 					monitor.Debug("Reading whitelist")
 					return <-whitelistChan
 				},
+				orbiterCommit, repoURL, repoKey,
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				finishedChan,
@@ -74,6 +80,11 @@ func GetSecrets(
 	error,
 ) {
 	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.SecretsFunc()(
+			monitor,
+			providerTree,
+		)
 	case "orbiter.caos.ch/StaticProvider":
 		return static.SecretsFunc()(
 			monitor,
@@ -93,6 +104,13 @@ func RewriteMasterkey(
 	error,
 ) {
 	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.RewriteFunc(
+			newMasterkey,
+		)(
+			monitor,
+			providerTree,
+		)
 	case "orbiter.caos.ch/StaticProvider":
 		return static.RewriteFunc(
 			newMasterkey,
