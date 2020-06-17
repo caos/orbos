@@ -8,7 +8,7 @@
 
 An Orbiter instance runs as a Kubernetes Pod managing the configured clusters (i.e. an Orb), typically including the one it is running on. It scales the clusters nodes and has `Node Agents` install software packages on their operating systems. `Node Agents` run as native system processes managed by `systemd`. An Orbs Git repository is the only source of truth for desired state. Also, the current Orbs state is continously pushed to its Git repository, so not only changes to the desired state is always tracked but also the most important changes to the actual systems state.
 
-For more details, take a look at the [design docs](orbiter/terminology.md).
+For more details, take a look at the [design docs](docs/orbiter/terminology.md).
 
 ## Why Another Cluster Manager
 
@@ -26,16 +26,16 @@ If you'd rather run a Kubernetes cluster on Google Compute Engine with ORBITER m
 
 ## Operating System Requirements
 
-See [OS Requirements](orbiter/os-requirements.md) for details.
+See [OS Requirements](docs/orbiter/os-requirements.md) for details.
 
 ## Supported Clusters
 
-See [Clusters](orbiter/clusters.md) for details.
+See [Clusters](docs/orbiter/clusters.md) for details.
 
 ## Supported Providers
 
-See [Providers](orbiter/providers.md) for details.
+See [Providers](docs/orbiter/providers.md) for details.
 
 ## How To Contribute
 
-See [contribute](orbiter/contribute.md) for details
+See [contribute](docs/orbiter/contribute.md) for details
