@@ -4,13 +4,16 @@ import (
 	"io/ioutil"
 
 	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
+	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -110,7 +113,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 				monitor.Info("Failed to connect to k8s")
 			}
 
-			if err := deployBoom(monitor, gitClient, &kubeconfig); err != nil {
+			if err := deployBoom(monitor, gitClient, &kubeconfig, orbConfig.Masterkey); err != nil {
 				return err
 			}
 		}
@@ -119,13 +122,31 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
-	foundBoom, err := existsFileInGit(gitClient, "boom.yml")
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, masterkey string) error {
+	filePath := "boom.yml"
+	foundBoom, err := existsFileInGit(gitClient, filePath)
 	if err != nil {
 		return err
 	}
 	if foundBoom {
-		if err := cmd.Reconcile(monitor, kubeconfig, version); err != nil {
+		raw := gitClient.Read(filePath)
+
+		desiredTree := &tree.Tree{}
+		if err := yaml.Unmarshal(raw, desiredTree); err != nil {
+			return err
+		}
+
+		desiredKind, err := api.ParseToolset(desiredTree, masterkey)
+		if err != nil {
+			return err
+		}
+
+		boomVersion := version
+		if desiredKind.Spec.BoomVersion != "" {
+			boomVersion = desiredKind.Spec.BoomVersion
+		}
+
+		if err := cmd.Reconcile(monitor, kubeconfig, boomVersion); err != nil {
 			return err
 		}
 	} else {

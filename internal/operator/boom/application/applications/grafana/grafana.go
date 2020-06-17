@@ -1,8 +1,9 @@
 package grafana
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
 	"reflect"
+
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
 
 	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/info"
@@ -28,7 +29,7 @@ func (g *Grafana) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
 	// workaround as grafana always deploys new pods even when the spec of the deployment is not changed
 	// due to the fact that kubernetes has an internal mapping from extensions/v1beta1 to apps/v1 in old k8s versions
 	if g.Changed(toolsetCRDSpec) {
-		return toolsetCRDSpec.Grafana.Deploy
+		return toolsetCRDSpec.Grafana != nil && toolsetCRDSpec.Grafana.Deploy
 	}
 	return false
 }

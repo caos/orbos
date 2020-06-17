@@ -37,6 +37,10 @@ func getGoogle(spec *google.Connector, redirect string) (interface{}, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	// get base path
 	base, err := filepath.Abs(spec.Config.ServiceAccountFilePath)
 	if err != nil {

@@ -39,7 +39,7 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Config {
 	}
 
 	oidc, err := auth.GetOIDC(spec.Auth)
-	if err == nil {
+	if err == nil && oidc != "" {
 		conf.OIDC = oidc
 	}
 
