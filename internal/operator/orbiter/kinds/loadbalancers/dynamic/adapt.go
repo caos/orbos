@@ -183,7 +183,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}
 						deepNa.Software.KeepaliveD = keepalived
 						if !deepNa.Software.KeepaliveD.Equals(deepNaCurr.Software.KeepaliveD) {
-							monitor.WithField("package", deepNa.Software.KeepaliveD).Info("Awaiting keepalived")
+							monitor.Info("Awaiting keepalived")
 							done = false
 						}
 					}

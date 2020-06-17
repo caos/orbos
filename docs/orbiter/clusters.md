@@ -2,7 +2,7 @@
 
 - Kubernetes with kubeadm
 
-## More Possible Use Cases
+# More Possible Use Cases
 
 - Other cluster managers
   - Nomad

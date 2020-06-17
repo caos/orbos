@@ -1,8 +1,10 @@
 # Supported providers
 
 - Google Compute Engine (GCE)
+  - orbiter manages clusters as well as the whole underlying infrastructure
 - Static provider
-  - orbiter only manages clusters, infrastructure is already existing and managed manually
+  - orbiter manages clusters, loadbalancing and machines software
+  - the machines creation and deletion is managed manually
 
 ## More providers to come
 
