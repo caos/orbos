@@ -1,6 +1,7 @@
 package providers
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"regexp"
 	"strings"
 
@@ -118,6 +119,23 @@ func RewriteMasterkey(
 			monitor,
 			providerTree,
 		)
+	default:
+		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+	}
+}
+
+func ListMachines(
+	monitor mntr.Monitor,
+	providerTree *tree.Tree,
+) (
+	map[string]infra.Machine,
+	error,
+) {
+	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return nil, nil
+	case "orbiter.caos.ch/StaticProvider":
+		return static.ListMachines(monitor, providerTree)
 	default:
 		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}

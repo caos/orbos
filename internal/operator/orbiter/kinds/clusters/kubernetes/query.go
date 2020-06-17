@@ -23,26 +23,9 @@ func query(
 
 	current.Machines = make(map[string]*Machine)
 
-	cloudPools := make(map[string]map[string]infra.Pool)
-	var kubeAPIAddress *infra.Address
-
-	for providerName, provider := range providerCurrents {
-		if cloudPools[providerName] == nil {
-			cloudPools[providerName] = make(map[string]infra.Pool)
-		}
-		prov := provider.(infra.ProviderCurrent)
-		providerPools := prov.Pools()
-		providerIngresses := prov.Ingresses()
-		for providerPoolName, providerPool := range providerPools {
-			cloudPools[providerName][providerPoolName] = providerPool
-			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
-				var ok bool
-				kubeAPIAddress, ok = providerIngresses["kubeapi"]
-				if !ok {
-					panic(errors.New("no externally reachable address named kubeapi found"))
-				}
-			}
-		}
+	cloudPools, kubeAPIAddress, err := GetProviderInfos(desired, providerCurrents)
+	if err != nil {
+		panic(err)
 	}
 
 	if err := poolIsConfigured(&desired.Spec.ControlPlane, cloudPools); err != nil {
@@ -94,4 +77,29 @@ func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) er
 		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Provider, poolSpec.Pool)
 	}
 	return nil
+}
+
+func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{}) (map[string]map[string]infra.Pool, *infra.Address, error) {
+	cloudPools := make(map[string]map[string]infra.Pool)
+	var kubeAPIAddress *infra.Address
+
+	for providerName, provider := range providerCurrents {
+		if cloudPools[providerName] == nil {
+			cloudPools[providerName] = make(map[string]infra.Pool)
+		}
+		prov := provider.(infra.ProviderCurrent)
+		providerPools := prov.Pools()
+		providerIngresses := prov.Ingresses()
+		for providerPoolName, providerPool := range providerPools {
+			cloudPools[providerName][providerPoolName] = providerPool
+			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
+				var ok bool
+				kubeAPIAddress, ok = providerIngresses["kubeapi"]
+				if !ok {
+					return nil, nil, errors.New("no externally reachable address named kubeapi found")
+				}
+			}
+		}
+	}
+	return cloudPools, kubeAPIAddress, nil
 }

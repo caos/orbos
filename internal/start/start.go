@@ -164,10 +164,10 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		finished = <-finishedChan
 	}
 
-	return GetKubeconfigs(monitor, orbctlGit, orbFile)
+	return GetKubeconfigs(monitor, orbctlGit)
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)

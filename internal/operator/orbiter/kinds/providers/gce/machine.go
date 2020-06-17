@@ -85,6 +85,30 @@ func (c *instance) execute(env map[string]string, stdin io.Reader, command strin
 	return outBuf, nil
 }
 
+func (c *instance) Shell(env map[string]string) error {
+	errBuf := new(bytes.Buffer)
+	defer resetBuffer(errBuf)
+
+	if err := gcloudSession(c.context, func(bin string) error {
+		cmd := exec.Command(gcloudBin(),
+			"compute",
+			"ssh",
+			"--zone", c.context.desired.Zone,
+			c.id,
+			"--tunnel-through-iap",
+			"--project", c.context.projectID,
+		)
+		cmd.Stderr = errBuf
+		if runErr := cmd.Run(); runErr != nil {
+			return errors.New(errBuf.String())
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *instance) WriteFile(path string, data io.Reader, permissions uint16) error {
 
 	user, err := c.Execute(nil, nil, "whoami")

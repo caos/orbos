@@ -35,6 +35,9 @@ func (c *cmpLB) Remove() error {
 func (c *cmpLB) Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error) {
 	return c.original.Execute(env, stdin, cmd)
 }
+func (c *cmpLB) Shell(env map[string]string) error {
+	return c.original.Shell(env)
+}
 func (c *cmpLB) WriteFile(path string, data io.Reader, permissions uint16) error {
 	return c.original.WriteFile(path, data, permissions)
 }
