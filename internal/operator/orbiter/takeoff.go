@@ -187,7 +187,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 		result := EnsureFuncGoroutine(ensureFunc)
 		if result.Err != nil {
-			handleAdapterError(err)
+			handleAdapterError(result.Err)
 			return
 		}
 
