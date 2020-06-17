@@ -17,7 +17,7 @@ func (*prometheusSystemdExporter) GetName() name.Application {
 }
 
 func (*prometheusSystemdExporter) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.PrometheusSystemdExporter.Deploy
+	return toolsetCRDSpec.PrometheusSystemdExporter != nil && toolsetCRDSpec.PrometheusSystemdExporter.Deploy
 }
 
 func (*prometheusSystemdExporter) GetNamespace() string {

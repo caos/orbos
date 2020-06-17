@@ -24,7 +24,7 @@ func (po *PrometheusOperator) GetName() name.Application {
 }
 
 func (po *PrometheusOperator) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.PrometheusOperator.Deploy
+	return toolsetCRDSpec.PrometheusOperator != nil && toolsetCRDSpec.PrometheusOperator.Deploy
 }
 
 func (po *PrometheusOperator) GetNamespace() string {

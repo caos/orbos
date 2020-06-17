@@ -23,7 +23,7 @@ func (l *Loki) GetName() name.Application {
 }
 
 func (lo *Loki) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.Loki.Deploy
+	return toolsetCRDSpec.Loki != nil && toolsetCRDSpec.Loki.Deploy
 }
 
 func (l *Loki) GetNamespace() string {
