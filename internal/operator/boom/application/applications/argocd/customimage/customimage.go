@@ -86,6 +86,22 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 			secretRes := resources.NewSecret(conf)
 			secrets = append(secrets, secretRes)
 		}
+
+		if helper2.IsCrdSecret(store.SSHKey, store.ExistingSSHKeySecret) {
+			ty := "ssh"
+			data := map[string]string{
+				getSecretKey(store.StoreName, ty): store.SSHKey.Value,
+			}
+
+			conf := &resources.SecretConfig{
+				Name:      getSecretName(store.StoreName, ty),
+				Namespace: namespace,
+				Labels:    labels.GetAllApplicationLabels(info.GetName()),
+				Data:      data,
+			}
+			secretRes := resources.NewSecret(conf)
+			secrets = append(secrets, secretRes)
+		}
 	}
 
 	return secrets
