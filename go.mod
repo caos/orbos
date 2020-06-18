@@ -5,10 +5,8 @@ go 1.14
 require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/AppsFlyer/go-sundheit v0.2.0
-	github.com/awalterschulze/goderive v0.0.0-20200222153121-9a5b9356be09 // indirect
 	github.com/aws/aws-sdk-go v1.31.12
 	github.com/caos/oidc v0.6.2
-	github.com/fatih/color v1.9.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2
@@ -16,13 +14,12 @@ require (
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
 	github.com/manifoldco/promptui v0.7.0
-	github.com/mitchellh/mapstructure v1.3.2
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.6.0
-	github.com/robfig/cron v1.2.0 // indirect
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v0.0.7
-	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/crypto v0.0.0-20200302210943-78000ba7a073
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
@@ -36,5 +33,4 @@ require (
 	k8s.io/apimachinery v0.18.3
 	k8s.io/client-go v0.18.3
 	k8s.io/kubectl v0.18.3
-	sigs.k8s.io/controller-runtime v0.4.0 // indirect
 )
