@@ -65,39 +65,42 @@ providers:
           localssds: 3
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
-      version: v1
+      version: v2
       spec:
-        masters:
+        management:
           - transport:
               - name: kubeapi
-                destinations:
-                  - healthchecks:
-                      protocol: https
-                      path: /healthz
-                      code: 200
-                    port: 6666
-                    pool: management
+                frontendport: 6443
+                backendport: 6666
+                backendpools:
+                  - management
                 whitelist:
                   - 0.0.0.0/0
-        workers:
+                healthchecks:
+                  protocol: https
+                  path: /healthz
+                  code: 200
+        application:
           - transport:
               - name: httpsingress
-                destinations:
-                  - healthchecks:
-                      protocol: https
-                      path: /ambassador/v0/check_ready
-                      code: 200
-                    port: 30443
-                    pool: application
+                frontendport: 443
+                backendport: 30443
+                backendpools:
+                  - application
                 whitelist:
                   - 0.0.0.0/0
+                healthchecks:
+                  protocol: https
+                  path: /ambassador/v0/check_ready
+                  code: 200
               - name: httpingress
-                destinations:
-                  - healthchecks:
-                      protocol: http
-                      path: /ambassador/v0/check_ready
-                      code: 200
-                    port: 30080
-                    pool: application
+                frontendport: 80
+                backendport: 30080
+                backendpools:
+                  - application
                 whitelist:
                   - 0.0.0.0/0
+                healthchecks:
+                  protocol: http
+                  path: /ambassador/v0/check_ready
+                  code: 200
