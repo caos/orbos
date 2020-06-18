@@ -24,7 +24,7 @@ func (pne *PrometheusNodeExporter) GetName() name.Application {
 }
 
 func (pne *PrometheusNodeExporter) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
-	return toolsetCRDSpec.NodeMetricsExporter.Deploy
+	return toolsetCRDSpec.NodeMetricsExporter != nil && toolsetCRDSpec.NodeMetricsExporter.Deploy
 }
 
 func (pne *PrometheusNodeExporter) GetNamespace() string {

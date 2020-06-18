@@ -30,6 +30,10 @@ func getGithub(spec *github.Connector, redirect string) (interface{}, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	var orgs []*org
 	if len(spec.Config.Orgs) > 0 {
 		orgs = make([]*org, len(spec.Config.Orgs))

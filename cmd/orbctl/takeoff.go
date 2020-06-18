@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
+	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
@@ -26,7 +27,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		ingestionAddress string
 		cmd              = &cobra.Command{
 			Use:   "takeoff",
-			Short: "Launch orbos",
+			Short: "Launch an orbiter",
 			Long:  "Ensures a desired state",
 		}
 	)
@@ -126,7 +127,22 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		return err
 	}
 	if foundBoom {
-		if err := cmd.Reconcile(monitor, kubeconfig, version); err != nil {
+		desiredTree, err := api.ReadBoomYml(gitClient)
+		if err != nil {
+			return err
+		}
+
+		desiredKind, _, err := boomapi.ParseToolset(desiredTree)
+		if err != nil {
+			return err
+		}
+
+		boomVersion := version
+		if desiredKind.Spec.BoomVersion != "" {
+			boomVersion = desiredKind.Spec.BoomVersion
+		}
+
+		if err := cmd.Reconcile(monitor, kubeconfig, boomVersion); err != nil {
 			return err
 		}
 	} else {

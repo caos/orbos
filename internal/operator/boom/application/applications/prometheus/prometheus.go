@@ -32,7 +32,7 @@ func (p *Prometheus) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
 		return false
 	}
 
-	return toolsetCRDSpec.MetricCollection.Deploy
+	return toolsetCRDSpec.MetricCollection != nil && toolsetCRDSpec.MetricCollection.Deploy
 }
 
 func (p *Prometheus) GetNamespace() string {

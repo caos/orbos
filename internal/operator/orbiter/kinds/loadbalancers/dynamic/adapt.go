@@ -109,7 +109,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
 
-				var done bool
+				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
 					machineMonitor := monitor.WithField("machine", machine.ID())
 					deepNa, ok := nodeagents[machine.ID()]
@@ -168,6 +168,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}) {
 							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
 							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
+							machineMonitor.Changed("sysctl desired")
 						}
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
@@ -182,7 +183,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}
 						deepNa.Software.KeepaliveD = keepalived
 						if !deepNa.Software.KeepaliveD.Equals(deepNaCurr.Software.KeepaliveD) {
-							monitor.WithField("package", deepNa.Software.KeepaliveD).Info("Awaiting keepalived")
+							monitor.Info("Awaiting keepalived")
 							done = false
 						}
 					}

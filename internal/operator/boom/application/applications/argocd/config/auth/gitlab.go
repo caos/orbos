@@ -25,6 +25,10 @@ func getGitlab(spec *gitlab.Connector, redirect string) (interface{}, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	var groups []string
 	if len(spec.Config.Groups) > 0 {
 		groups = make([]string, len(spec.Config.Groups))

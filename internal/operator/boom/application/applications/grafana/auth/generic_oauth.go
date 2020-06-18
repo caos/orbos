@@ -17,6 +17,10 @@ func GetGenericOAuthConfig(spec *generic.Auth) (map[string]string, error) {
 		return nil, err
 	}
 
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
+	}
+
 	allowedDomains := strings.Join(spec.AllowedDomains, " ")
 	scopes := strings.Join(spec.Scopes, " ")
 

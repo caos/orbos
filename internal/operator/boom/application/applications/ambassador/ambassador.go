@@ -18,7 +18,7 @@ func New(monitor mntr.Monitor) *Ambassador {
 }
 
 func (a *Ambassador) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
-	return toolsetCRDSpec.APIGateway.Deploy
+	return toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy
 }
 
 func (a *Ambassador) GetName() name.Application {
