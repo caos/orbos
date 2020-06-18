@@ -112,12 +112,12 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Credential {
 
 		if helper2.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
 			ty := "password"
-			us = &secret{
+			ps = &secret{
 				Name: getSecretName(v.Name, ty),
 				Key:  getSecretKey(ty),
 			}
 		} else if helper2.IsExistentSecret(v.Password, v.ExistingPasswordSecret) {
-			us = &secret{
+			ps = &secret{
 				Name: v.ExistingPasswordSecret.Name,
 				Key:  v.ExistingPasswordSecret.Key,
 			}
@@ -125,12 +125,12 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Credential {
 
 		if helper2.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
 			ty := "username"
-			us = &secret{
+			ssh = &secret{
 				Name: getSecretName(v.Name, ty),
 				Key:  getSecretKey(ty),
 			}
 		} else if helper2.IsExistentSecret(v.Certificate, v.ExistingCertificateSecret) {
-			us = &secret{
+			ssh = &secret{
 				Name: v.ExistingCertificateSecret.Name,
 				Key:  v.ExistingCertificateSecret.Key,
 			}
