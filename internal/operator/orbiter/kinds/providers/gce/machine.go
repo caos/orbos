@@ -62,12 +62,12 @@ func (c *instance) execute(env map[string]string, stdin io.Reader, command strin
 	errBuf := new(bytes.Buffer)
 	defer resetBuffer(errBuf)
 
-	if err := gcloudSession(c.context, func(bin string) error {
+	if err := gcloudSession(c.context.desired.JSONKey.Value, func(bin string) error {
 		cmd := exec.Command(gcloudBin(),
 			"compute",
 			"ssh",
 			"--zone", c.context.desired.Zone,
-			c.id,
+			fmt.Sprintf("orbiter@%s", c.id),
 			"--tunnel-through-iap",
 			"--project", c.context.projectID,
 			"--command", command,

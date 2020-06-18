@@ -53,7 +53,7 @@ func gcloudBin() string {
 	return gcloudBinCache
 }
 
-func gcloudSession(ctx *context, do func(binary string) error) error {
+func gcloudSession(jsonkey string, do func(binary string) error) error {
 	gcloud := gcloudBin()
 	listBuf := new(bytes.Buffer)
 	defer resetBuffer(listBuf)
@@ -80,7 +80,7 @@ func gcloudSession(ctx *context, do func(binary string) error) error {
 		return err
 	}
 
-	_, err = file.WriteString(ctx.desired.JSONKey.Value)
+	_, err = file.WriteString(jsonkey)
 	if err != nil {
 		return err
 	}
