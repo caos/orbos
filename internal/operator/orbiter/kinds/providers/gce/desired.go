@@ -84,7 +84,6 @@ func (d Desired) validate() error {
 	}
 	return nil
 }
-
 func parseDesiredV0(desiredTree *tree.Tree) (*Desired, error) {
 	desiredKind := &Desired{
 		Common: desiredTree.Common,

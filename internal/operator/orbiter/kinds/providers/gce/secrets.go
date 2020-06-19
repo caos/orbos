@@ -8,7 +8,6 @@ import (
 
 	"github.com/caos/orbos/mntr"
 )
-
 func SecretsFunc() secret.Func {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
@@ -37,13 +36,13 @@ func RewriteFunc(newMasterkey string) secret.Func {
 			return nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
-		secret.Masterkey = newMasterkey
 
 		secrets = getSecretsMap(desiredKind)
 		loadBalancersSecrets, err := loadbalancers.GetSecrets(monitor, desiredKind.Loadbalancing)
 		if err != nil {
 			return nil, err
 		}
+		secret.Masterkey = newMasterkey
 
 		for k, v := range loadBalancersSecrets {
 			secrets[k] = v

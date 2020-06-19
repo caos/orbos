@@ -7,7 +7,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
-	"net/http"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -183,7 +182,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		ensureFunc := func() *EnsureResult {
 			return ensure(api.OrbiterSecretFunc(conf.GitClient, treeDesired))
 		}
-
+    
 		result := EnsureFuncGoroutine(ensureFunc)
 		if result.Err != nil {
 			handleAdapterError(result.Err)

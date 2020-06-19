@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"github.com/caos/orbos/internal/api"
+	"runtime/debug"
+	"strings"
+	"time"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -18,9 +21,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
-	"runtime/debug"
-	"strings"
-	"time"
 )
 
 type OrbiterConfig struct {

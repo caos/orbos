@@ -73,7 +73,7 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, op
 	if tree == nil {
 		return nil
 	}
-
+  
 	if operator == "orbiter" {
 		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
 	} else if operator == "boom" {

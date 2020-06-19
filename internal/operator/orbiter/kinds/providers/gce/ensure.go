@@ -119,7 +119,6 @@ func query(
 		}
 		panic(fmt.Errorf("external address for %v is not ensured", vip))
 	})
-
 	return func(psf api.SecretFunc) *orbiter.EnsureResult {
 
 		if err := ensureGcloud(context); err != nil {
