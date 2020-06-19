@@ -11,7 +11,7 @@ require (
 	github.com/caos/oidc v0.6.1
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
-	github.com/golang/protobuf v1.3.5
+	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github/v31 v31.0.0
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
