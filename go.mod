@@ -3,7 +3,6 @@ module github.com/caos/orbos
 go 1.14
 
 require (
-	cloud.google.com/go v0.56.0 // indirect
 	cloud.google.com/go/storage v1.6.0
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.31.12

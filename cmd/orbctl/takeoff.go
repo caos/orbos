@@ -13,7 +13,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"io/ioutil"
-	"gopkg.in/yaml.v3"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
