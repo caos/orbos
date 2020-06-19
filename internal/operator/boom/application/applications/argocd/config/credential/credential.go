@@ -1,7 +1,7 @@
 package credential
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
@@ -36,7 +36,7 @@ func getSecretKey(ty string) string {
 	return ty
 }
 
-func GetSecrets(spec *argocd.Argocd) []interface{} {
+func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 	secrets := make([]interface{}, 0)
 	namespace := "caos-system"
 
@@ -89,7 +89,7 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 	return secrets
 }
 
-func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Credential {
+func GetFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) []*Credential {
 	credentials := make([]*Credential, 0)
 
 	if spec.Credentials == nil || len(spec.Credentials) == 0 {

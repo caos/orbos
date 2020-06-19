@@ -2,11 +2,9 @@ package helm
 
 import prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
 
-import "github.com/caos/orbos/internal/operator/boom/application/applications/grafanastandalone"
-
 func DefaultValues(imageTags map[string]string) *Values {
 	grafana := &GrafanaValues{
-		Image: &grafanastandalone.Image{
+		Image: &Image{
 			Repository: "grafana/grafana",
 			Tag:        imageTags["grafana/grafana"],
 			PullPolicy: "IfNotPresent",
@@ -38,7 +36,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Size:        "10Gi",
 			Finalizers:  []string{"kubernetes.io/pvc-protection"},
 		},
-		TestFramework: &grafanastandalone.TestFramework{
+		TestFramework: &TestFramework{
 			Enabled: false,
 			Image:   "dduportal/bats",
 			Tag:     imageTags["dduportal/bats"],

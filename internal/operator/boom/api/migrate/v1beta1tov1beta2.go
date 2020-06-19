@@ -63,7 +63,7 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 				ReplicaCount: oldSpec.Ambassador.ReplicaCount,
 			}
 			if oldSpec.Ambassador.Service != nil {
-				newSpec.APIGateway.Service = &v1beta2.Service{
+				newSpec.APIGateway.Service = &v1beta2.AmbassadorService{
 					Type:           oldSpec.Ambassador.Service.Type,
 					LoadBalancerIP: oldSpec.Ambassador.Service.LoadBalancerIP,
 				}

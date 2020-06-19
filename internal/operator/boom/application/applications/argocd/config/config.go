@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/auth"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/plugin"
@@ -18,7 +18,7 @@ type Config struct {
 	ConfigManagementPlugins string `yaml:"configManagementPlugins,omitempty"`
 }
 
-func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Config {
+func GetFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) *Config {
 	conf := &Config{}
 
 	dexconfig := auth.GetDexConfigFromSpec(monitor, spec)

@@ -1,11 +1,11 @@
 package argocd
 
 import (
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
 	"strings"
 
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/customimage"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/helm"
@@ -13,20 +13,24 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) ([]interface{}, error) {
-	addedSecrets := customimage.GetSecrets(toolsetCRDSpec.Argocd)
-	repoSecrets := repository.GetSecrets(toolsetCRDSpec.Argocd)
-	credSecrets := credential.GetSecrets(toolsetCRDSpec.Argocd)
+func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
+	secrets := make([]interface{}, 0)
+	if toolsetCRDSpec.Reconciling == nil {
+		return secrets, nil
+	}
+	customimagesecrets := customimage.GetSecrets(toolsetCRDSpec.Reconciling)
+	repoSecrets := repository.GetSecrets(toolsetCRDSpec.Reconciling)
+	credSecrets := credential.GetSecrets(toolsetCRDSpec.Reconciling)
 
-	addedSecrets = append(addedSecrets, repoSecrets...)
-	addedSecrets = append(addedSecrets, credSecrets...)
-	return addedSecrets, nil
+	secrets = append(secrets, customimagesecrets...)
+	secrets = append(secrets, repoSecrets...)
+	secrets = append(secrets, credSecrets...)
+	return secrets, nil
 }
 
-func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, resultFilePath string) error {
-	spec := toolsetCRDSpec.Argocd
-
-	if spec.CustomImage != nil && spec.CustomImage.Enabled && spec.CustomImage.ImagePullSecret != "" {
+func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled && toolsetCRDSpec.Reconciling.CustomImage.ImagePullSecret != "" {
+		spec := toolsetCRDSpec.Reconciling
 		if err := customimage.AddImagePullSecretFromSpec(spec, resultFilePath); err != nil {
 			return err
 		}
@@ -41,11 +45,14 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 	return nil
 }
 
-func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.Argocd
-
+func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
 	values := helm.DefaultValues(imageTags)
+	if toolsetCRDSpec.Reconciling == nil {
+		return values
+	}
+
+	spec := toolsetCRDSpec.Reconciling
 	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		conf := customimage.FromSpec(spec, imageTags)
 		values.RepoServer.Image = &helm.Image{

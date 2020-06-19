@@ -2,7 +2,7 @@ package customimage
 
 import (
 	"encoding/json"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
@@ -62,7 +62,7 @@ func getInternalName(store string, ty string) string {
 	return strings.Join([]string{"store", store, ty}, "-")
 }
 
-func GetSecrets(spec *argocd.Argocd) []interface{} {
+func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 	namespace := "caos-system"
 	secrets := make([]interface{}, 0)
 
@@ -107,7 +107,7 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 	return secrets
 }
 
-func FromSpec(spec *argocd.Argocd, imageTags map[string]string) *CustomImage {
+func FromSpec(spec *reconciling.Reconciling, imageTags map[string]string) *CustomImage {
 	imageRepository := "docker.pkg.github.com/caos/argocd-secrets/argocd"
 
 	vols := make([]*SecretVolume, 0)
@@ -176,7 +176,7 @@ func getVolMount(internal, foldername string) *VolumeMount {
 	}
 }
 
-func AddImagePullSecretFromSpec(spec *argocd.Argocd, resultFilePath string) error {
+func AddImagePullSecretFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
 	addContent := strings.Join([]string{
 		tab, tab, tab, "imagePullSecrets:", nl,
 		tab, tab, tab, "- name: ", spec.CustomImage.ImagePullSecret, nl,
@@ -194,7 +194,7 @@ type store struct {
 	StoreName string `json:"storename"`
 }
 
-func AddPostStartFromSpec(spec *argocd.Argocd, resultFilePath string) error {
+func AddPostStartFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
 	stores := &stores{}
 	for _, v := range spec.CustomImage.GopassStores {
 		stores.Stores = append(stores.Stores, &store{Directory: v.Directory, StoreName: v.StoreName})

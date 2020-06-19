@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"strings"
 
 	"github.com/caos/orbos/mntr"
@@ -19,7 +19,7 @@ type connector struct {
 	Config interface{}
 }
 
-func GetDexConfigFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Connectors {
+func GetDexConfigFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) *Connectors {
 	logFields := map[string]interface{}{
 		"application": "argocd",
 	}
