@@ -79,7 +79,7 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, op
 		return nil
 	}
 
-	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
+	return push.RewriteDesiredFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
 }
 
 func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path, value string) error {
@@ -90,7 +90,7 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 
 	secret.Value = value
 
-	return push.SecretsFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
+	return push.RewriteDesiredFunc(gitClient, tree, strings.Join([]string{operator, "yml"}, "."))(monitor)
 }
 
 func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Secret {

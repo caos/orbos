@@ -9,12 +9,6 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func init() {
-	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
-		panic(err)
-	}
-}
-
 type FirewallEnsurer interface {
 	Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
 }
@@ -44,62 +38,73 @@ type Installer interface {
 	fmt.Stringer
 }
 
-func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
+func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
 
-	curr.Commit = commit
-	curr.NodeIsReady = isReady()
-
-	defer persistReadyness(curr.NodeIsReady)
-
-	var (
-		err            error
-		ensureFirewall func() error
-	)
-	curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
-	if err != nil {
-		return noop, err
+	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
+		panic(err)
 	}
 
-	installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
-	if err != nil {
-		return noop, err
-	}
+	return func(desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
+		curr.Commit = commit
+		curr.NodeIsReady = isReady()
 
-	curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
-		return dep.Current
-	})
+		defer persistReadyness(curr.NodeIsReady)
 
-	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-	if len(divergentSw) == 0 && ensureFirewall == nil {
-		curr.NodeIsReady = true
-		return noop, nil
-	}
-
-	if curr.NodeIsReady {
-		curr.NodeIsReady = false
-		monitor.Changed("Marked node as unready")
-		return noop, nil
-	}
-
-	return func() error {
-
-		if !desired.ChangesAllowed {
-			monitor.Info("Changes are not allowed")
-			return nil
+		var (
+			err            error
+			ensureFirewall func() error
+		)
+		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
+		if err != nil {
+			return noop, err
 		}
 
-		if ensureFirewall != nil {
-			if err := ensureFirewall(); err != nil {
-				return err
+		installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
+		if err != nil {
+			return noop, err
+		}
+
+		curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
+			return dep.Current
+		})
+
+		divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
+		if len(divergentSw) == 0 && ensureFirewall == nil {
+			curr.NodeIsReady = true
+			return noop, nil
+		}
+
+		if curr.NodeIsReady {
+			curr.NodeIsReady = false
+			monitor.Changed("Marked node as unready")
+			return noop, nil
+		}
+
+		return func() error {
+
+			if !desired.ChangesAllowed {
+				monitor.Info("Changes are not allowed")
+				return nil
 			}
-			curr.Open = desired.Firewall.Ports()
-			monitor.Changed("Firewall changed")
-		}
 
-		ensureDep := ensureFunc(monitor, conv, curr)
-		_, err := deriveTraverse(ensureDep, divergentSw)
-		return err
-	}, nil
+			if ensureFirewall != nil {
+				if err := ensureFirewall(); err != nil {
+					return err
+				}
+				curr.Open = desired.Firewall.Ports()
+				monitor.Changed("Firewall changed")
+			}
+
+			if len(divergentSw) > 0 {
+				monitor.WithField("software", deriveFmap(func(dependency *Dependency) string {
+					return dependency.Installer.String()
+				}, divergentSw)).Info("Ensuring software")
+			}
+			ensureDep := ensureFunc(monitor, conv, curr)
+			_, err := deriveTraverse(ensureDep, divergentSw)
+			return err
+		}, nil
+	}
 }
 
 func queryFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error) {
@@ -115,7 +120,7 @@ func queryFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error) 
 }
 
 func divergent(dep *Dependency) bool {
-	return !dep.Desired.Equals(dep.Current)
+	return !dep.Desired.Equals(common.Package{}) && !dep.Desired.Equals(dep.Current)
 }
 
 func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurrent) func(dep *Dependency) (*Dependency, error) {

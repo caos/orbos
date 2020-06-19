@@ -22,8 +22,7 @@ spec:
         app: orbiter
     spec:
       containers:
-        - command:
-            - /orbctl
+        - args:
             - --orbconfig
             - /etc/orbiter/orbconfig
             - takeoff
@@ -39,6 +38,8 @@ spec:
           ports:
           - name: metrics
             containerPort: 9000
+          - name: debug
+            containerPort: 2345
           imagePullPolicy: IfNotPresent
           name: orbiter
           resources:

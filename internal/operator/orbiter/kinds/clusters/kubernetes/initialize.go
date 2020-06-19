@@ -40,11 +40,11 @@ func (i *initializedPool) enhance(initialize initializeFunc) {
 
 type initializedMachine struct {
 	infra            infra.Machine
-	tier             Tier
 	reconcile        func() error
 	currentNodeagent *common.NodeAgentCurrent
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
+	pool             *initializedPool
 }
 
 func initialize(
@@ -77,7 +77,7 @@ func initialize(
 			desired: desired,
 		}
 		pool.machines = func() ([]*initializedMachine, error) {
-			infraMachines, err := infraPool.GetMachines(true)
+			infraMachines, err := infraPool.GetMachines()
 			if err != nil {
 				return nil, err
 			}
@@ -151,9 +151,9 @@ func initialize(
 		}
 
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
-		if !naSpec.Software.Defines(k8sSoftware) {
+		if !softwareDefines(*naSpec.Software, k8sSoftware) {
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
-			if !naSpec.Software.Contains(k8sSoftware) {
+			if !softwareContains(*naSpec.Software, k8sSoftware) {
 				naSpec.Software.Merge(k8sSoftware)
 				machineMonitor.Changed("Kubernetes software desired")
 			}
@@ -163,9 +163,9 @@ func initialize(
 			infra:            machine,
 			currentNodeagent: naCurr,
 			desiredNodeagent: naSpec,
-			tier:             pool.tier,
 			reconcile:        reconcile,
 			currentMachine:   current,
+			pool:             &pool,
 		}
 
 		postInit(initMachine)
@@ -216,7 +216,7 @@ func initialize(
 		if !machine.currentMachine.Ready {
 			curr.Status = "degraded"
 		}
-		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.NodeAgentIsRunning || !machine.currentMachine.FirewallIsReady {
+		if !machine.currentMachine.Online || !machine.currentMachine.Joined || !machine.currentMachine.FirewallIsReady {
 			curr.Status = "maintaining"
 			break
 		}

@@ -3,6 +3,10 @@ package start
 import (
 	"context"
 	"errors"
+	"runtime/debug"
+	"strings"
+	"time"
+
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -17,9 +21,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
-	"runtime/debug"
-	"strings"
-	"time"
 )
 
 type OrbiterConfig struct {
@@ -34,7 +35,9 @@ type OrbiterConfig struct {
 }
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
-	orbiter.Metrics()
+	if conf.Recur {
+		orbiter.Metrics()
+	}
 
 	finishedChan := make(chan bool)
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)

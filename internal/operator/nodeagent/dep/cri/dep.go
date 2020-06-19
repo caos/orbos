@@ -48,6 +48,10 @@ func (s *criDep) Equals(other nodeagent.Installer) bool {
 }
 
 func (c *criDep) Current() (pkg common.Package, err error) {
+	if !c.systemd.Active("docker") {
+		return pkg, err
+	}
+
 	installed, err := c.manager.CurrentVersions("docker-ce")
 	if err != nil {
 		return pkg, err
@@ -60,7 +64,7 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (c *criDep) Ensure(uninstall common.Package, install common.Package) error {
+func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {

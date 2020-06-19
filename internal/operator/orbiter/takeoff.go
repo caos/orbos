@@ -2,12 +2,13 @@ package orbiter
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
-	"net/http"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -15,7 +16,18 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type EnsureFunc func(psf push.Func) error
+func ToEnsureResult(done bool, err error) *EnsureResult {
+	return &EnsureResult{
+		Err:  err,
+		Done: done,
+	}
+}
+
+type EnsureResult struct {
+	Err  error
+	Done bool
+}
+type EnsureFunc func(psf push.Func) *EnsureResult
 
 type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
 
@@ -33,8 +45,9 @@ func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
 	ret := <-retChan
 	return ret.ensure, ret.err
 }
-func EnsureFuncGoroutine(ensure func() error) error {
-	retChan := make(chan error)
+
+func EnsureFuncGoroutine(ensure func() *EnsureResult) *EnsureResult {
+	retChan := make(chan *EnsureResult)
 	go func() {
 		retChan <- ensure()
 	}()
@@ -169,14 +182,20 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 
 		events = make([]*event, 0)
 
-		ensureFunc := func() error {
-			return ensure(push.SecretsFunc(conf.GitClient, treeDesired, "orbiter.yml"))
+		ensureFunc := func() *EnsureResult {
+			return ensure(push.RewriteDesiredFunc(conf.GitClient, treeDesired, "orbiter.yml"))
 		}
-		if err := EnsureFuncGoroutine(ensureFunc); err != nil {
-			handleAdapterError(err)
+		result := EnsureFuncGoroutine(ensureFunc)
+		if result.Err != nil {
+			handleAdapterError(result.Err)
 			return
 		}
 
+		if result.Done {
+			monitor.Info("Desired state is ensured")
+		} else {
+			monitor.Info("Desired state is not yet ensured")
+		}
 		if err := conf.GitClient.Clone(); err != nil {
 			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 			return

@@ -29,6 +29,15 @@ func deriveFilter(predicate func(*Dependency) bool, list []*Dependency) []*Depen
 	return list[:j]
 }
 
+// deriveFmap returns a list where each element of the input list has been morphed by the input function.
+func deriveFmap(f func(*Dependency) string, list []*Dependency) []string {
+	out := make([]string, len(list))
+	for i, elem := range list {
+		out[i] = f(elem)
+	}
+	return out
+}
+
 // deriveAny reports whether the predicate returns true for any of the elements in the given slice.
 func deriveAny(pred func(*Dependency) bool, list []*Dependency) bool {
 	for _, elem := range list {

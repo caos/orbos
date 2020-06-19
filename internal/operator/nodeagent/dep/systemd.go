@@ -82,3 +82,12 @@ func (s *SystemD) Enable(binary string) error {
 	}
 	return errors.Wrapf(cmd.Run(), "configuring systemd to manage %s failed with stderr %s", binary, errBuf.String())
 }
+
+func (s *SystemD) Active(binary string) bool {
+	cmd := exec.Command("systemctl", "is-active", binary)
+	if s.monitor.IsVerbose() {
+		fmt.Println(strings.Join(cmd.Args, " "))
+		cmd.Stdout = os.Stdout
+	}
+	return cmd.Run() == nil
+}

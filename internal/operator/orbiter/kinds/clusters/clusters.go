@@ -34,7 +34,6 @@ func GetQueryAndDestroyFuncs(
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
 			return kubernetes.AdaptFunc(
 				orb,
-				orbiterCommit,
 				clusterID,
 				oneoff,
 				deployOrbiter,

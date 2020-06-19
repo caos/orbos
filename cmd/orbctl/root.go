@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+
+	"github.com/spf13/cobra"
+
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
-	"github.com/spf13/cobra"
 )
 
 type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, errFunc)

@@ -29,20 +29,6 @@ func deriveFilterMachines(predicate func(infra.Machine) bool, list []infra.Machi
 	return list[:j]
 }
 
-// deriveFilterSources returns a list of all items in the list that matches the predicate.
-func deriveFilterSources(predicate func(*Source) bool, list []*Source) []*Source {
-	j := 0
-	for i, elem := range list {
-		if predicate(elem) {
-			if i != j {
-				list[j] = list[i]
-			}
-			j++
-		}
-	}
-	return list[:j]
-}
-
 // deriveKeys returns the keys of the input map as a slice.
 func deriveKeys(m map[string]struct{}) []string {
 	keys := make([]string, 0, len(m))

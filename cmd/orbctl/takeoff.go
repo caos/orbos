@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io/ioutil"
+
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
@@ -12,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 

@@ -18,7 +18,7 @@ func Destroy(providers map[string]interface{}) (err error) {
 		}
 		pools := prov.Pools()
 		for _, pool := range pools {
-			comps, gcErr := pool.GetMachines(true)
+			comps, gcErr := pool.GetMachines()
 			if gcErr != nil {
 				err = gcErr
 				continue

@@ -41,6 +41,3 @@ func (c *cmpLB) WriteFile(path string, data io.Reader, permissions uint16) error
 func (c *cmpLB) ReadFile(path string, data io.Writer) error {
 	return c.original.ReadFile(path, data)
 }
-func (c *cmpLB) UseKey(keys ...[]byte) error {
-	return c.original.UseKey(keys...)
-}

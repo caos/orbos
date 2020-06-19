@@ -19,15 +19,12 @@ func query(
 	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
 	nodeAgentsDesired map[string]*common.NodeAgentSpec,
 	k8sClient *Client,
-	repoURL string,
-	repoKey string,
-	orbiterCommit string,
 	oneoff bool) (orbiter.EnsureFunc, error) {
 
 	current.Machines = make(map[string]*Machine)
 
 	cloudPools := make(map[string]map[string]infra.Pool)
-	var kubeAPIAddress infra.Address
+	var kubeAPIAddress *infra.Address
 
 	for providerName, provider := range providerCurrents {
 		if cloudPools[providerName] == nil {
@@ -39,10 +36,11 @@ func query(
 		for providerPoolName, providerPool := range providerPools {
 			cloudPools[providerName][providerPoolName] = providerPool
 			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
-				kubeAPIAddress = providerIngresses["kubeapi"]
-				monitor.WithFields(map[string]interface{}{
-					"address": kubeAPIAddress,
-				}).Debug("Found kubernetes api address")
+				var ok bool
+				kubeAPIAddress, ok = providerIngresses["kubeapi"]
+				if !ok {
+					panic(errors.New("no externally reachable address named kubeapi found"))
+				}
 			}
 		}
 	}
@@ -57,13 +55,6 @@ func query(
 		}
 	}
 
-	queryNodeAgent, installNodeAgent := nodeAgentFuncs(
-		monitor,
-		orbiterCommit,
-		repoURL,
-		repoKey,
-	)
-
 	controlplane, controlplaneMachines, workers, workerMachines, initializeMachine, uninitializeMachine, err := initialize(
 		monitor,
 		current,
@@ -73,16 +64,14 @@ func query(
 		cloudPools,
 		k8sClient,
 		func(machine *initializedMachine) {
-			queryNodeAgent(machine)
-			firewallFunc(monitor, *desired, kubeAPIAddress.Port)(machine)
+			firewallFunc(monitor, *desired, kubeAPIAddress.FrontendPort)(machine)
 		})
 
-	return func(psf push.Func) error {
-		return ensure(
+	return func(psf push.Func) *orbiter.EnsureResult {
+		return orbiter.ToEnsureResult(ensure(
 			monitor,
 			clusterID,
 			desired,
-			current,
 			kubeAPIAddress,
 			psf,
 			k8sClient,
@@ -92,8 +81,7 @@ func query(
 			workers,
 			workerMachines,
 			initializeMachine,
-			uninitializeMachine,
-			installNodeAgent)
+			uninitializeMachine))
 	}, err
 }
 

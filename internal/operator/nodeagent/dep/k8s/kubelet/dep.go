@@ -48,11 +48,13 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-func (k *kubeletDep) Current() (common.Package, error) {
-	pkg, err := k.common.Current()
+func (k *kubeletDep) Current() (pkg common.Package, err error) {
+
+	pkg, err = k.common.Current()
 	if err != nil {
 		return pkg, err
 	}
+
 	return pkg, selinux.Current(k.os, &pkg)
 }
 
@@ -80,35 +82,11 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 	}
 	errBuf.Reset()
 
-	file, err := os.Create("/etc/sysctl.d/k8s.conf")
-	if err != nil {
-		return errors.Wrap(err, "opening /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
-	}
-	defer file.Close()
-
-	file.Write(([]byte(`net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-		`)))
-	if err != nil {
-		return errors.Wrap(err, "writing to /etc/sysctl.d/k8s.conf in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed")
-	}
-	file.Close()
-
-	cmd = exec.Command("sysctl", "--system")
-	cmd.Stderr = errBuf
-	if k.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running sysctl --system in order to set net.bridge.bridge-nf-call-iptables to 1 while installing kubelet failed with stderr %s", errBuf.String())
-	}
-
 	return k.ensurePackage(remove, install)
 }
 
 func (k *kubeletDep) ensurePackage(remove common.Package, install common.Package) error {
+
 	if err := k.common.Ensure(remove, install); err != nil {
 		return err
 	}
