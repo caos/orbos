@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/caos/orbos/internal/push"
 
@@ -69,33 +70,47 @@ func ensureScale(
 		return delta <= 0, nil
 	}
 
-	upscalingDone, err := alignMachines(controlplanePool)
-	if err != nil {
-		return false, err
-	}
+	var wg sync.WaitGroup
 
-	machines, err := controlplanePool.machines()
-	if err != nil {
-		return false, err
-	}
-
-	ensuredControlplane := len(machines)
-	var ensuredWorkers int
-	for _, workerPool := range workerPools {
-		workerUpscalingDone, err := alignMachines(workerPool)
+	var machines []*initializedMachine
+	var upscalingDone bool
+	alignPool := func(pool initializedPool, ensured func(int)) {
+		defer wg.Done()
+		poolDone, alignErr := alignMachines(pool)
+		err = helpers.Concat(err, alignErr)
 		if err != nil {
-			return false, err
+			return
 		}
-		if !workerUpscalingDone {
+		if !poolDone {
 			upscalingDone = false
 		}
-
-		workerMachines, err := workerPool.machines()
+		poolMachines, listErr := pool.machines()
+		err = helpers.Concat(err, listErr)
 		if err != nil {
-			return false, err
+			return
 		}
-		ensuredWorkers += len(workerMachines)
-		machines = append(machines, workerMachines...)
+		machines = append(machines, poolMachines...)
+		if ensured != nil {
+			ensured(len(poolMachines))
+		}
+	}
+
+	var ensuredControlplane int
+	wg.Add(1)
+	go alignPool(controlplanePool, func(ensured int) {
+		ensuredControlplane = ensured
+	})
+
+	var ensuredWorkers int
+	for _, workerPool := range workerPools {
+		wg.Add(1)
+		go alignPool(workerPool, func(ensured int) {
+			ensuredWorkers += ensured
+		})
+	}
+	wg.Wait()
+	if err != nil {
+		return false, err
 	}
 
 	if !upscalingDone {

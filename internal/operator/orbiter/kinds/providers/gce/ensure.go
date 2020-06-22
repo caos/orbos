@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
+
+	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -25,8 +28,8 @@ func query(
 	current *Current,
 	lb interface{},
 	context *context,
-	currentNodeAgents map[string]*common.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	currentNodeAgents *common.CurrentNodeAgents,
+	nodeAgentsDesired *common.DesiredNodeAgents,
 	orbiterCommit,
 	repoURL,
 	repoKey string,
@@ -57,20 +60,9 @@ func query(
 	desireNodeAgent := func(pool string, machine infra.Machine) error {
 
 		machineID := machine.ID()
-		na, ok := nodeAgentsDesired[machineID]
-		if !ok {
-			na = &common.NodeAgentSpec{}
-			nodeAgentsDesired[machineID] = na
-		}
-		if na.Software == nil {
-			na.Software = &common.Software{}
-		}
+		na, _ := nodeAgentsDesired.Get(machineID)
 		if na.Software.Health.Config == nil {
 			na.Software.Health.Config = make(map[string]string)
-		}
-		if na.Firewall == nil {
-			fw := common.Firewall(make(map[string]*common.Allowed))
-			na.Firewall = &fw
 		}
 
 		for _, lb := range normalized {
@@ -88,12 +80,12 @@ func query(
 						internalPort(lb),
 						lb.healthcheck.desired.Path,
 					)
-					na.Firewall.Merge(map[string]*common.Allowed{
+					na.Firewall.Merge(common.ToFirewall(map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
 							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
 							Protocol: "tcp",
 						},
-					})
+					}))
 					break
 				}
 			}
@@ -110,7 +102,7 @@ func query(
 	}
 
 	context.machinesService.onCreate = desireNodeAgent
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, nodeAgentsDesired, false, nil, func(vip *dynamic.VIP) string {
+	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, false, nil, func(vip *dynamic.VIP) string {
 		for _, transport := range vip.Transport {
 			address, ok := current.Current.Ingresses[transport.Name]
 			if ok {
@@ -147,16 +139,24 @@ func query(
 			return orbiter.ToEnsureResult(false, err)
 		}
 
+		var wg sync.WaitGroup
 		for _, pool := range pools {
 			machines, err := context.machinesService.List(pool)
 			if err != nil {
 				return orbiter.ToEnsureResult(false, err)
 			}
 			for _, machine := range machines {
-				if err := desireNodeAgent(pool, machine); err != nil {
-					return orbiter.ToEnsureResult(false, err)
-				}
+				wg.Add(1)
+				go func() {
+					err = helpers.Concat(err, desireNodeAgent(pool, machine))
+					wg.Done()
+				}()
 			}
+		}
+		wg.Wait()
+
+		if err != nil {
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		return orbiter.ToEnsureResult(wrappedMachines.InitializeDesiredNodeAgents())

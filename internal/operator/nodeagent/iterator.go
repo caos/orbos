@@ -3,7 +3,6 @@
 package nodeagent
 
 import (
-	"errors"
 	"fmt"
 	"runtime/debug"
 
@@ -38,12 +37,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			panic(err)
 		}
 
-		if desired.Spec.NodeAgents == nil {
-			monitor.Error(errors.New("no desired node agents found"))
-			return
-		}
-
-		naDesired, ok := desired.Spec.NodeAgents[id]
+		naDesired, ok := desired.Spec.NodeAgents.Get(id)
 		if !ok {
 			monitor.Error(fmt.Errorf("No desired state for node agent with id %s found", id))
 			return
@@ -86,14 +80,11 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &current)
 			current.Kind = "nodeagent.caos.ch/NodeAgents"
 			current.Version = "v0"
-			if current.Current == nil {
-				current.Current = make(map[string]*common.NodeAgentCurrent)
-			}
 			return current
 		}
 
 		current := readCurrent()
-		current.Current[id] = curr
+		current.Current.Set(id, curr)
 
 		reconciledCurrentStateMsg := "Current state reconciled"
 		reconciledCurrent, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), git.File{
@@ -117,7 +108,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 		current = readCurrent()
 
 		for _, event := range events {
-			current.Current[id] = event.current
+			current.Current.Set(id, event.current)
 			changed, err := gitClient.StageAndCommit(event.commit, git.File{
 				Path:    "caos-internal/orbiter/node-agents-current.yml",
 				Content: common.MarshalYAML(current),

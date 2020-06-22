@@ -29,7 +29,7 @@ type EnsureResult struct {
 }
 type EnsureFunc func(psf push.Func) *EnsureResult
 
-type QueryFunc func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, queried map[string]interface{}) (EnsureFunc, error)
+type QueryFunc func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, queried map[string]interface{}) (EnsureFunc, error)
 
 type retQuery struct {
 	ensure EnsureFunc
@@ -93,9 +93,6 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		desiredNodeAgents.Kind = "nodeagent.caos.ch/NodeAgents"
 		desiredNodeAgents.Version = "v0"
 		desiredNodeAgents.Spec.Commit = conf.OrbiterCommit
-		if desiredNodeAgents.Spec.NodeAgents == nil {
-			desiredNodeAgents.Spec.NodeAgents = make(map[string]*common.NodeAgentSpec)
-		}
 
 		marshalCurrentFiles := func() []git.File {
 			return []git.File{{
@@ -138,10 +135,6 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 			return
 		}
 
-		if currentNodeAgents.Current == nil {
-			currentNodeAgents.Current = make(map[string]*common.NodeAgentCurrent)
-		}
-
 		handleAdapterError := func(err error) {
 			monitor.Error(err)
 			//			monitor.Error(gitClient.Clone())
@@ -153,7 +146,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 
 		queryFunc := func() (EnsureFunc, error) {
-			return query(currentNodeAgents.Current, desiredNodeAgents.Spec.NodeAgents, nil)
+			return query(&currentNodeAgents.Current, &desiredNodeAgents.Spec.NodeAgents, nil)
 		}
 		ensure, err := QueryFuncGoroutine(queryFunc)
 		if err != nil {
@@ -208,6 +201,11 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 				monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", event.commit, err.Error()))
 				return
 			}
+
+			monitor.WithFields(map[string]interface{}{
+				event.files[0].Path: string(event.files[0].Content),
+				event.files[1].Path: string(event.files[1].Content),
+			}).Debug("Current files staged")
 
 			if !changed {
 				panic(fmt.Sprint("Event has no effect:", event.commit))

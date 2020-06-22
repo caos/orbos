@@ -40,7 +40,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		addPorts := make([]string, 0)
 		removePorts := make([]string, 0)
 	openloop:
-		for _, des := range desired {
+		for _, des := range append(desired.Ports(), ignoredPorts(ignore)...) {
 			desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
 			for _, already := range append(alreadyOpen, ignore...) {
 				if desStr == already {
@@ -50,13 +50,6 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
 		}
 
-		for _, ign := range ignore {
-			desired[ign] = &common.Allowed{
-				Port:     ign,
-				Protocol: "tcp",
-			}
-		}
-
 		current := make([]*common.Allowed, len(alreadyOpen))
 	closeloop:
 		for idx, already := range alreadyOpen {
@@ -64,7 +57,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			port := fields[0]
 			protocol := fields[1]
 			current[idx] = &common.Allowed{Port: port, Protocol: protocol}
-			for _, des := range desired {
+			for _, des := range desired.Ports() {
 				if des.Port == port && des.Protocol == protocol {
 					continue closeloop
 				}
@@ -81,7 +74,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		monitor.WithFields(map[string]interface{}{
 			"open":  strings.Join(addPorts, ";"),
 			"close": strings.Join(removePorts, ";"),
-		}).Debug("Firewall changes determined")
+		}).Debug("firewall changes determined")
 
 		if cmd.Run() != nil || len(addPorts) == 0 && len(removePorts) == 0 {
 			monitor.Debug("Not changing firewall")
@@ -95,6 +88,17 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			return ensure(monitor, removePorts)
 		}, nil
 	})
+}
+
+func ignoredPorts(ports []string) []*common.Allowed {
+	allowed := make([]*common.Allowed, len(ports))
+	for idx, port := range ports {
+		allowed[idx] = &common.Allowed{
+			Port:     port,
+			Protocol: "tcp",
+		}
+	}
+	return allowed
 }
 
 func ensure(monitor mntr.Monitor, changes []string) error {
@@ -139,7 +143,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
 
 	defer func() {
 		if err == nil {
-			changesMonitor.Debug("Firewall changed")
+			changesMonitor.Debug("firewall changed")
 		} else {
 			changesMonitor.Error(err)
 		}

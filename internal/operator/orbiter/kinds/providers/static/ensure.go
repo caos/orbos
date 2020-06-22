@@ -1,6 +1,9 @@
 package static
 
 import (
+	"sync"
+
+	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/push"
@@ -19,8 +22,8 @@ func query(
 	desired *DesiredV0,
 	current *Current,
 
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired *common.DesiredNodeAgents,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
 	lb interface{},
 	masterkey string,
 
@@ -69,7 +72,7 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, true, nil, mapVIP)
+		wrappedMachinesService := wrap.MachinesService(machinesSvc, *lbCurrent, true, nil, mapVIP)
 		machinesSvc = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
@@ -95,19 +98,24 @@ func query(
 	}
 
 	return func(psf push.Func) *orbiter.EnsureResult {
+		var wg sync.WaitGroup
 		for _, pool := range pools {
 			machines, err := machinesSvc.List(pool)
 			if err != nil {
 				return orbiter.ToEnsureResult(false, err)
 			}
 			for _, machine := range machines {
-				ensureNodeFuncFunc := func() *orbiter.EnsureResult {
-					return orbiter.ToEnsureResult(true, ensureNodeFunc(machine, pool))
-				}
-				if result := orbiter.EnsureFuncGoroutine(ensureNodeFuncFunc); result.Err != nil {
-					return result
-				}
+				wg.Add(1)
+				go func() {
+					err = helpers.Concat(err, ensureNodeFunc(machine, pool))
+					wg.Done()
+				}()
 			}
+		}
+
+		wg.Wait()
+		if err != nil {
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&

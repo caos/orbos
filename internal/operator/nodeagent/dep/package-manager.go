@@ -48,6 +48,7 @@ func (p *PackageManager) RefreshInstalled() error {
 
 func (p *PackageManager) Init() error {
 
+	p.monitor.Debug("Initializing package manager")
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
@@ -60,7 +61,7 @@ func (p *PackageManager) Init() error {
 		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
 	}
 
-	p.monitor.Info("Packages are updated")
+	p.monitor.Debug("Package manager initialized")
 	return nil
 }
 

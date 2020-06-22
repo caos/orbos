@@ -51,8 +51,8 @@ func initialize(
 	monitor mntr.Monitor,
 	curr *CurrentCluster,
 	desired DesiredV0,
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
+	nodeAgentsDesired *common.DesiredNodeAgents,
 	providerPools map[string]map[string]infra.Pool,
 	k8s *Client,
 	postInit func(machine *initializedMachine)) (
@@ -133,23 +133,9 @@ func initialize(
 
 		machineMonitor := monitor.WithField("machine", machine.ID())
 
-		naSpec, ok := nodeAgentsDesired[machine.ID()]
-		if !ok {
-			naSpec = &common.NodeAgentSpec{}
-			nodeAgentsDesired[machine.ID()] = naSpec
-		}
+		naSpec, _ := nodeAgentsDesired.Get(machine.ID())
 		naSpec.ChangesAllowed = !pool.desired.UpdatesDisabled
-
-		naCurr, ok := nodeAgentsCurrent[machine.ID()]
-		if !ok || naCurr == nil {
-			naCurr = &common.NodeAgentCurrent{}
-			nodeAgentsCurrent[machine.ID()] = naCurr
-		}
-
-		if naSpec.Software == nil {
-			naSpec.Software = &common.Software{}
-		}
-
+		naCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
 		if !softwareDefines(*naSpec.Software, k8sSoftware) {
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
@@ -227,7 +213,7 @@ func initialize(
 		workers,
 		workerMachines,
 		initializeMachine, func(id string) {
-			delete(nodeAgentsDesired, id)
+			nodeAgentsDesired.Delete(id)
 			delete(curr.Machines, id)
 		}, nil
 }

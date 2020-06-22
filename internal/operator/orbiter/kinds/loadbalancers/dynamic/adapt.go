@@ -89,7 +89,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 		currentTree.Parsed = current
 
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeagents map[string]*common.NodeAgentSpec, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
+		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeagents *common.DesiredNodeAgents, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
 
 			wl := whitelist()
 
@@ -112,22 +112,12 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
 					machineMonitor := monitor.WithField("machine", machine.ID())
-					deepNa, ok := nodeagents[machine.ID()]
-					if !ok {
-						deepNa = &common.NodeAgentSpec{}
-						nodeagents[machine.ID()] = deepNa
-					}
-					deepNaCurr := common.NodeAgentCurrent{}
-					if naCurr, ok := nodeAgentsCurrent[machine.ID()]; ok {
-						deepNaCurr = *naCurr
-					}
-					if deepNa.Firewall == nil {
-						deepNa.Firewall = &common.Firewall{}
-					}
+					deepNa, _ := nodeagents.Get(machine.ID())
+					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
 						deepNa.Firewall.Merge(fw)
-						machineMonitor.Changed("Loadbalancing Firewall desired")
+						machineMonitor.Changed("Loadbalancing firewall desired")
 					}
 					if !fw.IsContainedIn(deepNaCurr.Open) {
 						machineMonitor.WithField("ports", deepNa.Firewall.Ports()).Info("Awaiting firewalld config")
@@ -380,7 +370,7 @@ http {
 							ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 							ngxBuf.Reset()
 
-							desireNodeAgent(d.Self, common.Firewall{}, ngxPkg, kaPkg)
+							desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
 						}
 					}
 				}
@@ -401,7 +391,7 @@ http {
 						var natVIPProbed bool
 						if balanceLoad {
 							for _, machine := range lbMachines {
-								desireNodeAgent(machine, srcFW, common.Package{}, common.Package{})
+								desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
 							}
 							probeVIP()
 						}
@@ -420,7 +410,7 @@ http {
 							}
 
 							for _, machine := range destMachines {
-								desireNodeAgent(machine, destFW, common.Package{}, common.Package{})
+								desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
 								probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
 								if !balanceLoad && forPool == dest {
 									if !natVIPProbed {
@@ -432,7 +422,7 @@ http {
 									if !ok {
 										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
 									}
-									nodeNatDesires.Firewall = srcFW
+									nodeNatDesires.Firewall = common.ToFirewall(srcFW)
 									nodeNatDesires.Machine = machine
 									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
 										Name: transport.Name,

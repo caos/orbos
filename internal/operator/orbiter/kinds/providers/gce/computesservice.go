@@ -123,9 +123,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	})
 
 	if err := operateFunc(
-		func() { monitor.Info("Creating instance") },
+		func() { monitor.Debug("Creating instance") },
 		computeOpCall(m.context.client.Instances.Insert(m.context.projectID, m.context.desired.Zone, createInstance).RequestId(uuid.NewV1().String()).Do),
-		nil,
+		func() error { monitor.Info("Instance created"); return nil },
 	)(); err != nil {
 		return nil, err
 	}
@@ -233,7 +233,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		pool := inst.Labels["pool"]
 		mach := newMachine(
 			m.context,
-			m.context.monitor.WithFields(toFields(inst.Labels)),
+			m.context.monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
 			inst.Name,
 			inst.NetworkInterfaces[0].NetworkIP,
 			inst.SelfLink,

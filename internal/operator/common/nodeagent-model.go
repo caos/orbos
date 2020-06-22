@@ -4,6 +4,7 @@ package common
 
 import (
 	"regexp"
+	"sync"
 )
 
 type NodeAgentSpec struct {
@@ -124,18 +125,26 @@ func PackageEquals(this, that Package) bool {
 	return equals
 }
 
-type Firewall map[string]*Allowed
+type Firewall struct {
+	mux sync.Mutex          `yaml:"-"`
+	FW  map[string]*Allowed `yaml:",inline"`
+}
+
+func ToFirewall(fw map[string]*Allowed) Firewall {
+	return Firewall{FW: fw}
+}
 
 func (f *Firewall) Merge(fw Firewall) {
-	for key, value := range fw {
-		m := *f
-		m[key] = value
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	for key, value := range fw.FW {
+		f.FW[key] = value
 	}
 }
 
 func (f *Firewall) Ports() []*Allowed {
 	ports := make([]*Allowed, 0)
-	for _, value := range *f {
+	for _, value := range f.FW {
 		ports = append(ports, value)
 	}
 	return ports
@@ -147,8 +156,8 @@ type Allowed struct {
 }
 
 func (f Firewall) Contains(other Firewall) bool {
-	for name, port := range other {
-		found, ok := f[name]
+	for name, port := range other.FW {
+		found, ok := f.FW[name]
 		if !ok {
 			return false
 		}
@@ -161,7 +170,7 @@ func (f Firewall) Contains(other Firewall) bool {
 
 func (f Firewall) IsContainedIn(ports []*Allowed) bool {
 checks:
-	for _, fwPort := range f {
+	for _, fwPort := range f.FW {
 		for _, port := range ports {
 			if deriveEqualPort(*port, *fwPort) {
 				continue checks
@@ -175,12 +184,76 @@ checks:
 type NodeAgentsCurrentKind struct {
 	Kind    string
 	Version string
-	Current map[string]*NodeAgentCurrent `yaml:",omitempty"`
+	Current CurrentNodeAgents
+}
+
+type CurrentNodeAgents struct {
+	// NA is exported for yaml (de)serialization and not intended to be accessed by any other code outside this package
+	NA  map[string]*NodeAgentCurrent `yaml:",inline"`
+	mux sync.Mutex                   `yaml:"-"`
+}
+
+func (n *CurrentNodeAgents) Set(id string, na *NodeAgentCurrent) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	n.NA[id] = na
+}
+
+func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+
+	if n.NA == nil {
+		n.NA = make(map[string]*NodeAgentCurrent)
+	}
+
+	na, ok := n.NA[id]
+	if !ok {
+		na = &NodeAgentCurrent{
+			Open: make([]*Allowed, 0),
+		}
+		n.NA[id] = na
+	}
+	return na, ok
+
 }
 
 type NodeAgentsSpec struct {
 	Commit     string
-	NodeAgents map[string]*NodeAgentSpec
+	NodeAgents DesiredNodeAgents
+}
+
+type DesiredNodeAgents struct {
+	// NA is exported for yaml (de)serialization and not intended to be accessed by any other code outside this package
+	NA  map[string]*NodeAgentSpec `yaml:",inline"`
+	mux sync.Mutex                `yaml:"-"`
+}
+
+func (n *DesiredNodeAgents) Delete(id string) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	delete(n.NA, id)
+}
+
+func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+
+	if n.NA == nil {
+		n.NA = make(map[string]*NodeAgentSpec)
+	}
+
+	na, ok := n.NA[id]
+	if !ok {
+		na = &NodeAgentSpec{
+			Software: &Software{},
+			Firewall: &Firewall{
+				FW: make(map[string]*Allowed),
+			},
+		}
+		n.NA[id] = na
+	}
+	return na, ok
 }
 
 type NodeAgentsDesiredKind struct {

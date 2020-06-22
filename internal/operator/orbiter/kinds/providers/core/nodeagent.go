@@ -20,7 +20,7 @@ func NodeAgentFuncs(
 	orbiterCommit string,
 	repoURL string,
 	repoKey string,
-	currentNodeAgents map[string]*common.NodeAgentCurrent) (queryNodeAgent func(machine infra.Machine) (bool, error), install func(machine infra.Machine) error) {
+	currentNodeAgents *common.CurrentNodeAgents) (queryNodeAgent func(machine infra.Machine) (bool, error), install func(machine infra.Machine) error) {
 
 	return func(machine infra.Machine) (running bool, err error) {
 
@@ -39,13 +39,12 @@ func NodeAgentFuncs(
 				return false, nil
 			}
 
-			current, ok := currentNodeAgents[machine.ID()]
-			if ok && current.Commit == orbiterCommit {
+			current, _ := currentNodeAgents.Get(machine.ID())
+			if current.Commit == orbiterCommit {
 				return true, nil
 			}
 
 			showVersion := "node-agent --version"
-
 			err = infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
 				var cbErr error
 				response, cbErr = cmp.Execute(nil, nil, showVersion)

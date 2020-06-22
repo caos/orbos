@@ -92,7 +92,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 					return err
 				}
 				curr.Open = desired.Firewall.Ports()
-				monitor.Changed("Firewall changed")
+				monitor.Changed("firewall changed")
 			}
 
 			if len(divergentSw) > 0 {
