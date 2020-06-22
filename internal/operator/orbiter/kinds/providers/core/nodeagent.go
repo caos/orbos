@@ -127,7 +127,6 @@ Type=simple
 User=root
 ExecStart=%s --repourl "%s" --id "%s"
 Restart=always
-MemoryMax=250M
 MemoryLimit=250M
 RestartSec=10
 
