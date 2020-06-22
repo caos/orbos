@@ -39,8 +39,13 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		alreadyOpen := strings.Fields(stdout)
 		addPorts := make([]string, 0)
 		removePorts := make([]string, 0)
+
+		desiredOpen := desired.Ports()
+		if len(ignore) > 0 {
+			desiredOpen = append(desiredOpen, ignoredPorts(ignore)...)
+		}
 	openloop:
-		for _, des := range append(desired.Ports(), ignoredPorts(ignore)...) {
+		for _, des := range desiredOpen {
 			desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
 			for _, already := range append(alreadyOpen, ignore...) {
 				if desStr == already {
