@@ -106,10 +106,10 @@ func query(
 			}
 			for _, machine := range machines {
 				wg.Add(1)
-				go func() {
-					err = helpers.Concat(err, ensureNodeFunc(machine, pool))
+				go func(m infra.Machine, p string) {
+					err = helpers.Concat(err, ensureNodeFunc(m, p))
 					wg.Done()
-				}()
+				}(machine, pool)
 			}
 		}
 
