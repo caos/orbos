@@ -2,6 +2,8 @@ package gce
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/ssh"
 	"strconv"
 	"strings"
 
@@ -30,6 +32,7 @@ func query(
 	orbiterCommit,
 	repoURL,
 	repoKey string,
+	masterkey string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
@@ -156,6 +159,19 @@ func query(
 				if err := desireNodeAgent(pool, machine); err != nil {
 					return orbiter.ToEnsureResult(false, err)
 				}
+			}
+		}
+
+		if (desired.SSHKey.Private == nil || desired.SSHKey.Private.Value == "") &&
+			(desired.SSHKey.Public == nil || desired.SSHKey.Public.Value == "") {
+			priv, pub, err := ssh.Generate()
+			if err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
+			desired.SSHKey.Private = &secret.Secret{Masterkey: masterkey, Value: priv}
+			desired.SSHKey.Public = &secret.Secret{Masterkey: masterkey, Value: pub}
+			if err := psf(context.monitor.WithField("type", "maintenancekey")); err != nil {
+				return orbiter.ToEnsureResult(false, err)
 			}
 		}
 

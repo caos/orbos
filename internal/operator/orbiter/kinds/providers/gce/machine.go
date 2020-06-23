@@ -1,22 +1,20 @@
 package gce
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"os/exec"
-	"sort"
-	"strings"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
+	"io"
+	"sort"
 )
 
 var _ infra.Machine = (*instance)(nil)
+
+type machine interface {
+	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
+	WriteFile(path string, data io.Reader, permissions uint16) error
+	ReadFile(path string, data io.Writer) error
+}
 
 type instance struct {
 	mntr.Monitor
@@ -27,9 +25,10 @@ type instance struct {
 	remove  func() error
 	context *context
 	start   bool
+	machine
 }
 
-func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool) *instance {
+func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine) *instance {
 	return &instance{
 		Monitor: monitor,
 		id:      id,
@@ -39,78 +38,8 @@ func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string
 		remove:  remove,
 		context: context,
 		start:   start,
+		machine: machine,
 	}
-}
-
-func resetBuffer(buffer *bytes.Buffer) {
-	if buffer != nil {
-		buffer.Reset()
-	}
-}
-
-func (c *instance) Execute(env map[string]string, stdin io.Reader, command string) ([]byte, error) {
-	buf, err := c.execute(env, stdin, command)
-	defer resetBuffer(buf)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func (c *instance) execute(env map[string]string, stdin io.Reader, command string) (outBuf *bytes.Buffer, err error) {
-	outBuf = new(bytes.Buffer)
-	errBuf := new(bytes.Buffer)
-	defer resetBuffer(errBuf)
-
-	if err := gcloudSession(c.context.desired.JSONKey.Value, func(bin string) error {
-		cmd := exec.Command(gcloudBin(),
-			"compute",
-			"ssh",
-			"--zone", c.context.desired.Zone,
-			fmt.Sprintf("orbiter@%s", c.id),
-			"--tunnel-through-iap",
-			"--project", c.context.projectID,
-			"--command", command,
-		)
-		cmd.Stdin = stdin
-		cmd.Stdout = outBuf
-		cmd.Stderr = errBuf
-		if runErr := cmd.Run(); runErr != nil {
-			return errors.New(errBuf.String())
-		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	return outBuf, nil
-}
-
-func (c *instance) WriteFile(path string, data io.Reader, permissions uint16) error {
-
-	user, err := c.Execute(nil, nil, "whoami")
-	if err != nil {
-		return err
-	}
-
-	mkdir, writeFile := ssh.WriteFileCommands(strings.TrimSpace(string(user)), path, permissions)
-	_, err = c.Execute(nil, nil, mkdir)
-	if err != nil {
-		return err
-	}
-
-	_, err = c.Execute(nil, data, writeFile)
-	return err
-}
-
-func (c *instance) ReadFile(path string, data io.Writer) error {
-	buf, err := c.execute(nil, nil, fmt.Sprintf("sudo cat %s", path))
-	defer resetBuffer(buf)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(data, buf)
-	return err
 }
 
 func (c *instance) ID() string {
