@@ -100,9 +100,9 @@ func query(
 	return func(psf push.Func) *orbiter.EnsureResult {
 		var wg sync.WaitGroup
 		for _, pool := range pools {
-			machines, err := machinesSvc.List(pool)
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
+			machines, listErr := machinesSvc.List(pool)
+			if listErr != nil {
+				err = helpers.Concat(err, listErr)
 			}
 			for _, machine := range machines {
 				wg.Add(1)

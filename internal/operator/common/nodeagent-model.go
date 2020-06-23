@@ -3,7 +3,9 @@
 package common
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
 	"sync"
 )
 
@@ -145,12 +147,22 @@ func (f *Firewall) Merge(fw Firewall) {
 	}
 }
 
-func (f *Firewall) Ports() []*Allowed {
+func (f *Firewall) Ports() Ports {
 	ports := make([]*Allowed, 0)
 	for _, value := range f.FW {
 		ports = append(ports, value)
 	}
 	return ports
+}
+
+type Ports []*Allowed
+
+func (p Ports) String() string {
+	strs := make([]string, len(p))
+	for idx, port := range p {
+		strs[idx] = fmt.Sprintf("%s/%s", port.Port, port.Protocol)
+	}
+	return strings.Join(strs, " ")
 }
 
 type Allowed struct {

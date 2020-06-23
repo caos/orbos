@@ -60,6 +60,7 @@ func query(
 	desireNodeAgent := func(pool string, machine infra.Machine) error {
 
 		machineID := machine.ID()
+		machineMonitor := context.monitor.WithField("machine", machineID)
 		na, _ := nodeAgentsDesired.Get(machineID)
 		if na.Software.Health.Config == nil {
 			na.Software.Health.Config = make(map[string]string)
@@ -68,11 +69,14 @@ func query(
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
 				if pool == destPool {
-					na.Software.Health.Config[fmt.Sprintf(
+
+					key := fmt.Sprintf(
 						"%s:%d%s",
 						"0.0.0.0",
 						lb.healthcheck.gce.Port,
-						lb.healthcheck.gce.RequestPath)] = fmt.Sprintf(
+						lb.healthcheck.gce.RequestPath)
+
+					value := fmt.Sprintf(
 						"%d@%s://%s:%d%s",
 						lb.healthcheck.desired.Code,
 						lb.healthcheck.desired.Protocol,
@@ -80,12 +84,24 @@ func query(
 						internalPort(lb),
 						lb.healthcheck.desired.Path,
 					)
-					na.Firewall.Merge(common.ToFirewall(map[string]*common.Allowed{
+
+					if v := na.Software.Health.Config[key]; v != value {
+						na.Software.Health.Config[key] = value
+						machineMonitor.WithFields(map[string]interface{}{
+							"listen": key,
+							"checks": value,
+						}).Changed("Healthcheck desired")
+					}
+					fw := common.ToFirewall(map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
 							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
 							Protocol: "tcp",
 						},
-					}))
+					})
+					if !na.Firewall.Contains(fw) {
+						na.Firewall.Merge(fw)
+						machineMonitor.WithField("ports", fw.Ports()).Changed("Firewall desired")
+					}
 					break
 				}
 			}
@@ -141,9 +157,9 @@ func query(
 
 		var wg sync.WaitGroup
 		for _, pool := range pools {
-			machines, err := context.machinesService.List(pool)
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
+			machines, listErr := context.machinesService.List(pool)
+			if listErr != nil {
+				err = helpers.Concat(err, listErr)
 			}
 			for _, machine := range machines {
 				wg.Add(1)
