@@ -83,24 +83,6 @@ func NodeAgentFuncs(
 				"command": whoami,
 			}).Debug("Executed command")
 
-			dockerCfg := "/etc/docker/daemon.json"
-			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-				return errors.Wrapf(cmp.WriteFile(dockerCfg, strings.NewReader(`{
-		  "exec-opts": ["native.cgroupdriver=systemd"],
-		  "log-driver": "json-file",
-		  "log-opts": {
-			"max-size": "100m"
-		  },
-		  "storage-driver": "overlay2"
-		}
-		`), 600), "creating remote file %s failed", dockerCfg)
-			}); err != nil {
-				return errors.Wrap(err, "configuring remote docker failed")
-			}
-			monitor.WithFields(map[string]interface{}{
-				"path": dockerCfg,
-			}).Debug("Written file")
-
 			systemdEntry := "node-agentd"
 			systemdPath := fmt.Sprintf("/lib/systemd/system/%s.service", systemdEntry)
 
