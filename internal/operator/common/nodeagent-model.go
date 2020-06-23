@@ -199,6 +199,9 @@ type CurrentNodeAgents struct {
 func (n *CurrentNodeAgents) Set(id string, na *NodeAgentCurrent) {
 	n.mux.Lock()
 	defer n.mux.Unlock()
+	if n.NA == nil {
+		n.NA = make(map[string]*NodeAgentCurrent)
+	}
 	n.NA[id] = na
 }
 

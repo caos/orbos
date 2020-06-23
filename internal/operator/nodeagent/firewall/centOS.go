@@ -47,7 +47,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 	openloop:
 		for _, des := range desiredOpen {
 			desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
-			for _, already := range append(alreadyOpen, ignore...) {
+			for _, already := range alreadyOpen {
 				if desStr == already {
 					continue openloop
 				}
