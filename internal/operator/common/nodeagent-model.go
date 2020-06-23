@@ -137,6 +137,9 @@ func ToFirewall(fw map[string]*Allowed) Firewall {
 func (f *Firewall) Merge(fw Firewall) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
+	if len(fw.FW) > 0 && f.FW == nil {
+		f.FW = make(map[string]*Allowed)
+	}
 	for key, value := range fw.FW {
 		f.FW[key] = value
 	}
