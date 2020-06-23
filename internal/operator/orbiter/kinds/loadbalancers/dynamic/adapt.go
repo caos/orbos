@@ -223,9 +223,7 @@ stream { {{ range $nat := .NATs }}
 		listen {{ $from }};
 		proxy_pass {{ $nat.Name }};
 	}
-{{ end }}{{ end }}}
-
-`))
+{{ end }}{{ end }}}`))
 
 				} else {
 
@@ -313,8 +311,7 @@ vrrp_instance VI_{{ $idx }} {
 	}
 {{ end }}
 }
-{{ end }}
-`))
+{{ end }}`))
 
 					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
 	worker_connections  4096;  ## Default: 1024
@@ -341,8 +338,7 @@ http {
 			return 200;
 		}
 	}
-}
-`))
+}`))
 
 					for _, d := range lbData {
 

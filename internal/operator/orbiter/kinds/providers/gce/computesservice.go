@@ -117,9 +117,8 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
-		"name": name,
-		"pool": poolName,
-		"zone": m.context.desired.Zone,
+		"machine": name,
+		"pool":    poolName,
 	})
 
 	if err := operateFunc(
@@ -268,7 +267,10 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 		m.cache.instances[pool] = cleanMachines
 
 		return removeResourceFunc(
-			m.context.monitor.WithField("pool", pool),
+			m.context.monitor.WithFields(map[string]interface{}{
+				"pool":    pool,
+				"machine": id,
+			}),
 			"instance",
 			id,
 			m.context.client.Instances.Delete(m.context.projectID, m.context.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,

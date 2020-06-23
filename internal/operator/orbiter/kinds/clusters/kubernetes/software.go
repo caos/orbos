@@ -63,13 +63,13 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 		Swap: common.Package{Version: "disabled"},
 		Containerruntime: common.Package{Version: dockerVersion, Config: map[string]string{
 			"daemon.json": `{
-				"exec-opts": ["native.cgroupdriver=systemd"],
-				"log-driver": "json-file",
-				"log-opts": {
-					"max-size": "100m"
-				},
-				"storage-driver": "overlay2"
-			}`,
+	"exec-opts": ["native.cgroupdriver=systemd"],
+	"log-driver": "json-file",
+	"log-opts": {
+		"max-size": "100m"
+	},
+	"storage-driver": "overlay2"
+}`,
 		}},
 		Kubelet: common.Package{Version: k.String()},
 		Kubeadm: common.Package{Version: k.String()},

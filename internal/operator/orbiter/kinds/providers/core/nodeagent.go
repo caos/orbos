@@ -24,6 +24,8 @@ func NodeAgentFuncs(
 
 	return func(machine infra.Machine) (running bool, err error) {
 
+			machineMonitor := monitor.WithField("machine", machine.ID())
+
 			var response []byte
 			isActive := "sudo systemctl is-active node-agentd"
 			err = infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -31,7 +33,7 @@ func NodeAgentFuncs(
 				response, cbErr = cmp.Execute(nil, nil, isActive)
 				return errors.Wrapf(cbErr, "remote command %s returned an unsuccessful exit code", isActive)
 			})
-			monitor.WithFields(map[string]interface{}{
+			machineMonitor.WithFields(map[string]interface{}{
 				"command":  isActive,
 				"response": string(response),
 			}).Debug("Executed command")
@@ -53,7 +55,7 @@ func NodeAgentFuncs(
 			if err != nil {
 				return false, err
 			}
-			monitor.WithFields(map[string]interface{}{
+			machineMonitor.WithFields(map[string]interface{}{
 				"command":  showVersion,
 				"response": string(response),
 			}).Debug("Executed command")
@@ -61,6 +63,8 @@ func NodeAgentFuncs(
 			fields := strings.Fields(string(response))
 			return len(fields) > 1 && fields[1] == orbiterCommit, nil
 		}, func(machine infra.Machine) error {
+
+			machineMonitor := monitor.WithField("machine", machine.ID())
 
 			var user string
 			whoami := "whoami"
@@ -75,13 +79,8 @@ func NodeAgentFuncs(
 			}); err != nil {
 				return errors.Wrap(err, "checking")
 			}
-			monitor = monitor.WithFields(map[string]interface{}{
-				"user":    user,
-				"machine": machine.ID(),
-			})
-			monitor.WithFields(map[string]interface{}{
-				"command": whoami,
-			}).Debug("Executed command")
+			machineMonitor = monitor.WithField("user", user)
+			machineMonitor.WithField("command", whoami).Debug("Executed command")
 
 			systemdEntry := "node-agentd"
 			systemdPath := fmt.Sprintf("/lib/systemd/system/%s.service", systemdEntry)
@@ -117,9 +116,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"path": systemdPath,
-			}).Debug("Written file")
+			machineMonitor.WithField("path", systemdPath).Debug("Written file")
 
 			keyPath := "/etc/nodeagent/repokey"
 			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -127,9 +124,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "writing repokey failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"path": keyPath,
-			}).Debug("Written file")
+			machineMonitor.WithField("path", keyPath).Debug("Written file")
 
 			daemonReload := "sudo systemctl daemon-reload"
 			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -138,9 +133,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "reloading remote systemd failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"command": daemonReload,
-			}).Debug("Executed command")
+			machineMonitor.WithField("command", daemonReload).Debug("Executed command")
 
 			stopSystemd := fmt.Sprintf("sudo systemctl stop %s orbos.health*", systemdEntry)
 			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -149,9 +142,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "remotely stopping systemd services failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"command": stopSystemd,
-			}).Debug("Executed command")
+			machineMonitor.WithField("command", stopSystemd).Debug("Executed command")
 
 			nodeagent, err := executables.PreBuilt("nodeagent")
 			if err != nil {
@@ -162,9 +153,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "remotely installing Node Agent failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"path": nodeAgentPath,
-			}).Debug("Written file")
+			machineMonitor.WithField("path", nodeAgentPath).Debug("Written file")
 
 			health, err := executables.PreBuilt("health")
 			if err != nil {
@@ -175,9 +164,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "remotely installing health executable failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"path": healthPath,
-			}).Debug("Written file")
+			machineMonitor.WithField("path", healthPath).Debug("Written file")
 
 			enableSystemd := fmt.Sprintf("sudo systemctl enable %s", systemdPath)
 			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -186,9 +173,7 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "remotely configuring systemd to autostart Node Agent after booting failed")
 			}
-			monitor.WithFields(map[string]interface{}{
-				"command": enableSystemd,
-			}).Debug("Executed command")
+			machineMonitor.WithField("command", enableSystemd).Debug("Executed command")
 
 			startSystemd := fmt.Sprintf("sudo systemctl restart %s", systemdEntry)
 			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -197,12 +182,8 @@ WantedBy=multi-user.target
 			}); err != nil {
 				return errors.Wrap(err, "remotely starting Node Agent by systemd failed")
 			}
-
-			monitor.WithFields(map[string]interface{}{
-				"command": startSystemd,
-			}).Debug("Executed command")
-
-			monitor.Info("Node Agent installed")
+			machineMonitor.WithField("command", startSystemd).Debug("Executed command")
+			machineMonitor.Info("Node Agent installed")
 			return nil
 		}
 }

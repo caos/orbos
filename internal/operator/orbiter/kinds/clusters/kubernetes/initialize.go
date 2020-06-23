@@ -64,10 +64,6 @@ func initialize(
 	uninitializeMachine uninitializeMachineFunc,
 	err error) {
 
-	if curr.Machines == nil {
-		curr.Machines = make(map[string]*Machine)
-	}
-
 	curr.Status = "running"
 
 	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
@@ -129,7 +125,7 @@ func initialize(
 			}
 		}
 
-		curr.Machines[machine.ID()] = current
+		curr.Machines.Set(machine.ID(), current)
 
 		machineMonitor := monitor.WithField("machine", machine.ID())
 
@@ -214,7 +210,7 @@ func initialize(
 		workerMachines,
 		initializeMachine, func(id string) {
 			nodeAgentsDesired.Delete(id)
-			delete(curr.Machines, id)
+			curr.Machines.Delete(id)
 		}, nil
 }
 

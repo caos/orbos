@@ -21,8 +21,6 @@ func query(
 	k8sClient *Client,
 	oneoff bool) (orbiter.EnsureFunc, error) {
 
-	current.Machines = make(map[string]*Machine)
-
 	cloudPools := make(map[string]map[string]infra.Pool)
 	var kubeAPIAddress *infra.Address
 

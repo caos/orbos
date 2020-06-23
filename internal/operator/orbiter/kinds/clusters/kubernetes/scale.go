@@ -36,30 +36,27 @@ func ensureScale(
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
 
-	alignMachines := func(pool initializedPool) (initialized bool, err error) {
+	var machines []*initializedMachine
+	upscalingDone := true
+	var wg sync.WaitGroup
+	alignPool := func(pool initializedPool, ensured func(int)) {
+		defer wg.Done()
 
-		existing, err := pool.machines()
-		if err != nil {
-			return false, err
-		}
+		existing, alignErr := pool.machines()
+		err = helpers.Concat(err, alignErr)
 		delta := pool.desired.Nodes - len(existing)
 		if delta > 0 {
-			machines, err := newMachines(pool.infra, delta)
-			if err != nil {
-				return false, err
-			}
+			upscalingDone = false
+			machines, alignErr := newMachines(pool.infra, delta)
+			err = helpers.Concat(err, alignErr)
 			for _, machine := range machines {
 				initializeMachine(machine, pool)
 			}
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
 				id := machine.infra.ID()
-				if err := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false); err != nil {
-					return false, err
-				}
-				if err := machine.infra.Remove(); err != nil {
-					return false, err
-				}
+				err = helpers.Concat(err, k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false))
+				err = helpers.Concat(err, machine.infra.Remove())
 				uninitializeMachine(id)
 				monitor.WithFields(map[string]interface{}{
 					"machine": id,
@@ -67,22 +64,9 @@ func ensureScale(
 				}).Changed("Machine removed")
 			}
 		}
-		return delta <= 0, nil
-	}
 
-	var wg sync.WaitGroup
-
-	var machines []*initializedMachine
-	var upscalingDone bool
-	alignPool := func(pool initializedPool, ensured func(int)) {
-		defer wg.Done()
-		poolDone, alignErr := alignMachines(pool)
-		err = helpers.Concat(err, alignErr)
 		if err != nil {
 			return
-		}
-		if !poolDone {
-			upscalingDone = false
 		}
 		poolMachines, listErr := pool.machines()
 		err = helpers.Concat(err, listErr)
