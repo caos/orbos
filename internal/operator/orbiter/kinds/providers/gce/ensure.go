@@ -124,6 +124,18 @@ func query(
 	})
 
 	return func(psf push.Func) *orbiter.EnsureResult {
+		if (desired.SSHKey.Private == nil || desired.SSHKey.Private.Value == "") &&
+			(desired.SSHKey.Public == nil || desired.SSHKey.Public.Value == "") {
+			priv, pub, err := ssh.Generate()
+			if err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
+			desired.SSHKey.Private = &secret.Secret{Masterkey: masterkey, Value: priv}
+			desired.SSHKey.Public = &secret.Secret{Masterkey: masterkey, Value: pub}
+			if err := psf(context.monitor.WithField("type", "maintenancekey")); err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
+		}
 
 		if err := ensureGcloud(context); err != nil {
 			return orbiter.ToEnsureResult(false, err)
@@ -159,19 +171,6 @@ func query(
 				if err := desireNodeAgent(pool, machine); err != nil {
 					return orbiter.ToEnsureResult(false, err)
 				}
-			}
-		}
-
-		if (desired.SSHKey.Private == nil || desired.SSHKey.Private.Value == "") &&
-			(desired.SSHKey.Public == nil || desired.SSHKey.Public.Value == "") {
-			priv, pub, err := ssh.Generate()
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-			desired.SSHKey.Private = &secret.Secret{Masterkey: masterkey, Value: priv}
-			desired.SSHKey.Public = &secret.Secret{Masterkey: masterkey, Value: pub}
-			if err := psf(context.monitor.WithField("type", "maintenancekey")); err != nil {
-				return orbiter.ToEnsureResult(false, err)
 			}
 		}
 

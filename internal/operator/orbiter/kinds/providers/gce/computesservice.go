@@ -152,7 +152,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	var machine machine
-	if m.oneoff {
+	if m.oneoff || m.maintenanceKey == nil || len(m.maintenanceKey) == 0 {
 		machine = newGCEMachine(m.context, monitor, createInstance.Name)
 	} else {
 		sshMachine := ssh.NewMachine(monitor, "orbiter", newInstance.NetworkInterfaces[0].NetworkIP)
@@ -202,7 +202,10 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
 	}
 
-	m.onCreate(poolName, infraMachine)
+	if err := m.onCreate(poolName, infraMachine); err != nil {
+		return nil, err
+	}
+
 	monitor.Info("Machine created")
 	return infraMachine, nil
 }
@@ -259,7 +262,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		pool := inst.Labels["pool"]
 
 		var machine machine
-		if m.oneoff {
+		if m.oneoff || m.maintenanceKey == nil || len(m.maintenanceKey) == 0 {
 			machine = newGCEMachine(m.context, m.context.monitor.WithFields(toFields(inst.Labels)), inst.Name)
 		} else {
 			sshMachine := ssh.NewMachine(m.context.monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
@@ -268,6 +271,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 			}
 			machine = sshMachine
 		}
+
 		mach := newMachine(
 			m.context,
 			m.context.monitor.WithFields(toFields(inst.Labels)),

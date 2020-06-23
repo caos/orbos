@@ -18,7 +18,7 @@ type gceMachine struct {
 }
 
 func newGCEMachine(context *context, monitor mntr.Monitor, id string) machine {
-	return &instance{
+	return &gceMachine{
 		Monitor: monitor,
 		id:      id,
 		context: context,
