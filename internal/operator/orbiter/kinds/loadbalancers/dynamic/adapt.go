@@ -109,6 +109,33 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
 
+				var lbMachines []infra.Machine
+				enrichedVIPs := make(map[string][]*VIP)
+
+				allPools, err := svc.ListPools()
+				if err != nil {
+					return false, err
+				}
+
+				var addedCIDRs []*orbiter.CIDR
+				for _, pool := range allPools {
+					machines, err := svc.List(pool)
+					if err != nil {
+						return false, err
+					}
+					if forPool == pool {
+						lbMachines = machines
+					}
+					for _, machine := range machines {
+						cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
+						addedCIDRs = append(addedCIDRs, &cidr)
+					}
+				}
+				addedCIDRs = append(addedCIDRs, wl...)
+				for deployPool, vips := range desiredKind.Spec {
+					enrichedVIPs[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
+				}
+
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
 					machineMonitor := monitor.WithField("machine", machine.ID())
@@ -213,13 +240,8 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				})
 
 				var nginxNATTemplate *template.Template
-				var vips []*VIP
-				var lbMachines []infra.Machine
 
 				if !balanceLoad {
-					for _, desiredVIPs := range desiredKind.Spec {
-						vips = append(vips, desiredVIPs...)
-					}
 					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
 	worker_connections  4096;  ## Default: 1024
 }
@@ -231,6 +253,10 @@ stream { {{ range $nat := .NATs }}
 
 {{ range $from := $nat.From }}	server {
 		listen {{ $from }};
+
+{{ range $white := $nat.Whitelist }}		allow {{ $white }};
+{{ end }}
+		deny all;
 		proxy_pass {{ $nat.Name }};
 	}
 {{ end }}{{ end }}}
@@ -240,31 +266,10 @@ stream { {{ range $nat := .NATs }}
 				} else {
 
 					var ok bool
-					vips, ok = desiredKind.Spec[forPool]
+					vips, ok := enrichedVIPs[forPool]
 					if !ok {
 						return false, nil
 					}
-
-					allPools, err := svc.ListPools()
-					if err != nil {
-						return false, err
-					}
-
-					for _, pool := range allPools {
-						machines, err := svc.List(pool)
-						if err != nil {
-							return false, err
-						}
-						if forPool == pool {
-							lbMachines = machines
-						}
-						for _, machine := range machines {
-							cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-							vips = addToWhitelists(false, vips, &cidr)
-						}
-					}
-
-					vips = addToWhitelists(true, vips, wl...)
 
 					lbData := make([]LB, len(lbMachines))
 					for idx, machine := range lbMachines {
@@ -386,63 +391,66 @@ http {
 				}
 
 				nodesNats := make(map[string]*NATDesires)
-				for _, vip := range vips {
-					for _, transport := range vip.Transport {
-						srcFW := map[string]*common.Allowed{
-							fmt.Sprintf("%s-%d-src", transport.Name, transport.FrontendPort): {
-								Port:     fmt.Sprintf("%d", transport.FrontendPort),
-								Protocol: "tcp",
-							},
-						}
-						probeVIP := func() {
-							probe("VIP", vip.IP, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
-						}
-
-						var natVIPProbed bool
-						if balanceLoad {
-							for _, machine := range lbMachines {
-								desireNodeAgent(machine, srcFW, common.Package{}, common.Package{})
-							}
-							probeVIP()
-						}
-						for _, dest := range transport.BackendPools {
-
-							destFW := map[string]*common.Allowed{
-								fmt.Sprintf("%s-%d-dest", transport.Name, transport.BackendPort): {
-									Port:     fmt.Sprintf("%d", transport.BackendPort),
+				for _, vips := range enrichedVIPs {
+					for _, vip := range vips {
+						for _, transport := range vip.Transport {
+							srcFW := map[string]*common.Allowed{
+								fmt.Sprintf("%s-%d-src", transport.Name, transport.FrontendPort): {
+									Port:     fmt.Sprintf("%d", transport.FrontendPort),
 									Protocol: "tcp",
 								},
 							}
-
-							destMachines, err := svc.List(dest)
-							if err != nil {
-								return false, err
+							probeVIP := func() {
+								probe("VIP", vip.IP, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
 							}
 
-							for _, machine := range destMachines {
-								desireNodeAgent(machine, destFW, common.Package{}, common.Package{})
-								probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
-								if !balanceLoad && forPool == dest {
-									if !natVIPProbed {
-										probeVIP()
-										natVIPProbed = true
-									}
+							var natVIPProbed bool
+							if balanceLoad {
+								for _, machine := range lbMachines {
+									desireNodeAgent(machine, srcFW, common.Package{}, common.Package{})
+								}
+								probeVIP()
+							}
+							for _, dest := range transport.BackendPools {
 
-									nodeNatDesires, ok := nodesNats[machine.IP()]
-									if !ok {
-										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
+								destFW := map[string]*common.Allowed{
+									fmt.Sprintf("%s-%d-dest", transport.Name, transport.BackendPort): {
+										Port:     fmt.Sprintf("%d", transport.BackendPort),
+										Protocol: "tcp",
+									},
+								}
+
+								destMachines, err := svc.List(dest)
+								if err != nil {
+									return false, err
+								}
+
+								for _, machine := range destMachines {
+									desireNodeAgent(machine, destFW, common.Package{}, common.Package{})
+									probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
+									if !balanceLoad && forPool == dest {
+										if !natVIPProbed {
+											probeVIP()
+											natVIPProbed = true
+										}
+
+										nodeNatDesires, ok := nodesNats[machine.IP()]
+										if !ok {
+											nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
+										}
+										nodeNatDesires.Firewall = srcFW
+										nodeNatDesires.Machine = machine
+										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
+											Whitelist: transport.Whitelist,
+											Name:      transport.Name,
+											From: []string{
+												fmt.Sprintf("%s:%d", mapVIP(vip), transport.FrontendPort),  // VIP
+												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
+											},
+											To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+										})
+										nodesNats[machine.IP()] = nodeNatDesires
 									}
-									nodeNatDesires.Firewall = srcFW
-									nodeNatDesires.Machine = machine
-									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
-										Name: transport.Name,
-										From: []string{
-											fmt.Sprintf("%s:%d", mapVIP(vip), transport.FrontendPort),  // VIP
-											fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
-										},
-										To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
-									})
-									nodesNats[machine.IP()] = nodeNatDesires
 								}
 							}
 						}
@@ -519,9 +527,10 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name string
-	From []string
-	To   string
+	Name      string
+	Whitelist []*orbiter.CIDR
+	From      []string
+	To        string
 }
 
 type LB struct {
