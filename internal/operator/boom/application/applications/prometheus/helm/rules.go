@@ -97,7 +97,7 @@ groups:
      record: caos_cluster_cpu_utilisation_5m
    - expr: 100 - (avg by (instance) (irate(dist_node_cpu_seconds_total[5m])) * 100)
      record: caos_node_cpu_utilisation_5m
-   - expr: (clamp_max(clamp_min(100-caos_node_cpu_utilisation_5m, 10),30)-10)/20
+   - expr: (clamp_max(clamp_min(100-caos_node_cpu_utilisation_5m, 10),20)-10)/10
      record: caos_node_cpu_ryg
    - expr: |-
        sum by (instance) (100 -
@@ -108,7 +108,7 @@ groups:
        * 100
        ))
      record: caos_node_memory_utilisation
-   - expr: (clamp_max(clamp_min(100-caos_node_memory_utilisation, 10),30)-10)/20
+   - expr: (clamp_max(clamp_min(100-caos_node_memory_utilisation, 10),20)-10)/10
      record: caos_node_memory_ryg
    - expr: |-
       100 - (
@@ -128,12 +128,18 @@ groups:
        clamp_max(
          clamp_min(
            (
-             max_over_time(dist_kube_deployment_status_replicas_available[5m]) -
-             dist_kube_deployment_spec_replicas or
-             max_over_time(dist_kube_statefulset_status_replicas_ready[5m]) -
-             dist_kube_statefulset_replicas or
-             max_over_time(dist_kube_daemonset_status_number_available[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled
+             max_over_time(dist_kube_deployment_status_replicas_available{namespace="caos-system"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace="caos-system"} or
+             max_over_time(dist_kube_deployment_status_replicas_available{namespace="kube-system"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace="kube-system"} or
+             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace="caos-system"}[5m]) -
+             dist_kube_statefulset_replicas{namespace="caos-system"} or
+             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace="kube-system"}[5m]) -
+             dist_kube_statefulset_replicas{namespace="kube-system"} or
+             max_over_time(dist_kube_daemonset_status_number_available{namespace="caos-system"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace="caos-system"} or
+             max_over_time(dist_kube_daemonset_status_number_available{namespace="kube-system"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace="kube-system"}
            ) + 
            1,
            0
@@ -145,12 +151,18 @@ groups:
        clamp_max(
          clamp_min(
            (
-             max_over_time(dist_kube_deployment_status_replicas[5m]) -
-             dist_kube_deployment_spec_replicas or
-             max_over_time(dist_kube_statefulset_status_replicas_current[5m]) -
-             dist_kube_statefulset_replicas or
-             max_over_time(dist_kube_daemonset_status_current_number_scheduled[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled
+             max_over_time(dist_kube_deployment_status_replicas{namespace="caos-system"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace="caos-system"} or
+             max_over_time(dist_kube_deployment_status_replicas{namespace="kube-system"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace="kube-system"} or
+             max_over_time(dist_kube_statefulset_status_replicas_current{namespace="caos-system"}[5m]) -
+             dist_kube_statefulset_replicas{namespace="caos-system"} or
+             max_over_time(dist_kube_statefulset_status_replicas_current{namespace="kube-system"}[5m]) -
+             dist_kube_statefulset_replicas{namespace="kube-system"} or
+             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace="caos-system"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace="caos-system"} or
+             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace="kube-system"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace="kube-system"}
            ) +
            1,
            0
@@ -158,6 +170,15 @@ groups:
          1
        )          
      record: caos_scheduled_pods_ryg
+   - expr: |-
+       sum(dist_kube_deployment_spec_replicas) + sum(dist_kube_statefulset_replicas) + sum(dist_kube_daemonset_status_desired_number_scheduled) 
+     record: caos_desired_pods
+   - expr: |-
+       sum(dist_kube_deployment_status_replicas) + sum(dist_kube_statefulset_status_replicas_current) + sum(dist_kube_daemonset_status_current_number_scheduled)
+     record: caos_scheduled_pods
+   - expr: |-
+       sum(dist_kube_deployment_status_replicas_available) + sum(dist_kube_statefulset_status_replicas_ready) + sum(dist_kube_daemonset_status_number_available)
+     record: caos_ready_pods
    - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(caos|kube)-system"}) * min(caos_scheduled_pods_ryg{namespace=~"(caos|kube)-system"})
      record: caos_orb_ryg
 `
