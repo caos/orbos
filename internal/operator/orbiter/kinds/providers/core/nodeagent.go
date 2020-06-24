@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	"github.com/caos/orbos/internal/operator/common"
 
 	"github.com/caos/orbos/internal/executables"
@@ -24,8 +26,6 @@ func NodeAgentFuncs(
 
 	return func(machine infra.Machine) (running bool, err error) {
 
-			machineMonitor := monitor.WithField("machine", machine.ID())
-
 			var response []byte
 			isActive := "sudo systemctl is-active node-agentd"
 			err = infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -33,7 +33,7 @@ func NodeAgentFuncs(
 				response, cbErr = cmp.Execute(nil, nil, isActive)
 				return errors.Wrapf(cbErr, "remote command %s returned an unsuccessful exit code", isActive)
 			})
-			machineMonitor.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"command":  isActive,
 				"response": string(response),
 			}).Debug("Executed command")
@@ -41,12 +41,13 @@ func NodeAgentFuncs(
 				return false, nil
 			}
 
-			current, _ := currentNodeAgents.Get(machine.ID())
-			if current.Commit == orbiterCommit {
+			current, ok := currentNodeAgents.Get(machine.ID())
+			if ok && current.Commit == orbiterCommit {
 				return true, nil
 			}
 
 			showVersion := "node-agent --version"
+
 			err = infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
 				var cbErr error
 				response, cbErr = cmp.Execute(nil, nil, showVersion)
@@ -55,7 +56,7 @@ func NodeAgentFuncs(
 			if err != nil {
 				return false, err
 			}
-			machineMonitor.WithFields(map[string]interface{}{
+			monitor.WithFields(map[string]interface{}{
 				"command":  showVersion,
 				"response": string(response),
 			}).Debug("Executed command")
@@ -64,12 +65,14 @@ func NodeAgentFuncs(
 			return len(fields) > 1 && fields[1] == orbiterCommit, nil
 		}, func(machine infra.Machine) error {
 
-			machineMonitor := monitor.WithField("machine", machine.ID())
+			monitor = monitor.WithField("machine", machine.ID())
 
 			systemdEntry := "node-agentd"
 			systemdPath := fmt.Sprintf("/lib/systemd/system/%s.service", systemdEntry)
+
 			nodeAgentPath := "/usr/local/bin/node-agent"
 			healthPath := "/usr/local/bin/health"
+
 			binary := nodeAgentPath
 			if os.Getenv("MODE") == "DEBUG" {
 				// Run node agent in debug mode
@@ -87,9 +90,11 @@ func NodeAgentFuncs(
 			}); err != nil {
 				return errors.Wrap(err, "remotely stopping systemd services failed")
 			}
-			machineMonitor.WithField("command", stopSystemd).Debug("Executed command")
+			monitor.WithFields(map[string]interface{}{
+				"command": stopSystemd,
+			}).Debug("Executed command")
 
-			writeFiles := []func() error{
+			if err := helpers.Fanout([]func() error{
 				func() error {
 					if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
 						return errors.Wrapf(cmp.WriteFile(systemdPath, strings.NewReader(fmt.Sprintf(`[Unit]
@@ -101,6 +106,7 @@ Type=simple
 User=root
 ExecStart=%s --repourl "%s" --id "%s"
 Restart=always
+MemoryMax=250M
 MemoryLimit=250M
 RestartSec=10
 
@@ -110,10 +116,11 @@ WantedBy=multi-user.target
 					}); err != nil {
 						return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 					}
-					machineMonitor.WithField("path", systemdPath).Debug("Written file")
+					monitor.WithFields(map[string]interface{}{
+						"path": systemdPath,
+					}).Debug("Written file")
 					return nil
 				},
-
 				func() error {
 					keyPath := "/etc/nodeagent/repokey"
 					if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
@@ -121,10 +128,11 @@ WantedBy=multi-user.target
 					}); err != nil {
 						return errors.Wrap(err, "writing repokey failed")
 					}
-					machineMonitor.WithField("path", keyPath).Debug("Written file")
+					monitor.WithFields(map[string]interface{}{
+						"path": keyPath,
+					}).Debug("Written file")
 					return nil
 				},
-
 				func() error {
 					nodeagent, err := executables.PreBuilt("nodeagent")
 					if err != nil {
@@ -135,10 +143,11 @@ WantedBy=multi-user.target
 					}); err != nil {
 						return errors.Wrap(err, "remotely installing Node Agent failed")
 					}
-					machineMonitor.WithField("path", nodeAgentPath).Debug("Written file")
+					monitor.WithFields(map[string]interface{}{
+						"path": nodeAgentPath,
+					}).Debug("Written file")
 					return nil
 				},
-
 				func() error {
 					health, err := executables.PreBuilt("health")
 					if err != nil {
@@ -149,26 +158,27 @@ WantedBy=multi-user.target
 					}); err != nil {
 						return errors.Wrap(err, "remotely installing health executable failed")
 					}
-					machineMonitor.WithField("path", healthPath).Debug("Written file")
+					monitor.WithFields(map[string]interface{}{
+						"path": healthPath,
+					}).Debug("Written file")
 					return nil
 				},
+			})(); err != nil {
+				return err
 			}
 
-			for _, fn := range writeFiles {
-				if err := fn(); err != nil {
-					return err
-				}
-			}
-
-			restart := fmt.Sprintf("sudo systemctl daemon-reload && sudo systemctl enable %s && sudo systemctl restart %s", systemdPath, systemdEntry)
+			enableSystemd := fmt.Sprintf("sudo systemctl daemon-reload && sudo systemctl enable %s && sudo systemctl restart %s", systemdPath, systemdEntry)
 			if err := infra.Try(monitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-				_, cbErr := cmp.Execute(nil, nil, restart)
-				return errors.Wrapf(cbErr, "running command %s remotely failed", restart)
+				_, cbErr := cmp.Execute(nil, nil, enableSystemd)
+				return errors.Wrapf(cbErr, "running command %s remotely failed", enableSystemd)
 			}); err != nil {
-				return errors.Wrap(err, "reloading remote systemd failed")
+				return errors.Wrap(err, "remotely configuring systemd to autostart Node Agent after booting failed")
 			}
-			machineMonitor.WithField("command", restart).Debug("Executed command")
-			machineMonitor.Info("Node Agent installed")
+			monitor.WithFields(map[string]interface{}{
+				"command": enableSystemd,
+			}).Debug("Executed command")
+
+			monitor.Info("Node Agent installed")
 			return nil
 		}
 }

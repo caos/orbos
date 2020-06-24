@@ -1,6 +1,7 @@
 package gce
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
@@ -22,7 +23,16 @@ func SecretsFunc(masterkey string) secret.Func {
 
 		initializeNecessarySecrets(desiredKind, masterkey)
 
-		return getSecretsMap(desiredKind), nil
+		secrets = getSecretsMap(desiredKind)
+		loadBalancersSecrets, err := loadbalancers.GetSecrets(monitor, desiredKind.Loadbalancing)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range loadBalancersSecrets {
+			secrets[k] = v
+		}
+		return secrets, nil
 	}
 }
 

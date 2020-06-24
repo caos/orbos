@@ -1,13 +1,14 @@
 package repository
 
 import (
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
-	"strings"
 )
 
 type Repository struct {
@@ -16,6 +17,12 @@ type Repository struct {
 	PasswordSecret      *secret `yaml:"passwordSecret,omitempty"`
 	SSHPrivateKeySecret *secret `yaml:"sshPrivateKeySecret,omitempty"`
 }
+
+const (
+	cert = "certificate"
+	user = "username"
+	pw   = "password"
+)
 
 type secret struct {
 	Name string
@@ -36,14 +43,13 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 
 	for _, v := range spec.Repositories {
 		if helper2.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
-			ty := "username"
 
 			data := map[string]string{
-				getSecretKey(ty): v.Username.Value,
+				getSecretKey(user): v.Username.Value,
 			}
 
 			conf := &resources.SecretConfig{
-				Name:      getSecretName(v.Name, ty),
+				Name:      getSecretName(v.Name, user),
 				Namespace: namespace,
 				Labels:    labels.GetAllApplicationLabels(info.GetName()),
 				Data:      data,
@@ -52,14 +58,13 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 			secrets = append(secrets, secretRes)
 		}
 		if helper2.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
-			ty := "password"
 
 			data := map[string]string{
-				getSecretKey(ty): v.Password.Value,
+				getSecretKey(pw): v.Password.Value,
 			}
 
 			conf := &resources.SecretConfig{
-				Name:      getSecretName(v.Name, ty),
+				Name:      getSecretName(v.Name, pw),
 				Namespace: namespace,
 				Labels:    labels.GetAllApplicationLabels(info.GetName()),
 				Data:      data,
@@ -68,14 +73,12 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 			secrets = append(secrets, secretRes)
 		}
 		if helper2.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
-			ty := "certificate"
-
 			data := map[string]string{
-				getSecretKey(ty): v.Certificate.Value,
+				getSecretKey(cert): v.Certificate.Value,
 			}
 
 			conf := &resources.SecretConfig{
-				Name:      getSecretName(v.Name, ty),
+				Name:      getSecretName(v.Name, cert),
 				Namespace: namespace,
 				Labels:    labels.GetAllApplicationLabels(info.GetName()),
 				Data:      data,
@@ -98,10 +101,9 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Repository {
 	for _, v := range spec.Repositories {
 		var us, ps, ssh *secret
 		if helper2.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
-			ty := "username"
 			us = &secret{
-				Name: getSecretName(v.Name, ty),
-				Key:  getSecretKey(ty),
+				Name: getSecretName(v.Name, user),
+				Key:  getSecretKey(user),
 			}
 		} else if helper2.IsExistentSecret(v.Username, v.ExistingUsernameSecret) {
 			us = &secret{
@@ -111,10 +113,9 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Repository {
 		}
 
 		if helper2.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
-			ty := "password"
 			ps = &secret{
-				Name: getSecretName(v.Name, ty),
-				Key:  getSecretKey(ty),
+				Name: getSecretName(v.Name, pw),
+				Key:  getSecretKey(pw),
 			}
 		} else if helper2.IsExistentSecret(v.Password, v.ExistingPasswordSecret) {
 			ps = &secret{
@@ -124,10 +125,9 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Repository {
 		}
 
 		if helper2.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
-			ty := "username"
 			ssh = &secret{
-				Name: getSecretName(v.Name, ty),
-				Key:  getSecretKey(ty),
+				Name: getSecretName(v.Name, cert),
+				Key:  getSecretKey(cert),
 			}
 		} else if helper2.IsExistentSecret(v.Certificate, v.ExistingCertificateSecret) {
 			ssh = &secret{
