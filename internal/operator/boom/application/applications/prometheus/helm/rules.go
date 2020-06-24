@@ -128,18 +128,12 @@ groups:
        clamp_max(
          clamp_min(
            (
-             max_over_time(dist_kube_deployment_status_replicas_available{namespace="caos-system"}[5m]) -
-             dist_kube_deployment_spec_replicas{namespace="caos-system"} or
-             max_over_time(dist_kube_deployment_status_replicas_available{namespace="kube-system"}[5m]) -
-             dist_kube_deployment_spec_replicas{namespace="kube-system"} or
-             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace="caos-system"}[5m]) -
-             dist_kube_statefulset_replicas{namespace="caos-system"} or
-             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace="kube-system"}[5m]) -
-             dist_kube_statefulset_replicas{namespace="kube-system"} or
-             max_over_time(dist_kube_daemonset_status_number_available{namespace="caos-system"}[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled{namespace="caos-system"} or
-             max_over_time(dist_kube_daemonset_status_number_available{namespace="kube-system"}[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled{namespace="kube-system"}
+             max_over_time(dist_kube_deployment_status_replicas_available{namespace=~"(caos|kube)-system"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace=~"(caos|kube)-system"} or
+             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace=~"(caos|kube)-system"}[5m]) -
+             dist_kube_statefulset_replicas{namespace=~"(caos|kube)-system"} or
+             max_over_time(dist_kube_daemonset_status_number_available{namespace=~"(caos|kube)-system"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace=~"(caos|kube)-system"}
            ) + 
            1,
            0
@@ -151,18 +145,12 @@ groups:
        clamp_max(
          clamp_min(
            (
-             max_over_time(dist_kube_deployment_status_replicas{namespace="caos-system"}[5m]) -
-             dist_kube_deployment_spec_replicas{namespace="caos-system"} or
-             max_over_time(dist_kube_deployment_status_replicas{namespace="kube-system"}[5m]) -
-             dist_kube_deployment_spec_replicas{namespace="kube-system"} or
-             max_over_time(dist_kube_statefulset_status_replicas_current{namespace="caos-system"}[5m]) -
-             dist_kube_statefulset_replicas{namespace="caos-system"} or
-             max_over_time(dist_kube_statefulset_status_replicas_current{namespace="kube-system"}[5m]) -
-             dist_kube_statefulset_replicas{namespace="kube-system"} or
-             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace="caos-system"}[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled{namespace="caos-system"} or
-             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace="kube-system"}[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled{namespace="kube-system"}
+             max_over_time(dist_kube_deployment_status_replicas{namespace=~"(caos|kube)-system"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace=~"(caos|kube)-system"} or
+             max_over_time(dist_kube_statefulset_status_replicas_current{namespace=~"(caos|kube)-system"}[5m]) -
+             dist_kube_statefulset_replicas{namespace=~"(caos|kube)-system"} or
+             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace=~"(caos|kube)-system"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace=~"(caos|kube)-system"}
            ) +
            1,
            0
