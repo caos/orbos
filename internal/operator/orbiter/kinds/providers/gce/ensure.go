@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/ssh"
+
 	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -32,6 +35,7 @@ func query(
 	orbiterCommit,
 	repoURL,
 	repoKey string,
+	masterkey string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
@@ -126,6 +130,19 @@ func query(
 	})
 
 	return func(psf push.Func) *orbiter.EnsureResult {
+
+		if (desired.SSHKey.Private == nil || desired.SSHKey.Private.Value == "") &&
+			(desired.SSHKey.Public == nil || desired.SSHKey.Public.Value == "") {
+			priv, pub, err := ssh.Generate()
+			if err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
+			desired.SSHKey.Private = &secret.Secret{Masterkey: masterkey, Value: priv}
+			desired.SSHKey.Public = &secret.Secret{Masterkey: masterkey, Value: pub}
+			if err := psf(context.monitor.WithField("type", "maintenancekey")); err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
+		}
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
 			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },

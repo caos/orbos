@@ -58,6 +58,7 @@ type Spec struct {
 	Region  string
 	Zone    string
 	Pools   map[string]*Pool
+	SSHKey  *SSHKey
 }
 
 func (d Desired) validate() error {
@@ -86,6 +87,10 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*Desired, error) 
 		Common: desiredTree.Common,
 		Spec: Spec{
 			JSONKey: &secret.Secret{Masterkey: masterkey},
+			SSHKey: &SSHKey{
+				Private: &secret.Secret{Masterkey: masterkey},
+				Public:  &secret.Secret{Masterkey: masterkey},
+			},
 		},
 	}
 
@@ -99,5 +104,11 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*Desired, error) 
 func initializeNecessarySecrets(desiredKind *Desired, masterkey string) {
 	if desiredKind.Spec.JSONKey == nil {
 		desiredKind.Spec.JSONKey = &secret.Secret{Masterkey: masterkey}
+	}
+	if desiredKind.Spec.SSHKey.Private == nil {
+		desiredKind.Spec.SSHKey.Private = &secret.Secret{Masterkey: masterkey}
+	}
+	if desiredKind.Spec.SSHKey.Public == nil {
+		desiredKind.Spec.SSHKey.Public = &secret.Secret{Masterkey: masterkey}
 	}
 }

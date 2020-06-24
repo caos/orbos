@@ -25,7 +25,6 @@ func join(
 	kubernetesVersion KubernetesVersion,
 	certKey string) (*string, error) {
 
-	var installNetwork func() error
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
 		"tier":    joining.pool.tier,
@@ -179,10 +178,6 @@ nodeRegistration:
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(initStdout),
 	}).Debug("Executed kubeadm init")
-
-	if err := installNetwork(); err != nil {
-		return nil, err
-	}
 
 	kubeconfigBuf := new(bytes.Buffer)
 	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfigBuf); err != nil {

@@ -61,7 +61,10 @@ func AdaptFunc(
 				providerCurrent,
 				whitelistChan,
 				finishedChan,
-				orbiterCommit, orb.URL, orb.Repokey,
+				orbiterCommit,
+				orb.URL,
+				orb.Repokey,
+				oneoff,
 			)
 
 			if err != nil {
