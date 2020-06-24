@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -82,8 +81,7 @@ func query(
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
 						internalPort(lb),
-						lb.healthcheck.desired.Path,
-					)
+						lb.healthcheck.desired.Path)
 
 					if v := na.Software.Health.Config[key]; v != value {
 						na.Software.Health.Config[key] = value
@@ -102,7 +100,6 @@ func query(
 						na.Firewall.Merge(fw)
 						machineMonitor.WithField("ports", fw.Ports()).Changed("Firewall desired")
 					}
-					break
 				}
 			}
 		}
@@ -129,53 +126,40 @@ func query(
 	})
 
 	return func(psf push.Func) *orbiter.EnsureResult {
+		var done bool
+		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
+			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },
+			func() error { return ensureCloudNAT(context) },
+			context.machinesService.restartPreemptibleMachines,
+			ensureLB,
+			func() error {
+				pools, err := context.machinesService.ListPools()
+				if err != nil {
+					return err
+				}
 
-		if err := ensureGcloud(context); err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		if err := ensureIdentityAwareProxyAPIEnabled(context); err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		if err := ensureCloudNAT(context); err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		if err := context.machinesService.restartPreemptibleMachines(); err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		pools, err := context.machinesService.ListPools()
-		if err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		if err := ensureLB(); err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		var wg sync.WaitGroup
-		for _, pool := range pools {
-			machines, listErr := context.machinesService.List(pool)
-			if listErr != nil {
-				err = helpers.Concat(err, listErr)
-			}
-			for _, machine := range machines {
-				wg.Add(1)
-				go func(p string, m infra.Machine) {
-					err = helpers.Concat(err, desireNodeAgent(p, m))
-					wg.Done()
-				}(pool, machine)
-			}
-		}
-		wg.Wait()
-
-		if err != nil {
-			return orbiter.ToEnsureResult(false, err)
-		}
-
-		return orbiter.ToEnsureResult(wrappedMachines.InitializeDesiredNodeAgents())
+				var desireNodeAgents []func() error
+				for _, pool := range pools {
+					machines, listErr := context.machinesService.List(pool)
+					if listErr != nil {
+						err = helpers.Concat(err, listErr)
+					}
+					for _, machine := range machines {
+						desireNodeAgents = append(desireNodeAgents, func(p string, m infra.Machine) func() error {
+							return func() error {
+								return desireNodeAgent(p, m)
+							}
+						}(pool, machine))
+					}
+				}
+				return helpers.Fanout(desireNodeAgents)()
+			},
+			func() error {
+				var err error
+				done, err = wrappedMachines.InitializeDesiredNodeAgents()
+				return err
+			},
+		})())
 	}, initPools(current, desired, context, normalized, wrappedMachines)
 }
 
