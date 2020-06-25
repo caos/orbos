@@ -84,6 +84,14 @@ func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 	})
 }
 
+func (c *Client) ListNamespaces() (*core.NamespaceList, error) {
+	return c.set.CoreV1().Namespaces().List(mach.ListOptions{})
+}
+
+func (c *Client) ListSecrets(namespace string) (*core.SecretList, error) {
+	return c.set.CoreV1().Secrets(namespace).List(mach.ListOptions{})
+}
+
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
 	return c.apply("deployment", rsc.GetName(), func() error {
