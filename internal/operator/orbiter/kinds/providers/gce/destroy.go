@@ -3,9 +3,9 @@ package gce
 import "github.com/caos/orbos/internal/helpers"
 
 func destroy(context *context) error {
-	return helpers.Fanout([]func() error{
+	if err := helpers.Fanout([]func() error{
 		func() error {
-			destroyLB, err := queryResources(context, nil, nil)
+			destroyLB, err := queryLB(context, nil)
 			if err != nil {
 				return err
 			}
@@ -29,7 +29,10 @@ func destroy(context *context) error {
 			return helpers.Fanout(delFuncs)()
 		},
 		func() error {
-			return destroyCloudNAT(context)
+			return destroyNetwork(context)
 		},
-	})()
+	})(); err != nil {
+		return err
+	}
+	return destroyNetwork(context)
 }

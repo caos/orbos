@@ -42,10 +42,24 @@ func query(
 	if !ok {
 		errors.Errorf("Unknown or unsupported load balancing of type %T", lb)
 	}
-	normalized, firewalls := normalize(context.monitor, lbCurrent.Current.Spec, context.orbID, context.providerID)
+	normalized, firewalls := normalize(context, lbCurrent.Current.Spec)
 
-	ensureLB, err := queryResources(context, normalized, firewalls)
-	if err != nil {
+	var (
+		ensureLB             func() error
+		createFWs, deleteFWs []func() error
+	)
+	if err := helpers.Fanout([]func() error{
+		func() error {
+			var err error
+			ensureLB, err = queryLB(context, normalized)
+			return err
+		},
+		func() error {
+			var err error
+			createFWs, deleteFWs, err = queryFirewall(context, firewalls)
+			return err
+		},
+	})(); err != nil {
 		return nil, err
 	}
 
@@ -146,7 +160,7 @@ func query(
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
 			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },
-			func() error { return ensureCloudNAT(context) },
+			func() error { return ensureNetwork(context, createFWs, deleteFWs) },
 			context.machinesService.restartPreemptibleMachines,
 			ensureLB,
 			func() error {
