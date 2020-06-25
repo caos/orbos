@@ -61,7 +61,10 @@ func AdaptFunc(
 				providerCurrent,
 				whitelistChan,
 				finishedChan,
-				orbiterCommit, orb.URL, orb.Repokey,
+				orbiterCommit,
+				orb.URL,
+				orb.Repokey,
+				oneoff,
 			)
 
 			if err != nil {
@@ -135,7 +138,7 @@ func AdaptFunc(
 			Providers: providerCurrents,
 		}
 
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
+		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 
 				providerEnsurers := make([]orbiter.EnsureFunc, 0)
 				queriedProviders := make(map[string]interface{})

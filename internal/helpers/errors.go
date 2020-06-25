@@ -14,7 +14,7 @@ func Concat(left error, right error) error {
 		return left
 	}
 
-	return fmt.Errorf("%s | %s", right.Error(), left.Error())
+	return fmt.Errorf("%s: %s", right.Error(), left.Error())
 }
 
 // Synchronizer implements the error interface as well as

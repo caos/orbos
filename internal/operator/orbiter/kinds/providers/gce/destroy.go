@@ -1,30 +1,35 @@
 package gce
 
+import "github.com/caos/orbos/internal/helpers"
+
 func destroy(context *context) error {
-
-	destroyLB, err := queryResources(context, nil, nil)
-	if err != nil {
-		return err
-	}
-
-	if err := destroyLB(); err != nil {
-		return err
-	}
-
-	pools, err := context.machinesService.ListPools()
-	if err != nil {
-		return err
-	}
-	for _, pool := range pools {
-		machines, err := context.machinesService.List(pool)
-		if err != nil {
-			return err
-		}
-		for _, machine := range machines {
-			if err := machine.Remove(); err != nil {
+	return helpers.Fanout([]func() error{
+		func() error {
+			destroyLB, err := queryResources(context, nil, nil)
+			if err != nil {
 				return err
 			}
-		}
-	}
-	return destroyCloudNAT(context)
+			return destroyLB()
+		},
+		func() error {
+			pools, err := context.machinesService.ListPools()
+			if err != nil {
+				return err
+			}
+			var delFuncs []func() error
+			for _, pool := range pools {
+				machines, err := context.machinesService.List(pool)
+				if err != nil {
+					return err
+				}
+				for _, machine := range machines {
+					delFuncs = append(delFuncs, machine.Remove)
+				}
+			}
+			return helpers.Fanout(delFuncs)()
+		},
+		func() error {
+			return destroyCloudNAT(context)
+		},
+	})()
 }
