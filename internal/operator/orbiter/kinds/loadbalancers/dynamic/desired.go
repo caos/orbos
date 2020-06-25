@@ -146,12 +146,13 @@ func (s *Transport) validate() (err error) {
 }
 
 type Transport struct {
-	Name         string
-	FrontendPort Port
-	BackendPort  Port
-	BackendPools []string
-	Whitelist    []*orbiter.CIDR
-	HealthChecks HealthChecks
+	Name              string
+	FrontendPort      Port
+	BackendPort       Port
+	BackendPools      []string
+	Whitelist         []*orbiter.CIDR
+	DownstreamProxies []*orbiter.IPAddress
+	HealthChecks      HealthChecks
 }
 
 type Port uint16

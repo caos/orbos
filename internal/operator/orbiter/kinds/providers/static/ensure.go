@@ -77,7 +77,11 @@ func query(
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
 		}
-		for _, pool := range lbCurrent.Current.Spec {
+		deployPools, err := lbCurrent.Current.Spec(machinesSvc)
+		if err != nil {
+			return nil, err
+		}
+		for _, pool := range deployPools {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
 					current.Current.Ingresses[src.Name] = &infra.Address{

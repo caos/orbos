@@ -106,35 +106,13 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 			}
 
-			current.Current.Spec = desiredKind.Spec
+			poolMachines := curryPoolMachines()
+			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl)
+
+			current.Current.Spec = enrichedVIPs
 			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
 
 				var lbMachines []infra.Machine
-				enrichedVIPs := make(map[string][]*VIP)
-
-				allPools, err := svc.ListPools()
-				if err != nil {
-					return false, err
-				}
-
-				var addedCIDRs []*orbiter.CIDR
-				for _, pool := range allPools {
-					machines, err := svc.List(pool)
-					if err != nil {
-						return false, err
-					}
-					if forPool == pool {
-						lbMachines = machines
-					}
-					for _, machine := range machines {
-						cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-						addedCIDRs = append(addedCIDRs, &cidr)
-					}
-				}
-				addedCIDRs = append(addedCIDRs, wl...)
-				for deployPool, vips := range desiredKind.Spec {
-					enrichedVIPs[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
-				}
 
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
@@ -257,37 +235,23 @@ stream { {{ range $nat := .NATs }}
 
 				} else {
 
-					var ok bool
-					vips, ok := enrichedVIPs[forPool]
-					if !ok {
-						return false, nil
+					if err := poolMachines(svc, func(pool string, machines infra.Machines) {
+						if forPool == pool {
+							lbMachines = machines
+						}
+					}); err != nil {
+						return false, err
 					}
 
-					allPools, err := svc.ListPools()
+					spec, err := enrichedVIPs(svc)
 					if err != nil {
 						return false, err
 					}
 
-					for _, pool := range allPools {
-						machines, err := svc.List(pool)
-						if err != nil {
-							return false, err
-						}
-						if forPool == pool {
-							lbMachines = machines
-						}
-						for _, machine := range machines {
-							cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-							vips = addToWhitelists(false, vips, &cidr)
-						}
-					}
-
-					vips = addToWhitelists(true, vips, wl...)
-
 					lbData := make([]LB, len(lbMachines))
 					for idx, machine := range lbMachines {
 						lbData[idx] = LB{
-							VIPs: vips,
+							VIPs: spec[forPool],
 							Self: machine,
 							Peers: deriveFilterMachines(func(cmp infra.Machine) bool {
 								return cmp.ID() != machine.ID()
@@ -402,7 +366,11 @@ http {
 				}
 
 				nodesNats := make(map[string]*NATDesires)
-				for _, vips := range enrichedVIPs {
+				spec, err := enrichedVIPs(svc)
+				if err != nil {
+					return false, err
+				}
+				for _, vips := range spec {
 					for _, vip := range vips {
 						for _, transport := range vip.Transport {
 							srcFW := map[string]*common.Allowed{
@@ -505,7 +473,7 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 				HealthChecks: src.HealthChecks,
 			}
 			if makeUnique {
-				newSource.Whitelist = unique(src.Whitelist)
+				newSource.Whitelist = unique(newSource.Whitelist)
 			}
 			newTransport[srcIdx] = newSource
 		}
@@ -568,4 +536,59 @@ func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
 	cidrs := orbiter.CIDRs(us)
 	sort.Sort(cidrs)
 	return cidrs
+}
+
+type poolMachinesFunc func(svc core.MachinesService, do func(string, infra.Machines)) error
+
+func curryPoolMachines() poolMachinesFunc {
+	var poolsCache map[string]infra.Machines
+	return func(svc core.MachinesService, do func(string, infra.Machines)) error {
+
+		if poolsCache == nil {
+			poolsCache = make(map[string]infra.Machines)
+			allPools, err := svc.ListPools()
+			if err != nil {
+				return err
+			}
+
+			for _, pool := range allPools {
+				machines, err := svc.List(pool)
+				if err != nil {
+					return err
+				}
+				poolsCache[pool] = machines
+			}
+		}
+
+		if poolsCache != nil {
+			for pool, machines := range poolsCache {
+				do(pool, machines)
+			}
+		}
+		return nil
+	}
+}
+
+func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelist []*orbiter.CIDR) func(svc core.MachinesService) (map[string][]*VIP, error) {
+	var enrichVIPsCache map[string][]*VIP
+	return func(svc core.MachinesService) (map[string][]*VIP, error) {
+		if enrichVIPsCache != nil {
+			return enrichVIPsCache, nil
+		}
+		enrichVIPsCache = make(map[string][]*VIP)
+
+		addedCIDRs := append([]*orbiter.CIDR(nil), adaptWhitelist...)
+		if err := machines(svc, func(_ string, machines infra.Machines) {
+			for _, machine := range machines {
+				cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
+				addedCIDRs = append(addedCIDRs, &cidr)
+			}
+		}); err != nil {
+			return nil, err
+		}
+		for deployPool, vips := range desired.Spec {
+			enrichVIPsCache[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
+		}
+		return enrichVIPsCache, nil
+	}
 }
