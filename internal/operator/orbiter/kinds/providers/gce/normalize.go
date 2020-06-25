@@ -339,14 +339,18 @@ func queryResources(context *context, normalized []*normalizedLoadbalancer, fire
 	if err != nil {
 		return nil, err
 	}
-	return func() error {
-		for _, operation := range append(append(lb, ensureFW...), removeFW...) {
-			if err := operation(); err != nil {
-				return err
+	return helpers.Fanout([]func() error{
+		func() error {
+			for _, fn := range lb {
+				if err := fn(); err != nil {
+					return err
+				}
 			}
-		}
-		return nil
-	}, nil
+			return nil
+		},
+		helpers.Fanout(ensureFW),
+		helpers.Fanout(removeFW),
+	}), nil
 }
 
 type ensureLBFunc func(*context, []*normalizedLoadbalancer) ([]func() error, []func() error, error)
@@ -357,13 +361,12 @@ func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...ens
 	var ensureOperations []func() error
 	var removeOperations []func() error
 	for _, fn := range query {
-
 		ensure, remove, err := fn(ctx, lb)
 		if err != nil {
 			return nil, err
 		}
-		ensureOperations = append(ensureOperations, ensure...)
-		removeOperations = append(removeOperations, remove...)
+		ensureOperations = append(ensureOperations, helpers.Fanout(ensure))
+		removeOperations = append(removeOperations, helpers.Fanout(remove))
 	}
 
 	for i := 0; i < len(removeOperations)/2; i++ {

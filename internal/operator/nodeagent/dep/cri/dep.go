@@ -2,6 +2,8 @@ package cri
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -61,10 +63,26 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 		version = fmt.Sprintf("%s %s %s", version, pkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(pkg.Version))
 	}
 	pkg.Version = strings.TrimSpace(version)
+
+	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
+	if pkg.Config == nil {
+		pkg.Config = map[string]string{}
+	}
+	pkg.Config["daemon.json"] = string(daemonJson)
 	return pkg, nil
 }
 
 func (c *criDep) Ensure(_ common.Package, install common.Package) error {
+
+	if install.Config != nil {
+		if err := os.MkdirAll("/etc/docker", 600); err != nil {
+			return err
+		}
+
+		if err := ioutil.WriteFile("/etc/docker/daemon.json", []byte(install.Config["daemon.json"]), 600); err != nil {
+			return err
+		}
+	}
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {

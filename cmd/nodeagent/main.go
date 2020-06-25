@@ -87,12 +87,17 @@ func main() {
 		panic(err)
 	}
 
+	var portsSlice []string
+	if len(*ignorePorts) > 0 {
+		portsSlice = strings.Split(*ignorePorts, ",")
+	}
+
 	itFunc := nodeagent.Iterator(
 		monitor,
 		gitClient,
 		gitCommit,
 		*nodeAgentID,
-		firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
+		firewall.Ensurer(monitor, os.OperatingSystem, portsSlice),
 		conv,
 		conv.Init())
 

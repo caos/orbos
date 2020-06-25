@@ -40,8 +40,8 @@ func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Conve
 
 func (d *dependencies) Init() func() error {
 
-	d.pm = dep.NewPackageManager(d.monitor, d.os.OperatingSystem)
 	d.sysd = dep.NewSystemD(d.monitor)
+	d.pm = dep.NewPackageManager(d.monitor, d.os.OperatingSystem, d.sysd)
 
 	return func() error {
 		if err := d.pm.Init(); err != nil {
