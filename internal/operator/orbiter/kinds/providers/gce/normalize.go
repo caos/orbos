@@ -188,7 +188,7 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 
 				firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
 					Network:     ctx.networkURL,
-					Description: src.Name,
+					Description: fmt.Sprintf("External %s", src.Name),
 					Allowed: []*compute.FirewallAllowed{{
 						IPProtocol: "tcp",
 						Ports:      []string{fmt.Sprintf("%d", src.FrontendPort)},
@@ -224,7 +224,8 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 	for _, lb := range normalized {
 		lb.healthcheck.gce.Port = hcPort
 		firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
-			Network: ctx.networkURL,
+			Description: fmt.Sprintf("Healthchecks %s", lb.transport),
+			Network:     ctx.networkURL,
 			Allowed: []*compute.FirewallAllowed{{
 				IPProtocol: "tcp",
 				Ports:      []string{fmt.Sprintf("%d", hcPort)},
@@ -253,7 +254,7 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 		}, {
 			IPProtocol: "ipip",
 		}},
-		Description:  "allow-internal",
+		Description:  "Internal Communication",
 		SourceRanges: []string{"10.128.0.0/9"},
 		TargetTags:   networkTags(ctx.orbID, ctx.providerID),
 	}, ctx.monitor), toInternalFirewall(&compute.Firewall{
@@ -262,7 +263,7 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 			IPProtocol: "tcp",
 			Ports:      []string{"22"},
 		}},
-		Description:  "allow-ssh-through-iap",
+		Description:  "SSH through IAP",
 		SourceRanges: []string{"35.235.240.0/20"},
 		TargetTags:   networkTags(ctx.orbID, ctx.providerID),
 	}, ctx.monitor))
