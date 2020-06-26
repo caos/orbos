@@ -3,7 +3,7 @@ package gce
 import "github.com/caos/orbos/internal/helpers"
 
 func destroy(context *context) error {
-	if err := helpers.Fanout([]func() error{
+	return helpers.Fanout([]func() error{
 		func() error {
 			destroyLB, err := queryLB(context, nil)
 			if err != nil {
@@ -26,13 +26,14 @@ func destroy(context *context) error {
 					delFuncs = append(delFuncs, machine.Remove)
 				}
 			}
-			return helpers.Fanout(delFuncs)()
+			if err := helpers.Fanout(delFuncs)(); err != nil {
+				return err
+			}
+			_, deleteFirewalls, err := queryFirewall(context, nil)
+			if err != nil {
+				return err
+			}
+			return destroyNetwork(context, deleteFirewalls)
 		},
-		func() error {
-			return destroyNetwork(context)
-		},
-	})(); err != nil {
-		return err
-	}
-	return destroyNetwork(context)
+	})()
 }

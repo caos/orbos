@@ -12,7 +12,7 @@ var _ ensureFWFunc = queryFirewall
 func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []func() error, error) {
 	gceFirewalls, err := context.client.Firewalls.
 		List(context.projectID).
-		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
+		Filter(fmt.Sprintf(`network : "%s"`, context.networkURL)).
 		Fields("items(description,name,allowed,targetTags,sourceRanges)").
 		Do()
 	if err != nil {
@@ -23,19 +23,17 @@ func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []f
 createLoop:
 	for _, fw := range firewalls {
 		for _, gceFW := range gceFirewalls.Items {
-			if gceFW.Description == fw.gce.Description {
-				fw.gce.Name = gceFW.Name
-				if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
-					!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
-					!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
-					ensure = append(ensure, operateFunc(
-						fw.log("Patching firewall", true),
-						computeOpCall(context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do),
-						toErrFunc(fw.log("Firewall patched", false)),
-					))
-				}
-				continue createLoop
+			fw.gce.Name = gceFW.Name
+			if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
+				!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
+				!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
+				ensure = append(ensure, operateFunc(
+					fw.log("Patching firewall", true),
+					computeOpCall(context.client.Firewalls.Patch(context.projectID, gceFW.Name, fw.gce).RequestId(uuid.NewV1().String()).Do),
+					toErrFunc(fw.log("Firewall patched", false)),
+				))
 			}
+			continue createLoop
 		}
 		fw.gce.Name = newName()
 		ensure = append(ensure, operateFunc(
