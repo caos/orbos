@@ -3,6 +3,7 @@ package gce
 import (
 	"bytes"
 	"fmt"
+	"github.com/caos/orbos/internal/tree"
 	"io"
 	"os/exec"
 	"sort"
@@ -173,4 +174,37 @@ func (i instances) refs() []*compute.InstanceReference {
 		ret[idx] = &compute.InstanceReference{Instance: i.url}
 	}
 	return ret
+}
+
+func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerID string) (map[string]infra.Machine, error) {
+	desired, err := parseDesiredV0(desiredTree)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+	desiredTree.Parsed = desired
+
+	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID)
+	if err != nil {
+		return nil, err
+	}
+
+	machinesSvc := newMachinesService(ctx)
+
+	pools, err := machinesSvc.ListPools()
+	if err != nil {
+		return nil, err
+	}
+
+	retMachines := make(map[string]infra.Machine, 0)
+	for _, pool := range pools {
+		machines, err := machinesSvc.List(pool)
+		if err != nil {
+			return nil, err
+		}
+		for _, machine := range machines {
+			id := pool + machine.ID()
+			retMachines[id] = machine
+		}
+	}
+	return retMachines, nil
 }

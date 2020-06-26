@@ -52,7 +52,6 @@ func GetQueryAndDestroyFuncs(
 			providerCurrent,
 		)
 	case "orbiter.caos.ch/StaticProvider":
-
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
 			return static.AdaptFunc(
 				provID,
@@ -127,15 +126,25 @@ func RewriteMasterkey(
 func ListMachines(
 	monitor mntr.Monitor,
 	providerTree *tree.Tree,
+	provID string,
+	repoURL string,
 ) (
 	map[string]infra.Machine,
 	error,
 ) {
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/GCEProvider":
-		return nil, nil
+		return gce.ListMachines(
+			monitor,
+			providerTree,
+			provID,
+			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"),
+		)
 	case "orbiter.caos.ch/StaticProvider":
-		return static.ListMachines(monitor, providerTree)
+		return static.ListMachines(
+			monitor,
+			providerTree,
+		)
 	default:
 		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}

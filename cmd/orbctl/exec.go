@@ -68,6 +68,7 @@ func Exec(rv RootValues) *cobra.Command {
 			machineIDs, machines, err := listMachines(
 				monitor,
 				desired,
+				orbConfig.URL,
 			)
 
 			if machineID == "" {
