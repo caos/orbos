@@ -12,8 +12,8 @@ var _ ensureFWFunc = queryFirewall
 func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []func() error, error) {
 	gceFirewalls, err := context.client.Firewalls.
 		List(context.projectID).
-		Filter(fmt.Sprintf(`network : "%s"`, context.networkURL)).
-		Fields("items(description,name,allowed,targetTags,sourceRanges)").
+		Filter(fmt.Sprintf(`network = "https://www.googleapis.com/compute/v1/%s"`, context.networkURL)).
+		Fields("items(network,name,allowed,targetTags,sourceRanges)").
 		Do()
 	if err != nil {
 		return nil, nil, err
