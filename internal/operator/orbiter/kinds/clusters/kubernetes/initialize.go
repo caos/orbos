@@ -220,11 +220,11 @@ func initialize(
 func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier) func() error {
 	n := &node
 	reconcileNode := false
-	reconcileMonitor := monitor.WithField("node", n)
+	reconcileMonitor := monitor.WithField("node", n.Name)
 	handleMaybe := func(maybeMonitorFields map[string]interface{}) {
 		if maybeMonitorFields != nil {
 			reconcileNode = true
-			monitor = monitor.WithFields(maybeMonitorFields)
+			reconcileMonitor = monitor.WithFields(maybeMonitorFields)
 		}
 	}
 
