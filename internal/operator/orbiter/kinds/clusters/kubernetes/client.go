@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 
 	apps "k8s.io/api/apps/v1"
+	batch "k8s.io/api/batch/v1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
@@ -117,6 +118,60 @@ func (c *Client) ApplyService(rsc *core.Service) error {
 		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
 		_, err = resources.Update(rsc)
 		return err
+	})
+}
+
+func (c *Client) ApplyJob(rsc *batch.Job) error {
+	resources := c.set.BatchV1().Jobs(rsc.Namespace)
+	return c.apply("job", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		j, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.GetName() != rsc.GetName() || j.GetNamespace() != rsc.GetNamespace() {
+			_, err := resources.Update(rsc)
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
+	resources := c.set.PolicyV1beta1().PodDisruptionBudgets(rsc.Namespace)
+	return c.apply("poddisruptionbudget", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		pdb, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if pdb.GetName() != rsc.GetName() || pdb.GetNamespace() != rsc.GetNamespace() {
+			_, err := resources.Update(rsc)
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
+	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
+	return c.apply("statefulset", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		ss, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if ss.GetName() != rsc.GetName() || ss.GetNamespace() != rsc.GetNamespace() {
+			_, err := resources.Update(rsc)
+			return err
+		}
+		return nil
 	})
 }
 

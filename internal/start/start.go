@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/caos/orbos/internal/operator/zitadel"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -253,6 +254,53 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 
 			takeoffChan <- struct{}{}
 		}()
+	}
+
+	return nil
+}
+
+func Zitadel(monitor mntr.Monitor, orbConfigPath string) error {
+	takeoffChan := make(chan struct{})
+	go func() {
+		takeoffChan <- struct{}{}
+	}()
+
+	for range takeoffChan {
+		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			monitor.Error(err)
+			return err
+		}
+
+		gitClientConf := &orbgit.Config{
+			Comitter:  "zitadel",
+			Email:     "zitadel@caos.ch",
+			OrbConfig: orbConfig,
+			Action:    "iteration",
+		}
+
+		gitClient, cleanUp, err := orbgit.NewGitClient(context.Background(), monitor, gitClientConf)
+		if err != nil {
+			monitor.Error(err)
+			return err
+		}
+
+		takeoff := zitadel.Takeoff(monitor, gitClient)
+
+		go func() {
+			started := time.Now()
+			takeoff()
+
+			monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			}).Info("Iteration done")
+			debug.FreeOSMemory()
+		}()
+
+		go func() {
+			takeoffChan <- struct{}{}
+		}()
+		cleanUp()
 	}
 
 	return nil

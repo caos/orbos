@@ -22,8 +22,7 @@ func NewCA() (*rsa.PrivateKey, []byte, error) {
 		NotBefore:             time.Now(),
 		NotAfter:              time.Now().AddDate(10, 0, 0),
 		IsCA:                  true,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageCertSign,
 		BasicConstraintsValid: true,
 	}
 
@@ -47,12 +46,10 @@ func NewClient(caPrivKey *rsa.PrivateKey, ca []byte, user string) (*rsa.PrivateK
 			Organization: []string{"Cockroach"},
 			CommonName:   user,
 		},
-		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(10, 0, 0),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().AddDate(10, 0, 0),
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 	}
 
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
@@ -73,19 +70,28 @@ func NewClient(caPrivKey *rsa.PrivateKey, ca []byte, user string) (*rsa.PrivateK
 	return certPrivKey, certBytes, nil
 }
 
-func NewNode(caPrivKey *rsa.PrivateKey, ca []byte) (*rsa.PrivateKey, []byte, error) {
+func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string) (*rsa.PrivateKey, []byte, error) {
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
 			Organization: []string{"Cockroach"},
 			CommonName:   "node",
 		},
-		IPAddresses:  []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
-		NotBefore:    time.Now(),
-		NotAfter:     time.Now().AddDate(10, 0, 0),
-		SubjectKeyId: []byte{1, 2, 3, 4, 6},
-		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
-		KeyUsage:     x509.KeyUsageDigitalSignature,
+		IPAddresses: []net.IP{net.IPv4(127, 0, 0, 1)},
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().AddDate(10, 0, 0),
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		DNSNames: []string{
+			"localhost",
+			"cockroachdb-public",
+			"cockroachdb-public.default",
+			"cockroachdb-public." + namespace,
+			"cockroachdb-public." + namespace + ".svc.cluster.local",
+			"*.cockroachdb",
+			"*.cockroachdb." + namespace,
+			"*.cockroachdb." + namespace + ".svc.cluster.local",
+		},
 	}
 
 	certPrivKey, err := rsa.GenerateKey(rand.Reader, 4096)
