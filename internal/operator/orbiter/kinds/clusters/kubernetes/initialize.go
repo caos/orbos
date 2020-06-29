@@ -111,6 +111,7 @@ func initialize(
 
 		reconcile := func() error { return nil }
 		if node != nil && !current.Unknown {
+			monitor.WithField("node", fmt.Sprintf("%+v", *node)).Info("Defining reconcile function")
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s, pool.tier)
 			current.Joined = true
 			for _, cond := range node.Status.Conditions {
@@ -213,8 +214,9 @@ func initialize(
 }
 
 func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier) func() error {
+	n := &node
 	reconcileNode := false
-	reconcileMonitor := monitor.WithField("node", node.Name)
+	reconcileMonitor := monitor.WithField("node", n)
 	handleMaybe := func(maybeMonitorFields map[string]interface{}) {
 		if maybeMonitorFields != nil {
 			reconcileNode = true
@@ -222,16 +224,16 @@ func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Clien
 		}
 	}
 
-	handleMaybe(reconcileLabels(&node, "orbos.ch/pool", pool.Pool))
-	handleMaybe(reconcileLabels(&node, "orbos.ch/tier", string(tier)))
-	handleMaybe(reconcileTaints(&node, pool))
+	handleMaybe(reconcileLabels(n, "orbos.ch/pool", pool.Pool))
+	handleMaybe(reconcileLabels(n, "orbos.ch/tier", string(tier)))
+	handleMaybe(reconcileTaints(n, pool))
 
 	if !reconcileNode {
 		return func() error { return nil }
 	}
 	return func() error {
 		reconcileMonitor.Info("Reconciling node")
-		return k8s.updateNode(&node)
+		return k8s.updateNode(n)
 	}
 }
 
