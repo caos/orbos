@@ -33,20 +33,20 @@ func main() {
 		}
 	}()
 
+	if *orbctldir == "" {
+		panic("flag orbctldir not provided")
+	}
+
 	_, selfPath, _, _ := runtime.Caller(0)
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
 	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
-		executables.Buildable{MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
-		executables.Buildable{MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
+		executables.Buildable{OutDir: filepath.Join(*orbctldir, "nodeagent"), MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
+		executables.Buildable{OutDir: filepath.Join(*orbctldir, "health"), MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
 	))); err != nil {
 		panic(err)
-	}
-
-	if *orbctldir == "" {
-		return
 	}
 
 	// Use all available CPUs from now on
