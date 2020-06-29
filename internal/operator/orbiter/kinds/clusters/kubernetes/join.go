@@ -25,33 +25,17 @@ func join(
 	kubernetesVersion KubernetesVersion,
 	certKey string) (*string, error) {
 
-	var installNetwork func() error
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
 		"tier":    joining.pool.tier,
 	})
 
+	var applyNetworkCommand string
 	switch desired.Spec.Networking.Network {
 	case "cilium":
-		installNetwork = func() error {
-			return infra.Try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
-				applyStdout, applyErr := cmp.Execute(nil, nil, "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml")
-				monitor.WithFields(map[string]interface{}{
-					"stdout": string(applyStdout),
-				}).Debug("Applied cilium network")
-				return applyErr
-			})
-		}
+		applyNetworkCommand = "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml"
 	case "calico":
-		installNetwork = func() error {
-			return infra.Try(monitor, time.NewTimer(20*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
-				applyStdout, applyErr := cmp.Execute(nil, nil, fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr))
-				monitor.WithFields(map[string]interface{}{
-					"stdout": string(applyStdout),
-				}).Debug("Applied calico network")
-				return applyErr
-			})
-		}
+		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
 	default:
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
@@ -186,7 +170,7 @@ nodeRegistration:
 		return nil, err
 	}
 
-	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s", kubeAPI.BackendPort, kubeadmCfgPath)
+	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && %s", kubeAPI.BackendPort, kubeadmCfgPath, applyNetworkCommand)
 	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
 	if err != nil {
 		return nil, err
@@ -194,18 +178,6 @@ nodeRegistration:
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(initStdout),
 	}).Debug("Executed kubeadm init")
-
-	copyKubeconfigStdout, err := joining.infra.Execute(nil, nil, "mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config")
-	monitor.WithFields(map[string]interface{}{
-		"stdout": string(copyKubeconfigStdout),
-	}).Debug("Moved kubeconfig")
-	if err != nil {
-		return nil, err
-	}
-
-	if err := installNetwork(); err != nil {
-		return nil, err
-	}
 
 	kubeconfigBuf := new(bytes.Buffer)
 	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfigBuf); err != nil {

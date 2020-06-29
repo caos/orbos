@@ -7,7 +7,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (desire func(machine *initializedMachine)) {
+func firewallFunc(monitor mntr.Monitor, desired DesiredV0) (desire func(machine *initializedMachine)) {
 
 	return func(machine *initializedMachine) {
 
@@ -42,18 +42,15 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0, kubeAPIPort uint16) (
 			}
 		}
 
-		if machine.desiredNodeagent.Firewall == nil {
-			machine.desiredNodeagent.Firewall = &common.Firewall{}
-		}
-		firewall := common.Firewall(fw)
+		firewall := common.ToFirewall(fw)
 		if firewall.IsContainedIn(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Contains(firewall) {
 			machine.currentMachine.FirewallIsReady = true
-			monitor.Debug("Firewall is ready")
+			monitor.Debug("firewall is ready")
 			return
 		}
 
 		machine.currentMachine.FirewallIsReady = false
 		machine.desiredNodeagent.Firewall.Merge(firewall)
-		monitor.Info("Firewall desired")
+		monitor.Info("firewall desired")
 	}
 }

@@ -23,6 +23,7 @@ func GetQueryAndDestroyFuncs(
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan bool,
 	orbiterCommit, repoURL, repoKey string,
+	oneoff bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -44,6 +45,7 @@ func GetQueryAndDestroyFuncs(
 			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"),
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
+			oneoff,
 		)(
 			monitor,
 			finishedChan,

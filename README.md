@@ -1,4 +1,4 @@
-# Orbos - GitOps everything
+# ORBOS - GitOps everything
 
 ![ORBOS](./docs/img/orbos-logo-oneline-lightdesign@2x.png)
 

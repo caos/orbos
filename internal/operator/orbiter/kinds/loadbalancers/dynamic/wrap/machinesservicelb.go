@@ -12,17 +12,16 @@ var _ core.MachinesService = (*CmpSvcLB)(nil)
 type CmpSvcLB struct {
 	core.MachinesService
 	dynamic       dynamic.Current
-	nodeagents    map[string]*common.NodeAgentSpec
+	nodeagents    *common.DesiredNodeAgents
 	notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string
 	vrrp          bool
 	vip           func(*dynamic.VIP) string
 }
 
-func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, vrrp bool, notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) *CmpSvcLB {
+func MachinesService(svc core.MachinesService, curr dynamic.Current, vrrp bool, notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) *CmpSvcLB {
 	return &CmpSvcLB{
 		MachinesService: svc,
 		dynamic:         curr,
-		nodeagents:      nodeagents,
 		notifyMasters:   notifyMasters,
 		vrrp:            vrrp,
 		vip:             vip,

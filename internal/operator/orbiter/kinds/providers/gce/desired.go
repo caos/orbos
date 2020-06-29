@@ -25,10 +25,6 @@ type Pool struct {
 
 func (p Pool) validate() error {
 
-	if p.Preemptible {
-		return errors.New("Premptible pools are not yet supported")
-	}
-
 	if p.MinCPUCores == 0 {
 		return errors.New("no cpu cores configured")
 	}
@@ -62,6 +58,7 @@ type Spec struct {
 	Region  string
 	Zone    string
 	Pools   map[string]*Pool
+	SSHKey  *SSHKey
 }
 
 func (d Desired) validate() error {

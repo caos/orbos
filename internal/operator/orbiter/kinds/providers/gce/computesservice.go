@@ -2,6 +2,7 @@ package gce
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -15,16 +16,22 @@ import (
 var _ core.MachinesService = (*machinesService)(nil)
 
 type machinesService struct {
-	context *context
-	cache   struct {
+	context           *context
+	oneoff            bool
+	maintenanceKey    []byte
+	maintenanceKeyPub []byte
+	cache             struct {
 		instances map[string][]*instance
 	}
 	onCreate func(pool string, machine infra.Machine) error
 }
 
-func newMachinesService(context *context) *machinesService {
+func newMachinesService(context *context, oneoff bool, maintenanceKey []byte, maintenanceKeyPub []byte) *machinesService {
 	return &machinesService{
-		context: context,
+		context:           context,
+		oneoff:            oneoff,
+		maintenanceKey:    maintenanceKey,
+		maintenanceKeyPub: maintenanceKeyPub,
 	}
 }
 
@@ -106,6 +113,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	name := newName()
+	sshKey := fmt.Sprintf("orbiter:%s", m.maintenanceKeyPub)
 	createInstance := &compute.Instance{
 		Name:              name,
 		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
@@ -114,18 +122,23 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Labels:            map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
 		Disks:             disks,
 		Scheduling:        &compute.Scheduling{Preemptible: desired.Preemptible},
+		Metadata: &compute.Metadata{
+			Items: []*compute.MetadataItems{{
+				Key:   "ssh-keys",
+				Value: &sshKey,
+			}},
+		},
 	}
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
-		"name": name,
-		"pool": poolName,
-		"zone": m.context.desired.Zone,
+		"machine": name,
+		"pool":    poolName,
 	})
 
 	if err := operateFunc(
-		func() { monitor.Info("Creating instance") },
+		func() { monitor.Debug("Creating instance") },
 		computeOpCall(m.context.client.Instances.Insert(m.context.projectID, m.context.desired.Zone, createInstance).RequestId(uuid.NewV1().String()).Do),
-		nil,
+		func() error { monitor.Info("Instance created"); return nil },
 	)(); err != nil {
 		return nil, err
 	}
@@ -135,6 +148,17 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Do()
 	if err != nil {
 		return nil, err
+	}
+
+	var machine machine
+	if m.oneoff || m.maintenanceKey == nil || len(m.maintenanceKey) == 0 {
+		machine = newGCEMachine(m.context, monitor, createInstance.Name)
+	} else {
+		sshMachine := ssh.NewMachine(monitor, "orbiter", newInstance.NetworkInterfaces[0].NetworkIP)
+		if err := sshMachine.UseKey(m.maintenanceKey); err != nil {
+			return nil, err
+		}
+		machine = sshMachine
 	}
 
 	infraMachine := newMachine(
@@ -149,6 +173,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 			createInstance.Name,
 		),
 		false,
+		machine,
 	)
 
 	for _, name := range diskNames {
@@ -176,7 +201,10 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
 	}
 
-	m.onCreate(poolName, infraMachine)
+	if err := m.onCreate(poolName, infraMachine); err != nil {
+		return nil, err
+	}
+
 	monitor.Info("Machine created")
 	return infraMachine, nil
 }
@@ -231,21 +259,34 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		}
 
 		pool := inst.Labels["pool"]
+
+		var machine machine
+		if m.oneoff || m.maintenanceKey == nil || len(m.maintenanceKey) == 0 {
+			machine = newGCEMachine(m.context, m.context.monitor.WithFields(toFields(inst.Labels)), inst.Name)
+		} else {
+			sshMachine := ssh.NewMachine(m.context.monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
+			if err := sshMachine.UseKey(m.maintenanceKey); err != nil {
+				return nil, err
+			}
+			machine = sshMachine
+		}
+
 		mach := newMachine(
 			m.context,
-			m.context.monitor.WithFields(toFields(inst.Labels)),
+			m.context.monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
 			inst.Name,
 			inst.NetworkInterfaces[0].NetworkIP,
 			inst.SelfLink,
 			pool,
 			m.removeMachineFunc(pool, inst.Name),
 			inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
+			machine,
 		)
+
 		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
 	}
 
 	return m.cache.instances, nil
-
 }
 
 func toFields(labels map[string]string) map[string]interface{} {
@@ -268,7 +309,10 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 		m.cache.instances[pool] = cleanMachines
 
 		return removeResourceFunc(
-			m.context.monitor.WithField("pool", pool),
+			m.context.monitor.WithFields(map[string]interface{}{
+				"pool":    pool,
+				"machine": id,
+			}),
 			"instance",
 			id,
 			m.context.client.Instances.Delete(m.context.projectID, m.context.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,

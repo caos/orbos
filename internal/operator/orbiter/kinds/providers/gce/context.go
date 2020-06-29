@@ -22,7 +22,7 @@ type context struct {
 	auth            *option.ClientOption
 }
 
-func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string) (*context, error) {
+func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*context, error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
 	ctx := ctxpkg.Background()
@@ -51,6 +51,7 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string)
 		ctx:        ctx,
 		auth:       &opt,
 	}
-	newContext.machinesService = newMachinesService(newContext)
+
+	newContext.machinesService = newMachinesService(newContext, oneoff, []byte(desired.SSHKey.Private.Value), []byte(desired.SSHKey.Public.Value))
 	return newContext, nil
 }

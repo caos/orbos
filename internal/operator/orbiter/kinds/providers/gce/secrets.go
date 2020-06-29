@@ -8,6 +8,7 @@ import (
 
 	"github.com/caos/orbos/mntr"
 )
+
 func SecretsFunc() secret.Func {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {

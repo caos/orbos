@@ -1,7 +1,10 @@
 package static
 
 import (
+	"sync"
+
 	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/secret"
@@ -19,8 +22,8 @@ func query(
 	desired *DesiredV0,
 	current *Current,
 
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
+	nodeAgentsDesired *common.DesiredNodeAgents,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
 	lb interface{},
 
 	monitor mntr.Monitor,
@@ -68,7 +71,7 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(machinesSvc, *lbCurrent, nodeAgentsDesired, true, nil, mapVIP)
+		wrappedMachinesService := wrap.MachinesService(machinesSvc, *lbCurrent, true, nil, mapVIP)
 		machinesSvc = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
@@ -94,19 +97,24 @@ func query(
 	}
 
 	return func(psf api.SecretFunc) *orbiter.EnsureResult {
+		var wg sync.WaitGroup
 		for _, pool := range pools {
-			machines, err := machinesSvc.List(pool)
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
+			machines, listErr := machinesSvc.List(pool)
+			if listErr != nil {
+				err = helpers.Concat(err, listErr)
 			}
 			for _, machine := range machines {
-				ensureNodeFuncFunc := func() *orbiter.EnsureResult {
-					return orbiter.ToEnsureResult(true, ensureNodeFunc(machine, pool))
-				}
-				if result := orbiter.EnsureFuncGoroutine(ensureNodeFuncFunc); result.Err != nil {
-					return result
-				}
+				wg.Add(1)
+				go func(m infra.Machine, p string) {
+					err = helpers.Concat(err, ensureNodeFunc(m, p))
+					wg.Done()
+				}(machine, pool)
 			}
+		}
+
+		wg.Wait()
+		if err != nil {
+			return orbiter.ToEnsureResult(false, err)
 		}
 
 		if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&

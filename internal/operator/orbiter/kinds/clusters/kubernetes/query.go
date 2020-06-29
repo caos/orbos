@@ -16,12 +16,10 @@ func query(
 	desired *DesiredV0,
 	current *CurrentCluster,
 	providerCurrents map[string]interface{},
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
+	nodeAgentsDesired *common.DesiredNodeAgents,
 	k8sClient *Client,
 	oneoff bool) (orbiter.EnsureFunc, error) {
-
-	current.Machines = make(map[string]*Machine)
 
 	cloudPools := make(map[string]map[string]infra.Pool)
 	var kubeAPIAddress *infra.Address
@@ -64,7 +62,7 @@ func query(
 		cloudPools,
 		k8sClient,
 		func(machine *initializedMachine) {
-			firewallFunc(monitor, *desired, kubeAPIAddress.FrontendPort)(machine)
+			firewallFunc(monitor, *desired)(machine)
 		})
 
 	return func(psf api.SecretFunc) *orbiter.EnsureResult {
