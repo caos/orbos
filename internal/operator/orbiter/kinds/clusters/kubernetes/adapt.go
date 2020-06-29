@@ -58,7 +58,7 @@ func AdaptFunc(
 		whitelist([]*orbiter.CIDR{&desiredKind.Spec.Networking.PodCidr})
 
 		var kc *string
-		if desiredKind.Spec.Kubeconfig.Value != "" {
+		if desiredKind.Spec.Kubeconfig != nil && desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
 		k8sClient := NewK8sClient(monitor, kc)
