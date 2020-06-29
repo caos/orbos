@@ -1,4 +1,4 @@
-package db
+package iam
 
 import (
 	"github.com/caos/orbos/internal/tree"
@@ -11,10 +11,8 @@ type DesiredV0 struct {
 }
 
 type Spec struct {
-	Verbose         bool
-	ReplicaCount    int      `yaml:"replicaCount,omitempty"`
-	StorageCapacity string   `yaml:"storageCapacity,omitempty"`
-	Users           []string `yaml:"users,omitempty"`
+	Verbose      bool
+	ReplicaCount int `yaml:"replicaCount,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
