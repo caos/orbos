@@ -21,6 +21,7 @@ func main() {
 	githubClientSecret := flag.String("githubclientsecret", "none", "ClientSecret used for OAuth with github as store")
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
+	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
 
 	flag.Parse()
 
@@ -52,17 +53,20 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	orbctlMain := path("orbctl")
-	orbctls := executables.Build(
-		*debug, *commit, *version, *githubClientID, *githubClientSecret,
+
+	orbctls := []executables.Buildable{
 		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
-	)
+	}
+	if *dev {
+		orbctls = []executables.Buildable{orbctlBin(orbctlMain, *orbctldir, runtime.GOOS, "amd64")}
+	}
 
 	var hasErr bool
-	for orbctl := range orbctls {
+	for orbctl := range executables.Build(*debug, *commit, *version, *githubClientID, *githubClientSecret, orbctls...) {
 		if _, err := orbctl(); err != nil {
 			hasErr = true
 		}
