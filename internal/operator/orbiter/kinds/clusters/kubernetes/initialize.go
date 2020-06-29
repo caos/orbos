@@ -215,17 +215,16 @@ func initialize(
 func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier) func() error {
 	reconcileNode := false
 	reconcileMonitor := monitor.WithField("node", node.Name)
-	handleMaybe := func(maybeNode *v1.Node, maybeMonitor *mntr.Monitor) {
-		if maybeNode != nil {
+	handleMaybe := func(maybeMonitorFields map[string]interface{}) {
+		if maybeMonitorFields != nil {
 			reconcileNode = true
-			node = *maybeNode
-			reconcileMonitor = *maybeMonitor
+			monitor = monitor.WithFields(maybeMonitorFields)
 		}
 	}
 
-	handleMaybe(reconcileLabels(node, reconcileMonitor, "orbos.ch/pool", pool.Pool))
-	handleMaybe(reconcileLabels(node, reconcileMonitor, "orbos.ch/tier", string(tier)))
-	handleMaybe(reconcileTaints(node, pool, reconcileMonitor))
+	handleMaybe(reconcileLabels(&node, "orbos.ch/pool", pool.Pool))
+	handleMaybe(reconcileLabels(&node, "orbos.ch/tier", string(tier)))
+	handleMaybe(reconcileTaints(&node, pool))
 
 	if !reconcileNode {
 		return func() error { return nil }
@@ -236,7 +235,7 @@ func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Clien
 	}
 }
 
-func reconcileTaints(node v1.Node, pool Pool, monitor mntr.Monitor) (*v1.Node, *mntr.Monitor) {
+func reconcileTaints(node *v1.Node, pool Pool) map[string]interface{} {
 	desiredTaints := pool.Taints.ToK8sTaints()
 	newTaints := append([]core.Taint{}, desiredTaints...)
 	updateTaints := false
@@ -257,21 +256,21 @@ outer:
 		break
 	}
 	if !updateTaints && len(node.Spec.Taints) == len(newTaints) || pool.Taints == nil {
-		return nil, nil
+		return nil
 	}
 	node.Spec.Taints = newTaints
-	monitor = monitor.WithField("taints", desiredTaints)
-	return &node, &monitor
+	return map[string]interface{}{"taints": desiredTaints}
 }
 
-func reconcileLabels(node v1.Node, monitor mntr.Monitor, key, value string) (*v1.Node, *mntr.Monitor) {
+func reconcileLabels(node *v1.Node, key, value string) map[string]interface{} {
 	if node.Labels[key] == value {
-		return nil, nil
+		return nil
 	}
-	monitor = monitor.WithField(fmt.Sprintf("label.%s", key), value)
 	if node.Labels == nil {
 		node.Labels = make(map[string]string)
 	}
 	node.Labels[key] = value
-	return &node, &monitor
+	return map[string]interface{}{
+		fmt.Sprintf("label.%s", key): value,
+	}
 }
