@@ -62,6 +62,7 @@ mdpolicy = group:main
 	if err := p.rembasedInstall(
 		&Software{Package: "yum-utils"},
 		&Software{Package: "yum-versionlock"},
+		&Software{Package: "yum-cron"},
 		&Software{Package: "firewalld"},
 	); err != nil {
 		return err

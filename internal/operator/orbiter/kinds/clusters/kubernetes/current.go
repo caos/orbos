@@ -44,6 +44,7 @@ type Machine struct {
 	Online          bool
 	Ready           bool
 	FirewallIsReady bool
+	Unknown         bool
 	Metadata        MachineMetadata `yaml:",inline"`
 }
 

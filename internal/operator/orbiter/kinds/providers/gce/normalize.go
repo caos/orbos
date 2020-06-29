@@ -39,6 +39,7 @@ type targetPool struct {
 	gce       *compute.TargetPool
 	destPools []string
 }
+
 type healthcheck struct {
 	log     StandardLogFunc
 	gce     *compute.HttpHealthCheck
@@ -93,11 +94,11 @@ func (n sortableDestinations) Less(i, j int) bool {
 
 // normalize returns a normalizedLoadBalancing for each unique destination backendPort and ip combination
 // whereas only one random configured healthcheck is relevant
-func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, providerID string) ([]*normalizedLoadbalancer, []*firewall) {
+func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadbalancer, []*firewall) {
 	var normalized []*normalizedLoadbalancer
 	var firewalls []*firewall
 
-	providerDescription := fmt.Sprintf("orb=%s;provider=%s", orbID, providerID)
+	providerDescription := fmt.Sprintf("orb=%s;provider=%s", ctx.orbID, ctx.providerID)
 
 	for _, ips := range spec {
 		for _, ip := range ips {
@@ -106,7 +107,7 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 			for _, src := range ip.Transport {
 				addressTransports = append(addressTransports, src.Name)
 				destDescription := fmt.Sprintf("%s;transport=%s", providerDescription, src.Name)
-				destMonitor := monitor.WithFields(map[string]interface{}{
+				destMonitor := ctx.monitor.WithFields(map[string]interface{}{
 					"transport": src.Name,
 				})
 				fwr := &compute.ForwardingRule{
@@ -186,21 +187,22 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 				})
 
 				firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
+					Network:     ctx.networkURL,
+					Description: fmt.Sprintf("External %s", src.Name),
 					Allowed: []*compute.FirewallAllowed{{
 						IPProtocol: "tcp",
 						Ports:      []string{fmt.Sprintf("%d", src.FrontendPort)},
 					}},
-					Description:  destDescription,
 					SourceRanges: whitelistStrings(src.Whitelist),
-					TargetTags:   networkTags(orbID, providerID, src.BackendPools...),
+					TargetTags:   networkTags(ctx.orbID, ctx.providerID, src.BackendPools...),
 				}, destMonitor))
 			}
 			sort.Strings(addressTransports)
 			address.gce = &compute.Address{
-				Description: fmt.Sprintf("orb=%s;provider=%s;transports=%s", orbID, providerID, strings.Join(addressTransports, ",")),
+				Description: fmt.Sprintf("orb=%s;provider=%s;transports=%s", ctx.orbID, ctx.providerID, strings.Join(addressTransports, ",")),
 			}
 			address.log = func(msg string, debug bool) func() {
-				localMonitor := monitor.WithField("transports", addressTransports)
+				localMonitor := ctx.monitor.WithField("transports", addressTransports)
 				if address.gce.Name != "" {
 					localMonitor = localMonitor.WithField("id", address.gce.Name)
 				}
@@ -222,23 +224,25 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 	for _, lb := range normalized {
 		lb.healthcheck.gce.Port = hcPort
 		firewalls = append(firewalls, toInternalFirewall(&compute.Firewall{
+			Description: fmt.Sprintf("Healthchecks %s", lb.transport),
+			Network:     ctx.networkURL,
 			Allowed: []*compute.FirewallAllowed{{
 				IPProtocol: "tcp",
 				Ports:      []string{fmt.Sprintf("%d", hcPort)},
 			}},
-			Description: fmt.Sprintf("%s;healthchecks", lb.healthcheck.gce.Description),
 			SourceRanges: []string{
 				// healthcheck sources, see https://cloud.google.com/load-balancing/docs/health-checks#fw-netlb
 				"35.191.0.0/16",
 				"209.85.152.0/22",
 				"209.85.204.0/22",
 			},
-			TargetTags: networkTags(orbID, providerID, lb.healthcheck.pools...),
-		}, monitor))
+			TargetTags: networkTags(ctx.orbID, ctx.providerID, lb.healthcheck.pools...),
+		}, ctx.monitor))
 		hcPort++
 	}
 
 	return normalized, append(firewalls, toInternalFirewall(&compute.Firewall{
+		Network: ctx.networkURL,
 		Allowed: []*compute.FirewallAllowed{{
 			IPProtocol: "tcp",
 			Ports:      []string{"0-65535"},
@@ -250,18 +254,19 @@ func normalize(monitor mntr.Monitor, spec map[string][]*dynamic.VIP, orbID, prov
 		}, {
 			IPProtocol: "ipip",
 		}},
-		Description:  fmt.Sprintf("%s;allow-internal", providerDescription),
+		Description:  "Internal Communication",
 		SourceRanges: []string{"10.128.0.0/9"},
-		TargetTags:   networkTags(orbID, providerID),
-	}, monitor), toInternalFirewall(&compute.Firewall{
+		TargetTags:   networkTags(ctx.orbID, ctx.providerID),
+	}, ctx.monitor), toInternalFirewall(&compute.Firewall{
+		Network: ctx.networkURL,
 		Allowed: []*compute.FirewallAllowed{{
 			IPProtocol: "tcp",
 			Ports:      []string{"22"},
 		}},
-		Description:  fmt.Sprintf("%s;allow-ssh-through-iap", providerDescription),
+		Description:  "SSH through IAP",
 		SourceRanges: []string{"35.235.240.0/20"},
-		TargetTags:   networkTags(orbID, providerID),
-	}, monitor))
+		TargetTags:   networkTags(ctx.orbID, ctx.providerID),
+	}, ctx.monitor))
 }
 
 func toInternalFirewall(fw *compute.Firewall, monitor mntr.Monitor) *firewall {
@@ -322,7 +327,7 @@ func removeResourceFunc(monitor mntr.Monitor, resource, id string, call func(...
 	}
 }
 
-func queryResources(context *context, normalized []*normalizedLoadbalancer, firewalls []*firewall) (func() error, error) {
+func queryLB(context *context, normalized []*normalizedLoadbalancer) (func() error, error) {
 	lb, err := chainInEnsureOrder(
 		context, normalized,
 		queryHealthchecks,
@@ -335,22 +340,14 @@ func queryResources(context *context, normalized []*normalizedLoadbalancer, fire
 		return nil, err
 	}
 
-	ensureFW, removeFW, err := queryFirewall(context, firewalls)
-	if err != nil {
-		return nil, err
-	}
-	return helpers.Fanout([]func() error{
-		func() error {
-			for _, fn := range lb {
-				if err := fn(); err != nil {
-					return err
-				}
+	return func() error {
+		for _, fn := range lb {
+			if err := fn(); err != nil {
+				return err
 			}
-			return nil
-		},
-		helpers.Fanout(ensureFW),
-		helpers.Fanout(removeFW),
-	}), nil
+		}
+		return nil
+	}, nil
 }
 
 type ensureLBFunc func(*context, []*normalizedLoadbalancer) ([]func() error, []func() error, error)
@@ -360,6 +357,7 @@ type ensureFWFunc func(*context, []*firewall) ([]func() error, []func() error, e
 func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...ensureLBFunc) ([]func() error, error) {
 	var ensureOperations []func() error
 	var removeOperations []func() error
+
 	for _, fn := range query {
 		ensure, remove, err := fn(ctx, lb)
 		if err != nil {

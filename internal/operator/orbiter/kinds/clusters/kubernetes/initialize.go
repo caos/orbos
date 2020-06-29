@@ -3,14 +3,14 @@ package kubernetes
 import (
 	"fmt"
 	"strings"
-	"time"
+
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type initializedPool struct {
@@ -91,18 +91,6 @@ func initialize(
 
 	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
 
-		node, imErr := k8s.GetNode(machine.ID())
-
-		// Retry if kubeapi returns other error than "NotFound"
-		for k8s.Available() && imErr != nil && !macherrs.IsNotFound(imErr) {
-			monitor.WithFields(map[string]interface{}{
-				"node":  machine.ID(),
-				"error": imErr.Error(),
-			}).Info("Could not determine node state")
-			time.Sleep(5 * time.Second)
-			node, imErr = k8s.GetNode(machine.ID())
-		}
-
 		current := &Machine{
 			Metadata: MachineMetadata{
 				Tier:     pool.tier,
@@ -111,9 +99,24 @@ func initialize(
 			},
 		}
 
+		var node *v1.Node
+		if k8s.Available() {
+			var k8sNodeErr error
+			node, k8sNodeErr = k8s.GetNode(machine.ID())
+			if k8sNodeErr != nil {
+				if macherrs.IsNotFound(k8sNodeErr) {
+					node = nil
+				} else {
+					current.Unknown = true
+				}
+			}
+		}
+
+		// Retry if kubeapi returns other error than "NotFound"
+
 		reconcile := func() error { return nil }
-		if imErr == nil {
-			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s)
+		if node != nil && !current.Unknown {
+			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s, pool.tier)
 			current.Joined = true
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
@@ -214,30 +217,31 @@ func initialize(
 		}, nil
 }
 
-func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client) func() error {
+func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier) func() error {
+	n := &node
 	reconcileNode := false
-	reconcileMonitor := monitor.WithField("node", node.Name)
-	handleMaybe := func(maybeNode *v1.Node, maybeMonitor *mntr.Monitor) {
-		if maybeNode != nil {
+	reconcileMonitor := monitor.WithField("node", n.Name)
+	handleMaybe := func(maybeMonitorFields map[string]interface{}) {
+		if maybeMonitorFields != nil {
 			reconcileNode = true
-			node = *maybeNode
-			reconcileMonitor = *maybeMonitor
+			reconcileMonitor = monitor.WithFields(maybeMonitorFields)
 		}
 	}
 
-	handleMaybe(reconcileLabels(node, pool, reconcileMonitor))
-	handleMaybe(reconcileTaints(node, pool, reconcileMonitor))
+	handleMaybe(reconcileLabels(n, "orbos.ch/pool", pool.Pool))
+	handleMaybe(reconcileLabels(n, "orbos.ch/tier", string(tier)))
+	handleMaybe(reconcileTaints(n, pool))
 
 	if !reconcileNode {
 		return func() error { return nil }
 	}
 	return func() error {
 		reconcileMonitor.Info("Reconciling node")
-		return k8s.updateNode(&node)
+		return k8s.updateNode(n)
 	}
 }
 
-func reconcileTaints(node v1.Node, pool Pool, monitor mntr.Monitor) (*v1.Node, *mntr.Monitor) {
+func reconcileTaints(node *v1.Node, pool Pool) map[string]interface{} {
 	desiredTaints := pool.Taints.ToK8sTaints()
 	newTaints := append([]core.Taint{}, desiredTaints...)
 	updateTaints := false
@@ -258,22 +262,21 @@ outer:
 		break
 	}
 	if !updateTaints && len(node.Spec.Taints) == len(newTaints) || pool.Taints == nil {
-		return nil, nil
+		return nil
 	}
 	node.Spec.Taints = newTaints
-	monitor = monitor.WithField("taints", desiredTaints)
-	return &node, &monitor
+	return map[string]interface{}{"taints": desiredTaints}
 }
 
-func reconcileLabels(node v1.Node, pool Pool, monitor mntr.Monitor) (*v1.Node, *mntr.Monitor) {
-	poolLabelKey := "orbos.ch/pool"
-	if node.Labels[poolLabelKey] == pool.Pool {
-		return nil, nil
+func reconcileLabels(node *v1.Node, key, value string) map[string]interface{} {
+	if node.Labels[key] == value {
+		return nil
 	}
-	monitor = monitor.WithField("label", fmt.Sprintf("%s=%s", poolLabelKey, pool.Pool))
 	if node.Labels == nil {
 		node.Labels = make(map[string]string)
 	}
-	node.Labels[poolLabelKey] = pool.Pool
-	return &node, &monitor
+	node.Labels[key] = value
+	return map[string]interface{}{
+		fmt.Sprintf("label.%s", key): value,
+	}
 }

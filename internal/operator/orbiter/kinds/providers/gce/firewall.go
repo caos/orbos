@@ -12,8 +12,8 @@ var _ ensureFWFunc = queryFirewall
 func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []func() error, error) {
 	gceFirewalls, err := context.client.Firewalls.
 		List(context.projectID).
-		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).
-		Fields("items(description,name,allowed,targetTags,sourceRanges)").
+		Filter(fmt.Sprintf(`network = "https://www.googleapis.com/compute/v1/%s"`, context.networkURL)).
+		Fields("items(network,name,description,allowed,targetTags,sourceRanges)").
 		Do()
 	if err != nil {
 		return nil, nil, err
@@ -23,8 +23,7 @@ func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []f
 createLoop:
 	for _, fw := range firewalls {
 		for _, gceFW := range gceFirewalls.Items {
-			if gceFW.Description == fw.gce.Description {
-				fw.gce.Name = gceFW.Name
+			if fw.gce.Description == gceFW.Description {
 				if gceFW.Allowed[0].Ports[0] != fw.gce.Allowed[0].Ports[0] ||
 					!stringsEqual(gceFW.TargetTags, fw.gce.TargetTags) ||
 					!stringsEqual(gceFW.SourceRanges, fw.gce.SourceRanges) {
