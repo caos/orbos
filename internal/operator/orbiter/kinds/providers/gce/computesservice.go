@@ -2,8 +2,9 @@ package gce
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -115,13 +116,15 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	name := newName()
 	sshKey := fmt.Sprintf("orbiter:%s", m.maintenanceKeyPub)
 	createInstance := &compute.Instance{
-		Name:              name,
-		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
-		Tags:              &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
-		NetworkInterfaces: []*compute.NetworkInterface{{}},
-		Labels:            map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
-		Disks:             disks,
-		Scheduling:        &compute.Scheduling{Preemptible: desired.Preemptible},
+		Name:        name,
+		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
+		Tags:        &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
+		NetworkInterfaces: []*compute.NetworkInterface{{
+			Network: m.context.networkURL,
+		}},
+		Labels:     map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
+		Disks:      disks,
+		Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
 		Metadata: &compute.Metadata{
 			Items: []*compute.MetadataItems{{
 				Key:   "ssh-keys",
