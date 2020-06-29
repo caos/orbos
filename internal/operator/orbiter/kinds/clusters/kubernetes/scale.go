@@ -109,12 +109,17 @@ func ensureScale(
 nodes:
 	for _, machine := range machines {
 
-		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
-
 		machineMonitor := monitor.WithFields(map[string]interface{}{
 			"machine": machine.infra.ID(),
 			"tier":    machine.pool.tier,
 		})
+
+		if machine.currentMachine.Unknown {
+			machineMonitor.Info("Waiting for kubernetes node to leave unknown state before proceeding")
+			return false, nil
+		}
+
+		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
 
 		if isJoinedControlPlane && machine.currentMachine.Online {
 			certsCP = machine.infra
