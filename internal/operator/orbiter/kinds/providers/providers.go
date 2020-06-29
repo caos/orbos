@@ -35,7 +35,8 @@ func GetQueryAndDestroyFuncs(
 
 	wlFunc := func() []*orbiter.CIDR {
 		monitor.Debug("Reading whitelist")
-		return <-whitelistChan
+		wl := <-whitelistChan
+		return wl
 	}
 
 	switch providerTree.Common.Kind {
@@ -57,10 +58,7 @@ func GetQueryAndDestroyFuncs(
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
 			return static.AdaptFunc(
 				provID,
-				func() []*orbiter.CIDR {
-					monitor.Debug("Reading whitelist")
-					return <-whitelistChan
-				},
+				wlFunc,
 				orbiterCommit, repoURL, repoKey,
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),

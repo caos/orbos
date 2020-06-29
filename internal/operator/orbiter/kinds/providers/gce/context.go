@@ -3,6 +3,8 @@ package gce
 import (
 	ctxpkg "context"
 	"encoding/json"
+	"fmt"
+	"hash/fnv"
 
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -12,6 +14,8 @@ import (
 
 type context struct {
 	monitor         mntr.Monitor
+	networkName     string
+	networkURL      string
 	orbID           string
 	providerID      string
 	projectID       string
@@ -40,16 +44,21 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 	}
 
 	monitor = monitor.WithField("projectID", key.ProjectID)
-
+	h := fnv.New32()
+	h.Write([]byte(orbID))
+	networkName := fmt.Sprintf("orbos-network-%d", h.Sum32())
+	networkURL := fmt.Sprintf("projects/%s/global/networks/%s", key.ProjectID, networkName)
 	newContext := &context{
-		monitor:    monitor,
-		orbID:      orbID,
-		providerID: providerID,
-		projectID:  key.ProjectID,
-		desired:    desired,
-		client:     computeClient,
-		ctx:        ctx,
-		auth:       &opt,
+		monitor:     monitor,
+		orbID:       orbID,
+		providerID:  providerID,
+		projectID:   key.ProjectID,
+		desired:     desired,
+		client:      computeClient,
+		ctx:         ctx,
+		auth:        &opt,
+		networkName: networkName,
+		networkURL:  networkURL,
 	}
 
 	newContext.machinesService = newMachinesService(newContext, oneoff, []byte(desired.SSHKey.Private.Value), []byte(desired.SSHKey.Public.Value))
