@@ -109,7 +109,7 @@ func initialize(
 		// Retry if kubeapi returns other error than "NotFound"
 
 		reconcile := func() error { return nil }
-		if !current.Unknown {
+		if node != nil && !current.Unknown {
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s, pool.tier)
 			current.Joined = true
 			for _, cond := range node.Status.Conditions {
