@@ -9,6 +9,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type initializedPool struct {
@@ -101,7 +102,7 @@ func initialize(
 		if k8s.Available() {
 			var k8sNodeErr error
 			node, k8sNodeErr = k8s.GetNode(machine.ID())
-			if k8sNodeErr != nil {
+			if k8sNodeErr != nil && !macherrs.IsNotFound(k8sNodeErr) {
 				current.Unknown = true
 			}
 		}
