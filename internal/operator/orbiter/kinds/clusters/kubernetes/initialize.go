@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strings"
 
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
 type initializedPool struct {
@@ -102,8 +103,12 @@ func initialize(
 		if k8s.Available() {
 			var k8sNodeErr error
 			node, k8sNodeErr = k8s.GetNode(machine.ID())
-			if k8sNodeErr != nil && !macherrs.IsNotFound(k8sNodeErr) {
-				current.Unknown = true
+			if k8sNodeErr != nil {
+				if macherrs.IsNotFound(k8sNodeErr) {
+					node = nil
+				} else {
+					current.Unknown = true
+				}
 			}
 		}
 
@@ -111,7 +116,6 @@ func initialize(
 
 		reconcile := func() error { return nil }
 		if node != nil && !current.Unknown {
-			monitor.WithField("node", fmt.Sprintf("%+v", *node)).Info("Defining reconcile function")
 			reconcile = reconcileNodeFunc(*node, monitor, pool.desired, k8s, pool.tier)
 			current.Joined = true
 			for _, cond := range node.Status.Conditions {
