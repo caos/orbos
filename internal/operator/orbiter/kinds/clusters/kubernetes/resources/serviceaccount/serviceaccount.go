@@ -7,9 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFunc(k8sClient *kubernetes.Client, namespace, name string, labels map[string]string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFunc(namespace, name string, labels map[string]string) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				return k8sClient.ApplyServiceAccount(&corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
@@ -18,7 +18,7 @@ func AdaptFunc(k8sClient *kubernetes.Client, namespace, name string, labels map[
 					},
 				})
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

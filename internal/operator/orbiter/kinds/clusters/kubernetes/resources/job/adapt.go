@@ -6,12 +6,12 @@ import (
 	batch "k8s.io/api/batch/v1"
 )
 
-func AdaptFunc(k8sClient *kubernetes.Client, job *batch.Job) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFunc(job *batch.Job) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				return k8sClient.ApplyJob(job)
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

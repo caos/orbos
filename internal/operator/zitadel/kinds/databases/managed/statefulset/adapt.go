@@ -2,7 +2,6 @@ package statefulset
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/statefulset"
 	appsv1 "k8s.io/api/apps/v1"
@@ -14,7 +13,6 @@ import (
 )
 
 func AdaptFunc(
-	k8sClient *kubernetes.Client,
 	namespace string,
 	labels map[string]string,
 	serviceAccountName string,
@@ -165,6 +163,6 @@ func AdaptFunc(
 		},
 	}
 
-	return statefulset.AdaptFunc(k8sClient, statefulsetDef)
+	return statefulset.AdaptFunc(statefulsetDef)
 
 }

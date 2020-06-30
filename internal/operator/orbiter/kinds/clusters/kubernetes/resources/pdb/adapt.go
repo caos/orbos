@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func AdaptFunc(k8sClient *kubernetes.Client, namespace, name string, labels map[string]string, maxUnavailable string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFunc(namespace, name string, labels map[string]string, maxUnavailable string) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				maxUnavailableParsed := intstr.Parse(maxUnavailable)
 
 				return k8sClient.ApplyPodDisruptionBudget(&policy.PodDisruptionBudget{
@@ -26,7 +26,7 @@ func AdaptFunc(k8sClient *kubernetes.Client, namespace, name string, labels map[
 					},
 				})
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

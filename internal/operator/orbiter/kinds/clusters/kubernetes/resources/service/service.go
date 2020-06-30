@@ -17,7 +17,6 @@ type Port struct {
 }
 
 func AdaptFunc(
-	k8sClient *kubernetes.Client,
 	name string,
 	namespace string,
 	labels map[string]string,
@@ -33,7 +32,7 @@ func AdaptFunc(
 	error,
 ) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				portList := make([]corev1.ServicePort, 0)
 				for _, port := range ports {
 					portList = append(portList, corev1.ServicePort{
@@ -62,7 +61,7 @@ func AdaptFunc(
 				},
 				)
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

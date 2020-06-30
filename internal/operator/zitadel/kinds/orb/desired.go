@@ -1,4 +1,4 @@
-package iam
+package orb
 
 import (
 	"github.com/caos/orbos/internal/tree"
@@ -7,23 +7,20 @@ import (
 
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
-	Spec   Spec
-}
-
-type Spec struct {
-	Verbose      bool
-	ReplicaCount int `yaml:"replicaCount,omitempty"`
-}
-
-func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
-	desiredKind := &DesiredV0{
-		Common: desiredTree.Common,
-		Spec:   Spec{},
+	Spec   struct {
+		Verbose bool
 	}
+	Database *tree.Tree
+	IAM      *tree.Tree
+}
+
+func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
+	desiredKind := &DesiredV0{Common: desiredTree.Common}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
+	desiredKind.Common.Version = "v0"
 
 	return desiredKind, nil
 }

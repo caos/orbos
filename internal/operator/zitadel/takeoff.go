@@ -2,9 +2,11 @@ package zitadel
 
 import (
 	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/operator/zitadel/cockroachdb"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"io/ioutil"
 )
 
 func Takeoff(monitor mntr.Monitor, gitClient *git.Client) func() {
@@ -16,21 +18,31 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client) func() {
 		}
 		treeCurrent := &tree.Tree{}
 
-		adapt := cockroachdb.AdaptFunc()
+		data, err := ioutil.ReadFile("/Users/benz/.kube/config")
+		dummyKubeconfig := string(data)
+		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
+		//if err := k8sClient.RefreshLocal(); err != nil {
+		//	return nil, nil, err
+		//}
 
-		query, _, err := adapt(monitor, treeDesired, treeCurrent)
+		if !k8sClient.Available() {
+			monitor.Error(err)
+			return
+		}
+
+		query, _, err := orb.AdaptFunc()(monitor, treeDesired, treeCurrent)
 		if err != nil {
 			monitor.Error(err)
 			return
 		}
 
-		ensure, err := query()
+		ensure, err := query(k8sClient)
 		if err != nil {
 			monitor.Error(err)
 			return
 		}
 
-		if err := ensure(); err != nil {
+		if err := ensure(k8sClient); err != nil {
 			monitor.Error(err)
 			return
 		}

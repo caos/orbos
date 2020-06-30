@@ -6,12 +6,12 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-func AdaptFunc(k8sClient *kubernetes.Client, statefulset *appsv1.StatefulSet) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFunc(statefulset *appsv1.StatefulSet) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				return k8sClient.ApplyStatefulSet(statefulset)
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

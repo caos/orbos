@@ -13,9 +13,9 @@ type Subject struct {
 	Namespace string
 }
 
-func AdaptFunc(k8sClient *kubernetes.Client, name string, labels map[string]string, subjects []Subject, clusterrole string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFunc(name string, labels map[string]string, subjects []Subject, clusterrole string) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				subjectsList := make([]rbac.Subject, 0)
 				for _, subject := range subjects {
 					subjectsList = append(subjectsList, rbac.Subject{
@@ -38,7 +38,7 @@ func AdaptFunc(k8sClient *kubernetes.Client, name string, labels map[string]stri
 					},
 				})
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

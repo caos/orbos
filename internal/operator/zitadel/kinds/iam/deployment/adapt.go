@@ -1,7 +1,6 @@
 package deployment
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
 	appsv1 "k8s.io/api/apps/v1"
@@ -10,7 +9,6 @@ import (
 )
 
 func AdaptFunc(
-	k8sClient *kubernetes.Client,
 	namespace string,
 	labels map[string]string,
 	replicaCount int,
@@ -125,5 +123,5 @@ func AdaptFunc(
 		},
 	}
 
-	return deployment.AdaptFunc(k8sClient, deploymentDef)
+	return deployment.AdaptFunc(deploymentDef)
 }

@@ -7,9 +7,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFunc(k8sClient *kubernetes.Client, name string, namespace string, labels map[string]string, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFunc(name string, namespace string, labels map[string]string, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
-			return func() error {
+			return func(k8sClient *kubernetes.Client) error {
 				return k8sClient.ApplyRole(&rbac.Role{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      name,
@@ -23,7 +23,7 @@ func AdaptFunc(k8sClient *kubernetes.Client, name string, namespace string, labe
 					}},
 				})
 			}, nil
-		}, func() error {
+		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
 			return nil
 		}, nil

@@ -1,7 +1,6 @@
 package initjob
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
 	batchv1 "k8s.io/api/batch/v1"
@@ -10,7 +9,6 @@ import (
 )
 
 func AdaptFunc(
-	k8sClient *kubernetes.Client,
 	namespace string,
 	labels map[string]string,
 	serviceAccountName string,
@@ -62,5 +60,5 @@ func AdaptFunc(
 		},
 	}
 
-	return job.AdaptFunc(k8sClient, jobDef)
+	return job.AdaptFunc(jobDef)
 }

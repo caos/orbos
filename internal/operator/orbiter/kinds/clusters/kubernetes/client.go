@@ -89,8 +89,17 @@ func (c *Client) ListNamespaces() (*core.NamespaceList, error) {
 	return c.set.CoreV1().Namespaces().List(mach.ListOptions{})
 }
 
-func (c *Client) ListSecrets(namespace string) (*core.SecretList, error) {
-	return c.set.CoreV1().Secrets(namespace).List(mach.ListOptions{})
+func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error) {
+	labelSelector := ""
+	for k, v := range labels {
+		if labelSelector == "" {
+			labelSelector = fmt.Sprintf("%s=%s", k, v)
+		} else {
+			labelSelector = fmt.Sprintf("%s, %s=%s", labelSelector, k, v)
+		}
+	}
+
+	return c.set.CoreV1().Secrets(namespace).List(mach.ListOptions{LabelSelector: labelSelector})
 }
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
@@ -181,6 +190,21 @@ func (c *Client) DeleteDeployment(namespace, name string) error {
 
 func (c *Client) ApplySecret(rsc *core.Secret) error {
 	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
+	return c.apply("secret", rsc.GetName(), func() error {
+		_, err := resources.Create(rsc)
+		return err
+	}, func() error {
+		_, err := resources.Update(rsc)
+		return err
+	})
+}
+
+func (c *Client) DeleteSecret(namespace, name string) error {
+	return c.set.CoreV1().Secrets(namespace).Delete(name, &mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
+	resources := c.set.CoreV1().ConfigMaps(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {
 		_, err := resources.Create(rsc)
 		return err

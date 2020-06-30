@@ -7,6 +7,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"net"
 	"time"
@@ -132,4 +133,13 @@ func PEMEncodeKey(key *rsa.PrivateKey) ([]byte, error) {
 		return nil, err
 	}
 	return keyPem.Bytes(), nil
+}
+
+func PEMDecodeKey(data []byte) (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode(data)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return nil, errors.New("failed to decode PEM block containing public key")
+	}
+
+	return x509.ParsePKCS1PrivateKey(block.Bytes)
 }

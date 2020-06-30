@@ -1,4 +1,4 @@
-package cockroachdb
+package provided
 
 import (
 	"github.com/caos/orbos/internal/tree"
@@ -11,10 +11,9 @@ type DesiredV0 struct {
 }
 
 type Spec struct {
-	Verbose         bool
-	ReplicaCount    int      `yaml:"replicaCount,omitempty"`
-	StorageCapacity string   `yaml:"storageCapacity,omitempty"`
-	Users           []string `yaml:"users,omitempty"`
+	Verbose bool
+	URL     string
+	Port    string
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
