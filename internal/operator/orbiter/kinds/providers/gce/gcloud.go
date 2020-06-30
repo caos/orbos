@@ -143,6 +143,9 @@ func refresh(ctx *context) (err error) {
 		}
 
 		name := filepath.Join(dir, header.Name)
+		if strings.Contains(name, "..") {
+			return false, nil
+		}
 
 		switch header.Typeflag {
 		case tar.TypeDir:
