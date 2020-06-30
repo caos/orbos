@@ -21,7 +21,16 @@ func SecretsFunc() secret.Func {
 		}
 		desiredTree.Parsed = desiredKind
 
-		return getSecretsMap(desiredKind), nil
+		secrets = getSecretsMap(desiredKind)
+		loadBalancersSecrets, err := loadbalancers.GetSecrets(monitor, desiredKind.Loadbalancing)
+		if err != nil {
+			return nil, err
+		}
+
+		for k, v := range loadBalancersSecrets {
+			secrets[k] = v
+		}
+		return secrets, nil
 	}
 }
 
