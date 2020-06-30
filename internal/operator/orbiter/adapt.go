@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type AdaptFunc func(monitor mntr.Monitor, finishedChan chan bool, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, bool, error)
+type AdaptFunc func(monitor mntr.Monitor, finishedChan chan struct{}, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, bool, error)
 
 type retAdapt struct {
 	query   QueryFunc

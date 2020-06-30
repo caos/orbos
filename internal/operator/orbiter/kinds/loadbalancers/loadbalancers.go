@@ -14,7 +14,7 @@ func GetQueryAndDestroyFunc(
 	whitelist dynamic.WhiteListFunc,
 	loadBalancingTree *tree.Tree,
 	loadBalacingCurrent *tree.Tree,
-	finishedChan chan bool,
+	finishedChan chan struct{},
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,

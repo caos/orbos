@@ -47,7 +47,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 
 		var initialized bool
 		for range takeoffChan {
-			monitor.Error(iterate(conf, !initialized, ctx, monitor, finishedChan, takeoffChan))
+			iterate(conf, !initialized, ctx, monitor, finishedChan, takeoffChan)
 			initialized = true
 		}
 	}()
@@ -59,10 +59,14 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		return nil, err
 	}
 
+	if err := orbctlGit.Clone(); err != nil {
+		return nil, err
+	}
+
 	return GetKubeconfigs(monitor, orbctlGit, orbFile)
 }
 
-func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) error {
+func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) {
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		panic(err)
@@ -175,8 +179,8 @@ func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, moni
 		}).Info("Iteration done")
 		debug.FreeOSMemory()
 		takeoffChan <- struct{}{}
+		cleanUp()
 	}()
-	cleanUp()
 }
 
 func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {

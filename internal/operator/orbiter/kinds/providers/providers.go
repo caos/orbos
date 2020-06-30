@@ -21,7 +21,7 @@ func GetQueryAndDestroyFuncs(
 	providerTree *tree.Tree,
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
-	finishedChan chan bool,
+	finishedChan chan struct{},
 	orbiterCommit, repoURL, repoKey string,
 	oneoff bool,
 ) (

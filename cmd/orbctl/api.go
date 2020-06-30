@@ -51,7 +51,7 @@ func APICommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			finishedChan := make(chan bool)
+			finishedChan := make(chan struct{})
 			_, _, migrate, err := adaptFunc(monitor, finishedChan, desired, &tree.Tree{})
 			if migrate {
 				if err := api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired); err != nil {

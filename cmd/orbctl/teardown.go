@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/utils/orbgit"
-	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -81,7 +82,7 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 				monitor.Info("Not touching Orb")
 				return nil
 			}
-			finishedChan := make(chan bool)
+			finishedChan := make(chan struct{})
 			return orbiter.Destroy(
 				monitor,
 				gitClient,

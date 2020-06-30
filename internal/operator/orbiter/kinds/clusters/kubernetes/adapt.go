@@ -22,8 +22,7 @@ func AdaptFunc(
 	destroyProviders func() (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
-		finished := false
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -95,7 +94,7 @@ func AdaptFunc(
 			} else {
 				if oneoff {
 					monitor.Info("Deployed Orbiter takes over control")
-					finished = true
+					finishedChan <- struct{}{}
 				}
 				deployErrors = 0
 			}
@@ -112,10 +111,6 @@ func AdaptFunc(
 			},
 			Current: current,
 		}
-
-		go func() {
-			finishedChan <- finished
-		}()
 
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
 				ensureFunc, err := query(

@@ -18,7 +18,7 @@ func DestroyFuncGoroutine(query func() error) error {
 	return <-retChan
 }
 
-func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan bool) error {
+func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan struct{}) error {
 	treeDesired, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
 		return err

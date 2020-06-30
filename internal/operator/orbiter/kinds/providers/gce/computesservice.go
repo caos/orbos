@@ -2,6 +2,7 @@ package gce
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
@@ -23,6 +24,7 @@ type machinesService struct {
 	maintenanceKeyPub []byte
 	cache             struct {
 		instances map[string][]*instance
+		sync.Mutex
 	}
 	onCreate func(pool string, machine infra.Machine) error
 }
@@ -303,6 +305,7 @@ func toFields(labels map[string]string) map[string]interface{} {
 func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 	return func() error {
 
+		m.cache.Lock()
 		cleanMachines := make([]*instance, 0)
 		for _, cachedMachine := range m.cache.instances[pool] {
 			if cachedMachine.id != id {
@@ -310,6 +313,7 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 			}
 		}
 		m.cache.instances[pool] = cleanMachines
+		defer m.cache.Unlock()
 
 		return removeResourceFunc(
 			m.context.monitor.WithFields(map[string]interface{}{

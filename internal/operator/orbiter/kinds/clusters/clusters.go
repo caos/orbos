@@ -21,7 +21,7 @@ func GetQueryAndDestroyFuncs(
 	clusterCurrent *tree.Tree,
 	destroyProviders func() (map[string]interface{}, error),
 	whitelistChan chan []*orbiter.CIDR,
-	finishedChan chan bool,
+	finishedChan chan struct{},
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,

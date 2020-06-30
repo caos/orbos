@@ -3,14 +3,15 @@ package orbgit
 import (
 	"context"
 	"errors"
+	"path/filepath"
+	"strings"
+
 	"github.com/caos/orbos/internal/git"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/stores/github"
 	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
-	"path/filepath"
-	"strings"
 )
 
 type Config struct {
@@ -48,7 +49,7 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, check
 		deployKeyPriv = deployKeyPrivLocal
 
 		deployKeyDelete = func() {
-			if err := g.DeleteDeployKeysByDescription(repo, desc).GetStatus(); err != nil {
+			if err := g.DeleteDeployKeysByAction(repo, conf.Action).GetStatus(); err != nil {
 				monitor.Error(errors.New("failed to clear deploy keys in repository"))
 			}
 		}

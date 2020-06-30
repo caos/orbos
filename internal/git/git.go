@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pkg/errors"
 

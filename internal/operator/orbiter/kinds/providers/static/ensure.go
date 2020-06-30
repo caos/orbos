@@ -51,8 +51,14 @@ func query(
 		return err
 	}
 
-	machinesSvc := NewMachinesService(monitor, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, ensureNodeFunc)
-	pools, err := machinesSvc.ListPools()
+	internalMachinesService := NewMachinesService(monitor, desired, id, ensureNodeFunc)
+	if err := internalMachinesService.updateKeys(); err != nil {
+		return nil, err
+	}
+
+	var externalMachinesService core.MachinesService = internalMachinesService
+
+	pools, err := internalMachinesService.ListPools()
 	if err != nil {
 		return nil, err
 	}
@@ -71,8 +77,8 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(machinesSvc, *lbCurrent, true, nil, mapVIP)
-		machinesSvc = wrappedMachinesService
+		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, true, nil, mapVIP)
+		externalMachinesService = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
 		}
@@ -99,7 +105,7 @@ func query(
 	return func(psf api.SecretFunc) *orbiter.EnsureResult {
 		var wg sync.WaitGroup
 		for _, pool := range pools {
-			machines, listErr := machinesSvc.List(pool)
+			machines, listErr := internalMachinesService.List(pool)
 			if listErr != nil {
 				err = helpers.Concat(err, listErr)
 			}
@@ -128,8 +134,11 @@ func query(
 			if err := psf(monitor.WithField("type", "maintenancekey")); err != nil {
 				return orbiter.ToEnsureResult(false, err)
 			}
+			if err := internalMachinesService.updateKeys(); err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
 		}
 
 		return ensureLBFunc()
-	}, addPools(current, desired, machinesSvc)
+	}, addPools(current, desired, externalMachinesService)
 }

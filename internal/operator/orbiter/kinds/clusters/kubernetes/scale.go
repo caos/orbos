@@ -2,9 +2,12 @@ package kubernetes
 
 import (
 	"fmt"
+	"sync"
+
+	"github.com/caos/orbos/internal/secret"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
-	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -177,7 +180,7 @@ nodes:
 
 	if joinCP != nil {
 
-		if doKubeadmInit && (desired.Spec.Kubeconfig.Value != "" || !oneoff) {
+		if doKubeadmInit && (desired.Spec.Kubeconfig != nil && desired.Spec.Kubeconfig.Value != "" || !oneoff) {
 			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is passed")
 		}
 
@@ -209,7 +212,7 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		desired.Spec.Kubeconfig.Value = *joinKubeconfig
+		desired.Spec.Kubeconfig = &secret.Secret{Value: *joinKubeconfig}
 		return false, psf(monitor.WithFields(map[string]interface{}{
 			"type": "kubeconfig",
 		}))

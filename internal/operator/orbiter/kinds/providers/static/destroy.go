@@ -3,14 +3,16 @@ package static
 import "github.com/caos/orbos/mntr"
 
 func destroy(monitor mntr.Monitor, desired *DesiredV0, current *Current, id string) error {
+
 	machinesSvc := NewMachinesService(
 		monitor,
 		desired,
-		[]byte(desired.Spec.Keys.BootstrapKeyPrivate.Value),
-		[]byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value),
-		[]byte(desired.Spec.Keys.MaintenanceKeyPublic.Value),
 		id,
 		nil)
+
+	if err := machinesSvc.updateKeys(); err != nil {
+		return err
+	}
 
 	pools, err := machinesSvc.ListPools()
 	if err != nil {

@@ -4,6 +4,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"syscall"
+
 	"github.com/caos/oidc/pkg/cli"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -14,11 +20,6 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-	"syscall"
 )
 
 var (
@@ -340,7 +341,7 @@ func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string,
 	return g
 }
 
-func (g *githubAPI) DeleteDeployKeysByDescription(repo *github.Repository, description string) *githubAPI {
+func (g *githubAPI) DeleteDeployKeysByAction(repo *github.Repository, action string) *githubAPI {
 	if g.GetStatus() != nil {
 		return g
 	}
@@ -351,7 +352,7 @@ func (g *githubAPI) DeleteDeployKeysByDescription(repo *github.Repository, descr
 	}
 
 	for _, key := range keys {
-		if *key.Title == description {
+		if strings.HasPrefix(*key.Title, fmt.Sprintf("orbos-%s", action)) {
 			if _, g.status = g.client.Repositories.DeleteKey(ctx, *repo.Owner.Login, *repo.Name, *key.ID); g.status != nil {
 				return g
 			}
