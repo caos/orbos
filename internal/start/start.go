@@ -3,10 +3,11 @@ package start
 import (
 	"context"
 	"errors"
-	"github.com/caos/orbos/internal/api"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
@@ -35,19 +36,39 @@ type OrbiterConfig struct {
 }
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
-	if conf.Recur {
-		orbiter.Metrics()
+
+	finishedChan := make(chan struct{})
+
+	go func() {
+		takeoffChan := make(chan struct{})
+		go func() {
+			takeoffChan <- struct{}{}
+		}()
+
+		var initialized bool
+		for range takeoffChan {
+			monitor.Error(iterate(conf, !initialized, ctx, monitor, finishedChan, takeoffChan))
+			initialized = true
+		}
+	}()
+
+	<-finishedChan
+
+	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
+	if err != nil {
+		return nil, err
 	}
 
-	finishedChan := make(chan bool)
+	return GetKubeconfigs(monitor, orbctlGit, orbFile)
+}
+
+func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) error {
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		panic(err)
 	}
 
-	pushEvents := func(_ []*ingestion.EventRequest) error {
-		return nil
-	}
+	pushEvents := func(events []*ingestion.EventRequest) error { return nil }
 	if conf.IngestionAddress != "" {
 		conn, err := grpc.Dial(conf.IngestionAddress, grpc.WithInsecure())
 		if err != nil {
@@ -55,6 +76,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		}
 
 		ingc := ingestion.NewIngestionServiceClient(conn)
+		defer conn.Close()
 
 		pushEvents = func(events []*ingestion.EventRequest) error {
 			_, err := ingc.PushEvents(ctx, &ingestion.EventsRequest{
@@ -65,106 +87,96 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		}
 	}
 
-	if err := pushEvents([]*ingestion.EventRequest{{
-		CreationDate: ptypes.TimestampNow(),
-		Type:         "orbiter.tookoff",
-		Data: &structpb.Struct{
-			Fields: map[string]*structpb.Value{
-				"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: conf.GitCommit}},
-			},
-		},
-	}}); err != nil {
-		panic(err)
-	}
-
-	started := float64(time.Now().UTC().Unix())
-
-	go func() {
-		for range time.Tick(time.Minute) {
-			pushEvents([]*ingestion.EventRequest{{
-				CreationDate: ptypes.TimestampNow(),
-				Type:         "orbiter.running",
-				Data: &structpb.Struct{
-					Fields: map[string]*structpb.Value{
-						"since": &structpb.Value{Kind: &structpb.Value_NumberValue{NumberValue: started}},
-					},
-				},
-			}})
+	if firstIteration {
+		if conf.Recur {
+			orbiter.Metrics()
 		}
-	}()
 
-	executables.Populate()
+		if err := pushEvents([]*ingestion.EventRequest{{
+			CreationDate: ptypes.TimestampNow(),
+			Type:         "orbiter.tookoff",
+			Data: &structpb.Struct{
+				Fields: map[string]*structpb.Value{
+					"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: conf.GitCommit}},
+				},
+			},
+		}}); err != nil {
+			panic(err)
+		}
 
-	monitor.WithFields(map[string]interface{}{
-		"version": conf.Version,
-		"commit":  conf.GitCommit,
-		"destroy": conf.Destroy,
-		"verbose": conf.Verbose,
-		"repoURL": orbFile.URL,
-	}).Info("Orbiter took off")
+		started := float64(time.Now().UTC().Unix())
 
-	go func() {
-		takeoffChan := make(chan struct{})
 		go func() {
-			takeoffChan <- struct{}{}
+			for range time.Tick(time.Minute) {
+				pushEvents([]*ingestion.EventRequest{{
+					CreationDate: ptypes.TimestampNow(),
+					Type:         "orbiter.running",
+					Data: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"since": {Kind: &structpb.Value_NumberValue{NumberValue: started}},
+						},
+					},
+				}})
+			}
 		}()
 
-		for range takeoffChan {
-			orbConfig, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
-			if err != nil {
-				monitor.Error(err)
-				return
-			}
+		executables.Populate()
 
-			gitClientConf := &orbgit.Config{
-				Comitter:  "orbiter",
-				Email:     "orbiter@caos.ch",
-				OrbConfig: orbConfig,
-				Action:    "iteration",
-			}
-
-			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
-			if err != nil {
-				monitor.Error(err)
-				return
-			}
-
-			adaptFunc := orb.AdaptFunc(
-				orbFile,
-				conf.GitCommit,
-				!conf.Recur,
-				conf.Deploy)
-
-			takeoffConf := &orbiter.Config{
-				OrbiterCommit: conf.GitCommit,
-				GitClient:     gitClient,
-				Adapt:         adaptFunc,
-				FinishedChan:  finishedChan,
-				PushEvents:    pushEvents,
-			}
-
-			takeoff := orbiter.Takeoff(monitor, takeoffConf)
-
-			go func() {
-				started := time.Now()
-				takeoff()
-
-				monitor.WithFields(map[string]interface{}{
-					"took": time.Since(started),
-				}).Info("Iteration done")
-				debug.FreeOSMemory()
-				takeoffChan <- struct{}{}
-			}()
-			cleanUp()
-		}
-	}()
-
-	finished := false
-	for !finished {
-		finished = <-finishedChan
+		monitor.WithFields(map[string]interface{}{
+			"version": conf.Version,
+			"commit":  conf.GitCommit,
+			"destroy": conf.Destroy,
+			"verbose": conf.Verbose,
+			"repoURL": orbFile.URL,
+		}).Info("Orbiter took off")
 	}
 
-	return GetKubeconfigs(monitor, orbctlGit, orbFile)
+	orbConfig, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
+	if err != nil {
+		monitor.Error(err)
+		finishedChan <- struct{}{}
+	}
+
+	gitClientConf := &orbgit.Config{
+		Comitter:  "orbiter",
+		Email:     "orbiter@caos.ch",
+		OrbConfig: orbConfig,
+		Action:    "iteration",
+	}
+
+	gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
+	if err != nil {
+		monitor.Error(err)
+		finishedChan <- struct{}{}
+	}
+
+	adaptFunc := orb.AdaptFunc(
+		orbFile,
+		conf.GitCommit,
+		!conf.Recur,
+		conf.Deploy)
+
+	takeoffConf := &orbiter.Config{
+		OrbiterCommit: conf.GitCommit,
+		GitClient:     gitClient,
+		Adapt:         adaptFunc,
+		FinishedChan:  finishedChan,
+		PushEvents:    pushEvents,
+	}
+
+	takeoff := orbiter.Takeoff(monitor, takeoffConf)
+
+	go func() {
+		started := time.Now()
+		takeoff()
+
+		monitor.WithFields(map[string]interface{}{
+			"took": time.Since(started),
+		}).Info("Iteration done")
+		debug.FreeOSMemory()
+		takeoffChan <- struct{}{}
+	}()
+	cleanUp()
 }
 
 func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
