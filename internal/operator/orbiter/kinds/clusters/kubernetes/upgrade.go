@@ -191,12 +191,14 @@ func ensureSoftware(
 			return nil
 		}
 
-		if !machine.currentNodeagent.NodeIsReady {
-			return awaitNodeAgent, nil
-		}
+		nodeIsReady := machine.currentNodeagent.NodeIsReady
 
 		if !machine.currentMachine.Joined {
 			if softwareContains(machine.currentNodeagent.Software, to) {
+				if !nodeIsReady {
+					return awaitNodeAgent, nil
+				}
+
 				// This node needs to be joined first
 				return nil, nil
 			}
@@ -228,6 +230,9 @@ func ensureSoftware(
 
 		if k8sNode.Spec.Unschedulable && !isControlplane {
 			machine.currentMachine.Online = false
+			if !nodeIsReady {
+				return awaitNodeAgent, nil
+			}
 			return ensureOnline(k8sNode), nil
 		}
 
@@ -235,7 +240,7 @@ func ensureSoftware(
 			return ensureTargetSoftware, nil
 		}
 
-		if !machine.currentNodeagent.NodeIsReady {
+		if !nodeIsReady {
 			return awaitNodeAgent, nil
 		}
 
