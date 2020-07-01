@@ -180,6 +180,17 @@ func ensureSoftware(
 			}
 		}
 
+		ensureTargetSoftware := func() error {
+			if !softwareContains(*machine.desiredNodeagent.Software, to) {
+				machine.desiredNodeagent.Software.Merge(to)
+				machinemonitor.WithFields(map[string]interface{}{
+					"current": KubernetesSoftware(machine.currentNodeagent.Software),
+					"desired": to,
+				}).Changed("Target software desired")
+			}
+			return nil
+		}
+
 		if !machine.currentNodeagent.NodeIsReady {
 			return awaitNodeAgent, nil
 		}
@@ -189,16 +200,7 @@ func ensureSoftware(
 				// This node needs to be joined first
 				return nil, nil
 			}
-			return func() error {
-				if !softwareContains(*machine.desiredNodeagent.Software, to) {
-					machine.desiredNodeagent.Software.Merge(to)
-					machinemonitor.WithFields(map[string]interface{}{
-						"current": KubernetesSoftware(machine.currentNodeagent.Software),
-						"desired": to,
-					}).Info("Join software desired")
-				}
-				return nil
-			}, nil
+			return ensureTargetSoftware, nil
 		}
 
 		if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
@@ -229,7 +231,11 @@ func ensureSoftware(
 			return ensureOnline(k8sNode), nil
 		}
 
-		if !machine.currentNodeagent.NodeIsReady || !softwareContains(machine.currentNodeagent.Software, to) {
+		if !softwareContains(machine.currentNodeagent.Software, to) {
+			return ensureTargetSoftware, nil
+		}
+
+		if !machine.currentNodeagent.NodeIsReady {
 			return awaitNodeAgent, nil
 		}
 
