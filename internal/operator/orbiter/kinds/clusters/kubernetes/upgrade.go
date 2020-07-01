@@ -231,7 +231,7 @@ func ensureSoftware(
 			return ensureOnline(k8sNode), nil
 		}
 
-		if !softwareContains(machine.currentNodeagent.Software, to) {
+		if !softwareContains(machine.currentNodeagent.Software, to) || !softwareContains(*machine.desiredNodeagent.Software, to) {
 			return ensureTargetSoftware, nil
 		}
 
