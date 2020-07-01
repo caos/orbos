@@ -135,16 +135,10 @@ func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, moni
 		}).Info("Orbiter took off")
 	}
 
-	orbConfig, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
-	if err != nil {
-		monitor.Error(err)
-		finishedChan <- struct{}{}
-	}
-
 	gitClientConf := &orbgit.Config{
 		Comitter:  "orbiter",
 		Email:     "orbiter@caos.ch",
-		OrbConfig: orbConfig,
+		OrbConfig: orbFile,
 		Action:    "iteration",
 	}
 

@@ -308,7 +308,7 @@ func addRepositories(ctx context.Context, client *github.Client, visibility, aff
 	return addRepos, err
 }
 
-func (g *githubAPI) GetDeployKeys(repo *github.Repository) []*github.Key {
+func (g *githubAPI) getDeployKeys(repo *github.Repository) []*github.Key {
 	if g.GetStatus() != nil {
 		return nil
 	}
@@ -323,7 +323,7 @@ func (g *githubAPI) GetDeployKeys(repo *github.Repository) []*github.Key {
 	return keys
 }
 
-func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string, value string) *githubAPI {
+func (g *githubAPI) CreateDeployKey(repo *github.Repository, value string) *githubAPI {
 	if g.GetStatus() != nil {
 		return g
 	}
@@ -332,7 +332,7 @@ func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string,
 	f := false
 	key := github.Key{
 		Key:      &value,
-		Title:    &description,
+		Title:    strPtr("orbos-system"),
 		ReadOnly: &f,
 	}
 
@@ -341,18 +341,18 @@ func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string,
 	return g
 }
 
-func (g *githubAPI) DeleteDeployKeysByAction(repo *github.Repository, action string) *githubAPI {
+func (g *githubAPI) EnsureNoDeployKey(repo *github.Repository) *githubAPI {
 	if g.GetStatus() != nil {
 		return g
 	}
 	ctx := context.Background()
-	keys := g.GetDeployKeys(repo)
+	keys := g.getDeployKeys(repo)
 	if g.status != nil {
 		return g
 	}
 
 	for _, key := range keys {
-		if strings.HasPrefix(*key.Title, fmt.Sprintf("orbos-%s", action)) {
+		if *key.Title == "orbos-system" {
 			if _, g.status = g.client.Repositories.DeleteKey(ctx, *repo.Owner.Login, *repo.Name, *key.ID); g.status != nil {
 				return g
 			}
@@ -360,4 +360,8 @@ func (g *githubAPI) DeleteDeployKeysByAction(repo *github.Repository, action str
 	}
 
 	return g
+}
+
+func strPtr(str string) *string {
+	return &str
 }

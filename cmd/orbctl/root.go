@@ -3,13 +3,15 @@ package main
 import (
 	"context"
 
+	"github.com/caos/orbos/internal/git"
+
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, errFunc)
+type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc)
 
 type errFunc func(cmd *cobra.Command) error
 
@@ -50,7 +52,7 @@ $ orbctl -f ~/.orb/myorb [command]
 	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, errFunc) {
+	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc) {
 
 		monitor := mntr.Monitor{
 			OnInfo:   mntr.LogMessage,
@@ -67,6 +69,8 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor.Error(err)
 		}
 
-		return context.Background(), monitor, orbConfig, nil
+		ctx := context.Background()
+
+		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch"), nil
 	}
 }

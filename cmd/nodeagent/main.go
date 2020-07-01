@@ -83,7 +83,7 @@ func main() {
 
 	ctx := context.Background()
 	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
-	if err := gitClient.Init(repoKey); err != nil {
+	if err := gitClient.Configure(repoKey); err != nil {
 		panic(err)
 	}
 

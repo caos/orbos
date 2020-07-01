@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
-	"strings"
 
 	"github.com/caos/orbos/internal/git"
 	orbconfig "github.com/caos/orbos/internal/orb"
@@ -21,7 +20,7 @@ type Config struct {
 	Action    string
 }
 
-func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, checks bool) (*git.Client, func(), error) {
+func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, checks bool) (*git.Client, string, func(), error) {
 	deployKeyPriv := ""
 	deployKeyDelete := func() {}
 
@@ -30,26 +29,24 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, check
 
 		deployKeyPrivLocal, deployKeyPub, err := ssh.Generate()
 		if err != nil {
-			return nil, deployKeyDelete, errors.New("failed to generate ssh key for deploy key")
+			return nil, "", deployKeyDelete, errors.New("failed to generate ssh key for deploy key")
 		}
 		g := github.New(monitor).LoginOAuth(dir)
 		if g.GetStatus() != nil {
-			return nil, deployKeyDelete, errors.New("failed github oauth login ")
+			return nil, "", deployKeyDelete, errors.New("failed github oauth login ")
 		}
 		repo, err := g.GetRepositorySSH(conf.OrbConfig.URL)
 		if err != nil {
-			return nil, deployKeyDelete, errors.New("failed to get github repository")
+			return nil, "", deployKeyDelete, errors.New("failed to get github repository")
 		}
 
-		desc := strings.Join([]string{"orbos", conf.Action, random.Generate()}, "-")
-
-		if err := g.CreateDeployKey(repo, desc, deployKeyPub).GetStatus(); err != nil {
-			return nil, deployKeyDelete, errors.New("failed to create deploy keys in repository")
+		if err := g.CreateDeployKey(repo, deployKeyPub).GetStatus(); err != nil {
+			return nil, "", deployKeyDelete, errors.New("failed to create deploy keys in repository")
 		}
 		deployKeyPriv = deployKeyPrivLocal
 
 		deployKeyDelete = func() {
-			if err := g.DeleteDeployKeysByAction(repo, conf.Action).GetStatus(); err != nil {
+			if err := g.EnsureNoDeployKey(repo).GetStatus(); err != nil {
 				monitor.Error(errors.New("failed to clear deploy keys in repository"))
 			}
 		}
@@ -59,26 +56,26 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, check
 	}
 
 	gitClient := git.New(ctx, monitor, conf.Comitter, conf.Email, conf.OrbConfig.URL)
-	if err := gitClient.Init([]byte(deployKeyPriv)); err != nil {
+	if err := gitClient.Configure([]byte(deployKeyPriv)); err != nil {
 		monitor.Error(err)
-		return nil, deployKeyDelete, err
+		return nil, "", deployKeyDelete, err
 	}
 
 	if checks {
 		if err := gitClient.ReadCheck(); err != nil {
 			monitor.Error(err)
-			return nil, deployKeyDelete, err
+			return nil, "", deployKeyDelete, err
 		}
 
 		if err := gitClient.WriteCheck(random.Generate()); err != nil {
 			monitor.Error(err)
-			return nil, deployKeyDelete, err
+			return nil, "", deployKeyDelete, err
 		}
 	}
 
 	if err := gitClient.Clone(); err != nil {
-		return gitClient, deployKeyDelete, err
+		return gitClient, "", deployKeyDelete, err
 	}
 
-	return gitClient, deployKeyDelete, nil
+	return gitClient, deployKeyPriv, deployKeyDelete, nil
 }

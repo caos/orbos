@@ -313,7 +313,7 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 			}
 		}
 		m.cache.instances[pool] = cleanMachines
-		defer m.cache.Unlock()
+		m.cache.Unlock()
 
 		return removeResourceFunc(
 			m.context.monitor.WithFields(map[string]interface{}{

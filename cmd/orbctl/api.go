@@ -5,7 +5,6 @@ import (
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/internal/tree"
-	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/spf13/cobra"
 )
 
@@ -19,22 +18,12 @@ func APICommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, monitor, orbConfig, errFunc := rv()
+		_, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "api",
-		}
-
-		monitor.Info("Start connection with git-repository")
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, false)
-		defer cleanUp()
-		if err != nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 

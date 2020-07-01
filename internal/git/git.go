@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/utils/random"
+
 	"gopkg.in/src-d/go-git.v4/config"
 	"gopkg.in/yaml.v3"
 
@@ -43,12 +45,11 @@ type Client struct {
 	repoURL   string
 }
 
-func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL string) *Client {
+func New(ctx context.Context, monitor mntr.Monitor, committer, email string) *Client {
 	newClient := &Client{
 		ctx:       ctx,
-		monitor:   monitor.WithField("repository", repoURL),
 		committer: committer,
-		repoURL:   repoURL,
+		email:     email,
 	}
 
 	if monitor.IsVerbose() {
@@ -61,11 +62,14 @@ func (g *Client) GetURL() string {
 	return g.repoURL
 }
 
-func (g *Client) Init(deploykey []byte) error {
+func (g *Client) Configure(repoURL string, deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {
 		return errors.Wrap(err, "parsing deployment key failed")
 	}
+
+	g.repoURL = repoURL
+	g.monitor = g.monitor.WithField("repository", repoURL)
 
 	g.auth = &gitssh.PublicKeys{
 		User:   "git",
@@ -74,6 +78,15 @@ func (g *Client) Init(deploykey []byte) error {
 
 	// TODO: Fix
 	g.auth.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+
+	if err := g.ReadCheck(); err != nil {
+		return err
+	}
+
+	if err := g.WriteCheck(random.Generate()); err != nil {
+		return err
+	}
+
 	return nil
 }
 

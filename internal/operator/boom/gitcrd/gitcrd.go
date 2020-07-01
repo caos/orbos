@@ -2,6 +2,11 @@ package gitcrd
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+
 	orbosapi "github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
@@ -21,10 +26,6 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 type GitCrd struct {
@@ -44,7 +45,7 @@ func New(conf *config.Config) (*GitCrd, error) {
 	monitor.Info("New GitCRD")
 
 	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email, conf.CrdUrl)
-	err := gitClient.Init(conf.PrivateKey)
+	err := gitClient.Configure(conf.PrivateKey)
 	if err != nil {
 		monitor.Error(err)
 		return nil, err

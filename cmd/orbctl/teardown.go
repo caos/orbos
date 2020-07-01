@@ -5,8 +5,6 @@ import (
 	"strings"
 
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/utils/orbgit"
-
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -45,21 +43,12 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, monitor, orbConfig, errFunc := rv()
+		_, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "takeoff",
-		}
-
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
-		defer cleanUp()
-		if err != nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
