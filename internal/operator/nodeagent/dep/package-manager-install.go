@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,14 +28,8 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 			continue
 		}
 
-		var epoch uint8 = 0
-		parsedEpoch, err := strconv.ParseInt(strings.Split(sw.Version, ":")[0], 10, 8)
-		if err != nil {
-			epoch = uint8(parsedEpoch)
-		}
-
 		installFmt := fmt.Sprintf("%s-%s", sw.Package, sw.Version)
-		if err := ManipulateFile("/etc/yum/pluginconf.d/versionlock.list", []string{installFmt}, []string{fmt.Sprintf("%d:%s.*", epoch, installFmt)}, nil); err != nil {
+		if err := ManipulateFile("/etc/yum/pluginconf.d/versionlock.list", []string{installFmt}, []string{fmt.Sprintf("%s.*", installFmt)}, nil); err != nil {
 			return err
 		}
 	}
