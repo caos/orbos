@@ -136,6 +136,7 @@ func initialize(
 		naSpec.ChangesAllowed = !pool.desired.UpdatesDisabled
 		naCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
+
 		if !softwareDefines(*naSpec.Software, k8sSoftware) {
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
 			if !softwareContains(*naSpec.Software, k8sSoftware) {

@@ -23,7 +23,6 @@ func ensure(
 ) (done bool, err error) {
 
 	initialized := true
-
 	for _, machine := range append(controlplaneMachines, workerMachines...) {
 
 		if err := machine.reconcile(); err != nil {
