@@ -2,16 +2,17 @@ package gce
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/api"
 	"strconv"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+
+	"github.com/caos/orbos/internal/api"
 
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/ssh"
 
 	"github.com/caos/orbos/internal/helpers"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
@@ -30,11 +31,10 @@ func query(
 	current *Current,
 	lb interface{},
 	context *context,
-	currentNodeAgents *common.CurrentNodeAgents,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
-	orbiterCommit,
-	repoURL,
-	repoKey string,
+	naFuncs core.IterateNodeAgentFuncs,
+	orbiterCommit string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
@@ -71,7 +71,7 @@ func query(
 		}
 	}
 
-	queryNA, installNA := core.NodeAgentFuncs(context.monitor, orbiterCommit, repoURL, repoKey, currentNodeAgents)
+	queryNA, installNA := naFuncs(nodeAgentsCurrent)
 
 	desireNodeAgent := func(pool string, machine infra.Machine) error {
 
@@ -120,7 +120,7 @@ func query(
 				}
 			}
 		}
-		running, err := queryNA(machine)
+		running, err := queryNA(machine, orbiterCommit)
 		if err != nil {
 			return err
 		}

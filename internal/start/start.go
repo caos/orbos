@@ -17,7 +17,6 @@ import (
 	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/caos/orbos/mntr"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
@@ -47,29 +46,26 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 
 		var initialized bool
 		for range takeoffChan {
-			iterate(conf, !initialized, ctx, monitor, finishedChan, takeoffChan)
+			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, takeoffChan)
 			initialized = true
 		}
 	}()
 
 	<-finishedChan
 
-	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := orbctlGit.Clone(); err != nil {
-		return nil, err
-	}
-
-	return GetKubeconfigs(monitor, orbctlGit, orbFile)
+	return GetKubeconfigs(monitor, orbctlGit)
 }
 
-func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) {
+func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) {
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
-		panic(err)
+		monitor.Error(err)
+		return
+	}
+
+	if err := gitClient.Configure(orbFile.URL, []byte(orbFile.Repokey)); err != nil {
+		monitor.Error(err)
+		return
 	}
 
 	pushEvents := func(events []*ingestion.EventRequest) error { return nil }
@@ -135,19 +131,6 @@ func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, moni
 		}).Info("Orbiter took off")
 	}
 
-	gitClientConf := &orbgit.Config{
-		Comitter:  "orbiter",
-		Email:     "orbiter@caos.ch",
-		OrbConfig: orbFile,
-		Action:    "iteration",
-	}
-
-	gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
-	if err != nil {
-		monitor.Error(err)
-		finishedChan <- struct{}{}
-	}
-
 	adaptFunc := orb.AdaptFunc(
 		orbFile,
 		conf.GitCommit,
@@ -160,6 +143,7 @@ func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, moni
 		Adapt:         adaptFunc,
 		FinishedChan:  finishedChan,
 		PushEvents:    pushEvents,
+		OrbConfig:     *orbFile,
 	}
 
 	takeoff := orbiter.Takeoff(monitor, takeoffConf)
@@ -173,11 +157,10 @@ func iterate(conf *OrbiterConfig, firstIteration bool, ctx context.Context, moni
 		}).Info("Iteration done")
 		debug.FreeOSMemory()
 		takeoffChan <- struct{}{}
-		cleanUp()
 	}()
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbFile *orbconfig.Orb) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)

@@ -4,6 +4,7 @@ package nodeagent
 
 import (
 	"fmt"
+	"io/ioutil"
 	"runtime/debug"
 
 	"gopkg.in/yaml.v3"
@@ -22,11 +23,40 @@ type event struct {
 	current *common.NodeAgentCurrent
 }
 
+func RepoKey() ([]byte, error) {
+
+	path := "/var/orbiter/repo-key"
+	key, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("repokey not found at %s: %w", path, err)
+	}
+
+	return key, err
+}
+
 func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
 
 	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, conv)
 
 	return func() {
+
+		repoKey, err := RepoKey()
+		if err != nil {
+			monitor.Error(err)
+			return
+		}
+
+		repoURL, err := ioutil.ReadFile("/var/orbiter/repo-url")
+		if err != nil {
+			monitor.Error(err)
+			return
+		}
+
+		if err := gitClient.Configure(string(repoURL), repoKey); err != nil {
+			monitor.Error(err)
+			return
+		}
+
 		if err := gitClient.Clone(); err != nil {
 			monitor.Error(err)
 			return
@@ -34,12 +64,13 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 
 		desired := common.NodeAgentsDesiredKind{}
 		if err := yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-desired.yml"), &desired); err != nil {
-			panic(err)
+			monitor.Error(err)
+			return
 		}
 
 		naDesired, ok := desired.Spec.NodeAgents.Get(id)
 		if !ok {
-			monitor.Error(fmt.Errorf("No desired state for node agent with id %s found", id))
+			monitor.Error(fmt.Errorf("no desired state for node agent with id %s found", id))
 			return
 		}
 
@@ -92,7 +123,8 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			Content: common.MarshalYAML(current),
 		})
 		if err != nil {
-			panic(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+			return
 		}
 
 		if reconciledCurrent {
@@ -114,10 +146,12 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 				Content: common.MarshalYAML(current),
 			})
 			if err != nil {
-				panic(fmt.Errorf("Commiting event \"%s\" failed: %s", event.commit, err.Error()))
+				monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", event.commit, err.Error()))
+				return
 			}
 			if !changed {
-				panic(fmt.Sprint("Event has no effect:", event.commit))
+				monitor.Error(fmt.Errorf("event has no effect:", event.commit))
+				return
 			}
 		}
 

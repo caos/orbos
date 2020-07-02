@@ -5,6 +5,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/operator/orbiter"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+
 	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/stores/github"
 
@@ -110,8 +114,22 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		if foundOrbiter {
+
+			_, _, configure, _, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+				orbConfig,
+				gitCommit,
+				true,
+				false))
+			if err != nil {
+				return err
+			}
+
+			if err := configure(*orbConfig); err != nil {
+				return err
+			}
+
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
 			if err != nil {
 				return err
 			}

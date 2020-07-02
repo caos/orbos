@@ -3,8 +3,8 @@ package main
 import (
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
+	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/spf13/cobra"
 )
 
@@ -33,15 +33,15 @@ func APICommand(rv RootValues) *cobra.Command {
 		}
 
 		if foundOrbiter {
-			adaptFunc := orb.AdaptFunc(orbConfig, gitCommit, true, false)
-
-			desired, err := api.ReadOrbiterYml(gitClient)
+			_, _, _, migrate, desired, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+				orbConfig,
+				gitCommit,
+				true,
+				false))
 			if err != nil {
 				return err
 			}
 
-			finishedChan := make(chan struct{})
-			_, _, migrate, err := adaptFunc(monitor, finishedChan, desired, &tree.Tree{})
 			if migrate {
 				if err := api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired); err != nil {
 					return err

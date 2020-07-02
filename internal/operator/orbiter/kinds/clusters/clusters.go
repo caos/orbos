@@ -3,7 +3,6 @@ package clusters
 import (
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -12,10 +11,8 @@ import (
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
-	orb *orb.Orb,
 	clusterID string,
 	clusterTree *tree.Tree,
-	orbiterCommit string,
 	oneoff bool,
 	deployOrbiter bool,
 	clusterCurrent *tree.Tree,
@@ -25,15 +22,15 @@ func GetQueryAndDestroyFuncs(
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
+	orbiter.ConfigureFunc,
 	bool,
 	error,
 ) {
 
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
 			return kubernetes.AdaptFunc(
-				orb,
 				clusterID,
 				oneoff,
 				deployOrbiter,
@@ -56,7 +53,7 @@ func GetQueryAndDestroyFuncs(
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 		//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 	default:
-		return nil, nil, false, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+		return nil, nil, nil, false, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 	}
 }
 

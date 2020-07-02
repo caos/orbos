@@ -1,34 +1,15 @@
 package static
 
-import "github.com/caos/orbos/mntr"
+import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+)
 
-func destroy(monitor mntr.Monitor, desired *DesiredV0, current *Current, id string) error {
+func destroy(svc *machinesService, desired *DesiredV0, current *Current) error {
 
-	machinesSvc := NewMachinesService(
-		monitor,
-		desired,
-		id,
-		nil)
+	core.Each(svc, func(pool string, machine infra.Machine) error {
+		return machine.Remove()
+	})
 
-	if err := machinesSvc.updateKeys(); err != nil {
-		return err
-	}
-
-	pools, err := machinesSvc.ListPools()
-	if err != nil {
-		return err
-	}
-
-	for _, pool := range pools {
-		machines, err := machinesSvc.List(pool)
-		if err != nil {
-			return err
-		}
-		for _, machine := range machines {
-			if err := machine.Remove(); err != nil {
-				return err
-			}
-		}
-	}
-	return addPools(current, desired, machinesSvc)
+	return addPools(current, desired, svc)
 }

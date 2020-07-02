@@ -27,18 +27,18 @@ func query(
 	lb interface{},
 
 	monitor mntr.Monitor,
-	id,
-	orbiterCommit,
-	repoURL,
-	repoKey string,
+	internalMachinesService *machinesService,
+	naFuncs core.IterateNodeAgentFuncs,
+	orbiterCommit string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	// TODO: Allow Changes
 	desireHostnameFunc := desireHostname(desired.Spec.Pools, nodeAgentsDesired, nodeAgentsCurrent, monitor)
-	queryNA, installNA := core.NodeAgentFuncs(monitor, orbiterCommit, repoURL, repoKey, nodeAgentsCurrent)
+
+	queryNA, installNA := naFuncs(nodeAgentsCurrent)
 
 	ensureNodeFunc := func(machine infra.Machine, pool string) error {
-		running, err := queryNA(machine)
+		running, err := queryNA(machine, orbiterCommit)
 		if err != nil {
 			return err
 		}
@@ -50,11 +50,7 @@ func query(
 		_, err = desireHostnameFunc(machine, pool)
 		return err
 	}
-
-	internalMachinesService := NewMachinesService(monitor, desired, id, ensureNodeFunc)
-	if err := internalMachinesService.updateKeys(); err != nil {
-		return nil, err
-	}
+	internalMachinesService.onCreate = ensureNodeFunc
 
 	var externalMachinesService core.MachinesService = internalMachinesService
 

@@ -27,13 +27,12 @@ type machinesService struct {
 func NewMachinesService(
 	monitor mntr.Monitor,
 	desired *DesiredV0,
-	id string,
-	onCreate func(machine infra.Machine, pool string) error) *machinesService {
+	id string) *machinesService {
 	return &machinesService{
 		monitor,
 		desired,
 		filepath.Join("/var/orbiter", id),
-		onCreate,
+		nil,
 		nil,
 	}
 }

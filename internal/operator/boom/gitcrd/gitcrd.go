@@ -44,8 +44,8 @@ func New(conf *config.Config) (*GitCrd, error) {
 
 	monitor.Info("New GitCRD")
 
-	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email, conf.CrdUrl)
-	err := gitClient.Configure(conf.PrivateKey)
+	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email)
+	err := gitClient.Configure(conf.CrdUrl, conf.PrivateKey)
 	if err != nil {
 		monitor.Error(err)
 		return nil, err

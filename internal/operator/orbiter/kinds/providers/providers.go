@@ -27,6 +27,7 @@ func GetQueryAndDestroyFuncs(
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
+	orbiter.ConfigureFunc,
 	bool,
 	error,
 ) {
@@ -55,7 +56,7 @@ func GetQueryAndDestroyFuncs(
 		)
 	case "orbiter.caos.ch/StaticProvider":
 
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
 			return static.AdaptFunc(
 				provID,
 				wlFunc,
@@ -68,7 +69,7 @@ func GetQueryAndDestroyFuncs(
 		}
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
-		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
 }
 

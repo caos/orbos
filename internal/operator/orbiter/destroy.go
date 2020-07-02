@@ -10,6 +10,10 @@ import (
 
 type DestroyFunc func() error
 
+func NoopDestroy() error {
+	return nil
+}
+
 func DestroyFuncGoroutine(query func() error) error {
 	retChan := make(chan error)
 	go func() {
@@ -26,11 +30,11 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finis
 
 	treeCurrent := &tree.Tree{}
 
-	adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
+	adaptFunc := func() (QueryFunc, DestroyFunc, ConfigureFunc, bool, error) {
 		return adapt(monitor, finishedChan, treeDesired, treeCurrent)
 	}
 
-	_, destroy, _, err := AdaptFuncGoroutine(adaptFunc)
+	_, destroy, _, _, err := AdaptFuncGoroutine(adaptFunc)
 	if err != nil {
 		return err
 	}
