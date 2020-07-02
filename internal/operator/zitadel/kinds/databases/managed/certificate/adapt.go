@@ -9,9 +9,13 @@ import (
 )
 
 func AdaptFunc(namespace string, clients []string, labels map[string]string) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
-	nodeLabels := labels
+	nodeLabels := map[string]string{}
+	clientLabels := map[string]string{}
+	for k, v := range labels {
+		nodeLabels[k] = v
+		clientLabels[k] = v
+	}
 	nodeLabels["zitadel.caos.ch/secret-type"] = "node"
-	clientLabels := labels
 	clientLabels["zitadel.caos.ch/secret-type"] = "client"
 
 	desiredNode := make([]*secretInternal, 0)
@@ -97,13 +101,13 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string) (zi
 				}
 				ensurers = append(ensurers, ensure)
 			} else {
-				cert, err := PEMDecodeKey([]byte(allNodeSecrets.Items[0].StringData[caPrivKeyKey]))
+				cert, err := PEMDecodeKey(allNodeSecrets.Items[0].Data[caPrivKeyKey])
 				if err != nil {
 					return nil, err
 				}
 				caPrivKey = cert
 
-				caCert = []byte(allNodeSecrets.Items[0].StringData[caCertKey])
+				caCert = allNodeSecrets.Items[0].Data[caCertKey]
 			}
 
 			allClientSecrets, err := k8sClient.ListSecrets(namespace, clientLabels)

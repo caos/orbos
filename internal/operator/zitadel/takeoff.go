@@ -3,13 +3,12 @@ package zitadel
 import (
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"io/ioutil"
 )
 
-func Takeoff(monitor mntr.Monitor, gitClient *git.Client) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) func() {
 	return func() {
 		treeDesired, err := Parse(gitClient, "zitadel.yml")
 		if err != nil {
@@ -30,7 +29,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client) func() {
 			return
 		}
 
-		query, _, err := orb.AdaptFunc()(monitor, treeDesired, treeCurrent)
+		query, _, err := adapt(monitor, treeDesired, treeCurrent)
 		if err != nil {
 			monitor.Error(err)
 			return

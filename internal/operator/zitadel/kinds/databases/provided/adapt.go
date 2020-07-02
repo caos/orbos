@@ -24,15 +24,19 @@ func AdaptFunc() zitadel.AdaptFunc {
 		}
 		desired.Parsed = desiredKind
 
-		current.Parsed = &DesiredV0{
+		currentDB := &Current{
 			Common: &tree.Common{
 				Kind:    "zitadel.caos.ch/ProvidedDatabase",
 				Version: "v0",
 			},
-			Spec: desiredKind.Spec,
 		}
+		current.Parsed = currentDB
 
 		return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
+				currentDB.Current.URL = desiredKind.Spec.URL
+				currentDB.Current.Port = desiredKind.Spec.Port
+				currentDB.Current.Users = desiredKind.Spec.Users
+
 				return func(k8sClient *kubernetes.Client) error {
 					return nil
 				}, nil

@@ -3,17 +3,26 @@ package deployment
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
+
+type secret struct {
+	Path      string
+	Name      string
+	Namespace string
+}
 
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
 	replicaCount int,
+	version string,
 ) (
-	resources.QueryFunc,
+	func(currentDB interface{}) (resources.EnsureFunc, error),
 	resources.DestroyFunc,
 	error,
 ) {
@@ -41,18 +50,18 @@ func AdaptFunc(
 					Containers: []v1.Container{
 						{
 							Name:            "zitadel",
-							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:latest",
+							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:" + version,
 							ImagePullPolicy: "IfNotPresent",
 							Ports: []v1.ContainerPort{
-								{Name: "management-rest", HostPort: 50011},
-								{Name: "management-grpc", HostPort: 50010},
-								{Name: "auth-rest", HostPort: 50021},
-								{Name: "issuer-rest", HostPort: 50022},
-								{Name: "auth-grpc", HostPort: 50020},
-								{Name: "admin-rest", HostPort: 50041},
-								{Name: "admin-grpc", HostPort: 50040},
-								{Name: "console-http", HostPort: 50050},
-								{Name: "accounts-http", HostPort: 50031},
+								{Name: "management-rest", ContainerPort: 50011},
+								{Name: "management-grpc", ContainerPort: 50010},
+								{Name: "auth-rest", ContainerPort: 50021},
+								{Name: "issuer-rest", ContainerPort: 50022},
+								{Name: "auth-grpc", ContainerPort: 50020},
+								{Name: "admin-rest", ContainerPort: 50041},
+								{Name: "admin-grpc", ContainerPort: 50040},
+								{Name: "console-http", ContainerPort: 50050},
+								{Name: "accounts-http", ContainerPort: 50031},
 							},
 							Env: []v1.EnvVar{
 								{Name: "POD_IP",
@@ -101,7 +110,7 @@ func AdaptFunc(
 						},
 					},
 					ImagePullSecrets: []v1.LocalObjectReference{{
-						Name: "githubsecret",
+						Name: "public-github-packages",
 					}},
 					Volumes: []v1.Volume{{
 						Name: internalSecrets,
@@ -123,5 +132,42 @@ func AdaptFunc(
 		},
 	}
 
-	return deployment.AdaptFunc(deploymentDef)
+	_, destroy, err := deployment.AdaptFunc(deploymentDef)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return func(currentDB interface{}) (resources.EnsureFunc, error) {
+		current := currentDB.(core.DatabaseCurrent)
+		secrets := make([]*secret, 0)
+		users := current.GetUsers()
+		for _, user := range users {
+			secrets = append(secrets, &secret{
+				Path: "/certs/" + user,
+				Name: "cockroachdb.client." + user,
+			})
+		}
+
+		for _, secret := range secrets {
+			internalName := strings.ReplaceAll(secret.Name, ".", "-")
+			vol := v1.Volume{
+				Name: internalName,
+				VolumeSource: v1.VolumeSource{
+					Secret: &v1.SecretVolumeSource{
+						SecretName: secret.Name,
+					},
+				},
+			}
+			deploymentDef.Spec.Template.Spec.Volumes = append(deploymentDef.Spec.Template.Spec.Volumes, vol)
+
+			volMount := v1.VolumeMount{Name: internalName, MountPath: secret.Path}
+			deploymentDef.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploymentDef.Spec.Template.Spec.Containers[0].VolumeMounts, volMount)
+		}
+
+		query, _, err := deployment.AdaptFunc(deploymentDef)
+		if err != nil {
+			return nil, err
+		}
+		return query()
+	}, destroy, nil
 }

@@ -33,6 +33,7 @@ func AdaptFunc(
 	migrationsConfigInternal := "migrate-db"
 	rootUserInternal := "root"
 	rootUserPath := "/certificates"
+	defaultMode := int32(0400)
 
 	jobDef := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -50,17 +51,32 @@ func AdaptFunc(
 							Command: []string{
 								"sh",
 								"-c",
-								"sleep 30; until pg_isready -h cockroachdb-public -p 26257; do echo waiting for database; sleep 2; done; sleep 30;",
+								"sleep 10; until pg_isready -h cockroachdb-public -p 26257; do echo waiting for database; sleep 2; done; sleep 10;",
 							},
+						},
+						{
+							Name:  "create-flyway-user",
+							Image: "cockroachdb/cockroach:v20.1.2",
+							Command: []string{
+								"sh",
+								"-c",
+								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"" + scripts.V1Setup1 + "\" -e \"" + scripts.V1Setup2 + "\"",
+							},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      rootUserInternal,
+								MountPath: rootUserPath,
+							}},
 						},
 					},
 					Containers: []corev1.Container{{
 						Name:            "db-migration",
-						Image:           "flyway/flyway:6.4.3",
+						Image:           "flyway/flyway:6.5.0",
 						ImagePullPolicy: "Always",
 						Args: []string{
-							"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?sslmode=verify-full&sslrootcert=" + rootUserPath + "/ca.crt&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key",
+							"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&user=flyway&sslfactory=org.postgresql.ssl.NonValidatingFactory&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key",
 							"-locations=filesystem:" + migrationsPath,
+							"-user=flyway",
+							"-password=flyway",
 							"migrate",
 						},
 
@@ -84,7 +100,8 @@ func AdaptFunc(
 						Name: rootUserInternal,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName: "cockroachdb.client.root",
+								SecretName:  "cockroachdb.client.root",
+								DefaultMode: &defaultMode,
 							},
 						},
 					}},

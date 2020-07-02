@@ -39,7 +39,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		queriers := make([]resources.QueryFunc, 0)
 		destroyers := make([]resources.DestroyFunc, 0)
 
-		namespaceStr := "caos-cockroach"
+		namespaceStr := "caos-zitadel"
 
 		labels := map[string]string{
 			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
@@ -92,11 +92,18 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
+		cockroachPort := "26257"
+		cockroachURL := "cockroachdb-public"
 		ports := []service.Port{
-			{Port: 26257, TargetPort: "26257", Name: "grpc"},
+			{Port: 26257, TargetPort: cockroachPort, Name: "grpc"},
 			{Port: 8080, TargetPort: "8080", Name: "http"},
 		}
-		querySP, destroySP, err := service.AdaptFunc("cockroachdb-public", namespaceStr, labels, ports, "", labels, false, "", "")
+		querySPD, destroySPD, err := service.AdaptFunc(cockroachURL, "default", labels, ports, "", labels, false, "", "")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		querySP, destroySP, err := service.AdaptFunc(cockroachURL, namespaceStr, labels, ports, "", labels, false, "", "")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -113,31 +120,36 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		externalName := "cockroachdb-public." + namespaceStr + ".svc.cluster.local"
-		queryES, destroyES, err := service.AdaptFunc("cockroachdb-public", "default", labels, []service.Port{}, "ExternalName", map[string]string{}, false, "", externalName)
-		if err != nil {
-			return nil, nil, err
-		}
+		//externalName := "cockroachdb-public." + namespaceStr + ".svc.cluster.local"
+		//queryES, destroyES, err := service.AdaptFunc("cockroachdb-public", "default", labels, []service.Port{}, "ExternalName", map[string]string{}, false, "", externalName)
+		//if err != nil {
+		//	return nil, nil, err
+		//}
 
 		queryJ, destroyJ, err := initjob.AdaptFunc(namespaceStr, labels, serviceAccountName)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queriers = append(queriers, querySA, queryR, queryCR, queryRB, queryCRB, querySP, queryS, querySFS, queryPDB, queryES, queryJ)
+		queriers = append(queriers, querySA, queryR, queryCR, queryRB, queryCRB, querySPD, querySP, queryS, querySFS, queryPDB, queryJ)
 		destroyCertZ := func(k8sClient *kubernetes.Client) error {
 			return destroyCert(k8sClient)
 		}
-		destroyers = append(destroyers, destroyNS, destroyCertZ, destroySA, destroyR, destroyCR, destroyRB, destroyCRB, destroySP, destroyS, destroySFS, destroyPDB, destroyES, destroyJ)
+		destroyers = append(destroyers, destroyNS, destroyCertZ, destroySA, destroyR, destroyCR, destroyRB, destroyCRB, destroySPD, destroySP, destroyS, destroySFS, destroyPDB, destroyJ)
 
-		current.Parsed = &Current{
+		currentDB := &Current{
 			Common: &tree.Common{
 				Kind:    "zitadel.caos.ch/ManagedDatabase",
 				Version: "v0",
 			},
 		}
+		current.Parsed = currentDB
 
 		return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
+				currentDB.Current.Port = cockroachPort
+				currentDB.Current.URL = cockroachURL
+				currentDB.Current.Users = userList
+
 				ensurers := make([]resources.EnsureFunc, 0)
 				ensureNS, err := queryNS()
 				if err != nil {
