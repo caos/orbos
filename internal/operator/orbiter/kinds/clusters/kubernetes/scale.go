@@ -49,6 +49,9 @@ func ensureScale(
 			upscalingDone = false
 			machines, alignErr := newMachines(pool.infra, delta)
 			err = helpers.Concat(err, alignErr)
+			if alignErr != nil {
+				return
+			}
 			for _, machine := range machines {
 				initializeMachine(machine, pool)
 			}
@@ -70,7 +73,7 @@ func ensureScale(
 		}
 		poolMachines, listErr := pool.machines()
 		err = helpers.Concat(err, listErr)
-		if err != nil {
+		if listErr != nil {
 			return
 		}
 		machines = append(machines, poolMachines...)
