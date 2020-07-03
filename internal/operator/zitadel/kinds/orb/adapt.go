@@ -31,6 +31,9 @@ func AdaptFunc() zitadel.AdaptFunc {
 
 		iamCurrent := &tree.Tree{}
 		queryIAM, destroyIAM, err := iam.AdaptFunc()(monitor, desiredKind.IAM, iamCurrent)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		queriers = append(queriers, queryIAM)
 		destroyers = append(destroyers, destroyIAM)

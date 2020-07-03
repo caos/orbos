@@ -93,7 +93,13 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 		return err
 	}
 
-	secret.Value = value
+	if secret == nil {
+		secret = &Secret{
+			Value: value,
+		}
+	} else {
+		secret.Value = value
+	}
 
 	if operator == orbiter {
 		return api.OrbiterSecretFunc(gitClient, tree)(monitor)

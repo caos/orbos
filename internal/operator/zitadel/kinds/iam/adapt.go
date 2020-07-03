@@ -36,7 +36,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		desired.Parsed = desiredKind
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent)
+		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Database, databaseCurrent)
 
 		namespaceStr := "caos-zitadel"
 		labels := map[string]string{"app.kubernetes.io/managed-by": "zitadel.caos.ch"}
