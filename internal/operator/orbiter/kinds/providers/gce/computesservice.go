@@ -2,8 +2,10 @@ package gce
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"sync"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -22,6 +24,7 @@ type machinesService struct {
 	maintenanceKeyPub []byte
 	cache             struct {
 		instances map[string][]*instance
+		sync.Mutex
 	}
 	onCreate func(pool string, machine infra.Machine) error
 }
@@ -115,13 +118,15 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	name := newName()
 	sshKey := fmt.Sprintf("orbiter:%s", m.maintenanceKeyPub)
 	createInstance := &compute.Instance{
-		Name:              name,
-		MachineType:       fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
-		Tags:              &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
-		NetworkInterfaces: []*compute.NetworkInterface{{}},
-		Labels:            map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
-		Disks:             disks,
-		Scheduling:        &compute.Scheduling{Preemptible: desired.Preemptible},
+		Name:        name,
+		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
+		Tags:        &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
+		NetworkInterfaces: []*compute.NetworkInterface{{
+			Network: m.context.networkURL,
+		}},
+		Labels:     map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
+		Disks:      disks,
+		Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
 		Metadata: &compute.Metadata{
 			Items: []*compute.MetadataItems{{
 				Key:   "ssh-keys",
@@ -300,6 +305,7 @@ func toFields(labels map[string]string) map[string]interface{} {
 func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 	return func() error {
 
+		m.cache.Lock()
 		cleanMachines := make([]*instance, 0)
 		for _, cachedMachine := range m.cache.instances[pool] {
 			if cachedMachine.id != id {
@@ -307,6 +313,7 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 			}
 		}
 		m.cache.instances[pool] = cleanMachines
+		m.cache.Unlock()
 
 		return removeResourceFunc(
 			m.context.monitor.WithFields(map[string]interface{}{

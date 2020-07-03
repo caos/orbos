@@ -3,10 +3,10 @@ package secret
 import (
 	"errors"
 	"fmt"
+	"github.com/caos/orbos/internal/api"
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
 
@@ -23,11 +23,6 @@ const (
 )
 
 func Parse(gitClient *git.Client, files ...string) (trees []*tree.Tree, err error) {
-
-	if err := gitClient.Clone(); err != nil {
-		panic(err)
-	}
-
 	for _, file := range files {
 		tree := &tree.Tree{}
 		if err := yaml.Unmarshal(gitClient.Read(file), tree); err != nil {
@@ -53,7 +48,7 @@ func Read(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path 
 	secret, _, _, err := findSecret(monitor, gitClient, secretFunc, path, func(secrets map[string]*Secret) []string {
 		items := make([]string, 0)
 		for key, sec := range secrets {
-			if sec.Value != "" {
+			if sec != nil && sec.Value != "" {
 				items = append(items, key)
 			}
 		}
@@ -78,8 +73,15 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, op
 	if tree == nil {
 		return nil
 	}
+  
+	if operator == "orbiter" {
+		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+	} else if operator == "boom" {
+		return api.BoomSecretFunc(gitClient, tree)(monitor)
+	}
 
-	return push.RewriteDesiredFunc(gitClient, tree, strings.Join([]string{operator, yml}, "."))(monitor)
+	monitor.Info("No secrets written")
+	return nil
 }
 
 func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path, value string) error {
@@ -90,7 +92,14 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 
 	secret.Value = value
 
-	return push.RewriteDesiredFunc(gitClient, tree, strings.Join([]string{operator, "yml"}, "."))(monitor)
+	if operator == "orbiter" {
+		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+	} else if operator == "boom" {
+		return api.BoomSecretFunc(gitClient, tree)(monitor)
+	}
+
+	monitor.Info("No secrets written")
+	return nil
 }
 
 func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Secret {
@@ -106,10 +115,6 @@ func addSecretsPrefix(prefix string, secrets map[string]*Secret) map[string]*Sec
 }
 
 func existsFileInGit(g *git.Client, path string) bool {
-	if err := g.Clone(); err != nil {
-		return false
-	}
-
 	of := g.Read(path)
 	if of != nil && len(of) > 0 {
 		return true

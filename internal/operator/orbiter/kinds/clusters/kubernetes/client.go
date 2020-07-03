@@ -3,6 +3,7 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"k8s.io/client-go/rest"
@@ -76,11 +77,13 @@ type File struct {
 
 func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 	resources := c.set.CoreV1().Namespaces()
+
 	return c.apply("namespace", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -105,10 +108,10 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
 	return c.apply("deployment", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -116,16 +119,16 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 func (c *Client) ApplyService(rsc *core.Service) error {
 	resources := c.set.CoreV1().Services(rsc.GetNamespace())
 	return c.apply("service", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		svc, err := resources.Get(rsc.Name, mach.GetOptions{})
+		svc, err := resources.Get(context.Background(), rsc.Name, mach.GetOptions{})
 		if err != nil {
 			return err
 		}
 		rsc.Spec.ClusterIP = svc.Spec.ClusterIP
 		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
-		_, err = resources.Update(rsc)
+		_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -185,16 +188,16 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 }
 
 func (c *Client) DeleteDeployment(namespace, name string) error {
-	return c.set.AppsV1().Deployments(namespace).Delete(name, &mach.DeleteOptions{})
+	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplySecret(rsc *core.Secret) error {
 	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -217,15 +220,15 @@ func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 	resources := c.set.CoreV1().ServiceAccounts(rsc.Namespace)
 	return c.apply("serviceaccount", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		sa, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		sa, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if sa.GetName() != rsc.GetName() || sa.GetNamespace() != rsc.GetNamespace() {
-			_, err := resources.Update(rsc)
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
 		return nil
@@ -235,10 +238,10 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
 	resources := c.set.RbacV1().Roles(rsc.Namespace)
 	return c.apply("role", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -246,10 +249,10 @@ func (c *Client) ApplyRole(rsc *rbac.Role) error {
 func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
 	resources := c.set.RbacV1().ClusterRoles()
 	return c.apply("clusterrole", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -257,10 +260,10 @@ func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
 func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
 	resources := c.set.RbacV1().RoleBindings(rsc.Namespace)
 	return c.apply("rolebinding", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -268,10 +271,10 @@ func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
 func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
 	resources := c.set.RbacV1().ClusterRoleBindings()
 	return c.apply("clusterrolebinding", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }
@@ -328,7 +331,7 @@ func (c *Client) GetNode(id string) (node *core.Node, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return api.Get(id, mach.GetOptions{})
+	return api.Get(context.Background(), id, mach.GetOptions{})
 }
 
 func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
@@ -349,7 +352,7 @@ func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 		labelSelector = labelSelector[1:]
 	}
 
-	nodeList, err := api.List(mach.ListOptions{
+	nodeList, err := api.List(context.Background(), mach.ListOptions{
 		LabelSelector: labelSelector,
 	})
 
@@ -369,7 +372,7 @@ func (c *Client) updateNode(node *core.Node) (err error) {
 	if err != nil {
 		return err
 	}
-	_, err = api.Update(node)
+	_, err = api.Update(context.Background(), node, mach.UpdateOptions{})
 	return err
 }
 
@@ -451,7 +454,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 
 	// Cordon node
 	if apiErr == nil {
-		nodeStruct, err := api.Get(name, mach.GetOptions{})
+		nodeStruct, err := api.Get(context.Background(), name, mach.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "getting node %s from kube api failed", name)
 		}
@@ -472,7 +475,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 		return nil
 	}
 	monitor.Info("Deleting node")
-	if err := api.Delete(name, &mach.DeleteOptions{}); err != nil {
+	if err := api.Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
 		return err
 	}
 	if machine.Online || machine.Joined {
@@ -496,7 +499,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	monitor.Info("Evicting pods")
 
 	selector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name)
-	podItems, err := c.set.CoreV1().Pods("").List(mach.ListOptions{
+	podItems, err := c.set.CoreV1().Pods("").List(context.Background(), mach.ListOptions{
 		FieldSelector: selector,
 	})
 	if err != nil {
@@ -523,7 +526,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 			})
 			monitor.Debug("Evicting pod")
 
-			watcher, goErr := c.set.CoreV1().Pods(pod.Namespace).Watch(mach.ListOptions{
+			watcher, goErr := c.set.CoreV1().Pods(pod.Namespace).Watch(context.Background(), mach.ListOptions{
 				FieldSelector: fmt.Sprintf("metadata.name=%s", pod.Name),
 			})
 			if goErr != nil {
@@ -532,7 +535,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 			}
 			defer watcher.Stop()
 
-			if goErr := c.set.PolicyV1beta1().Evictions(pod.Namespace).Evict(&policy.Eviction{
+			if goErr := c.set.PolicyV1beta1().Evictions(pod.Namespace).Evict(context.Background(), &policy.Eviction{
 				TypeMeta: mach.TypeMeta{
 					Kind:       "EvictionKind",
 					APIVersion: c.set.PolicyV1beta1().RESTClient().APIVersion().String(),
@@ -570,7 +573,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 						return
 					}
 				case <-timeout:
-					synchronizer.Done(errors.Wrapf(c.set.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &mach.DeleteOptions{}), "Deleting pod %s after timout exceeded failed", pod.Name))
+					synchronizer.Done(errors.Wrapf(c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{}), "Deleting pod %s after timout exceeded failed", pod.Name))
 					return
 				}
 			}
@@ -594,5 +597,5 @@ func safeUint64(ptr *int64) int64 {
 }
 
 func (c *Client) deletePod(pod *core.Pod) error {
-	return c.set.CoreV1().Pods(pod.Namespace).Delete(pod.Name, &mach.DeleteOptions{})
+	return c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{})
 }

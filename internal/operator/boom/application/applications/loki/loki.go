@@ -1,7 +1,7 @@
 package loki
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
@@ -22,8 +22,8 @@ func (l *Loki) GetName() name.Application {
 	return info.GetName()
 }
 
-func (lo *Loki) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.Loki != nil && toolsetCRDSpec.Loki.Deploy
+func (lo *Loki) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+	return toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy
 }
 
 func (l *Loki) GetNamespace() string {

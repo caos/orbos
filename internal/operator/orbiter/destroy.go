@@ -1,6 +1,7 @@
 package orbiter
 
 import (
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/tree"
@@ -8,6 +9,10 @@ import (
 )
 
 type DestroyFunc func() error
+
+func NoopDestroy() error {
+	return nil
+}
 
 func DestroyFuncGoroutine(query func() error) error {
 	retChan := make(chan error)
@@ -17,20 +22,19 @@ func DestroyFuncGoroutine(query func() error) error {
 	return <-retChan
 }
 
-func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan bool) error {
-	trees, err := Parse(gitClient, "orbiter.yml")
+func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan struct{}) error {
+	treeDesired, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
 		return err
 	}
 
-	treeDesired := trees[0]
 	treeCurrent := &tree.Tree{}
 
-	adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
+	adaptFunc := func() (QueryFunc, DestroyFunc, ConfigureFunc, bool, error) {
 		return adapt(monitor, finishedChan, treeDesired, treeCurrent)
 	}
 
-	_, destroy, _, err := AdaptFuncGoroutine(adaptFunc)
+	_, destroy, _, _, err := AdaptFuncGoroutine(adaptFunc)
 	if err != nil {
 		return err
 	}

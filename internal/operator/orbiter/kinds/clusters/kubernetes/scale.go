@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/secret"
 
+	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -17,7 +18,7 @@ func ensureScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf push.Func,
+	psf api.SecretFunc,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
 	kubeAPI *infra.Address,
@@ -49,6 +50,9 @@ func ensureScale(
 			upscalingDone = false
 			machines, alignErr := newMachines(pool.infra, delta)
 			err = helpers.Concat(err, alignErr)
+			if alignErr != nil {
+				return
+			}
 			for _, machine := range machines {
 				initializeMachine(machine, pool)
 			}
@@ -70,7 +74,7 @@ func ensureScale(
 		}
 		poolMachines, listErr := pool.machines()
 		err = helpers.Concat(err, listErr)
-		if err != nil {
+		if listErr != nil {
 			return
 		}
 		machines = append(machines, poolMachines...)
@@ -109,12 +113,17 @@ func ensureScale(
 nodes:
 	for _, machine := range machines {
 
-		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
-
 		machineMonitor := monitor.WithFields(map[string]interface{}{
 			"machine": machine.infra.ID(),
 			"tier":    machine.pool.tier,
 		})
+
+		if machine.currentMachine.Unknown {
+			machineMonitor.Info("Waiting for kubernetes node to leave unknown state before proceeding")
+			return false, nil
+		}
+
+		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
 
 		if isJoinedControlPlane && machine.currentMachine.Online {
 			certsCP = machine.infra
@@ -174,7 +183,7 @@ nodes:
 
 	if joinCP != nil {
 
-		if doKubeadmInit && (desired.Spec.Kubeconfig.Value != "" || !oneoff) {
+		if doKubeadmInit && (desired.Spec.Kubeconfig != nil && desired.Spec.Kubeconfig.Value != "" || !oneoff) {
 			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is passed")
 		}
 
@@ -206,7 +215,7 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		desired.Spec.Kubeconfig.Value = *joinKubeconfig
+		desired.Spec.Kubeconfig = &secret.Secret{Value: *joinKubeconfig}
 		return false, psf(monitor.WithFields(map[string]interface{}{
 			"type": "kubeconfig",
 		}))

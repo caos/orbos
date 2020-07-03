@@ -3,10 +3,10 @@ package static
 import (
 	"sync"
 
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 
@@ -25,21 +25,20 @@ func query(
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	lb interface{},
-	masterkey string,
 
 	monitor mntr.Monitor,
-	id,
-	orbiterCommit,
-	repoURL,
-	repoKey string,
+	internalMachinesService *machinesService,
+	naFuncs core.IterateNodeAgentFuncs,
+	orbiterCommit string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	// TODO: Allow Changes
 	desireHostnameFunc := desireHostname(desired.Spec.Pools, nodeAgentsDesired, nodeAgentsCurrent, monitor)
-	queryNA, installNA := core.NodeAgentFuncs(monitor, orbiterCommit, repoURL, repoKey, nodeAgentsCurrent)
+
+	queryNA, installNA := naFuncs(nodeAgentsCurrent)
 
 	ensureNodeFunc := func(machine infra.Machine, pool string) error {
-		running, err := queryNA(machine)
+		running, err := queryNA(machine, orbiterCommit)
 		if err != nil {
 			return err
 		}
@@ -51,9 +50,11 @@ func query(
 		_, err = desireHostnameFunc(machine, pool)
 		return err
 	}
+	internalMachinesService.onCreate = ensureNodeFunc
 
-	machinesSvc := NewMachinesService(monitor, desired, []byte(desired.Spec.Keys.BootstrapKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value), []byte(desired.Spec.Keys.MaintenanceKeyPublic.Value), id, ensureNodeFunc)
-	pools, err := machinesSvc.ListPools()
+	var externalMachinesService core.MachinesService = internalMachinesService
+
+	pools, err := internalMachinesService.ListPools()
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +73,8 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(machinesSvc, *lbCurrent, true, nil, mapVIP)
-		machinesSvc = wrappedMachinesService
+		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, true, nil, mapVIP)
+		externalMachinesService = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
 		}
@@ -97,10 +98,10 @@ func query(
 		return nil, errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
-	return func(psf push.Func) *orbiter.EnsureResult {
+	return func(psf api.SecretFunc) *orbiter.EnsureResult {
 		var wg sync.WaitGroup
 		for _, pool := range pools {
-			machines, listErr := machinesSvc.List(pool)
+			machines, listErr := internalMachinesService.List(pool)
 			if listErr != nil {
 				err = helpers.Concat(err, listErr)
 			}
@@ -124,13 +125,16 @@ func query(
 			if err != nil {
 				return orbiter.ToEnsureResult(false, err)
 			}
-			desired.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey, Value: priv}
-			desired.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey, Value: pub}
+			desired.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Value: priv}
+			desired.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Value: pub}
 			if err := psf(monitor.WithField("type", "maintenancekey")); err != nil {
+				return orbiter.ToEnsureResult(false, err)
+			}
+			if err := internalMachinesService.updateKeys(); err != nil {
 				return orbiter.ToEnsureResult(false, err)
 			}
 		}
 
 		return ensureLBFunc()
-	}, addPools(current, desired, machinesSvc)
+	}, addPools(current, desired, externalMachinesService)
 }

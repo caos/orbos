@@ -7,7 +7,6 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -18,17 +17,17 @@ var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
-	orb *orb.Orb,
 	provID string,
 	providerTree *tree.Tree,
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
-	finishedChan chan bool,
+	finishedChan chan struct{},
 	orbiterCommit, repoURL, repoKey string,
 	oneoff bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
+	orbiter.ConfigureFunc,
 	bool,
 	error,
 ) {
@@ -37,15 +36,15 @@ func GetQueryAndDestroyFuncs(
 
 	wlFunc := func() []*orbiter.CIDR {
 		monitor.Debug("Reading whitelist")
-		return <-whitelistChan
+		wl := <-whitelistChan
+		return wl
 	}
 
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/GCEProvider":
 		return gce.AdaptFunc(
-			orb.Masterkey,
 			provID,
-			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(orb.URL, "git@"), ".git"), "-"),
+			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"),
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
@@ -57,14 +56,10 @@ func GetQueryAndDestroyFuncs(
 		)
 	case "orbiter.caos.ch/StaticProvider":
 
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
 			return static.AdaptFunc(
-				orb.Masterkey,
 				provID,
-				func() []*orbiter.CIDR {
-					monitor.Debug("Reading whitelist")
-					return <-whitelistChan
-				},
+				wlFunc,
 				orbiterCommit, repoURL, repoKey,
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
@@ -74,13 +69,12 @@ func GetQueryAndDestroyFuncs(
 		}
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
-		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
 }
 
 func GetSecrets(
 	monitor mntr.Monitor,
-	masterkey string,
 	providerTree *tree.Tree,
 ) (
 	map[string]*secret.Secret,
@@ -88,16 +82,12 @@ func GetSecrets(
 ) {
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/GCEProvider":
-		return gce.SecretsFunc(
-			masterkey,
-		)(
+		return gce.SecretsFunc()(
 			monitor,
 			providerTree,
 		)
 	case "orbiter.caos.ch/StaticProvider":
-		return static.SecretsFunc(
-			masterkey,
-		)(
+		return static.SecretsFunc()(
 			monitor,
 			providerTree,
 		)
@@ -108,7 +98,6 @@ func GetSecrets(
 
 func RewriteMasterkey(
 	monitor mntr.Monitor,
-	oldMasterkey string,
 	newMasterkey string,
 	providerTree *tree.Tree,
 ) (
@@ -116,9 +105,15 @@ func RewriteMasterkey(
 	error,
 ) {
 	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.RewriteFunc(
+			newMasterkey,
+		)(
+			monitor,
+			providerTree,
+		)
 	case "orbiter.caos.ch/StaticProvider":
 		return static.RewriteFunc(
-			oldMasterkey,
 			newMasterkey,
 		)(
 			monitor,

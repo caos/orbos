@@ -1,7 +1,7 @@
 package ambassador
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
 	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
 	"github.com/caos/orbos/internal/utils/helper"
@@ -12,27 +12,27 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 )
 
-func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) ([]interface{}, error) {
+func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
 
 	ret := make([]interface{}, 0)
-	if toolsetCRDSpec.Argocd.Network != nil {
-		host := crds.GetHostFromConfig(argocdnet.GetHostConfig(toolsetCRDSpec.Argocd.Network))
+	if toolsetCRDSpec.Reconciling.Network != nil {
+		host := crds.GetHostFromConfig(argocdnet.GetHostConfig(toolsetCRDSpec.Reconciling.Network))
 		ret = append(ret, host)
-		mapping := crds.GetMappingFromConfig(argocdnet.GetMappingConfig(toolsetCRDSpec.Argocd.Network))
+		mapping := crds.GetMappingFromConfig(argocdnet.GetMappingConfig(toolsetCRDSpec.Reconciling.Network))
 		ret = append(ret, mapping)
 	}
 
-	if toolsetCRDSpec.Grafana.Network != nil {
-		host := crds.GetHostFromConfig(grafananet.GetHostConfig(toolsetCRDSpec.Grafana.Network))
+	if toolsetCRDSpec.Monitoring.Network != nil {
+		host := crds.GetHostFromConfig(grafananet.GetHostConfig(toolsetCRDSpec.Monitoring.Network))
 		ret = append(ret, host)
-		mapping := crds.GetMappingFromConfig(grafananet.GetMappingConfig(toolsetCRDSpec.Grafana.Network))
+		mapping := crds.GetMappingFromConfig(grafananet.GetMappingConfig(toolsetCRDSpec.Monitoring.Network))
 		ret = append(ret, mapping)
 	}
 
 	return ret, nil
 }
 
-func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, resultFilePath string) error {
+func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
 
 	if err := helper.DeleteFirstResourceFromYaml(resultFilePath, "v1", "Pod", "ambassador-test-ready"); err != nil {
 		return err
@@ -41,8 +41,8 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1
 	return nil
 }
 
-func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.Ambassador
+func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
+	spec := toolsetCRDSpec.APIGateway
 	imageTags := helm.GetImageTags()
 
 	values := helm.DefaultValues(imageTags)

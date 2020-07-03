@@ -9,8 +9,8 @@ import (
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -33,7 +33,7 @@ func TestComputeService(t *testing.T) {
 	if jsonKey == "" {
 		t.Fatal("Environment variable ORBOS_GCE_JSON_KEY is empty")
 	}
-
+  
 	svc := gce.NewMachinesService(
 		mntr.Monitor{OnInfo: mntr.LogMessage},
 		&gce.Spec{

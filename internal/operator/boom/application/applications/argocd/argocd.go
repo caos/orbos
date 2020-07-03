@@ -1,7 +1,7 @@
 package argocd
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
@@ -23,8 +23,8 @@ func (a *Argocd) GetName() name.Application {
 	return info.GetName()
 }
 
-func (a *Argocd) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.Argocd != nil && toolsetCRDSpec.Argocd.Deploy
+func (a *Argocd) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+	return toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.Deploy
 }
 
 func (a *Argocd) GetNamespace() string {

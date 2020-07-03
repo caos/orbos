@@ -15,8 +15,8 @@ mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "repo and VM bootstrap key" -P "
 Create and setup two new Virtual Machines. Make sure you have a sudo user called orbiter on the guest OS
 
 ```bash
-./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/myorb_bootstrap.pub master1
-./examples/k8s/static/machine.sh ./examples/k8s/static/kickstart.cfg ~/.ssh/myorb_bootstrap.pub worker1
+./examples/orbiter/static/kvm/machine.sh ./examples/orbiter/static/kvm/kickstart.cfg ~/.ssh/myorb_bootstrap.pub master1
+./examples/orbiter/static/kvm/machine.sh ./examples/orbiter/static/kvm/kickstart.cfg ~/.ssh/myorb_bootstrap.pub worker1
 ```
 
 List the new virtual machines IP addresses

@@ -3,6 +3,8 @@ package static
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
@@ -11,14 +13,14 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string) orbiter.AdaptFunc {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
-		desiredKind, err := parseDesiredV0(desiredTree, masterkey)
+		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -27,17 +29,15 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc, orb
 		}
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, migrate, err
+			return nil, nil, nil, migrate, err
 		}
-
-		initializeNecessarySecrets(desiredKind, masterkey)
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
 
-		lbQuery, _, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
+		lbQuery, lbDestroy, lbConfigure, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
 		if err != nil {
-			return nil, nil, migrate, err
+			return nil, nil, nil, migrate, err
 		}
 		if migrateLocal {
 			migrate = true
@@ -50,6 +50,11 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc, orb
 			},
 		}
 		currentTree.Parsed = current
+
+		svc := NewMachinesService(monitor, desiredKind, id)
+		if err := svc.updateKeys(); err != nil {
+			return nil, nil, nil, migrate, err
+		}
 
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 				defer func() {
@@ -65,11 +70,20 @@ func AdaptFunc(masterkey string, id string, whitelist dynamic.WhiteListFunc, orb
 				}
 
 				queryFunc := func() (orbiter.EnsureFunc, error) {
-					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, masterkey, monitor, id, orbiterCommit, repoURL, repoKey)
+					_, iterateNA := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
 				}
 				return orbiter.QueryFuncGoroutine(queryFunc)
 			}, func() error {
-				return destroy(monitor, desiredKind, current, id)
+				if err := lbDestroy(); err != nil {
+					return err
+				}
+				return destroy(svc, desiredKind, current)
+			}, func(orb orb.Orb) error {
+				if err := lbConfigure(orb); err != nil {
+					return err
+				}
+				return core.ConfigureNodeAgents(svc, monitor, orb)
 			}, migrate, nil
 	}
 }

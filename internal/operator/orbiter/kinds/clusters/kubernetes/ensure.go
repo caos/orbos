@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -11,7 +11,7 @@ func ensure(
 	clusterID string,
 	desired *DesiredV0,
 	kubeAPIAddress *infra.Address,
-	psf push.Func,
+	psf api.SecretFunc,
 	k8sClient *Client,
 	oneoff bool,
 	controlplane initializedPool,
@@ -23,7 +23,6 @@ func ensure(
 ) (done bool, err error) {
 
 	initialized := true
-
 	for _, machine := range append(controlplaneMachines, workerMachines...) {
 
 		if err := machine.reconcile(); err != nil {

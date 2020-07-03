@@ -20,8 +20,8 @@ func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalan
 
 	var ensure []func() error
 	assignRefs := func(lb *normalizedLoadbalancer) {
-		lb.forwardingRule.gce.Target = lb.targetPool.gce.SelfLink
 		lb.forwardingRule.gce.IPAddress = lb.address.gce.Address
+		lb.forwardingRule.gce.Target = lb.targetPool.gce.SelfLink
 	}
 
 createLoop:
@@ -30,9 +30,12 @@ createLoop:
 			if gceRule.Description == lb.forwardingRule.gce.Description {
 				assignRefs(lb)
 				lb.forwardingRule.gce.Name = gceRule.Name
-				if gceRule.Target != lb.forwardingRule.gce.Target || gceRule.PortRange != lb.forwardingRule.gce.PortRange || gceRule.IPAddress != lb.forwardingRule.gce.IPAddress {
+				if gceRule.PortRange != lb.forwardingRule.gce.PortRange {
 					ensure = append(ensure, operateFunc(
-						lb.forwardingRule.log("Patching forwarding rule", true),
+						func() {
+							assignRefs(lb)
+							lb.forwardingRule.log("Patching forwarding rule", true)
+						},
 						computeOpCall(context.client.ForwardingRules.Patch(context.projectID, context.desired.Region, gceRule.Name, lb.forwardingRule.gce).
 							RequestId(uuid.NewV1().String()).
 							Do),

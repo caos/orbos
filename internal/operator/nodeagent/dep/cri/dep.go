@@ -74,14 +74,16 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 
 func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 
-	if install.Config != nil {
-		if err := os.MkdirAll("/etc/docker", 600); err != nil {
-			return err
-		}
+	if install.Config == nil {
+		return errors.New("Docker config is nil")
+	}
 
-		if err := ioutil.WriteFile("/etc/docker/daemon.json", []byte(install.Config["daemon.json"]), 600); err != nil {
-			return err
-		}
+	if err := os.MkdirAll("/etc/docker", 600); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile("/etc/docker/daemon.json", []byte(install.Config["daemon.json"]), 600); err != nil {
+		return err
 	}
 
 	fields := strings.Fields(install.Version)

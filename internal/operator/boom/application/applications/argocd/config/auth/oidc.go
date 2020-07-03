@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"

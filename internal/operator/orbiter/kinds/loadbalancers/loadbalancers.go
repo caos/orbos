@@ -14,10 +14,11 @@ func GetQueryAndDestroyFunc(
 	whitelist dynamic.WhiteListFunc,
 	loadBalancingTree *tree.Tree,
 	loadBalacingCurrent *tree.Tree,
-	finishedChan chan bool,
+	finishedChan chan struct{},
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
+	orbiter.ConfigureFunc,
 	bool,
 	error,
 ) {
@@ -26,12 +27,12 @@ func GetQueryAndDestroyFunc(
 	//		case "orbiter.caos.ch/ExternalLoadBalancer":
 	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 	case "orbiter.caos.ch/DynamicLoadBalancer":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
 			return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
 		}
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
-		return nil, nil, false, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
+		return nil, nil, nil, false, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
 	}
 }
 

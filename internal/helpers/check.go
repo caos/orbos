@@ -26,6 +26,7 @@ func Check(url string, status int) (string, error) {
 		Client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
+					// Insecure health checks are ok
 					InsecureSkipVerify: true,
 				},
 			},

@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/admin"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"

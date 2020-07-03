@@ -1,6 +1,7 @@
 package orb
 
 import (
+	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 	"io/ioutil"
@@ -27,6 +28,7 @@ func ParseOrbConfig(orbConfigPath string) (*Orb, error) {
 	}
 
 	orb.Path = orbConfigPath
+	secret.Masterkey = orb.Masterkey
 	return orb, nil
 }
 
