@@ -22,7 +22,6 @@ import (
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
-	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -48,16 +47,6 @@ func New(conf *config.Config) (*GitCrd, error) {
 	err := gitClient.Configure(conf.CrdUrl, conf.PrivateKey)
 	if err != nil {
 		monitor.Error(err)
-		return nil, err
-	}
-
-	if err := gitClient.ReadCheck(); err != nil {
-		conf.Monitor.Error(err)
-		return nil, err
-	}
-
-	if err := gitClient.WriteCheck(random.Generate()); err != nil {
-		conf.Monitor.Error(err)
 		return nil, err
 	}
 
