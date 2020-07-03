@@ -83,6 +83,13 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
+
+				if desiredKind.Spec.Keys == nil || desiredKind.Spec.Keys.BootstrapKeyPrivate == nil && desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
+					return nil
+				}
+
+				// TODO: Maybe generate maintenancekey here?
+
 				return core.ConfigureNodeAgents(svc, monitor, orb)
 			}, migrate, nil
 	}

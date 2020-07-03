@@ -45,6 +45,10 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return errFunc(cmd)
 		}
 
+		if err := orbConfig.IsComplete(); err != nil {
+			return err
+		}
+
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}

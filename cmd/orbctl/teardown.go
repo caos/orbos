@@ -52,6 +52,10 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		if err := orbConfig.IsComplete(); err != nil {
+			return err
+		}
+
 		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {
 			return err

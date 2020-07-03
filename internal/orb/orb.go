@@ -1,11 +1,15 @@
 package orb
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+
+	"github.com/caos/orbos/internal/helpers"
+
 	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-	"io/ioutil"
-	"os"
 )
 
 type Orb struct {
@@ -13,6 +17,41 @@ type Orb struct {
 	URL       string
 	Repokey   string
 	Masterkey string
+}
+
+func (o *Orb) IsConnectable() (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("repository is not connectable: %w", err)
+		}
+	}()
+	if o.URL == "" {
+		err = helpers.Concat(err, errors.New("repository url is missing"))
+	}
+
+	if o.Repokey == "" {
+		err = helpers.Concat(err, errors.New("repository key is missing"))
+	}
+	return err
+}
+
+func (o *Orb) IsComplete() (err error) {
+
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("orbconfig is incomplete: %w", err)
+		}
+	}()
+
+	if o.Masterkey == "" {
+		err = helpers.Concat(err, errors.New("master key is missing"))
+	}
+
+	if o.Path == "" {
+		err = helpers.Concat(err, errors.New("file path is missing"))
+	}
+
+	return helpers.Concat(err, o.IsConnectable())
 }
 
 func ParseOrbConfig(orbConfigPath string) (*Orb, error) {

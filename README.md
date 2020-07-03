@@ -23,53 +23,47 @@ In the following example we will create a `kubernetes` cluster on a `GCEProvider
 
 ### Initialize A Git Repository
 
-Generate a new Deploy Key
-```bash
-mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "ORBOS repo key" -P "" -f /tmp/myorb_repo -q
-```
-
-Create a new Git Repository
-
-Add the public part of your new SSH key pair to the git repositories trusted deploy keys with write access.
-
-```
-cat /tmp/myorb_repo.pub
-```
-
-Copy the files [orbiter.yml](examples/orbiter/gce/orbiter.yml) and [boom.yml](examples/boom/boom.yml) to the root of your Repository.
+Copy the files [orbiter.yml](examples/orbiter/gce/orbiter.yml) and [boom.yml](examples/boom/boom.yml) to the root of a new git Repository.
 
 ### Configure your local environment
 
-Download the latest orbctl
-
 ```bash
+# Install the latest orbctl
 curl -s https://api.github.com/repos/caos/orbos/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d '"' -f 4 | sudo wget -i - -O /usr/local/bin/orbctl
 sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
+
+# Create an orb file at ${HOME}/.orb/config
+orbctl configure --repourl git@github.com:me/my-orb.git --masterkey "$(openssl rand -base64 21)"
 ```
 
-Create an orb file
+### Configure a billable Google Cloud Platform project of your choice
 
 ```bash
-mkdir -p ~/.orb
-cat > ~/.orb/config << EOF
-url: git@github.com:me/my-orb.git
-masterkey: $(openssl rand -base64 21)
-repokey: |
-$(sed s/^/\ \ /g /tmp/myorb_repo)
-EOF
-```
+MY_GCE_PROJECT="$(gcloud config get-value project)"
+ORBOS_SERVICE_ACCOUNT_NAME=orbiter-system
 
-### Create a service account in a billable GCP project of your choice
+# Create a service account for the ORBITER user
+gcloud iam service-accounts create ${ORBOS_SERVICE_ACCOUNT_NAME} \
+    --description="${ORBOS_SERVICE_ACCOUNT_NAME}" \
+    --display-name="${ORBOS_SERVICE_ACCOUNT_NAME}"
 
-Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
+ORBOS_SERVICE_ACCOUNT=${ORBOS_SERVICE_ACCOUNT_NAME}@${MY_GCE_PROJECT}.iam.gserviceaccount.com
 
-Create a JSON key for the service account
+# Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/compute.admin \
+    --role=roles/iap.tunnelResourceAccessor \
+    --role=roles/serviceusage.serviceUsageAdmin
 
-Encrypt and write the created JSON key to the orbiter.yml
+# Create a JSON key for the service account
+gcloud iam service-accounts keys create /tmp/key.json \
+  --iam-account ${ORBOS_SERVICE_ACCOUNT}
 
-```bash
-orbctl writesecret orbiter.gce.jsonkey --file ~/Downloads/<YOUR_JSON_KEY_FILE>
+# Encrypt and write the created JSON key to the orbiter.yml
+orbctl writesecret orbiter.gce.jsonkey --file /tmp/key.json
+rm -f /tmp/key.json
 ```
 
 ### Bootstrap your Kubernetes cluster on GCE

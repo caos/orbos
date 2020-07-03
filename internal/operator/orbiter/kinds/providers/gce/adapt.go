@@ -51,11 +51,6 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 		}
 		currentTree.Parsed = current
 
-		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-		if err != nil {
-			return nil, nil, nil, migrate, err
-		}
-
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 				defer func() {
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
@@ -66,16 +61,37 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				if err != nil {
+					return nil, err
+				}
+
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func() error {
 				if err := lbDestroy(); err != nil {
 					return err
 				}
+				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				if err != nil {
+					return err
+				}
+
 				return destroy(ctx)
 			}, func(orb orb.Orb) error {
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
+
+				if desiredKind.Spec.JSONKey == nil {
+					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
+					return nil
+				}
+
+				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				if err != nil {
+					return err
+				}
+
 				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)
 			}, migrate, nil
 	}

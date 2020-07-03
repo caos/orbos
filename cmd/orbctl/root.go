@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"github.com/caos/orbos/internal/git"
 
@@ -64,9 +66,17 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor = monitor.Verbose()
 		}
 
+		if strings.HasPrefix(orbConfigPath, "~") {
+			userhome, err := os.UserHomeDir()
+			if err != nil {
+				panic(err)
+			}
+			orbConfigPath = userhome + orbConfigPath[1:]
+		}
+
 		orbConfig, err := orb.ParseOrbConfig(orbConfigPath)
 		if err != nil {
-			monitor.Error(err)
+			orbConfig = &orb.Orb{Path: orbConfigPath}
 		}
 
 		ctx := context.Background()

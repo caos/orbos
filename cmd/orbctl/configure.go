@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/start"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
@@ -16,7 +18,6 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/start"
 	"github.com/spf13/cobra"
 )
 
@@ -27,21 +28,30 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		masterkey  string
 		repoURL    string
 		cmd        = &cobra.Command{
-			Use:   "config",
-			Short: "Changes local and in-cluster of config",
-			Long:  "Changes local and in-cluster of config",
+			Use:     "configure",
+			Short:   "Configures and reconfigures an orb",
+			Long:    "Configures and reconfigures an orb",
+			Aliases: []string{"config"},
 		}
 	)
 
 	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig for in-cluster changes")
-	flags.StringVar(&masterkey, "masterkey", "", "Masterkey to replace old masterkey in orbconfig")
-	flags.StringVar(&repoURL, "repoURL", "", "Repository-URL to replace the old repository-URL in the orbconfig")
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "Needed in boom-only scenarios")
+	flags.StringVar(&masterkey, "masterkey", "", "Reencrypts all secrets")
+	flags.StringVar(&repoURL, "repourl", "", "Reconfigures repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		_, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
+		}
+
+		if orbConfig.URL == "" && repoURL == "" {
+			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
+		}
+
+		if orbConfig.Masterkey == "" && masterkey == "" {
+			return errors.New("master key is neighter passed by flag masterkey nor written in orbconfig")
 		}
 
 		var changes bool
@@ -129,11 +139,6 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
-			if err != nil {
-				return err
-			}
-			allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 
 			if masterkey != "" {
 				monitor.Info("Read and rewrite orbiter.yml with new masterkey")
@@ -145,6 +150,12 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 					panic(err)
 				}
 			}
+
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
+			if err == nil {
+				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
+			}
+
 		} else {
 			monitor.Info("No orbiter.yml existent, reading kubeconfig from path provided as parameter")
 			if kubeconfig == "" {
