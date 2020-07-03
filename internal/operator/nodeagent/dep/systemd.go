@@ -50,7 +50,7 @@ func (s *SystemD) Disable(binary string) error {
 	}
 	if err := cmd.Run(); err != nil {
 		errString := errBuf.String()
-		if strings.Contains(errString, "not loaded") {
+		if strings.Contains(errString, "No such file or directory") {
 			err = nil
 		} else {
 			return errors.Wrapf(err, "disabling %s by systemd failed with stderr %s", binary, errString)
