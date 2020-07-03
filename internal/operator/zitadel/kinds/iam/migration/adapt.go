@@ -60,7 +60,43 @@ func AdaptFunc(
 							Command: []string{
 								"sh",
 								"-c",
-								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"" + scripts.V1Setup1 + "\" -e \"" + scripts.V1Setup2 + "\"",
+								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"CREATE USER IF NOT EXISTS flyway WITH PASSWORD flyway;\" -e \"GRANT admin TO flyway;\"",
+							},
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      rootUserInternal,
+								MountPath: rootUserPath,
+							}},
+						},
+						{
+							Name:            "db-migration",
+							Image:           "flyway/flyway:6.5.0",
+							ImagePullPolicy: "Always",
+							Args: []string{
+								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&user=flyway&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt",
+								//sslfactory=org.postgresql.ssl.NonValidatingFactory&&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key"
+								"-locations=filesystem:" + migrationsPath,
+								"-user=flyway",
+								"-password=flyway",
+								"migrate",
+							},
+
+							VolumeMounts: []corev1.VolumeMount{{
+								Name:      migrationsConfigInternal,
+								MountPath: migrationsPath,
+							}, {
+								Name:      rootUserInternal,
+								MountPath: rootUserPath,
+							}},
+						},
+					},
+					Containers: []corev1.Container{
+						{
+							Name:  "delete-flyway-user",
+							Image: "cockroachdb/cockroach:v20.1.2",
+							Command: []string{
+								"sh",
+								"-c",
+								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"DROP USER IF EXISTS flyway;\"",
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      rootUserInternal,
@@ -68,26 +104,6 @@ func AdaptFunc(
 							}},
 						},
 					},
-					Containers: []corev1.Container{{
-						Name:            "db-migration",
-						Image:           "flyway/flyway:6.5.0",
-						ImagePullPolicy: "Always",
-						Args: []string{
-							"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&user=flyway&sslfactory=org.postgresql.ssl.NonValidatingFactory&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key",
-							"-locations=filesystem:" + migrationsPath,
-							"-user=flyway",
-							"-password=flyway",
-							"migrate",
-						},
-
-						VolumeMounts: []corev1.VolumeMount{{
-							Name:      migrationsConfigInternal,
-							MountPath: migrationsPath,
-						}, {
-							Name:      rootUserInternal,
-							MountPath: rootUserPath,
-						}},
-					}},
 					RestartPolicy: "Never",
 					Volumes: []corev1.Volume{{
 						Name: migrationsConfigInternal,

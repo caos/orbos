@@ -27,6 +27,5 @@ func GetAll() map[string]string {
 		"V1.22__admin_view.sql":               V122AdminView,
 		"V1.23__admin_iam_members.sql":        V123AdminIamMembers,
 		"V1.24__failed_events.sql":            V124FailedEvents,
-		"V1.25__cleanup.sql":                  V999Cleanup,
 	}
 }
