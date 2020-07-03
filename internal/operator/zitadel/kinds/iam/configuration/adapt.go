@@ -21,7 +21,7 @@ func AdaptFunc(
 	zitadelKeysPath := "zitadel-keys.yaml"
 
 	tls := ""
-	if desired.Email.TLS {
+	if desired.Notifications.Email.TLS {
 		tls = "TRUE"
 	} else {
 		tls = "FALSE"
@@ -41,11 +41,11 @@ func AdaptFunc(
 		"ZITADEL_COOKIE_KEY":                desired.Secrets.CookieID,
 		"ZITADEL_CSRF_KEY":                  desired.Secrets.CSRFID,
 		"DEBUG_MODE":                        "TRUE",
-		"TWILIO_SENDER_NAME":                desired.TwilioSenderName,
-		"SMTP_HOST":                         desired.Email.SMTPHost,
-		"SMTP_USER":                         desired.Email.SMTPUser,
-		"EMAIL_SENDER_ADDRESS":              desired.Email.SenderAddress,
-		"EMAIL_SENDER_NAME":                 desired.Email.SenderName,
+		"TWILIO_SENDER_NAME":                desired.Notifications.Twilio.SenderName,
+		"SMTP_HOST":                         desired.Notifications.Email.SMTPHost,
+		"SMTP_USER":                         desired.Notifications.Email.SMTPUser,
+		"EMAIL_SENDER_ADDRESS":              desired.Notifications.Email.SenderAddress,
+		"EMAIL_SENDER_NAME":                 desired.Notifications.Email.SenderName,
 		"SMTP_TLS":                          tls,
 		"ZITADEL_ISSUER":                    desired.Endpoints.Issuer,
 		"ZITADEL_ACCOUNTS":                  desired.Endpoints.Accounts,
@@ -63,13 +63,12 @@ func AdaptFunc(
 	}
 
 	literalsSecret := map[string]string{}
-	if desired.Secrets != nil {
-		if desired.Secrets.ServiceAccountJSON != nil {
-			literalsSecret[googleServiceAccountJSONPath] = desired.Secrets.ServiceAccountJSON.Value
-		}
-		if desired.Secrets.Keys != nil {
-			literalsSecret[zitadelKeysPath] = desired.Secrets.Keys.Value
-		}
+
+	if desired.Tracing != nil && desired.Tracing.ServiceAccountJSON != nil {
+		literalsSecret[googleServiceAccountJSONPath] = desired.Tracing.ServiceAccountJSON.Value
+	}
+	if desired.Secrets != nil && desired.Secrets.Keys != nil {
+		literalsSecret[zitadelKeysPath] = desired.Secrets.Keys.Value
 	}
 
 	literalsConsoleCM := map[string]string{}
@@ -78,18 +77,18 @@ func AdaptFunc(
 	}
 
 	literalsSecretVars := map[string]string{}
-	if desired.SecretVars != nil {
-		if desired.SecretVars.EmailAppKey != nil {
-			literalsSecretVars["ZITADEL_EMAILAPPKEY"] = desired.SecretVars.EmailAppKey.Value
+	if desired.Notifications != nil {
+		if desired.Notifications.Email.AppKey != nil {
+			literalsSecretVars["ZITADEL_EMAILAPPKEY"] = desired.Notifications.Email.AppKey.Value
 		}
-		if desired.SecretVars.GoogleChatURL != nil {
-			literalsSecretVars["ZITADEL_GOOGLE_CHAT_URL"] = desired.SecretVars.GoogleChatURL.Value
+		if desired.Notifications.GoogleChatURL != nil {
+			literalsSecretVars["ZITADEL_GOOGLE_CHAT_URL"] = desired.Notifications.GoogleChatURL.Value
 		}
-		if desired.SecretVars.TwilioAuthToken != nil {
-			literalsSecretVars["ZITADEL_TWILIO_AUTH_TOKEN"] = desired.SecretVars.TwilioAuthToken.Value
+		if desired.Notifications.Twilio.AuthToken != nil {
+			literalsSecretVars["ZITADEL_TWILIO_AUTH_TOKEN"] = desired.Notifications.Twilio.AuthToken.Value
 		}
-		if desired.SecretVars.TwilioSID != nil {
-			literalsSecretVars["ZITADEL_TWILIO_SID"] = desired.SecretVars.TwilioSID.Value
+		if desired.Notifications.Twilio.SID != nil {
+			literalsSecretVars["ZITADEL_TWILIO_SID"] = desired.Notifications.Twilio.SID.Value
 		}
 	}
 

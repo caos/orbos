@@ -6,7 +6,6 @@ CREATE DATABASE eventstore;
 
 COMMIT;
 
-
 BEGIN;
 
 CREATE USER eventstore;

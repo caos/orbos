@@ -4,7 +4,6 @@ const V114Authz = `BEGIN;
 
 CREATE DATABASE authz;
 
-
 COMMIT;
 
 BEGIN;

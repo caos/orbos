@@ -89,7 +89,7 @@ func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 }
 
 func (c *Client) ListNamespaces() (*core.NamespaceList, error) {
-	return c.set.CoreV1().Namespaces().List(mach.ListOptions{})
+	return c.set.CoreV1().Namespaces().List(context.Background(), mach.ListOptions{})
 }
 
 func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error) {
@@ -102,7 +102,7 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 		}
 	}
 
-	return c.set.CoreV1().Secrets(namespace).List(mach.ListOptions{LabelSelector: labelSelector})
+	return c.set.CoreV1().Secrets(namespace).List(context.Background(), mach.ListOptions{LabelSelector: labelSelector})
 }
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
@@ -136,15 +136,15 @@ func (c *Client) ApplyService(rsc *core.Service) error {
 func (c *Client) ApplyJob(rsc *batch.Job) error {
 	resources := c.set.BatchV1().Jobs(rsc.Namespace)
 	return c.apply("job", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		j, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		j, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if j.GetName() != rsc.GetName() || j.GetNamespace() != rsc.GetNamespace() {
-			_, err := resources.Update(rsc)
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
 		return nil
@@ -154,15 +154,15 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
 	resources := c.set.PolicyV1beta1().PodDisruptionBudgets(rsc.Namespace)
 	return c.apply("poddisruptionbudget", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		pdb, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		pdb, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if pdb.GetName() != rsc.GetName() || pdb.GetNamespace() != rsc.GetNamespace() {
-			_, err := resources.Update(rsc)
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
 		return nil
@@ -172,15 +172,15 @@ func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error
 func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
 	return c.apply("statefulset", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		ss, err := resources.Get(rsc.GetName(), mach.GetOptions{})
+		ss, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
 		if ss.GetName() != rsc.GetName() || ss.GetNamespace() != rsc.GetNamespace() {
-			_, err := resources.Update(rsc)
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
 		return nil
@@ -203,16 +203,16 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 }
 
 func (c *Client) DeleteSecret(namespace, name string) error {
-	return c.set.CoreV1().Secrets(namespace).Delete(name, &mach.DeleteOptions{})
+	return c.set.CoreV1().Secrets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 	resources := c.set.CoreV1().ConfigMaps(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {
-		_, err := resources.Create(rsc)
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(rsc)
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
 }

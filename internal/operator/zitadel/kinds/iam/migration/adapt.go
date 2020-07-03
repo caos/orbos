@@ -56,11 +56,11 @@ func AdaptFunc(
 						},
 						{
 							Name:  "create-flyway-user",
-							Image: "cockroachdb/cockroach:v20.1.2",
+							Image: "cockroachdb/cockroach:v20.1.3",
 							Command: []string{
 								"sh",
 								"-c",
-								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"CREATE USER IF NOT EXISTS flyway WITH PASSWORD flyway;\" -e \"GRANT admin TO flyway;\"",
+								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"CREATE USER IF NOT EXISTS flyway WITH PASSWORD flyway;\" -e \"GRANT admin TO flyway WITH ADMIN OPTION;\"; sleep 10",
 							},
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      rootUserInternal,
@@ -72,7 +72,7 @@ func AdaptFunc(
 							Image:           "flyway/flyway:6.5.0",
 							ImagePullPolicy: "Always",
 							Args: []string{
-								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&user=flyway&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslfactory=org.postgresql.ssl.NonValidatingFactory&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key",
+								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslfactory=org.postgresql.ssl.NonValidatingFactory&sslcert=" + rootUserPath + "/client.flyway.crt&sslkey=" + rootUserPath + "/client.flyway.key",
 								"-locations=filesystem:" + migrationsPath,
 								"-user=flyway",
 								"-password=flyway",

@@ -4,7 +4,6 @@ const V11Management = `BEGIN;
 
 CREATE DATABASE management;
 
-
 COMMIT;
 
 BEGIN;

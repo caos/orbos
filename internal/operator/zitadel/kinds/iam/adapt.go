@@ -11,7 +11,6 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/imagepullsecret"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -35,8 +34,6 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
-
-		setTestVariables(desiredKind)
 
 		databaseCurrent := &tree.Tree{}
 		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent)
@@ -189,18 +186,4 @@ func AdaptFunc() zitadel.AdaptFunc {
 			nil
 	}
 
-}
-
-func setTestVariables(desired *DesiredV0) {
-	desired.Spec.Configuration.SecretVars = &configuration.SecretVars{
-		GoogleChatURL:   &secret.Secret{"test", "test", "test", "test"},
-		TwilioAuthToken: &secret.Secret{"test", "test", "test", "test"},
-		TwilioSID:       &secret.Secret{"test", "test", "test", "test"},
-		EmailAppKey:     &secret.Secret{"test", "test", "test", "test"},
-	}
-
-	desired.Spec.Configuration.ConsoleEnvironmentJSON = &secret.Secret{"test", "test", "test", "test"}
-
-	desired.Spec.Configuration.Secrets.Keys = &secret.Secret{"test", "test", "test", "test"}
-	desired.Spec.Configuration.Secrets.ServiceAccountJSON = &secret.Secret{"test", "test", "test", "test"}
 }

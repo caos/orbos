@@ -3,63 +3,68 @@ package configuration
 import "github.com/caos/orbos/internal/secret"
 
 type Configuration struct {
-	Tracing                *Tracing
-	TwilioSenderName       string
-	Email                  *Email
-	Cache                  *Cache
-	Domains                *Domains
-	Endpoints              *Endpoints
-	Secrets                *Secrets
-	SecretVars             *SecretVars
-	ConsoleEnvironmentJSON *secret.Secret
+	Tracing                *Tracing       `yaml:"tracing,omitempty"`
+	Cache                  *Cache         `yaml:"cache,omitempty"`
+	Domains                *Domains       `yaml:"domains,omitempty"`
+	Endpoints              *Endpoints     `yaml:"endpoints,omitempty"`
+	Secrets                *Secrets       `yaml:"secrets,omitempty"`
+	Notifications          *Notifications `yaml:"notifications,omitempty"`
+	ConsoleEnvironmentJSON *secret.Secret `yaml:"consoleEnvironmentJSON,omitempty"`
 }
 
 type Secrets struct {
-	ServiceAccountJSON *secret.Secret
-	Keys               *secret.Secret
-	UserVerificationID string
-	OTPVerificationID  string
-	OIDCKeysID         string
-	CookieID           string
-	CSRFID             string
+	Keys               *secret.Secret `yaml:"keys,omitempty"`
+	UserVerificationID string         `yaml:"userVerificationID,omitempty"`
+	OTPVerificationID  string         `yaml:"otpVerificationID,omitempty"`
+	OIDCKeysID         string         `yaml:"oidcKeysID,omitempty"`
+	CookieID           string         `yaml:"cookieID,omitempty"`
+	CSRFID             string         `yaml:"csrfID,omitempty"`
 }
-type SecretVars struct {
-	GoogleChatURL   *secret.Secret
-	TwilioAuthToken *secret.Secret
-	TwilioSID       *secret.Secret
-	EmailAppKey     *secret.Secret
+
+type Notifications struct {
+	GoogleChatURL *secret.Secret `yaml:"googleChatURL,omitempty"`
+	Email         *Email         `yaml:"email,omitempty"`
+	Twilio        *Twilio        `yaml:"twilio,omitempty"`
 }
 
 type Tracing struct {
-	ProjectID string
-	Fraction  string
+	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
+	ProjectID          string         `yaml:"projectID,omitempty"`
+	Fraction           string         `yaml:"fraction,omitempty"`
+}
+
+type Twilio struct {
+	SenderName string         `yaml:"senderName,omitempty"`
+	AuthToken  *secret.Secret `yaml:"authToken,omitempty"`
+	SID        *secret.Secret `yaml:"sid,omitempty"`
 }
 
 type Email struct {
-	SMTPHost      string
-	SMTPUser      string
-	SenderAddress string
-	SenderName    string
-	TLS           bool
+	SMTPHost      string         `yaml:"smtpHost,omitempty"`
+	SMTPUser      string         `yaml:"smtpUser,omitempty"`
+	SenderAddress string         `yaml:"senderAddress,omitempty"`
+	SenderName    string         `yaml:"senderName,omitempty"`
+	TLS           bool           `yaml:"tls,omitempty"`
+	AppKey        *secret.Secret `yaml:"appKey,omitempty"`
 }
 
 type Cache struct {
-	MaxAge            string
-	SharedMaxAge      string
-	ShortMaxAge       string
-	ShortSharedMaxAge string
+	MaxAge            string `yaml:"maxAge,omitempty"`
+	SharedMaxAge      string `yaml:"sharedMaxAge,omitempty"`
+	ShortMaxAge       string `yaml:"shortMaxAge,omitempty"`
+	ShortSharedMaxAge string `yaml:"shortSharedMaxAge,omitempty"`
 }
 
 type Domains struct {
-	Accounts string
-	Cookie   string
-	Default  string
+	Accounts string `yaml:"accounts,omitempty"`
+	Cookie   string `yaml:"cookie,omitempty"`
+	Default  string `yaml:"default,omitempty"`
 }
 
 type Endpoints struct {
-	Authorize string
-	OAuth     string
-	Issuer    string
-	Console   string
-	Accounts  string
+	Authorize string `yaml:"authorize,omitempty"`
+	OAuth     string `yaml:"oauth,omitempty"`
+	Issuer    string `yaml:"issuer,omitempty"`
+	Console   string `yaml:"console,omitempty"`
+	Accounts  string `yaml:"accounts,omitempty"`
 }

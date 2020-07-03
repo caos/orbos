@@ -11,6 +11,7 @@ import (
 const (
 	orbiterFile = "orbiter.yml"
 	boomFile    = "boom.yml"
+	zitadelFile = "zitadel.yml"
 )
 
 type SecretFunc func(monitor mntr.Monitor) error
@@ -49,7 +50,26 @@ func PushBoomYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desire
 func BoomSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing boom secrets")
-		return PushBoomYml(monitor, "Orbiter secrets written", gitClient, desired)
+		return PushBoomYml(monitor, "Boom secrets written", gitClient, desired)
+	}
+}
+
+func ExistsZitadelYml(gitClient *git.Client) (bool, error) {
+	return existsFileInGit(gitClient, zitadelFile)
+}
+
+func ReadZitadelYml(gitClient *git.Client) (*tree.Tree, error) {
+	return readFileInGit(gitClient, zitadelFile)
+}
+
+func PushZitadelYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
+	return pushFileInGit(monitor, msg, gitClient, desired, zitadelFile)
+}
+
+func ZitadelSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
+	return func(monitor mntr.Monitor) error {
+		monitor.Info("Writing zitadel secrets")
+		return PushZitadelYml(monitor, "Zitadel secrets written", gitClient, desired)
 	}
 }
 

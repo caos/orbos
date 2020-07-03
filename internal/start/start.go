@@ -266,15 +266,8 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath string) error {
 			return err
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "zitadel",
-			Email:     "zitadel@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "iteration",
-		}
-
-		gitClient, cleanUp, err := orbgit.NewGitClient(context.Background(), monitor, gitClientConf)
-		if err != nil {
+		gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			monitor.Error(err)
 			return err
 		}
@@ -294,7 +287,6 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath string) error {
 		go func() {
 			takeoffChan <- struct{}{}
 		}()
-		cleanUp()
 	}
 
 	return nil

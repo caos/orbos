@@ -55,8 +55,8 @@ func NewGitClient(ctx context.Context, monitor mntr.Monitor, conf *Config, check
 		deployKeyPriv = conf.OrbConfig.Repokey
 	}
 
-	gitClient := git.New(ctx, monitor, conf.Comitter, conf.Email, conf.OrbConfig.URL)
-	if err := gitClient.Configure([]byte(deployKeyPriv)); err != nil {
+	gitClient := git.New(ctx, monitor, conf.Comitter, conf.Email)
+	if err := gitClient.Configure(conf.OrbConfig.URL, []byte(deployKeyPriv)); err != nil {
 		monitor.Error(err)
 		return nil, "", deployKeyDelete, err
 	}

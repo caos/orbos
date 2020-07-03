@@ -16,7 +16,7 @@ func GetAll() map[string]string {
 		"V1.11__auth_oidc.sql":                V111AuthOidc,
 		"V1.12__auth_user_grant_view.sql":     V112AuthUserGrantView,
 		"V1.13__auth_org_view.sql":            V113AuthOrgView,
-		"V1.14__authz":                        V114Authz,
+		"V1.14__authz.sql":                    V114Authz,
 		"V1.15__management_project_view.sql":  V115ManagementProjectView,
 		"V1.16__login_names.sql":              V116LoginNames,
 		"V1.17__org_domains.sql":              V117OrgDomains,

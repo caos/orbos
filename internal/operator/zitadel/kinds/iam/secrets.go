@@ -26,11 +26,11 @@ func SecretsFunc() secret.Func {
 func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
 	return map[string]*secret.Secret{
 		"consoleenvironmentjson": desiredKind.Spec.Configuration.ConsoleEnvironmentJSON,
-		"serviceaccountjson":     desiredKind.Spec.Configuration.Secrets.ServiceAccountJSON,
+		"serviceaccountjson":     desiredKind.Spec.Configuration.Tracing.ServiceAccountJSON,
 		"keys":                   desiredKind.Spec.Configuration.Secrets.Keys,
-		"googlechaturl":          desiredKind.Spec.Configuration.SecretVars.GoogleChatURL,
-		"twiliosid":              desiredKind.Spec.Configuration.SecretVars.TwilioSID,
-		"twilioauthtoken":        desiredKind.Spec.Configuration.SecretVars.TwilioAuthToken,
-		"emailappkey":            desiredKind.Spec.Configuration.SecretVars.EmailAppKey,
+		"googlechaturl":          desiredKind.Spec.Configuration.Notifications.GoogleChatURL,
+		"twiliosid":              desiredKind.Spec.Configuration.Notifications.Twilio.SID,
+		"twilioauthtoken":        desiredKind.Spec.Configuration.Notifications.Twilio.AuthToken,
+		"emailappkey":            desiredKind.Spec.Configuration.Notifications.Email.AppKey,
 	}
 }
