@@ -15,6 +15,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/internal/operator/secretfuncs"
+	orbzitadel "github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/utils/orbgit"
@@ -285,7 +286,7 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath string) error {
 			return err
 		}
 
-		takeoff := zitadel.Takeoff(monitor, gitClient)
+		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc())
 
 		go func() {
 			started := time.Now()

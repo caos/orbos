@@ -72,8 +72,7 @@ func AdaptFunc(
 							Image:           "flyway/flyway:6.5.0",
 							ImagePullPolicy: "Always",
 							Args: []string{
-								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&user=flyway&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt",
-								//sslfactory=org.postgresql.ssl.NonValidatingFactory&&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key"
+								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&user=flyway&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslfactory=org.postgresql.ssl.NonValidatingFactory&sslcert=" + rootUserPath + "/client.root.crt&sslkey=" + rootUserPath + "/client.root.key",
 								"-locations=filesystem:" + migrationsPath,
 								"-user=flyway",
 								"-password=flyway",
