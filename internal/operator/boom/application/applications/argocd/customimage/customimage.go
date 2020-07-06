@@ -2,14 +2,15 @@ package customimage
 
 import (
 	"encoding/json"
+	"path/filepath"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/secret"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"path/filepath"
-	"strings"
 
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/pkg/errors"
@@ -115,12 +116,16 @@ func FromSpec(spec *reconciling.Reconciling, imageTags map[string]string) *Custo
 	for _, store := range spec.CustomImage.GopassStores {
 
 		volGPG, volMountGPG := getVolAndVolMount(store.StoreName, "gpg", store.GPGKey, store.ExistingGPGKeySecret, gpgFolderName)
-		vols = append(vols, volGPG)
-		volMounts = append(volMounts, volMountGPG)
+		if volGPG != nil && volMountGPG != nil {
+			vols = append(vols, volGPG)
+			volMounts = append(volMounts, volMountGPG)
+		}
 
 		volSSH, volMountSSH := getVolAndVolMount(store.StoreName, "ssh", store.SSHKey, store.ExistingSSHKeySecret, sshFolderName)
-		vols = append(vols, volSSH)
-		volMounts = append(volMounts, volMountSSH)
+		if volSSH != nil && volMountSSH != nil {
+			vols = append(vols, volSSH)
+			volMounts = append(volMounts, volMountSSH)
+		}
 	}
 
 	return &CustomImage{
