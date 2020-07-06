@@ -90,7 +90,7 @@ Wait for grafana to become running
 kubectl --namespace caos-system get po -w
 ```
 
-Open your browser at localhost:8080 to show your new clusters dashboards
+Open your browser at `http://localhost:8080` to show your new clusters dashboards. Default username and password are both `admin`
 
 ```bash
 kubectl --namespace caos-system port-forward svc/grafana 8080:80
@@ -114,9 +114,7 @@ gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
     --role=roles/serviceusage.serviceUsageAdmin
 
 # Remove service account
-gcloud iam service-accounts create ${ORBOS_SERVICE_ACCOUNT_NAME} \
-    --description="${ORBOS_SERVICE_ACCOUNT_NAME}" \
-    --display-name="${ORBOS_SERVICE_ACCOUNT_NAME}"
+gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 ```
 
 
