@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	boomapi "github.com/caos/orbos/internal/operator/boom/api"
+
 	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -16,7 +18,6 @@ import (
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/spf13/cobra"
 )
@@ -24,21 +25,21 @@ import (
 func ConfigCommand(rv RootValues) *cobra.Command {
 
 	var (
-		kubeconfig string
-		masterkey  string
-		repoURL    string
-		cmd        = &cobra.Command{
+		kubeconfig   string
+		newMasterKey string
+		newRepoURL   string
+		cmd          = &cobra.Command{
 			Use:     "configure",
 			Short:   "Configures and reconfigures an orb",
 			Long:    "Configures and reconfigures an orb",
-			Aliases: []string{"config"},
+			Aliases: []string{"reconfigure", "config", "reconfig"},
 		}
 	)
 
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Needed in boom-only scenarios")
-	flags.StringVar(&masterkey, "masterkey", "", "Reencrypts all secrets")
-	flags.StringVar(&repoURL, "repourl", "", "Reconfigures repository URL")
+	flags.StringVar(&newMasterKey, "masterkey", "", "Reencrypts all secrets")
+	flags.StringVar(&newRepoURL, "repourl", "", "Reconfigures repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		_, monitor, orbConfig, gitClient, errFunc := rv()
@@ -46,23 +47,23 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		if orbConfig.URL == "" && repoURL == "" {
+		if orbConfig.URL == "" && newRepoURL == "" {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
 		}
 
-		if orbConfig.Masterkey == "" && masterkey == "" {
+		if orbConfig.Masterkey == "" && newMasterKey == "" {
 			return errors.New("master key is neighter passed by flag masterkey nor written in orbconfig")
 		}
 
 		var changes bool
-		if masterkey != "" {
+		if newMasterKey != "" {
 			monitor.Info("Change masterkey in current orbconfig")
-			orbConfig.Masterkey = masterkey
+			orbConfig.Masterkey = newMasterKey
 			changes = true
 		}
-		if repoURL != "" {
+		if newRepoURL != "" {
 			monitor.Info("Change repository url in current orbconfig")
-			orbConfig.URL = repoURL
+			orbConfig.URL = newRepoURL
 			changes = true
 		}
 
@@ -106,15 +107,12 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			changes = true
 		}
 
-		if !changes {
-			monitor.Info("No changes")
-			return nil
-		}
-
-		monitor.Info("Writeback current orbconfig to local orbconfig")
-		if err := orbConfig.WriteBackOrbConfig(); err != nil {
-			monitor.Info("Failed to change local configuration")
-			return err
+		if changes {
+			monitor.Info("Writeback current orbconfig to local orbconfig")
+			if err := orbConfig.WriteBackOrbConfig(); err != nil {
+				monitor.Info("Failed to change local configuration")
+				return err
+			}
 		}
 
 		allKubeconfigs := make([]string, 0)
@@ -123,9 +121,14 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		rewriteKey := orbConfig.Masterkey
+		if newMasterKey != "" {
+			rewriteKey = newMasterKey
+		}
+
 		if foundOrbiter {
 
-			_, _, configure, _, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, configure, _, desired, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
 				orbConfig,
 				gitCommit,
 				true,
@@ -138,19 +141,18 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			monitor.Info("Reading kubeconfigs from orbiter.yml")
-
-			if masterkey != "" {
-				monitor.Info("Read and rewrite orbiter.yml with new masterkey")
-				if err := secret.Rewrite(
-					monitor,
-					gitClient,
-					secretfuncs.GetRewrite(masterkey),
-					"orbiter"); err != nil {
-					panic(err)
-				}
+			monitor.Info("Repopulating orbiter secrets")
+			if err := secret.Rewrite(
+				monitor,
+				gitClient,
+				"orbiter",
+				rewriteKey,
+				desired,
+			); err != nil {
+				panic(err)
 			}
 
+			monitor.Info("Reading kubeconfigs from orbiter.yml")
 			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
@@ -168,20 +170,31 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			allKubeconfigs = append(allKubeconfigs, string(value))
 		}
 
-		if masterkey != "" {
-			foundBoom, err := api.ExistsBoomYml(gitClient)
+		foundBoom, err := api.ExistsBoomYml(gitClient)
+		if err != nil {
+			return err
+		}
+		if foundBoom {
+			monitor.Info("Repopulating boom secrets")
+
+			tree, err := api.ReadBoomYml(gitClient)
 			if err != nil {
 				return err
 			}
-			if foundBoom {
-				monitor.Info("Read and rewrite boom.yml with new masterkey")
-				if err := secret.Rewrite(
-					monitor,
-					gitClient,
-					secretfuncs.GetRewrite(masterkey),
-					"boom"); err != nil {
-					return err
-				}
+
+			toolset, _, err := boomapi.ParseToolset(tree)
+			if err != nil {
+				return err
+			}
+
+			tree.Parsed = toolset
+			if err := secret.Rewrite(
+				monitor,
+				gitClient,
+				"boom",
+				rewriteKey,
+				tree); err != nil {
+				return err
 			}
 		}
 

@@ -53,21 +53,3 @@ func SecretsFunc() secret.Func {
 		}
 	}
 }
-
-func RewriteFunc(newMasterkey string) secret.Func {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
-		desiredKindCommon := common.New()
-		if err := desiredTree.Original.Decode(desiredKindCommon); err != nil {
-			return nil, errors.Wrap(err, "parsing desired state failed")
-		}
-
-		switch desiredKindCommon.APIVersion {
-		case "boom.caos.ch/v1beta1":
-			return v1beta1.RewriteFunc(desiredTree, newMasterkey)
-		case "boom.caos.ch/v1beta2":
-			return v1beta2.RewriteFunc(desiredTree, newMasterkey)
-		default:
-			return nil, errors.New("APIVersion unknown")
-		}
-	}
-}

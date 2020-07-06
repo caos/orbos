@@ -9,9 +9,6 @@ import (
 
 	"github.com/caos/orbos/internal/api"
 
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/ssh"
-
 	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
@@ -143,18 +140,6 @@ func query(
 	})
 	return func(psf api.SecretFunc) *orbiter.EnsureResult {
 
-		if (desired.SSHKey.Private == nil || desired.SSHKey.Private.Value == "") &&
-			(desired.SSHKey.Public == nil || desired.SSHKey.Public.Value == "") {
-			priv, pub, err := ssh.Generate()
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-			desired.SSHKey.Private = &secret.Secret{Value: priv}
-			desired.SSHKey.Public = &secret.Secret{Value: pub}
-			if err := psf(context.monitor.WithField("type", "maintenancekey")); err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-		}
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
 			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },

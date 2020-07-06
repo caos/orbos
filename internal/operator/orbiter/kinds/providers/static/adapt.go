@@ -5,6 +5,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
@@ -84,11 +86,18 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					return err
 				}
 
-				if desiredKind.Spec.Keys == nil || desiredKind.Spec.Keys.BootstrapKeyPrivate == nil && desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
-					return nil
+				if (desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil || desiredKind.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
+					(desiredKind.Spec.Keys.MaintenanceKeyPublic == nil || desiredKind.Spec.Keys.MaintenanceKeyPublic.Value == "") {
+					priv, pub, err := ssh.Generate()
+					if err != nil {
+						return err
+					}
+					desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Value: priv}
+					desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Value: pub}
+					if err := svc.updateKeys(); err != nil {
+						return err
+					}
 				}
-
-				// TODO: Maybe generate maintenancekey here?
 
 				return core.ConfigureNodeAgents(svc, monitor, orb)
 			}, migrate, nil

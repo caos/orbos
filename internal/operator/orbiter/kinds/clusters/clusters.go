@@ -75,25 +75,3 @@ func GetSecrets(
 		return nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 	}
 }
-
-func RewriteMasterkey(
-	monitor mntr.Monitor,
-	newMasterkey string,
-	clusterTree *tree.Tree,
-) (
-	map[string]*secret.Secret,
-	error,
-) {
-
-	switch clusterTree.Common.Kind {
-	case "orbiter.caos.ch/KubernetesCluster":
-		return kubernetes.RewriteFunc(
-			newMasterkey,
-		)(
-			monitor,
-			clusterTree,
-		)
-	default:
-		return nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
-	}
-}

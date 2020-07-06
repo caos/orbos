@@ -6,22 +6,23 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/caos/orbos/internal/utils/clientgo"
+	"gopkg.in/yaml.v3"
 )
 
 var Masterkey = "empty"
 
 // Secret: Secret handled with orbctl so no manual changes are required
 type Secret struct {
-	//Used encryption for the secret
+	//Encryption algorithm used for the secret
 	Encryption string
-	//Used encoding for the secret
+	//Encoding algorithm used for the secret
 	Encoding string
-	//Value after encryption and encoding
+	//Encrypted and encoded Value
 	Value string
 }
 type secretAlias Secret
@@ -32,7 +33,7 @@ type Existing struct {
 	Name string `json:"name" yaml:"name"`
 	//Key in the secret from where the value should be used
 	Key string `json:"key" yaml:"key"`
-	//Name which should be used internal, should be unique for the volume and volumemounts
+	//Name which should be used internally, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
@@ -44,7 +45,7 @@ type ExistingIDSecret struct {
 	IDKey string `json:"idKey" yaml:"idKey"`
 	//Key in the secret which contains the secret
 	SecretKey string `json:"secretKey" yaml:"secretKey"`
-	//Name which should be used internal, should be unique for the volume and volumemounts
+	//Name which should be used internally, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 

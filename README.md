@@ -99,7 +99,24 @@ kubectl --namespace caos-system port-forward svc/grafana 8080:80
 Delete everything created by Orbiter
 
 ```bash
+# Remove all GCE compute resources
 orbctl destroy
+
+# Unassign all service account roles
+gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/compute.admin
+gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iap.tunnelResourceAccessor
+gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/serviceusage.serviceUsageAdmin
+
+# Remove service account
+gcloud iam service-accounts create ${ORBOS_SERVICE_ACCOUNT_NAME} \
+    --description="${ORBOS_SERVICE_ACCOUNT_NAME}" \
+    --display-name="${ORBOS_SERVICE_ACCOUNT_NAME}"
 ```
 
 

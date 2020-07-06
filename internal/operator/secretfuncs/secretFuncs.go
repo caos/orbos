@@ -21,17 +21,3 @@ func GetSecrets() func(operator string) secret.Func {
 		}
 	}
 }
-
-func GetRewrite(masterkey string) func(operator string) secret.Func {
-	return func(operator string) secret.Func {
-		if operator == "boom" {
-			return api.RewriteFunc(masterkey)
-		} else if operator == "orbiter" {
-			return orb.RewriteFunc(masterkey)
-		}
-
-		return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
-			return make(map[string]*secret.Secret), nil
-		}
-	}
-}

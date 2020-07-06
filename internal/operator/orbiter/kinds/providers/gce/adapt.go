@@ -5,6 +5,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
@@ -80,6 +82,19 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			}, func(orb orb.Orb) error {
 				if err := lbConfigure(orb); err != nil {
 					return err
+				}
+
+				if desiredKind.Spec.SSHKey == nil ||
+					desiredKind.Spec.SSHKey.Private == nil || desiredKind.Spec.SSHKey.Private.Value == "" ||
+					desiredKind.Spec.SSHKey.Public == nil || desiredKind.Spec.SSHKey.Public.Value == "" {
+					priv, pub, err := ssh.Generate()
+					if err != nil {
+						return err
+					}
+					desiredKind.Spec.SSHKey = &SSHKey{
+						Private: &secret.Secret{Value: priv},
+						Public:  &secret.Secret{Value: pub},
+					}
 				}
 
 				if desiredKind.Spec.JSONKey == nil {
