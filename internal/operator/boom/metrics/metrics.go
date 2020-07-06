@@ -23,8 +23,8 @@ type metricsStruct struct {
 var (
 	metrics = &metricsStruct{
 		gitClone:               newCounterVec("boom_git_clone", "Counter how many times git repositories were cloned", "result", "url"),
-		crdFormat:              newCounterVec("boom_crd_format", "Counter how many failures there were with the crd unmarshalling", "result", "url", "path", "reason"),
-		currentStateWrite:      newCounterVec("boom_current_state_write", "Counter how many times the current state was written", "result", "url", "path"),
+		crdFormat:              newCounterVec("boom_crd_format", "Counter how many failures there were with the crd unmarshalling", "result", "url", "reason"),
+		currentStateWrite:      newCounterVec("boom_current_state_write", "Counter how many times the current state was written", "result", "url"),
 		currentStateRead:       newCounterVec("boom_current_state_read", "Counter how many times the current state was read", "result"),
 		reconcilingBundle:      newCounterVec("boom_reconciling_bundle", "Counter how many times the bundle was reconciled", "result", "bundle"),
 		reconcilingApplication: newCounterVec("boom_reconciling_application", "Counter how many times a application was reconciled", "result", "application", "templator", "deploy"),
@@ -39,7 +39,7 @@ var (
 	success float64 = 1
 )
 
-func newGauge(name, help string, labels ...string) prometheus.Gauge {
+func newGauge(name, help string) prometheus.Gauge {
 	gauge := promauto.NewGauge(prometheus.GaugeOpts{
 		Name: name,
 		Help: help,
