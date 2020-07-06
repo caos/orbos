@@ -54,10 +54,6 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 		currentTree.Parsed = current
 
 		svc := NewMachinesService(monitor, desiredKind, id)
-		if err := svc.updateKeys(); err != nil {
-			return nil, nil, nil, migrate, err
-		}
-
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 				defer func() {
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
@@ -71,6 +67,10 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					return nil, err
 				}
 
+				if err := svc.updateKeys(); err != nil {
+					return nil, err
+				}
+
 				queryFunc := func() (orbiter.EnsureFunc, error) {
 					_, iterateNA := core.NodeAgentFuncs(monitor, repoURL, repoKey)
 					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
@@ -80,23 +80,31 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 				if err := lbDestroy(); err != nil {
 					return err
 				}
+
+				if err := svc.updateKeys(); err != nil {
+					return err
+				}
+
 				return destroy(svc, desiredKind, current)
 			}, func(orb orb.Orb) error {
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
 
-				if (desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil || desiredKind.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
-					(desiredKind.Spec.Keys.MaintenanceKeyPublic == nil || desiredKind.Spec.Keys.MaintenanceKeyPublic.Value == "") {
+				initKeys := desiredKind.Spec.Keys == nil
+				if initKeys ||
+					desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil || desiredKind.Spec.Keys.MaintenanceKeyPrivate.Value == "" ||
+					desiredKind.Spec.Keys.MaintenanceKeyPublic == nil || desiredKind.Spec.Keys.MaintenanceKeyPublic.Value == "" {
 					priv, pub, err := ssh.Generate()
 					if err != nil {
 						return err
 					}
+					if initKeys {
+						desiredKind.Spec.Keys = &Keys{}
+					}
 					desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Value: priv}
 					desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Value: pub}
-					if err := svc.updateKeys(); err != nil {
-						return err
-					}
+					return nil
 				}
 
 				return core.ConfigureNodeAgents(svc, monitor, orb)
