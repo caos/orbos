@@ -53,9 +53,14 @@ ORBOS_SERVICE_ACCOUNT=${ORBOS_SERVICE_ACCOUNT_NAME}@${MY_GCE_PROJECT}.iam.gservi
 # Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
 gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
     --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
-    --role=roles/compute.admin \
-    --role=roles/iap.tunnelResourceAccessor \
+    --role=roles/compute.admin
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iap.tunnelResourceAccessor
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
     --role=roles/serviceusage.serviceUsageAdmin
+
 
 # Create a JSON key for the service account
 gcloud iam service-accounts keys create /tmp/key.json \
@@ -76,7 +81,7 @@ As soon as the Orbiter has deployed itself to the cluster, you can decrypt the g
 
 ```bash
 mkdir -p ~/.kube
-orbctl readsecret k8s.kubeconfig > ~/.kube/config
+orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config
 ```
 
 Wait for grafana to become running
