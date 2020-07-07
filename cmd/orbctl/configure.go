@@ -42,7 +42,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&newRepoURL, "repourl", "", "Reconfigures repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -83,7 +83,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err != nil {
 				panic(errors.New("failed to generate ssh key for deploy key"))
 			}
-			g := github.New(monitor).LoginOAuth(dir)
+			g := github.New(monitor).LoginOAuth(ctx, dir)
 			if g.GetStatus() != nil {
 				return errors.New("failed github oauth login ")
 			}

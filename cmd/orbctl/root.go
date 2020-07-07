@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"os"
-	"strings"
+
+	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/internal/git"
 
@@ -66,17 +66,10 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor = monitor.Verbose()
 		}
 
-		if strings.HasPrefix(orbConfigPath, "~") {
-			userhome, err := os.UserHomeDir()
-			if err != nil {
-				panic(err)
-			}
-			orbConfigPath = userhome + orbConfigPath[1:]
-		}
-
-		orbConfig, err := orb.ParseOrbConfig(orbConfigPath)
+		prunedPath := helpers.PruneHome(orbConfigPath)
+		orbConfig, err := orb.ParseOrbConfig(prunedPath)
 		if err != nil {
-			orbConfig = &orb.Orb{Path: orbConfigPath}
+			orbConfig = &orb.Orb{Path: prunedPath}
 		}
 
 		ctx := context.Background()
