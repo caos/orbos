@@ -6,13 +6,8 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
-
-type secret struct {
-	Path      string
-	Name      string
-	Namespace string
-}
 
 func AdaptFunc(
 	namespace string,
@@ -20,19 +15,19 @@ func AdaptFunc(
 	replicaCount int,
 	version string,
 ) (
-	func(currentDB interface{}) (resources.EnsureFunc, error),
+	resources.QueryFunc,
 	resources.DestroyFunc,
 	error,
 ) {
 	internalSecrets := "zitadel-secret"
 	internalConfig := "console-config"
 	rootSecret := "client-root"
-	secretMode := int32(0400)
+	secretMode := int32(0777)
 	replicas := int32(replicaCount)
 	runAsUser := int64(1000)
 	runAsNonRoot := true
 
-	userList := []string{"management", "auth", "authz", "admin", "notify"}
+	userList := []string{"management", "auth", "authz", "adminapi", "notification"}
 	volumnes := []v1.Volume{{
 		Name: internalSecrets,
 		VolumeSource: v1.VolumeSource{
@@ -62,12 +57,13 @@ func AdaptFunc(
 		{Name: rootSecret, MountPath: "/dbsecrets/ca.crt", SubPath: "ca.crt"},
 	}
 	for _, user := range userList {
-		internalName := "client-" + user
+		userReplaced := strings.ReplaceAll(user, "_", "-")
+		internalName := "client-" + userReplaced
 		volumnes = append(volumnes, v1.Volume{
 			Name: internalName,
 			VolumeSource: v1.VolumeSource{
 				Secret: &v1.SecretVolumeSource{
-					SecretName:  "cockroachdb.client." + user,
+					SecretName:  "cockroachdb.client." + userReplaced,
 					DefaultMode: &secretMode,
 				},
 			},
@@ -108,11 +104,20 @@ func AdaptFunc(
 					},
 					Containers: []v1.Container{
 						{
+							Lifecycle: &v1.Lifecycle{
+								PostStart: &v1.Handler{
+									Exec: &v1.ExecAction{
+										// TODO: until proper fix of https://github.com/kubernetes/kubernetes/issues/2630
+										Command: []string{"sh", "-c",
+											"mkdir -p $HOME/dbsecrets-zitadel/ && cp /dbsecrets/* $HOME/dbsecrets-zitadel/ && chmod 400 $HOME/dbsecrets-zitadel/*"},
+									},
+								},
+							},
 							SecurityContext: &v1.SecurityContext{
 								RunAsUser:    &runAsUser,
 								RunAsNonRoot: &runAsNonRoot,
 							},
-							Command:         []string{"/bin/sh", "-c", "mkdir -p /dbsecrets-zitadel/ && cp /dbsecrets/* /dbsecrets-zitadel/ && chmod 400 /dbsecrets-zitadel/* && chown 1000:1000 /dbsecrets-zitadel/* && while true; do sleep 30; done;"},
+							//Command:         []string{"/bin/sh", "-c", "while true; do sleep 30; done;"},
 							Name:            "zitadel",
 							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:" + version,
 							ImagePullPolicy: "IfNotPresent",
@@ -179,16 +184,5 @@ func AdaptFunc(
 		},
 	}
 
-	_, destroy, err := deployment.AdaptFunc(deploymentDef)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return func(currentDB interface{}) (resources.EnsureFunc, error) {
-		query, _, err := deployment.AdaptFunc(deploymentDef)
-		if err != nil {
-			return nil, err
-		}
-		return query()
-	}, destroy, nil
+	return deployment.AdaptFunc(deploymentDef)
 }

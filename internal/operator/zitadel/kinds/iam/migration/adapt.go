@@ -2,9 +2,9 @@ package migration
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
+	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration/scripts"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -14,26 +14,22 @@ import (
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
-	migrationConfigmap string,
 ) (
-	resources.QueryFunc,
-	resources.DestroyFunc,
+	zitadel.QueryFunc,
+	zitadel.DestroyFunc,
 	error,
 ) {
-
-	queriers := make([]resources.QueryFunc, 0)
-	destroyers := make([]resources.DestroyFunc, 0)
-
-	queryCM, destroyCM, err := configmap.AdaptFunc(migrationConfigmap, namespace, labels, scripts.GetAll())
-	if err != nil {
-		return nil, nil, err
-	}
-
+	migrationConfigmap := "migrate-db"
 	migrationsPath := "/migrate"
 	migrationsConfigInternal := "migrate-db"
 	rootUserInternal := "root"
 	rootUserPath := "/certificates"
 	defaultMode := int32(0400)
+
+	queryCM, destroyCM, err := configmap.AdaptFunc(migrationConfigmap, namespace, labels, scripts.GetAll())
+	if err != nil {
+		return nil, nil, err
+	}
 
 	jobDef := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
@@ -130,34 +126,18 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	queriers = append(queriers, queryCM, queryJ)
-	destroyers = append(destroyers, destroyCM, destroyJ)
+	queriers := []zitadel.QueryFunc{
+		zitadel.ResourceQueryToZitadelQuery(queryCM),
+		zitadel.ResourceQueryToZitadelQuery(queryJ),
+	}
+	destroyers := []zitadel.DestroyFunc{
+		zitadel.ResourceDestroyToZitadelDestroy(destroyJ),
+		zitadel.ResourceDestroyToZitadelDestroy(destroyCM),
+	}
 
-	return func() (resources.EnsureFunc, error) {
-			ensurers := make([]resources.EnsureFunc, 0)
-			for _, querier := range queriers {
-				ensurer, err := querier()
-				if err != nil {
-					return nil, err
-				}
-				ensurers = append(ensurers, ensurer)
-			}
-
-			return func(k8sClient *kubernetes.Client) error {
-				for _, ensurer := range ensurers {
-					if err := ensurer(k8sClient); err != nil {
-						return err
-					}
-				}
-				return nil
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			for _, destroyer := range destroyers {
-				if err := destroyer(k8sClient); err != nil {
-					return err
-				}
-			}
-			return nil
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 		},
+		zitadel.DestroyersToDestroyFunc(destroyers),
 		nil
 }

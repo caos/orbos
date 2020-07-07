@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"strings"
 )
 
 func AdaptFunc(namespace string, clients []string, labels map[string]string) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
@@ -31,13 +32,13 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string) (zi
 		clientSecret := "cockroachdb.client." + client
 		desiredClient = append(desiredClient, &secretInternal{
 			client:    client,
-			name:      clientSecret,
+			name:      strings.ReplaceAll(clientSecret, "_", "-"),
 			namespace: namespace,
 			labels:    clientLabels,
 		})
 	}
 
-	return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
+	return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
 			ensurers := make([]resources.EnsureFunc, 0)
 
 			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)

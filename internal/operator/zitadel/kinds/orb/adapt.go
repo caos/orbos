@@ -26,17 +26,14 @@ func AdaptFunc() zitadel.AdaptFunc {
 			monitor = monitor.Verbose()
 		}
 
-		queriers := make([]zitadel.QueryFunc, 0)
-		destroyers := make([]zitadel.DestroyFunc, 0)
-
 		iamCurrent := &tree.Tree{}
 		queryIAM, destroyIAM, err := iam.AdaptFunc()(monitor, desiredKind.IAM, iamCurrent)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queriers = append(queriers, queryIAM)
-		destroyers = append(destroyers, destroyIAM)
+		queriers := []zitadel.QueryFunc{queryIAM}
+		destroyers := []zitadel.DestroyFunc{destroyIAM}
 
 		currentTree.Parsed = &DesiredV0{
 			Common: &tree.Common{
@@ -46,33 +43,10 @@ func AdaptFunc() zitadel.AdaptFunc {
 			IAM: iamCurrent,
 		}
 
-		return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
-				ensurers := make([]zitadel.EnsureFunc, 0)
-				for _, querier := range queriers {
-					ensurer, err := querier(k8sClient)
-					if err != nil {
-						return nil, err
-					}
-					ensurers = append(ensurers, ensurer)
-				}
-
-				return func(k8sClient *kubernetes.Client) error {
-					for _, ensurer := range ensurers {
-						if err := ensurer(k8sClient); err != nil {
-							return err
-						}
-					}
-					return nil
-				}, nil
-			}, func(k8sClient *kubernetes.Client) error {
-				for _, destroyer := range destroyers {
-					if err := destroyer(k8sClient); err != nil {
-						return err
-					}
-				}
-				return nil
+		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 			},
+			zitadel.DestroyersToDestroyFunc(destroyers),
 			nil
-
 	}
 }

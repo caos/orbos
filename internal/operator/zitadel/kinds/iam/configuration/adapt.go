@@ -1,11 +1,13 @@
 package configuration
 
 import (
+	"errors"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	secret2 "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
+	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	"github.com/caos/orbos/internal/tree"
 	"strings"
 )
 
@@ -14,8 +16,8 @@ func AdaptFunc(
 	labels map[string]string,
 	desired *Configuration,
 ) (
-	func(currentDB interface{}) (resources.EnsureFunc, error),
-	resources.DestroyFunc,
+	zitadel.QueryFunc,
+	zitadel.DestroyFunc,
 	error,
 ) {
 	googleServiceAccountJSONPath := "google-serviceaccount-key.json"
@@ -62,13 +64,14 @@ func AdaptFunc(
 		"ZITADEL_SHORT_CACHE_MAXAGE":        desired.Cache.ShortMaxAge,
 		"ZITADEL_SHORT_CACHE_SHARED_MAXAGE": desired.Cache.ShortSharedMaxAge,
 		"CR_SSL_MODE":                       "require",
-		"CR_ROOT_CERT":                      "/dbsecrets-zitadel/ca.crt",
+		"CR_ROOT_CERT":                      "/home/zitadel/dbsecrets-zitadel/ca.crt",
 	}
 
-	userList := []string{"management", "auth", "authz", "admin", "notify"}
+	userList := []string{"management", "auth", "authz", "adminapi", "notification"}
 	for _, user := range userList {
-		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = "/dbsecrets-zitadel/client." + user + ".crt"
-		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = "/dbsecrets-zitadel/client." + user + ".key"
+		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = "/home/zitadel/dbsecrets-zitadel/client." + user + ".crt"
+		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = "/home/zitadel/dbsecrets-zitadel/client." + user + ".key"
+		literalsConfig["CR_"+strings.ToUpper(user)+"_PASSWORD"] = user
 	}
 
 	literalsSecret := map[string]string{}
@@ -118,60 +121,44 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	return func(currentDB interface{}) (resources.EnsureFunc, error) {
-			current := currentDB.(core.DatabaseCurrent)
-			literalsConfig["ZITADEL_EVENTSTORE_HOST"] = current.GetURL()
-			literalsConfig["ZITADEL_EVENTSTORE_PORT"] = current.GetPort()
+	queriers := []zitadel.QueryFunc{
+		zitadel.ResourceQueryToZitadelQuery(queryS),
+		zitadel.ResourceQueryToZitadelQuery(queryCCM),
+		zitadel.ResourceQueryToZitadelQuery(querySV),
+	}
+
+	destroyers := []zitadel.DestroyFunc{
+		zitadel.ResourceDestroyToZitadelDestroy(destroyS),
+		zitadel.ResourceDestroyToZitadelDestroy(destroyCM),
+		zitadel.ResourceDestroyToZitadelDestroy(destroyCCM),
+		zitadel.ResourceDestroyToZitadelDestroy(destroySV),
+	}
+
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+			queriedDB, ok := queried["database"]
+			if !ok {
+				return nil, errors.New("no current state for database found")
+			}
+			current, ok := queriedDB.(*tree.Tree)
+			if !ok {
+				return nil, errors.New("current state does not fullfil interface")
+			}
+			currentDB, ok := current.Parsed.(core.DatabaseCurrent)
+			if !ok {
+				return nil, errors.New("current state does not fullfil interface")
+			}
+
+			literalsConfig["ZITADEL_EVENTSTORE_HOST"] = currentDB.GetURL()
+			literalsConfig["ZITADEL_EVENTSTORE_PORT"] = currentDB.GetPort()
 			queryCM, _, err := configmap.AdaptFunc("zitadel-vars", namespace, labels, literalsConfig)
 			if err != nil {
 				return nil, err
 			}
-			ensureS, err := queryS()
-			if err != nil {
-				return nil, err
-			}
-			ensureCM, err := queryCM()
-			if err != nil {
-				return nil, err
-			}
-			ensureCCM, err := queryCCM()
-			if err != nil {
-				return nil, err
-			}
-			ensureSV, err := querySV()
-			if err != nil {
-				return nil, err
-			}
 
-			return func(k8sClient *kubernetes.Client) error {
-				if err := ensureS(k8sClient); err != nil {
-					return err
-				}
-				if err := ensureCM(k8sClient); err != nil {
-					return err
-				}
-				if err := ensureCCM(k8sClient); err != nil {
-					return err
-				}
-				if err := ensureSV(k8sClient); err != nil {
-					return err
-				}
-				return nil
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			if err := destroyS(k8sClient); err != nil {
-				return err
-			}
-			if err := destroyCM(k8sClient); err != nil {
-				return err
-			}
-			if err := destroyCCM(k8sClient); err != nil {
-				return err
-			}
-			if err := destroySV(k8sClient); err != nil {
-				return err
-			}
-			return nil
+			queriers = append(queriers, zitadel.ResourceQueryToZitadelQuery(queryCM))
+
+			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 		},
+		zitadel.DestroyersToDestroyFunc(destroyers),
 		nil
 }

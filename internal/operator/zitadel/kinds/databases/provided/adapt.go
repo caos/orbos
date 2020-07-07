@@ -32,7 +32,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		}
 		current.Parsed = currentDB
 
-		return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
+		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
 				currentDB.Current.URL = desiredKind.Spec.URL
 				currentDB.Current.Port = desiredKind.Spec.Port
 

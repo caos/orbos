@@ -35,7 +35,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc) func(
 			return
 		}
 
-		ensure, err := query(k8sClient)
+		ensure, err := query(k8sClient, map[string]interface{}{})
 		if err != nil {
 			monitor.Error(err)
 			return
