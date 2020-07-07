@@ -6,10 +6,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"k8s.io/client-go/rest"
 	"strings"
 	"sync"
 	"time"
+
+	"k8s.io/client-go/rest"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
@@ -233,6 +234,9 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 
 func (c *Client) RefreshLocal() (err error) {
 	config, err := rest.InClusterConfig()
+	if err != nil {
+		return err
+	}
 
 	c.set, err = kubernetes.NewForConfig(config)
 	return err
