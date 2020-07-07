@@ -9,16 +9,7 @@ import (
 	"strings"
 )
 
-var sdkDirCache string
-
-var gcloudBinCache string
-
-func gcloudSession(jsonkey string, do func(binary string) error) error {
-
-	gcloud, err := exec.LookPath("gcloud")
-	if err != nil {
-		return err
-	}
+func gcloudSession(jsonkey string, gcloud string, do func(binary string) error) error {
 
 	listBuf := new(bytes.Buffer)
 	defer resetBuffer(listBuf)

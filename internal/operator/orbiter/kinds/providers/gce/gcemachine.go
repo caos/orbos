@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbos/mntr"
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
 type gceMachine struct {
@@ -45,8 +46,13 @@ func (c *gceMachine) execute(env map[string]string, stdin io.Reader, command str
 	errBuf := new(bytes.Buffer)
 	defer resetBuffer(errBuf)
 
-	if err := gcloudSession(c.context.desired.JSONKey.Value, func(bin string) error {
-		cmd := exec.Command(gcloudBin(),
+	gcloud, err := exec.LookPath("gcloud")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := gcloudSession(c.context.desired.JSONKey.Value, gcloud, func(bin string) error {
+		cmd := exec.Command(gcloud,
 			"compute",
 			"ssh",
 			"--zone", c.context.desired.Zone,
