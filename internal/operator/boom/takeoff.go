@@ -1,6 +1,11 @@
 package boom
 
 import (
+	"net/http"
+	"path/filepath"
+	"strings"
+	"time"
+
 	"github.com/caos/orbos/internal/operator/boom/app"
 	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"
 	gitcrdconfig "github.com/caos/orbos/internal/operator/boom/gitcrd/config"
@@ -9,10 +14,6 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 func Metrics(monitor mntr.Monitor) {
