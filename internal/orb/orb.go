@@ -55,6 +55,7 @@ func (o *Orb) IsComplete() (err error) {
 }
 
 func ParseOrbConfig(orbConfigPath string) (*Orb, error) {
+
 	gitOrbConfig, err := ioutil.ReadFile(orbConfigPath)
 
 	if err != nil {
