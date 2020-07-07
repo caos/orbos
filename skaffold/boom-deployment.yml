@@ -1,7 +1,12 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: orbiter
+  labels:
+    app.kubernetes.io/component: boom
+    app.kubernetes.io/instance: boom
+    app.kubernetes.io/managed-by: boom.caos.ch
+    app.kubernetes.io/part-of: orbos
+  name: boom
   namespace: caos-system
 spec:
   progressDeadlineSeconds: 600
@@ -9,7 +14,9 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: orbiter
+      app.kubernetes.io/component: boom
+      app.kubernetes.io/instance: boom
+      app.kubernetes.io/part-of: orbos
   strategy:
     rollingUpdate:
       maxSurge: 25%
@@ -19,41 +26,36 @@ spec:
     metadata:
       creationTimestamp: null
       labels:
-        app: orbiter
+        app.kubernetes.io/component: boom
+        app.kubernetes.io/instance: boom
+        app.kubernetes.io/part-of: orbos
     spec:
       containers:
         - args:
-            - --orbconfig
-            - /etc/orbiter/orbconfig
             - takeoff
-            - --recur
-            - --deploy=false
-            - --ingestion=
-          image: eu.gcr.io/caos-240809/orbiter
-          env:
-            - name: GRPC_GO_LOG_VERBOSITY_LEVEL
-              value: "99"
-            - name: GRPC_GO_LOG_SEVERITY_LEVEL
-              value: info
-          ports:
-          - name: metrics
-            containerPort: 9000
-          - name: debug
-            containerPort: 2345
+            - boom
+            - -f
+            - /secrets/orbconfig
+          image: eu.gcr.io/caos-240809/orbos
           imagePullPolicy: IfNotPresent
-          name: orbiter
+          name: boom
+          ports:
+            - name: metrics
+              containerPort: 2112
+            - name: debug
+              containerPort: 2345
           resources:
             limits:
-              memory: 500Mi
               cpu: 500m
+              memory: 500Mi
             requests:
-              memory: 250Mi
               cpu: 250m
+              memory: 250Mi
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           volumeMounts:
-            - mountPath: /etc/orbiter
-              name: keys
+            - mountPath: /secrets
+              name: orbconfig
               readOnly: true
       dnsPolicy: ClusterFirst
       imagePullSecrets:
@@ -61,14 +63,11 @@ spec:
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
-      terminationGracePeriodSeconds: 30
-      tolerations:
-        - operator: Exists
-      nodeSelector:
-        node-role.kubernetes.io/master: ""
+      serviceAccount: boom
+      serviceAccountName: boom
+      terminationGracePeriodSeconds: 10
       volumes:
-        - name: keys
+        - name: orbconfig
           secret:
             defaultMode: 420
-            optional: false
             secretName: caos

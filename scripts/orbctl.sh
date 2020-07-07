@@ -9,4 +9,5 @@ go run -race ./cmd/gen-executables/*.go \
   --githubclientsecret "${ORBOS_GITHUBOAUTHCLIENTSECRET}" \
   --orbctl ./artifacts \
   --dev 1>&2
+CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/gen-charts/*.go
 time ./artifacts/orbctl-Linux-x86_64 "$@"
