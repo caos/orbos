@@ -113,6 +113,50 @@ func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string) (*rsa.Priva
 	return certPrivKey, certBytes, nil
 }
 
+/*
+func PEMEncodeCertificate(certData []byte) ([]byte, error) {
+	data, err := x509.EncryptPEMBlock(rand.Reader, "CERTIFICATE", certData, []byte(""), x509.PEMCipherAES256)
+	if err != nil {
+		return nil, err
+	}
+
+	keyPem := new(bytes.Buffer)
+	if err := pem.Encode(keyPem, data); err != nil {
+		return nil, err
+	}
+	return keyPem.Bytes(), nil
+}
+
+func PEMEncodeKey(key *rsa.PrivateKey) ([]byte, error) {
+	keyData := x509.MarshalPKCS1PrivateKey(key)
+	data, err := x509.EncryptPEMBlock(rand.Reader, "RSA PRIVATE KEY", keyData, []byte(""), x509.PEMCipherAES256)
+	if err != nil {
+		return nil, err
+	}
+	keyPem := new(bytes.Buffer)
+	if err := pem.Encode(keyPem, data); err != nil {
+		return nil, err
+	}
+	return keyPem.Bytes(), nil
+}
+
+func PEMDecodeKey(data []byte) (*rsa.PrivateKey, error) {
+	block, rest := pem.Decode(data)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return nil, errors.New("failed to decode PEM block containing public key")
+	}
+	if len(rest) > 0 {
+		return nil, errors.New("extra data")
+	}
+	der, err := x509.DecryptPEMBlock(block, []byte(""))
+	if err != nil {
+		return nil, err
+	}
+
+	return x509.ParsePKCS1PrivateKey(der)
+}
+*/
+
 func PEMEncodeCertificate(data []byte) ([]byte, error) {
 	certPem := new(bytes.Buffer)
 	if err := pem.Encode(certPem, &pem.Block{

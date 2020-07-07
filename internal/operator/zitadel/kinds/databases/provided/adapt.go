@@ -35,7 +35,6 @@ func AdaptFunc() zitadel.AdaptFunc {
 		return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
 				currentDB.Current.URL = desiredKind.Spec.URL
 				currentDB.Current.Port = desiredKind.Spec.Port
-				currentDB.Current.Users = desiredKind.Spec.Users
 
 				return func(k8sClient *kubernetes.Client) error {
 					return nil

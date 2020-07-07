@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	secret2 "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	"strings"
 )
 
 func AdaptFunc(
@@ -60,6 +61,14 @@ func AdaptFunc(
 		"ZITADEL_CACHE_SHARED_MAXAGE":       desired.Cache.SharedMaxAge,
 		"ZITADEL_SHORT_CACHE_MAXAGE":        desired.Cache.ShortMaxAge,
 		"ZITADEL_SHORT_CACHE_SHARED_MAXAGE": desired.Cache.ShortSharedMaxAge,
+		"CR_SSL_MODE":                       "require",
+		"CR_ROOT_CERT":                      "/dbsecrets-zitadel/ca.crt",
+	}
+
+	userList := []string{"management", "auth", "authz", "admin", "notify"}
+	for _, user := range userList {
+		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = "/dbsecrets-zitadel/client." + user + ".crt"
+		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = "/dbsecrets-zitadel/client." + user + ".key"
 	}
 
 	literalsSecret := map[string]string{}

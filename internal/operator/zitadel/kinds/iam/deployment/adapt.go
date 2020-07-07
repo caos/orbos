@@ -3,11 +3,9 @@ package deployment
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 )
 
 type secret struct {
@@ -26,11 +24,67 @@ func AdaptFunc(
 	resources.DestroyFunc,
 	error,
 ) {
-	replicas := int32(replicaCount)
-
 	internalSecrets := "zitadel-secret"
 	internalConfig := "console-config"
+	rootSecret := "client-root"
+	secretMode := int32(0400)
+	replicas := int32(replicaCount)
+	runAsUser := int64(1000)
+	runAsNonRoot := true
 
+	userList := []string{"management", "auth", "authz", "admin", "notify"}
+	volumnes := []v1.Volume{{
+		Name: internalSecrets,
+		VolumeSource: v1.VolumeSource{
+			Secret: &v1.SecretVolumeSource{
+				SecretName: "zitadel-secret",
+			},
+		},
+	}, {
+		Name: rootSecret,
+		VolumeSource: v1.VolumeSource{
+			Secret: &v1.SecretVolumeSource{
+				SecretName:  "cockroachdb.client.root",
+				DefaultMode: &secretMode,
+			},
+		},
+	}, {
+		Name: internalConfig,
+		VolumeSource: v1.VolumeSource{
+			ConfigMap: &v1.ConfigMapVolumeSource{
+				LocalObjectReference: v1.LocalObjectReference{Name: "console-config"},
+			},
+		},
+	}}
+	volMounts := []v1.VolumeMount{
+		{Name: internalSecrets, MountPath: "/secret"},
+		{Name: internalConfig, MountPath: "/console/environment.json", SubPath: "environment.json"},
+		{Name: rootSecret, MountPath: "/dbsecrets/ca.crt", SubPath: "ca.crt"},
+	}
+	for _, user := range userList {
+		internalName := "client-" + user
+		volumnes = append(volumnes, v1.Volume{
+			Name: internalName,
+			VolumeSource: v1.VolumeSource{
+				Secret: &v1.SecretVolumeSource{
+					SecretName:  "cockroachdb.client." + user,
+					DefaultMode: &secretMode,
+				},
+			},
+		})
+		volMounts = append(volMounts, v1.VolumeMount{
+			Name: internalName,
+			//ReadOnly:  true,
+			MountPath: "/dbsecrets/client." + user + ".crt",
+			SubPath:   "client." + user + ".crt",
+		})
+		volMounts = append(volMounts, v1.VolumeMount{
+			Name: internalName,
+			//ReadOnly:  true,
+			MountPath: "/dbsecrets/client." + user + ".key",
+			SubPath:   "client." + user + ".key",
+		})
+	}
 	deploymentDef := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "zitadel",
@@ -46,9 +100,19 @@ func AdaptFunc(
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 				},
+
 				Spec: v1.PodSpec{
+					SecurityContext: &v1.PodSecurityContext{
+						RunAsUser:    &runAsUser,
+						RunAsNonRoot: &runAsNonRoot,
+					},
 					Containers: []v1.Container{
 						{
+							SecurityContext: &v1.SecurityContext{
+								RunAsUser:    &runAsUser,
+								RunAsNonRoot: &runAsNonRoot,
+							},
+							Command:         []string{"/bin/sh", "-c", "mkdir -p /dbsecrets-zitadel/ && cp /dbsecrets/* /dbsecrets-zitadel/ && chmod 400 /dbsecrets-zitadel/* && chown 1000:1000 /dbsecrets-zitadel/* && while true; do sleep 30; done;"},
 							Name:            "zitadel",
 							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:" + version,
 							ImagePullPolicy: "IfNotPresent",
@@ -103,30 +167,13 @@ func AdaptFunc(
 								{ConfigMapRef: &v1.ConfigMapEnvSource{
 									LocalObjectReference: v1.LocalObjectReference{Name: "zitadel-vars"},
 								}}},
-							VolumeMounts: []v1.VolumeMount{
-								{Name: internalSecrets, MountPath: "/secret"},
-								{Name: internalConfig, MountPath: "/console/environment.json", SubPath: "environment.json"},
-							},
+							VolumeMounts: volMounts,
 						},
 					},
 					ImagePullSecrets: []v1.LocalObjectReference{{
 						Name: "public-github-packages",
 					}},
-					Volumes: []v1.Volume{{
-						Name: internalSecrets,
-						VolumeSource: v1.VolumeSource{
-							Secret: &v1.SecretVolumeSource{
-								SecretName: "zitadel-secret",
-							},
-						},
-					}, {
-						Name: internalConfig,
-						VolumeSource: v1.VolumeSource{
-							ConfigMap: &v1.ConfigMapVolumeSource{
-								LocalObjectReference: v1.LocalObjectReference{Name: "console-config"},
-							},
-						},
-					}},
+					Volumes: volumnes,
 				},
 			},
 		},
@@ -138,32 +185,6 @@ func AdaptFunc(
 	}
 
 	return func(currentDB interface{}) (resources.EnsureFunc, error) {
-		current := currentDB.(core.DatabaseCurrent)
-		secrets := make([]*secret, 0)
-		users := current.GetUsers()
-		for _, user := range users {
-			secrets = append(secrets, &secret{
-				Path: "/certs/" + user,
-				Name: "cockroachdb.client." + user,
-			})
-		}
-
-		for _, secret := range secrets {
-			internalName := strings.ReplaceAll(secret.Name, ".", "-")
-			vol := v1.Volume{
-				Name: internalName,
-				VolumeSource: v1.VolumeSource{
-					Secret: &v1.SecretVolumeSource{
-						SecretName: secret.Name,
-					},
-				},
-			}
-			deploymentDef.Spec.Template.Spec.Volumes = append(deploymentDef.Spec.Template.Spec.Volumes, vol)
-
-			volMount := v1.VolumeMount{Name: internalName, MountPath: secret.Path}
-			deploymentDef.Spec.Template.Spec.Containers[0].VolumeMounts = append(deploymentDef.Spec.Template.Spec.Containers[0].VolumeMounts, volMount)
-		}
-
 		query, _, err := deployment.AdaptFunc(deploymentDef)
 		if err != nil {
 			return nil, err

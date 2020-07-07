@@ -56,10 +56,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		userList := []string{"root"}
-		if desiredKind.Spec.Users != nil && len(desiredKind.Spec.Users) > 0 {
-			userList = append(userList, desiredKind.Spec.Users...)
-		}
+		userList := []string{"root", "flyway", "management", "auth", "authz", "admin", "notify"}
 		queryCert, destroyCert, err := certificate.AdaptFunc(namespaceStr, userList, labels)
 		if err != nil {
 			return nil, nil, err
@@ -148,7 +145,6 @@ func AdaptFunc() zitadel.AdaptFunc {
 		return func(k8sClient *kubernetes.Client) (zitadel.EnsureFunc, error) {
 				currentDB.Current.Port = cockroachPort
 				currentDB.Current.URL = cockroachURL
-				currentDB.Current.Users = userList
 
 				ensurers := make([]resources.EnsureFunc, 0)
 				ensureNS, err := queryNS()

@@ -7,9 +7,8 @@ import (
 type Current struct {
 	Common  *tree.Common `yaml:",inline"`
 	Current struct {
-		URL   string
-		Port  string
-		Users []string
+		URL  string
+		Port string
 	}
 }
 
@@ -18,9 +17,5 @@ func (c *Current) GetURL() string {
 }
 
 func (c *Current) GetPort() string {
-	return c.Current.URL
-}
-
-func (c *Current) GetUsers() []string {
-	return c.Current.Users
+	return c.Current.Port
 }
