@@ -5,16 +5,8 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func Reconcile(monitor mntr.Monitor, kubeconfig *string, version string) error {
+func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, version string) error {
 	recMonitor := monitor.WithField("version", version)
-
-	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
-	if *kubeconfig == "" {
-		err := k8sClient.RefreshLocal()
-		if err != nil {
-			return err
-		}
-	}
 
 	if k8sClient.Available() {
 		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {

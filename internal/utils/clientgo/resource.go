@@ -86,7 +86,7 @@ func (a ResourceSorter) Less(i, j int) bool {
 
 func GetResource(group, version, resource, namespace, name string) (*Resource, error) {
 	res := schema.GroupVersionResource{Group: group, Version: version, Resource: resource}
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func GetResource(group, version, resource, namespace, name string) (*Resource, e
 
 func DeleteResource(resource *Resource) error {
 	res := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Resource}
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func GetGroupVersionsResources(monitor mntr.Monitor, filtersResources []string) 
 		"action": "groupVersionResources",
 	})
 
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func ListResources(monitor mntr.Monitor, resourceInfoList []*ResourceInfo, label
 	listMonitor := monitor.WithFields(map[string]interface{}{
 		"action": "listResources",
 	})
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}

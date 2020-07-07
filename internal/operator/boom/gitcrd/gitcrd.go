@@ -2,6 +2,7 @@ package gitcrd
 
 import (
 	"context"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -139,8 +140,20 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 	}
 
 	if toolsetCRD.Spec.BoomVersion != "" {
+		conf, err := clientgo.GetClusterConfig()
+		if err != nil {
+			c.status = err
+			return
+		}
+
 		dummyKubeconfig := ""
-		if err := cmd.Reconcile(monitor, &dummyKubeconfig, toolsetCRD.Spec.BoomVersion); err != nil {
+		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
+		if err := k8sClient.RefreshConfig(conf); err != nil {
+			c.status = err
+			return
+		}
+
+		if err := cmd.Reconcile(monitor, k8sClient, toolsetCRD.Spec.BoomVersion); err != nil {
 			c.status = err
 			return
 		}

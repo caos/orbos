@@ -136,7 +136,9 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 			boomVersion = desiredKind.Spec.BoomVersion
 		}
 
-		if err := cmd.Reconcile(monitor, kubeconfig, boomVersion); err != nil {
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+
+		if err := cmd.Reconcile(monitor, k8sClient, boomVersion); err != nil {
 			return err
 		}
 	} else {
