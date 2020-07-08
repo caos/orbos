@@ -5,6 +5,7 @@
 .idea
 /artifacts
 /*.go
+sandbox*
 
 # Binaries for programs and plugins
 *.exe

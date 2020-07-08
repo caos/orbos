@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -65,7 +65,7 @@ func query(
 			firewallFunc(monitor, *desired)(machine)
 		})
 
-	return func(psf push.Func) *orbiter.EnsureResult {
+	return func(psf api.SecretFunc) *orbiter.EnsureResult {
 		return orbiter.ToEnsureResult(ensure(
 			monitor,
 			clusterID,

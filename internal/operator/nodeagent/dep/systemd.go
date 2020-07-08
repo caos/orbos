@@ -31,8 +31,14 @@ func (s *SystemD) Disable(binary string) error {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "stopping %s by systemd failed with stderr %s", binary, errBuf.String())
+	err := cmd.Run()
+	if err != nil {
+		errString := errBuf.String()
+		if strings.Contains(errString, "not loaded") {
+			err = nil
+		} else {
+			return errors.Wrapf(err, "stopping %s by systemd failed with stderr %s", binary, errString)
+		}
 	}
 
 	errBuf.Reset()
@@ -43,7 +49,12 @@ func (s *SystemD) Disable(binary string) error {
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "disabling %s by systemd failed with stderr %s", binary, errBuf.String())
+		errString := errBuf.String()
+		if strings.Contains(errString, "No such file or directory") {
+			err = nil
+		} else {
+			return errors.Wrapf(err, "disabling %s by systemd failed with stderr %s", binary, errString)
+		}
 	}
 
 	return nil

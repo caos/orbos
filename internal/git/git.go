@@ -4,12 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/utils/random"
+
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pkg/errors"
 
@@ -21,6 +26,10 @@ import (
 	"gopkg.in/src-d/go-git.v4/plumbing/object"
 	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
 	"gopkg.in/src-d/go-git.v4/storage/memory"
+)
+
+const (
+	writeCheckTag = "writecheck"
 )
 
 type Client struct {
@@ -36,12 +45,11 @@ type Client struct {
 	repoURL   string
 }
 
-func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL string) *Client {
+func New(ctx context.Context, monitor mntr.Monitor, committer, email string) *Client {
 	newClient := &Client{
 		ctx:       ctx,
-		monitor:   monitor.WithField("repository", repoURL),
 		committer: committer,
-		repoURL:   repoURL,
+		email:     email,
 	}
 
 	if monitor.IsVerbose() {
@@ -54,11 +62,14 @@ func (g *Client) GetURL() string {
 	return g.repoURL
 }
 
-func (g *Client) Init(deploykey []byte) error {
+func (g *Client) Configure(repoURL string, deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {
 		return errors.Wrap(err, "parsing deployment key failed")
 	}
+
+	g.repoURL = repoURL
+	g.monitor = g.monitor.WithField("repository", repoURL)
 
 	g.auth = &gitssh.PublicKeys{
 		User:   "git",
@@ -67,6 +78,83 @@ func (g *Client) Init(deploykey []byte) error {
 
 	// TODO: Fix
 	g.auth.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+
+	if err := g.ReadCheck(); err != nil {
+		return err
+	}
+
+	if err := g.WriteCheck(random.Generate()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (g *Client) ReadCheck() error {
+	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{g.repoURL},
+	})
+
+	// We can then use every Remote functions to retrieve wanted information
+	_, err := rem.List(&gogit.ListOptions{
+		Auth: g.auth,
+	})
+	if err != nil {
+		return errors.Wrap(err, "Read-check failed")
+	}
+
+	g.monitor.Debug("Read-check successful")
+	return nil
+}
+
+func (g *Client) WriteCheck(id string) error {
+	if err := g.clone(); err != nil {
+		return err
+	}
+
+	head, err := g.repo.Head()
+	if err != nil {
+		return errors.Wrap(err, "Failed to get head")
+	}
+	localWriteCheckTag := strings.Join([]string{writeCheckTag, id}, "-")
+
+	ref, err := g.repo.CreateTag(localWriteCheckTag, head.Hash(), nil)
+	if err != nil {
+		return errors.Wrap(err, "Write-check failed")
+	}
+
+	if err := g.repo.Push(&gogit.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec("+" + ref.Name() + ":" + ref.Name()),
+		},
+		Auth: g.auth,
+	}); err != nil {
+		return errors.Wrap(err, "Write-check failed")
+	}
+
+	g.monitor.Debug("Write-check successful")
+
+	if err := g.clone(); err != nil {
+		return err
+	}
+
+	if err := g.repo.DeleteTag(localWriteCheckTag); err != nil {
+		return errors.Wrap(err, "Write-check cleanup delete tag failed")
+	}
+
+	if err := g.repo.Push(&gogit.PushOptions{
+		RemoteName: "origin",
+		RefSpecs: []config.RefSpec{
+			config.RefSpec(":" + ref.Name()),
+		},
+		Auth: g.auth,
+	}); err != nil {
+		return errors.Wrap(err, "Write-check cleanup failed")
+	}
+
+	g.monitor.Debug("Write-check cleanup successful")
 	return nil
 }
 

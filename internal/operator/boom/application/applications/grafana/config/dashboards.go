@@ -1,17 +1,16 @@
 package config
 
 import (
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"path/filepath"
-
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 )
 
 var orgID = 0
 
-func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) []*Provider {
+func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) []*Provider {
 	providers := make([]*Provider, 0)
-	if toolsetCRDSpec.Ambassador != nil && toolsetCRDSpec.Ambassador.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Ambassador) {
+	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Ambassador) {
 		provider := &Provider{
 			ConfigMaps: []string{
 				"grafana-dashboard-ambassador-envoy-global",
@@ -23,8 +22,8 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	if toolsetCRDSpec.Argocd != nil && toolsetCRDSpec.Argocd.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Argocd) {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Argocd) {
 		provider := &Provider{
 			ConfigMaps: []string{
 				"grafana-dashboard-argocd",
@@ -34,8 +33,8 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	nodeExporterDeployed := toolsetCRDSpec.PrometheusNodeExporter != nil && toolsetCRDSpec.PrometheusNodeExporter.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusNodeExporter)
+	nodeExporterDeployed := toolsetCRDSpec.NodeMetricsExporter != nil && toolsetCRDSpec.NodeMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.PrometheusNodeExporter)
 	if nodeExporterDeployed {
 		provider := &Provider{
 			ConfigMaps: []string{
@@ -47,8 +46,8 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	if toolsetCRDSpec.LoggingOperator != nil && toolsetCRDSpec.LoggingOperator.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.LoggingOperator) {
+	if toolsetCRDSpec.LogCollection != nil && toolsetCRDSpec.LogCollection.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.LoggingOperator) {
 		provider := &Provider{
 			ConfigMaps: []string{
 				"grafana-dashboard-logging-dashboard-rev3",
@@ -58,8 +57,8 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	kubeStateMetricsDeployed := toolsetCRDSpec.KubeStateMetrics != nil && toolsetCRDSpec.KubeStateMetrics.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.KubeStateMetrics)
+	kubeStateMetricsDeployed := toolsetCRDSpec.KubeMetricsExporter != nil && toolsetCRDSpec.KubeMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.KubeStateMetrics)
 	if kubeStateMetricsDeployed {
 		provider := &Provider{
 			ConfigMaps: []string{
@@ -70,7 +69,7 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	if toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Boom {
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Boom) {
 		provider := &Provider{
 			ConfigMaps: []string{
 				"grafana-dashboard-boom",
@@ -80,8 +79,8 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 		providers = append(providers, provider)
 	}
 
-	systemdExporterDeployed := toolsetCRDSpec.PrometheusSystemdExporter != nil && toolsetCRDSpec.PrometheusSystemdExporter.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusSystemdExporter)
+	systemdExporterDeployed := toolsetCRDSpec.SystemdMetricsExporter != nil && toolsetCRDSpec.SystemdMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.PrometheusSystemdExporter)
 	if systemdExporterDeployed && kubeStateMetricsDeployed && nodeExporterDeployed {
 		provider := &Provider{
 			ConfigMaps: []string{

@@ -1,11 +1,12 @@
 package desired
 
 import (
-	yamlfile "github.com/caos/orbos/internal/utils/yaml"
-	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
 	"strings"
+
+	yamlfile "github.com/caos/orbos/internal/utils/yaml"
+	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"

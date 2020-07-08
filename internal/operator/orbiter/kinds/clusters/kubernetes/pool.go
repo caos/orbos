@@ -88,7 +88,7 @@ func newMachines(pool infra.Pool, number int) (machines []infra.Machine, err err
 		go func() {
 			defer wg.Done()
 			machine, addErr := pool.AddMachine()
-			if err != nil {
+			if addErr != nil {
 				err = helpers.Concat(err, addErr)
 				return
 			}

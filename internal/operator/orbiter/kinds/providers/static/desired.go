@@ -18,7 +18,7 @@ type Spec struct {
 	RemoteUser          string
 	RemotePublicKeyPath string
 	Pools               map[string][]*Machine
-	Keys                Keys
+	Keys                *Keys
 }
 
 type Keys struct {
@@ -47,17 +47,10 @@ func (d DesiredV0) validate() error {
 	return nil
 }
 
-func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error) {
+func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{
 		Common: desiredTree.Common,
-		Spec: Spec{
-			Keys: Keys{
-				BootstrapKeyPrivate:   &secret.Secret{Masterkey: masterkey},
-				BootstrapKeyPublic:    &secret.Secret{Masterkey: masterkey},
-				MaintenanceKeyPrivate: &secret.Secret{Masterkey: masterkey},
-				MaintenanceKeyPublic:  &secret.Secret{Masterkey: masterkey},
-			},
-		},
+		Spec:   Spec{},
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
@@ -65,46 +58,6 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error
 	}
 
 	return desiredKind, nil
-}
-
-func rewriteMasterkeyDesiredV0(old *DesiredV0, masterkey string) *DesiredV0 {
-	if old != nil {
-		newD := new(DesiredV0)
-		*newD = *old
-
-		if newD.Spec.Keys.BootstrapKeyPrivate != nil {
-			newD.Spec.Keys.BootstrapKeyPrivate.Masterkey = masterkey
-		}
-		if newD.Spec.Keys.BootstrapKeyPublic != nil {
-			newD.Spec.Keys.BootstrapKeyPublic.Masterkey = masterkey
-		}
-		if newD.Spec.Keys.MaintenanceKeyPrivate != nil {
-			newD.Spec.Keys.MaintenanceKeyPrivate.Masterkey = masterkey
-		}
-		if newD.Spec.Keys.MaintenanceKeyPublic != nil {
-			newD.Spec.Keys.MaintenanceKeyPublic.Masterkey = masterkey
-		}
-		return newD
-	}
-	return old
-}
-
-func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
-	if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
-		desiredKind.Spec.Keys.BootstrapKeyPrivate = &secret.Secret{Masterkey: masterkey}
-	}
-
-	if desiredKind.Spec.Keys.BootstrapKeyPublic == nil {
-		desiredKind.Spec.Keys.BootstrapKeyPublic = &secret.Secret{Masterkey: masterkey}
-	}
-
-	if desiredKind.Spec.Keys.MaintenanceKeyPrivate == nil {
-		desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Masterkey: masterkey}
-	}
-
-	if desiredKind.Spec.Keys.MaintenanceKeyPublic == nil {
-		desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Masterkey: masterkey}
-	}
 }
 
 type Machine struct {

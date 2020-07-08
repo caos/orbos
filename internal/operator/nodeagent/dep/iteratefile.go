@@ -49,11 +49,7 @@ func ManipulateFile(path string, removeContaining, append []string, eachLine fun
 		return err
 	}
 
-	if err := os.Rename(tmpPath, path); err != nil {
-		return err
-	}
-
-	return os.Remove(tmpPath)
+	return os.Rename(tmpPath, path)
 }
 
 func createTmpFile(path string, tmpPath string, removeContaining, append []string, eachLine func(string) *string) (err error) {

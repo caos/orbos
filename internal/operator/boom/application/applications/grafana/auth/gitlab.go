@@ -1,7 +1,7 @@
 package auth
 
 import (
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
+	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Gitlab"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
 )

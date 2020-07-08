@@ -136,10 +136,8 @@ func initialize(
 		naSpec.ChangesAllowed = !pool.desired.UpdatesDisabled
 		naCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
-		if !softwareDefines(*naSpec.Software, k8sSoftware) ||
-			// The following check ensures backward compatibility with orbos
-			// version < v0.24.1 and can be deleted for orbos version >= v1.0.0
-			naSpec.Software.Containerruntime.Config == nil {
+
+		if !softwareDefines(*naSpec.Software, k8sSoftware) {
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
 			if !softwareContains(*naSpec.Software, k8sSoftware) {
 				naSpec.Software.Merge(k8sSoftware)

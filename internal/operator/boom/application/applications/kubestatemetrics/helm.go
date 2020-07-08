@@ -1,18 +1,17 @@
 package kubestatemetrics
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/kubestatemetrics/helm"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
 )
 
-func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta1.ToolsetSpec) interface{} {
-	spec := toolset.KubeStateMetrics
+func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
 	values := helm.DefaultValues(k.GetImageTags())
 
-	if spec.ReplicaCount != 0 {
-		values.Replicas = spec.ReplicaCount
+	if toolset.KubeMetricsExporter != nil && toolset.KubeMetricsExporter.ReplicaCount != 0 {
+		values.Replicas = toolset.KubeMetricsExporter.ReplicaCount
 	}
 
 	return values

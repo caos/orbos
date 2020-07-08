@@ -1,7 +1,7 @@
 package prometheusnodeexporter
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
@@ -23,8 +23,8 @@ func (pne *PrometheusNodeExporter) GetName() name.Application {
 	return info.GetName()
 }
 
-func (pne *PrometheusNodeExporter) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.PrometheusNodeExporter != nil && toolsetCRDSpec.PrometheusNodeExporter.Deploy
+func (pne *PrometheusNodeExporter) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+	return toolsetCRDSpec.NodeMetricsExporter != nil && toolsetCRDSpec.NodeMetricsExporter.Deploy
 }
 
 func (pne *PrometheusNodeExporter) GetNamespace() string {

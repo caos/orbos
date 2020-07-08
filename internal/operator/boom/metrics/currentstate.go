@@ -2,10 +2,9 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-func SuccessfulWriteCurrentState(url string, path string) {
+func SuccessfulWriteCurrentState(url string) {
 	labels := prometheus.Labels{
-		"url":  url,
-		"path": path,
+		"url": url,
 	}
 	metrics.gyrCurrentStateWrite.Set(success)
 
@@ -13,10 +12,9 @@ func SuccessfulWriteCurrentState(url string, path string) {
 	metrics.currentStateWrite.With(labels).Inc()
 }
 
-func FailedWritingCurrentState(url string, path string) {
+func FailedWritingCurrentState(url string) {
 	labels := prometheus.Labels{
-		"url":  url,
-		"path": path,
+		"url": url,
 	}
 	metrics.gyrCurrentStateWrite.Set(failed)
 

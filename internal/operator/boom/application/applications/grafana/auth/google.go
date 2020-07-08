@@ -1,7 +1,7 @@
 package auth
 
 import (
-	google "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Google"
+	google "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Google"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
 )

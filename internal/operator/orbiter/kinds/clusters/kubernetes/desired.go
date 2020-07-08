@@ -39,34 +39,16 @@ type Spec struct {
 	Workers []*Pool
 }
 
-func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*DesiredV0, error) {
+func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{
 		Common: *desiredTree.Common,
-		Spec:   Spec{Kubeconfig: &secret.Secret{Masterkey: masterkey}},
+		Spec:   Spec{},
 	}
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
 
 	return desiredKind, nil
-}
-
-func rewriteMasterkeyDesiredV0(old *DesiredV0, masterkey string) *DesiredV0 {
-	if old != nil {
-		newD := new(DesiredV0)
-		*newD = *old
-		if newD.Spec.Kubeconfig != nil {
-			newD.Spec.Kubeconfig.Masterkey = masterkey
-		}
-		return newD
-	}
-	return old
-}
-
-func initializeNecessarySecrets(desiredKind *DesiredV0, masterkey string) {
-	if desiredKind.Spec.Kubeconfig == nil {
-		desiredKind.Spec.Kubeconfig = &secret.Secret{Masterkey: masterkey}
-	}
 }
 
 func (d *DesiredV0) validate() error {

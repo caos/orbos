@@ -1,7 +1,7 @@
 package network
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/crds"
 )
 

@@ -1,16 +1,14 @@
 package grafana
 
 import (
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/admin"
 	"path/filepath"
 	"sort"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/auth"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/grafanastandalone"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kubectl"
@@ -18,10 +16,9 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, resultFilePath string) error {
-
-	if toolsetCRDSpec.KubeStateMetrics != nil && toolsetCRDSpec.KubeStateMetrics.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.KubeStateMetrics) {
+func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
+	if toolsetCRDSpec.KubeMetricsExporter != nil && toolsetCRDSpec.KubeMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.KubeStateMetrics) {
 
 		if err := helper.DeleteFirstResourceFromYaml(resultFilePath, "v1", "ConfigMap", "grafana-persistentvolumesusage"); err != nil {
 			return err
@@ -31,7 +28,7 @@ func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1bet
 	return nil
 }
 
-func (g *Grafana) HelmPreApplySteps(monitor mntr.Monitor, spec *v1beta1.ToolsetSpec) ([]interface{}, error) {
+func (g *Grafana) HelmPreApplySteps(monitor mntr.Monitor, spec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
 	config := config.New(spec)
 
 	folders := make([]string, 0)
@@ -49,7 +46,9 @@ func (g *Grafana) HelmPreApplySteps(monitor mntr.Monitor, spec *v1beta1.ToolsetS
 		ret[k] = v
 	}
 
-	ret = append(ret, admin.GetSecrets(spec.Grafana.Admin)...)
+	if spec.Monitoring != nil && spec.Monitoring.Admin != nil {
+		ret = append(ret, admin.GetSecrets(spec.Monitoring.Admin)...)
+	}
 	return ret, nil
 }
 
@@ -65,25 +64,25 @@ func (a AlphaSorter) Len() int           { return len(a) }
 func (a AlphaSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a AlphaSorter) Less(i, j int) bool { return a[i] < a[j] }
 
-func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta1.ToolsetSpec) interface{} {
+func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
 		return nil
 	}
 
-	conf := config.New(toolset)
 	values := helm.DefaultValues(g.GetImageTags())
+	conf := config.New(toolset)
 
 	values.KubeTargetVersionOverride = version
 
 	providers := make([]*helm.Provider, 0)
 	dashboards := make(map[string]string, 0)
-	datasources := make([]*grafanastandalone.Datasource, 0)
+	datasources := make([]*helm.Datasource, 0)
 
 	//internal datasources
 	if conf.Datasources != nil {
 		for _, datasource := range conf.Datasources {
-			valuesDatasource := &grafanastandalone.Datasource{
+			valuesDatasource := &helm.Datasource{
 				Name:      datasource.Name,
 				Type:      datasource.Type,
 				URL:       datasource.Url,
@@ -120,56 +119,58 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta
 		values.Grafana.AdditionalDataSources = datasources
 	}
 
-	if toolset.Grafana.Admin != nil {
-		values.Grafana.Admin = admin.GetConfig(toolset.Grafana.Admin)
-	}
-
-	if toolset.Grafana.Storage != nil {
-		values.Grafana.Persistence.Enabled = true
-		values.Grafana.Persistence.Size = toolset.Grafana.Storage.Size
-		values.Grafana.Persistence.StorageClassName = toolset.Grafana.Storage.StorageClass
-
-		if toolset.Grafana.Storage.AccessModes != nil {
-			values.Grafana.Persistence.AccessModes = toolset.Grafana.Storage.AccessModes
+	if toolset.Monitoring != nil {
+		if toolset.Monitoring.Admin != nil {
+			values.Grafana.Admin = admin.GetConfig(toolset.Monitoring.Admin)
 		}
-	}
 
-	if toolset.Grafana.Network != nil && toolset.Grafana.Network.Domain != "" {
-		values.Grafana.Env["GF_SERVER_DOMAIN"] = toolset.Grafana.Network.Domain
+		if toolset.Monitoring.Storage != nil {
+			values.Grafana.Persistence.Enabled = true
+			values.Grafana.Persistence.Size = toolset.Monitoring.Storage.Size
+			values.Grafana.Persistence.StorageClassName = toolset.Monitoring.Storage.StorageClass
 
-		if toolset.Grafana.Auth != nil {
-			if toolset.Grafana.Auth.Google != nil {
-				google, err := auth.GetGoogleAuthConfig(toolset.Grafana.Auth.Google)
-				if err == nil && google != nil {
-					values.Grafana.Ini.AuthGoogle = google
-				}
-			}
-
-			if toolset.Grafana.Auth.Github != nil {
-				github, err := auth.GetGithubAuthConfig(toolset.Grafana.Auth.Github)
-				if err == nil && github != nil {
-					values.Grafana.Ini.AuthGithub = github
-				}
-			}
-
-			if toolset.Grafana.Auth.Gitlab != nil {
-				gitlab, err := auth.GetGitlabAuthConfig(toolset.Grafana.Auth.Gitlab)
-				if err == nil && gitlab != nil {
-					values.Grafana.Ini.AuthGitlab = gitlab
-				}
-			}
-
-			if toolset.Grafana.Auth.GenericOAuth != nil {
-				generic, err := auth.GetGenericOAuthConfig(toolset.Grafana.Auth.GenericOAuth)
-				if err == nil && generic != nil {
-					values.Grafana.Ini.AuthGeneric = generic
-				}
+			if toolset.Monitoring.Storage.AccessModes != nil {
+				values.Grafana.Persistence.AccessModes = toolset.Monitoring.Storage.AccessModes
 			}
 		}
-	}
 
-	if toolset.Grafana.Plugins != nil && len(toolset.Grafana.Plugins) > 0 {
-		values.Grafana.Plugins = append(values.Grafana.Plugins, toolset.Grafana.Plugins...)
+		if toolset.Monitoring.Network != nil && toolset.Monitoring.Network.Domain != "" {
+			values.Grafana.Env["GF_SERVER_DOMAIN"] = toolset.Monitoring.Network.Domain
+
+			if toolset.Monitoring.Auth != nil {
+				if toolset.Monitoring.Auth.Google != nil {
+					google, err := auth.GetGoogleAuthConfig(toolset.Monitoring.Auth.Google)
+					if err == nil && google != nil {
+						values.Grafana.Ini.AuthGoogle = google
+					}
+				}
+
+				if toolset.Monitoring.Auth.Github != nil {
+					github, err := auth.GetGithubAuthConfig(toolset.Monitoring.Auth.Github)
+					if err == nil && github != nil {
+						values.Grafana.Ini.AuthGithub = github
+					}
+				}
+
+				if toolset.Monitoring.Auth.Gitlab != nil {
+					gitlab, err := auth.GetGitlabAuthConfig(toolset.Monitoring.Auth.Gitlab)
+					if err == nil && gitlab != nil {
+						values.Grafana.Ini.AuthGitlab = gitlab
+					}
+				}
+
+				if toolset.Monitoring.Auth.GenericOAuth != nil {
+					generic, err := auth.GetGenericOAuthConfig(toolset.Monitoring.Auth.GenericOAuth)
+					if err == nil && generic != nil {
+						values.Grafana.Ini.AuthGeneric = generic
+					}
+				}
+			}
+		}
+
+		if toolset.Monitoring.Plugins != nil && len(toolset.Monitoring.Plugins) > 0 {
+			values.Grafana.Plugins = append(values.Grafana.Plugins, toolset.Monitoring.Plugins...)
+		}
 	}
 
 	return values

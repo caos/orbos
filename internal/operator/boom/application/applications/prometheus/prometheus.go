@@ -1,7 +1,7 @@
 package prometheus
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator"
 	"github.com/caos/orbos/internal/operator/boom/name"
@@ -24,7 +24,7 @@ func (p *Prometheus) GetName() name.Application {
 	return info.GetName()
 }
 
-func (p *Prometheus) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
+func (p *Prometheus) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
 	//not possible to deploy when prometheus operator is not deployed
 
 	po := prometheusoperator.New(p.monitor)
@@ -32,7 +32,7 @@ func (p *Prometheus) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
 		return false
 	}
 
-	return toolsetCRDSpec.Prometheus != nil && toolsetCRDSpec.Prometheus.Deploy
+	return toolsetCRDSpec.MetricCollection != nil && toolsetCRDSpec.MetricCollection.Deploy
 }
 
 func (p *Prometheus) GetNamespace() string {

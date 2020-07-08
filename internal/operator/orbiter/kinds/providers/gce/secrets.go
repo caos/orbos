@@ -9,19 +9,17 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func SecretsFunc(masterkey string) secret.Func {
+func SecretsFunc() secret.Func {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
-		desiredKind, err := parseDesiredV0(desiredTree, masterkey)
+		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
-
-		initializeNecessarySecrets(desiredKind, masterkey)
 
 		secrets = getSecretsMap(desiredKind)
 		loadBalancersSecrets, err := loadbalancers.GetSecrets(monitor, desiredKind.Loadbalancing)
@@ -37,6 +35,10 @@ func SecretsFunc(masterkey string) secret.Func {
 }
 
 func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
+	if desiredKind.Spec.JSONKey == nil {
+		desiredKind.Spec.JSONKey = &secret.Secret{}
+	}
+
 	return map[string]*secret.Secret{
 		"jsonkey": desiredKind.Spec.JSONKey,
 	}

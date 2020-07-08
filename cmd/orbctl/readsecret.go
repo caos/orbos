@@ -1,10 +1,10 @@
 package main
 
 import (
+	"os"
+
 	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/utils/orbgit"
-	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -19,9 +19,17 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			ctx, monitor, orbConfig, errFunc := rv()
+			_, monitor, orbConfig, gitClient, errFunc := rv()
 			if errFunc != nil {
 				return errFunc(cmd)
+			}
+
+			if err := orbConfig.IsComplete(); err != nil {
+				return err
+			}
+
+			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+				return err
 			}
 
 			path := ""
@@ -29,23 +37,10 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				path = args[0]
 			}
 
-			gitClientConf := &orbgit.Config{
-				Comitter:  "orbctl",
-				Email:     "orbctl@caos.ch",
-				OrbConfig: orbConfig,
-				Action:    "readsecret",
-			}
-
-			gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
-			defer cleanUp()
-			if err != nil {
-				return err
-			}
-
 			value, err := secret.Read(
 				monitor,
 				gitClient,
-				secretfuncs.GetSecrets(orbConfig),
+				secretfuncs.GetSecrets(),
 				path)
 			if err != nil {
 				panic(err)

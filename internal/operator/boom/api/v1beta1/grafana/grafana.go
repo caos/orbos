@@ -5,7 +5,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
-	"reflect"
 )
 
 type Grafana struct {
@@ -26,39 +25,6 @@ type Grafana struct {
 	Auth *auth.Auth `json:"auth,omitempty" yaml:"auth,omitempty"`
 	//List of plugins which get added to the grafana instance
 	Plugins []string `json:"plugins,omitempty" yaml:"plugins,omitempty"`
-}
-
-func (x *Grafana) MarshalYAML() (interface{}, error) {
-	type Alias Grafana
-	return &Alias{
-		Deploy:             x.Deploy,
-		Admin:              admin.ClearEmpty(x.Admin),
-		Datasources:        x.Datasources,
-		DashboardProviders: x.DashboardProviders,
-		Storage:            x.Storage,
-		Network:            x.Network,
-		Auth:               auth.ClearEmpty(x.Auth),
-	}, nil
-}
-
-func ClearEmpty(x *Grafana) *Grafana {
-	if x == nil {
-		return nil
-	}
-
-	marshaled := Grafana{
-		Deploy:             x.Deploy,
-		Admin:              admin.ClearEmpty(x.Admin),
-		Datasources:        x.Datasources,
-		DashboardProviders: x.DashboardProviders,
-		Storage:            x.Storage,
-		Network:            x.Network,
-		Auth:               auth.ClearEmpty(x.Auth),
-	}
-	if reflect.DeepEqual(marshaled, Grafana{}) {
-		return &Grafana{}
-	}
-	return &marshaled
 }
 
 type Datasource struct {

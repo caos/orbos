@@ -24,6 +24,8 @@ RUN /gen-charts -basepath "/boom"
 
 COPY dashboards /boom/dashboards
 
+ENV PATH="/dependencies:${PATH}"
+
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "--" ]
 
 FROM python:3.8.3-alpine3.11 as prod
