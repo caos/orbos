@@ -14,25 +14,37 @@ func AdaptFunc(
 	labels map[string]string,
 	replicaCount int,
 	version string,
+	imagePullSecret string,
+	cmName string,
+	certPath string,
+	secretName string,
+	secretPath string,
+	consoleCMName string,
+	secretVarsName string,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
 	error,
 ) {
-	internalSecrets := "zitadel-secret"
-	internalConfig := "console-config"
 	rootSecret := "client-root"
 	secretMode := int32(0777)
 	replicas := int32(replicaCount)
 	runAsUser := int64(1000)
 	runAsNonRoot := true
+	certMountPath := "/dbsecrets"
+
+	internalLabels := make(map[string]string, 0)
+	for k, v := range labels {
+		internalLabels[k] = v
+	}
+	internalLabels["app.kubernetes.io/component"] = "iam"
 
 	userList := []string{"management", "auth", "authz", "adminapi", "notification"}
 	volumnes := []v1.Volume{{
-		Name: internalSecrets,
+		Name: secretName,
 		VolumeSource: v1.VolumeSource{
 			Secret: &v1.SecretVolumeSource{
-				SecretName: "zitadel-secret",
+				SecretName: secretName,
 			},
 		},
 	}, {
@@ -44,17 +56,17 @@ func AdaptFunc(
 			},
 		},
 	}, {
-		Name: internalConfig,
+		Name: consoleCMName,
 		VolumeSource: v1.VolumeSource{
 			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{Name: "console-config"},
+				LocalObjectReference: v1.LocalObjectReference{Name: consoleCMName},
 			},
 		},
 	}}
 	volMounts := []v1.VolumeMount{
-		{Name: internalSecrets, MountPath: "/secret"},
-		{Name: internalConfig, MountPath: "/console/environment.json", SubPath: "environment.json"},
-		{Name: rootSecret, MountPath: "/dbsecrets/ca.crt", SubPath: "ca.crt"},
+		{Name: secretName, MountPath: secretPath},
+		{Name: consoleCMName, MountPath: "/console/environment.json", SubPath: "environment.json"},
+		{Name: rootSecret, MountPath: certMountPath + "/ca.crt", SubPath: "ca.crt"},
 	}
 	for _, user := range userList {
 		userReplaced := strings.ReplaceAll(user, "_", "-")
@@ -71,13 +83,13 @@ func AdaptFunc(
 		volMounts = append(volMounts, v1.VolumeMount{
 			Name: internalName,
 			//ReadOnly:  true,
-			MountPath: "/dbsecrets/client." + user + ".crt",
+			MountPath: certMountPath + "/client." + user + ".crt",
 			SubPath:   "client." + user + ".crt",
 		})
 		volMounts = append(volMounts, v1.VolumeMount{
 			Name: internalName,
 			//ReadOnly:  true,
-			MountPath: "/dbsecrets/client." + user + ".key",
+			MountPath: certMountPath + "/client." + user + ".key",
 			SubPath:   "client." + user + ".key",
 		})
 	}
@@ -85,16 +97,16 @@ func AdaptFunc(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "zitadel",
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    internalLabels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: internalLabels,
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: internalLabels,
 				},
 
 				Spec: v1.PodSpec{
@@ -109,7 +121,7 @@ func AdaptFunc(
 									Exec: &v1.ExecAction{
 										// TODO: until proper fix of https://github.com/kubernetes/kubernetes/issues/2630
 										Command: []string{"sh", "-c",
-											"mkdir -p $HOME/dbsecrets-zitadel/ && cp /dbsecrets/* $HOME/dbsecrets-zitadel/ && chmod 400 $HOME/dbsecrets-zitadel/*"},
+											"mkdir -p " + certPath + "/ && cp " + certMountPath + "/* " + certPath + "/ && chmod 400 " + certPath + "/*"},
 									},
 								},
 							},
@@ -142,41 +154,41 @@ func AdaptFunc(
 								{Name: "CHAT_URL",
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: "zitadel-secrets-vars"},
+											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
 											Key:                  "ZITADEL_GOOGLE_CHAT_URL",
 										},
 									}},
 								{Name: "TWILIO_TOKEN",
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: "zitadel-secrets-vars"},
+											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
 											Key:                  "ZITADEL_TWILIO_AUTH_TOKEN",
 										},
 									}},
 								{Name: "TWILIO_SERVICE_SID",
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: "zitadel-secrets-vars"},
+											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
 											Key:                  "ZITADEL_TWILIO_SID",
 										},
 									}},
 								{Name: "SMTP_PASSWORD",
 									ValueFrom: &v1.EnvVarSource{
 										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: "zitadel-secrets-vars"},
+											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
 											Key:                  "ZITADEL_EMAILAPPKEY",
 										},
 									}},
 							},
 							EnvFrom: []v1.EnvFromSource{
 								{ConfigMapRef: &v1.ConfigMapEnvSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: "zitadel-vars"},
+									LocalObjectReference: v1.LocalObjectReference{Name: cmName},
 								}}},
 							VolumeMounts: volMounts,
 						},
 					},
 					ImagePullSecrets: []v1.LocalObjectReference{{
-						Name: "public-github-packages",
+						Name: imagePullSecret,
 					}},
 					Volumes: volumnes,
 				},

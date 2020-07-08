@@ -26,6 +26,12 @@ func AdaptFunc(
 	rootUserPath := "/certificates"
 	defaultMode := int32(0400)
 
+	internalLabels := make(map[string]string, 0)
+	for k, v := range labels {
+		internalLabels[k] = v
+	}
+	internalLabels["app.kubernetes.io/component"] = "migration"
+
 	queryCM, destroyCM, err := configmap.AdaptFunc(migrationConfigmap, namespace, labels, scripts.GetAll())
 	if err != nil {
 		return nil, nil, err
@@ -35,7 +41,7 @@ func AdaptFunc(
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cockroachdb-cluster-migration",
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    internalLabels,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
@@ -47,7 +53,7 @@ func AdaptFunc(
 							Command: []string{
 								"sh",
 								"-c",
-								"sleep 10; until pg_isready -h cockroachdb-public -p 26257; do echo waiting for database; sleep 2; done; sleep 10;",
+								"until pg_isready -h cockroachdb-public -p 26257; do echo waiting for database; sleep 2; done;",
 							},
 						},
 						{

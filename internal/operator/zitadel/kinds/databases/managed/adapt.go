@@ -17,6 +17,7 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 func AdaptFunc() zitadel.AdaptFunc {
@@ -36,16 +37,22 @@ func AdaptFunc() zitadel.AdaptFunc {
 		desired.Parsed = desiredKind
 
 		namespaceStr := "caos-zitadel"
-
 		labels := map[string]string{
 			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
 			"app.kubernetes.io/part-of":    "zitadel",
-			"zitadel.caos.ch/part-of":      "database",
 		}
 
-		serviceAccountName := "cockroachdb"
-		roleName := "cockroachdb"
-		clusterRoleName := "cockroachdb"
+		sfsName := "cockroachdb"
+		serviceAccountName := sfsName
+		roleName := sfsName
+		clusterRoleName := sfsName
+
+		cockroachURL := sfsName + "-public"
+		cockroachPort := int32(26257)
+		cockroachHTTPPort := int32(8080)
+
+		image := "cockroachdb/cockroach:v20.1.2"
+		replicaCount := int32(desiredKind.Spec.ReplicaCount)
 
 		queryNS, destroyNS, err := namespace.AdaptFunc(namespaceStr)
 		if err != nil {
@@ -85,11 +92,9 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		cockroachPort := "26257"
-		cockroachURL := "cockroachdb-public"
 		ports := []service.Port{
-			{Port: 26257, TargetPort: cockroachPort, Name: "grpc"},
-			{Port: 8080, TargetPort: "8080", Name: "http"},
+			{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},
+			{Port: 8080, TargetPort: strconv.Itoa(int(cockroachHTTPPort)), Name: "http"},
 		}
 		querySPD, destroySPD, err := service.AdaptFunc(cockroachURL, "default", labels, ports, "", labels, false, "", "")
 		if err != nil {
@@ -101,14 +106,14 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryS, destroyS, err := service.AdaptFunc("cockroachdb", namespaceStr, labels, ports, "", labels, true, "None", "")
+		queryS, destroyS, err := service.AdaptFunc(sfsName, namespaceStr, labels, ports, "", labels, true, "None", "")
 		if err != nil {
 			return nil, nil, err
 		}
 
-		querySFS, destroySFS, err := statefulset.AdaptFunc(namespaceStr, labels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity)
+		querySFS, destroySFS, err := statefulset.AdaptFunc(namespaceStr, sfsName, image, labels, serviceAccountName, &replicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort)
 
-		queryPDB, destroyPDB, err := pdb.AdaptFunc(namespaceStr, "cockroachdb-budget", labels, "1")
+		queryPDB, destroyPDB, err := pdb.AdaptFunc(namespaceStr, sfsName+"-budget", labels, "1")
 		if err != nil {
 			return nil, nil, err
 		}
@@ -119,7 +124,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		//	return nil, nil, err
 		//}
 
-		queryJ, destroyJ, err := initjob.AdaptFunc(namespaceStr, labels, serviceAccountName)
+		queryJ, destroyJ, err := initjob.AdaptFunc(namespaceStr, sfsName+"-init", image, labels, serviceAccountName)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -173,8 +178,14 @@ func AdaptFunc() zitadel.AdaptFunc {
 		current.Parsed = currentDB
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-				currentDB.Current.Port = cockroachPort
+				currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
 				currentDB.Current.URL = cockroachURL
+
+				queriers = append(queriers, func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+					return func(k8sClient *kubernetes.Client) error {
+						return k8sClient.WaitUntilStatefulsetIsReady(namespaceStr, sfsName, true, true)
+					}, nil
+				})
 
 				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 			},

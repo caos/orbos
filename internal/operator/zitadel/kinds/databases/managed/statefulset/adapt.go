@@ -14,45 +14,59 @@ import (
 
 func AdaptFunc(
 	namespace string,
+	name string,
+	image string,
 	labels map[string]string,
 	serviceAccountName string,
-	replicaCount int,
+	replicaCount *int32,
 	storageCapacity string,
+	dbPort int32,
+	httpPort int32,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
 	error,
 ) {
-	replicas := int32(replicaCount)
 	defaultMode := int32(256)
 	quantity, err := resource.ParseQuantity(storageCapacity)
 	if err != nil {
 		return nil, nil, err
 	}
-	joinList := make([]string, replicas)
-	for i := int32(0); i < replicas; i++ {
-		joinList = append(joinList, fmt.Sprintf("cockroachdb-%d.cockroachdb.%s", i, namespace))
+
+	joinList := make([]string, *replicaCount)
+	for i := int32(0); i < *replicaCount; i++ {
+		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s", name, i, name, namespace))
 	}
 	joinListStr := strings.Join(joinList, ",")
+
 	locality := "zone=" + namespace
 	certPath := "/cockroach/cockroach-certs"
+	datadirPath := "/cockroach/cockroach-data"
 	joinExec := "exec /cockroach/cockroach start --logtostderr --certs-dir " + certPath + " --advertise-host $(hostname -f) --http-addr 0.0.0.0 --join " + joinListStr + " --locality " + locality + " --cache 25% --max-sql-memory 25%"
+	datadirInternal := "datadir"
+	certsInternal := "certs"
+
+	internalLabels := make(map[string]string, 0)
+	for k, v := range labels {
+		internalLabels[k] = v
+	}
+	internalLabels["app.kubernetes.io/component"] = "iam-database"
 
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cockroachdb",
+			Name:      name,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    internalLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
-			ServiceName: "cockroachdb",
-			Replicas:    &replicas,
+			ServiceName: name,
+			Replicas:    replicaCount,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: internalLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: internalLabels,
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccountName,
@@ -76,12 +90,12 @@ func AdaptFunc(
 						},
 					},
 					Containers: []corev1.Container{{
-						Name:            "cockroachdb",
-						Image:           "cockroachdb/cockroach:v20.1.2",
+						Name:            name,
+						Image:           image,
 						ImagePullPolicy: "IfNotPresent",
 						Ports: []corev1.ContainerPort{
-							{ContainerPort: 26257, Name: "grpc"},
-							{ContainerPort: 8080, Name: "http"},
+							{ContainerPort: dbPort, Name: "grpc"},
+							{ContainerPort: httpPort, Name: "http"},
 						},
 						LivenessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
@@ -107,10 +121,10 @@ func AdaptFunc(
 							FailureThreshold:    2,
 						},
 						VolumeMounts: []corev1.VolumeMount{{
-							Name:      "datadir",
-							MountPath: "/cockroach/cockroach-data",
+							Name:      datadirInternal,
+							MountPath: datadirPath,
 						}, {
-							Name:      "certs",
+							Name:      certsInternal,
 							MountPath: certPath,
 						}},
 						Env: []corev1.EnvVar{{
@@ -124,14 +138,14 @@ func AdaptFunc(
 						},
 					}},
 					Volumes: []corev1.Volume{{
-						Name: "datadir",
+						Name: datadirInternal,
 						VolumeSource: corev1.VolumeSource{
 							PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-								ClaimName: "datadir",
+								ClaimName: datadirInternal,
 							},
 						},
 					}, {
-						Name: "certs",
+						Name: certsInternal,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  "cockroachdb.node",
@@ -147,7 +161,7 @@ func AdaptFunc(
 			},
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "datadir",
+					Name: datadirInternal,
 				},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{
@@ -162,7 +176,5 @@ func AdaptFunc(
 			}},
 		},
 	}
-
 	return statefulset.AdaptFunc(statefulsetDef)
-
 }

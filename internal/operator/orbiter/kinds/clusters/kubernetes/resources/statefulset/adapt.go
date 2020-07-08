@@ -9,7 +9,10 @@ import (
 func AdaptFunc(statefulset *appsv1.StatefulSet) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyStatefulSet(statefulset)
+				if err := k8sClient.ApplyStatefulSet(statefulset); err != nil {
+					return err
+				}
+				return k8sClient.WaitUntilStatefulsetIsReady(statefulset.Namespace, statefulset.Name, true, false)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO

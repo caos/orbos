@@ -31,21 +31,32 @@ func AdaptFunc() zitadel.AdaptFunc {
 		}
 		desired.Parsed = desiredKind
 
+		namespaceStr := "caos-zitadel"
+		labels := map[string]string{
+			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
+			"app.kubernetes.io/part-of":    "zitadel",
+		}
+
+		cmName := "zitadel-vars"
+		certPath := "$HOME/dbsecrets-zitadel"
+		secretName := "zitadel-secret"
+		secretPath := "/secret"
+		consoleCMName := "console-config"
+		secretVarsName := "zitadel-secrets-vars"
+		imagePullSecretName := "public-github-packages"
+
 		databaseCurrent := &tree.Tree{}
 		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Database, databaseCurrent)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		namespaceStr := "caos-zitadel"
-		labels := map[string]string{"app.kubernetes.io/managed-by": "zitadel.caos.ch"}
-
 		queryNS, destroyNS, err := namespace.AdaptFunc(namespaceStr)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryC, destroyC, err := configuration.AdaptFunc(namespaceStr, labels, desiredKind.Spec.Configuration)
+		queryC, destroyC, err := configuration.AdaptFunc(namespaceStr, labels, desiredKind.Spec.Configuration, cmName, certPath, secretName, secretPath, consoleCMName, secretVarsName)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -55,12 +66,12 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(namespaceStr, labels)
+		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(namespaceStr, imagePullSecretName, labels)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryD, destroyD, err := deployment.AdaptFunc(namespaceStr, labels, desiredKind.Spec.ReplicaCount, desiredKind.Spec.Version)
+		queryD, destroyD, err := deployment.AdaptFunc(namespaceStr, labels, desiredKind.Spec.ReplicaCount, desiredKind.Spec.Version, imagePullSecretName, cmName, certPath, secretName, secretPath, consoleCMName, secretVarsName)
 		if err != nil {
 			return nil, nil, err
 		}

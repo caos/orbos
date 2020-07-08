@@ -10,6 +10,8 @@ import (
 
 func AdaptFunc(
 	namespace string,
+	name string,
+	image string,
 	labels map[string]string,
 	serviceAccountName string,
 ) (
@@ -20,19 +22,25 @@ func AdaptFunc(
 	certPath := "/cockroach/cockroach-certs"
 	defaultMode := int32(256)
 
+	internalLabels := make(map[string]string, 0)
+	for k, v := range labels {
+		internalLabels[k] = v
+	}
+	internalLabels["app.kubernetes.io/component"] = "iam-database-init"
+
 	jobDef := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cockroachdb-cluster-init",
+			Name:      name,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    internalLabels,
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					ServiceAccountName: serviceAccountName,
 					Containers: []corev1.Container{{
-						Name:            "cockroachdb-cluster-init",
-						Image:           "cockroachdb/cockroach:v20.1.2",
+						Name:            name,
+						Image:           image,
 						ImagePullPolicy: "IfNotPresent",
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      "client-certs",

@@ -116,6 +116,26 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	})
 }
 
+func (c *Client) WaitUntilDeploymentReady(namespace string, name string) error {
+	ctx := context.Background()
+	deploy, err := c.set.AppsV1().Deployments(namespace).Get(ctx, name, mach.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	labelSelector := getLabelSelector(deploy.Spec.Selector.MatchLabels)
+
+	watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return err
+	}
+	replicas := deploy.Spec.Replicas
+
+	return waitForPodsPhase(watch, int(*replicas), core.PodRunning, true, true)
+}
+
 func (c *Client) ApplyService(rsc *core.Service) error {
 	resources := c.set.CoreV1().Services(rsc.GetNamespace())
 	return c.apply("service", rsc.GetName(), func() error {
@@ -149,6 +169,25 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 		}
 		return nil
 	})
+}
+
+func (c *Client) WaitUntilJobCompleted(namespace string, name string) error {
+	ctx := context.Background()
+	job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	labelSelector := getLabelSelector(job.Spec.Selector.MatchLabels)
+
+	watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return err
+	}
+
+	return waitForPodsPhase(watch, 1, core.PodSucceeded, false, false)
 }
 
 func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
@@ -185,6 +224,26 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 		}
 		return nil
 	})
+}
+
+func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool) error {
+	ctx := context.Background()
+	sfs, err := c.set.AppsV1().StatefulSets(namespace).Get(ctx, name, mach.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	labelSelector := getLabelSelector(sfs.Spec.Selector.MatchLabels)
+
+	watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return err
+	}
+	replicas := sfs.Spec.Replicas
+
+	return waitForPodsPhase(watch, int(*replicas), core.PodRunning, containerCheck, readyCheck)
 }
 
 func (c *Client) DeleteDeployment(namespace, name string) error {
@@ -598,4 +657,94 @@ func safeUint64(ptr *int64) int64 {
 
 func (c *Client) deletePod(pod *core.Pod) error {
 	return c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{})
+}
+
+func getLabelSelector(labels map[string]string) string {
+	labelSelector := ""
+	for k, v := range labels {
+		if labelSelector == "" {
+			labelSelector = k + "=" + v
+		} else {
+			labelSelector = labelSelector + ", " + k + "=" + v
+
+		}
+	}
+	return labelSelector
+}
+
+type podStatus struct {
+	name              string
+	phase             core.PodPhase
+	containerStatuses []containerStatus
+}
+type containerStatus struct {
+	containerState core.ContainerStatus
+}
+
+func waitForPodsPhase(watch watch.Interface, replicaCount int, phase core.PodPhase, containerCheck bool, readyCheck bool) error {
+	statusChan := make(chan podStatus)
+	pods := make(map[string]core.PodPhase, 0)
+
+	go func() {
+		for event := range watch.ResultChan() {
+			p, ok := event.Object.(*core.Pod)
+			if !ok {
+				continue
+			}
+			containerStatuses := make([]containerStatus, 0)
+			for _, podContainerStatus := range p.Status.ContainerStatuses {
+				containerStatuses = append(containerStatuses, containerStatus{
+					containerState: podContainerStatus,
+				})
+			}
+
+			statusChan <- podStatus{p.Name, p.Status.Phase, containerStatuses}
+
+		}
+	}()
+
+	runningPods := 0
+	for runningPods < replicaCount {
+		podStat := <-statusChan
+		if podStat.phase == phase {
+			running := true
+			ready := true
+			if containerCheck {
+				running = checkContainer(podStat.containerStatuses)
+			}
+			if readyCheck {
+				ready = checkReady(podStat.containerStatuses)
+			}
+
+			if running && ready {
+				pods[podStat.name] = podStat.phase
+			} else {
+				delete(pods, podStat.name)
+			}
+		} else {
+			delete(pods, podStat.name)
+		}
+		runningPods = len(pods)
+	}
+	return nil
+}
+
+func checkContainer(containers []containerStatus) bool {
+	running := true
+	for _, stat := range containers {
+		if stat.containerState.State.Running == nil {
+			running = false
+		}
+	}
+	return running
+}
+
+func checkReady(containers []containerStatus) bool {
+	ready := true
+	for _, stat := range containers {
+		if !stat.containerState.Ready {
+			ready = false
+		}
+	}
+	return ready
 }

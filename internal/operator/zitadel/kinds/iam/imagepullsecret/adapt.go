@@ -7,6 +7,7 @@ import (
 
 func AdaptFunc(
 	namespace string,
+	name string,
 	labels map[string]string,
 ) (
 	resources.QueryFunc,
@@ -21,5 +22,5 @@ func AdaptFunc(
 		}
 }`
 
-	return dockerconfigsecret.AdaptFunc("public-github-packages", namespace, labels, data)
+	return dockerconfigsecret.AdaptFunc(name, namespace, labels, data)
 }

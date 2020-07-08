@@ -15,6 +15,12 @@ func AdaptFunc(
 	namespace string,
 	labels map[string]string,
 	desired *Configuration,
+	cmName string,
+	certPath string,
+	secretName string,
+	secretPath string,
+	consoleCMName string,
+	secretVarsName string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -31,8 +37,8 @@ func AdaptFunc(
 	}
 
 	literalsConfig := map[string]string{
-		"GOOGLE_APPLICATION_CREDENTIALS":    "/secret/" + googleServiceAccountJSONPath,
-		"ZITADEL_KEY_PATH":                  "/secret/" + zitadelKeysPath,
+		"GOOGLE_APPLICATION_CREDENTIALS":    secretPath + "/" + googleServiceAccountJSONPath,
+		"ZITADEL_KEY_PATH":                  secretPath + "/" + zitadelKeysPath,
 		"ZITADEL_TRACING_PROJECT_ID":        desired.Tracing.ProjectID,
 		"ZITADEL_TRACING_FRACTION":          desired.Tracing.Fraction,
 		"ZITADEL_LOG_LEVEL":                 "debug",
@@ -64,13 +70,13 @@ func AdaptFunc(
 		"ZITADEL_SHORT_CACHE_MAXAGE":        desired.Cache.ShortMaxAge,
 		"ZITADEL_SHORT_CACHE_SHARED_MAXAGE": desired.Cache.ShortSharedMaxAge,
 		"CR_SSL_MODE":                       "require",
-		"CR_ROOT_CERT":                      "/home/zitadel/dbsecrets-zitadel/ca.crt",
+		"CR_ROOT_CERT":                      certPath + "/ca.crt",
 	}
 
 	userList := []string{"management", "auth", "authz", "adminapi", "notification"}
 	for _, user := range userList {
-		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = "/home/zitadel/dbsecrets-zitadel/client." + user + ".crt"
-		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = "/home/zitadel/dbsecrets-zitadel/client." + user + ".key"
+		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = certPath + "/client." + user + ".crt"
+		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = certPath + "/client." + user + ".key"
 		literalsConfig["CR_"+strings.ToUpper(user)+"_PASSWORD"] = user
 	}
 
@@ -104,19 +110,19 @@ func AdaptFunc(
 		}
 	}
 
-	_, destroyCM, err := configmap.AdaptFunc("zitadel-vars", namespace, labels, literalsConfig)
+	_, destroyCM, err := configmap.AdaptFunc(cmName, namespace, labels, literalsConfig)
 	if err != nil {
 		return nil, nil, err
 	}
-	queryS, destroyS, err := secret2.AdaptFunc("zitadel-secret", namespace, labels, literalsSecret)
+	queryS, destroyS, err := secret2.AdaptFunc(secretName, namespace, labels, literalsSecret)
 	if err != nil {
 		return nil, nil, err
 	}
-	queryCCM, destroyCCM, err := configmap.AdaptFunc("console-config", namespace, labels, literalsConsoleCM)
+	queryCCM, destroyCCM, err := configmap.AdaptFunc(consoleCMName, namespace, labels, literalsConsoleCM)
 	if err != nil {
 		return nil, nil, err
 	}
-	querySV, destroySV, err := secret2.AdaptFunc("zitadel-secrets-vars", namespace, labels, literalsSecretVars)
+	querySV, destroySV, err := secret2.AdaptFunc(secretVarsName, namespace, labels, literalsSecretVars)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -150,7 +156,7 @@ func AdaptFunc(
 
 			literalsConfig["ZITADEL_EVENTSTORE_HOST"] = currentDB.GetURL()
 			literalsConfig["ZITADEL_EVENTSTORE_PORT"] = currentDB.GetPort()
-			queryCM, _, err := configmap.AdaptFunc("zitadel-vars", namespace, labels, literalsConfig)
+			queryCM, _, err := configmap.AdaptFunc(cmName, namespace, labels, literalsConfig)
 			if err != nil {
 				return nil, err
 			}

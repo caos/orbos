@@ -9,7 +9,11 @@ import (
 func AdaptFunc(job *batch.Job) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyJob(job)
+				if err := k8sClient.ApplyJob(job); err != nil {
+					return err
+				}
+
+				return k8sClient.WaitUntilJobCompleted(job.Namespace, job.Name)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
