@@ -4,14 +4,17 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"gopkg.in/src-d/go-git.v4/config"
-	"gopkg.in/yaml.v3"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/utils/random"
+
+	"gopkg.in/src-d/go-git.v4/config"
+	"gopkg.in/yaml.v3"
 
 	"github.com/pkg/errors"
 
@@ -42,12 +45,11 @@ type Client struct {
 	repoURL   string
 }
 
-func New(ctx context.Context, monitor mntr.Monitor, committer, email, repoURL string) *Client {
+func New(ctx context.Context, monitor mntr.Monitor, committer, email string) *Client {
 	newClient := &Client{
 		ctx:       ctx,
-		monitor:   monitor.WithField("repository", repoURL),
 		committer: committer,
-		repoURL:   repoURL,
+		email:     email,
 	}
 
 	if monitor.IsVerbose() {
@@ -60,11 +62,14 @@ func (g *Client) GetURL() string {
 	return g.repoURL
 }
 
-func (g *Client) Init(deploykey []byte) error {
+func (g *Client) Configure(repoURL string, deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {
 		return errors.Wrap(err, "parsing deployment key failed")
 	}
+
+	g.repoURL = repoURL
+	g.monitor = g.monitor.WithField("repository", repoURL)
 
 	g.auth = &gitssh.PublicKeys{
 		User:   "git",
@@ -73,6 +78,15 @@ func (g *Client) Init(deploykey []byte) error {
 
 	// TODO: Fix
 	g.auth.HostKeyCallback = ssh.InsecureIgnoreHostKey()
+
+	if err := g.ReadCheck(); err != nil {
+		return err
+	}
+
+	if err := g.WriteCheck(random.Generate()); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -241,7 +255,7 @@ func (g *Client) EmptyFolder(path string) (bool, error) {
 	return false, nil
 }
 
-func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
+func (g *Client) ReadFolder(path string) (map[string][]byte, []string, error) {
 	monitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
 	})
@@ -250,21 +264,26 @@ func (g *Client) ReadFolder(path string) (map[string][]byte, error) {
 	files, err := g.fs.ReadDir(path)
 	if err != nil {
 		if os.IsNotExist(errors.Cause(err)) {
-			return make(map[string][]byte, 0), nil
+			return make(map[string][]byte, 0), nil, nil
 		}
-		return nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+		return nil, nil, errors.Wrapf(err, "opening %s from worktree failed", path)
 	}
+	subdirs := make([]string, 0)
 	for _, file := range files {
-		filePath := filepath.Join(path, file.Name())
-		fileBytes := g.Read(filePath)
-		dirBytes[file.Name()] = fileBytes
+		if !file.IsDir() {
+			filePath := filepath.Join(path, file.Name())
+			fileBytes := g.Read(filePath)
+			dirBytes[file.Name()] = fileBytes
+		} else {
+			subdirs = append(subdirs, file.Name())
+		}
 	}
 
 	if monitor.IsVerbose() {
 		monitor.Debug("Folder read")
 		fmt.Println(dirBytes)
 	}
-	return dirBytes, nil
+	return dirBytes, subdirs, nil
 }
 
 type File struct {

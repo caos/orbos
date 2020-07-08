@@ -197,18 +197,14 @@ func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 func (c *Machine) UseKey(keys ...[]byte) error {
 
-	publicKeys := make([]sshlib.AuthMethod, 0)
-	for _, key := range keys {
-		publicKey, err := ssh.PrivateKeyToPublicKey(key)
-		if err != nil {
-			return err
-		}
-		publicKeys = append(publicKeys, publicKey)
+	publicKeys, err := ssh.AuthMethodFromKeys(keys...)
+	if err != nil {
+		return err
 	}
 
 	c.sshCfg = &sshlib.ClientConfig{
 		User:            c.remoteUser,
-		Auth:            publicKeys,
+		Auth:            []sshlib.AuthMethod{publicKeys},
 		HostKeyCallback: sshlib.InsecureIgnoreHostKey(),
 	}
 	return nil

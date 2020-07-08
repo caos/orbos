@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/gitlab"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/gitlab"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
@@ -23,6 +23,10 @@ func getGitlab(spec *gitlab.Connector, redirect string) (interface{}, error) {
 	clientSecret, err := helper2.GetSecretValue(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
+	}
+
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
 	}
 
 	var groups []string

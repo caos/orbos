@@ -5,7 +5,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
@@ -17,7 +17,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1beta1.ToolsetSpec) interface{} {
+func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1beta2.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
 		return err
@@ -32,43 +32,44 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), toolsetCRDSpec)
 
 	values := helm.DefaultValues(p.GetImageTags())
-
-	if config.StorageSpec != nil {
-		storageSpec := &helm.StorageSpec{
-			VolumeClaimTemplate: &helm.VolumeClaimTemplate{
-				Spec: &helm.VolumeClaimTemplateSpec{
-					StorageClassName: config.StorageSpec.StorageClass,
-					AccessModes:      config.StorageSpec.AccessModes,
-					Resources: &helm.Resources{
-						Requests: &helm.Request{
-							Storage: config.StorageSpec.Storage,
+	if config != nil {
+		if config.StorageSpec != nil {
+			storageSpec := &helm.StorageSpec{
+				VolumeClaimTemplate: &helm.VolumeClaimTemplate{
+					Spec: &helm.VolumeClaimTemplateSpec{
+						StorageClassName: config.StorageSpec.StorageClass,
+						AccessModes:      config.StorageSpec.AccessModes,
+						Resources: &helm.Resources{
+							Requests: &helm.Request{
+								Storage: config.StorageSpec.Storage,
+							},
 						},
 					},
 				},
-			},
+			}
+
+			values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
 		}
 
-		values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
-	}
-
-	if config.MonitorLabels != nil {
-		values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{
-			MatchLabels: config.MonitorLabels,
-		}
-	}
-
-	if config.ServiceMonitors != nil {
-		additionalServiceMonitors := make([]*servicemonitor.Values, 0)
-		for _, specServiceMonitor := range config.ServiceMonitors {
-			valuesServiceMonitor := servicemonitor.SpecToValues(specServiceMonitor)
-			additionalServiceMonitors = append(additionalServiceMonitors, valuesServiceMonitor)
+		if config.MonitorLabels != nil {
+			values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{
+				MatchLabels: config.MonitorLabels,
+			}
 		}
 
-		values.Prometheus.AdditionalServiceMonitors = additionalServiceMonitors
-	}
+		if config.ServiceMonitors != nil {
+			additionalServiceMonitors := make([]*servicemonitor.Values, 0)
+			for _, specServiceMonitor := range config.ServiceMonitors {
+				valuesServiceMonitor := servicemonitor.SpecToValues(specServiceMonitor)
+				additionalServiceMonitors = append(additionalServiceMonitors, valuesServiceMonitor)
+			}
 
-	if config.AdditionalScrapeConfigs != nil {
-		values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = config.AdditionalScrapeConfigs
+			values.Prometheus.AdditionalServiceMonitors = additionalServiceMonitors
+		}
+
+		if config.AdditionalScrapeConfigs != nil {
+			values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = config.AdditionalScrapeConfigs
+		}
 	}
 
 	if getSecretErr == nil && !ingestionSecretAbsent {
@@ -99,17 +100,17 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		})
 	}
 
-	if toolsetCRDSpec.Prometheus.RemoteWrite != nil {
+	if toolsetCRDSpec.MetricsPersisting != nil && toolsetCRDSpec.MetricsPersisting.RemoteWrite != nil {
 		values.Prometheus.PrometheusSpec.RemoteWrite = append(values.Prometheus.PrometheusSpec.RemoteWrite, &helm.RemoteWrite{
-			URL: toolsetCRDSpec.Prometheus.RemoteWrite.URL,
+			URL: toolsetCRDSpec.MetricsPersisting.RemoteWrite.URL,
 			BasicAuth: &helm.BasicAuth{
 				Username: &helm.SecretKeySelector{
-					Name: toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Username.Name,
-					Key:  toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Username.Key,
+					Name: toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Username.Name,
+					Key:  toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Username.Key,
 				},
 				Password: &helm.SecretKeySelector{
-					Name: toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Password.Name,
-					Key:  toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Password.Key,
+					Name: toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Password.Name,
+					Key:  toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Password.Key,
 				},
 			},
 		})

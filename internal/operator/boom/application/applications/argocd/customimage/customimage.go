@@ -2,14 +2,15 @@ package customimage
 
 import (
 	"encoding/json"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"path/filepath"
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/secret"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"path/filepath"
-	"strings"
 
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/pkg/errors"
@@ -62,7 +63,7 @@ func getInternalName(store string, ty string) string {
 	return strings.Join([]string{"store", store, ty}, "-")
 }
 
-func GetSecrets(spec *argocd.Argocd) []interface{} {
+func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 	namespace := "caos-system"
 	secrets := make([]interface{}, 0)
 
@@ -86,12 +87,28 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 			secretRes := resources.NewSecret(conf)
 			secrets = append(secrets, secretRes)
 		}
+
+		if helper2.IsCrdSecret(store.SSHKey, store.ExistingSSHKeySecret) {
+			ty := "ssh"
+			data := map[string]string{
+				getSecretKey(store.StoreName, ty): store.SSHKey.Value,
+			}
+
+			conf := &resources.SecretConfig{
+				Name:      getSecretName(store.StoreName, ty),
+				Namespace: namespace,
+				Labels:    labels.GetAllApplicationLabels(info.GetName()),
+				Data:      data,
+			}
+			secretRes := resources.NewSecret(conf)
+			secrets = append(secrets, secretRes)
+		}
 	}
 
 	return secrets
 }
 
-func FromSpec(spec *argocd.Argocd, imageTags map[string]string) *CustomImage {
+func FromSpec(spec *reconciling.Reconciling, imageTags map[string]string) *CustomImage {
 	imageRepository := "docker.pkg.github.com/caos/argocd-secrets/argocd"
 
 	vols := make([]*SecretVolume, 0)
@@ -99,12 +116,16 @@ func FromSpec(spec *argocd.Argocd, imageTags map[string]string) *CustomImage {
 	for _, store := range spec.CustomImage.GopassStores {
 
 		volGPG, volMountGPG := getVolAndVolMount(store.StoreName, "gpg", store.GPGKey, store.ExistingGPGKeySecret, gpgFolderName)
-		vols = append(vols, volGPG)
-		volMounts = append(volMounts, volMountGPG)
+		if volGPG != nil && volMountGPG != nil {
+			vols = append(vols, volGPG)
+			volMounts = append(volMounts, volMountGPG)
+		}
 
 		volSSH, volMountSSH := getVolAndVolMount(store.StoreName, "ssh", store.SSHKey, store.ExistingSSHKeySecret, sshFolderName)
-		vols = append(vols, volSSH)
-		volMounts = append(volMounts, volMountSSH)
+		if volSSH != nil && volMountSSH != nil {
+			vols = append(vols, volSSH)
+			volMounts = append(volMounts, volMountSSH)
+		}
 	}
 
 	return &CustomImage{
@@ -160,7 +181,7 @@ func getVolMount(internal, foldername string) *VolumeMount {
 	}
 }
 
-func AddImagePullSecretFromSpec(spec *argocd.Argocd, resultFilePath string) error {
+func AddImagePullSecretFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
 	addContent := strings.Join([]string{
 		tab, tab, tab, "imagePullSecrets:", nl,
 		tab, tab, tab, "- name: ", spec.CustomImage.ImagePullSecret, nl,
@@ -178,7 +199,7 @@ type store struct {
 	StoreName string `json:"storename"`
 }
 
-func AddPostStartFromSpec(spec *argocd.Argocd, resultFilePath string) error {
+func AddPostStartFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
 	stores := &stores{}
 	for _, v := range spec.CustomImage.GopassStores {
 		stores.Stores = append(stores.Stores, &store{Directory: v.Directory, StoreName: v.StoreName})

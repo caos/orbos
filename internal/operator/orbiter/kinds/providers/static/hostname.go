@@ -8,36 +8,25 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
-func desireHostname(poolsSpec map[string][]*Machine, nodeagents map[string]*common.NodeAgentSpec, nodeagentsCurr map[string]*common.NodeAgentCurrent, monitor mntr.Monitor) func(machine infra.Machine, pool string) (bool, error) {
+func desireHostname(poolsSpec map[string][]*Machine, nodeagents *common.DesiredNodeAgents, nodeagentsCurr *common.CurrentNodeAgents, monitor mntr.Monitor) func(machine infra.Machine, pool string) (bool, error) {
 	return func(machine infra.Machine, pool string) (bool, error) {
 		for _, machineSpec := range poolsSpec[pool] {
 			if machineSpec.ID == machine.ID() {
-				nodeagent, ok := nodeagents[machineSpec.ID]
 				machineMonitor := monitor.WithFields(map[string]interface{}{
 					"machine":  machine.ID(),
 					"hostname": machineSpec.Hostname,
 				})
-				if !ok {
-					nodeagent = &common.NodeAgentSpec{}
-					nodeagents[machineSpec.ID] = nodeagent
-				}
-				if nodeagent.Software == nil {
-					nodeagent.Software = &common.Software{}
-				}
 
+				nodeagent, _ := nodeagents.Get(machineSpec.ID)
 				if nodeagent.Software.Hostname.Config == nil || nodeagent.Software.Hostname.Config["hostname"] != machineSpec.Hostname {
-					machineMonitor.Changed("Hostname desired")
 					nodeagent.Software.Hostname = common.Package{Config: map[string]string{"hostname": machineSpec.Hostname}}
+					machineMonitor.Changed("Hostname desired")
 				}
 				logWaiting := func() {
 					machineMonitor.Info("Awaiting hostname")
 				}
-				if nodeagentsCurr == nil {
-					logWaiting()
-					return false, nil
-				}
-				curr, ok := nodeagentsCurr[machine.ID()]
-				if !ok || curr == nil {
+				curr, ok := nodeagentsCurr.Get(machine.ID())
+				if !ok {
 					logWaiting()
 					return false, nil
 				}

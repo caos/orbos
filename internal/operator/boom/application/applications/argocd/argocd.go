@@ -24,7 +24,7 @@ func (a *Argocd) GetName() name.Application {
 }
 
 func (a *Argocd) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
-	return toolsetCRDSpec.Reconciling.Deploy
+	return toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.Deploy
 }
 
 func (a *Argocd) GetNamespace() string {

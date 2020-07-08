@@ -28,7 +28,7 @@ func (g *Grafana) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
 	// workaround as grafana always deploys new pods even when the spec of the deployment is not changed
 	// due to the fact that kubernetes has an internal mapping from extensions/v1beta1 to apps/v1 in old k8s versions
 	if g.Changed(toolsetCRDSpec) {
-		return toolsetCRDSpec.Monitoring.Deploy
+		return toolsetCRDSpec.Monitoring != nil && toolsetCRDSpec.Monitoring.Deploy
 	}
 	return false
 }

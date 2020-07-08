@@ -3,21 +3,30 @@ package gce
 import (
 	"bytes"
 	"fmt"
-	"github.com/caos/orbos/internal/tree"
 	"io"
 	"os/exec"
 	"sort"
 	"strings"
+	"sync"
 
+	"github.com/caos/orbos/internal/tree"
+	"github.com/pkg/errors"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
 )
 
 var _ infra.Machine = (*instance)(nil)
+
+type machine interface {
+	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
+	WriteFile(path string, data io.Reader, permissions uint16) error
+	ReadFile(path string, data io.Writer) error
+}
 
 type instance struct {
 	mntr.Monitor
@@ -28,9 +37,10 @@ type instance struct {
 	remove  func() error
 	context *context
 	start   bool
+	machine
 }
 
-func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool) *instance {
+func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine) *instance {
 	return &instance{
 		Monitor: monitor,
 		id:      id,
@@ -40,12 +50,7 @@ func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string
 		remove:  remove,
 		context: context,
 		start:   start,
-	}
-}
-
-func resetBuffer(buffer *bytes.Buffer) {
-	if buffer != nil {
-		buffer.Reset()
+		machine: machine,
 	}
 }
 
@@ -63,8 +68,13 @@ func (c *instance) execute(env map[string]string, stdin io.Reader, command strin
 	errBuf := new(bytes.Buffer)
 	defer resetBuffer(errBuf)
 
-	if err := gcloudSession(c.context, func(bin string) error {
-		cmd := exec.Command(gcloudBin(),
+	gcloud, err := exec.LookPath("gcloud")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := gcloudSession(c.context.desired.JSONKey.Value, gcloud, func(bin string) error {
+		cmd := exec.Command(gcloud,
 			"compute",
 			"ssh",
 			"--zone", c.context.desired.Zone,
@@ -90,8 +100,13 @@ func (c *instance) Shell(env map[string]string) error {
 	errBuf := new(bytes.Buffer)
 	defer resetBuffer(errBuf)
 
-	if err := gcloudSession(c.context, func(bin string) error {
-		cmd := exec.Command(gcloudBin(),
+	gcloud, err := exec.LookPath("gcloud")
+	if err != nil {
+		return err
+	}
+
+	if err := gcloudSession(c.context.desired.JSONKey.Value, gcloud, func(bin string) error {
+		cmd := exec.Command(gcloud,
 			"compute",
 			"ssh",
 			"--zone", c.context.desired.Zone,
@@ -183,28 +198,17 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	}
 	desiredTree.Parsed = desired
 
-	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID)
+	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
 		return nil, err
 	}
 
-	machinesSvc := newMachinesService(ctx)
-
-	pools, err := machinesSvc.ListPools()
-	if err != nil {
-		return nil, err
-	}
-
-	retMachines := make(map[string]infra.Machine, 0)
-	for _, pool := range pools {
-		machines, err := machinesSvc.List(pool)
-		if err != nil {
-			return nil, err
-		}
-		for _, machine := range machines {
-			id := pool + machine.ID()
-			retMachines[id] = machine
-		}
-	}
-	return retMachines, nil
+	machines := make(map[string]infra.Machine, 0)
+	var mux sync.Mutex
+	return machines, core.Each(ctx.machinesService, func(pool string, machine infra.Machine) error {
+		mux.Lock()
+		defer mux.Unlock()
+		machines[pool+machine.ID()] = machine
+		return nil
+	})
 }

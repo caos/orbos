@@ -1,7 +1,6 @@
 package ambassador
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
 	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
@@ -33,7 +32,7 @@ func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *too
 	return ret, nil
 }
 
-func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, resultFilePath string) error {
+func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
 
 	if err := helper.DeleteFirstResourceFromYaml(resultFilePath, "v1", "Pod", "ambassador-test-ready"); err != nil {
 		return err
@@ -42,8 +41,8 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1
 	return nil
 }
 
-func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.Ambassador
+func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
+	spec := toolsetCRDSpec.APIGateway
 	imageTags := helm.GetImageTags()
 
 	values := helm.DefaultValues(imageTags)

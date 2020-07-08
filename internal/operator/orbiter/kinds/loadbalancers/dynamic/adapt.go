@@ -40,7 +40,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
 
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -50,7 +50,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
 
 		for _, pool := range desiredKind.Spec {
@@ -77,7 +77,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 
 		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, migrate, err
+			return nil, nil, nil, migrate, err
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -89,7 +89,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 		currentTree.Parsed = current
 
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeagents map[string]*common.NodeAgentSpec, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
+		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeagents *common.DesiredNodeAgents, queried map[string]interface{}) (orbiter.EnsureFunc, error) {
 
 			wl := whitelist()
 
@@ -109,25 +109,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			current.Current.Spec = desiredKind.Spec
 			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
 
-				var done bool
+				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
 					machineMonitor := monitor.WithField("machine", machine.ID())
-					deepNa, ok := nodeagents[machine.ID()]
-					if !ok {
-						deepNa = &common.NodeAgentSpec{}
-						nodeagents[machine.ID()] = deepNa
-					}
-					deepNaCurr := common.NodeAgentCurrent{}
-					if naCurr, ok := nodeAgentsCurrent[machine.ID()]; ok {
-						deepNaCurr = *naCurr
-					}
-					if deepNa.Firewall == nil {
-						deepNa.Firewall = &common.Firewall{}
-					}
+					deepNa, _ := nodeagents.Get(machine.ID())
+					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
 						deepNa.Firewall.Merge(fw)
-						machineMonitor.Changed("Loadbalancing Firewall desired")
+						machineMonitor.Changed("Loadbalancing firewall desired")
 					}
 					if !fw.IsContainedIn(deepNaCurr.Open) {
 						machineMonitor.WithField("ports", deepNa.Firewall.Ports()).Info("Awaiting firewalld config")
@@ -168,6 +158,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}) {
 							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
 							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
+							machineMonitor.Changed("sysctl desired")
 						}
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
@@ -182,7 +173,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}
 						deepNa.Software.KeepaliveD = keepalived
 						if !deepNa.Software.KeepaliveD.Equals(deepNaCurr.Software.KeepaliveD) {
-							monitor.WithField("package", deepNa.Software.KeepaliveD).Info("Awaiting keepalived")
+							monitor.Info("Awaiting keepalived")
 							done = false
 						}
 					}
@@ -232,9 +223,7 @@ stream { {{ range $nat := .NATs }}
 		listen {{ $from }};
 		proxy_pass {{ $nat.Name }};
 	}
-{{ end }}{{ end }}}
-
-`))
+{{ end }}{{ end }}}`))
 
 				} else {
 
@@ -322,8 +311,7 @@ vrrp_instance VI_{{ $idx }} {
 	}
 {{ end }}
 }
-{{ end }}
-`))
+{{ end }}`))
 
 					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
 	worker_connections  4096;  ## Default: 1024
@@ -350,8 +338,7 @@ http {
 			return 200;
 		}
 	}
-}
-`))
+}`))
 
 					for _, d := range lbData {
 
@@ -379,7 +366,7 @@ http {
 							ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 							ngxBuf.Reset()
 
-							desireNodeAgent(d.Self, common.Firewall{}, ngxPkg, kaPkg)
+							desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
 						}
 					}
 				}
@@ -400,7 +387,7 @@ http {
 						var natVIPProbed bool
 						if balanceLoad {
 							for _, machine := range lbMachines {
-								desireNodeAgent(machine, srcFW, common.Package{}, common.Package{})
+								desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
 							}
 							probeVIP()
 						}
@@ -419,7 +406,7 @@ http {
 							}
 
 							for _, machine := range destMachines {
-								desireNodeAgent(machine, destFW, common.Package{}, common.Package{})
+								desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
 								probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
 								if !balanceLoad && forPool == dest {
 									if !natVIPProbed {
@@ -431,7 +418,7 @@ http {
 									if !ok {
 										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
 									}
-									nodeNatDesires.Firewall = srcFW
+									nodeNatDesires.Firewall = common.ToFirewall(srcFW)
 									nodeNatDesires.Machine = machine
 									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
 										Name: transport.Name,
@@ -463,11 +450,10 @@ http {
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
-
 				return done, nil
 			}
-			return nil, nil
-		}, nil, migrate, nil
+			return orbiter.NoopEnsure, nil
+		}, orbiter.NoopDestroy, orbiter.NoopConfigure, migrate, nil
 	}
 }
 

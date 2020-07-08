@@ -21,6 +21,8 @@ func main() {
 	githubClientSecret := flag.String("githubclientsecret", "none", "ClientSecret used for OAuth with github as store")
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
+	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
+	containeronly := flag.Bool("containeronly", false, "Compile orbctl binaries only for in-container usage")
 
 	flag.Parse()
 
@@ -32,37 +34,44 @@ func main() {
 		}
 	}()
 
+	if *orbctldir == "" {
+		panic("flag orbctldir not provided")
+	}
+
 	_, selfPath, _, _ := runtime.Caller(0)
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
 	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
-		executables.Buildable{MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
-		executables.Buildable{MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
+		executables.Buildable{OutDir: filepath.Join(*orbctldir, "nodeagent"), MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
+		executables.Buildable{OutDir: filepath.Join(*orbctldir, "health"), MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
 	))); err != nil {
 		panic(err)
-	}
-
-	if *orbctldir == "" {
-		return
 	}
 
 	// Use all available CPUs from now on
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	orbctlMain := path("orbctl")
-	orbctls := executables.Build(
-		*debug, *commit, *version, *githubClientID, *githubClientSecret,
+
+	orbctls := []executables.Buildable{
 		orbctlBin(orbctlMain, *orbctldir, "darwin", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "freebsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
-	)
+	}
+	if *dev {
+		orbctls = []executables.Buildable{orbctlBin(orbctlMain, *orbctldir, runtime.GOOS, "amd64")}
+	}
+
+	if *containeronly {
+		orbctls = []executables.Buildable{orbctlBin(orbctlMain, *orbctldir, "linux", "amd64")}
+	}
 
 	var hasErr bool
-	for orbctl := range orbctls {
+	for orbctl := range executables.Build(*debug, *commit, *version, *githubClientID, *githubClientSecret, orbctls...) {
 		if _, err := orbctl(); err != nil {
 			hasErr = true
 		}

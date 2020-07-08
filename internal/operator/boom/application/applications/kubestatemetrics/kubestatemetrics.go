@@ -24,7 +24,7 @@ func (k *KubeStateMetrics) GetName() name.Application {
 }
 
 func (k *KubeStateMetrics) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
-	return toolsetCRDSpec.KubeMetricsExporter.Deploy
+	return toolsetCRDSpec.KubeMetricsExporter != nil && toolsetCRDSpec.KubeMetricsExporter.Deploy
 }
 
 func (k *KubeStateMetrics) GetNamespace() string {

@@ -1,7 +1,7 @@
 package auth
 
 import (
-	github "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Github"
+	github "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Github"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
 )
@@ -15,6 +15,10 @@ func GetGithubAuthConfig(spec *github.Auth) (map[string]string, error) {
 	clientSecret, err := helper2.GetSecretValue(spec.ClientSecret, spec.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
+	}
+
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
 	}
 
 	teamIds := strings.Join(spec.TeamIDs, " ")

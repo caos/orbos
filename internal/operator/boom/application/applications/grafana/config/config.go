@@ -1,9 +1,9 @@
 package config
 
 import (
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"strings"
 
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
 	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 )
@@ -32,10 +32,10 @@ type Config struct {
 	Ini                map[string]interface{}
 }
 
-func New(spec *toolsetsv1beta1.ToolsetSpec) *Config {
+func New(spec *toolsetsv1beta2.ToolsetSpec) *Config {
 	dashboardProviders := make([]*Provider, 0)
-	if spec.Grafana.DashboardProviders != nil {
-		for _, provider := range spec.Grafana.DashboardProviders {
+	if spec.Monitoring != nil && spec.Monitoring.DashboardProviders != nil {
+		for _, provider := range spec.Monitoring.DashboardProviders {
 			confProvider := &Provider{
 				ConfigMaps: provider.ConfigMaps,
 				Folder:     provider.Folder,
@@ -45,8 +45,8 @@ func New(spec *toolsetsv1beta1.ToolsetSpec) *Config {
 	}
 
 	datasources := make([]*Datasource, 0)
-	if spec.Grafana.Datasources != nil {
-		for _, datasource := range spec.Grafana.Datasources {
+	if spec.Monitoring != nil && spec.Monitoring.Datasources != nil {
+		for _, datasource := range spec.Monitoring.Datasources {
 			confDatasource := &Datasource{
 				Name:      datasource.Name,
 				Type:      datasource.Type,
@@ -59,9 +59,11 @@ func New(spec *toolsetsv1beta1.ToolsetSpec) *Config {
 	}
 
 	conf := &Config{
-		Deploy:             spec.Grafana.Deploy,
 		DashboardProviders: dashboardProviders,
 		Datasources:        datasources,
+	}
+	if spec.Monitoring != nil {
+		conf.Deploy = spec.Monitoring.Deploy
 	}
 
 	providers := getGrafanaDashboards(DashboardsDirectoryPath, spec)
@@ -70,13 +72,13 @@ func New(spec *toolsetsv1beta1.ToolsetSpec) *Config {
 		conf.AddDashboardProvider(provider)
 	}
 
-	if spec.PrometheusOperator.Deploy && spec.Prometheus.Deploy {
+	if spec.MetricCollection != nil && spec.MetricsPersisting != nil && spec.MetricCollection.Deploy && spec.MetricsPersisting.Deploy {
 		serviceName := strings.Join([]string{prometheusinfo.GetInstanceName(), "prometheus"}, "-")
 		datasourceProm := strings.Join([]string{"http://", serviceName, ".", prometheusinfo.GetNamespace(), ":9090"}, "")
 		conf.AddDatasourceURL(serviceName, "prometheus", datasourceProm)
 	}
 
-	if spec.Loki.Deploy {
+	if spec.LogsPersisting != nil && spec.LogsPersisting.Deploy {
 		serviceName := lokiinfo.GetName().String()
 		datasourceLoki := strings.Join([]string{"http://", serviceName, ".", lokiinfo.GetNamespace(), ":3100"}, "")
 		conf.AddDatasourceURL(serviceName, "loki", datasourceLoki)

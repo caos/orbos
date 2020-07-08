@@ -14,23 +14,23 @@ import (
 )
 
 func AdaptFunc(
-	orb *orb.Orb,
+	orbConfig *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiter bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, migrate, err
+			return nil, nil, nil, migrate, err
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
@@ -40,6 +40,7 @@ func AdaptFunc(
 		providerCurrents := make(map[string]*tree.Tree)
 		providerQueriers := make([]orbiter.QueryFunc, 0)
 		providerDestroyers := make([]orbiter.DestroyFunc, 0)
+		providerConfigurers := make([]orbiter.ConfigureFunc, 0)
 
 		whitelistChan := make(chan []*orbiter.CIDR)
 
@@ -53,18 +54,21 @@ func AdaptFunc(
 			//			})
 
 			//			providerID := id + provID
-			query, destroy, migrateLocal, err := providers.GetQueryAndDestroyFuncs(
+			query, destroy, configure, migrateLocal, err := providers.GetQueryAndDestroyFuncs(
 				monitor,
 				provID,
 				providerTree,
 				providerCurrent,
 				whitelistChan,
 				finishedChan,
-				orbiterCommit, orb.URL, orb.Repokey,
+				orbiterCommit,
+				orbConfig.URL,
+				orbConfig.Repokey,
+				oneoff,
 			)
 
 			if err != nil {
-				return nil, nil, migrate, err
+				return nil, nil, nil, migrate, err
 			}
 
 			if migrateLocal {
@@ -73,6 +77,7 @@ func AdaptFunc(
 
 			providerQueriers = append(providerQueriers, query)
 			providerDestroyers = append(providerDestroyers, destroy)
+			providerConfigurers = append(providerConfigurers, configure)
 		}
 
 		var provCurr map[string]interface{}
@@ -97,16 +102,15 @@ func AdaptFunc(
 		clusterCurrents := make(map[string]*tree.Tree)
 		clusterQueriers := make([]orbiter.QueryFunc, 0)
 		clusterDestroyers := make([]orbiter.DestroyFunc, 0)
+		clusterConfigurers := make([]orbiter.ConfigureFunc, 0)
 		for clusterID, clusterTree := range desiredKind.Clusters {
 
 			clusterCurrent := &tree.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
-			query, destroy, migrateLocal, err := clusters.GetQueryAndDestroyFuncs(
+			query, destroy, configure, migrateLocal, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
-				orb,
 				clusterID,
 				clusterTree,
-				orbiterCommit,
 				oneoff,
 				deployOrbiter,
 				clusterCurrent,
@@ -116,10 +120,11 @@ func AdaptFunc(
 			)
 
 			if err != nil {
-				return nil, nil, migrate, err
+				return nil, nil, nil, migrate, err
 			}
 			clusterQueriers = append(clusterQueriers, query)
 			clusterDestroyers = append(clusterDestroyers, destroy)
+			clusterConfigurers = append(clusterConfigurers, configure)
 			if migrateLocal {
 				migrate = true
 			}
@@ -134,7 +139,7 @@ func AdaptFunc(
 			Providers: providerCurrents,
 		}
 
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
+		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 
 				providerEnsurers := make([]orbiter.EnsureFunc, 0)
 				queriedProviders := make(map[string]interface{})
@@ -182,15 +187,26 @@ func AdaptFunc(
 						}
 					}
 
-					return nil
+					return orbiter.ToEnsureResult(true, nil)
 				}, nil
 			}, func() error {
 				defer func() {
-					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
 				for _, destroyer := range clusterDestroyers {
 					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
+						return err
+					}
+				}
+				return nil
+			}, func(orb orb.Orb) error {
+				defer func() {
+					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+				}()
+
+				for _, configure := range append(providerConfigurers, clusterConfigurers...) {
+					if err := configure(orb); err != nil {
 						return err
 					}
 				}

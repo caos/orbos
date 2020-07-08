@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: orbiter-debug
+  namespace: caos-system
+  labels:
+    app.kubernetes.io/instance: "orbiter"
+    app.kubernetes.io/part-of: "orbos"
+    app.kubernetes.io/component: "orbiter"
+    app.kubernetes.io/managed-by: "orbiter.caos.ch"
+spec:
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 9000
+      targetPort: 9000
+    - name: debug
+      protocol: TCP
+      port: 2345
+      targetPort: 2345
+  selector:
+    app: orbiter
+  type: ClusterIP

@@ -3,9 +3,10 @@ package secret
 import (
 	"errors"
 	"fmt"
-	"github.com/caos/orbos/internal/api"
 	"sort"
 	"strings"
+
+	"github.com/caos/orbos/internal/api"
 
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
@@ -65,19 +66,17 @@ func Read(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path 
 	return secret.Value, nil
 }
 
-func Rewrite(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, operator string) error {
-	tree, err := getTree(monitor, gitClient, secretFunc, operator)
-	if err != nil {
-		return err
-	}
-	if tree == nil {
-		return nil
-	}
+func Rewrite(monitor mntr.Monitor, gitClient *git.Client, operator, newMasterKey string, desired *tree.Tree) error {
+	oldMasterKey := Masterkey
+	Masterkey = newMasterKey
+	defer func() {
+		Masterkey = oldMasterKey
+	}()
 
 	if operator == "orbiter" {
-		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+		return api.OrbiterSecretFunc(gitClient, desired)(monitor)
 	} else if operator == "boom" {
-		return api.BoomSecretFunc(gitClient, tree)(monitor)
+		return api.BoomSecretFunc(gitClient, desired)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -130,12 +129,6 @@ func secretsListToSlice(secrets map[string]*Secret) []string {
 	return items
 }
 
-func getTree(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, operator string) (*tree.Tree, error) {
-	_, treeDesired, err := getOperatorSecrets(monitor, operator, gitClient, secretFunc)
-
-	return treeDesired, err
-}
-
 func getOperatorSecrets(monitor mntr.Monitor, operator string, gitClient *git.Client, secretFunc GetFunc) (map[string]*Secret, *tree.Tree, error) {
 	file := strings.Join([]string{operator, yml}, ".")
 
@@ -148,7 +141,7 @@ func getOperatorSecrets(monitor mntr.Monitor, operator string, gitClient *git.Cl
 		treeDesired := trees[0]
 		secretsFunc := secretFunc(operator)
 		if secretsFunc == nil {
-			return nil, nil, errors.New("Operator unknown")
+			return nil, nil, errors.New("operator unknown")
 		}
 		secrets, err := secretsFunc(monitor, treeDesired)
 		if err != nil {

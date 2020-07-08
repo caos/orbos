@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -33,6 +33,10 @@ func GetOIDC(spec *auth.Auth) (string, error) {
 	clientSecret, err := helper2.GetSecretValue(spec.OIDC.ClientSecret, spec.OIDC.ExistingClientSecretSecret)
 	if err != nil {
 		return "", err
+	}
+
+	if clientID == "" || clientSecret == "" {
+		return "", nil
 	}
 
 	var claims map[string]*Claim

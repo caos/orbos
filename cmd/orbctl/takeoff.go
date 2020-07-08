@@ -1,17 +1,17 @@
 package main
 
 import (
+	"io/ioutil"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
+	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
-	"github.com/caos/orbos/internal/utils/orbgit"
-	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -26,7 +26,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 		ingestionAddress string
 		cmd              = &cobra.Command{
 			Use:   "takeoff",
-			Short: "Launch orbos",
+			Short: "Launch an orbiter",
 			Long:  "Ensures a desired state",
 		}
 	)
@@ -42,21 +42,16 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, errFunc := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "takeoff",
+		if err := orbConfig.IsComplete(); err != nil {
+			return err
 		}
 
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
-		defer cleanUp()
-		if err != nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
@@ -126,7 +121,24 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		return err
 	}
 	if foundBoom {
-		if err := cmd.Reconcile(monitor, kubeconfig, version); err != nil {
+		desiredTree, err := api.ReadBoomYml(gitClient)
+		if err != nil {
+			return err
+		}
+
+		desiredKind, _, err := boomapi.ParseToolset(desiredTree)
+		if err != nil {
+			return err
+		}
+
+		boomVersion := version
+		if desiredKind.Spec.BoomVersion != "" {
+			boomVersion = desiredKind.Spec.BoomVersion
+		}
+
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+
+		if err := cmd.Reconcile(monitor, k8sClient, boomVersion); err != nil {
 			return err
 		}
 	} else {
@@ -151,7 +163,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", true, "Ensure the desired state continously")
-	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
+	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -159,31 +171,12 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, errFunc := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "takeoff",
-		}
-
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
-		defer cleanUp()
-		if err != nil {
-			return err
-		}
-
-		if err := gitClient.ReadCheck(); err != nil {
-			monitor.Error(err)
-			return err
-		}
-
-		if err := gitClient.WriteCheck(random.Generate()); err != nil {
-			monitor.Error(err)
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
@@ -198,7 +191,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
+		_, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
 		return err
 	}
 	return cmd
@@ -218,7 +211,7 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, errFunc := rv()
+		_, monitor, orbConfig, _, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}

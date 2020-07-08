@@ -4,6 +4,12 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"syscall"
+
 	"github.com/caos/oidc/pkg/cli"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/rp"
@@ -14,11 +20,6 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strings"
-	"syscall"
 )
 
 var (
@@ -85,9 +86,8 @@ const (
 	githubToken = "ghtoken"
 )
 
-func (g *githubAPI) LoginOAuth(folderPath string) *githubAPI {
+func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string) *githubAPI {
 	filePath := filepath.Join(folderPath, githubToken)
-	ctx := context.Background()
 	port := "9999"
 	callbackPath := "/orbctl/github/callback"
 
@@ -307,7 +307,7 @@ func addRepositories(ctx context.Context, client *github.Client, visibility, aff
 	return addRepos, err
 }
 
-func (g *githubAPI) GetDeployKeys(repo *github.Repository) []*github.Key {
+func (g *githubAPI) getDeployKeys(repo *github.Repository) []*github.Key {
 	if g.GetStatus() != nil {
 		return nil
 	}
@@ -322,7 +322,7 @@ func (g *githubAPI) GetDeployKeys(repo *github.Repository) []*github.Key {
 	return keys
 }
 
-func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string, value string) *githubAPI {
+func (g *githubAPI) CreateDeployKey(repo *github.Repository, value string) *githubAPI {
 	if g.GetStatus() != nil {
 		return g
 	}
@@ -331,7 +331,7 @@ func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string,
 	f := false
 	key := github.Key{
 		Key:      &value,
-		Title:    &description,
+		Title:    strPtr("orbos-system"),
 		ReadOnly: &f,
 	}
 
@@ -340,18 +340,18 @@ func (g *githubAPI) CreateDeployKey(repo *github.Repository, description string,
 	return g
 }
 
-func (g *githubAPI) DeleteDeployKeysByDescription(repo *github.Repository, description string) *githubAPI {
+func (g *githubAPI) EnsureNoDeployKey(repo *github.Repository) *githubAPI {
 	if g.GetStatus() != nil {
 		return g
 	}
 	ctx := context.Background()
-	keys := g.GetDeployKeys(repo)
+	keys := g.getDeployKeys(repo)
 	if g.status != nil {
 		return g
 	}
 
 	for _, key := range keys {
-		if *key.Title == description {
+		if *key.Title == "orbos-system" {
 			if _, g.status = g.client.Repositories.DeleteKey(ctx, *repo.Owner.Login, *repo.Name, *key.ID); g.status != nil {
 				return g
 			}
@@ -359,4 +359,8 @@ func (g *githubAPI) DeleteDeployKeysByDescription(repo *github.Repository, descr
 	}
 
 	return g
+}
+
+func strPtr(str string) *string {
+	return &str
 }

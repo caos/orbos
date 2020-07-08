@@ -23,7 +23,7 @@ func (l *LoggingOperator) GetName() name.Application {
 }
 
 func (lo *LoggingOperator) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
-	return toolsetCRDSpec.LogCollection.Deploy
+	return toolsetCRDSpec.LogCollection != nil && toolsetCRDSpec.LogCollection.Deploy
 }
 
 func (l *LoggingOperator) GetNamespace() string {

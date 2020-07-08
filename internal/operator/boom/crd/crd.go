@@ -71,27 +71,6 @@ func (c *Crd) GetBundle() *bundle.Bundle {
 	return c.bundle
 }
 
-//
-//func (c *Crd) ReconcileWithFunc(currentResourceList []*clientgo.Resource, getToolsetCRD func(instance runtime.Object) error) {
-//	if c.GetStatus() != nil {
-//		return
-//	}
-//
-//	if getToolsetCRD == nil {
-//		c.status = errors.New("ToolsetCRDFunc is nil")
-//		c.monitor.Error(c.status)
-//		return
-//	}
-//
-//	var toolsetCRD *toolsetsv1beta1.Toolset
-//	if err := getToolsetCRD(toolsetCRD); err != nil {
-//		c.status = err
-//		return
-//	}
-//
-//	c.Reconcile(currentResourceList, toolsetCRD)
-//}
-
 func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetsv1beta2.Toolset) {
 	if c.GetStatus() != nil {
 		return

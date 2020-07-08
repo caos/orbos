@@ -2,6 +2,10 @@ package kubernetes
 
 import (
 	"fmt"
+	"sync"
+
+	"github.com/caos/orbos/internal/secret"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
@@ -33,17 +37,21 @@ func ensureScale(
 		"worker_nodes":        wCount,
 	}).Debug("Ensuring scale")
 
-	alignMachines := func(pool initializedPool) (initialized bool, err error) {
+	var machines []*initializedMachine
+	upscalingDone := true
+	var wg sync.WaitGroup
+	alignPool := func(pool initializedPool, ensured func(int)) {
+		defer wg.Done()
 
-		existing, err := pool.machines()
-		if err != nil {
-			return false, err
-		}
+		existing, alignErr := pool.machines()
+		err = helpers.Concat(err, alignErr)
 		delta := pool.desired.Nodes - len(existing)
 		if delta > 0 {
-			machines, err := newMachines(pool.infra, delta)
-			if err != nil {
-				return false, err
+			upscalingDone = false
+			machines, alignErr := newMachines(pool.infra, delta)
+			err = helpers.Concat(err, alignErr)
+			if alignErr != nil {
+				return
 			}
 			for _, machine := range machines {
 				initializeMachine(machine, pool)
@@ -51,12 +59,8 @@ func ensureScale(
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
 				id := machine.infra.ID()
-				if err := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false); err != nil {
-					return false, err
-				}
-				if err := machine.infra.Remove(); err != nil {
-					return false, err
-				}
+				err = helpers.Concat(err, k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false))
+				err = helpers.Concat(err, machine.infra.Remove())
 				uninitializeMachine(id)
 				monitor.WithFields(map[string]interface{}{
 					"machine": id,
@@ -64,36 +68,37 @@ func ensureScale(
 				}).Changed("Machine removed")
 			}
 		}
-		return delta <= 0, nil
+
+		if err != nil {
+			return
+		}
+		poolMachines, listErr := pool.machines()
+		err = helpers.Concat(err, listErr)
+		if listErr != nil {
+			return
+		}
+		machines = append(machines, poolMachines...)
+		if ensured != nil {
+			ensured(len(poolMachines))
+		}
 	}
 
-	upscalingDone, err := alignMachines(controlplanePool)
-	if err != nil {
-		return false, err
-	}
+	var ensuredControlplane int
+	wg.Add(1)
+	go alignPool(controlplanePool, func(ensured int) {
+		ensuredControlplane = ensured
+	})
 
-	machines, err := controlplanePool.machines()
-	if err != nil {
-		return false, err
-	}
-
-	ensuredControlplane := len(machines)
 	var ensuredWorkers int
 	for _, workerPool := range workerPools {
-		workerUpscalingDone, err := alignMachines(workerPool)
-		if err != nil {
-			return false, err
-		}
-		if !workerUpscalingDone {
-			upscalingDone = false
-		}
-
-		workerMachines, err := workerPool.machines()
-		if err != nil {
-			return false, err
-		}
-		ensuredWorkers += len(workerMachines)
-		machines = append(machines, workerMachines...)
+		wg.Add(1)
+		go alignPool(workerPool, func(ensured int) {
+			ensuredWorkers += ensured
+		})
+	}
+	wg.Wait()
+	if err != nil {
+		return false, err
 	}
 
 	if !upscalingDone {
@@ -108,12 +113,17 @@ func ensureScale(
 nodes:
 	for _, machine := range machines {
 
-		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
-
 		machineMonitor := monitor.WithFields(map[string]interface{}{
 			"machine": machine.infra.ID(),
 			"tier":    machine.pool.tier,
 		})
+
+		if machine.currentMachine.Unknown {
+			machineMonitor.Info("Waiting for kubernetes node to leave unknown state before proceeding")
+			return false, nil
+		}
+
+		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
 
 		if isJoinedControlPlane && machine.currentMachine.Online {
 			certsCP = machine.infra
@@ -173,7 +183,7 @@ nodes:
 
 	if joinCP != nil {
 
-		if doKubeadmInit && (desired.Spec.Kubeconfig.Value != "" || !oneoff) {
+		if doKubeadmInit && (desired.Spec.Kubeconfig != nil && desired.Spec.Kubeconfig.Value != "" || !oneoff) {
 			return false, errors.New("initializing a cluster is not supported when kubeconfig exists or the flag --recur is passed")
 		}
 
@@ -205,7 +215,7 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		desired.Spec.Kubeconfig.Value = *joinKubeconfig
+		desired.Spec.Kubeconfig = &secret.Secret{Value: *joinKubeconfig}
 		return false, psf(monitor.WithFields(map[string]interface{}{
 			"type": "kubeconfig",
 		}))

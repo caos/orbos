@@ -12,6 +12,11 @@ import (
 
 func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Software) error {
 
+	if err := p.systemd.Disable("yum-cron"); err != nil {
+		return err
+	}
+	defer p.systemd.Enable("yum-cron")
+
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 

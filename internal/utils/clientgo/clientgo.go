@@ -12,7 +12,7 @@ import (
 
 var InConfig = true
 
-func getClusterConfig() (*rest.Config, error) {
+func GetClusterConfig() (*rest.Config, error) {
 	if InConfig {
 		return getInClusterConfig()
 	} else {

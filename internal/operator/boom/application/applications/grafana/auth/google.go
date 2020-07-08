@@ -1,7 +1,7 @@
 package auth
 
 import (
-	google "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Google"
+	google "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Google"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
 )
@@ -15,6 +15,10 @@ func GetGoogleAuthConfig(spec *google.Auth) (map[string]string, error) {
 	clientSecret, err := helper2.GetSecretValue(spec.ClientSecret, spec.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
+	}
+
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
 	}
 
 	domains := strings.Join(spec.AllowedDomains, " ")
