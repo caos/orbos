@@ -2,11 +2,12 @@ package gitcrd
 
 import (
 	"context"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 
 	orbosapi "github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
@@ -36,7 +37,7 @@ type GitCrd struct {
 	monitor          mntr.Monitor
 }
 
-func New(conf *config.Config) (*GitCrd, error) {
+func New(conf *config.Config) *GitCrd {
 
 	monitor := conf.Monitor.WithFields(map[string]interface{}{
 		"type": "gitcrd",
@@ -45,21 +46,6 @@ func New(conf *config.Config) (*GitCrd, error) {
 	monitor.Info("New GitCRD")
 
 	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email)
-	err := gitClient.Configure(conf.CrdUrl, conf.PrivateKey)
-	if err != nil {
-		monitor.Error(err)
-		return nil, err
-	}
-
-	err = gitClient.Clone()
-	if err != nil {
-		monitor.Error(err)
-		conf.Monitor.Error(err)
-		metrics.FailedGitClone(conf.CrdUrl)
-		return nil, err
-	}
-	metrics.SuccessfulGitClone(conf.CrdUrl)
-
 	gitCrd := &GitCrd{
 		crdDirectoryPath: conf.CrdDirectoryPath,
 		git:              gitClient,
@@ -72,7 +58,24 @@ func New(conf *config.Config) (*GitCrd, error) {
 
 	gitCrd.crd = crd.New(crdConf)
 
-	return gitCrd, nil
+	return gitCrd
+}
+
+func (c *GitCrd) Clone(url string, key []byte) error {
+	err := c.git.Configure(url, key)
+	if err != nil {
+		c.monitor.Error(err)
+		return err
+	}
+
+	err = c.git.Clone()
+	if err != nil {
+		c.monitor.Error(err)
+		metrics.FailedGitClone(url)
+		return err
+	}
+	metrics.SuccessfulGitClone(url)
+	return nil
 }
 
 func (c *GitCrd) GetStatus() error {

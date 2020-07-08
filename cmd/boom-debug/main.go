@@ -5,7 +5,6 @@ import (
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/boom"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -27,17 +26,11 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
-	cfg, err := orb.ParseOrbConfig(helpers.PruneHome(*orbconfig))
-	if err != nil {
-		panic(err)
-	}
-
 	takeoff, _ := boom.Takeoff(
 		monitor,
-		cfg,
 		"./artifacts",
 		true,
-		"local",
+		helpers.PruneHome(*orbconfig),
 	)
 	for {
 		takeoff()
