@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 
@@ -39,7 +40,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Needed in boom-only scenarios")
 	flags.StringVar(&newMasterKey, "masterkey", "", "Reencrypts all secrets")
-	flags.StringVar(&newRepoURL, "repourl", "", "Reconfigures repository URL")
+	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		ctx, monitor, orbConfig, gitClient, errFunc := rv()
@@ -51,18 +52,25 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
 		}
 
+		if orbConfig.URL != "" && orbConfig.URL != newRepoURL {
+			return fmt.Errorf("repository url %s is not reconfigurable", orbConfig.URL)
+		}
+
 		if orbConfig.Masterkey == "" && newMasterKey == "" {
 			return errors.New("master key is neighter passed by flag masterkey nor written in orbconfig")
 		}
 
 		var changes bool
 		if newMasterKey != "" {
-			monitor.Info("Change masterkey in current orbconfig")
+			monitor.Info("Changing masterkey in current orbconfig")
+			if orbConfig.Masterkey == "" {
+				secret.Masterkey = newMasterKey
+			}
 			orbConfig.Masterkey = newMasterKey
 			changes = true
 		}
 		if newRepoURL != "" {
-			monitor.Info("Change repository url in current orbconfig")
+			monitor.Info("Changing repository url in current orbconfig")
 			orbConfig.URL = newRepoURL
 			changes = true
 		}
@@ -75,7 +83,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		// This ensures git providers other than github keep being supported
 		if err := configureGit(); err != nil {
 
-			monitor.Info("Start connection with git-repository")
+			monitor.Info("Starting connection with git-repository")
 
 			dir := filepath.Dir(orbConfig.Path)
 
@@ -108,7 +116,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		if changes {
-			monitor.Info("Writeback current orbconfig to local orbconfig")
+			monitor.Info("Writing local orbconfig")
 			if err := orbConfig.WriteBackOrbConfig(); err != nil {
 				monitor.Info("Failed to change local configuration")
 				return err
@@ -201,9 +209,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		for _, kubeconfig := range allKubeconfigs {
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
-				monitor.Info("Ensure current orbconfig in kubernetes cluster")
+				monitor.Info("Ensuring orbconfig in kubernetes cluster")
 				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-					monitor.Info("Failed to apply configuration resources into k8s-cluster")
+					monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
 					return err
 				}
 

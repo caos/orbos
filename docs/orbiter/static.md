@@ -54,7 +54,7 @@ As soon as the Orbiter has deployed itself to the cluster, you can decrypt the g
 
 ```bash
 mkdir -p ~/.kube
-orbctl readsecret k8s.kubeconfig > ~/.kube/config
+orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config
 ```
 
 Wait for grafana to become running
