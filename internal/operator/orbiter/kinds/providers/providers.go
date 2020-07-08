@@ -46,7 +46,7 @@ func GetQueryAndDestroyFuncs(
 	case "orbiter.caos.ch/GCEProvider":
 		return gce.AdaptFunc(
 			provID,
-			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"),
+			orbID(repoURL),
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
@@ -111,15 +111,20 @@ func ListMachines(
 		return gce.ListMachines(
 			monitor,
 			providerTree,
+			orbID(repoURL),
 			provID,
-			alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"),
 		)
 	case "orbiter.caos.ch/StaticProvider":
 		return static.ListMachines(
 			monitor,
 			providerTree,
+			provID,
 		)
 	default:
 		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
+}
+
+func orbID(repoURL string) string {
+	return alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-")
 }

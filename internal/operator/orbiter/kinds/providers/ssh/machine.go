@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/ssh"
@@ -90,6 +91,9 @@ func (c *Machine) Shell(env map[string]string) (err error) {
 	if err != nil {
 		return err
 	}
+	sess.Stdin = os.Stdin
+	sess.Stderr = os.Stderr
+	sess.Stdout = os.Stdout
 	modes := sshlib.TerminalModes{
 		sshlib.ECHO:          0,     // disable echoing
 		sshlib.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
@@ -103,7 +107,7 @@ func (c *Machine) Shell(env map[string]string) (err error) {
 	if err := sess.Shell(); err != nil {
 		return errors.Wrap(err, "failed to start shell")
 	}
-	return nil
+	return sess.Wait()
 }
 
 func WriteFileCommands(user, path string, permissions uint16) (string, string) {

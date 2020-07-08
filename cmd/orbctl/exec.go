@@ -2,19 +2,18 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/utils/orbgit"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
-func Exec(rv RootValues) *cobra.Command {
+func ExecCommand(rv RootValues) *cobra.Command {
 	var (
-		interactive bool
-		command     string
-		machineID   string
-		cmd         = &cobra.Command{
+		command   string
+		machineID string
+		cmd       = &cobra.Command{
 			Use:   "exec",
 			Short: "Exec shell command on machine",
 			Long:  "Exec shell command on machine",
@@ -22,31 +21,20 @@ func Exec(rv RootValues) *cobra.Command {
 	)
 
 	flags := cmd.Flags()
-	flags.BoolVar(&interactive, "interactive", false, "Use the created connection interactive")
 	flags.StringVar(&machineID, "machine", "", "ID of the machine to connect to")
 	flags.StringVar(&command, "command", "", "Command to be executed")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, errFunc := rv()
+		_, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		ctx, monitor, orbConfig, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
+		if err := orbConfig.IsConnectable(); err != nil {
+			return err
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "exec",
-		}
-
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf, true)
-		defer cleanUp()
-		if err != nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
@@ -94,7 +82,7 @@ func Exec(rv RootValues) *cobra.Command {
 				if err != nil {
 					return err
 				}
-				monitor.Info(string(output))
+				fmt.Print(string(output))
 			} else {
 				if err := machine.Shell(nil); err != nil {
 					return err

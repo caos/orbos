@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sort"
 	"strings"
-	"sync"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -114,11 +115,10 @@ func (c *instance) Shell(env map[string]string) error {
 			"--tunnel-through-iap",
 			"--project", c.context.projectID,
 		)
-		cmd.Stderr = errBuf
-		if runErr := cmd.Run(); runErr != nil {
-			return errors.New(errBuf.String())
-		}
-		return nil
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		return cmd.Run()
 	}); err != nil {
 		return err
 	}
@@ -203,12 +203,5 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 		return nil, err
 	}
 
-	machines := make(map[string]infra.Machine, 0)
-	var mux sync.Mutex
-	return machines, core.Each(ctx.machinesService, func(pool string, machine infra.Machine) error {
-		mux.Lock()
-		defer mux.Unlock()
-		machines[pool+machine.ID()] = machine
-		return nil
-	})
+	return core.ListMachines(ctx.machinesService)
 }

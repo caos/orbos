@@ -1,9 +1,12 @@
 package static
 
 import (
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
-	"strings"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
@@ -50,7 +53,7 @@ func (c *machine) Remove() error {
 	return nil
 }
 
-func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree) (map[string]infra.Machine, error) {
+func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID string) (map[string]infra.Machine, error) {
 	desired, err := parseDesiredV0(desiredTree)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing desired state failed")
@@ -59,27 +62,11 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree) (map[string]infr
 
 	machinesSvc := NewMachinesService(monitor,
 		desired,
-		[]byte(desired.Spec.Keys.BootstrapKeyPrivate.Value),
-		[]byte(desired.Spec.Keys.MaintenanceKeyPrivate.Value),
-		[]byte(desired.Spec.Keys.MaintenanceKeyPublic.Value),
-		"list",
-		func(machine infra.Machine, pool string) error { return nil })
+		providerID)
 
-	pools, err := machinesSvc.ListPools()
-	if err != nil {
+	if err := machinesSvc.updateKeys(); err != nil {
 		return nil, err
 	}
 
-	retMachines := make(map[string]infra.Machine, 0)
-	for _, pool := range pools {
-		machines, err := machinesSvc.List(pool)
-		if err != nil {
-			return nil, err
-		}
-		for _, machine := range machines {
-			id := pool + machine.ID()
-			retMachines[id] = machine
-		}
-	}
-	return retMachines, nil
+	return core.ListMachines(machinesSvc)
 }
