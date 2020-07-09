@@ -83,7 +83,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryD, destroyD, err := deployment.AdaptFunc(namespaceStr, labels, desiredKind.Spec.ReplicaCount, desiredKind.Spec.Version, imagePullSecretName, cmName, certPath, secretName, secretPath, consoleCMName, secretVarsName)
+		queryD, destroyD, err := deployment.AdaptFunc(namespaceStr, labels, desiredKind.Spec.ReplicaCount, desiredKind.Spec.Version, imagePullSecretName, cmName, certPath, secretName, secretPath, consoleCMName, secretVarsName, desiredKind.Spec.NodeSelector)
 		if err != nil {
 			return nil, nil, err
 		}

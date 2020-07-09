@@ -21,6 +21,7 @@ func AdaptFunc(
 	secretPath string,
 	consoleCMName string,
 	secretVarsName string,
+	nodeSelector map[string]string,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
@@ -108,8 +109,8 @@ func AdaptFunc(
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: internalLabels,
 				},
-
 				Spec: v1.PodSpec{
+					NodeSelector: nodeSelector,
 					SecurityContext: &v1.PodSecurityContext{
 						RunAsUser:    &runAsUser,
 						RunAsNonRoot: &runAsNonRoot,

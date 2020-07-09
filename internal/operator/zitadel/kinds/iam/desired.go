@@ -18,6 +18,7 @@ type Spec struct {
 	ReplicaCount  int                          `yaml:"replicaCount,omitempty"`
 	Version       string                       `yaml:"version"`
 	Configuration *configuration.Configuration `yaml:"configuration"`
+	NodeSelector  map[string]string            `yaml:"nodeSelector,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

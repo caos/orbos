@@ -22,6 +22,8 @@ func AdaptFunc(
 	storageCapacity string,
 	dbPort int32,
 	httpPort int32,
+	storageClass string,
+	nodeSelector map[string]string,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
@@ -69,6 +71,7 @@ func AdaptFunc(
 					Labels: internalLabels,
 				},
 				Spec: corev1.PodSpec{
+					NodeSelector:       nodeSelector,
 					ServiceAccountName: serviceAccountName,
 					Affinity: &corev1.Affinity{
 						PodAffinity: &corev1.PodAffinity{
@@ -172,6 +175,7 @@ func AdaptFunc(
 							"storage": quantity,
 						},
 					},
+					StorageClassName: &storageClass,
 				},
 			}},
 		},

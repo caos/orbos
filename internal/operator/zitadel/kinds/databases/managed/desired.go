@@ -12,9 +12,11 @@ type DesiredV0 struct {
 
 type Spec struct {
 	Verbose         bool
-	ReplicaCount    int      `yaml:"replicaCount,omitempty"`
-	StorageCapacity string   `yaml:"storageCapacity,omitempty"`
-	Users           []string `yaml:"users,omitempty"`
+	ReplicaCount    int               `yaml:"replicaCount,omitempty"`
+	StorageCapacity string            `yaml:"storageCapacity,omitempty"`
+	StorageClass    string            `yaml:"storageClass,omitempty"`
+	NodeSelector    map[string]string `yaml:"nodeSelector,omitempty"`
+	Users           []string          `yaml:"users,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

@@ -111,7 +111,10 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		querySFS, destroySFS, err := statefulset.AdaptFunc(namespaceStr, sfsName, image, labels, serviceAccountName, &replicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort)
+		querySFS, destroySFS, err := statefulset.AdaptFunc(namespaceStr, sfsName, image, labels, serviceAccountName, &replicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		queryPDB, destroyPDB, err := pdb.AdaptFunc(namespaceStr, sfsName+"-budget", labels, "1")
 		if err != nil {
