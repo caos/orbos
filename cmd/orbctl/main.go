@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/stores/github"
 	"math/rand"
 	"os"
+
+	"github.com/caos/orbos/internal/stores/github"
 )
 
 var (
@@ -34,6 +35,7 @@ func main() {
 	takeoff.AddCommand(
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
+		StartZitadel(rootValues),
 	)
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),

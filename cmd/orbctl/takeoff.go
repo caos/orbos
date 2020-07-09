@@ -220,3 +220,23 @@ func StartBoom(rv RootValues) *cobra.Command {
 	}
 	return cmd
 }
+
+func StartZitadel(rv RootValues) *cobra.Command {
+	var (
+		cmd = &cobra.Command{
+			Use:   "zitadel",
+			Short: "Launch a zitadel operator",
+			Long:  "Ensures a desired state",
+		}
+	)
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		_, monitor, orbConfig, _, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
+		}
+
+		return start.Zitadel(monitor, orbConfig.Path)
+	}
+	return cmd
+}
