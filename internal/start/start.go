@@ -277,9 +277,7 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath, kubeconfigpath string, feature
 				"took": time.Since(started),
 			}).Info("Iteration done")
 			debug.FreeOSMemory()
-		}()
 
-		go func() {
 			takeoffChan <- struct{}{}
 		}()
 	}

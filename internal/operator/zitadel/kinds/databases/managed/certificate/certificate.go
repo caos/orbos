@@ -84,7 +84,6 @@ func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string, clusterDns 
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		DNSNames: []string{
-			//TODO clustername
 			"localhost",
 			"cockroachdb-public",
 			"cockroachdb-public.default",
