@@ -47,7 +47,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		imagePullSecretName := "public-github-packages"
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Database, databaseCurrent)
+		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -90,7 +90,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		}
 
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Networking, networkingCurrent)
+		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Networking, networkingCurrent)
 		if err != nil {
 			return nil, nil, err
 		}
