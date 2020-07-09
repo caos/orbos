@@ -10,6 +10,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/imagepullsecret"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/services"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -82,17 +83,17 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		}
 
 		networkingCurrent := &tree.Tree{}
-		/*		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Networking, networkingCurrent)
-				if err != nil {
-					return nil, nil, err
-				}
-		*/
+		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Networking, networkingCurrent)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		queriers := make([]zitadel.QueryFunc, 0)
 		for _, feature := range features {
 			switch feature {
 			case "networking":
-			//networking
-			//				queriers = append(queryNW)
+				//networking
+				queriers = append(queriers, queryNW)
 			case "zitadel":
 				queriers = append(queriers, //namespace
 					zitadel.ResourceQueryToZitadelQuery(queryNS),
@@ -114,7 +115,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		for _, feature := range features {
 			switch feature {
 			case "networking":
-			//				destroyers = append(destroyNW)
+				destroyers = append(destroyers, destroyNW)
 			case "zitadel":
 				destroyers = append(destroyers, //namespace
 					destroyS,
@@ -124,7 +125,6 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					zitadel.ResourceDestroyToZitadelDestroy(destroyD),
 					destroyDB,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
-					//			destroyNW,
 				)
 			}
 		}
