@@ -6,7 +6,11 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"strings"
 	"sync"
 	"time"
@@ -24,6 +28,10 @@ import (
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
 
+	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apixv1beta1client "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	clgocore "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -46,8 +54,11 @@ func (n *NotAvailableError) Error() string {
 }
 
 type Client struct {
-	monitor mntr.Monitor
-	set     *kubernetes.Clientset
+	monitor           mntr.Monitor
+	set               *kubernetes.Clientset
+	dynamic           dynamic.Interface
+	apixv1beta1client *apixv1beta1client.ApiextensionsV1beta1Client
+	mapper            *restmapper.DeferredDiscoveryRESTMapper
 }
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
@@ -374,6 +385,22 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 	}
 
 	c.set, err = kubernetes.NewForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+
+	c.apixv1beta1client, err = apixv1beta1client.NewForConfig(restCfg)
+
+	c.dynamic, err = dynamic.NewForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+
+	dc, err := discovery.NewDiscoveryClientForConfig(restCfg)
+	if err != nil {
+		return err
+	}
+	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
 	return err
 }
 
@@ -683,6 +710,10 @@ func waitForPodsPhase(watch watch.Interface, replicaCount int, phase core.PodPha
 	statusChan := make(chan podStatus)
 	pods := make(map[string]core.PodPhase, 0)
 
+	if watch == nil {
+		return errors.New("no pods watched")
+	}
+
 	go func() {
 		for event := range watch.ResultChan() {
 			p, ok := event.Object.(*core.Pod)
@@ -745,4 +776,31 @@ func checkReady(containers []containerStatus) bool {
 		}
 	}
 	return ready
+}
+
+func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error) {
+	crds := c.apixv1beta1client.CustomResourceDefinitions()
+
+	return crds.Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return err
+	}
+	fmt.Println(mapping)
+
+	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
+
+	return c.apply("crd", name, func() error {
+		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
+		return err
+	}, func() error {
+		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+		return err
+	})
 }

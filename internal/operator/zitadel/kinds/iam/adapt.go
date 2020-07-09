@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/configuration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/imagepullsecret"
@@ -14,6 +15,7 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 func AdaptFunc(features ...string) zitadel.AdaptFunc {
@@ -45,6 +47,15 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		consoleCMName := "console-config"
 		secretVarsName := "zitadel-secrets-vars"
 		imagePullSecretName := "public-github-packages"
+		grpcServiceName := "grpc-v1"
+		grpcPort := 80
+		httpServiceName := "http-v1"
+		httpPort := 80
+		uiServiceName := "ui-v1"
+		uiPort := 80
+		httpURL := "http://" + httpServiceName + "." + namespaceStr + ":" + strconv.Itoa(httpPort)
+		grpcURL := grpcServiceName + "." + namespaceStr + ":" + strconv.Itoa(grpcPort)
+		uiURL := "http://" + uiServiceName + "." + namespaceStr
 
 		databaseCurrent := &tree.Tree{}
 		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent)
@@ -62,14 +73,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		grpcServiceName := "grpc-v1"
-		grpcPost := 80
-		httpServiceName := "http-v1"
-		httpPort := 80
-		uiServiceName := "ui-v1"
-		uiPort := 80
-
-		queryS, destroyS, err := services.AdaptFunc(namespaceStr, labels, grpcServiceName, grpcPost, httpServiceName, httpPort, uiServiceName, uiPort)
+		queryS, destroyS, err := services.AdaptFunc(namespaceStr, labels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -95,6 +99,11 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
+		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(namespaceStr, labels, grpcURL, httpURL, uiURL)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		queriers := make([]zitadel.QueryFunc, 0)
 		for _, feature := range features {
 			switch feature {
@@ -114,6 +123,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					queryC,
 					zitadel.ResourceQueryToZitadelQuery(queryIPS),
 					zitadel.ResourceQueryToZitadelQuery(queryD),
+					queryAmbassador,
 				)
 			}
 		}
@@ -125,6 +135,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 				destroyers = append(destroyers, destroyNW)
 			case "zitadel":
 				destroyers = append(destroyers, //namespace
+					destroyAmbassador,
 					destroyS,
 					destroyM,
 					destroyC,

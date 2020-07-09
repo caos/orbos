@@ -1,6 +1,7 @@
 package iam
 
 import (
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
@@ -25,9 +26,15 @@ func SecretsFunc() secret.Func {
 			return nil, err
 		}
 
+		databaseSecrets, err := databases.GetSecrets(monitor, desiredKind.Database)
+		if err != nil {
+			return nil, err
+		}
+
 		allSecrets := make(map[string]*secret.Secret)
 		appendSecrets(allSecrets, getSecretsMap(desiredKind))
 		appendSecrets(allSecrets, networkingSecrets)
+		appendSecrets(allSecrets, databaseSecrets)
 		return allSecrets, nil
 	}
 }

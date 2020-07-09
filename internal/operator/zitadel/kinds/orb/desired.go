@@ -10,8 +10,7 @@ type DesiredV0 struct {
 	Spec   struct {
 		Verbose bool
 	}
-	Database *tree.Tree
-	IAM      *tree.Tree
+	IAM *tree.Tree
 }
 
 func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
