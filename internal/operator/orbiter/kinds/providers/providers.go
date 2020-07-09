@@ -95,31 +95,3 @@ func GetSecrets(
 		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
 }
-
-func RewriteMasterkey(
-	monitor mntr.Monitor,
-	newMasterkey string,
-	providerTree *tree.Tree,
-) (
-	map[string]*secret.Secret,
-	error,
-) {
-	switch providerTree.Common.Kind {
-	case "orbiter.caos.ch/GCEProvider":
-		return gce.RewriteFunc(
-			newMasterkey,
-		)(
-			monitor,
-			providerTree,
-		)
-	case "orbiter.caos.ch/StaticProvider":
-		return static.RewriteFunc(
-			newMasterkey,
-		)(
-			monitor,
-			providerTree,
-		)
-	default:
-		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
-	}
-}

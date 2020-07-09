@@ -86,9 +86,8 @@ const (
 	githubToken = "ghtoken"
 )
 
-func (g *githubAPI) LoginOAuth(folderPath string) *githubAPI {
+func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string) *githubAPI {
 	filePath := filepath.Join(folderPath, githubToken)
-	ctx := context.Background()
 	port := "9999"
 	callbackPath := "/orbctl/github/callback"
 

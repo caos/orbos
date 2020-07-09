@@ -29,6 +29,10 @@ func EditCommand(rv RootValues) *cobra.Command {
 				return errFunc(cmd)
 			}
 
+			if err := orbConfig.IsConnectable(); err != nil {
+				return err
+			}
+
 			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 				return err
 			}

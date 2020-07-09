@@ -203,21 +203,15 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 	}()
 
 	for range takeoffChan {
-		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
-		if err != nil {
-			monitor.Error(err)
-			return err
-		}
 
 		boomChan := make(chan struct{})
 		currentChan := make(chan struct{})
 
 		takeoff, takeoffCurrent := boom.Takeoff(
 			monitor,
-			orbConfig,
 			"/boom",
 			localmode,
-			version,
+			orbConfigPath,
 		)
 		go func() {
 			started := time.Now()

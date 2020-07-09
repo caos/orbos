@@ -8,7 +8,7 @@ import (
 )
 
 func GetSecret(name, namespace string) (*v1.Secret, error) {
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}

@@ -187,6 +187,8 @@ func ensureSoftware(
 					"current": KubernetesSoftware(machine.currentNodeagent.Software),
 					"desired": to,
 				}).Changed("Target software desired")
+			} else {
+				machinemonitor.Info("Awaiting kubernetes software")
 			}
 			return nil
 		}

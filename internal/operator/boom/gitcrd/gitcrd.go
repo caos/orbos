@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+
 	orbosapi "github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
@@ -22,7 +24,6 @@ import (
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
-	"github.com/caos/orbos/internal/utils/random"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
@@ -36,7 +37,7 @@ type GitCrd struct {
 	monitor          mntr.Monitor
 }
 
-func New(conf *config.Config) (*GitCrd, error) {
+func New(conf *config.Config) *GitCrd {
 
 	monitor := conf.Monitor.WithFields(map[string]interface{}{
 		"type": "gitcrd",
@@ -45,31 +46,6 @@ func New(conf *config.Config) (*GitCrd, error) {
 	monitor.Info("New GitCRD")
 
 	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email)
-	err := gitClient.Configure(conf.CrdUrl, conf.PrivateKey)
-	if err != nil {
-		monitor.Error(err)
-		return nil, err
-	}
-
-	if err := gitClient.ReadCheck(); err != nil {
-		conf.Monitor.Error(err)
-		return nil, err
-	}
-
-	if err := gitClient.WriteCheck(random.Generate()); err != nil {
-		conf.Monitor.Error(err)
-		return nil, err
-	}
-
-	err = gitClient.Clone()
-	if err != nil {
-		monitor.Error(err)
-		conf.Monitor.Error(err)
-		metrics.FailedGitClone(conf.CrdUrl)
-		return nil, err
-	}
-	metrics.SuccessfulGitClone(conf.CrdUrl)
-
 	gitCrd := &GitCrd{
 		crdDirectoryPath: conf.CrdDirectoryPath,
 		git:              gitClient,
@@ -82,7 +58,24 @@ func New(conf *config.Config) (*GitCrd, error) {
 
 	gitCrd.crd = crd.New(crdConf)
 
-	return gitCrd, nil
+	return gitCrd
+}
+
+func (c *GitCrd) Clone(url string, key []byte) error {
+	err := c.git.Configure(url, key)
+	if err != nil {
+		c.monitor.Error(err)
+		return err
+	}
+
+	err = c.git.Clone()
+	if err != nil {
+		c.monitor.Error(err)
+		metrics.FailedGitClone(url)
+		return err
+	}
+	metrics.SuccessfulGitClone(url)
+	return nil
 }
 
 func (c *GitCrd) GetStatus() error {
@@ -150,8 +143,20 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 	}
 
 	if toolsetCRD.Spec.BoomVersion != "" {
+		conf, err := clientgo.GetClusterConfig()
+		if err != nil {
+			c.status = err
+			return
+		}
+
 		dummyKubeconfig := ""
-		if err := cmd.Reconcile(monitor, &dummyKubeconfig, toolsetCRD.Spec.BoomVersion); err != nil {
+		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
+		if err := k8sClient.RefreshConfig(conf); err != nil {
+			c.status = err
+			return
+		}
+
+		if err := cmd.Reconcile(monitor, k8sClient, toolsetCRD.Spec.BoomVersion); err != nil {
 			c.status = err
 			return
 		}

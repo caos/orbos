@@ -2,8 +2,13 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
+
+	boomapi "github.com/caos/orbos/internal/operator/boom/api"
+
+	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 
@@ -14,45 +19,59 @@ import (
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/start"
 	"github.com/spf13/cobra"
 )
 
 func ConfigCommand(rv RootValues) *cobra.Command {
 
 	var (
-		kubeconfig string
-		masterkey  string
-		repoURL    string
-		cmd        = &cobra.Command{
-			Use:   "config",
-			Short: "Changes local and in-cluster of config",
-			Long:  "Changes local and in-cluster of config",
+		kubeconfig   string
+		newMasterKey string
+		newRepoURL   string
+		cmd          = &cobra.Command{
+			Use:     "configure",
+			Short:   "Configures and reconfigures an orb",
+			Long:    "Configures and reconfigures an orb",
+			Aliases: []string{"reconfigure", "config", "reconfig"},
 		}
 	)
 
 	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig for in-cluster changes")
-	flags.StringVar(&masterkey, "masterkey", "", "Masterkey to replace old masterkey in orbconfig")
-	flags.StringVar(&repoURL, "repoURL", "", "Repository-URL to replace the old repository-URL in the orbconfig")
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "Needed in boom-only scenarios")
+	flags.StringVar(&newMasterKey, "masterkey", "", "Reencrypts all secrets")
+	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
+		if orbConfig.URL == "" && newRepoURL == "" {
+			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
+		}
+
+		if orbConfig.URL != "" && orbConfig.URL != newRepoURL {
+			return fmt.Errorf("repository url %s is not reconfigurable", orbConfig.URL)
+		}
+
+		if orbConfig.Masterkey == "" && newMasterKey == "" {
+			return errors.New("master key is neighter passed by flag masterkey nor written in orbconfig")
+		}
+
 		var changes bool
-		if masterkey != "" {
-			monitor.Info("Change masterkey in current orbconfig")
-			orbConfig.Masterkey = masterkey
+		if newMasterKey != "" {
+			monitor.Info("Changing masterkey in current orbconfig")
+			if orbConfig.Masterkey == "" {
+				secret.Masterkey = newMasterKey
+			}
+			orbConfig.Masterkey = newMasterKey
 			changes = true
 		}
-		if repoURL != "" {
-			monitor.Info("Change repository url in current orbconfig")
-			orbConfig.URL = repoURL
+		if newRepoURL != "" {
+			monitor.Info("Changing repository url in current orbconfig")
+			orbConfig.URL = newRepoURL
 			changes = true
 		}
 
@@ -64,7 +83,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		// This ensures git providers other than github keep being supported
 		if err := configureGit(); err != nil {
 
-			monitor.Info("Start connection with git-repository")
+			monitor.Info("Starting connection with git-repository")
 
 			dir := filepath.Dir(orbConfig.Path)
 
@@ -72,7 +91,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err != nil {
 				panic(errors.New("failed to generate ssh key for deploy key"))
 			}
-			g := github.New(monitor).LoginOAuth(dir)
+			g := github.New(monitor).LoginOAuth(ctx, dir)
 			if g.GetStatus() != nil {
 				return errors.New("failed github oauth login ")
 			}
@@ -96,15 +115,12 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			changes = true
 		}
 
-		if !changes {
-			monitor.Info("No changes")
-			return nil
-		}
-
-		monitor.Info("Writeback current orbconfig to local orbconfig")
-		if err := orbConfig.WriteBackOrbConfig(); err != nil {
-			monitor.Info("Failed to change local configuration")
-			return err
+		if changes {
+			monitor.Info("Writing local orbconfig")
+			if err := orbConfig.WriteBackOrbConfig(); err != nil {
+				monitor.Info("Failed to change local configuration")
+				return err
+			}
 		}
 
 		allKubeconfigs := make([]string, 0)
@@ -113,9 +129,14 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		rewriteKey := orbConfig.Masterkey
+		if newMasterKey != "" {
+			rewriteKey = newMasterKey
+		}
+
 		if foundOrbiter {
 
-			_, _, configure, _, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, configure, _, desired, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
 				orbConfig,
 				gitCommit,
 				true,
@@ -128,23 +149,23 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
+			monitor.Info("Repopulating orbiter secrets")
+			if err := secret.Rewrite(
+				monitor,
+				gitClient,
+				"orbiter",
+				rewriteKey,
+				desired,
+			); err != nil {
+				panic(err)
+			}
+
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
 			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
-			if err != nil {
-				return err
+			if err == nil {
+				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}
-			allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 
-			if masterkey != "" {
-				monitor.Info("Read and rewrite orbiter.yml with new masterkey")
-				if err := secret.Rewrite(
-					monitor,
-					gitClient,
-					secretfuncs.GetRewrite(masterkey),
-					"orbiter"); err != nil {
-					panic(err)
-				}
-			}
 		} else {
 			monitor.Info("No orbiter.yml existent, reading kubeconfig from path provided as parameter")
 			if kubeconfig == "" {
@@ -157,29 +178,40 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			allKubeconfigs = append(allKubeconfigs, string(value))
 		}
 
-		if masterkey != "" {
-			foundBoom, err := api.ExistsBoomYml(gitClient)
+		foundBoom, err := api.ExistsBoomYml(gitClient)
+		if err != nil {
+			return err
+		}
+		if foundBoom {
+			monitor.Info("Repopulating boom secrets")
+
+			tree, err := api.ReadBoomYml(gitClient)
 			if err != nil {
 				return err
 			}
-			if foundBoom {
-				monitor.Info("Read and rewrite boom.yml with new masterkey")
-				if err := secret.Rewrite(
-					monitor,
-					gitClient,
-					secretfuncs.GetRewrite(masterkey),
-					"boom"); err != nil {
-					return err
-				}
+
+			toolset, _, err := boomapi.ParseToolset(tree)
+			if err != nil {
+				return err
+			}
+
+			tree.Parsed = toolset
+			if err := secret.Rewrite(
+				monitor,
+				gitClient,
+				"boom",
+				rewriteKey,
+				tree); err != nil {
+				return err
 			}
 		}
 
 		for _, kubeconfig := range allKubeconfigs {
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
-				monitor.Info("Ensure current orbconfig in kubernetes cluster")
+				monitor.Info("Ensuring orbconfig in kubernetes cluster")
 				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-					monitor.Info("Failed to apply configuration resources into k8s-cluster")
+					monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
 					return err
 				}
 

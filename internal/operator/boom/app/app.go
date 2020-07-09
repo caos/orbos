@@ -18,7 +18,7 @@ import (
 
 type App struct {
 	ToolsDirectoryPath string
-	GitCrds            []*gitcrd.GitCrd
+	GitCrd             *gitcrd.GitCrd
 	Crds               map[string]crd.Crd
 	monitor            mntr.Monitor
 }
@@ -31,7 +31,6 @@ func New(monitor mntr.Monitor, toolsDirectoryPath string) *App {
 	}
 
 	app.Crds = make(map[string]crd.Crd, 0)
-	app.GitCrds = make([]*gitcrd.GitCrd, 0)
 
 	return app
 }
@@ -40,12 +39,10 @@ func (a *App) CleanUp() error {
 
 	a.monitor.Info("Cleanup")
 
-	for _, g := range a.GitCrds {
-		g.CleanUp()
+	a.GitCrd.CleanUp()
 
-		if err := g.GetStatus(); err != nil {
-			return err
-		}
+	if err := a.GitCrd.GetStatus(); err != nil {
+		return err
 	}
 
 	for _, c := range a.Crds {
@@ -58,14 +55,14 @@ func (a *App) CleanUp() error {
 	return nil
 }
 
-func (a *App) AddGitCrd(gitCrdConf *gitcrdconfig.Config) error {
-	c, err := gitcrd.New(gitCrdConf)
-	if err != nil {
+func (a *App) ReadSpecs(gitCrdConf *gitcrdconfig.Config, repoURL string, repoKey []byte) error {
+	c := gitcrd.New(gitCrdConf)
+	if err := c.Clone(repoURL, repoKey); err != nil {
 		return err
 	}
 
 	bundleConf := &bundleconfig.Config{
-		Orb:               strings.TrimSuffix(strings.TrimPrefix(gitCrdConf.CrdUrl, "git@"), ".git"),
+		Orb:               strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"),
 		BundleName:        bundles.Caos,
 		BaseDirectoryPath: a.ToolsDirectoryPath,
 		Templator:         helm.GetName(),
@@ -76,7 +73,7 @@ func (a *App) AddGitCrd(gitCrdConf *gitcrdconfig.Config) error {
 		return err
 	}
 
-	a.GitCrds = append(a.GitCrds, c)
+	a.GitCrd = c
 	return nil
 }
 
@@ -101,18 +98,16 @@ func (a *App) Reconcile() error {
 	})
 	monitor.Info("Started reconciling of GitCRDs")
 
-	for _, crdGit := range a.GitCrds {
-		crdGit.SetBackStatus()
+	a.GitCrd.SetBackStatus()
 
-		currentResourceList, err := a.getCurrent(monitor)
-		if err != nil {
-			return err
-		}
+	currentResourceList, err := a.getCurrent(monitor)
+	if err != nil {
+		return err
+	}
 
-		crdGit.Reconcile(currentResourceList)
-		if err := crdGit.GetStatus(); err != nil {
-			return err
-		}
+	a.GitCrd.Reconcile(currentResourceList)
+	if err := a.GitCrd.GetStatus(); err != nil {
+		return err
 	}
 	return nil
 }
@@ -124,21 +119,19 @@ func (a *App) WriteBackCurrentState() error {
 	})
 	monitor.Info("Started writeback of currentstate of GitCRDs")
 
-	for _, crdGit := range a.GitCrds {
-		crdGit.SetBackStatus()
+	a.GitCrd.SetBackStatus()
 
-		currentResourceList, err := a.getCurrent(monitor)
-		if err != nil {
-			return err
-		}
-
-		crdGit.WriteBackCurrentState(currentResourceList)
-		if err := crdGit.GetStatus(); err != nil {
-			metrics.FailedWritingCurrentState(crdGit.GetRepoURL())
-			return err
-		}
-		metrics.SuccessfulWriteCurrentState(crdGit.GetRepoURL())
+	currentResourceList, err := a.getCurrent(monitor)
+	if err != nil {
+		return err
 	}
+
+	a.GitCrd.WriteBackCurrentState(currentResourceList)
+	if err := a.GitCrd.GetStatus(); err != nil {
+		metrics.FailedWritingCurrentState(a.GitCrd.GetRepoURL())
+		return err
+	}
+	metrics.SuccessfulWriteCurrentState(a.GitCrd.GetRepoURL())
 	return nil
 }
 

@@ -1,11 +1,12 @@
 package helmcommand
 
 import (
-	helper2 "github.com/caos/orbos/internal/utils/helper"
+	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 var (
@@ -14,7 +15,7 @@ var (
 )
 
 func Init(basePath string) error {
-	return doHelmCommand(basePath, "init --client-only >& /dev/null")
+	return doHelmCommand(basePath, "init --client-only")
 }
 
 func addIfNotEmpty(one, two string) string {
@@ -33,9 +34,14 @@ func doHelmCommand(basePath, command string) error {
 
 	helm := strings.Join([]string{"helm", "--home", helmHomeFolderPathAbs, command}, " ")
 
+	stderr := new(bytes.Buffer)
+	defer stderr.Reset()
 	cmd := exec.Command("/bin/sh", "-c", helm)
-
-	return errors.Wrapf(cmd.Run(), "Error while executing helm command \"%s\"", helm)
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error while executing helm command \"%s\": %s: %w", helm, stderr.String(), err)
+	}
+	return nil
 }
 
 func doHelmCommandOutput(basePath, command string) ([]byte, error) {

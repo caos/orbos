@@ -377,9 +377,7 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 	return err
 }
 
-func (c *Client) RefreshLocal() (err error) {
-	config, err := rest.InClusterConfig()
-
+func (c *Client) RefreshConfig(config *rest.Config) (err error) {
 	c.set, err = kubernetes.NewForConfig(config)
 	return err
 }

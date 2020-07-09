@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	"github.com/caos/orbos/internal/git"
 
 	"github.com/spf13/cobra"
@@ -64,9 +66,10 @@ $ orbctl -f ~/.orb/myorb [command]
 			monitor = monitor.Verbose()
 		}
 
-		orbConfig, err := orb.ParseOrbConfig(orbConfigPath)
+		prunedPath := helpers.PruneHome(orbConfigPath)
+		orbConfig, err := orb.ParseOrbConfig(prunedPath)
 		if err != nil {
-			monitor.Error(err)
+			orbConfig = &orb.Orb{Path: prunedPath}
 		}
 
 		ctx := context.Background()

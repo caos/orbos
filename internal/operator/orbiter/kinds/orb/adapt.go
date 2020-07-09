@@ -205,7 +205,7 @@ func AdaptFunc(
 					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 				}()
 
-				for _, configure := range clusterConfigurers {
+				for _, configure := range append(providerConfigurers, clusterConfigurers...) {
 					if err := configure(orb); err != nil {
 						return err
 					}

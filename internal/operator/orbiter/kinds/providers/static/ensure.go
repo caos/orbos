@@ -7,14 +7,12 @@ import (
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -117,22 +115,6 @@ func query(
 		wg.Wait()
 		if err != nil {
 			return orbiter.ToEnsureResult(false, err)
-		}
-
-		if (desired.Spec.Keys.MaintenanceKeyPrivate == nil || desired.Spec.Keys.MaintenanceKeyPrivate.Value == "") &&
-			(desired.Spec.Keys.MaintenanceKeyPublic == nil || desired.Spec.Keys.MaintenanceKeyPublic.Value == "") {
-			priv, pub, err := ssh.Generate()
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-			desired.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Value: priv}
-			desired.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Value: pub}
-			if err := psf(monitor.WithField("type", "maintenancekey")); err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-			if err := internalMachinesService.updateKeys(); err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
 		}
 
 		return ensureLBFunc()

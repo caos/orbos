@@ -47,6 +47,10 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
+		if err := orbConfig.IsComplete(); err != nil {
+			return err
+		}
+
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
@@ -132,7 +136,9 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 			boomVersion = desiredKind.Spec.BoomVersion
 		}
 
-		if err := cmd.Reconcile(monitor, kubeconfig, boomVersion); err != nil {
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+
+		if err := cmd.Reconcile(monitor, k8sClient, boomVersion); err != nil {
 			return err
 		}
 	} else {
@@ -157,7 +163,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", true, "Ensure the desired state continously")
-	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
+	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
