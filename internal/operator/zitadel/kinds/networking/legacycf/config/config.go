@@ -5,7 +5,6 @@ import "github.com/caos/orbos/internal/secret"
 type Config struct {
 	Domains     []*Domain `yaml:"domains"`
 	Groups      []*Group  `yaml:"groups"`
-	Path        string
 	Credentials *Credentials
 	Prefix      string
 }

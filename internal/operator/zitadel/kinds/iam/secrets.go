@@ -1,6 +1,7 @@
 package iam
 
 import (
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -19,7 +20,21 @@ func SecretsFunc() secret.Func {
 		}
 		desiredTree.Parsed = desiredKind
 
-		return getSecretsMap(desiredKind), nil
+		networkingSecrets, err := networking.GetSecrets(monitor, desiredKind.Networking)
+		if err != nil {
+			return nil, err
+		}
+
+		allSecrets := make(map[string]*secret.Secret)
+		appendSecrets(allSecrets, getSecretsMap(desiredKind))
+		appendSecrets(allSecrets, networkingSecrets)
+		return allSecrets, nil
+	}
+}
+
+func appendSecrets(into, add map[string]*secret.Secret) {
+	for key, secret := range add {
+		into[key] = secret
 	}
 }
 

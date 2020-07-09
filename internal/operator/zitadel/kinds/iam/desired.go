@@ -7,8 +7,10 @@ import (
 )
 
 type DesiredV0 struct {
-	Common *tree.Common `yaml:",inline"`
-	Spec   *Spec
+	Common     *tree.Common `yaml:",inline"`
+	Spec       *Spec
+	Database   *tree.Tree `yaml:"database"`
+	Networking *tree.Tree `yaml:"networking"`
 }
 
 type Spec struct {
@@ -16,8 +18,6 @@ type Spec struct {
 	ReplicaCount  int                          `yaml:"replicaCount,omitempty"`
 	Version       string                       `yaml:"version"`
 	Configuration *configuration.Configuration `yaml:"configuration"`
-	Database      *tree.Tree                   `yaml:"database"`
-	Networking    *tree.Tree                   `yaml:"networking"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
