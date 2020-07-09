@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-func AdaptFunc(namespace string, clients []string, labels map[string]string) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
+func AdaptFunc(namespace string, clients []string, labels map[string]string, clusterDns string) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
 	nodeLabels := map[string]string{}
 	clientLabels := map[string]string{}
 	for k, v := range labels {
@@ -62,7 +62,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string) (zi
 				caPrivKey = caPrivKeyInternal
 				caCert = caCertInternal
 
-				nodePrivKey, nodeCert, err := NewNode(caPrivKey, caCert, namespace)
+				nodePrivKey, nodeCert, err := NewNode(caPrivKey, caCert, namespace, clusterDns)
 				if err != nil {
 					return nil, err
 				}

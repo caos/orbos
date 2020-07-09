@@ -17,6 +17,7 @@ type Spec struct {
 	StorageClass    string            `yaml:"storageClass,omitempty"`
 	NodeSelector    map[string]string `yaml:"nodeSelector,omitempty"`
 	Users           []string          `yaml:"users,omitempty"`
+	ClusterDns      string            `yaml:"clusterDNS,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

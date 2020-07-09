@@ -60,7 +60,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		}
 
 		userList := []string{"root", "flyway", "management", "auth", "authz", "adminapi", "notification"}
-		queryCert, destroyCert, err := certificate.AdaptFunc(namespaceStr, userList, labels)
+		queryCert, destroyCert, err := certificate.AdaptFunc(namespaceStr, userList, labels, desiredKind.Spec.ClusterDns)
 		if err != nil {
 			return nil, nil, err
 		}

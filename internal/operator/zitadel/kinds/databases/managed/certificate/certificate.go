@@ -71,7 +71,7 @@ func NewClient(caPrivKey *rsa.PrivateKey, ca []byte, user string) (*rsa.PrivateK
 	return certPrivKey, certBytes, nil
 }
 
-func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string) (*rsa.PrivateKey, []byte, error) {
+func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string, clusterDns string) (*rsa.PrivateKey, []byte, error) {
 	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(1658),
 		Subject: pkix.Name{
@@ -89,10 +89,10 @@ func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string) (*rsa.Priva
 			"cockroachdb-public",
 			"cockroachdb-public.default",
 			"cockroachdb-public." + namespace,
-			"cockroachdb-public." + namespace + ".svc.*",
+			"cockroachdb-public." + namespace + ".svc." + clusterDns,
 			"*.cockroachdb",
 			"*.cockroachdb." + namespace,
-			"*.cockroachdb." + namespace + ".svc.*",
+			"*.cockroachdb." + namespace + ".svc." + clusterDns,
 		},
 	}
 
