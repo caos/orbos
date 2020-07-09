@@ -134,11 +134,12 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					"database":   databaseCurrent,
 					"networking": networkingCurrent,
 				}
+				monitor.WithField("queriers", len(queriers)).Info("Querying")
 				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 			},
 			func(k8sClient *kubernetes.Client) error {
-				monitor.WithField("count", len(destroyers)).Info("skipping destroyers")
-				return zitadel.DestroyersToDestroyFunc([]zitadel.DestroyFunc{} /*destroyers*/)(k8sClient)
+				monitor.WithField("destroyers", len(destroyers)).Info("Destroying")
+				return zitadel.DestroyersToDestroyFunc(destroyers)(k8sClient)
 			},
 			nil
 	}
