@@ -7,7 +7,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/config"
 )
 
-func adaptFunc(cfg *config.Config) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
+func adaptFunc(cfg *config.InternalConfig) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
 	return func(_ *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
 			return func(_ *kubernetes.Client) error {
 

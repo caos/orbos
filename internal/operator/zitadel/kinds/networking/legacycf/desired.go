@@ -7,14 +7,14 @@ import (
 )
 
 type Desired struct {
-	Common *tree.Common `yaml:",inline"`
-	Spec   *config.Config
+	Common *tree.Common           `yaml:",inline"`
+	Spec   *config.ExternalConfig `yaml:"spec"`
 }
 
 func parseDesired(desiredTree *tree.Tree) (*Desired, error) {
 	desiredKind := &Desired{
 		Common: desiredTree.Common,
-		Spec:   &config.Config{},
+		Spec:   &config.ExternalConfig{},
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {

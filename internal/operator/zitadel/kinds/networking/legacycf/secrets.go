@@ -27,7 +27,7 @@ func SecretsFunc() secret.Func {
 func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
 	secrets := map[string]*secret.Secret{}
 	if desiredKind.Spec == nil {
-		desiredKind.Spec = &config.Config{}
+		desiredKind.Spec = &config.ExternalConfig{}
 	}
 
 	if desiredKind.Spec.Credentials == nil {

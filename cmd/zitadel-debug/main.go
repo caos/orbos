@@ -32,6 +32,7 @@ func main() {
 		monitor,
 		helpers.PruneHome(*orbconfig),
 		helpers.PruneHome(*kubeconfig),
+		"networking",
 		"zitadel",
 	); err != nil {
 		panic(err)
