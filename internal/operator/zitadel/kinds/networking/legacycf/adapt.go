@@ -11,20 +11,30 @@ import (
 func AdaptFunc() zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
-		desired *tree.Tree,
-		current *tree.Tree,
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
 	) (
 		zitadel.QueryFunc,
 		zitadel.DestroyFunc,
 		error,
 	) {
-		desiredKind, err := parseDesired(desired)
+		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
-		desired.Parsed = desiredKind
+		desiredTree.Parsed = desiredKind
 
-		legacyQuerier, legacyDestroyer, err := adaptFunc(desiredKind.Spec)
+		if desiredKind.Spec == nil {
+			return nil, nil, errors.New("No specs found")
+		}
+
+		if err := desiredKind.Spec.Validate(); err != nil {
+			return nil, nil, err
+		}
+
+		internalSpec, current := desiredKind.Spec.Internal()
+		legacyQuerier, legacyDestroyer, err := adaptFunc(internalSpec)
+		currentTree.Parsed = current
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 				return zitadel.QueriersToEnsureFunc([]zitadel.QueryFunc{legacyQuerier}, k8sClient, queried)

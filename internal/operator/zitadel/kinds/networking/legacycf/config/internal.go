@@ -1,10 +1,12 @@
 package config
 
-import "github.com/caos/orbos/internal/secret"
+import (
+	"github.com/caos/orbos/internal/secret"
+)
 
-type Config struct {
-	Domains     []*Domain `yaml:"domains"`
-	Groups      []*Group  `yaml:"groups"`
+type InternalConfig struct {
+	Domains     []*IntenalDomain `yaml:"domains"`
+	Groups      []*Group         `yaml:"groups"`
 	Credentials *Credentials
 	Prefix      string
 }
@@ -19,7 +21,7 @@ type Group struct {
 	List []string `yaml:"list"`
 }
 
-type Domain struct {
+type IntenalDomain struct {
 	Domain     string       `yaml:"domain"`
 	Subdomains []*Subdomain `yaml:"subdomains"`
 	Rules      []*Rule      `yaml:"rules"`
