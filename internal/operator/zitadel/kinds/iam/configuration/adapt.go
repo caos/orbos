@@ -6,7 +6,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	secret2 "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
 	"github.com/caos/orbos/internal/operator/zitadel"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/internal/tree"
 	"strings"
 )
@@ -56,14 +57,6 @@ func AdaptFunc(
 		"EMAIL_SENDER_ADDRESS":              desired.Notifications.Email.SenderAddress,
 		"EMAIL_SENDER_NAME":                 desired.Notifications.Email.SenderName,
 		"SMTP_TLS":                          tls,
-		"ZITADEL_ISSUER":                    desired.Endpoints.Issuer,
-		"ZITADEL_ACCOUNTS":                  desired.Endpoints.Accounts,
-		"ZITADEL_OAUTH":                     desired.Endpoints.OAuth,
-		"ZITADEL_AUTHORIZE":                 desired.Endpoints.Authorize,
-		"ZITADEL_CONSOLE":                   desired.Endpoints.Console,
-		"ZITADEL_ACCOUNTS_DOMAIN":           desired.Domains.Accounts,
-		"ZITADEL_COOKIE_DOMAIN":             desired.Domains.Cookie,
-		"ZITADEL_DEFAULT_DOMAIN":            desired.Domains.Default,
 		"CAOS_OIDC_DEV":                     "true",
 		"ZITADEL_CACHE_MAXAGE":              desired.Cache.MaxAge,
 		"ZITADEL_CACHE_SHARED_MAXAGE":       desired.Cache.SharedMaxAge,
@@ -145,17 +138,48 @@ func AdaptFunc(
 			if !ok {
 				return nil, errors.New("no current state for database found")
 			}
-			current, ok := queriedDB.(*tree.Tree)
+			currentDBTree, ok := queriedDB.(*tree.Tree)
 			if !ok {
 				return nil, errors.New("current state does not fullfil interface")
 			}
-			currentDB, ok := current.Parsed.(core.DatabaseCurrent)
+			currentDB, ok := currentDBTree.Parsed.(coredb.DatabaseCurrent)
 			if !ok {
 				return nil, errors.New("current state does not fullfil interface")
 			}
 
 			literalsConfig["ZITADEL_EVENTSTORE_HOST"] = currentDB.GetURL()
 			literalsConfig["ZITADEL_EVENTSTORE_PORT"] = currentDB.GetPort()
+
+			queriedNW, ok := queried["networking"]
+			if !ok {
+				return nil, errors.New("no current state for networking found")
+			}
+			currentNWTree, ok := queriedNW.(*tree.Tree)
+			if !ok {
+				return nil, errors.New("current state does not fullfil interface")
+			}
+			currentNW, ok := currentNWTree.Parsed.(corenw.NetworkingCurrent)
+			if !ok {
+				return nil, errors.New("current state does not fullfil interface")
+			}
+
+			defaultDomain := currentNW.GetDomain()
+			accountsDomain := currentNW.GetAccountsSubDomain() + "." + defaultDomain
+			accounts := "https://" + accountsDomain
+			issuer := "https://" + currentNW.GetIssuerSubDomain() + "." + defaultDomain
+			oauth := "https://" + currentNW.GetAPISubDomain() + "." + defaultDomain + "/oauth/v2"
+			authorize := "https://" + currentNW.GetAccountsSubDomain() + "." + defaultDomain + "/oauth/v2"
+			console := "https://" + currentNW.GetConsoleSubDomain() + "." + defaultDomain
+
+			literalsConfig["ZITADEL_ISSUER"] = issuer
+			literalsConfig["ZITADEL_ACCOUNTS"] = accounts
+			literalsConfig["ZITADEL_OAUTH"] = oauth
+			literalsConfig["ZITADEL_AUTHORIZE"] = authorize
+			literalsConfig["ZITADEL_CONSOLE"] = console
+			literalsConfig["ZITADEL_ACCOUNTS_DOMAIN"] = accountsDomain
+			literalsConfig["ZITADEL_COOKIE_DOMAIN"] = accountsDomain
+			literalsConfig["ZITADEL_DEFAULT_DOMAIN"] = defaultDomain
+
 			queryCM, _, err := configmap.AdaptFunc(cmName, namespace, labels, literalsConfig)
 			if err != nil {
 				return nil, err

@@ -5,8 +5,6 @@ import "github.com/caos/orbos/internal/secret"
 type Configuration struct {
 	Tracing                *Tracing       `yaml:"tracing,omitempty"`
 	Cache                  *Cache         `yaml:"cache,omitempty"`
-	Domains                *Domains       `yaml:"domains,omitempty"`
-	Endpoints              *Endpoints     `yaml:"endpoints,omitempty"`
 	Secrets                *Secrets       `yaml:"secrets,omitempty"`
 	Notifications          *Notifications `yaml:"notifications,omitempty"`
 	ConsoleEnvironmentJSON *secret.Secret `yaml:"consoleEnvironmentJSON,omitempty"`
@@ -53,18 +51,4 @@ type Cache struct {
 	SharedMaxAge      string `yaml:"sharedMaxAge,omitempty"`
 	ShortMaxAge       string `yaml:"shortMaxAge,omitempty"`
 	ShortSharedMaxAge string `yaml:"shortSharedMaxAge,omitempty"`
-}
-
-type Domains struct {
-	Accounts string `yaml:"accounts,omitempty"`
-	Cookie   string `yaml:"cookie,omitempty"`
-	Default  string `yaml:"default,omitempty"`
-}
-
-type Endpoints struct {
-	Authorize string `yaml:"authorize,omitempty"`
-	OAuth     string `yaml:"oauth,omitempty"`
-	Issuer    string `yaml:"issuer,omitempty"`
-	Console   string `yaml:"console,omitempty"`
-	Accounts  string `yaml:"accounts,omitempty"`
 }
