@@ -62,7 +62,14 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryS, destroyS, err := services.AdaptFunc(namespaceStr, labels)
+		grpcServiceName := "grpc-v1"
+		grpcPost := 80
+		httpServiceName := "http-v1"
+		httpPort := 80
+		uiServiceName := "ui-v1"
+		uiPort := 80
+
+		queryS, destroyS, err := services.AdaptFunc(namespaceStr, labels, grpcServiceName, grpcPost, httpServiceName, httpPort, uiServiceName, uiPort)
 		if err != nil {
 			return nil, nil, err
 		}
