@@ -1,8 +1,9 @@
 package core
 
 type NetworkingCurrent interface {
-	GetIssuerDomain() string
-	GetConsoleDomain() string
-	GetAPIDomain() string
-	GetAccountsDomain() string
+	GetDomain() string
+	GetIssuerSubDomain() string
+	GetConsoleSubDomain() string
+	GetAPISubDomain() string
+	GetAccountsSubDomain() string
 }
