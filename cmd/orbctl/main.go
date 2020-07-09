@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/stores/github"
 	"math/rand"
 	"os"
+
+	"github.com/caos/orbos/internal/stores/github"
 )
 
 var (
@@ -39,6 +40,7 @@ func main() {
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
 		EditCommand(rootValues),
+		ExecCommand(rootValues),
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
