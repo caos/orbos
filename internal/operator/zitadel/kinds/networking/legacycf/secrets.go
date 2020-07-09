@@ -34,51 +34,16 @@ func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
 		desiredKind.Spec.Credentials = &config.Credentials{}
 	}
 
-
-
-	if desiredKind.Spec != nil && desiredKind.Spec.Credentials != nil {
-		conf := desiredKind.Spec.Configuration
-		if conf.ConsoleEnvironmentJSON == nil {
-			conf.ConsoleEnvironmentJSON = &secret.Secret{}
-		}
-		secrets["consoleenvironmentjson"] = conf.ConsoleEnvironmentJSON
-
-		if conf.Tracing != nil {
-			if conf.Tracing.ServiceAccountJSON == nil {
-				conf.Tracing.ServiceAccountJSON = &secret.Secret{}
-			}
-			secrets["serviceaccountjson"] = conf.Tracing.ServiceAccountJSON
-		}
-
-		if conf.Secrets != nil {
-			if conf.Secrets.Keys == nil {
-				conf.Secrets.Keys = &secret.Secret{}
-			}
-			secrets["keys"] = conf.Secrets.Keys
-		}
-
-		if conf.Notifications != nil {
-			if conf.Notifications.GoogleChatURL == nil {
-				conf.Notifications.GoogleChatURL = &secret.Secret{}
-			}
-			secrets["googlechaturl"] = conf.Notifications.GoogleChatURL
-
-			if conf.Notifications.Twilio.SID == nil {
-				conf.Notifications.Twilio.SID = &secret.Secret{}
-			}
-			secrets["twiliosid"] = conf.Notifications.Twilio.SID
-
-			if conf.Notifications.Twilio.AuthToken == nil {
-				conf.Notifications.Twilio.AuthToken = &secret.Secret{}
-			}
-			secrets["twilioauthtoken"] = conf.Notifications.Twilio.AuthToken
-
-			if conf.Notifications.Email.AppKey == nil {
-				conf.Notifications.Email.AppKey = &secret.Secret{}
-			}
-			secrets["emailappkey"] = conf.Notifications.Email.AppKey
-		}
+	if desiredKind.Spec.Credentials.User == nil {
+		desiredKind.Spec.Credentials.User = &secret.Secret{}
 	}
+
+	if desiredKind.Spec.Credentials.APIKey == nil {
+		desiredKind.Spec.Credentials.APIKey = &secret.Secret{}
+	}
+
+	secrets["credentials.user"] = desiredKind.Spec.Credentials.User
+	secrets["credentials.apikey"] = desiredKind.Spec.Credentials.APIKey
+
 	return secrets
 }
-*/

@@ -16,7 +16,7 @@ func adaptFunc(cfg *config.Config) (zitadel.QueryFunc, zitadel.DestroyFunc, erro
 					groups[group.Name] = group.List
 				}
 
-				apps, err := app.New(cfg.User, cfg.Key.Value, groups, cfg.Prefix)
+				apps, err := app.New(cfg.Credentials.User.Value, cfg.Credentials.APIKey.Value, groups, cfg.Prefix)
 				if err != nil {
 					return err
 				}

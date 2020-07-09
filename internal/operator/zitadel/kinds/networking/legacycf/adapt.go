@@ -29,7 +29,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 				return zitadel.QueriersToEnsureFunc([]zitadel.QueryFunc{legacyQuerier}, k8sClient, queried)
 			},
-			zitadel.DestroyersToDestroyFunc(destroyers),
+			zitadel.DestroyersToDestroyFunc([]zitadel.DestroyFunc{legacyDestroyer}),
 			nil
 	}
 }
