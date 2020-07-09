@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AdaptFunc() zitadel.AdaptFunc {
+func AdaptFunc(features ...string) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -81,39 +81,65 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
+		networkingCurrent := &tree.Tree{}
+		/*		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Spec.Networking, networkingCurrent)
+				if err != nil {
+					return nil, nil, err
+				}
+		*/
 		queriers := make([]zitadel.QueryFunc, 0)
-		queriers = []zitadel.QueryFunc{
-			//namespace
-			zitadel.ResourceQueryToZitadelQuery(queryNS),
-			//database
-			queryDB,
-			//migration
-			queryM,
-			//services
-			queryS,
-			//configuration
-			queryC,
-			zitadel.ResourceQueryToZitadelQuery(queryIPS),
-			zitadel.ResourceQueryToZitadelQuery(queryD),
+		for _, feature := range features {
+			switch feature {
+			case "networking":
+			//networking
+			//				queriers = append(queryNW)
+			case "zitadel":
+				queriers = append(queriers, //namespace
+					zitadel.ResourceQueryToZitadelQuery(queryNS),
+					//database
+					queryDB,
+					//migration
+					queryM,
+					//services
+					queryS,
+					//configuration
+					queryC,
+					zitadel.ResourceQueryToZitadelQuery(queryIPS),
+					zitadel.ResourceQueryToZitadelQuery(queryD),
+				)
+			}
 		}
 
 		destroyers := make([]zitadel.DestroyFunc, 0)
-		destroyers = []zitadel.DestroyFunc{
-			destroyS,
-			destroyM,
-			destroyC,
-			zitadel.ResourceDestroyToZitadelDestroy(destroyIPS),
-			zitadel.ResourceDestroyToZitadelDestroy(destroyD),
-			destroyDB,
-			zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
+		for _, feature := range features {
+			switch feature {
+			case "networking":
+			//				destroyers = append(destroyNW)
+			case "zitadel":
+				destroyers = append(destroyers, //namespace
+					destroyS,
+					destroyM,
+					destroyC,
+					zitadel.ResourceDestroyToZitadelDestroy(destroyIPS),
+					zitadel.ResourceDestroyToZitadelDestroy(destroyD),
+					destroyDB,
+					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
+					//			destroyNW,
+				)
+			}
 		}
 
 		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
-				queried := map[string]interface{}{"database": databaseCurrent}
-
+				queried := map[string]interface{}{
+					"database":   databaseCurrent,
+					"networking": networkingCurrent,
+				}
 				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 			},
-			zitadel.DestroyersToDestroyFunc(destroyers),
+			func(k8sClient *kubernetes.Client) error {
+				monitor.WithField("count", len(destroyers)).Info("skipping destroyers")
+				return zitadel.DestroyersToDestroyFunc([]zitadel.DestroyFunc{} /*destroyers*/)(k8sClient)
+			},
 			nil
 	}
 }

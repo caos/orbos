@@ -17,6 +17,7 @@ type Spec struct {
 	Version       string                       `yaml:"version"`
 	Configuration *configuration.Configuration `yaml:"configuration"`
 	Database      *tree.Tree                   `yaml:"database"`
+	Networking    *tree.Tree                   `yaml:"networking"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 
+	"github.com/caos/orbos/internal/start"
+
 	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/operator/boom"
 	"github.com/caos/orbos/mntr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
@@ -12,6 +13,7 @@ import (
 func main() {
 
 	orbconfig := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
+	kubeconfig := flag.String("kubeconfig", "~/.kube/config", "The kubeconfig file to use")
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
 
 	flag.Parse()
@@ -26,13 +28,12 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
-	takeoff, _ := boom.Takeoff(
+	if err := start.Zitadel(
 		monitor,
-		"./artifacts",
-		true,
 		helpers.PruneHome(*orbconfig),
-	)
-	for {
-		takeoff()
+		helpers.PruneHome(*kubeconfig),
+		"networking",
+	); err != nil {
+		panic(err)
 	}
 }

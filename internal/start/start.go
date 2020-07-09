@@ -3,10 +3,11 @@ package start
 import (
 	"context"
 	"errors"
-	"github.com/caos/orbos/internal/operator/zitadel"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/zitadel"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
@@ -247,7 +248,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 	return nil
 }
 
-func Zitadel(monitor mntr.Monitor, orbConfigPath string) error {
+func Zitadel(monitor mntr.Monitor, orbConfigPath, kubeconfigpath string, features ...string) error {
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}
@@ -266,7 +267,7 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath string) error {
 			return err
 		}
 
-		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc())
+		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(features...), kubeconfigpath)
 
 		go func() {
 			started := time.Now()
