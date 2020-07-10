@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -32,8 +33,8 @@ func resetBuffer(buffer *bytes.Buffer) {
 	}
 }
 
-func (c *gceMachine) Execute(env map[string]string, stdin io.Reader, command string) ([]byte, error) {
-	buf, err := c.execute(env, stdin, command)
+func (c *gceMachine) Execute(stdin io.Reader, command string) ([]byte, error) {
+	buf, err := c.execute(stdin, command)
 	defer resetBuffer(buf)
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func (c *gceMachine) Execute(env map[string]string, stdin io.Reader, command str
 	return buf.Bytes(), nil
 }
 
-func (c *gceMachine) execute(env map[string]string, stdin io.Reader, command string) (outBuf *bytes.Buffer, err error) {
+func (c *gceMachine) execute(stdin io.Reader, command string) (outBuf *bytes.Buffer, err error) {
 	outBuf = new(bytes.Buffer)
 	errBuf := new(bytes.Buffer)
 	defer resetBuffer(errBuf)
@@ -74,25 +75,53 @@ func (c *gceMachine) execute(env map[string]string, stdin io.Reader, command str
 	return outBuf, nil
 }
 
+func (c *gceMachine) Shell() error {
+	errBuf := new(bytes.Buffer)
+	defer resetBuffer(errBuf)
+
+	gcloud, err := exec.LookPath("gcloud")
+	if err != nil {
+		return err
+	}
+
+	if err := gcloudSession(c.context.desired.JSONKey.Value, gcloud, func(bin string) error {
+		cmd := exec.Command(gcloud,
+			"compute",
+			"ssh",
+			"--zone", c.context.desired.Zone,
+			fmt.Sprintf("orbiter@%s", c.id),
+			"--tunnel-through-iap",
+			"--project", c.context.projectID,
+		)
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		return cmd.Run()
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *gceMachine) WriteFile(path string, data io.Reader, permissions uint16) error {
 
-	user, err := c.Execute(nil, nil, "whoami")
+	user, err := c.Execute(nil, "whoami")
 	if err != nil {
 		return err
 	}
 
 	mkdir, writeFile := ssh.WriteFileCommands(strings.TrimSpace(string(user)), path, permissions)
-	_, err = c.Execute(nil, nil, mkdir)
+	_, err = c.Execute(nil, mkdir)
 	if err != nil {
 		return err
 	}
 
-	_, err = c.Execute(nil, data, writeFile)
+	_, err = c.Execute(data, writeFile)
 	return err
 }
 
 func (c *gceMachine) ReadFile(path string, data io.Writer) error {
-	buf, err := c.execute(nil, nil, fmt.Sprintf("sudo cat %s", path))
+	buf, err := c.execute(nil, fmt.Sprintf("sudo cat %s", path))
 	defer resetBuffer(buf)
 	if err != nil {
 		return err

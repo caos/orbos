@@ -32,8 +32,8 @@ func (c *cmpLB) Remove() error {
 	}
 	return c.desire()
 }
-func (c *cmpLB) Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error) {
-	return c.original.Execute(env, stdin, cmd)
+func (c *cmpLB) Execute(stdin io.Reader, cmd string) ([]byte, error) {
+	return c.original.Execute(stdin, cmd)
 }
 func (c *cmpLB) Shell(env map[string]string) error {
 	return c.original.Shell(env)

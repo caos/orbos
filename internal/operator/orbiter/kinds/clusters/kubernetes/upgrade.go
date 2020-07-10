@@ -155,7 +155,7 @@ func ensureSoftware(
 					machinemonitor.Info("Migrating node")
 				}
 
-				_, err = machine.infra.Execute(nil, nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
+				_, err = machine.infra.Execute(nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
 				if err != nil {
 					return err
 				}

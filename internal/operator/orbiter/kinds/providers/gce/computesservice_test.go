@@ -33,7 +33,7 @@ func TestComputeService(t *testing.T) {
 	if jsonKey == "" {
 		t.Fatal("Environment variable ORBOS_GCE_JSON_KEY is empty")
 	}
-  
+
 	svc := gce.NewMachinesService(
 		mntr.Monitor{OnInfo: mntr.LogMessage},
 		&gce.Spec{
@@ -77,7 +77,7 @@ func TestComputeService(t *testing.T) {
 	}
 	t.Log(buf.String())
 
-	stdout, err := machine.Execute(nil, nil, "sudo whoami")
+	stdout, err := machine.Execute(nil, "sudo whoami")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -187,7 +187,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
-						stdout, err := machine.Execute(nil, nil, whoami)
+						stdout, err := machine.Execute(nil, whoami)
 						if err != nil {
 							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
 						}

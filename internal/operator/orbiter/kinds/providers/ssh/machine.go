@@ -33,10 +33,9 @@ func NewMachine(monitor mntr.Monitor, remoteUser, ip string) *Machine {
 	}
 }
 
-func (c *Machine) Execute(env map[string]string, stdin io.Reader, cmd string) (stdout []byte, err error) {
+func (c *Machine) Execute(stdin io.Reader, cmd string) (stdout []byte, err error) {
 
 	monitor := c.monitor.WithFields(map[string]interface{}{
-		"env":     env,
 		"command": cmd,
 	})
 	defer func() {
@@ -60,29 +59,19 @@ func (c *Machine) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 	sess.Stdin = stdin
 	sess.Stderr = buf
 
-	envPre := ""
-	for key, value := range env {
-		if key == "" || value == "" {
-			return nil, errors.Errorf("environment variable %s=%s is not valid", key, value)
-		}
-		sess.Setenv(key, value)
-	}
-	output, err = sess.Output(envPre + cmd)
+	output, err = sess.Output(cmd)
 	if err != nil {
 		return output, fmt.Errorf("stderr: %s", buf.String())
 	}
 	return output, nil
 }
 
-func (c *Machine) Shell(env map[string]string) (err error) {
-	monitor := c.monitor.WithFields(map[string]interface{}{
-		"env": env,
-	})
+func (c *Machine) Shell() (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("executing shell failed: %w", err)
 		} else {
-			monitor.Debug("Done executing shell with ssh")
+			c.monitor.Debug("Done executing shell with ssh")
 		}
 	}()
 
@@ -133,11 +122,11 @@ func (c *Machine) WriteFile(path string, data io.Reader, permissions uint16) (er
 
 	ensurePath, writeFile := WriteFileCommands(c.remoteUser, path, permissions)
 
-	if _, err := c.Execute(nil, nil, ensurePath); err != nil {
+	if _, err := c.Execute(nil, ensurePath); err != nil {
 		return err
 	}
 
-	_, err = c.Execute(nil, data, writeFile)
+	_, err = c.Execute(data, writeFile)
 	return err
 }
 
