@@ -30,7 +30,7 @@ import (
 )
 
 type NodeWithKubeadm interface {
-	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
+	Execute(stdin io.Reader, cmd string) ([]byte, error)
 }
 
 type IDFunc func() string
