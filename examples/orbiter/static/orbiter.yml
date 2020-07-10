@@ -38,8 +38,6 @@ providers:
         - ip: 192.168.122.83
           id: second
           hostname: worker01
-      remotepublickeypath: /home/orbiter/.ssh/authorized_keys
-      remoteuser: orbiter
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
       version: v1

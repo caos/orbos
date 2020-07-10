@@ -8,5 +8,5 @@
 - For Kubernetes Clusters, a minimum of 2 CPU cores is required per node
 
 ## User
-- Passwordless sudo capability
-- Bootstrapkey listed in ~/.ssh/authorized_keys
+- orbiter user with passwordless sudo capability
+- Bootstrapkey listed in /home/orbiter/.ssh/authorized_keys

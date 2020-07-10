@@ -79,7 +79,7 @@ func (c *instance) execute(env map[string]string, stdin io.Reader, command strin
 			"compute",
 			"ssh",
 			"--zone", c.context.desired.Zone,
-			c.id,
+			fmt.Sprintf("orbiter@%s", c.id),
 			"--tunnel-through-iap",
 			"--project", c.context.projectID,
 			"--command", command,
@@ -111,7 +111,7 @@ func (c *instance) Shell(env map[string]string) error {
 			"compute",
 			"ssh",
 			"--zone", c.context.desired.Zone,
-			c.id,
+			fmt.Sprintf("orbiter@%s", c.id),
 			"--tunnel-through-iap",
 			"--project", c.context.projectID,
 		)
