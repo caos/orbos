@@ -23,8 +23,16 @@ type IterateNodeAgentFuncs func(currentNodeAgents *common.CurrentNodeAgents) (qu
 
 func ConfigureNodeAgents(svc MachinesService, monitor mntr.Monitor, orb orb.Orb) error {
 	configure, _ := NodeAgentFuncs(monitor, orb.URL, orb.Repokey)
-	return Each(svc, func(_ string, machine infra.Machine) error {
-		return configure(machine)
+	return Each(svc, func(pool string, machine infra.Machine) error {
+		err := configure(machine)
+		if err != nil {
+			return fmt.Errorf("configuring node agent on machine %s in pool %s failed: %w", machine.ID(), pool, err)
+		}
+		monitor.WithFields(map[string]interface{}{
+			"pool":     pool,
+			"machine:": machine.ID(),
+		}).Info("Node agent configured")
+		return nil
 	})
 }
 

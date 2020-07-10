@@ -37,34 +37,39 @@ type OrbiterConfig struct {
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
 
 	finishedChan := make(chan struct{})
+	takeoffChan := make(chan struct{})
 
-	go func() {
-		takeoffChan := make(chan struct{})
-		go func() {
-			takeoffChan <- struct{}{}
-		}()
-
-		var initialized bool
-		for range takeoffChan {
-			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, takeoffChan)
-			initialized = true
+	on := func() { takeoffChan <- struct{}{} }
+	go on()
+	var initialized bool
+	for {
+		select {
+		case <-finishedChan:
+			break
+		case <-takeoffChan:
+			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, func(iterated bool) {
+				if iterated {
+					initialized = true
+				}
+				go on()
+			})
 		}
-	}()
-
-	<-finishedChan
+	}
 
 	return GetKubeconfigs(monitor, orbctlGit)
 }
 
-func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) {
+func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		monitor.Error(err)
+		done(false)
 		return
 	}
 
 	if err := gitClient.Configure(orbFile.URL, []byte(orbFile.Repokey)); err != nil {
 		monitor.Error(err)
+		done(false)
 		return
 	}
 
@@ -156,7 +161,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 			"took": time.Since(started),
 		}).Info("Iteration done")
 		debug.FreeOSMemory()
-		takeoffChan <- struct{}{}
+		done(true)
 	}()
 }
 
