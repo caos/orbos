@@ -83,7 +83,7 @@ func NodeAgentFuncs(
 					isActive := "sudo systemctl is-active node-agentd"
 					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
 						var cbErr error
-						response, cbErr = cmp.Execute(nil, nil, isActive)
+						response, cbErr = cmp.Execute(nil, isActive)
 						return errors.Wrapf(cbErr, "remote command %s returned an unsuccessful exit code", isActive)
 					})
 					machineMonitor.WithFields(map[string]interface{}{
@@ -103,7 +103,7 @@ func NodeAgentFuncs(
 
 					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
 						var cbErr error
-						response, cbErr = cmp.Execute(nil, nil, showVersion)
+						response, cbErr = cmp.Execute(nil, showVersion)
 						return errors.Wrapf(cbErr, "running command %s remotely failed", showVersion)
 					})
 					if err != nil {
@@ -129,7 +129,7 @@ func NodeAgentFuncs(
 					binary := nodeAgentPath
 					if os.Getenv("MODE") == "DEBUG" {
 						// Run node agent in debug mode
-						if _, err := machine.Execute(nil, nil, "sudo apt-get update && sudo apt-get install -y git && wget https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz && sudo tar -zxvf go1.13.3.linux-amd64.tar.gz -C / && sudo chown -R $(id -u):$(id -g) /go && /go/bin/go get -u github.com/go-delve/delve/cmd/dlv && /go/bin/go install github.com/go-delve/delve/cmd/dlv && mv ${HOME}/go/bin/dlv /usr/local/bin"); err != nil {
+						if _, err := machine.Execute(nil, "sudo apt-get update && sudo apt-get install -y git && wget https://dl.google.com/go/go1.13.3.linux-amd64.tar.gz && sudo tar -zxvf go1.13.3.linux-amd64.tar.gz -C / && sudo chown -R $(id -u):$(id -g) /go && /go/bin/go get -u github.com/go-delve/delve/cmd/dlv && /go/bin/go install github.com/go-delve/delve/cmd/dlv && mv ${HOME}/go/bin/dlv /usr/local/bin"); err != nil {
 							panic(err)
 						}
 
@@ -138,7 +138,7 @@ func NodeAgentFuncs(
 
 					stopSystemd := fmt.Sprintf("sudo systemctl stop %s orbos.health* || true", systemdEntry)
 					if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-						_, cbErr := cmp.Execute(nil, nil, stopSystemd)
+						_, cbErr := cmp.Execute(nil, stopSystemd)
 						return errors.Wrapf(cbErr, "running command %s remotely failed", stopSystemd)
 					}); err != nil {
 						return errors.Wrap(err, "remotely stopping systemd services failed")
@@ -210,7 +210,7 @@ WantedBy=multi-user.target
 
 					enableSystemd := fmt.Sprintf("sudo systemctl daemon-reload && sudo systemctl enable %s && sudo systemctl restart %s", systemdPath, systemdEntry)
 					if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-						_, cbErr := cmp.Execute(nil, nil, enableSystemd)
+						_, cbErr := cmp.Execute(nil, enableSystemd)
 						return errors.Wrapf(cbErr, "running command %s remotely failed", enableSystemd)
 					}); err != nil {
 						return errors.Wrap(err, "remotely configuring systemd to autostart Node Agent after booting failed")

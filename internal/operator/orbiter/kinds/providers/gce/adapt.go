@@ -102,7 +102,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil
 				}
 
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, true)
 				if err != nil {
 					return err
 				}

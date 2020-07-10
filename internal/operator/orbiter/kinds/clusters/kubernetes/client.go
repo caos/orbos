@@ -6,10 +6,11 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"k8s.io/client-go/rest"
 	"strings"
 	"sync"
 	"time"
+
+	"k8s.io/client-go/rest"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
@@ -29,7 +30,7 @@ import (
 )
 
 type NodeWithKubeadm interface {
-	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
+	Execute(stdin io.Reader, cmd string) ([]byte, error)
 }
 
 type IDFunc func() string
@@ -376,7 +377,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	}
 
 	monitor.Info("Resetting kubeadm")
-	if _, resetErr := node.Execute(nil, nil, "sudo kubeadm reset --force"); resetErr != nil {
+	if _, resetErr := node.Execute(nil, "sudo kubeadm reset --force"); resetErr != nil {
 		if !strings.Contains(resetErr.Error(), "command not found") {
 			return resetErr
 		}

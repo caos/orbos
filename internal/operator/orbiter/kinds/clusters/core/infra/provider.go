@@ -37,8 +37,8 @@ type Machine interface {
 	ID() string
 	IP() string
 	Remove() error
-	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
-	Shell(env map[string]string) error
+	Execute(stdin io.Reader, cmd string) ([]byte, error)
+	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
 }
