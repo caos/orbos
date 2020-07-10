@@ -144,7 +144,7 @@ nodeRegistration:
 	}).Debug("Written file")
 
 	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
-	resetStdout, err := joining.infra.Execute(nil, nil, cmd)
+	resetStdout, err := joining.infra.Execute(nil, cmd)
 	if err != nil {
 		return nil, errors.Wrapf(err, "executing %s failed", cmd)
 	}
@@ -154,7 +154,7 @@ nodeRegistration:
 
 	if joinAt != nil {
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.BackendPort, joinAt.IP(), kubeAPI.FrontendPort, kubeadmCfgPath)
-		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
+		joinStdout, err := joining.infra.Execute(nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
 		}
@@ -171,7 +171,7 @@ nodeRegistration:
 	}
 
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && %s", kubeAPI.BackendPort, kubeadmCfgPath, applyNetworkCommand)
-	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
+	initStdout, err := joining.infra.Execute(nil, initCmd)
 	if err != nil {
 		return nil, err
 	}

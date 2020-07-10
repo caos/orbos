@@ -165,14 +165,14 @@ nodes:
 	if certsCP != nil && (joinCP != nil || len(joinWorkers) > 0) {
 		runes := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 		jointoken = fmt.Sprintf("%s.%s", helpers.RandomStringRunes(6, runes), helpers.RandomStringRunes(16, runes))
-		if _, err := certsCP.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
+		if _, err := certsCP.Execute(nil, "sudo kubeadm token create "+jointoken); err != nil {
 			return false, errors.Wrap(err, "creating new join token failed")
 		}
 
-		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
+		defer certsCP.Execute(nil, "sudo kubeadm token delete "+jointoken)
 
 		if k8sVersion.equals(V1x18x0) {
-			if _, err := certsCP.Execute(nil, nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
+			if _, err := certsCP.Execute(nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
 				return false, errors.Wrap(err, "Working around kubeadm bug failed, see https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#not-possible-to-join-a-v1-18-node-to-a-v1-17-cluster-due-to-missing-rbac")
 			}
 		}
@@ -189,7 +189,7 @@ nodes:
 
 		if !doKubeadmInit && certKey == nil {
 			var err error
-			certKey, err = certsCP.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
+			certKey, err = certsCP.Execute(nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
