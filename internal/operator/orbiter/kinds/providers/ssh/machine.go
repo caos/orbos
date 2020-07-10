@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/ssh"
@@ -71,6 +72,42 @@ func (c *Machine) Execute(env map[string]string, stdin io.Reader, cmd string) (s
 		return output, fmt.Errorf("stderr: %s", buf.String())
 	}
 	return output, nil
+}
+
+func (c *Machine) Shell(env map[string]string) (err error) {
+	monitor := c.monitor.WithFields(map[string]interface{}{
+		"env": env,
+	})
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("executing shell failed: %w", err)
+		} else {
+			monitor.Debug("Done executing shell with ssh")
+		}
+	}()
+
+	sess, close, err := c.open()
+	defer close()
+	if err != nil {
+		return err
+	}
+	sess.Stdin = os.Stdin
+	sess.Stderr = os.Stderr
+	sess.Stdout = os.Stdout
+	modes := sshlib.TerminalModes{
+		sshlib.ECHO:          0,     // disable echoing
+		sshlib.TTY_OP_ISPEED: 14400, // input speed = 14.4kbaud
+		sshlib.TTY_OP_OSPEED: 14400, // output speed = 14.4kbaud
+	}
+
+	if err := sess.RequestPty("xterm", 40, 80, modes); err != nil {
+		return errors.Wrap(err, "request for pseudo terminal failed")
+	}
+
+	if err := sess.Shell(); err != nil {
+		return errors.Wrap(err, "failed to start shell")
+	}
+	return sess.Wait()
 }
 
 func WriteFileCommands(user, path string, permissions uint16) (string, string) {

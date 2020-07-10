@@ -14,11 +14,9 @@ type DesiredV0 struct {
 }
 
 type Spec struct {
-	Verbose             bool
-	RemoteUser          string
-	RemotePublicKeyPath string
-	Pools               map[string][]*Machine
-	Keys                *Keys
+	Verbose bool
+	Pools   map[string][]*Machine
+	Keys    *Keys
 }
 
 type Keys struct {
@@ -29,13 +27,6 @@ type Keys struct {
 }
 
 func (d DesiredV0) validate() error {
-	if d.Spec.RemoteUser == "" {
-		return errors.New("No remote user provided")
-	}
-
-	if d.Spec.RemotePublicKeyPath == "" {
-		return errors.New("No remote public key path provided")
-	}
 
 	for pool, machines := range d.Spec.Pools {
 		for _, machine := range machines {

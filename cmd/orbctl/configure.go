@@ -52,7 +52,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
 		}
 
-		if orbConfig.URL != "" && orbConfig.URL != newRepoURL {
+		if orbConfig.URL != "" && newRepoURL != "" && orbConfig.URL != newRepoURL {
 			return fmt.Errorf("repository url %s is not reconfigurable", orbConfig.URL)
 		}
 

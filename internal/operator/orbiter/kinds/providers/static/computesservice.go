@@ -88,7 +88,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	for _, machine := range pool {
 
-		if err := machine.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
+		if err := machine.WriteFile(fmt.Sprintf("/home/orbiter/.ssh/authorized_keys"), bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
 			return nil, err
 		}
 
@@ -126,7 +126,7 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	newCache := make([]*machine, 0)
 	for _, spec := range specifiedMachines {
-		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &spec.ID, string(spec.IP))
+		machine := newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP))
 		if err := machine.UseKey(keys...); err != nil {
 			return nil, err
 		}

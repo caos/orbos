@@ -3,6 +3,7 @@ package gce
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -30,6 +31,16 @@ func gcloudSession(jsonkey string, gcloud string, do func(binary string) error) 
 		}
 	}
 
+	if err := run(exec.Command(gcloud, "config", "configurations", "create", "orbiter-system"), func(out []byte) bool {
+		return strings.Contains(string(out), "it already exists")
+	}); err != nil {
+		return err
+	}
+
+	if err := run(exec.Command(gcloud, "config", "configurations", "activate", "orbiter-system"), nil); err != nil {
+		return err
+	}
+
 	file, err := ioutil.TempFile("", "orbiter-gce-key")
 	defer os.Remove(file.Name())
 	if err != nil {
@@ -44,16 +55,24 @@ func gcloudSession(jsonkey string, gcloud string, do func(binary string) error) 
 		return err
 	}
 
-	cmd = exec.Command(gcloud, "auth", "activate-service-account", "--key-file", file.Name())
-	if err := cmd.Run(); err != nil {
+	if err := run(exec.Command(gcloud, "auth", "activate-service-account", "--key-file", file.Name()), nil); err != nil {
 		return err
 	}
 	if err := do(gcloud); err != nil {
 		return err
 	}
 	if reactivate != "" {
-		cmd := exec.Command(gcloud, "config", "configurations", "activate", reactivate)
-		return cmd.Run()
+		if err := run(exec.Command(gcloud, "config", "configurations", "activate", reactivate), nil); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func run(cmd *exec.Cmd, ignoreErr func([]byte) bool) error {
+	out, err := cmd.CombinedOutput()
+	if err != nil && ignoreErr != nil && !ignoreErr(out) {
+		return fmt.Errorf("failed to run \"%s\": %s: %w", strings.Join(cmd.Args, "\" \""), string(out), err)
 	}
 	return nil
 }
