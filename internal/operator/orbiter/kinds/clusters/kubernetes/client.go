@@ -365,7 +365,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	apiErr = errors.Wrap(apiErr, "getting node api failed")
 
 	// Cordon node
-	if apiErr == nil {
+	if apiErr == nil && machine.Metadata.Tier == Workers {
 		nodeStruct, err := api.Get(context.Background(), name, mach.GetOptions{})
 		if err != nil {
 			return errors.Wrapf(err, "getting node %s from kube api failed", name)
