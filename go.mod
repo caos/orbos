@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.6.0
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.31.12
-	github.com/caos/oidc v0.6.2
+	github.com/caos/oidc v0.6.4
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2
