@@ -150,7 +150,6 @@ func step(
 	sortedMachines initializedMachines,
 	to common.Software,
 ) (bool, error) {
-	done := true
 	for idx, machine := range append(sortedMachines) {
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, to)
@@ -161,14 +160,9 @@ func step(
 		if next == nil {
 			continue
 		}
-
-		done = false
-
-		if err := next(); err != nil {
-			return false, err
-		}
+		return false, next()
 	}
-	return done, nil
+	return true, nil
 }
 
 func plan(

@@ -42,13 +42,12 @@ orbctl configure --repourl git@github.com:me/my-orb.git --masterkey "$(openssl r
 ```bash
 MY_GCE_PROJECT="$(gcloud config get-value project)"
 ORBOS_SERVICE_ACCOUNT_NAME=orbiter-system
+ORBOS_SERVICE_ACCOUNT=${ORBOS_SERVICE_ACCOUNT_NAME}@${MY_GCE_PROJECT}.iam.gserviceaccount.com
 
 # Create a service account for the ORBITER user
 gcloud iam service-accounts create ${ORBOS_SERVICE_ACCOUNT_NAME} \
     --description="${ORBOS_SERVICE_ACCOUNT_NAME}" \
     --display-name="${ORBOS_SERVICE_ACCOUNT_NAME}"
-
-ORBOS_SERVICE_ACCOUNT=${ORBOS_SERVICE_ACCOUNT_NAME}@${MY_GCE_PROJECT}.iam.gserviceaccount.com
 
 # Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
 gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
