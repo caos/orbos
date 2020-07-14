@@ -57,12 +57,11 @@ func findPath(
 
 	for _, machine := range machines {
 		id := machine.infra.ID()
-		node, err := k8sClient.GetNode(id)
-		if err != nil {
+		if machine.node == nil {
 			continue
 		}
 
-		nodeinfoKubelet := node.Status.NodeInfo.KubeletVersion
+		nodeinfoKubelet := machine.node.Status.NodeInfo.KubeletVersion
 
 		monitor.WithFields(map[string]interface{}{
 			"machine": id,
@@ -150,7 +149,17 @@ func step(
 	sortedMachines initializedMachines,
 	to common.Software,
 ) (bool, error) {
-	for idx, machine := range append(sortedMachines) {
+
+	for _, machine := range sortedMachines {
+		if machine.node != nil && machine.node.Spec.Unschedulable && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
+			delete(machine.node.Labels, "orbos.ch/updating")
+			if err := k8sClient.Uncordon(machine.currentMachine, machine.node); err != nil {
+				return false, err
+			}
+		}
+	}
+
+	for idx, machine := range sortedMachines {
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, to)
 		if err != nil {
@@ -191,6 +200,7 @@ func plan(
 			}()
 
 			if !isControlplane {
+				k8sNode.Labels["orbos.ch/updating"] = to.Kubelet.Version
 				if err := k8sClient.Drain(machine.currentMachine, k8sNode); err != nil {
 					return err
 				}
@@ -215,15 +225,6 @@ func plan(
 					"from": machine.currentNodeagent.Software.Kubelet.Version,
 					"to":   to.Kubelet.Version,
 				}).Changed("Updated Kubernetes packages desired")
-			}
-			return nil
-		}
-	}
-
-	ensureOnline := func(k8sNode *v1.Node) func() error {
-		return func() error {
-			if err := k8sClient.Uncordon(machine.currentMachine, k8sNode); err != nil {
-				return err
 			}
 			return nil
 		}
@@ -270,21 +271,8 @@ func plan(
 	}
 
 	isControlplane := machine.pool.tier == Controlplane
-	k8sNode, err := k8sClient.GetNode(id)
-	if err != nil {
-		return nil, err
-	}
-
-	if k8sNode.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
-		return ensureSoftware(k8sNode, isControlplane, isFirstControlplane), nil
-	}
-
-	if k8sNode.Spec.Unschedulable && !isControlplane {
-		machine.currentMachine.Online = false
-		if !nodeIsReady {
-			return awaitNodeAgent, nil
-		}
-		return ensureOnline(k8sNode), nil
+	if machine.node.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
+		return ensureSoftware(machine.node, isControlplane, isFirstControlplane), nil
 	}
 
 	if !softwareContains(machine.currentNodeagent.Software, to) || !softwareContains(*machine.desiredNodeagent.Software, to) {

@@ -45,6 +45,7 @@ type initializedMachine struct {
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
 	pool             *initializedPool
+	node             *v1.Node
 }
 
 func initialize(
@@ -152,6 +153,7 @@ func initialize(
 			reconcile:        reconcile,
 			currentMachine:   current,
 			pool:             &pool,
+			node:             node,
 		}
 
 		postInit(initMachine)
