@@ -42,10 +42,11 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 	on := func() { takeoffChan <- struct{}{} }
 	go on()
 	var initialized bool
+loop:
 	for {
 		select {
 		case <-finishedChan:
-			break
+			break loop
 		case <-takeoffChan:
 			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, func(iterated bool) {
 				if iterated {
