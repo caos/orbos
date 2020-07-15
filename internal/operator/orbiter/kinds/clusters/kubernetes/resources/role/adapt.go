@@ -8,20 +8,21 @@ import (
 )
 
 func AdaptFunc(name string, namespace string, labels map[string]string, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, resources.DestroyFunc, error) {
-	return func() (resources.EnsureFunc, error) {
+	role := &rbac.Role{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Rules: []rbac.PolicyRule{{
+			APIGroups: apiGroups,
+			Resources: kubeResources,
+			Verbs:     verbs,
+		}},
+	}
+	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyRole(&rbac.Role{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-						Labels:    labels,
-					},
-					Rules: []rbac.PolicyRule{{
-						APIGroups: apiGroups,
-						Resources: kubeResources,
-						Verbs:     verbs,
-					}},
-				})
+				return k8sClient.ApplyRole(role)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO

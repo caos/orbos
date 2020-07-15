@@ -96,7 +96,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 				if err != nil {
 					return nil, err
 				}
-				ensure, err := queryNodeSecret()
+				ensure, err := queryNodeSecret(k8sClient)
 				if err != nil {
 					return nil, err
 				}
@@ -153,7 +153,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 					return nil, err
 				}
 
-				ensure, err := queryClientSecret()
+				ensure, err := queryClientSecret(k8sClient)
 				if err != nil {
 					return nil, err
 				}

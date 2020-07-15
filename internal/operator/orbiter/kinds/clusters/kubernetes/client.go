@@ -785,6 +785,19 @@ func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, e
 	return crds.Get(context.Background(), name, mach.GetOptions{})
 }
 
+func (c *Client) GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error) {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return nil, err
+	}
+	resource := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
+
+	return resource.Get(context.Background(), name, mach.GetOptions{})
+}
+
 func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error {
 	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
 		Group: group,

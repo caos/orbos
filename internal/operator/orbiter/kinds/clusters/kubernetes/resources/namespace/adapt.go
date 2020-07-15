@@ -8,13 +8,14 @@ import (
 )
 
 func AdaptFunc(namespace string) (resources.QueryFunc, resources.DestroyFunc, error) {
-	return func() (resources.EnsureFunc, error) {
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: namespace,
+		},
+	}
+	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyNamespace(&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: namespace,
-					},
-				})
+				return k8sClient.ApplyNamespace(ns)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO

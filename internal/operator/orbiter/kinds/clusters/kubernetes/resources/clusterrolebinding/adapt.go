@@ -14,29 +14,30 @@ type Subject struct {
 }
 
 func AdaptFunc(name string, labels map[string]string, subjects []Subject, clusterrole string) (resources.QueryFunc, resources.DestroyFunc, error) {
-	return func() (resources.EnsureFunc, error) {
-			return func(k8sClient *kubernetes.Client) error {
-				subjectsList := make([]rbac.Subject, 0)
-				for _, subject := range subjects {
-					subjectsList = append(subjectsList, rbac.Subject{
-						Name:      subject.Name,
-						Namespace: subject.Namespace,
-						Kind:      subject.Kind,
-					})
-				}
+	subjectsList := make([]rbac.Subject, 0)
+	for _, subject := range subjects {
+		subjectsList = append(subjectsList, rbac.Subject{
+			Name:      subject.Name,
+			Namespace: subject.Namespace,
+			Kind:      subject.Kind,
+		})
+	}
 
-				return k8sClient.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:   name,
-						Labels: labels,
-					},
-					Subjects: subjectsList,
-					RoleRef: rbac.RoleRef{
-						APIGroup: "rbac.authorization.k8s.io",
-						Name:     clusterrole,
-						Kind:     "ClusterRole",
-					},
-				})
+	crb := &rbac.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+		Subjects: subjectsList,
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Name:     clusterrole,
+			Kind:     "ClusterRole",
+		},
+	}
+	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
+			return func(k8sClient *kubernetes.Client) error {
+				return k8sClient.ApplyClusterRoleBinding(crb)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO

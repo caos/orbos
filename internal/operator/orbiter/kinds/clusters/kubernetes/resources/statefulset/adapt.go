@@ -7,7 +7,7 @@ import (
 )
 
 func AdaptFunc(statefulset *appsv1.StatefulSet) (resources.QueryFunc, resources.DestroyFunc, error) {
-	return func() (resources.EnsureFunc, error) {
+	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
 				if err := k8sClient.ApplyStatefulSet(statefulset); err != nil {
 					return err

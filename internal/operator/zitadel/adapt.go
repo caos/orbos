@@ -38,7 +38,7 @@ func ResourceDestroyToZitadelDestroy(destroyFunc resources.DestroyFunc) DestroyF
 
 func ResourceQueryToZitadelQuery(queryFunc resources.QueryFunc) QueryFunc {
 	return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (EnsureFunc, error) {
-		ensure, err := queryFunc()
+		ensure, err := queryFunc(k8sClient)
 		ensureInternal := ResourceEnsureToZitadelEnsure(ensure)
 
 		return func(k8sClient *kubernetes.Client) error {

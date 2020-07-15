@@ -8,16 +8,17 @@ import (
 )
 
 func AdaptFunc(name string, namespace string, labels map[string]string, data map[string]string) (resources.QueryFunc, resources.DestroyFunc, error) {
-	return func() (resources.EnsureFunc, error) {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    labels,
+		},
+		Data: data,
+	}
+	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyConfigmap(&corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-						Labels:    labels,
-					},
-					Data: data,
-				})
+				return k8sClient.ApplyConfigmap(cm)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO

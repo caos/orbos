@@ -9,22 +9,22 @@ import (
 )
 
 func AdaptFunc(namespace, name string, labels map[string]string, maxUnavailable string) (resources.QueryFunc, resources.DestroyFunc, error) {
-	return func() (resources.EnsureFunc, error) {
+	maxUnavailableParsed := intstr.Parse(maxUnavailable)
+	pdb := &policy.PodDisruptionBudget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: policy.PodDisruptionBudgetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			MaxUnavailable: &maxUnavailableParsed,
+		},
+	}
+	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
-				maxUnavailableParsed := intstr.Parse(maxUnavailable)
-
-				return k8sClient.ApplyPodDisruptionBudget(&policy.PodDisruptionBudget{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      name,
-						Namespace: namespace,
-					},
-					Spec: policy.PodDisruptionBudgetSpec{
-						Selector: &metav1.LabelSelector{
-							MatchLabels: labels,
-						},
-						MaxUnavailable: &maxUnavailableParsed,
-					},
-				})
+				return k8sClient.ApplyPodDisruptionBudget(pdb)
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
