@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
@@ -24,12 +23,8 @@ func ensureSoftware(
 	controlplane []*initializedMachine,
 	workers []*initializedMachine) (bool, error) {
 
-	sortedControlplane := initializedMachines(controlplane)
-	sortedWorkers := initializedMachines(workers)
-	sort.Sort(sortedControlplane)
-	sort.Sort(sortedWorkers)
-	sortedMachines := append(sortedControlplane, sortedWorkers...)
-	from, to, err := findPath(k8sClient, monitor, sortedMachines, target)
+	sortedMachines := append(controlplane, workers...)
+	from, to, err := findPath(monitor, sortedMachines, target)
 	if err != nil {
 		return false, err
 	}
@@ -45,7 +40,6 @@ func ensureSoftware(
 }
 
 func findPath(
-	k8sClient *Client,
 	monitor mntr.Monitor,
 	machines []*initializedMachine,
 	target KubernetesVersion,
@@ -150,7 +144,6 @@ func step(
 	to common.Software,
 ) (bool, error) {
 
-	// Adish
 	for _, machine := range sortedMachines {
 		if machine.node != nil && machine.node.Spec.Unschedulable && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
 			delete(machine.node.Labels, "orbos.ch/updating")

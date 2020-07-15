@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
@@ -85,6 +86,7 @@ func initialize(
 					curr.Status = "maintaining"
 				}
 			}
+			sort.Sort(initializedMachines(machines))
 			return machines, nil
 		}
 		return pool
