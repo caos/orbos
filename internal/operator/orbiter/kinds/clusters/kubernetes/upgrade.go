@@ -150,6 +150,7 @@ func step(
 	to common.Software,
 ) (bool, error) {
 
+	// Adish
 	for _, machine := range sortedMachines {
 		if machine.node != nil && machine.node.Spec.Unschedulable && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
 			delete(machine.node.Labels, "orbos.ch/updating")
