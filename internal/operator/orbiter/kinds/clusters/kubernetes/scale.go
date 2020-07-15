@@ -59,8 +59,17 @@ func ensureScale(
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
 				id := machine.infra.ID()
-				err = helpers.Concat(err, k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false))
-				err = helpers.Concat(err, machine.infra.Remove())
+				delErr := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false)
+				err = helpers.Concat(err, delErr)
+				if delErr != nil {
+					return
+				}
+
+				rmErr := machine.infra.Remove()
+				err = helpers.Concat(err, rmErr)
+				if rmErr != nil {
+					return
+				}
 				uninitializeMachine(id)
 				monitor.WithFields(map[string]interface{}{
 					"machine": id,
