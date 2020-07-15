@@ -48,7 +48,7 @@ func AdaptFunc(
 			namespace,
 			labels,
 			false,
-			"console.zitadel.dev",
+			consoleDomain,
 			"/",
 			"/console/",
 			uiURL,

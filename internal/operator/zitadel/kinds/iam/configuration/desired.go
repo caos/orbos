@@ -8,6 +8,16 @@ type Configuration struct {
 	Secrets                *Secrets       `yaml:"secrets,omitempty"`
 	Notifications          *Notifications `yaml:"notifications,omitempty"`
 	ConsoleEnvironmentJSON *secret.Secret `yaml:"consoleEnvironmentJSON,omitempty"`
+	Passwords              *Passwords     `yaml:"passwords,omitempty"`
+}
+
+type Passwords struct {
+	Migration    *secret.Secret `yaml:"migration"`
+	Management   *secret.Secret `yaml:"management"`
+	Auth         *secret.Secret `yaml:"auth"`
+	Authz        *secret.Secret `yaml:"authz"`
+	Adminapi     *secret.Secret `yaml:"adminapi"`
+	Notification *secret.Secret `yaml:"notification"`
 }
 
 type Secrets struct {

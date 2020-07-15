@@ -21,6 +21,8 @@ func AdaptFunc(
 	secretPath string,
 	consoleCMName string,
 	secretVarsName string,
+	secretPasswordsName string,
+	users []string,
 	nodeSelector map[string]string,
 ) (
 	resources.QueryFunc,
@@ -34,13 +36,6 @@ func AdaptFunc(
 	runAsNonRoot := true
 	certMountPath := "/dbsecrets"
 
-	internalLabels := make(map[string]string, 0)
-	for k, v := range labels {
-		internalLabels[k] = v
-	}
-	internalLabels["app.kubernetes.io/component"] = "iam"
-
-	userList := []string{"management", "auth", "authz", "adminapi", "notification"}
 	volumnes := []v1.Volume{{
 		Name: secretName,
 		VolumeSource: v1.VolumeSource{
@@ -57,6 +52,13 @@ func AdaptFunc(
 			},
 		},
 	}, {
+		Name: secretPasswordsName,
+		VolumeSource: v1.VolumeSource{
+			Secret: &v1.SecretVolumeSource{
+				SecretName: secretPasswordsName,
+			},
+		},
+	}, {
 		Name: consoleCMName,
 		VolumeSource: v1.VolumeSource{
 			ConfigMap: &v1.ConfigMapVolumeSource{
@@ -69,7 +71,8 @@ func AdaptFunc(
 		{Name: consoleCMName, MountPath: "/console/environment.json", SubPath: "environment.json"},
 		{Name: rootSecret, MountPath: certMountPath + "/ca.crt", SubPath: "ca.crt"},
 	}
-	for _, user := range userList {
+
+	for _, user := range users {
 		userReplaced := strings.ReplaceAll(user, "_", "-")
 		internalName := "client-" + userReplaced
 		volumnes = append(volumnes, v1.Volume{
@@ -94,20 +97,70 @@ func AdaptFunc(
 			SubPath:   "client." + user + ".key",
 		})
 	}
+
+	envVars := []v1.EnvVar{
+		{Name: "POD_IP",
+			ValueFrom: &v1.EnvVarSource{
+				FieldRef: &v1.ObjectFieldSelector{
+					FieldPath: "status.podIP",
+				},
+			}},
+		{Name: "CHAT_URL",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+					Key:                  "ZITADEL_GOOGLE_CHAT_URL",
+				},
+			}},
+		{Name: "TWILIO_TOKEN",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+					Key:                  "ZITADEL_TWILIO_AUTH_TOKEN",
+				},
+			}},
+		{Name: "TWILIO_SERVICE_SID",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+					Key:                  "ZITADEL_TWILIO_SID",
+				},
+			}},
+		{Name: "SMTP_PASSWORD",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+					Key:                  "ZITADEL_EMAILAPPKEY",
+				},
+			}},
+	}
+
+	for _, user := range users {
+		envVars = append(envVars, v1.EnvVar{
+			Name: "CR_" + strings.ToUpper(user) + "_PASSWORD",
+			ValueFrom: &v1.EnvVarSource{
+				SecretKeyRef: &v1.SecretKeySelector{
+					LocalObjectReference: v1.LocalObjectReference{Name: secretPasswordsName},
+					Key:                  user,
+				},
+			},
+		})
+	}
+
 	deploymentDef := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "zitadel",
 			Namespace: namespace,
-			Labels:    internalLabels,
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: internalLabels,
+				MatchLabels: labels,
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: internalLabels,
+					Labels: labels,
 				},
 				Spec: v1.PodSpec{
 					NodeSelector: nodeSelector,
@@ -135,52 +188,11 @@ func AdaptFunc(
 							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:" + version,
 							ImagePullPolicy: "IfNotPresent",
 							Ports: []v1.ContainerPort{
-								{Name: "management-rest", ContainerPort: 50011},
-								{Name: "management-grpc", ContainerPort: 50010},
-								{Name: "auth-rest", ContainerPort: 50021},
-								{Name: "issuer-rest", ContainerPort: 50022},
-								{Name: "auth-grpc", ContainerPort: 50020},
-								{Name: "admin-rest", ContainerPort: 50041},
-								{Name: "admin-grpc", ContainerPort: 50040},
-								{Name: "console-http", ContainerPort: 50050},
-								{Name: "accounts-http", ContainerPort: 50031},
+								{Name: "grpc", ContainerPort: 50001},
+								{Name: "http", ContainerPort: 50002},
+								{Name: "ui", ContainerPort: 50003},
 							},
-							Env: []v1.EnvVar{
-								{Name: "POD_IP",
-									ValueFrom: &v1.EnvVarSource{
-										FieldRef: &v1.ObjectFieldSelector{
-											FieldPath: "status.podIP",
-										},
-									}},
-								{Name: "CHAT_URL",
-									ValueFrom: &v1.EnvVarSource{
-										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
-											Key:                  "ZITADEL_GOOGLE_CHAT_URL",
-										},
-									}},
-								{Name: "TWILIO_TOKEN",
-									ValueFrom: &v1.EnvVarSource{
-										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
-											Key:                  "ZITADEL_TWILIO_AUTH_TOKEN",
-										},
-									}},
-								{Name: "TWILIO_SERVICE_SID",
-									ValueFrom: &v1.EnvVarSource{
-										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
-											Key:                  "ZITADEL_TWILIO_SID",
-										},
-									}},
-								{Name: "SMTP_PASSWORD",
-									ValueFrom: &v1.EnvVarSource{
-										SecretKeyRef: &v1.SecretKeySelector{
-											LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
-											Key:                  "ZITADEL_EMAILAPPKEY",
-										},
-									}},
-							},
+							Env: envVars,
 							EnvFrom: []v1.EnvFromSource{
 								{ConfigMapRef: &v1.ConfigMapEnvSource{
 									LocalObjectReference: v1.LocalObjectReference{Name: cmName},

@@ -35,9 +35,9 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	joinList := make([]string, *replicaCount)
+	joinList := make([]string, 0)
 	for i := int32(0); i < *replicaCount; i++ {
-		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s", name, i, name, namespace))
+		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s:%d", name, i, name, namespace, dbPort))
 	}
 	joinListStr := strings.Join(joinList, ",")
 
@@ -48,27 +48,21 @@ func AdaptFunc(
 	datadirInternal := "datadir"
 	certsInternal := "certs"
 
-	internalLabels := make(map[string]string, 0)
-	for k, v := range labels {
-		internalLabels[k] = v
-	}
-	internalLabels["app.kubernetes.io/component"] = "iam-database"
-
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    internalLabels,
+			Labels:    labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
 			Replicas:    replicaCount,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: internalLabels,
+				MatchLabels: labels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: internalLabels,
+					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,

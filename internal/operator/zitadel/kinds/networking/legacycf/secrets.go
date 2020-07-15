@@ -42,8 +42,13 @@ func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
 		desiredKind.Spec.Credentials.APIKey = &secret.Secret{}
 	}
 
+	if desiredKind.Spec.Credentials.UserServiceKey == nil {
+		desiredKind.Spec.Credentials.UserServiceKey = &secret.Secret{}
+	}
+
 	secrets["credentials.user"] = desiredKind.Spec.Credentials.User
 	secrets["credentials.apikey"] = desiredKind.Spec.Credentials.APIKey
+	secrets["credentials.userservicekey"] = desiredKind.Spec.Credentials.UserServiceKey
 
 	return secrets
 }

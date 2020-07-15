@@ -64,7 +64,7 @@ func AdaptFunc(
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-			crd, err := k8sClient.CheckCRD("mappings.getambassador.io")
+			crd, err := k8sClient.CheckCRD("hosts.getambassador.io")
 			if crd == nil || err != nil {
 				return func(k8sClient *kubernetes.Client) error { return nil }, nil
 			}

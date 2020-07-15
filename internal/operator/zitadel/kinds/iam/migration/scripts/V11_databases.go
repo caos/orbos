@@ -1,19 +1,20 @@
 package scripts
 
-const V11Databases = `CREATE DATABASE management;
+const V11Databases = `
+CREATE DATABASE management;
 CREATE DATABASE auth;
 CREATE DATABASE notification;
 CREATE DATABASE adminapi;
 CREATE DATABASE authz;
 
-CREATE USER management WITH PASSWORD management;
+CREATE USER management WITH PASSWORD ${managementpassword};
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON DATABASE management TO management;
 GRANT SELECT, INSERT, UPDATE ON DATABASE eventstore TO management;
 GRANT SELECT, INSERT, UPDATE ON TABLE eventstore.* TO management;
 
 
-CREATE USER adminapi WITH PASSWORD adminapi;
+CREATE USER adminapi WITH PASSWORD ${adminapipassword};
 
 GRANT SELECT, INSERT, UPDATE, DELETE, DROP ON DATABASE adminapi TO adminapi;
 
@@ -29,20 +30,20 @@ GRANT SELECT, INSERT, UPDATE, DROP, DELETE ON DATABASE management TO adminapi;
 GRANT SELECT, INSERT, UPDATE, DROP, DELETE ON DATABASE notification TO adminapi;
 
 
-CREATE USER auth WITH PASSWORD auth;
+CREATE USER auth WITH PASSWORD ${authpassword};
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON DATABASE auth TO auth;
 GRANT SELECT, INSERT, UPDATE ON DATABASE eventstore TO auth;
 GRANT SELECT, INSERT, UPDATE ON TABLE eventstore.* TO auth;
 
 
-CREATE USER notification WITH PASSWORD notification;
+CREATE USER notification WITH PASSWORD ${notificationpassword};
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON DATABASE notification TO notification;
 GRANT SELECT, INSERT, UPDATE ON DATABASE eventstore TO notification;
 GRANT SELECT, INSERT, UPDATE ON TABLE eventstore.* TO notification;
 
-CREATE USER authz WITH PASSWORD authz;
+CREATE USER authz WITH PASSWORD ${authzpassword};
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON DATABASE authz TO authz;
 GRANT SELECT, INSERT, UPDATE ON DATABASE eventstore TO authz;

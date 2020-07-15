@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"crypto/sha1"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
@@ -9,11 +10,15 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
 )
 
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
+	secretPasswordName string,
+	migrationUser string,
+	users []string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -31,17 +36,93 @@ func AdaptFunc(
 		internalLabels[k] = v
 	}
 	internalLabels["app.kubernetes.io/component"] = "migration"
-
-	queryCM, destroyCM, err := configmap.AdaptFunc(migrationConfigmap, namespace, labels, scripts.GetAll())
+	allScripts := scripts.GetAll()
+	scriptsStr := ""
+	for k, v := range allScripts {
+		if scriptsStr == "" {
+			scriptsStr = k + ": " + v
+		} else {
+			scriptsStr = scriptsStr + "," + k + ": " + v
+		}
+	}
+	h := sha1.New()
+	_, err := h.Write([]byte(scriptsStr))
 	if err != nil {
 		return nil, nil, err
 	}
+	hash := h.Sum(nil)
+
+	queryCM, destroyCM, err := configmap.AdaptFunc(migrationConfigmap, namespace, labels, allScripts)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	envMigrationUser := "FLYWAY_USER"
+	envMigrationPW := "FLYWAY_PASSWORD"
+
+	envVars := []corev1.EnvVar{
+		{
+			Name:  envMigrationUser,
+			Value: migrationUser,
+		}, {
+			Name: envMigrationPW,
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretPasswordName},
+					Key:                  migrationUser,
+				},
+			},
+		},
+	}
+
+	migrationEnvVars := make([]corev1.EnvVar, 0)
+	for _, v := range envVars {
+		migrationEnvVars = append(migrationEnvVars, v)
+	}
+	for _, user := range users {
+		migrationEnvVars = append(migrationEnvVars, corev1.EnvVar{
+			Name: "FLYWAY_PLACEHOLDERS_" + strings.ToUpper(user) + "PASSWORD",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretPasswordName},
+					Key:                  migrationUser,
+				},
+			},
+		})
+	}
+
+	createFile := "create.sql"
+	createStr := strings.Join([]string{
+		"echo -n 'CREATE USER IF NOT EXISTS ' > " + createFile,
+		"echo -n ${" + envMigrationUser + "} >> " + createFile,
+		"echo -n ';' >> " + createFile,
+		"echo -n 'ALTER USER ' >> " + createFile,
+		"echo -n ${" + envMigrationUser + "} >> " + createFile,
+		"echo -n ' WITH PASSWORD ' >> " + createFile,
+		"echo -n ${" + envMigrationPW + "} >> " + createFile,
+		"echo -n ';' >> " + createFile,
+	}, ";")
+	grantFile := "grant.sql"
+	grantStr := strings.Join([]string{
+		"echo -n 'GRANT admin TO ' > " + grantFile,
+		"echo -n ${" + envMigrationUser + "} >> " + grantFile,
+		"echo -n ' WITH ADMIN OPTION;'  >> " + grantFile,
+	}, ";")
+	deleteFile := "delete.sql"
+	deleteStr := strings.Join([]string{
+		"echo -n 'DROP USER IF EXISTS ' > " + deleteFile,
+		"echo -n ${" + envMigrationUser + "} >> " + deleteFile,
+		"echo -n ';' >> " + deleteFile,
+	}, ";")
 
 	jobDef := &batchv1.Job{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cockroachdb-cluster-migration",
 			Namespace: namespace,
 			Labels:    internalLabels,
+			Annotations: map[string]string{
+				"migrationhash": string(hash),
+			},
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
@@ -59,28 +140,31 @@ func AdaptFunc(
 						{
 							Name:  "create-flyway-user",
 							Image: "cockroachdb/cockroach:v20.1.3",
-							Command: []string{
-								"sh",
-								"-c",
-								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"CREATE USER IF NOT EXISTS flyway WITH PASSWORD flyway;\" -e \"GRANT admin TO flyway WITH ADMIN OPTION;\"; sleep 10",
-							},
+							Env:   envVars,
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      rootUserInternal,
 								MountPath: rootUserPath,
 							}},
+							Command: []string{"/bin/bash", "-c", "--"},
+							Args: []string{
+								strings.Join([]string{
+									createStr,
+									grantStr,
+									"cockroach.sh sql --certs-dir=/certificates --host=cockroachdb-public:26257 -e \"$(cat " + createFile + ")\" -e \"$(cat " + grantFile + ")\";",
+								},
+									";"),
+							},
 						},
 						{
 							Name:            "db-migration",
 							Image:           "flyway/flyway:6.5.0",
 							ImagePullPolicy: "Always",
 							Args: []string{
-								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslfactory=org.postgresql.ssl.NonValidatingFactory&sslcert=" + rootUserPath + "/client.flyway.crt&sslkey=" + rootUserPath + "/client.flyway.key",
+								"-url=jdbc:postgresql://cockroachdb-public:26257/defaultdb?&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslfactory=org.postgresql.ssl.NonValidatingFactory",
 								"-locations=filesystem:" + migrationsPath,
-								"-user=flyway",
-								"-password=flyway",
 								"migrate",
 							},
-
+							Env: migrationEnvVars,
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      migrationsConfigInternal,
 								MountPath: migrationsPath,
@@ -92,13 +176,16 @@ func AdaptFunc(
 					},
 					Containers: []corev1.Container{
 						{
-							Name:  "delete-flyway-user",
-							Image: "cockroachdb/cockroach:v20.1.2",
-							Command: []string{
-								"sh",
-								"-c",
-								"cockroach sql --certs-dir=" + rootUserPath + " --host=cockroachdb-public:26257 -e \"DROP USER IF EXISTS flyway;\"",
+							Name:    "delete-flyway-user",
+							Image:   "cockroachdb/cockroach:v20.1.3",
+							Command: []string{"/bin/bash", "-c", "--"},
+							Args: []string{
+								strings.Join([]string{
+									deleteStr,
+									"cockroach.sh sql --certs-dir=/certificates --host=cockroachdb-public:26257 -e \"$(cat " + deleteFile + ")\";",
+								}, ";"),
 							},
+							Env: envVars,
 							VolumeMounts: []corev1.VolumeMount{{
 								Name:      rootUserInternal,
 								MountPath: rootUserPath,
@@ -119,6 +206,13 @@ func AdaptFunc(
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  "cockroachdb.client.root",
 								DefaultMode: &defaultMode,
+							},
+						},
+					}, {
+						Name: secretPasswordName,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: secretPasswordName,
 							},
 						},
 					}},
@@ -147,3 +241,5 @@ func AdaptFunc(
 		zitadel.DestroyersToDestroyFunc(destroyers),
 		nil
 }
+
+//sql --certs-dir = /certificates --host =cockroachdb-public:26257 -e CREATE USER IF NOT EXISTS ${FLYWAY_USER} WITH PASSWORD ${FLYWAY_PASSWORD}; -e GRANT admin TO ${FLYWAY_USER} WITH ADMIN OPTION

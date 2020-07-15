@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
@@ -15,8 +16,8 @@ type App struct {
 	internalPrefix string
 }
 
-func New(user string, key string, groups map[string][]string, internalPrefix string) (*App, error) {
-	api, err := cloudflare.New(user, key)
+func New(user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
+	api, err := cloudflare.New(user, key, userServiceKey)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +37,7 @@ func (a *App) AddInternalPrefix(desc string) string {
 	return strings.Join([]string{a.internalPrefix, desc}, " ")
 }
 
-func (a *App) Ensure(domain string, subdomains []*config.Subdomain, rules []*config.Rule) error {
+func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, domain string, subdomains []*config.Subdomain, rules []*config.Rule) error {
 	firewallRulesInt := make([]*cloudflare.FirewallRule, 0)
 	filtersInt := make([]*cloudflare.Filter, 0)
 	recordsInt := make([]*cloudflare.DNSRecord, 0)
@@ -131,7 +132,8 @@ func (a *App) Ensure(domain string, subdomains []*config.Subdomain, rules []*con
 	if len(firewallRules) != len(rules) {
 		return errors.New("Error while ensuring firewall rule")
 	}
-	return nil
+
+	return a.EnsureOriginCACertificate(k8sClient, namespace, domain)
 }
 
 func addSourcesFromList(subList []string, exp *expression.Expression) {

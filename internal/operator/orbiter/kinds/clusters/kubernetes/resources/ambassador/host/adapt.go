@@ -6,21 +6,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type CORS struct {
-	Origins        string
-	Methods        string
-	Headers        string
-	Credentials    bool
-	ExposedHeaders string
-	MaxAge         string
-}
-
 func AdaptFunc(name, namespace string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, resources.DestroyFunc, error) {
 	return func() (resources.EnsureFunc, error) {
 
-			kind := "Host"
 			group := "getambassador.io"
 			version := "v2"
+			kind := "Host"
 
 			acme := map[string]interface{}{
 				"authority": authority,
@@ -50,6 +41,9 @@ func AdaptFunc(name, namespace string, labels map[string]string, hostname string
 					"spec": map[string]interface{}{
 						"hostname":     hostname,
 						"acmeProvider": acme,
+						"ambassadorId": []string{
+							"default",
+						},
 						"selector": map[string]interface{}{
 							"matchLabels": selectorInternal,
 						},

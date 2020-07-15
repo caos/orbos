@@ -20,7 +20,7 @@ import (
 	"strconv"
 )
 
-func AdaptFunc() zitadel.AdaptFunc {
+func AdaptFunc(users []string) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -40,6 +40,7 @@ func AdaptFunc() zitadel.AdaptFunc {
 		labels := map[string]string{
 			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
 			"app.kubernetes.io/part-of":    "zitadel",
+			"app.kubernetes.io/component":  "iam-database",
 		}
 
 		sfsName := "cockroachdb"
@@ -59,7 +60,9 @@ func AdaptFunc() zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		userList := []string{"root", "flyway", "management", "auth", "authz", "adminapi", "notification"}
+		userList := []string{"root"}
+		userList = append(userList, users...)
+
 		queryCert, destroyCert, err := certificate.AdaptFunc(namespaceStr, userList, labels, desiredKind.Spec.ClusterDns)
 		if err != nil {
 			return nil, nil, err

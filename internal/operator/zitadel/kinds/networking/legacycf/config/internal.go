@@ -9,11 +9,13 @@ type InternalConfig struct {
 	Groups      []*Group         `yaml:"groups"`
 	Credentials *Credentials
 	Prefix      string
+	Namespace   string
 }
 
 type Credentials struct {
-	User   *secret.Secret
-	APIKey *secret.Secret
+	User           *secret.Secret
+	APIKey         *secret.Secret
+	UserServiceKey *secret.Secret
 }
 
 type Group struct {
@@ -23,8 +25,14 @@ type Group struct {
 
 type IntenalDomain struct {
 	Domain     string       `yaml:"domain"`
+	Origin     *Origin      `yaml:"origin"`
 	Subdomains []*Subdomain `yaml:"subdomains"`
 	Rules      []*Rule      `yaml:"rules"`
+}
+
+type Origin struct {
+	Key         *secret.Secret
+	Certificate *secret.Secret
 }
 
 type Subdomain struct {

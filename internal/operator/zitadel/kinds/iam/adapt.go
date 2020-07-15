@@ -38,14 +38,16 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		labels := map[string]string{
 			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
 			"app.kubernetes.io/part-of":    "zitadel",
+			"app.kubernetes.io/component":  "iam",
 		}
 
 		cmName := "zitadel-vars"
-		certPath := "$HOME/dbsecrets-zitadel"
+		certPath := "/home/zitadel/dbsecrets-zitadel"
 		secretName := "zitadel-secret"
 		secretPath := "/secret"
 		consoleCMName := "console-config"
 		secretVarsName := "zitadel-secrets-vars"
+		secretPasswordName := "zitadel-passwords"
 		imagePullSecretName := "public-github-packages"
 		grpcServiceName := "grpc-v1"
 		grpcPort := 80
@@ -57,8 +59,22 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		grpcURL := grpcServiceName + "." + namespaceStr + ":" + strconv.Itoa(grpcPort)
 		uiURL := "http://" + uiServiceName + "." + namespaceStr
 
+		users, migrationUser := getUsers(desiredKind)
+
+		allZitadelUsers := make([]string, 0)
+		for k := range users {
+			if k != migrationUser {
+				allZitadelUsers = append(allZitadelUsers, k)
+			}
+		}
+
+		allUsers := make([]string, 0)
+		for k := range users {
+			allUsers = append(allUsers, k)
+		}
+
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent)
+		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent, allUsers)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -68,7 +84,19 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryC, destroyC, err := configuration.AdaptFunc(namespaceStr, labels, desiredKind.Spec.Configuration, cmName, certPath, secretName, secretPath, consoleCMName, secretVarsName)
+		queryC, destroyC, err := configuration.AdaptFunc(
+			namespaceStr,
+			labels,
+			desiredKind.Spec.Configuration,
+			cmName,
+			certPath,
+			secretName,
+			secretPath,
+			consoleCMName,
+			secretVarsName,
+			secretPasswordName,
+			users,
+		)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -83,12 +111,27 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryD, destroyD, err := deployment.AdaptFunc(namespaceStr, labels, desiredKind.Spec.ReplicaCount, desiredKind.Spec.Version, imagePullSecretName, cmName, certPath, secretName, secretPath, consoleCMName, secretVarsName, desiredKind.Spec.NodeSelector)
+		queryD, destroyD, err := deployment.AdaptFunc(
+			namespaceStr,
+			labels,
+			desiredKind.Spec.ReplicaCount,
+			desiredKind.Spec.Version,
+			imagePullSecretName,
+			cmName,
+			certPath,
+			secretName,
+			secretPath,
+			consoleCMName,
+			secretVarsName,
+			secretPasswordName,
+			allZitadelUsers,
+			desiredKind.Spec.NodeSelector,
+		)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryM, destroyM, err := migration.AdaptFunc(namespaceStr, labels)
+		queryM, destroyM, err := migration.AdaptFunc(namespaceStr, labels, secretPasswordName, migrationUser, allZitadelUsers)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -109,21 +152,20 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			switch feature {
 			case "networking":
 				//networking
-				queriers = append(queriers, queryNW)
+				queriers = append(queriers, queryNW, queryAmbassador)
 			case "zitadel":
 				queriers = append(queriers, //namespace
 					zitadel.ResourceQueryToZitadelQuery(queryNS),
 					//database
 					queryDB,
+					//configuration
+					queryC,
 					//migration
 					queryM,
 					//services
 					queryS,
-					//configuration
-					queryC,
 					zitadel.ResourceQueryToZitadelQuery(queryIPS),
 					zitadel.ResourceQueryToZitadelQuery(queryD),
-					queryAmbassador,
 				)
 			}
 		}
@@ -132,16 +174,15 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		for _, feature := range features {
 			switch feature {
 			case "networking":
-				destroyers = append(destroyers, destroyNW)
+				destroyers = append(destroyers, destroyNW, destroyAmbassador)
 			case "zitadel":
 				destroyers = append(destroyers, //namespace
-					destroyAmbassador,
 					destroyS,
 					destroyM,
-					destroyC,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyIPS),
 					zitadel.ResourceDestroyToZitadelDestroy(destroyD),
 					destroyDB,
+					destroyC,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
 				)
 			}
@@ -161,4 +202,56 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			},
 			nil
 	}
+}
+
+func getUsers(desired *DesiredV0) (map[string]string, string) {
+	passwords := &configuration.Passwords{}
+	if desired.Spec != nil && desired.Spec.Configuration != nil && desired.Spec.Configuration.Passwords != nil {
+		passwords = desired.Spec.Configuration.Passwords
+	}
+	users := make(map[string]string, 0)
+
+	migrationUser := "flyway"
+	migrationPassword := migrationUser
+	if passwords.Migration != nil {
+		migrationPassword = passwords.Migration.Value
+	}
+	users[migrationUser] = migrationPassword
+
+	mgmtUser := "management"
+	mgmtPassword := mgmtUser
+	if passwords != nil && passwords.Management != nil {
+		mgmtPassword = passwords.Management.Value
+	}
+	users[mgmtUser] = mgmtPassword
+
+	adminUser := "adminapi"
+	adminPassword := adminUser
+	if passwords != nil && passwords.Adminapi != nil {
+		adminPassword = passwords.Adminapi.Value
+	}
+	users[adminUser] = adminPassword
+
+	authUser := "auth"
+	authPassword := authUser
+	if passwords != nil && passwords.Auth != nil {
+		authPassword = passwords.Auth.Value
+	}
+	users[authUser] = authPassword
+
+	authzUser := "authz"
+	authzPassword := authzUser
+	if passwords != nil && passwords.Authz != nil {
+		authzPassword = passwords.Authz.Value
+	}
+	users[authzUser] = authzPassword
+
+	notUser := "notification"
+	notPassword := notUser
+	if passwords != nil && passwords.Notification != nil {
+		notPassword = passwords.Notification.Value
+	}
+	users[notUser] = notPassword
+
+	return users, migrationUser
 }

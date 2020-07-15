@@ -22,6 +22,8 @@ func AdaptFunc(
 	secretPath string,
 	consoleCMName string,
 	secretVarsName string,
+	secretPasswordName string,
+	users map[string]string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -66,11 +68,9 @@ func AdaptFunc(
 		"CR_ROOT_CERT":                      certPath + "/ca.crt",
 	}
 
-	userList := []string{"management", "auth", "authz", "adminapi", "notification"}
-	for _, user := range userList {
+	for _, user := range users {
 		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = certPath + "/client." + user + ".crt"
 		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = certPath + "/client." + user + ".key"
-		literalsConfig["CR_"+strings.ToUpper(user)+"_PASSWORD"] = user
 	}
 
 	literalsSecret := map[string]string{}
@@ -119,11 +119,16 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, err
 	}
+	querySP, destroySP, err := secret2.AdaptFunc(secretPasswordName, namespace, labels, users)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	queriers := []zitadel.QueryFunc{
 		zitadel.ResourceQueryToZitadelQuery(queryS),
 		zitadel.ResourceQueryToZitadelQuery(queryCCM),
 		zitadel.ResourceQueryToZitadelQuery(querySV),
+		zitadel.ResourceQueryToZitadelQuery(querySP),
 	}
 
 	destroyers := []zitadel.DestroyFunc{
@@ -131,6 +136,7 @@ func AdaptFunc(
 		zitadel.ResourceDestroyToZitadelDestroy(destroyCM),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyCCM),
 		zitadel.ResourceDestroyToZitadelDestroy(destroySV),
+		zitadel.ResourceDestroyToZitadelDestroy(destroySP),
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {

@@ -16,7 +16,6 @@ type Spec struct {
 	StorageCapacity string            `yaml:"storageCapacity,omitempty"`
 	StorageClass    string            `yaml:"storageClass,omitempty"`
 	NodeSelector    map[string]string `yaml:"nodeSelector,omitempty"`
-	Users           []string          `yaml:"users,omitempty"`
 	ClusterDns      string            `yaml:"clusterDNS,omitempty"`
 }
 

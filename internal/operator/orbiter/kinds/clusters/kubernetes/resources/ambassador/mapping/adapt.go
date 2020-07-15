@@ -22,9 +22,27 @@ func AdaptFunc(name, namespace string, labels map[string]string, grpc bool, host
 			version := "v2"
 			kind := "Mapping"
 
-			corsMap := map[string]interface{}{}
+			spec := map[string]interface{}{
+				"host":    host,
+				"rewrite": rewrite,
+				"service": service,
+			}
+			if prefix != "" {
+				spec["prefix"] = prefix
+			}
+
+			if timeoutMS != "" {
+				spec["timeout_ms"] = timeoutMS
+			}
+			if connectTimeoutMS != "" {
+				spec["connect_timeout_ms"] = connectTimeoutMS
+			}
+			if grpc {
+				spec["grpc"] = grpc
+			}
+
 			if cors != nil {
-				corsMap = map[string]interface{}{
+				corsMap := map[string]interface{}{
 					"origins":         cors.Origins,
 					"methods":         cors.Methods,
 					"headers":         cors.Headers,
@@ -32,6 +50,7 @@ func AdaptFunc(name, namespace string, labels map[string]string, grpc bool, host
 					"exposed_headers": cors.ExposedHeaders,
 					"max_age":         cors.MaxAge,
 				}
+				spec["cors"] = corsMap
 			}
 
 			crd := &unstructured.Unstructured{
@@ -43,16 +62,7 @@ func AdaptFunc(name, namespace string, labels map[string]string, grpc bool, host
 						"namespace": namespace,
 						"labels":    labels,
 					},
-					"spec": map[string]interface{}{
-						"grpc":               grpc,
-						"host":               host,
-						"prefix":             prefix,
-						"rewrite":            rewrite,
-						"service":            service,
-						"timeout_ms":         timeoutMS,
-						"connect_timeout_ms": connectTimeoutMS,
-						"cors":               corsMap,
-					},
+					"spec": spec,
 				}}
 
 			return func(k8sClient *kubernetes.Client) error {

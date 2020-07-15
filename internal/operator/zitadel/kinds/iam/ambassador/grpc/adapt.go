@@ -3,6 +3,7 @@ package grpc
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/mapping"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/module"
 	"github.com/caos/orbos/internal/operator/zitadel"
 )
 
@@ -17,6 +18,8 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	error,
 ) {
+
+	queryModule, destroyModule, err := module.AdaptFunc("ambassador", namespace, labels, &module.Config{EnableGrpcWeb: true})
 
 	queryAdminG, destroyAdminG, err := mapping.AdaptFunc(
 		"admin-grpc-v1",
@@ -91,6 +94,7 @@ func AdaptFunc(
 	}
 
 	queriers := []zitadel.QueryFunc{
+		zitadel.ResourceQueryToZitadelQuery(queryModule),
 		zitadel.ResourceQueryToZitadelQuery(queryAdminG),
 		zitadel.ResourceQueryToZitadelQuery(queryAuthG),
 		zitadel.ResourceQueryToZitadelQuery(queryMgmtGRPC),
@@ -99,10 +103,16 @@ func AdaptFunc(
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAdminG),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAuthG),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyMgmtGRPC),
+		zitadel.ResourceDestroyToZitadelDestroy(destroyModule),
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 			crd, err := k8sClient.CheckCRD("mappings.getambassador.io")
+			if crd == nil || err != nil {
+				return func(k8sClient *kubernetes.Client) error { return nil }, nil
+			}
+
+			crd, err = k8sClient.CheckCRD("modules.getambassador.io")
 			if crd == nil || err != nil {
 				return func(k8sClient *kubernetes.Client) error { return nil }, nil
 			}

@@ -236,7 +236,7 @@ func StartZitadel(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		return start.Zitadel(monitor, orbConfig.Path, "", "networking", "zitadel")
+		return start.Zitadel(monitor, orbConfig.Path, "/Users/benz/.kube/stefan-orbos-gce", "networking", "zitadel")
 	}
 	return cmd
 }

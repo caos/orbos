@@ -2,6 +2,7 @@ package legacycf
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -31,13 +32,26 @@ func AdaptFunc() zitadel.AdaptFunc {
 		if err := desiredKind.Spec.Validate(); err != nil {
 			return nil, nil, err
 		}
+		namespaceStr := "caos-zitadel"
+
+		queryNS, _, err := namespace.AdaptFunc(namespaceStr)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		internalSpec, current := desiredKind.Spec.Internal()
+		internalSpec.Namespace = namespaceStr
+
 		legacyQuerier, legacyDestroyer, err := adaptFunc(internalSpec)
 		currentTree.Parsed = current
 
+		queriers := []zitadel.QueryFunc{
+			zitadel.ResourceQueryToZitadelQuery(queryNS),
+			legacyQuerier,
+		}
+
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-				return zitadel.QueriersToEnsureFunc([]zitadel.QueryFunc{legacyQuerier}, k8sClient, queried)
+				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 			},
 			zitadel.DestroyersToDestroyFunc([]zitadel.DestroyFunc{legacyDestroyer}),
 			nil

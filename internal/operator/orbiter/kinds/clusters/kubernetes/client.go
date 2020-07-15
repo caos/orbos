@@ -359,7 +359,8 @@ func (c *Client) apply(object, name string, create func() error, update func() e
 	}
 
 	err = update()
-	if err == nil || !macherrs.IsNotFound(err) {
+	reason := macherrs.ReasonForError(err)
+	if err == nil || (reason != "" && !macherrs.IsNotFound(err)) {
 		return err
 	}
 	return create()
@@ -792,7 +793,6 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	if err != nil {
 		return err
 	}
-	fmt.Println(mapping)
 
 	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
 
