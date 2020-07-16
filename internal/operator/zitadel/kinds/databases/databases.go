@@ -14,7 +14,9 @@ func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
+	namespace string,
 	users []string,
+	labels map[string]string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -22,7 +24,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.AdaptFunc(users)(monitor, desiredTree, currentTree)
+		return managed.AdaptFunc(labels, users, namespace)(monitor, desiredTree, currentTree)
 	case "zitadel.caos.ch/ProvidedDatabse":
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:

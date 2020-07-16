@@ -7,18 +7,22 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFunc(namespace string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFuncToEnsure(namespace string) (resources.QueryFunc, error) {
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespace,
 		},
 	}
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
-			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyNamespace(ns)
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			//TODO
-			return nil
+		return func(k8sClient *kubernetes.Client) error {
+			return k8sClient.ApplyNamespace(ns)
 		}, nil
+	}, nil
+}
+
+func AdaptFuncToDestroy(namespace string) (resources.DestroyFunc, error) {
+	return func(client *kubernetes.Client) error {
+		//TODO
+		return nil
+	}, nil
 }

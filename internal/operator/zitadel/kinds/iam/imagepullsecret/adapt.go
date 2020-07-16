@@ -22,5 +22,13 @@ func AdaptFunc(
 		}
 }`
 
-	return dockerconfigsecret.AdaptFunc(name, namespace, labels, data)
+	query, err := dockerconfigsecret.AdaptFuncToEnsure(name, namespace, labels, data)
+	if err != nil {
+		return nil, nil, err
+	}
+	destroy, err := dockerconfigsecret.AdaptFuncToDestroy(name, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	return query, destroy, nil
 }

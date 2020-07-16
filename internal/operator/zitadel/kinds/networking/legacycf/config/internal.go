@@ -5,11 +5,13 @@ import (
 )
 
 type InternalConfig struct {
-	Domains     []*IntenalDomain `yaml:"domains"`
-	Groups      []*Group         `yaml:"groups"`
-	Credentials *Credentials
-	Prefix      string
-	Namespace   string
+	Domains            []*IntenalDomain `yaml:"domains"`
+	Groups             []*Group         `yaml:"groups"`
+	Credentials        *Credentials
+	Prefix             string
+	Namespace          string
+	OriginCASecretName string
+	Labels             map[string]string
 }
 
 type Credentials struct {

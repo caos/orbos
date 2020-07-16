@@ -1,14 +1,12 @@
 package configuration
 
 import (
-	"errors"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
-	secret2 "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
-	"github.com/caos/orbos/internal/tree"
 	"strings"
 )
 
@@ -32,103 +30,29 @@ func AdaptFunc(
 	googleServiceAccountJSONPath := "google-serviceaccount-key.json"
 	zitadelKeysPath := "zitadel-keys.yaml"
 
-	tls := ""
-	if desired.Notifications.Email.TLS {
-		tls = "TRUE"
-	} else {
-		tls = "FALSE"
-	}
+	literalsSecret := literalsSecret(desired, googleServiceAccountJSONPath, zitadelKeysPath)
+	literalsSecretVars := literalsSecretVars(desired)
+	literalsConsoleCM := literalsConsoleCM(desired)
 
-	literalsConfig := map[string]string{
-		"GOOGLE_APPLICATION_CREDENTIALS":    secretPath + "/" + googleServiceAccountJSONPath,
-		"ZITADEL_KEY_PATH":                  secretPath + "/" + zitadelKeysPath,
-		"ZITADEL_TRACING_PROJECT_ID":        desired.Tracing.ProjectID,
-		"ZITADEL_TRACING_FRACTION":          desired.Tracing.Fraction,
-		"ZITADEL_LOG_LEVEL":                 "debug",
-		"ZITADEL_EVENTSTORE_HOST":           "",
-		"ZITADEL_EVENTSTORE_PORT":           "",
-		"ZITADEL_USER_VERIFICATION_KEY":     desired.Secrets.UserVerificationID,
-		"ZITADEL_OTP_VERIFICATION_KEY":      desired.Secrets.OTPVerificationID,
-		"ZITADEL_OIDC_KEYS_ID":              desired.Secrets.OIDCKeysID,
-		"ZITADEL_COOKIE_KEY":                desired.Secrets.CookieID,
-		"ZITADEL_CSRF_KEY":                  desired.Secrets.CSRFID,
-		"DEBUG_MODE":                        "TRUE",
-		"TWILIO_SENDER_NAME":                desired.Notifications.Twilio.SenderName,
-		"SMTP_HOST":                         desired.Notifications.Email.SMTPHost,
-		"SMTP_USER":                         desired.Notifications.Email.SMTPUser,
-		"EMAIL_SENDER_ADDRESS":              desired.Notifications.Email.SenderAddress,
-		"EMAIL_SENDER_NAME":                 desired.Notifications.Email.SenderName,
-		"SMTP_TLS":                          tls,
-		"CAOS_OIDC_DEV":                     "true",
-		"ZITADEL_CACHE_MAXAGE":              desired.Cache.MaxAge,
-		"ZITADEL_CACHE_SHARED_MAXAGE":       desired.Cache.SharedMaxAge,
-		"ZITADEL_SHORT_CACHE_MAXAGE":        desired.Cache.ShortMaxAge,
-		"ZITADEL_SHORT_CACHE_SHARED_MAXAGE": desired.Cache.ShortSharedMaxAge,
-		"CR_SSL_MODE":                       "require",
-		"CR_ROOT_CERT":                      certPath + "/ca.crt",
-	}
-
-	for _, user := range users {
-		literalsConfig["CR_"+strings.ToUpper(user)+"_CERT"] = certPath + "/client." + user + ".crt"
-		literalsConfig["CR_"+strings.ToUpper(user)+"_KEY"] = certPath + "/client." + user + ".key"
-	}
-
-	literalsSecret := map[string]string{}
-
-	if desired.Tracing != nil && desired.Tracing.ServiceAccountJSON != nil {
-		literalsSecret[googleServiceAccountJSONPath] = desired.Tracing.ServiceAccountJSON.Value
-	}
-	if desired.Secrets != nil && desired.Secrets.Keys != nil {
-		literalsSecret[zitadelKeysPath] = desired.Secrets.Keys.Value
-	}
-
-	literalsConsoleCM := map[string]string{}
-	if desired.ConsoleEnvironmentJSON != nil {
-		literalsConsoleCM["environment.json"] = desired.ConsoleEnvironmentJSON.Value
-	}
-
-	literalsSecretVars := map[string]string{}
-	if desired.Notifications != nil {
-		if desired.Notifications.Email.AppKey != nil {
-			literalsSecretVars["ZITADEL_EMAILAPPKEY"] = desired.Notifications.Email.AppKey.Value
-		}
-		if desired.Notifications.GoogleChatURL != nil {
-			literalsSecretVars["ZITADEL_GOOGLE_CHAT_URL"] = desired.Notifications.GoogleChatURL.Value
-		}
-		if desired.Notifications.Twilio.AuthToken != nil {
-			literalsSecretVars["ZITADEL_TWILIO_AUTH_TOKEN"] = desired.Notifications.Twilio.AuthToken.Value
-		}
-		if desired.Notifications.Twilio.SID != nil {
-			literalsSecretVars["ZITADEL_TWILIO_SID"] = desired.Notifications.Twilio.SID.Value
-		}
-	}
-
-	_, destroyCM, err := configmap.AdaptFunc(cmName, namespace, labels, literalsConfig)
+	destroyCM, err := configmap.AdaptFuncToDestroy(cmName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
-	queryS, destroyS, err := secret2.AdaptFunc(secretName, namespace, labels, literalsSecret)
+	destroyS, err := secret.AdaptFuncToDestroy(secretName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
-	queryCCM, destroyCCM, err := configmap.AdaptFunc(consoleCMName, namespace, labels, literalsConsoleCM)
+	destroyCCM, err := configmap.AdaptFuncToDestroy(consoleCMName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
-	querySV, destroySV, err := secret2.AdaptFunc(secretVarsName, namespace, labels, literalsSecretVars)
+	destroySV, err := secret.AdaptFuncToDestroy(secretVarsName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
-	querySP, destroySP, err := secret2.AdaptFunc(secretPasswordName, namespace, labels, users)
+	destroySP, err := secret.AdaptFuncToDestroy(secretPasswordName, namespace)
 	if err != nil {
 		return nil, nil, err
-	}
-
-	queriers := []zitadel.QueryFunc{
-		zitadel.ResourceQueryToZitadelQuery(queryS),
-		zitadel.ResourceQueryToZitadelQuery(queryCCM),
-		zitadel.ResourceQueryToZitadelQuery(querySV),
-		zitadel.ResourceQueryToZitadelQuery(querySP),
 	}
 
 	destroyers := []zitadel.DestroyFunc{
@@ -140,61 +64,177 @@ func AdaptFunc(
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-			queriedDB, ok := queried["database"]
-			if !ok {
-				return nil, errors.New("no current state for database found")
+			queryS, err := secret.AdaptFuncToEnsure(secretName, namespace, labels, literalsSecret)
+			if err != nil {
+				return nil, err
 			}
-			currentDBTree, ok := queriedDB.(*tree.Tree)
-			if !ok {
-				return nil, errors.New("current state does not fullfil interface")
+			queryCCM, err := configmap.AdaptFuncToEnsure(consoleCMName, namespace, labels, literalsConsoleCM)
+			if err != nil {
+				return nil, err
 			}
-			currentDB, ok := currentDBTree.Parsed.(coredb.DatabaseCurrent)
-			if !ok {
-				return nil, errors.New("current state does not fullfil interface")
+			querySV, err := secret.AdaptFuncToEnsure(secretVarsName, namespace, labels, literalsSecretVars)
+			if err != nil {
+				return nil, err
 			}
-
-			literalsConfig["ZITADEL_EVENTSTORE_HOST"] = currentDB.GetURL()
-			literalsConfig["ZITADEL_EVENTSTORE_PORT"] = currentDB.GetPort()
-
-			queriedNW, ok := queried["networking"]
-			if !ok {
-				return nil, errors.New("no current state for networking found")
-			}
-			currentNWTree, ok := queriedNW.(*tree.Tree)
-			if !ok {
-				return nil, errors.New("current state does not fullfil interface")
-			}
-			currentNW, ok := currentNWTree.Parsed.(corenw.NetworkingCurrent)
-			if !ok {
-				return nil, errors.New("current state does not fullfil interface")
-			}
-
-			defaultDomain := currentNW.GetDomain()
-			accountsDomain := currentNW.GetAccountsSubDomain() + "." + defaultDomain
-			accounts := "https://" + accountsDomain
-			issuer := "https://" + currentNW.GetIssuerSubDomain() + "." + defaultDomain
-			oauth := "https://" + currentNW.GetAPISubDomain() + "." + defaultDomain + "/oauth/v2"
-			authorize := "https://" + currentNW.GetAccountsSubDomain() + "." + defaultDomain + "/oauth/v2"
-			console := "https://" + currentNW.GetConsoleSubDomain() + "." + defaultDomain
-
-			literalsConfig["ZITADEL_ISSUER"] = issuer
-			literalsConfig["ZITADEL_ACCOUNTS"] = accounts
-			literalsConfig["ZITADEL_OAUTH"] = oauth
-			literalsConfig["ZITADEL_AUTHORIZE"] = authorize
-			literalsConfig["ZITADEL_CONSOLE"] = console
-			literalsConfig["ZITADEL_ACCOUNTS_DOMAIN"] = accountsDomain
-			literalsConfig["ZITADEL_COOKIE_DOMAIN"] = accountsDomain
-			literalsConfig["ZITADEL_DEFAULT_DOMAIN"] = defaultDomain
-
-			queryCM, _, err := configmap.AdaptFunc(cmName, namespace, labels, literalsConfig)
+			querySP, err := secret.AdaptFuncToEnsure(secretPasswordName, namespace, labels, users)
 			if err != nil {
 				return nil, err
 			}
 
-			queriers = append(queriers, zitadel.ResourceQueryToZitadelQuery(queryCM))
+			currentDB, err := coredb.ParseQueriedForDatabase(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			currentNW, err := corenw.ParseQueriedForNetworking(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			queryCM, err := configmap.AdaptFuncToEnsure(cmName, namespace, labels, literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB))
+			if err != nil {
+				return nil, err
+			}
+
+			queriers := []zitadel.QueryFunc{
+				zitadel.ResourceQueryToZitadelQuery(queryS),
+				zitadel.ResourceQueryToZitadelQuery(queryCCM),
+				zitadel.ResourceQueryToZitadelQuery(querySV),
+				zitadel.ResourceQueryToZitadelQuery(querySP),
+				zitadel.ResourceQueryToZitadelQuery(queryCM),
+			}
 
 			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 		},
 		zitadel.DestroyersToDestroyFunc(destroyers),
 		nil
+}
+
+func literalsConfigMap(
+	desired *Configuration,
+	users map[string]string,
+	certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath string,
+	currentNW corenw.NetworkingCurrent,
+	currentDB coredb.DatabaseCurrent,
+) map[string]string {
+
+	tls := ""
+	if desired.Notifications.Email.TLS {
+		tls = "TRUE"
+	} else {
+		tls = "FALSE"
+	}
+
+	literalsConfigMap := map[string]string{
+		"GOOGLE_APPLICATION_CREDENTIALS": secretPath + "/" + googleServiceAccountJSONPath,
+		"ZITADEL_KEY_PATH":               secretPath + "/" + zitadelKeysPath,
+		"ZITADEL_LOG_LEVEL":              "debug",
+		"DEBUG_MODE":                     "TRUE",
+		"SMTP_TLS":                       tls,
+		"CAOS_OIDC_DEV":                  "true",
+		"CR_SSL_MODE":                    "require",
+		"CR_ROOT_CERT":                   certPath + "/ca.crt",
+	}
+
+	if users != nil {
+		for _, user := range users {
+			literalsConfigMap["CR_"+strings.ToUpper(user)+"_CERT"] = certPath + "/client." + user + ".crt"
+			literalsConfigMap["CR_"+strings.ToUpper(user)+"_KEY"] = certPath + "/client." + user + ".key"
+		}
+	}
+
+	if desired != nil {
+		if desired.Tracing != nil {
+			literalsConfigMap["ZITADEL_TRACING_PROJECT_ID"] = desired.Tracing.ProjectID
+			literalsConfigMap["ZITADEL_TRACING_FRACTION"] = desired.Tracing.Fraction
+		}
+		if desired.Secrets != nil {
+			literalsConfigMap["ZITADEL_USER_VERIFICATION_KEY"] = desired.Secrets.UserVerificationID
+			literalsConfigMap["ZITADEL_OTP_VERIFICATION_KEY"] = desired.Secrets.OTPVerificationID
+			literalsConfigMap["ZITADEL_OIDC_KEYS_ID"] = desired.Secrets.OIDCKeysID
+			literalsConfigMap["ZITADEL_COOKIE_KEY"] = desired.Secrets.CookieID
+			literalsConfigMap["ZITADEL_CSRF_KEY"] = desired.Secrets.CSRFID
+		}
+		if desired.Notifications != nil {
+			literalsConfigMap["TWILIO_SENDER_NAME"] = desired.Notifications.Twilio.SenderName
+			literalsConfigMap["SMTP_HOST"] = desired.Notifications.Email.SMTPHost
+			literalsConfigMap["SMTP_USER"] = desired.Notifications.Email.SMTPUser
+			literalsConfigMap["EMAIL_SENDER_ADDRESS"] = desired.Notifications.Email.SenderAddress
+			literalsConfigMap["EMAIL_SENDER_NAME"] = desired.Notifications.Email.SenderName
+		}
+		if desired.Cache != nil {
+			literalsConfigMap["ZITADEL_CACHE_MAXAGE"] = desired.Cache.MaxAge
+			literalsConfigMap["ZITADEL_CACHE_SHARED_MAXAGE"] = desired.Cache.SharedMaxAge
+			literalsConfigMap["ZITADEL_SHORT_CACHE_MAXAGE"] = desired.Cache.ShortMaxAge
+			literalsConfigMap["ZITADEL_SHORT_CACHE_SHARED_MAXAGE"] = desired.Cache.ShortSharedMaxAge
+		}
+	}
+
+	if currentDB != nil {
+		literalsConfigMap["ZITADEL_EVENTSTORE_HOST"] = currentDB.GetURL()
+		literalsConfigMap["ZITADEL_EVENTSTORE_PORT"] = currentDB.GetPort()
+	}
+
+	if currentNW != nil {
+		defaultDomain := currentNW.GetDomain()
+		accountsDomain := currentNW.GetAccountsSubDomain() + "." + defaultDomain
+		accounts := "https://" + accountsDomain
+		issuer := "https://" + currentNW.GetIssuerSubDomain() + "." + defaultDomain
+		oauth := "https://" + currentNW.GetAPISubDomain() + "." + defaultDomain + "/oauth/v2"
+		authorize := "https://" + currentNW.GetAccountsSubDomain() + "." + defaultDomain + "/oauth/v2"
+		console := "https://" + currentNW.GetConsoleSubDomain() + "." + defaultDomain
+
+		literalsConfigMap["ZITADEL_ISSUER"] = issuer
+		literalsConfigMap["ZITADEL_ACCOUNTS"] = accounts
+		literalsConfigMap["ZITADEL_OAUTH"] = oauth
+		literalsConfigMap["ZITADEL_AUTHORIZE"] = authorize
+		literalsConfigMap["ZITADEL_CONSOLE"] = console
+		literalsConfigMap["ZITADEL_ACCOUNTS_DOMAIN"] = accountsDomain
+		literalsConfigMap["ZITADEL_COOKIE_DOMAIN"] = accountsDomain
+		literalsConfigMap["ZITADEL_DEFAULT_DOMAIN"] = defaultDomain
+	}
+
+	return literalsConfigMap
+}
+
+func literalsSecret(desired *Configuration, googleServiceAccountJSONPath, zitadelKeysPath string) map[string]string {
+	literalsSecret := map[string]string{}
+	if desired != nil {
+		if desired.Tracing != nil && desired.Tracing.ServiceAccountJSON != nil {
+			literalsSecret[googleServiceAccountJSONPath] = desired.Tracing.ServiceAccountJSON.Value
+		}
+		if desired.Secrets != nil && desired.Secrets.Keys != nil {
+			literalsSecret[zitadelKeysPath] = desired.Secrets.Keys.Value
+		}
+	}
+	return literalsSecret
+}
+
+func literalsSecretVars(desired *Configuration) map[string]string {
+	literalsSecretVars := map[string]string{}
+	if desired != nil {
+		if desired.Notifications != nil {
+			if desired.Notifications.Email.AppKey != nil {
+				literalsSecretVars["ZITADEL_EMAILAPPKEY"] = desired.Notifications.Email.AppKey.Value
+			}
+			if desired.Notifications.GoogleChatURL != nil {
+				literalsSecretVars["ZITADEL_GOOGLE_CHAT_URL"] = desired.Notifications.GoogleChatURL.Value
+			}
+			if desired.Notifications.Twilio.AuthToken != nil {
+				literalsSecretVars["ZITADEL_TWILIO_AUTH_TOKEN"] = desired.Notifications.Twilio.AuthToken.Value
+			}
+			if desired.Notifications.Twilio.SID != nil {
+				literalsSecretVars["ZITADEL_TWILIO_SID"] = desired.Notifications.Twilio.SID.Value
+			}
+		}
+	}
+	return literalsSecretVars
+}
+
+func literalsConsoleCM(desired *Configuration) map[string]string {
+	literalsConsoleCM := map[string]string{}
+	if desired != nil && desired.ConsoleEnvironmentJSON != nil {
+		literalsConsoleCM["environment.json"] = desired.ConsoleEnvironmentJSON.Value
+	}
+	return literalsConsoleCM
 }

@@ -68,5 +68,15 @@ func AdaptFunc(
 		},
 	}
 
-	return job.AdaptFunc(jobDef)
+	query, err := job.AdaptFuncToEnsure(jobDef)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	destroy, err := job.AdaptFuncToDestroy(name, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return query, destroy, nil
 }

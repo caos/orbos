@@ -13,6 +13,9 @@ func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
+	namespace string,
+	originCASecretName string,
+	labels map[string]string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -20,7 +23,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/LegacyCloudflare":
-		return legacycf.AdaptFunc()(monitor, desiredTree, currentTree)
+		return legacycf.AdaptFunc(namespace, originCASecretName, labels)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}

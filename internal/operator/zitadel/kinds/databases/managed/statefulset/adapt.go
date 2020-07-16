@@ -18,7 +18,7 @@ func AdaptFunc(
 	image string,
 	labels map[string]string,
 	serviceAccountName string,
-	replicaCount *int32,
+	replicaCount int,
 	storageCapacity string,
 	dbPort int32,
 	httpPort int32,
@@ -35,8 +35,9 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
+	replicaCountParsed := int32(replicaCount)
 	joinList := make([]string, 0)
-	for i := int32(0); i < *replicaCount; i++ {
+	for i := int32(0); i < replicaCountParsed; i++ {
 		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s:%d", name, i, name, namespace, dbPort))
 	}
 	joinListStr := strings.Join(joinList, ",")
@@ -56,7 +57,7 @@ func AdaptFunc(
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
-			Replicas:    replicaCount,
+			Replicas:    &replicaCountParsed,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -174,5 +175,14 @@ func AdaptFunc(
 			}},
 		},
 	}
-	return statefulset.AdaptFunc(statefulsetDef)
+
+	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef)
+	if err != nil {
+		return nil, nil, err
+	}
+	destroy, err := statefulset.AdaptFuncToDestroy(name, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	return query, destroy, nil
 }

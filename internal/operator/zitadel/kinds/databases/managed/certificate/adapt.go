@@ -92,7 +92,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 					nodePrivKeyKey: string(pemNodePrivKey),
 					nodeCertKey:    string(pemNodeCert),
 				}
-				queryNodeSecret, _, err := secret.AdaptFunc(nodeSecret, namespace, nodeLabels, nodeSecretData)
+				queryNodeSecret, err := secret.AdaptFuncToEnsure(nodeSecret, namespace, nodeLabels, nodeSecretData)
 				if err != nil {
 					return nil, err
 				}
@@ -148,7 +148,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 					clientCertKey:    string(pemClientCert),
 				}
 
-				queryClientSecret, _, err := secret.AdaptFunc(createSecret.name, namespace, clientLabels, clientSecretData)
+				queryClientSecret, err := secret.AdaptFuncToEnsure(createSecret.name, namespace, clientLabels, clientSecretData)
 				if err != nil {
 					return nil, err
 				}
@@ -161,7 +161,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 				ensurers = append(ensurers, ensure)
 			}
 			for _, deleteSecret := range deleteSecrets {
-				_, destroy, err := secret.AdaptFunc(deleteSecret.name, namespace, clientLabels, map[string]string{})
+				destroy, err := secret.AdaptFuncToDestroy(deleteSecret.name, namespace)
 				if err != nil {
 					return nil, err
 				}
@@ -186,7 +186,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 			}
 			_, deleteSecrets := queryCertificate([]*secretInternal{}, allClientSecrets.Items)
 			for _, deleteSecret := range deleteSecrets {
-				_, destroyer, err := secret.AdaptFunc(deleteSecret.name, namespace, clientLabels, map[string]string{})
+				destroyer, err := secret.AdaptFuncToDestroy(deleteSecret.name, namespace)
 				if err != nil {
 					return err
 				}

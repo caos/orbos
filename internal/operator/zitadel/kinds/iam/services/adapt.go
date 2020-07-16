@@ -20,10 +20,31 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	error,
 ) {
+	destroyGRPC, err := service.AdaptFuncToDestroy(grpcServiceName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	destroyHTTP, err := service.AdaptFuncToDestroy(httpServiceName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	destroyUI, err := service.AdaptFuncToDestroy(uiServiceName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	destroyers := []zitadel.DestroyFunc{
+		zitadel.ResourceDestroyToZitadelDestroy(destroyGRPC),
+		zitadel.ResourceDestroyToZitadelDestroy(destroyHTTP),
+		zitadel.ResourceDestroyToZitadelDestroy(destroyUI),
+	}
+
 	grpcPorts := []service.Port{
 		{Name: "grpc", Port: grpcPort, TargetPort: "grpc"},
 	}
-	queryGRPC, destroyGRPC, err := service.AdaptFunc(grpcServiceName, namespace, labels, grpcPorts, "", labels, false, "", "")
+	queryGRPC, err := service.AdaptFuncToEnsure(grpcServiceName, namespace, labels, grpcPorts, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -31,7 +52,7 @@ func AdaptFunc(
 	httpPorts := []service.Port{
 		{Name: "http", Port: httpPort, TargetPort: "http"},
 	}
-	queryHTTP, destroyHTTP, err := service.AdaptFunc(httpServiceName, namespace, labels, httpPorts, "", labels, false, "", "")
+	queryHTTP, err := service.AdaptFuncToEnsure(httpServiceName, namespace, labels, httpPorts, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -39,23 +60,15 @@ func AdaptFunc(
 	uiPorts := []service.Port{
 		{Name: "ui", Port: uiPort, TargetPort: "ui"},
 	}
-	queryUI, destroyUI, err := service.AdaptFunc(uiServiceName, namespace, labels, uiPorts, "", labels, false, "", "")
+	queryUI, err := service.AdaptFuncToEnsure(uiServiceName, namespace, labels, uiPorts, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	queriers := make([]zitadel.QueryFunc, 0)
-	queriers = []zitadel.QueryFunc{
+	queriers := []zitadel.QueryFunc{
 		zitadel.ResourceQueryToZitadelQuery(queryGRPC),
 		zitadel.ResourceQueryToZitadelQuery(queryHTTP),
 		zitadel.ResourceQueryToZitadelQuery(queryUI),
-	}
-
-	destroyers := make([]zitadel.DestroyFunc, 0)
-	destroyers = []zitadel.DestroyFunc{
-		zitadel.ResourceDestroyToZitadelDestroy(destroyGRPC),
-		zitadel.ResourceDestroyToZitadelDestroy(destroyHTTP),
-		zitadel.ResourceDestroyToZitadelDestroy(destroyUI),
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {

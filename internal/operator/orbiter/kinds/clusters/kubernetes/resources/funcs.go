@@ -6,7 +6,8 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, error)
+type AdaptFuncToEnsure func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, error)
+type AdaptFuncToDelete func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (DestroyFunc, error)
 
 type EnsureFunc func(*kubernetes.Client) error
 

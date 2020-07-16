@@ -147,9 +147,11 @@ func AdaptFunc(
 		})
 	}
 
+	deployName := "zitadel"
+
 	deploymentDef := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "zitadel",
+			Name:      deployName,
 			Namespace: namespace,
 			Labels:    labels,
 		},
@@ -209,5 +211,13 @@ func AdaptFunc(
 		},
 	}
 
-	return deployment.AdaptFunc(deploymentDef)
+	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
+	if err != nil {
+		return nil, nil, err
+	}
+	destroy, err := deployment.AdaptFuncToDestroy(deployName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	return query, destroy, nil
 }

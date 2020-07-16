@@ -16,7 +16,7 @@ type Port struct {
 	Name       string
 }
 
-func AdaptFunc(
+func AdaptFuncToEnsure(
 	name string,
 	namespace string,
 	labels map[string]string,
@@ -28,41 +28,44 @@ func AdaptFunc(
 	externalName string,
 ) (
 	resources.QueryFunc,
-	resources.DestroyFunc,
 	error,
 ) {
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
-			portList := make([]corev1.ServicePort, 0)
-			for _, port := range ports {
-				portList = append(portList, corev1.ServicePort{
-					Name:       port.Name,
-					Protocol:   corev1.Protocol(port.Protocol),
-					Port:       int32(port.Port),
-					TargetPort: intstr.Parse(port.TargetPort),
-					NodePort:   int32(port.NodePort),
-				})
-			}
-			service := &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: namespace,
-					Labels:    labels,
-				},
-				Spec: corev1.ServiceSpec{
-					Ports:                    portList,
-					Selector:                 selector,
-					Type:                     corev1.ServiceType(t),
-					PublishNotReadyAddresses: publishNotReadyAddresses,
-					ClusterIP:                clusterIP,
-					ExternalName:             externalName,
-				},
-			}
+		portList := make([]corev1.ServicePort, 0)
+		for _, port := range ports {
+			portList = append(portList, corev1.ServicePort{
+				Name:       port.Name,
+				Protocol:   corev1.Protocol(port.Protocol),
+				Port:       int32(port.Port),
+				TargetPort: intstr.Parse(port.TargetPort),
+				NodePort:   int32(port.NodePort),
+			})
+		}
+		service := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: namespace,
+				Labels:    labels,
+			},
+			Spec: corev1.ServiceSpec{
+				Ports:                    portList,
+				Selector:                 selector,
+				Type:                     corev1.ServiceType(t),
+				PublishNotReadyAddresses: publishNotReadyAddresses,
+				ClusterIP:                clusterIP,
+				ExternalName:             externalName,
+			},
+		}
 
-			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyService(service)
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			//TODO
-			return nil
+		return func(k8sClient *kubernetes.Client) error {
+			return k8sClient.ApplyService(service)
 		}, nil
+	}, nil
+}
+
+func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+	return func(client *kubernetes.Client) error {
+		//TODO
+		return nil
+	}, nil
 }

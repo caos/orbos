@@ -6,16 +6,20 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-func AdaptFunc(statefulset *appsv1.StatefulSet) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFuncToEnsure(statefulset *appsv1.StatefulSet) (resources.QueryFunc, error) {
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
-			return func(k8sClient *kubernetes.Client) error {
-				if err := k8sClient.ApplyStatefulSet(statefulset); err != nil {
-					return err
-				}
-				return k8sClient.WaitUntilStatefulsetIsReady(statefulset.Namespace, statefulset.Name, true, false)
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			//TODO
-			return nil
+		return func(k8sClient *kubernetes.Client) error {
+			if err := k8sClient.ApplyStatefulSet(statefulset); err != nil {
+				return err
+			}
+			return k8sClient.WaitUntilStatefulsetIsReady(statefulset.Namespace, statefulset.Name, true, false)
 		}, nil
+	}, nil
+}
+
+func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+	return func(client *kubernetes.Client) error {
+		//TODO
+		return nil
+	}, nil
 }

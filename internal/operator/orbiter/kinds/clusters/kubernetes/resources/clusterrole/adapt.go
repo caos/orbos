@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFunc(name string, labels map[string]string, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFuncToEnsure(name string, labels map[string]string, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, error) {
 	cr := &rbac.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -20,11 +20,15 @@ func AdaptFunc(name string, labels map[string]string, apiGroups, kubeResources, 
 		}},
 	}
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
-			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyClusterRole(cr)
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			//TODO
-			return nil
+		return func(k8sClient *kubernetes.Client) error {
+			return k8sClient.ApplyClusterRole(cr)
 		}, nil
+	}, nil
+}
+
+func AdaptFuncToDestroy(name string) (resources.DestroyFunc, error) {
+	return func(client *kubernetes.Client) error {
+		//TODO
+		return nil
+	}, nil
 }

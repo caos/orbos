@@ -11,6 +11,12 @@ func adaptFunc(cfg *config.InternalConfig) (zitadel.QueryFunc, zitadel.DestroyFu
 	return func(_ *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
 
+				internalLabels := map[string]string{}
+				for k, v := range cfg.Labels {
+					internalLabels[k] = v
+				}
+				internalLabels["app.kubernetes.io/component"] = "networking"
+
 				groups := make(map[string][]string, 0)
 				for _, group := range cfg.Groups {
 					groups[group.Name] = group.List
@@ -22,7 +28,7 @@ func adaptFunc(cfg *config.InternalConfig) (zitadel.QueryFunc, zitadel.DestroyFu
 				}
 
 				for _, domain := range cfg.Domains {
-					err = apps.Ensure(k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules)
+					err = apps.Ensure(k8sClient, cfg.Namespace, internalLabels, domain.Domain, domain.Subdomains, domain.Rules, cfg.OriginCASecretName)
 					if err != nil {
 						return err
 					}

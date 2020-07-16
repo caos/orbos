@@ -16,7 +16,7 @@ type CORS struct {
 	MaxAge         string
 }
 
-func AdaptFunc(name, namespace string, labels map[string]string, grpc bool, host, prefix, rewrite, service, timeoutMS, connectTimeoutMS string, cors *CORS) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFuncToEnsure(name, namespace string, labels map[string]string, grpc bool, host, prefix, rewrite, service, timeoutMS, connectTimeoutMS string, cors *CORS) (resources.QueryFunc, error) {
 	group := "getambassador.io"
 	version := "v2"
 	kind := "Mapping"
@@ -65,38 +65,30 @@ func AdaptFunc(name, namespace string, labels map[string]string, grpc bool, host
 		}}
 
 	return func(k8sClient *kubernetes.Client) (resources.EnsureFunc, error) {
-			res, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
-			if err != nil && !macherrs.IsNotFound(err) {
-				return nil, err
-			}
-			resourceVersion := ""
-			if res != nil {
-				meta := res.Object["metadata"].(map[string]interface{})
-				resourceVersion = meta["resourceVersion"].(string)
-			}
+		res, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
+		if err != nil && !macherrs.IsNotFound(err) {
+			return nil, err
+		}
+		resourceVersion := ""
+		if res != nil {
+			meta := res.Object["metadata"].(map[string]interface{})
+			resourceVersion = meta["resourceVersion"].(string)
+		}
 
-			if resourceVersion != "" {
-				meta := crd.Object["metadata"].(map[string]interface{})
-				meta["resourceVersion"] = resourceVersion
-			}
+		if resourceVersion != "" {
+			meta := crd.Object["metadata"].(map[string]interface{})
+			meta["resourceVersion"] = resourceVersion
+		}
 
-			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			//TODO
-			return nil
+		return func(k8sClient *kubernetes.Client) error {
+			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil
+	}, nil
 }
 
-/*apiVersion: getambassador.io/v2
-kind: Mapping
-metadata:
-  name: dev-accounts-v1
-spec:
-  host: accounts.zitadel.dev
-  prefix: /
-  rewrite: /login/
-  service: http://ui-v1.dev-zitadel
-  timeout_ms: 30000
-  connect_timeout_ms: 30000*/
+func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+	return func(client *kubernetes.Client) error {
+		//TODO
+		return nil
+	}, nil
+}

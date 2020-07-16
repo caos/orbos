@@ -4,58 +4,43 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/host"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 )
 
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
-	accountsDomain string,
-	apiDomain string,
-	consoleDomain string,
-	issuerDomain string,
+	originCASecretName string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
 	error,
 ) {
-	accountsSelector := map[string]string{
-		"hostname": accountsDomain,
-	}
-	queryAccounts, destroyAccounts, err := host.AdaptFunc("accounts", namespace, labels, accountsDomain, "none", "", accountsSelector, "tls-cert-wildcard")
+	accountsHostName := "accounts"
+	apiHostName := "api"
+	consoleHostName := "console"
+	issuerHostName := "issuer"
+
+	destroyAccounts, err := host.AdaptFuncToDestroy(accountsHostName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	apiSelector := map[string]string{
-		"hostname": apiDomain,
-	}
-	queryAPI, destroyAPI, err := host.AdaptFunc("api", namespace, labels, apiDomain, "none", "", apiSelector, "tls-cert-wildcard")
+	destroyAPI, err := host.AdaptFuncToDestroy(apiHostName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	consoleSelector := map[string]string{
-		"hostname": consoleDomain,
-	}
-	queryConsole, destroyConsole, err := host.AdaptFunc("console", namespace, labels, consoleDomain, "none", "", consoleSelector, "tls-cert-wildcard")
+	destroyConsole, err := host.AdaptFuncToDestroy(consoleHostName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	issuerSelector := map[string]string{
-		"hostname": issuerDomain,
-	}
-	queryIssuer, destroyIssuer, err := host.AdaptFunc("issuer", namespace, labels, issuerDomain, "none", "", issuerSelector, "tls-cert-wildcard")
+	destroyIssuer, err := host.AdaptFuncToDestroy(issuerHostName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	queriers := []zitadel.QueryFunc{
-		zitadel.ResourceQueryToZitadelQuery(queryAccounts),
-		zitadel.ResourceQueryToZitadelQuery(queryAPI),
-		zitadel.ResourceQueryToZitadelQuery(queryConsole),
-		zitadel.ResourceQueryToZitadelQuery(queryIssuer),
-	}
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAccounts),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAPI),
@@ -67,6 +52,55 @@ func AdaptFunc(
 			crd, err := k8sClient.CheckCRD("hosts.getambassador.io")
 			if crd == nil || err != nil {
 				return func(k8sClient *kubernetes.Client) error { return nil }, nil
+			}
+
+			currentNW, err := core.ParseQueriedForNetworking(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			accountsDomain := currentNW.GetAccountsSubDomain() + "." + currentNW.GetDomain()
+			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
+			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
+			issuerDomain := currentNW.GetIssuerSubDomain() + "." + currentNW.GetDomain()
+
+			accountsSelector := map[string]string{
+				"hostname": accountsDomain,
+			}
+			queryAccounts, err := host.AdaptFuncToEnsure(accountsHostName, namespace, labels, accountsDomain, "none", "", accountsSelector, originCASecretName)
+			if err != nil {
+				return nil, err
+			}
+
+			apiSelector := map[string]string{
+				"hostname": apiDomain,
+			}
+			queryAPI, err := host.AdaptFuncToEnsure(apiHostName, namespace, labels, apiDomain, "none", "", apiSelector, originCASecretName)
+			if err != nil {
+				return nil, err
+			}
+
+			consoleSelector := map[string]string{
+				"hostname": consoleDomain,
+			}
+			queryConsole, err := host.AdaptFuncToEnsure(consoleHostName, namespace, labels, consoleDomain, "none", "", consoleSelector, originCASecretName)
+			if err != nil {
+				return nil, err
+			}
+
+			issuerSelector := map[string]string{
+				"hostname": issuerDomain,
+			}
+			queryIssuer, err := host.AdaptFuncToEnsure(issuerHostName, namespace, labels, issuerDomain, "none", "", issuerSelector, originCASecretName)
+			if err != nil {
+				return nil, err
+			}
+
+			queriers := []zitadel.QueryFunc{
+				zitadel.ResourceQueryToZitadelQuery(queryAccounts),
+				zitadel.ResourceQueryToZitadelQuery(queryAPI),
+				zitadel.ResourceQueryToZitadelQuery(queryConsole),
+				zitadel.ResourceQueryToZitadelQuery(queryIssuer),
 			}
 
 			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)

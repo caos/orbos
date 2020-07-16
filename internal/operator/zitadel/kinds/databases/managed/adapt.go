@@ -2,17 +2,12 @@ package managed
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/clusterrole"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/clusterrolebinding"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/pdb"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/role"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/rolebinding"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/service"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/serviceaccount"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/initjob"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/rbac"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/services"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/statefulset"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -20,7 +15,7 @@ import (
 	"strconv"
 )
 
-func AdaptFunc(users []string) zitadel.AdaptFunc {
+func AdaptFunc(labels map[string]string, users []string, namespace string) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -36,93 +31,37 @@ func AdaptFunc(users []string) zitadel.AdaptFunc {
 		}
 		desired.Parsed = desiredKind
 
-		namespaceStr := "caos-zitadel"
-		labels := map[string]string{
-			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
-			"app.kubernetes.io/part-of":    "zitadel",
-			"app.kubernetes.io/component":  "iam-database",
+		interalLabels := map[string]string{}
+		for k, v := range labels {
+			interalLabels[k] = v
 		}
+		interalLabels["app.kubernetes.io/component"] = "iam-database"
 
 		sfsName := "cockroachdb"
+		pdbName := sfsName + "-budget"
+		initJobName := sfsName + "-init"
 		serviceAccountName := sfsName
-		roleName := sfsName
-		clusterRoleName := sfsName
-
-		cockroachURL := sfsName + "-public"
+		publicServiceName := sfsName + "-public"
 		cockroachPort := int32(26257)
 		cockroachHTTPPort := int32(8080)
-
 		image := "cockroachdb/cockroach:v20.1.2"
-		replicaCount := int32(desiredKind.Spec.ReplicaCount)
-
-		queryNS, destroyNS, err := namespace.AdaptFunc(namespaceStr)
-		if err != nil {
-			return nil, nil, err
-		}
 
 		userList := []string{"root"}
 		userList = append(userList, users...)
 
-		queryCert, destroyCert, err := certificate.AdaptFunc(namespaceStr, userList, labels, desiredKind.Spec.ClusterDns)
+		queryCert, destroyCert, err := certificate.AdaptFunc(namespace, userList, interalLabels, desiredKind.Spec.ClusterDns)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		querySA, destroySA, err := serviceaccount.AdaptFunc(namespaceStr, serviceAccountName, labels)
+		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(namespace, serviceAccountName, interalLabels)
+
+		querySFS, destroySFS, err := statefulset.AdaptFunc(namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryR, destroyR, err := role.AdaptFunc(roleName, namespaceStr, labels, []string{""}, []string{"secrets"}, []string{"create", "get"})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		queryCR, destroyCR, err := clusterrole.AdaptFunc(clusterRoleName, labels, []string{"certificates.k8s.io"}, []string{"certificatesigningrequests"}, []string{"create", "get", "watch"})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		subjects := []rolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountName, Namespace: namespaceStr}}
-		queryRB, destroyRB, err := rolebinding.AdaptFunc(roleName, namespaceStr, labels, subjects, roleName)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		subjectsCRB := []clusterrolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountName, Namespace: namespaceStr}}
-		queryCRB, destroyCRB, err := clusterrolebinding.AdaptFunc(roleName, labels, subjectsCRB, roleName)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		ports := []service.Port{
-			{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},
-			{Port: 8080, TargetPort: strconv.Itoa(int(cockroachHTTPPort)), Name: "http"},
-		}
-		querySPD, destroySPD, err := service.AdaptFunc(cockroachURL, "default", labels, ports, "", labels, false, "", "")
-		if err != nil {
-			return nil, nil, err
-		}
-
-		querySP, destroySP, err := service.AdaptFunc(cockroachURL, namespaceStr, labels, ports, "", labels, false, "", "")
-		if err != nil {
-			return nil, nil, err
-		}
-
-		queryS, destroyS, err := service.AdaptFunc(sfsName, namespaceStr, labels, ports, "", labels, true, "None", "")
-		if err != nil {
-			return nil, nil, err
-		}
-
-		querySFS, destroySFS, err := statefulset.AdaptFunc(namespaceStr, sfsName, image, labels, serviceAccountName, &replicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		queryPDB, destroyPDB, err := pdb.AdaptFunc(namespaceStr, sfsName+"-budget", labels, "1")
-		if err != nil {
-			return nil, nil, err
-		}
+		queryS, destroyS, err := services.AdaptFunc(namespace, publicServiceName, sfsName, interalLabels, cockroachPort, cockroachHTTPPort)
 
 		//externalName := "cockroachdb-public." + namespaceStr + ".svc.cluster.local"
 		//queryES, destroyES, err := service.AdaptFunc("cockroachdb-public", "default", labels, []service.Port{}, "ExternalName", map[string]string{}, false, "", externalName)
@@ -130,49 +69,37 @@ func AdaptFunc(users []string) zitadel.AdaptFunc {
 		//	return nil, nil, err
 		//}
 
-		queryJ, destroyJ, err := initjob.AdaptFunc(namespaceStr, sfsName+"-init", image, labels, serviceAccountName)
+		queryJ, destroyJ, err := initjob.AdaptFunc(namespace, initJobName, image, labels, serviceAccountName)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, pdbName, interalLabels, "1")
 		if err != nil {
 			return nil, nil, err
 		}
 
 		queriers := []zitadel.QueryFunc{
-			//namespace
-			zitadel.ResourceQueryToZitadelQuery(queryNS),
-			//serviceaccount
-			zitadel.ResourceQueryToZitadelQuery(querySA),
-			//rbac
-			zitadel.ResourceQueryToZitadelQuery(queryR),
-			zitadel.ResourceQueryToZitadelQuery(queryCR),
-			zitadel.ResourceQueryToZitadelQuery(queryRB),
-			zitadel.ResourceQueryToZitadelQuery(queryCRB),
-			//services
-			zitadel.ResourceQueryToZitadelQuery(querySPD),
-			zitadel.ResourceQueryToZitadelQuery(querySP),
-			zitadel.ResourceQueryToZitadelQuery(queryS),
-			//certificates
+			queryRBAC,
 			queryCert,
-			//statefulset
 			zitadel.ResourceQueryToZitadelQuery(querySFS),
-			//poddisruptionpolicy
 			zitadel.ResourceQueryToZitadelQuery(queryPDB),
-			//initjob
+			queryS,
 			zitadel.ResourceQueryToZitadelQuery(queryJ),
+		}
+
+		destroyPDB, err := pdb.AdaptFuncToDestroy(namespace, pdbName)
+		if err != nil {
+			return nil, nil, err
 		}
 
 		destroyers := []zitadel.DestroyFunc{
 			zitadel.ResourceDestroyToZitadelDestroy(destroyJ),
 			zitadel.ResourceDestroyToZitadelDestroy(destroyPDB),
-			zitadel.ResourceDestroyToZitadelDestroy(destroySPD),
-			zitadel.ResourceDestroyToZitadelDestroy(destroySP),
-			zitadel.ResourceDestroyToZitadelDestroy(destroyS),
+			destroyS,
 			zitadel.ResourceDestroyToZitadelDestroy(destroySFS),
-			zitadel.ResourceDestroyToZitadelDestroy(destroyR),
-			zitadel.ResourceDestroyToZitadelDestroy(destroyCR),
-			zitadel.ResourceDestroyToZitadelDestroy(destroyRB),
-			zitadel.ResourceDestroyToZitadelDestroy(destroyCRB),
-			zitadel.ResourceDestroyToZitadelDestroy(destroySA),
+			destroyRBAC,
 			destroyCert,
-			zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
 		}
 
 		currentDB := &Current{
@@ -185,11 +112,11 @@ func AdaptFunc(users []string) zitadel.AdaptFunc {
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 				currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
-				currentDB.Current.URL = cockroachURL
+				currentDB.Current.URL = publicServiceName
 
 				queriers = append(queriers, func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 					return func(k8sClient *kubernetes.Client) error {
-						return k8sClient.WaitUntilStatefulsetIsReady(namespaceStr, sfsName, true, true)
+						return k8sClient.WaitUntilStatefulsetIsReady(namespace, sfsName, true, true)
 					}, nil
 				})
 

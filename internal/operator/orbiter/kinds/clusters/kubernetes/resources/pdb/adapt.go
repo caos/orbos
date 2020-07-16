@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func AdaptFunc(namespace, name string, labels map[string]string, maxUnavailable string) (resources.QueryFunc, resources.DestroyFunc, error) {
+func AdaptFuncToEnsure(namespace, name string, labels map[string]string, maxUnavailable string) (resources.QueryFunc, error) {
 	maxUnavailableParsed := intstr.Parse(maxUnavailable)
 	pdb := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
@@ -23,11 +23,15 @@ func AdaptFunc(namespace, name string, labels map[string]string, maxUnavailable 
 		},
 	}
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
-			return func(k8sClient *kubernetes.Client) error {
-				return k8sClient.ApplyPodDisruptionBudget(pdb)
-			}, nil
-		}, func(k8sClient *kubernetes.Client) error {
-			//TODO
-			return nil
+		return func(k8sClient *kubernetes.Client) error {
+			return k8sClient.ApplyPodDisruptionBudget(pdb)
 		}, nil
+	}, nil
+}
+
+func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+	return func(client *kubernetes.Client) error {
+		//TODO
+		return nil
+	}, nil
 }

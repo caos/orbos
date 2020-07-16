@@ -17,13 +17,16 @@ type ExternalConfig struct {
 	Prefix      string       `yaml:"prefix"`
 }
 
-func (e *ExternalConfig) Internal() (*InternalConfig, *current) {
+func (e *ExternalConfig) Internal(namespace string, originCASecretName string, labels map[string]string) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
-		Domains:     []*IntenalDomain{dom},
-		Groups:      e.Groups,
-		Credentials: e.Credentials,
-		Prefix:      e.Prefix,
+		Domains:            []*IntenalDomain{dom},
+		Groups:             e.Groups,
+		Credentials:        e.Credentials,
+		Prefix:             e.Prefix,
+		Namespace:          namespace,
+		OriginCASecretName: originCASecretName,
+		Labels:             labels,
 	}, curr
 }
 

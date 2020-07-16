@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"
+	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/configuration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/deployment"
@@ -12,9 +13,11 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/services"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
+	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"sort"
 	"strconv"
 )
 
@@ -38,8 +41,12 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		labels := map[string]string{
 			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
 			"app.kubernetes.io/part-of":    "zitadel",
-			"app.kubernetes.io/component":  "iam",
 		}
+		internalLabels := map[string]string{}
+		for k, v := range labels {
+			internalLabels[k] = v
+		}
+		internalLabels["app.kubernetes.io/component"] = "iam"
 
 		cmName := "zitadel-vars"
 		certPath := "/home/zitadel/dbsecrets-zitadel"
@@ -58,6 +65,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		httpURL := "http://" + httpServiceName + "." + namespaceStr + ":" + strconv.Itoa(httpPort)
 		grpcURL := grpcServiceName + "." + namespaceStr + ":" + strconv.Itoa(grpcPort)
 		uiURL := "http://" + uiServiceName + "." + namespaceStr
+		originCASecretName := "tls-cert-wildcard"
 
 		users, migrationUser := getUsers(desiredKind)
 
@@ -67,19 +75,29 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 				allZitadelUsers = append(allZitadelUsers, k)
 			}
 		}
+		sort.Slice(allZitadelUsers, func(i, j int) bool {
+			return allZitadelUsers[i] < allZitadelUsers[j]
+		})
 
 		allUsers := make([]string, 0)
 		for k := range users {
 			allUsers = append(allUsers, k)
 		}
+		sort.Slice(allUsers, func(i, j int) bool {
+			return allUsers[i] < allUsers[j]
+		})
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent, allUsers)
+		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent, namespaceStr, allUsers, labels)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryNS, destroyNS, err := namespace.AdaptFunc(namespaceStr)
+		queryNS, err := namespace.AdaptFuncToEnsure(namespaceStr)
+		if err != nil {
+			return nil, nil, err
+		}
+		destroyNS, err := namespace.AdaptFuncToDestroy(namespaceStr)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -101,19 +119,19 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryS, destroyS, err := services.AdaptFunc(namespaceStr, labels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
+		queryS, destroyS, err := services.AdaptFunc(namespaceStr, internalLabels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(namespaceStr, imagePullSecretName, labels)
+		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(namespaceStr, imagePullSecretName, internalLabels)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		queryD, destroyD, err := deployment.AdaptFunc(
 			namespaceStr,
-			labels,
+			internalLabels,
 			desiredKind.Spec.ReplicaCount,
 			desiredKind.Spec.Version,
 			imagePullSecretName,
@@ -131,18 +149,18 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryM, destroyM, err := migration.AdaptFunc(namespaceStr, labels, secretPasswordName, migrationUser, allZitadelUsers)
+		queryM, destroyM, err := migration.AdaptFunc(namespaceStr, internalLabels, secretPasswordName, migrationUser, allZitadelUsers)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Networking, networkingCurrent)
+		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Networking, networkingCurrent, namespaceStr, originCASecretName, labels)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(namespaceStr, labels, grpcURL, httpURL, uiURL)
+		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(namespaceStr, labels, grpcURL, httpURL, uiURL, originCASecretName)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -152,7 +170,11 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			switch feature {
 			case "networking":
 				//networking
-				queriers = append(queriers, queryNW, queryAmbassador)
+				queriers = append(queriers,
+					zitadel.ResourceQueryToZitadelQuery(queryNS),
+					queryNW,
+					queryAmbassador,
+				)
 			case "zitadel":
 				queriers = append(queriers, //namespace
 					zitadel.ResourceQueryToZitadelQuery(queryNS),
@@ -174,7 +196,11 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		for _, feature := range features {
 			switch feature {
 			case "networking":
-				destroyers = append(destroyers, destroyNW, destroyAmbassador)
+				destroyers = append(destroyers,
+					destroyNW,
+					destroyAmbassador,
+					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
+				)
 			case "zitadel":
 				destroyers = append(destroyers, //namespace
 					destroyS,
@@ -189,10 +215,10 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		}
 
 		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
-				queried := map[string]interface{}{
-					"database":   databaseCurrent,
-					"networking": networkingCurrent,
-				}
+				queried := map[string]interface{}{}
+				corenw.SetQueriedForNetworking(queried, networkingCurrent)
+				coredb.SetQueriedForDatabase(queried, databaseCurrent)
+
 				monitor.WithField("queriers", len(queriers)).Info("Querying")
 				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
 			},

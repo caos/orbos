@@ -9,12 +9,8 @@ import (
 	"reflect"
 )
 
-func (a *App) EnsureOriginCACertificate(k8sClient *kubernetes.Client, namespace string, domain string) error {
-	labels := map[string]string{
-		"app.kubernetes.io/managed-by": "zitadel.caos.ch",
-		"app.kubernetes.io/part-of":    "zitadel",
-	}
-	tlsSecretName := "tls-cert-wildcard"
+func (a *App) EnsureOriginCACertificate(k8sClient *kubernetes.Client, namespace string, labels map[string]string, domain string, originCASecretName string) error {
+
 	certKey := "tls.crt"
 	keyKey := "tls.key"
 
@@ -25,7 +21,7 @@ func (a *App) EnsureOriginCACertificate(k8sClient *kubernetes.Client, namespace 
 
 	tlsSecret := new(corev1.Secret)
 	for _, secret := range secretList.Items {
-		if secret.Name == tlsSecretName {
+		if secret.Name == originCASecretName {
 			tlsSecret = &secret
 		}
 	}
@@ -74,7 +70,7 @@ func (a *App) EnsureOriginCACertificate(k8sClient *kubernetes.Client, namespace 
 
 		if err := k8sClient.ApplySecret(&corev1.Secret{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      tlsSecretName,
+				Name:      originCASecretName,
 				Namespace: namespace,
 				Labels:    labels,
 			},

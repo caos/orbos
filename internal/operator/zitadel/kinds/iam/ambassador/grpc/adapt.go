@@ -5,100 +5,40 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/mapping"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/module"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 )
 
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
 	grpcURL string,
-	apiDomain string,
-	consoleDomain string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
 	error,
 ) {
+	adminMName := "admin-grpc-v1"
+	authMName := "auth-grpc-v1"
+	mgmtMName := "mgmt-grpc-v1"
+	moduleName := "ambassador"
 
-	queryModule, destroyModule, err := module.AdaptFunc("ambassador", namespace, labels, &module.Config{EnableGrpcWeb: true})
-
-	queryAdminG, destroyAdminG, err := mapping.AdaptFunc(
-		"admin-grpc-v1",
-		namespace,
-		labels,
-		true,
-		apiDomain,
-		"/caos.zitadel.admin.api.v1.AdminService/",
-		"/login/",
-		grpcURL,
-		"30000",
-		"30000",
-		&mapping.CORS{
-			Origins:        "https://" + consoleDomain,
-			Methods:        "POST, GET, OPTIONS, DELETE, PUT",
-			Headers:        "'*'",
-			Credentials:    true,
-			ExposedHeaders: "'*'",
-			MaxAge:         "86400",
-		},
-	)
+	destroyAdminG, err := mapping.AdaptFuncToDestroy(adminMName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	destroyAuthG, err := mapping.AdaptFuncToDestroy(authMName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	destroyMgmtGRPC, err := mapping.AdaptFuncToDestroy(mgmtMName, namespace)
+	if err != nil {
+		return nil, nil, err
+	}
+	destroyModule, err := module.AdaptFuncToDestroy(moduleName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	queryAuthG, destroyAuthG, err := mapping.AdaptFunc(
-		"auth-grpc-v1",
-		namespace,
-		labels,
-		true,
-		apiDomain,
-		"/caos.zitadel.auth.api.v1.AuthService/",
-		"",
-		grpcURL,
-		"30000",
-		"30000",
-		&mapping.CORS{
-			Origins:        "https://" + consoleDomain,
-			Methods:        "POST, GET, OPTIONS, DELETE, PUT",
-			Headers:        "'*'",
-			Credentials:    true,
-			ExposedHeaders: "'*'",
-			MaxAge:         "86400",
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	queryMgmtGRPC, destroyMgmtGRPC, err := mapping.AdaptFunc(
-		"mgmt-grpc-v1",
-		namespace,
-		labels,
-		true,
-		apiDomain,
-		"/caos.zitadel.management.api.v1.ManagementService/",
-		"",
-		grpcURL,
-		"30000",
-		"30000",
-		&mapping.CORS{
-			Origins:        "https://" + consoleDomain,
-			Methods:        "POST, GET, OPTIONS, DELETE, PUT",
-			Headers:        "'*'",
-			Credentials:    true,
-			ExposedHeaders: "'*'",
-			MaxAge:         "86400",
-		},
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	queriers := []zitadel.QueryFunc{
-		zitadel.ResourceQueryToZitadelQuery(queryModule),
-		zitadel.ResourceQueryToZitadelQuery(queryAdminG),
-		zitadel.ResourceQueryToZitadelQuery(queryAuthG),
-		zitadel.ResourceQueryToZitadelQuery(queryMgmtGRPC),
-	}
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAdminG),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAuthG),
@@ -115,6 +55,83 @@ func AdaptFunc(
 			crd, err = k8sClient.CheckCRD("modules.getambassador.io")
 			if crd == nil || err != nil {
 				return func(k8sClient *kubernetes.Client) error { return nil }, nil
+			}
+
+			currentNW, err := core.ParseQueriedForNetworking(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
+			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
+
+			queryModule, err := module.AdaptFuncToEnsure(moduleName, namespace, labels, &module.Config{EnableGrpcWeb: true})
+
+			cors := &mapping.CORS{
+				Origins:        "https://" + consoleDomain,
+				Methods:        "POST, GET, OPTIONS, DELETE, PUT",
+				Headers:        "'*'",
+				Credentials:    true,
+				ExposedHeaders: "'*'",
+				MaxAge:         "86400",
+			}
+
+			queryAdminG, err := mapping.AdaptFuncToEnsure(
+				adminMName,
+				namespace,
+				labels,
+				true,
+				"apiDomain",
+				"/caos.zitadel.admin.api.v1.AdminService/",
+				"/login/",
+				grpcURL,
+				"30000",
+				"30000",
+				cors,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			queryAuthG, err := mapping.AdaptFuncToEnsure(
+				authMName,
+				namespace,
+				labels,
+				true,
+				apiDomain,
+				"/caos.zitadel.auth.api.v1.AuthService/",
+				"",
+				grpcURL,
+				"30000",
+				"30000",
+				cors,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			queryMgmtGRPC, err := mapping.AdaptFuncToEnsure(
+				mgmtMName,
+				namespace,
+				labels,
+				true,
+				apiDomain,
+				"/caos.zitadel.management.api.v1.ManagementService/",
+				"",
+				grpcURL,
+				"30000",
+				"30000",
+				cors,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			queriers := []zitadel.QueryFunc{
+				zitadel.ResourceQueryToZitadelQuery(queryModule),
+				zitadel.ResourceQueryToZitadelQuery(queryAdminG),
+				zitadel.ResourceQueryToZitadelQuery(queryAuthG),
+				zitadel.ResourceQueryToZitadelQuery(queryMgmtGRPC),
 			}
 
 			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
