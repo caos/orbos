@@ -2,8 +2,12 @@ package statefulset
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/statefulset"
+	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -13,6 +17,7 @@ import (
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	name string,
 	image string,
@@ -27,12 +32,16 @@ func AdaptFunc(
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
+	zitadel.EnsureFunc,
+	zitadel.EnsureFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("component", "statefulset")
+
 	defaultMode := int32(256)
 	quantity, err := resource.ParseQuantity(storageCapacity)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	replicaCountParsed := int32(replicaCount)
@@ -178,11 +187,33 @@ func AdaptFunc(
 
 	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroy, err := statefulset.AdaptFuncToDestroy(name, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, nil, err
 	}
-	return query, destroy, nil
+
+	wrapedQuery, wrapedDestroy, err := resources.WrapFuncs(internalMonitor, query, destroy)
+	checkDBRunning := func(k8sClient *kubernetes.Client) error {
+		internalMonitor.Info("waiting for statefulset to be running")
+		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, false, 60); err != nil {
+			internalMonitor.Error(errors.Wrap(err, "error while waiting for statefulset to be running"))
+			return err
+		}
+		internalMonitor.Info("statefulset is running")
+		return nil
+	}
+
+	checkDBReady := func(k8sClient *kubernetes.Client) error {
+		internalMonitor.Info("waiting for statefulset to be ready")
+		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, true, 60); err != nil {
+			internalMonitor.Error(errors.Wrap(err, "error while waiting for statefulset to be ready"))
+			return err
+		}
+		internalMonitor.Info("statefulset is ready")
+		return nil
+	}
+
+	return wrapedQuery, wrapedDestroy, checkDBRunning, checkDBReady, err
 }

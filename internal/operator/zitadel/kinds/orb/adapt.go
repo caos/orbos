@@ -15,6 +15,8 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
+		orbMonitor := monitor.WithField("kind", "orb")
+
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing desired state failed")
@@ -22,12 +24,12 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
 
-		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
-			monitor = monitor.Verbose()
+		if desiredKind.Spec.Verbose && !orbMonitor.IsVerbose() {
+			orbMonitor = orbMonitor.Verbose()
 		}
 
 		iamCurrent := &tree.Tree{}
-		queryIAM, destroyIAM, err := iam.AdaptFunc(features...)(monitor, desiredKind.IAM, iamCurrent)
+		queryIAM, destroyIAM, err := iam.AdaptFunc(features...)(orbMonitor, desiredKind.IAM, iamCurrent)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -44,9 +46,9 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		}
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+				return zitadel.QueriersToEnsureFunc(monitor, true, queriers, k8sClient, queried)
 			},
-			zitadel.DestroyersToDestroyFunc(destroyers),
+			zitadel.DestroyersToDestroyFunc(monitor, destroyers),
 			nil
 	}
 }

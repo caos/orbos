@@ -12,6 +12,8 @@ import (
 
 func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, kubeconfig string) func() {
 	return func() {
+		internalMonitor := monitor.WithField("operator", "zitadel")
+		internalMonitor.Info("Takeoff")
 		treeDesired, err := Parse(gitClient, "zitadel.yml")
 		if err != nil {
 			monitor.Error(err)
@@ -23,39 +25,39 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, kubec
 		if kubeconfig != "" {
 			data, err := ioutil.ReadFile(kubeconfig)
 			if err != nil {
-				monitor.Error(err)
+				internalMonitor.Error(err)
 				return
 			}
 			dummyKubeconfig := string(data)
 
-			k8sClient = kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
+			k8sClient = kubernetes.NewK8sClient(internalMonitor, &dummyKubeconfig)
 			//if err := k8sClient.RefreshLocal(); err != nil {
 			//	return nil, nil, err
 			//}
 		} else {
-			monitor.Error(errors.New("In cluster kubeconfig is not yet supported"))
+			internalMonitor.Error(errors.New("In cluster kubeconfig is not yet supported"))
 			return
 		}
 
 		if !k8sClient.Available() {
-			monitor.Error(err)
+			internalMonitor.Error(err)
 			return
 		}
 
-		query, _, err := adapt(monitor, treeDesired, treeCurrent)
+		query, _, err := adapt(internalMonitor, treeDesired, treeCurrent)
 		if err != nil {
-			monitor.Error(err)
+			internalMonitor.Error(err)
 			return
 		}
 
 		ensure, err := query(k8sClient, map[string]interface{}{})
 		if err != nil {
-			monitor.Error(err)
+			internalMonitor.Error(err)
 			return
 		}
 
 		if err := ensure(k8sClient); err != nil {
-			monitor.Error(err)
+			internalMonitor.Error(err)
 			return
 		}
 	}

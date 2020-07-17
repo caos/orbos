@@ -22,11 +22,17 @@ func AdaptFunc(
 		zitadel.DestroyFunc,
 		error,
 	) {
+		internalMonitor := monitor.WithField("kind", "legacycf")
+
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
+
+		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
+			internalMonitor.Verbose()
+		}
 
 		if desiredKind.Spec == nil {
 			return nil, nil, errors.New("No specs found")
@@ -38,17 +44,20 @@ func AdaptFunc(
 
 		internalSpec, current := desiredKind.Spec.Internal(namespace, originCASecretName, labels)
 
-		legacyQuerier, legacyDestroyer, err := adaptFunc(internalSpec)
-		currentTree.Parsed = current
+		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
+		current.ReadyCertificate = readyCertificate
 
 		queriers := []zitadel.QueryFunc{
 			legacyQuerier,
 		}
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+				currentTree.Parsed = current
+				internalMonitor.Info("set current state legacycf")
+
+				return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 			},
-			zitadel.DestroyersToDestroyFunc([]zitadel.DestroyFunc{legacyDestroyer}),
+			zitadel.DestroyersToDestroyFunc(internalMonitor, []zitadel.DestroyFunc{legacyDestroyer}),
 			nil
 	}
 }

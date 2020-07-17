@@ -5,9 +5,19 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/app"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/config"
+	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 )
 
-func adaptFunc(cfg *config.InternalConfig) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
+func adaptFunc(
+	monitor mntr.Monitor,
+	cfg *config.InternalConfig,
+) (
+	zitadel.QueryFunc,
+	zitadel.DestroyFunc,
+	zitadel.EnsureFunc,
+	error,
+) {
 	return func(_ *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
 			return func(k8sClient *kubernetes.Client) error {
 
@@ -37,6 +47,14 @@ func adaptFunc(cfg *config.InternalConfig) (zitadel.QueryFunc, zitadel.DestroyFu
 			}, nil
 		}, func(k8sClient *kubernetes.Client) error {
 			//TODO
+			return nil
+		},
+		func(k8sClient *kubernetes.Client) error {
+			monitor.Info("waiting for certificate to be created")
+			if err := k8sClient.WaitForSecret(cfg.Namespace, cfg.OriginCASecretName, 60); err != nil {
+				return errors.Wrap(err, "error while waiting for certificate secret to be created")
+			}
+			monitor.Info("certificateis created")
 			return nil
 		}, nil
 }

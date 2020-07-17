@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/tree"
 )
 
@@ -10,6 +11,7 @@ const queriedName = "database"
 type DatabaseCurrent interface {
 	GetURL() string
 	GetPort() string
+	GetReadyQuery() zitadel.EnsureFunc
 }
 
 func ParseQueriedForDatabase(queried map[string]interface{}) (DatabaseCurrent, error) {

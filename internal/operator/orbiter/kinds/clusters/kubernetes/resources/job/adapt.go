@@ -9,11 +9,7 @@ import (
 func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 		return func(k8sClient *kubernetes.Client) error {
-			if err := k8sClient.ApplyJob(job); err != nil {
-				return err
-			}
-
-			return k8sClient.WaitUntilJobCompleted(job.Namespace, job.Name)
+			return k8sClient.ApplyJob(job)
 		}, nil
 	}, nil
 }

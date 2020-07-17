@@ -5,9 +5,11 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/mapping"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	uiURL string,
@@ -16,6 +18,7 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("part", "ui")
 
 	consoleName := "console-v1"
 	accountsName := "accounts-v1"
@@ -88,8 +91,8 @@ func AdaptFunc(
 				zitadel.ResourceQueryToZitadelQuery(queryAcc),
 			}
 
-			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
-		zitadel.DestroyersToDestroyFunc(destroyers),
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		nil
 }

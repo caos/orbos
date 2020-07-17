@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,33 +53,60 @@ func ResourceEnsureToZitadelEnsure(ensureFunc resources.EnsureFunc) EnsureFunc {
 		return ensureFunc(k8sClient)
 	}
 }
+func EnsureFuncToQueryFunc(ensure EnsureFunc) QueryFunc {
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (ensureFunc EnsureFunc, err error) {
+		return ensure, err
+	}
+}
 
-func QueriersToEnsureFunc(queriers []QueryFunc, k8sClient *kubernetes.Client, queried map[string]interface{}) (EnsureFunc, error) {
+func QueriersToEnsureFunc(monitor mntr.Monitor, infoLogs bool, queriers []QueryFunc, k8sClient *kubernetes.Client, queried map[string]interface{}) (EnsureFunc, error) {
+	if infoLogs {
+		monitor.Info("querying...")
+	} else {
+		monitor.Debug("querying...")
+	}
 	ensurers := make([]EnsureFunc, 0)
 	for _, querier := range queriers {
 		ensurer, err := querier(k8sClient, queried)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "error while querying")
 		}
 		ensurers = append(ensurers, ensurer)
 	}
-
+	if infoLogs {
+		monitor.Info("queried")
+	} else {
+		monitor.Debug("queried")
+	}
 	return func(k8sClient *kubernetes.Client) error {
+		if infoLogs {
+			monitor.Info("ensuring...")
+		} else {
+			monitor.Debug("ensuring...")
+		}
 		for _, ensurer := range ensurers {
 			if err := ensurer(k8sClient); err != nil {
-				return err
+				return errors.Wrap(err, "error while ensuring")
 			}
+		}
+		if infoLogs {
+			monitor.Info("ensured")
+		} else {
+			monitor.Debug("ensured")
 		}
 		return nil
 	}, nil
 }
-func DestroyersToDestroyFunc(destroyers []DestroyFunc) DestroyFunc {
+
+func DestroyersToDestroyFunc(monitor mntr.Monitor, destroyers []DestroyFunc) DestroyFunc {
 	return func(k8sClient *kubernetes.Client) error {
+		monitor.Info("destroying...")
 		for _, destroyer := range destroyers {
 			if err := destroyer(k8sClient); err != nil {
-				return err
+				return errors.Wrap(err, "error while destroying")
 			}
 		}
+		monitor.Info("destroyed")
 		return nil
 	}
 }

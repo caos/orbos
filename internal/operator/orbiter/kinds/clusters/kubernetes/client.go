@@ -182,23 +182,35 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 	})
 }
 
-func (c *Client) WaitUntilJobCompleted(namespace string, name string) error {
-	ctx := context.Background()
-	job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
-	if err != nil {
-		return err
+func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		labelSelector := getLabelSelector(job.Spec.Selector.MatchLabels)
+
+		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		returnChannel <- waitForPodsPhase(watch, 1, core.PodSucceeded, false, false)
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for job to complete")
 	}
-
-	labelSelector := getLabelSelector(job.Spec.Selector.MatchLabels)
-
-	watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return err
-	}
-
-	return waitForPodsPhase(watch, 1, core.PodSucceeded, false, false)
 }
 
 func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
@@ -237,24 +249,36 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 	})
 }
 
-func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool) error {
-	ctx := context.Background()
-	sfs, err := c.set.AppsV1().StatefulSets(namespace).Get(ctx, name, mach.GetOptions{})
-	if err != nil {
-		return err
+func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		sfs, err := c.set.AppsV1().StatefulSets(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		labelSelector := getLabelSelector(sfs.Spec.Selector.MatchLabels)
+
+		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+		replicas := sfs.Spec.Replicas
+
+		returnChannel <- waitForPodsPhase(watch, int(*replicas), core.PodRunning, containerCheck, readyCheck)
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for job to complete")
 	}
-
-	labelSelector := getLabelSelector(sfs.Spec.Selector.MatchLabels)
-
-	watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return err
-	}
-	replicas := sfs.Spec.Replicas
-
-	return waitForPodsPhase(watch, int(*replicas), core.PodRunning, containerCheck, readyCheck)
 }
 
 func (c *Client) DeleteDeployment(namespace, name string) error {
@@ -270,6 +294,56 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
+}
+
+func (c *Client) WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		for i := 0; i < int(timeoutSeconds); i++ {
+			secret, err := c.set.CoreV1().ConfigMaps(namespace).Get(ctx, name, mach.GetOptions{})
+			if err != nil && !macherrs.IsNotFound(err) {
+				returnChannel <- err
+				return
+			} else if secret != nil {
+				returnChannel <- nil
+				return
+			}
+			time.Sleep(1)
+		}
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for configmap to be created")
+	}
+}
+
+func (c *Client) WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		for i := 0; i < int(timeoutSeconds); i++ {
+			secret, err := c.set.CoreV1().Secrets(namespace).Get(ctx, name, mach.GetOptions{})
+			if err != nil && !macherrs.IsNotFound(err) {
+				returnChannel <- err
+				return
+			} else if secret != nil {
+				returnChannel <- nil
+				return
+			}
+			time.Sleep(1)
+		}
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for secret to be created")
+	}
 }
 
 func (c *Client) DeleteSecret(namespace, name string) error {

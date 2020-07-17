@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/operator/zitadel"
 
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 
@@ -9,6 +10,7 @@ import (
 )
 
 type ExternalConfig struct {
+	Verbose     bool
 	Domain      string
 	IP          orbiter.IPAddress
 	Rules       []*Rule
@@ -78,6 +80,7 @@ type current struct {
 	consoleSubdomain  string `yaml:"-"`
 	apiSubdomain      string `yaml:"-"`
 	accountsSubdomain string `yaml:"-"`
+	ReadyCertificate  zitadel.EnsureFunc
 }
 
 func (c *current) GetDomain() string {
@@ -94,4 +97,7 @@ func (c *current) GetAPISubDomain() string {
 }
 func (c *current) GetAccountsSubDomain() string {
 	return c.accountsSubdomain
+}
+func (c *current) GetReadyCertificate() zitadel.EnsureFunc {
+	return c.ReadyCertificate
 }

@@ -1,8 +1,11 @@
 package deployment
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
+	"github.com/caos/orbos/internal/operator/zitadel"
+	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	"github.com/caos/orbos/mntr"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,6 +13,7 @@ import (
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	replicaCount int,
@@ -24,11 +28,15 @@ func AdaptFunc(
 	secretPasswordsName string,
 	users []string,
 	nodeSelector map[string]string,
+	migrationDone zitadel.EnsureFunc,
+	configurationDone zitadel.EnsureFunc,
 ) (
-	resources.QueryFunc,
-	resources.DestroyFunc,
+	zitadel.QueryFunc,
+	zitadel.DestroyFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("component", "deployment")
+
 	rootSecret := "client-root"
 	secretMode := int32(0777)
 	replicas := int32(replicaCount)
@@ -185,7 +193,6 @@ func AdaptFunc(
 								RunAsUser:    &runAsUser,
 								RunAsNonRoot: &runAsNonRoot,
 							},
-							//Command:         []string{"/bin/sh", "-c", "while true; do sleep 30; done;"},
 							Name:            "zitadel",
 							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:" + version,
 							ImagePullPolicy: "IfNotPresent",
@@ -211,13 +218,34 @@ func AdaptFunc(
 		},
 	}
 
-	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
-	if err != nil {
-		return nil, nil, err
-	}
 	destroy, err := deployment.AdaptFuncToDestroy(deployName, namespace)
 	if err != nil {
 		return nil, nil, err
 	}
-	return query, destroy, nil
+	destroyers := []zitadel.DestroyFunc{
+		zitadel.ResourceDestroyToZitadelDestroy(destroy),
+	}
+
+	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+			currentDB, err := coredb.ParseQueriedForDatabase(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			queriers := []zitadel.QueryFunc{
+				zitadel.EnsureFuncToQueryFunc(currentDB.GetReadyQuery()),
+				zitadel.EnsureFuncToQueryFunc(migrationDone),
+				zitadel.EnsureFuncToQueryFunc(configurationDone),
+				zitadel.ResourceQueryToZitadelQuery(query),
+			}
+
+			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
+		},
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
+		nil
 }

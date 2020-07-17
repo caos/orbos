@@ -3,9 +3,11 @@ package imagepullsecret
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/dockerconfigsecret"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	name string,
 	labels map[string]string,
@@ -14,6 +16,8 @@ func AdaptFunc(
 	resources.DestroyFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("component", "imagepullsecret")
+
 	data := `{
 		"auths": {
 				"docker.pkg.github.com": {
@@ -30,5 +34,5 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, err
 	}
-	return query, destroy, nil
+	return resources.WrapFuncs(internalMonitor, query, destroy)
 }

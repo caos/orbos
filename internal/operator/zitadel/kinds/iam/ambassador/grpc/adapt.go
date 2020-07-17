@@ -6,9 +6,11 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/module"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	grpcURL string,
@@ -17,6 +19,8 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("part", "grpc")
+
 	adminMName := "admin-grpc-v1"
 	authMName := "auth-grpc-v1"
 	mgmtMName := "mgmt-grpc-v1"
@@ -134,8 +138,8 @@ func AdaptFunc(
 				zitadel.ResourceQueryToZitadelQuery(queryMgmtGRPC),
 			}
 
-			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
-		zitadel.DestroyersToDestroyFunc(destroyers),
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		nil
 }

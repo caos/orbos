@@ -8,6 +8,8 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel"
 	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration/scripts"
+	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	secretPasswordName string,
@@ -23,8 +26,11 @@ func AdaptFunc(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
+	zitadel.EnsureFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("component", "migration")
+
 	migrationConfigmap := "migrate-db"
 	migrationsPath := "/migrate"
 	rootUserInternal := "root"
@@ -39,12 +45,12 @@ func AdaptFunc(
 
 	destroyCM, err := configmap.AdaptFuncToDestroy(migrationConfigmap, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	destroyJ, err := job.AdaptFuncToDestroy(jobName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	destroyers := []zitadel.DestroyFunc{
@@ -187,13 +193,24 @@ func AdaptFunc(
 			if err != nil {
 				return nil, err
 			}
+
 			queriers := []zitadel.QueryFunc{
+				zitadel.EnsureFuncToQueryFunc(currentDB.GetReadyQuery()),
 				zitadel.ResourceQueryToZitadelQuery(queryCM),
 				zitadel.ResourceQueryToZitadelQuery(queryJ),
 			}
-			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+			return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 		},
-		zitadel.DestroyersToDestroyFunc(destroyers),
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
+		func(k8sClient *kubernetes.Client) error {
+			internalMonitor.Info("waiting for migration to be completed")
+			if err := k8sClient.WaitUntilJobCompleted(namespace, jobName, 60); err != nil {
+				internalMonitor.Error(errors.Wrap(err, "error while waiting for migration to be completed"))
+				return err
+			}
+			internalMonitor.Info("migration is completed")
+			return nil
+		},
 		nil
 }
 

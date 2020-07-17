@@ -4,9 +4,11 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/service"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	grpcServiceName string,
@@ -20,6 +22,8 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("component", "services")
+
 	destroyGRPC, err := service.AdaptFuncToDestroy(grpcServiceName, namespace)
 	if err != nil {
 		return nil, nil, err
@@ -72,8 +76,8 @@ func AdaptFunc(
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
-		zitadel.DestroyersToDestroyFunc(destroyers),
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		nil
 }

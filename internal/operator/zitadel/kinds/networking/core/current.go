@@ -2,6 +2,7 @@ package core
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/tree"
 )
 
@@ -13,6 +14,7 @@ type NetworkingCurrent interface {
 	GetConsoleSubDomain() string
 	GetAPISubDomain() string
 	GetAccountsSubDomain() string
+	GetReadyCertificate() zitadel.EnsureFunc
 }
 
 func ParseQueriedForNetworking(queried map[string]interface{}) (NetworkingCurrent, error) {

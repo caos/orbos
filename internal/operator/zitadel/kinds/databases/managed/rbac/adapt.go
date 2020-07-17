@@ -8,9 +8,11 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/rolebinding"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/serviceaccount"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	name string,
 	labels map[string]string,
@@ -19,6 +21,8 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	error,
 ) {
+
+	internalMonitor := monitor.WithField("component", "rbac")
 
 	serviceAccountName := name
 	roleName := name
@@ -94,9 +98,9 @@ func AdaptFunc(
 		zitadel.ResourceQueryToZitadelQuery(queryCRB),
 	}
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
-		zitadel.DestroyersToDestroyFunc(destroyers),
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		nil
 
 }

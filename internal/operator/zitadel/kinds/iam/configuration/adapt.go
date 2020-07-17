@@ -7,10 +7,13 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel"
 	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
+	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	"strings"
 )
 
 func AdaptFunc(
+	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	desired *Configuration,
@@ -25,8 +28,11 @@ func AdaptFunc(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
+	zitadel.EnsureFunc,
 	error,
 ) {
+	internalMonitor := monitor.WithField("component", "configuration")
+
 	googleServiceAccountJSONPath := "google-serviceaccount-key.json"
 	zitadelKeysPath := "zitadel-keys.yaml"
 
@@ -36,23 +42,23 @@ func AdaptFunc(
 
 	destroyCM, err := configmap.AdaptFuncToDestroy(cmName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	destroyS, err := secret.AdaptFuncToDestroy(secretName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	destroyCCM, err := configmap.AdaptFuncToDestroy(consoleCMName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	destroySV, err := secret.AdaptFuncToDestroy(secretVarsName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	destroySP, err := secret.AdaptFuncToDestroy(secretPasswordName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	destroyers := []zitadel.DestroyFunc{
@@ -104,9 +110,33 @@ func AdaptFunc(
 				zitadel.ResourceQueryToZitadelQuery(queryCM),
 			}
 
-			return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
-		zitadel.DestroyersToDestroyFunc(destroyers),
+		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
+		func(k8sClient *kubernetes.Client) error {
+			monitor.Debug("Waiting for configuration to be created")
+			if err := k8sClient.WaitForSecret(namespace, secretName, 60); err != nil {
+				return errors.Wrap(err, "error while waiting for secret")
+			}
+
+			if err := k8sClient.WaitForSecret(namespace, secretVarsName, 60); err != nil {
+				return errors.Wrap(err, "error while waiting for vars secret ")
+			}
+
+			if err := k8sClient.WaitForSecret(namespace, secretPasswordName, 60); err != nil {
+				return errors.Wrap(err, "error while waiting for password secret")
+			}
+
+			if err := k8sClient.WaitForConfigMap(namespace, cmName, 60); err != nil {
+				return errors.Wrap(err, "error while waiting for configmap")
+			}
+
+			if err := k8sClient.WaitForConfigMap(namespace, consoleCMName, 60); err != nil {
+				return errors.Wrap(err, "error while waiting for console configmap")
+			}
+			monitor.Debug("configuration is created")
+			return nil
+		},
 		nil
 }
 

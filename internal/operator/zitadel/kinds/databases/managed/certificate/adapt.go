@@ -6,10 +6,23 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/mntr"
 	"strings"
 )
 
-func AdaptFunc(namespace string, clients []string, labels map[string]string, clusterDns string) (zitadel.QueryFunc, zitadel.DestroyFunc, error) {
+func AdaptFunc(
+	monitor mntr.Monitor,
+	namespace string,
+	clients []string,
+	labels map[string]string,
+	clusterDns string,
+) (
+	zitadel.QueryFunc,
+	zitadel.DestroyFunc,
+	error,
+) {
+	cMonitor := monitor.WithField("component", "certificates")
+
 	nodeLabels := map[string]string{}
 	clientLabels := map[string]string{}
 	for k, v := range labels {
@@ -38,21 +51,21 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 		})
 	}
 
-	return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
-			ensurers := make([]resources.EnsureFunc, 0)
+	caPrivKey := new(rsa.PrivateKey)
+	caCert := make([]byte, 0)
+	nodeSecret := "cockroachdb.node"
+	caCertKey := "ca.crt"
+	caPrivKeyKey := "ca.key"
+	nodeCertKey := "node.crt"
+	nodePrivKeyKey := "node.key"
+
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+			queriers := make([]zitadel.QueryFunc, 0)
 
 			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
 			if err != nil {
 				return nil, err
 			}
-
-			caPrivKey := new(rsa.PrivateKey)
-			caCert := make([]byte, 0)
-			nodeSecret := "cockroachdb.node"
-			caCertKey := "ca.crt"
-			caPrivKeyKey := "ca.key"
-			nodeCertKey := "node.crt"
-			nodePrivKeyKey := "node.key"
 
 			if len(allNodeSecrets.Items) == 0 {
 				caPrivKeyInternal, caCertInternal, err := NewCA()
@@ -96,11 +109,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 				if err != nil {
 					return nil, err
 				}
-				ensure, err := queryNodeSecret(k8sClient)
-				if err != nil {
-					return nil, err
-				}
-				ensurers = append(ensurers, ensure)
+				queriers = append(queriers, zitadel.ResourceQueryToZitadelQuery(queryNodeSecret))
 			} else {
 				cert, err := PEMDecodeKey(allNodeSecrets.Items[0].Data[caPrivKeyKey])
 				if err != nil {
@@ -152,13 +161,7 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 				if err != nil {
 					return nil, err
 				}
-
-				ensure, err := queryClientSecret(k8sClient)
-				if err != nil {
-					return nil, err
-				}
-
-				ensurers = append(ensurers, ensure)
+				queriers = append(queriers, zitadel.ResourceQueryToZitadelQuery(queryClientSecret))
 			}
 			for _, deleteSecret := range deleteSecrets {
 				destroy, err := secret.AdaptFuncToDestroy(deleteSecret.name, namespace)
@@ -166,19 +169,14 @@ func AdaptFunc(namespace string, clients []string, labels map[string]string, clu
 					return nil, err
 				}
 
-				ensurers = append(ensurers, func(client *kubernetes.Client) error {
-					return destroy(client)
-				})
+				queriers = append(queriers, zitadel.ResourceQueryToZitadelQuery(func(client *kubernetes.Client) (ensureFunc resources.EnsureFunc, err error) {
+					return func(client *kubernetes.Client) error {
+						return destroy(client)
+					}, nil
+				}))
 			}
 
-			return func(k8sClient *kubernetes.Client) error {
-				for _, ensurer := range ensurers {
-					if err := ensurer(k8sClient); err != nil {
-						return err
-					}
-				}
-				return nil
-			}, nil
+			return zitadel.QueriersToEnsureFunc(cMonitor, false, queriers, k8sClient, queried)
 		}, func(k8sClient *kubernetes.Client) error {
 			allClientSecrets, err := k8sClient.ListSecrets(namespace, clientLabels)
 			if err != nil {

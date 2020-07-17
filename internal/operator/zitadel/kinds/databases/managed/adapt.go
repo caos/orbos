@@ -25,11 +25,17 @@ func AdaptFunc(labels map[string]string, users []string, namespace string) zitad
 		zitadel.DestroyFunc,
 		error,
 	) {
+		internalMonitor := monitor.WithField("kind", "managedDatabase")
+
 		desiredKind, err := parseDesiredV0(desired)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
+
+		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
+			internalMonitor.Verbose()
+		}
 
 		interalLabels := map[string]string{}
 		for k, v := range labels {
@@ -49,19 +55,19 @@ func AdaptFunc(labels map[string]string, users []string, namespace string) zitad
 		userList := []string{"root"}
 		userList = append(userList, users...)
 
-		queryCert, destroyCert, err := certificate.AdaptFunc(namespace, userList, interalLabels, desiredKind.Spec.ClusterDns)
+		queryCert, destroyCert, err := certificate.AdaptFunc(internalMonitor, namespace, userList, interalLabels, desiredKind.Spec.ClusterDns)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(namespace, serviceAccountName, interalLabels)
+		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, interalLabels)
 
-		querySFS, destroySFS, err := statefulset.AdaptFunc(namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
+		querySFS, destroySFS, checkDBRunning, checkDBReady, err := statefulset.AdaptFunc(internalMonitor, namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryS, destroyS, err := services.AdaptFunc(namespace, publicServiceName, sfsName, interalLabels, cockroachPort, cockroachHTTPPort)
+		queryS, destroyS, err := services.AdaptFunc(internalMonitor, namespace, publicServiceName, sfsName, interalLabels, cockroachPort, cockroachHTTPPort)
 
 		//externalName := "cockroachdb-public." + namespaceStr + ".svc.cluster.local"
 		//queryES, destroyES, err := service.AdaptFunc("cockroachdb-public", "default", labels, []service.Port{}, "ExternalName", map[string]string{}, false, "", externalName)
@@ -69,7 +75,7 @@ func AdaptFunc(labels map[string]string, users []string, namespace string) zitad
 		//	return nil, nil, err
 		//}
 
-		queryJ, destroyJ, err := initjob.AdaptFunc(namespace, initJobName, image, labels, serviceAccountName)
+		queryJ, destroyJ, err := initjob.AdaptFunc(internalMonitor, namespace, initJobName, image, labels, serviceAccountName, checkDBRunning)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -85,7 +91,7 @@ func AdaptFunc(labels map[string]string, users []string, namespace string) zitad
 			zitadel.ResourceQueryToZitadelQuery(querySFS),
 			zitadel.ResourceQueryToZitadelQuery(queryPDB),
 			queryS,
-			zitadel.ResourceQueryToZitadelQuery(queryJ),
+			queryJ,
 		}
 
 		destroyPDB, err := pdb.AdaptFuncToDestroy(namespace, pdbName)
@@ -94,7 +100,7 @@ func AdaptFunc(labels map[string]string, users []string, namespace string) zitad
 		}
 
 		destroyers := []zitadel.DestroyFunc{
-			zitadel.ResourceDestroyToZitadelDestroy(destroyJ),
+			destroyJ,
 			zitadel.ResourceDestroyToZitadelDestroy(destroyPDB),
 			destroyS,
 			zitadel.ResourceDestroyToZitadelDestroy(destroySFS),
@@ -111,18 +117,17 @@ func AdaptFunc(labels map[string]string, users []string, namespace string) zitad
 		current.Parsed = currentDB
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+				ensure, err := zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
+
 				currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
 				currentDB.Current.URL = publicServiceName
+				currentDB.Current.ReadyFunc = checkDBReady
 
-				queriers = append(queriers, func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-					return func(k8sClient *kubernetes.Client) error {
-						return k8sClient.WaitUntilStatefulsetIsReady(namespace, sfsName, true, true)
-					}, nil
-				})
+				internalMonitor.Info("set current state of managed database")
 
-				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+				return ensure, err
 			},
-			zitadel.DestroyersToDestroyFunc(destroyers),
+			zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 			nil
 	}
 }

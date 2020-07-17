@@ -31,11 +31,17 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		zitadel.DestroyFunc,
 		error,
 	) {
+		internalMonitor := monitor.WithField("kind", "iam")
+
 		desiredKind, err := parseDesiredV0(desired)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
+
+		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
+			internalMonitor.Verbose()
+		}
 
 		namespaceStr := "caos-zitadel"
 		labels := map[string]string{
@@ -88,7 +94,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		})
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(monitor, desiredKind.Database, databaseCurrent, namespaceStr, allUsers, labels)
+		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Database, databaseCurrent, namespaceStr, allUsers, labels)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -102,7 +108,8 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryC, destroyC, err := configuration.AdaptFunc(
+		queryC, destroyC, configurationDone, err := configuration.AdaptFunc(
+			internalMonitor,
 			namespaceStr,
 			labels,
 			desiredKind.Spec.Configuration,
@@ -119,17 +126,23 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryS, destroyS, err := services.AdaptFunc(namespaceStr, internalLabels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
+		queryS, destroyS, err := services.AdaptFunc(internalMonitor, namespaceStr, internalLabels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(namespaceStr, imagePullSecretName, internalLabels)
+		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(internalMonitor, namespaceStr, imagePullSecretName, internalLabels)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		queryM, destroyM, migrationDone, err := migration.AdaptFunc(internalMonitor, namespaceStr, internalLabels, secretPasswordName, migrationUser, allZitadelUsers)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		queryD, destroyD, err := deployment.AdaptFunc(
+			internalMonitor,
 			namespaceStr,
 			internalLabels,
 			desiredKind.Spec.ReplicaCount,
@@ -144,23 +157,20 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 			secretPasswordName,
 			allZitadelUsers,
 			desiredKind.Spec.NodeSelector,
+			migrationDone,
+			configurationDone,
 		)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryM, destroyM, err := migration.AdaptFunc(namespaceStr, internalLabels, secretPasswordName, migrationUser, allZitadelUsers)
-		if err != nil {
-			return nil, nil, err
-		}
-
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(monitor, desiredKind.Networking, networkingCurrent, namespaceStr, originCASecretName, labels)
+		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, originCASecretName, labels)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(namespaceStr, labels, grpcURL, httpURL, uiURL, originCASecretName)
+		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(internalMonitor, namespaceStr, labels, grpcURL, httpURL, uiURL, originCASecretName)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -187,7 +197,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					//services
 					queryS,
 					zitadel.ResourceQueryToZitadelQuery(queryIPS),
-					zitadel.ResourceQueryToZitadelQuery(queryD),
+					queryD,
 				)
 			}
 		}
@@ -206,7 +216,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					destroyS,
 					destroyM,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyIPS),
-					zitadel.ResourceDestroyToZitadelDestroy(destroyD),
+					destroyD,
 					destroyDB,
 					destroyC,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
@@ -219,12 +229,12 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 				corenw.SetQueriedForNetworking(queried, networkingCurrent)
 				coredb.SetQueriedForDatabase(queried, databaseCurrent)
 
-				monitor.WithField("queriers", len(queriers)).Info("Querying")
-				return zitadel.QueriersToEnsureFunc(queriers, k8sClient, queried)
+				internalMonitor.WithField("queriers", len(queriers)).Info("Querying")
+				return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 			},
 			func(k8sClient *kubernetes.Client) error {
-				monitor.WithField("destroyers", len(destroyers)).Info("Destroying")
-				return zitadel.DestroyersToDestroyFunc(destroyers)(k8sClient)
+				internalMonitor.WithField("destroyers", len(destroyers)).Info("Destroying")
+				return zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers)(k8sClient)
 			},
 			nil
 	}
