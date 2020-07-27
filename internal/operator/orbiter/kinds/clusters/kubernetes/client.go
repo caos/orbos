@@ -418,11 +418,8 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 		return errors.Wrapf(err, "listing pods with selector %s failed", selector)
 	}
 
-	// --ignore-daemonsets and orbiter
+	// --ignore-daemonsets
 	pods := deriveFilter(func(pod core.Pod) bool {
-		if pod.ObjectMeta.Labels["app"] == "orbiter" {
-			return false
-		}
 		controllerRef := mach.GetControllerOf(&pod)
 		return controllerRef == nil || controllerRef.Kind != apps.SchemeGroupVersion.WithKind("DaemonSet").Kind
 	}, append([]core.Pod{}, podItems.Items...))

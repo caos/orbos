@@ -326,6 +326,8 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 						"node-role.kubernetes.io/master": "",
 					},
 					Tolerations: []core.Toleration{{
+						Key:      "node-role.kubernetes.io/master",
+						Effect:   "NoSchedule",
 						Operator: "Exists",
 					}},
 				},
