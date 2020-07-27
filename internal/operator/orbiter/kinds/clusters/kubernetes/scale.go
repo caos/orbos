@@ -49,8 +49,8 @@ func ensureScale(
 		if delta > 0 {
 			upscalingDone = false
 			machines, alignErr := newMachines(pool.infra, delta)
-			err = helpers.Concat(err, alignErr)
 			if alignErr != nil {
+				err = helpers.Concat(err, alignErr)
 				return
 			}
 			for _, machine := range machines {
@@ -60,14 +60,14 @@ func ensureScale(
 			for _, machine := range existing[pool.desired.Nodes:] {
 				id := machine.infra.ID()
 				delErr := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false)
-				err = helpers.Concat(err, delErr)
 				if delErr != nil {
+					err = helpers.Concat(err, delErr)
 					return
 				}
 
 				rmErr := machine.infra.Remove()
-				err = helpers.Concat(err, rmErr)
 				if rmErr != nil {
+					err = helpers.Concat(err, rmErr)
 					return
 				}
 				uninitializeMachine(id)
@@ -82,8 +82,8 @@ func ensureScale(
 			return
 		}
 		poolMachines, listErr := pool.machines()
-		err = helpers.Concat(err, listErr)
 		if listErr != nil {
+			err = helpers.Concat(err, listErr)
 			return
 		}
 		machines = append(machines, poolMachines...)
