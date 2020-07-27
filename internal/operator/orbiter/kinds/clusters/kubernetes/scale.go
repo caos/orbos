@@ -215,7 +215,8 @@ nodes:
 			kubeAPI,
 			jointoken,
 			k8sVersion,
-			string(certKey))
+			string(certKey),
+			k8sClient)
 
 		if err != nil {
 			return false, err
@@ -245,7 +246,8 @@ nodes:
 			kubeAPI,
 			jointoken,
 			k8sVersion,
-			""); err != nil {
+			"",
+			k8sClient); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}
