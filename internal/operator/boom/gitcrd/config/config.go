@@ -1,11 +1,13 @@
 package config
 
-import "github.com/caos/orbos/mntr"
+import (
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/mntr"
+)
 
 type Config struct {
-	Monitor          mntr.Monitor
 	CrdDirectoryPath string
 	CrdPath          string
-	User             string
-	Email            string
+	Git              *git.Client
+	Monitor          mntr.Monitor
 }

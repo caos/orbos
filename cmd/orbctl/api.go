@@ -31,6 +31,10 @@ func APICommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
 		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {
 			return err

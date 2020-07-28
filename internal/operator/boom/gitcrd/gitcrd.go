@@ -1,7 +1,6 @@
 package gitcrd
 
 import (
-	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -45,10 +44,9 @@ func New(conf *config.Config) *GitCrd {
 
 	monitor.Info("New GitCRD")
 
-	gitClient := git.New(context.Background(), conf.Monitor, conf.User, conf.Email)
 	gitCrd := &GitCrd{
 		crdDirectoryPath: conf.CrdDirectoryPath,
-		git:              gitClient,
+		git:              conf.Git,
 		monitor:          monitor,
 	}
 

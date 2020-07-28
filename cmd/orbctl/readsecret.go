@@ -32,6 +32,10 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
+			if err := gitClient.Clone(); err != nil {
+				return err
+			}
+
 			path := ""
 			if len(args) > 0 {
 				path = args[0]
