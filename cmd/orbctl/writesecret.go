@@ -53,6 +53,10 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
