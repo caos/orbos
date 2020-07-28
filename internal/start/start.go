@@ -76,6 +76,11 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		return
 	}
 
+	if err := gitClient.Clone(); err != nil {
+		monitor.Error(err)
+		return
+	}
+
 	pushEvents := func(events []*ingestion.EventRequest) error { return nil }
 	if conf.IngestionAddress != "" {
 		conn, err := grpc.Dial(conf.IngestionAddress, grpc.WithInsecure())
