@@ -272,7 +272,7 @@ func gitClient(monitor mntr.Monitor, task string) *git.Client {
 }
 
 func checks(monitor mntr.Monitor, client *git.Client) {
-	t := time.NewTicker(1 * time.Minute)
+	t := time.NewTicker(13 * time.Hour)
 	for range t.C {
 		if err := client.Check(); err != nil {
 			monitor.Error(err)
