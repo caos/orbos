@@ -36,6 +36,8 @@ type OrbiterConfig struct {
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
 
+	go checks(monitor, orbctlGit)
+
 	finishedChan := make(chan struct{})
 	takeoffChan := make(chan struct{})
 
@@ -199,6 +201,13 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, erro
 }
 
 func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version string) error {
+
+	ensureClient := gitClient(monitor, "ensure")
+	queryClient := gitClient(monitor, "query")
+
+	// We don't need to check both clients
+	go checks(monitor, queryClient)
+
 	boom.Metrics(monitor)
 
 	takeoffChan := make(chan struct{})
@@ -208,45 +217,60 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 
 	for range takeoffChan {
 
-		boomChan := make(chan struct{})
-		currentChan := make(chan struct{})
+		ensureChan := make(chan struct{})
+		queryChan := make(chan struct{})
 
-		takeoff, takeoffCurrent := boom.Takeoff(
+		ensure, query := boom.Takeoff(
 			monitor,
 			"/boom",
 			localmode,
 			orbConfigPath,
+			ensureClient,
+			queryClient,
 		)
 		go func() {
 			started := time.Now()
-			takeoffCurrent()
+			query()
 
 			monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			}).Info("Iteration done")
 			debug.FreeOSMemory()
 
-			currentChan <- struct{}{}
+			queryChan <- struct{}{}
 		}()
 		go func() {
 			started := time.Now()
-			takeoff()
+			ensure()
 
 			monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			}).Info("Iteration done")
 			debug.FreeOSMemory()
 
-			boomChan <- struct{}{}
+			ensureChan <- struct{}{}
 		}()
 
 		go func() {
-			<-currentChan
-			<-boomChan
+			<-queryChan
+			<-ensureChan
 
 			takeoffChan <- struct{}{}
 		}()
 	}
 
 	return nil
+}
+
+func gitClient(monitor mntr.Monitor, task string) *git.Client {
+	return git.New(context.Background(), monitor.WithField("task", task), "Boom", "boom@caos.ch")
+}
+
+func checks(monitor mntr.Monitor, client *git.Client) {
+	t := time.NewTicker(1 * time.Minute)
+	for range t.C {
+		if err := client.Check(); err != nil {
+			monitor.Error(err)
+		}
+	}
 }
