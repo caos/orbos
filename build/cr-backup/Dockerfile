@@ -9,4 +9,7 @@ RUN mv linux_amd64/oauth2l /usr/local/bin/oauth2l && rm -rf linux_amd64
 COPY build/scripts/backup-cockroach.sh /scripts/backup.sh
 RUN chmod +x /scripts/backup.sh
 
+COPY build/scripts/restore-cockroach.sh /scripts/restore.sh
+RUN chmod +x /scripts/restore.sh
+
 ENTRYPOINT [ "/cockroach" ]
