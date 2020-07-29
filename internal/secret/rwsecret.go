@@ -74,9 +74,9 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, operator, newMasterKey
 	}()
 
 	if operator == "orbiter" {
-		return api.OrbiterSecretFunc(gitClient, desired)(monitor)
+		return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
 	} else if operator == "boom" {
-		return api.BoomSecretFunc(gitClient, desired)(monitor)
+		return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -92,9 +92,9 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 	secret.Value = value
 
 	if operator == "orbiter" {
-		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+		return api.PushOrbiterDesiredFunc(gitClient, tree)(monitor)
 	} else if operator == "boom" {
-		return api.BoomSecretFunc(gitClient, tree)(monitor)
+		return api.PushBoomDesiredFunc(gitClient, tree)(monitor)
 	}
 
 	monitor.Info("No secrets written")

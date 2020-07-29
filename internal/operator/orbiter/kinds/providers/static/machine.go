@@ -16,20 +16,24 @@ import (
 var _ infra.Machine = (*machine)(nil)
 
 type machine struct {
-	active   bool
-	poolFile string
-	id       *string
-	ip       string
+	active          bool
+	poolFile        string
+	id              *string
+	ip              string
+	rebootRequired  bool
+	unrequireReboot func()
 	*ssh.Machine
 }
 
-func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, ip string) *machine {
+func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, ip string, rebootRequired bool, unrequireReboot func()) *machine {
 	return &machine{
-		active:   false,
-		poolFile: poolFile,
-		id:       id,
-		ip:       ip,
-		Machine:  ssh.NewMachine(monitor, remoteUser, ip),
+		active:          false,
+		poolFile:        poolFile,
+		id:              id,
+		ip:              ip,
+		Machine:         ssh.NewMachine(monitor, remoteUser, ip),
+		rebootRequired:  rebootRequired,
+		unrequireReboot: unrequireReboot,
 	}
 }
 
@@ -51,6 +55,10 @@ func (c *machine) Remove() error {
 	c.Execute(nil, "sudo kubeadm reset -f")
 	c.Execute(nil, "sudo rm -rf /var/lib/etcd")
 	return nil
+}
+
+func (c *machine) RebootRequired() (bool, func()) {
+	return c.rebootRequired, c.unrequireReboot
 }
 
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID string) (map[string]infra.Machine, error) {

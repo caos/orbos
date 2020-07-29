@@ -18,7 +18,7 @@ func ensureScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf api.SecretFunc,
+	psf api.PushDesiredFunc,
 	controlplanePool initializedPool,
 	workerPools []initializedPool,
 	kubeAPI *infra.Address,
@@ -59,7 +59,7 @@ func ensureScale(
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
 				id := machine.infra.ID()
-				delErr := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false)
+				delErr := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra)
 				if delErr != nil {
 					err = helpers.Concat(err, delErr)
 					return
@@ -134,17 +134,17 @@ nodes:
 
 		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
 
-		if isJoinedControlPlane && machine.currentMachine.Online {
+		if isJoinedControlPlane && !machine.currentMachine.Updating && !machine.currentMachine.Rebooting {
 			certsCP = machine.infra
 			continue nodes
 		}
 
-		if isJoinedControlPlane && !machine.currentMachine.Online {
+		if isJoinedControlPlane && machine.node != nil && machine.node.Spec.Unschedulable {
 			machineMonitor.Info("Awaiting controlplane to become ready")
 			return false, nil
 		}
 
-		if machine.currentMachine.Online {
+		if machine.node != nil && !machine.node.Spec.Unschedulable {
 			continue nodes
 		}
 

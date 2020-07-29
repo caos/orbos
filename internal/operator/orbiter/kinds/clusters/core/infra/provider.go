@@ -41,6 +41,7 @@ type Machine interface {
 	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
+	RebootRequired() (required bool, unrequire func())
 }
 
 type Machines []Machine

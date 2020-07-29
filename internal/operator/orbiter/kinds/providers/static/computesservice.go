@@ -125,15 +125,27 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 	keys := privateKeys(c.desired.Spec)
 
 	newCache := make([]*machine, 0)
+
+	initializeMachine := func(rebootRequired bool, spec *Machine) *machine {
+		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP), rebootRequired, func() {
+			f := false
+			spec.RebootRequired = &f
+		})
+	}
 	for _, spec := range specifiedMachines {
-		machine := newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP))
+
+		machine := initializeMachine(*spec.RebootRequired, spec)
 		if err := machine.UseKey(keys...); err != nil {
 			return nil, err
 		}
 
 		buf := new(bytes.Buffer)
 		if err := machine.ReadFile(c.statusFile, buf); err != nil {
-			// treat as inactive
+			// treat as active and require reboot if ssh connection fails
+			rebootMachine := initializeMachine(true, spec)
+			rebootMachine.active = true
+			newCache = append(newCache, rebootMachine)
+			continue
 		}
 		machine.active = strings.Contains(buf.String(), "active")
 		buf.Reset()

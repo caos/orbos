@@ -13,7 +13,7 @@ const (
 	boomFile    = "boom.yml"
 )
 
-type SecretFunc func(monitor mntr.Monitor) error
+type PushDesiredFunc func(monitor mntr.Monitor) error
 
 func ExistsOrbiterYml(gitClient *git.Client) (bool, error) {
 	return existsFileInGit(gitClient, orbiterFile)
@@ -27,7 +27,7 @@ func PushOrbiterYml(monitor mntr.Monitor, msg string, gitClient *git.Client, des
 	return pushFileInGit(monitor, msg, gitClient, desired, orbiterFile)
 }
 
-func OrbiterSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
+func PushOrbiterDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing orbiter secrets")
 		return PushOrbiterYml(monitor, "Orbiter secrets written", gitClient, desired)
@@ -46,10 +46,10 @@ func PushBoomYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desire
 	return pushFileInGit(monitor, msg, gitClient, desired, boomFile)
 }
 
-func BoomSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
+func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing boom secrets")
-		return PushBoomYml(monitor, "Orbiter secrets written", gitClient, desired)
+		return PushBoomYml(monitor, "Boom secrets written", gitClient, desired)
 	}
 }
 

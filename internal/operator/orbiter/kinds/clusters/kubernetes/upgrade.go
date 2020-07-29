@@ -144,15 +144,6 @@ func step(
 	to common.Software,
 ) (bool, error) {
 
-	for _, machine := range sortedMachines {
-		if machine.node != nil && machine.node.Spec.Unschedulable && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
-			delete(machine.node.Labels, "orbos.ch/updating")
-			if err := k8sClient.Uncordon(machine.currentMachine, machine.node); err != nil {
-				return false, err
-			}
-		}
-	}
-
 	for idx, machine := range sortedMachines {
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, to)
@@ -195,7 +186,7 @@ func plan(
 
 			if !isControlplane {
 				k8sNode.Labels["orbos.ch/updating"] = to.Kubelet.Version
-				if err := k8sClient.Drain(machine.currentMachine, k8sNode); err != nil {
+				if err := k8sClient.Drain(machine.currentMachine, k8sNode, updating); err != nil {
 					return err
 				}
 			}

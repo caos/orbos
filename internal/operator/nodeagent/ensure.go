@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"time"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
@@ -46,9 +48,26 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 
 	return func(desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
 		curr.Commit = commit
+
 		curr.NodeIsReady = isReady()
 
 		defer persistReadyness(curr.NodeIsReady)
+
+		if desired.RebootRequired.After(curr.RebootIssued) {
+			curr.NodeIsReady = false
+			if !desired.ChangesAllowed {
+				monitor.Info("Not rebooting as changes are not allowed")
+				return noop, nil
+			}
+			curr.RebootIssued = time.Now()
+			return func() error {
+				monitor.Info("Rebooting")
+				if err := exec.Command("sudo", "reboot").Run(); err != nil {
+					return fmt.Errorf("rebooting system failed: %w", err)
+				}
+				return nil
+			}, nil
+		}
 
 		var (
 			err            error
@@ -83,7 +102,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		return func() error {
 
 			if !desired.ChangesAllowed {
-				monitor.Info("Changes are not allowed")
+				monitor.Info("Not ensuring anything as changes are not allowed")
 				return nil
 			}
 

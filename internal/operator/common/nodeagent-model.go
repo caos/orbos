@@ -7,20 +7,23 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 type NodeAgentSpec struct {
 	ChangesAllowed bool
 	//	RebootEnabled  bool
-	Software *Software
-	Firewall *Firewall
+	Software       *Software
+	Firewall       *Firewall
+	RebootRequired time.Time
 }
 
 type NodeAgentCurrent struct {
-	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
-	Software    Software
-	Open        []*Allowed
-	Commit      string
+	NodeIsReady  bool `mapstructure:"ready" yaml:"ready"`
+	Software     Software
+	Open         []*Allowed
+	Commit       string
+	RebootIssued time.Time
 }
 
 type Software struct {

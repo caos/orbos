@@ -33,19 +33,23 @@ type instance struct {
 	context *context
 	start   bool
 	machine
+	rebootRequired  bool
+	unrequireReboot func()
 }
 
-func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine) *instance {
+func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine, rebootRequired bool, unrequireReboot func()) *instance {
 	return &instance{
-		Monitor: monitor,
-		id:      id,
-		ip:      ip,
-		url:     url,
-		pool:    pool,
-		remove:  remove,
-		context: context,
-		start:   start,
-		machine: machine,
+		Monitor:         monitor,
+		id:              id,
+		ip:              ip,
+		url:             url,
+		pool:            pool,
+		remove:          remove,
+		context:         context,
+		start:           start,
+		machine:         machine,
+		rebootRequired:  rebootRequired,
+		unrequireReboot: unrequireReboot,
 	}
 }
 
@@ -55,6 +59,10 @@ func (c *instance) ID() string {
 
 func (c *instance) IP() string {
 	return c.ip
+}
+
+func (c *instance) RebootRequired() (bool, func()) {
+	return c.rebootRequired, c.unrequireReboot
 }
 
 func (c *instance) Remove() error {
