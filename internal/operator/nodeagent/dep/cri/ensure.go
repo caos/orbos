@@ -32,10 +32,11 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		return errors.Wrapf(err, "removing older docker versions failed with stderr %s", errBuf.String())
 	}
 
-	for _, pkg := range []*dep.Software{
-		&dep.Software{Package: "device-mapper-persistent-data"},
-		&dep.Software{Package: "lvm2"},
-	} {
+	for _, pkg := range []*dep.Software{{
+		Package: "device-mapper-persistent-data",
+	}, {
+		Package: "lvm2",
+	}} {
 		if err := c.manager.Install(pkg); err != nil {
 			return errors.Wrap(err, "installing docker dependency failed")
 		}

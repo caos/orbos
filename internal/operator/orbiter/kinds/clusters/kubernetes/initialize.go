@@ -145,6 +145,9 @@ func initialize(
 			if !softwareContains(*naSpec.Software, k8sSoftware) {
 				naSpec.Software.Merge(k8sSoftware)
 				machineMonitor.Changed("Kubernetes software desired")
+			} else if naSpec.Software.Containerruntime.Config == nil {
+				// Ensures backward compatibility with versions that didn't use a docker config
+				naSpec.Software.Containerruntime.Config = naCurr.Software.Containerruntime.Config
 			}
 		}
 
