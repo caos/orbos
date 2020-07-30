@@ -285,7 +285,7 @@ outer:
 		updateTaints = true
 	}
 
-	if k8s.Tainted(node, rebooting) && naCurr.RebootIssued.After(naSpec.RebootRequired) {
+	if k8s.Tainted(node, rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
 		newTaints = k8s.RemoveFromTaints(newTaints, rebooting)
 		updateTaints = true
 	}

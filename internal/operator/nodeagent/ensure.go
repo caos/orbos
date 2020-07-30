@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -53,13 +54,27 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 
 		defer persistReadyness(curr.NodeIsReady)
 
-		if desired.RebootRequired.After(curr.RebootIssued) {
+		who, err := exec.Command("who", "-b").CombinedOutput()
+		if err != nil {
+			return noop, err
+		}
+
+		dateTime := strings.Fields(string(who))[2:]
+		str := strings.Join(dateTime, " ") + ":00"
+		t, err := time.Parse("2006-01-02 15:04:05", str)
+		if err != nil {
+			return noop, err
+		}
+
+		curr.Booted = t
+
+		if desired.RebootRequired.After(curr.Booted) {
 			curr.NodeIsReady = false
 			if !desired.ChangesAllowed {
 				monitor.Info("Not rebooting as changes are not allowed")
 				return noop, nil
 			}
-			curr.RebootIssued = time.Now()
+			curr.Booted = time.Now()
 			return func() error {
 				monitor.Info("Rebooting")
 				if err := exec.Command("sudo", "reboot").Run(); err != nil {
@@ -69,10 +84,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 			}, nil
 		}
 
-		var (
-			err            error
-			ensureFirewall func() error
-		)
+		var ensureFirewall func() error
 		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
 		if err != nil {
 			return noop, err

@@ -19,11 +19,11 @@ type NodeAgentSpec struct {
 }
 
 type NodeAgentCurrent struct {
-	NodeIsReady  bool `mapstructure:"ready" yaml:"ready"`
-	Software     Software
-	Open         []*Allowed
-	Commit       string
-	RebootIssued time.Time
+	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
+	Software    Software
+	Open        []*Allowed
+	Commit      string
+	Booted      time.Time
 }
 
 type Software struct {
