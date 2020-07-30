@@ -74,7 +74,6 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 				monitor.Info("Not rebooting as changes are not allowed")
 				return noop, nil
 			}
-			curr.Booted = time.Now()
 			return func() error {
 				monitor.Info("Rebooting")
 				if err := exec.Command("sudo", "reboot").Run(); err != nil {

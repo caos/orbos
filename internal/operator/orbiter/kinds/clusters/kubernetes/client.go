@@ -287,6 +287,7 @@ func (c *Client) updateNode(node *core.Node) (err error) {
 	if err != nil {
 		return err
 	}
+	node.ResourceVersion = ""
 	_, err = api.Update(context.Background(), node, mach.UpdateOptions{})
 	return err
 }

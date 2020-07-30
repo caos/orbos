@@ -30,7 +30,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 		machine.currentMachine.Rebooting = true
 		machineMonitor.Info("Requiring reboot")
 		unreq()
-		machine.desiredNodeagent.RebootRequired = time.Now()
+		machine.desiredNodeagent.RebootRequired = time.Now().Truncate(time.Second)
 		err = pdf(monitor.WithField("reason", "remove machine from reboot list"))
 		return false
 	})
@@ -38,6 +38,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 		return false, err
 	}
 
+	done = true
 	allInitializedMachines.forEach(monitor, func(machine *initializedMachine, machineMonitor mntr.Monitor) bool {
 		if !machine.currentMachine.FirewallIsReady {
 			done = false
