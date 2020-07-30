@@ -213,7 +213,7 @@ func plan(
 				return err
 			}
 
-			if !softwareContains(*machine.desiredNodeagent.Software, to, true) {
+			if !softwareContains(*machine.desiredNodeagent.Software, to) {
 				machine.desiredNodeagent.Software.Merge(to)
 				machinemonitor.WithFields(map[string]interface{}{
 					"from": machine.currentNodeagent.Software.Kubelet.Version,
@@ -224,23 +224,25 @@ func plan(
 		}
 	}
 
-	ensureTargetSoftware := func() error {
-		if !softwareContains(*machine.desiredNodeagent.Software, to, true) {
-			machine.desiredNodeagent.Software.Merge(to)
-			machinemonitor.WithFields(map[string]interface{}{
-				"current": KubernetesSoftware(machine.currentNodeagent.Software),
-				"desired": to,
-			}).Changed("Target software desired")
-		} else {
-			machinemonitor.Info("Awaiting kubernetes software")
+	ensureTargetSoftware := func(sw common.Software) func() error {
+		return func() error {
+			if !softwareContains(*machine.desiredNodeagent.Software, sw) {
+				machine.desiredNodeagent.Software.Merge(to)
+				machinemonitor.WithFields(map[string]interface{}{
+					"current": KubernetesSoftware(machine.currentNodeagent.Software),
+					"desired": sw,
+				}).Changed("Software desired")
+			} else {
+				machinemonitor.Info("Awaiting kubernetes software")
+			}
+			return nil
 		}
-		return nil
 	}
 
 	nodeIsReady := machine.currentNodeagent.NodeIsReady
 
 	if !machine.currentMachine.Joined {
-		if softwareContains(machine.currentNodeagent.Software, to, true) {
+		if softwareContains(machine.currentNodeagent.Software, to) {
 			if !nodeIsReady {
 				return awaitNodeAgent, nil
 			}
@@ -248,7 +250,14 @@ func plan(
 			// This node needs to be joined first
 			return nil, nil
 		}
-		return ensureTargetSoftware, nil
+		return ensureTargetSoftware(to), nil
+	}
+
+	alignedSoftware := new(common.Software)
+	*alignedSoftware = machine.currentNodeagent.Software
+	alignedSoftware.Kubeadm = common.Package{}
+	if !softwareContains(*machine.desiredNodeagent.Software, *alignedSoftware) {
+		return ensureTargetSoftware(*machine.desiredNodeagent.Software), nil
 	}
 
 	if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
@@ -270,7 +279,7 @@ func plan(
 	}
 
 	if !softwareContains(machine.currentNodeagent.Software, to, true) || !softwareContains(*machine.desiredNodeagent.Software, to, true) {
-		return ensureTargetSoftware, nil
+		return ensureTargetSoftware(to), nil
 	}
 
 	if !nodeIsReady {
