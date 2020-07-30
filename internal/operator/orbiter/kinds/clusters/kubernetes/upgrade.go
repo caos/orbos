@@ -213,7 +213,7 @@ func plan(
 				return err
 			}
 
-			if !softwareContains(*machine.desiredNodeagent.Software, to) {
+			if !softwareContains(*machine.desiredNodeagent.Software, to, true) {
 				machine.desiredNodeagent.Software.Merge(to)
 				machinemonitor.WithFields(map[string]interface{}{
 					"from": machine.currentNodeagent.Software.Kubelet.Version,
@@ -225,7 +225,7 @@ func plan(
 	}
 
 	ensureTargetSoftware := func() error {
-		if !softwareContains(*machine.desiredNodeagent.Software, to) {
+		if !softwareContains(*machine.desiredNodeagent.Software, to, true) {
 			machine.desiredNodeagent.Software.Merge(to)
 			machinemonitor.WithFields(map[string]interface{}{
 				"current": KubernetesSoftware(machine.currentNodeagent.Software),
@@ -240,7 +240,7 @@ func plan(
 	nodeIsReady := machine.currentNodeagent.NodeIsReady
 
 	if !machine.currentMachine.Joined {
-		if softwareContains(machine.currentNodeagent.Software, to) {
+		if softwareContains(machine.currentNodeagent.Software, to, true) {
 			if !nodeIsReady {
 				return awaitNodeAgent, nil
 			}
@@ -269,7 +269,7 @@ func plan(
 		return ensureSoftware(machine.node, isControlplane, isFirstControlplane), nil
 	}
 
-	if !softwareContains(machine.currentNodeagent.Software, to) || !softwareContains(*machine.desiredNodeagent.Software, to) {
+	if !softwareContains(machine.currentNodeagent.Software, to, true) || !softwareContains(*machine.desiredNodeagent.Software, to, true) {
 		return ensureTargetSoftware, nil
 	}
 

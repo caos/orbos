@@ -143,17 +143,17 @@ func (k KubernetesVersion) extractNumber(monitor mntr.Monitor, position int) (in
 	return int(version), nil
 }
 
-func softwareContains(this common.Software, that common.Software) bool {
-	return contains(this.Swap, that.Swap) &&
-		contains(this.Kubelet, that.Kubelet) &&
-		contains(this.Kubeadm, that.Kubeadm) &&
-		contains(this.Kubectl, that.Kubectl) &&
-		contains(this.Containerruntime, that.Containerruntime) &&
-		contains(this.KeepaliveD, that.KeepaliveD) &&
-		contains(this.Nginx, that.Nginx) &&
-		contains(this.Hostname, that.Hostname) &&
-		sysctl.Contains(this.Sysctl, that.Sysctl) &&
-		contains(this.Health, that.Health)
+func softwareContains(this common.Software, that common.Software, deep bool) bool {
+	return contains(this.Swap, that.Swap) && (!deep || this.Swap.Equals(that.Swap)) &&
+		contains(this.Kubelet, that.Kubelet) && (!deep || this.Kubelet.Equals(that.Kubelet)) &&
+		contains(this.Kubeadm, that.Kubeadm) && (!deep || this.Kubeadm.Equals(that.Kubeadm)) &&
+		contains(this.Kubectl, that.Kubectl) && (!deep || this.Kubectl.Equals(that.Kubectl)) &&
+		contains(this.Containerruntime, that.Containerruntime) && (!deep || this.Containerruntime.Equals(that.Containerruntime)) &&
+		contains(this.KeepaliveD, that.KeepaliveD) && (!deep || this.KeepaliveD.Equals(that.KeepaliveD)) &&
+		contains(this.Nginx, that.Nginx) && (!deep || this.Nginx.Equals(that.Nginx)) &&
+		contains(this.Hostname, that.Hostname) && (!deep || this.Hostname.Equals(that.Hostname)) &&
+		sysctl.Contains(this.Sysctl, that.Sysctl) && (!deep || this.Sysctl.Equals(that.Sysctl)) &&
+		contains(this.Health, that.Health) && (!deep || this.Health.Equals(that.Health))
 }
 
 func contains(this, that common.Package) bool {
