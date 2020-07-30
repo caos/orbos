@@ -302,6 +302,9 @@ func (c *Client) cordon(node *core.Node, reason drainReason) (err error) {
 	})
 	monitor.Info("Cordoning node")
 
+	if c.Tainted(node, reason) {
+		return nil
+	}
 	node.Spec.Taints = append(node.Spec.Taints, core.Taint{
 		Key:    taintKeyPrefix + reason.String(),
 		Effect: "NoSchedule",
