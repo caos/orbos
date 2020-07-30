@@ -30,7 +30,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 		machine.currentMachine.Rebooting = true
 		machineMonitor.Info("Requiring reboot")
 		unreq()
-		machine.desiredNodeagent.RebootRequired = time.Now().Truncate(time.Second)
+		machine.desiredNodeagent.RebootRequired = time.Now().Truncate(time.Minute)
 		err = pdf(monitor.WithField("reason", "remove machine from reboot list"))
 		return false
 	})
