@@ -186,7 +186,23 @@ func plan(
 		return nil
 	}
 
-	ensureSoftware := func(k8sNode *v1.Node, isControlplane bool, isFirstControlplane bool) func() error {
+	ensureSoftware := func(packages common.Software, phase string) func() error {
+		swmonitor := machinemonitor.WithFields(map[string]interface{}{
+			"packages": packages,
+			"phase":    phase,
+		})
+		return func() error {
+			if !softwareContains(*machine.desiredNodeagent.Software, packages) {
+				swmonitor.Changed("Kubernetes software desired")
+			} else {
+				swmonitor.Info("Awaiting kubernetes software")
+			}
+			machine.desiredNodeagent.Software.Merge(to)
+			return nil
+		}
+	}
+
+	ensureMigration := func(k8sNode *v1.Node, isControlplane bool, isFirstControlplane bool) func() error {
 		return func() (err error) {
 
 			defer func() {
@@ -214,26 +230,7 @@ func plan(
 			}
 
 			if !softwareContains(*machine.desiredNodeagent.Software, to) {
-				machine.desiredNodeagent.Software.Merge(to)
-				machinemonitor.WithFields(map[string]interface{}{
-					"from": machine.currentNodeagent.Software.Kubelet.Version,
-					"to":   to.Kubelet.Version,
-				}).Changed("Updated Kubernetes packages desired")
-			}
-			return nil
-		}
-	}
-
-	ensureTargetSoftware := func(sw common.Software) func() error {
-		return func() error {
-			if !softwareContains(*machine.desiredNodeagent.Software, sw) {
-				machine.desiredNodeagent.Software.Merge(to)
-				machinemonitor.WithFields(map[string]interface{}{
-					"current": KubernetesSoftware(machine.currentNodeagent.Software),
-					"desired": sw,
-				}).Changed("Software desired")
-			} else {
-				machinemonitor.Info("Awaiting kubernetes software")
+				return ensureSoftware(to, "Update kubelet")()
 			}
 			return nil
 		}
@@ -250,36 +247,24 @@ func plan(
 			// This node needs to be joined first
 			return nil, nil
 		}
-		return ensureTargetSoftware(to), nil
+		return ensureSoftware(to, "Prepare join"), nil
 	}
 
-	alignedSoftware := new(common.Software)
-	*alignedSoftware = machine.currentNodeagent.Software
-	alignedSoftware.Kubeadm = common.Package{}
-	if !softwareContains(*machine.desiredNodeagent.Software, *alignedSoftware) {
-		return ensureTargetSoftware(*machine.desiredNodeagent.Software), nil
+	if !machine.currentNodeagent.Software.Containerruntime.Equals(to.Containerruntime) || !machine.desiredNodeagent.Software.Containerruntime.Equals(to.Containerruntime) {
+		return ensureSoftware(common.Software{Containerruntime: to.Containerruntime}, "Update container runtime"), nil
 	}
 
-	if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-		return func() error {
-			if machine.desiredNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-				machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
-				machinemonitor.WithFields(map[string]interface{}{
-					"current": machine.currentNodeagent.Software.Kubeadm.Version,
-					"desired": to.Kubeadm.Version,
-				}).Changed("Kubeadm desired")
-			}
-			return nil
-		}, nil
+	if !machine.currentNodeagent.Software.Kubeadm.Equals(to.Kubeadm) || !machine.desiredNodeagent.Software.Kubeadm.Equals(to.Kubeadm) {
+		return ensureSoftware(common.Software{Kubeadm: to.Kubeadm}, "Update kubeadm"), nil
 	}
 
 	isControlplane := machine.pool.tier == Controlplane
 	if machine.node.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
-		return ensureSoftware(machine.node, isControlplane, isFirstControlplane), nil
+		return ensureMigration(machine.node, isControlplane, isFirstControlplane), nil
 	}
 
-	if !softwareContains(machine.currentNodeagent.Software, to, true) || !softwareContains(*machine.desiredNodeagent.Software, to, true) {
-		return ensureTargetSoftware(to), nil
+	if !softwareContains(machine.currentNodeagent.Software, to) || !softwareContains(*machine.desiredNodeagent.Software, to) {
+		return ensureSoftware(to, "Reconcile kubernetes software"), nil
 	}
 
 	if !nodeIsReady {

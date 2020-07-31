@@ -41,6 +41,10 @@ func (s *Software) Merge(sw Software) {
 
 	zeroPkg := Package{}
 
+	if !sw.Containerruntime.Equals(zeroPkg) {
+		s.Containerruntime = sw.Containerruntime
+	}
+
 	if !sw.KeepaliveD.Equals(zeroPkg) {
 		s.KeepaliveD = sw.KeepaliveD
 	}
@@ -71,10 +75,6 @@ func (s *Software) Merge(sw Software) {
 
 	if !sw.Hostname.Equals(zeroPkg) {
 		s.Hostname = sw.Hostname
-	}
-
-	if !sw.Containerruntime.Equals(zeroPkg) || s.Containerruntime.Config == nil {
-		s.Containerruntime = sw.Containerruntime
 	}
 
 	if !sw.Sysctl.Equals(zeroPkg) && s.Sysctl.Config == nil {
