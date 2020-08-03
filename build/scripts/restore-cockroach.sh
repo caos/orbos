@@ -30,5 +30,4 @@ curl -X GET \
   -o "${filenamelocal}" \
   "https://storage.googleapis.com/storage/v1/b/${bucket}/o/$(urlencode ${env}/${timestamp}/${filenamebucket})?alt=media"
 
-/cockroach/cockroach.sh sql --certs-dir=${certs} --host=cockroachdb-public:26257 --database=${db} < ${filenamelocal}
-
+/cockroach/cockroach.sh sql --certs-dir=${certs} --host=cockroachdb-public:26257 --database=defaultdb < ${filenamelocal}
