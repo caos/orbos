@@ -6,12 +6,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+
 	"github.com/caos/orbos/internal/api"
 
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
-
-	"github.com/manifoldco/promptui"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/mntr"
@@ -199,16 +199,13 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 		return iDots < jDots || iDots == jDots && selectItems[i] < selectItems[j]
 	})
 
-	prompt := promptui.Select{
-		Label: "Select Secret",
-		Items: selectItems,
-	}
-
-	_, result, err := prompt.Run()
-	if err != nil {
+	var result string
+	if err := survey.AskOne(&survey.Select{
+		Message: "Select a secret:",
+		Options: selectItems,
+	}, &result, survey.WithValidator(survey.Required)); err != nil {
 		return nil, nil, "", err
 	}
-
 	sec, err := exactSecret(secretsAll, result)
 	if strings.HasPrefix(result, orbiter) {
 		return sec, treeDesiredOrbiter, orbiter, err

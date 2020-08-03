@@ -128,6 +128,9 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	initializeMachine := func(rebootRequired bool, spec *Machine) *machine {
 		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP), rebootRequired, func() {
+			t := true
+			spec.RebootRequired = &t
+		}, func() {
 			f := false
 			spec.RebootRequired = &f
 		})

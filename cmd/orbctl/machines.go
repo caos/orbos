@@ -1,17 +1,18 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/spf13/cobra"
+	cfg "github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 )
 
-func machines(rv RootValues, cmd *cobra.Command, do func(machineIDs []string, machines map[string]infra.Machine) error) error {
-	_, monitor, orbConfig, gitClient, errFunc := rv()
-	if errFunc != nil {
-		return errFunc(cmd)
-	}
+func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *cfg.Orb, do func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error) error {
 
 	if err := orbConfig.IsConnectable(); err != nil {
 		return err
@@ -30,23 +31,24 @@ func machines(rv RootValues, cmd *cobra.Command, do func(machineIDs []string, ma
 		return err
 	}
 
-	if foundOrbiter {
-		monitor.Info("Reading machines from orbiter.yml")
-
-		desired, err := api.ReadOrbiterYml(gitClient)
-		if err != nil {
-			return err
-		}
-
-		listMachines := orb.ListMachines()
-
-		machineIDs, machines, err := listMachines(
-			monitor,
-			desired,
-			orbConfig.URL,
-		)
-
-		return do(machineIDs, machines)
+	if !foundOrbiter {
+		return errors.New("Orbiter.yml not found")
 	}
-	return nil
+
+	monitor.Debug("Reading machines from orbiter.yml")
+
+	desired, err := api.ReadOrbiterYml(gitClient)
+	if err != nil {
+		return err
+	}
+
+	listMachines := orb.ListMachines()
+
+	machineIDs, machines, err := listMachines(
+		monitor,
+		desired,
+		orbConfig.URL,
+	)
+
+	return do(machineIDs, machines, desired)
 }

@@ -44,6 +44,7 @@ func main() {
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
+		RebootCommand(rootValues),
 		takeoff,
 	)
 

@@ -3,41 +3,46 @@ package main
 import (
 	"fmt"
 
+	"github.com/caos/orbos/internal/tree"
+
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 
-	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
 
 func ExecCommand(rv RootValues) *cobra.Command {
 	var (
-		command   string
-		machineID string
-		cmd       = &cobra.Command{
+		command string
+		cmd     = &cobra.Command{
 			Use:   "exec",
 			Short: "Exec shell command on machine",
 			Long:  "Exec shell command on machine",
+			Args:  cobra.MaximumNArgs(1),
 		}
 	)
 
 	flags := cmd.Flags()
-	flags.StringVar(&machineID, "machine", "", "ID of the machine to connect to")
 	flags.StringVar(&command, "command", "", "Command to be executed")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		return machines(rv, cmd, func(machineIDs []string, machines map[string]infra.Machine) error {
+		_, monitor, orbConfig, gitClient, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
+		}
 
-			if machineID == "" {
-				prompt := promptui.Select{
-					Label: "Select machine",
-					Items: machineIDs,
-				}
+		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
 
-				_, result, err := prompt.Run()
-				if err != nil {
+			machineID := ""
+			if len(args) > 0 {
+				machineID = args[0]
+			} else {
+				if err := survey.AskOne(&survey.Select{
+					Message: "Select a machine:",
+					Options: machineIDs,
+				}, &machineID, survey.WithValidator(survey.Required)); err != nil {
 					return err
 				}
-				machineID = result
 			}
 
 			machine, found := machines[machineID]
@@ -57,7 +62,6 @@ func ExecCommand(rv RootValues) *cobra.Command {
 				}
 			}
 			return nil
-
 		})
 	}
 	return cmd

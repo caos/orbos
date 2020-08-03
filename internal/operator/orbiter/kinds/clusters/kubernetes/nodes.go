@@ -20,7 +20,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 	}
 
 	allInitializedMachines.forEach(monitor, func(machine *initializedMachine, machineMonitor mntr.Monitor) bool {
-		req, unreq := machine.infra.RebootRequired()
+		req, _, unreq := machine.infra.RebootRequired()
 		if !req {
 			return true
 		}

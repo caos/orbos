@@ -181,6 +181,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		machine,
 		false,
 		func() {},
+		func() {},
 	)
 
 	for _, name := range diskNames {
@@ -284,6 +285,7 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 				unrequireReboot = func() {
 					m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:idx], m.context.desired.RebootRequired[idx+1:]...)
 				}
+				break
 			}
 		}
 
@@ -298,6 +300,9 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 			inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
 			machine,
 			rebootRequired,
+			func(id string) func() {
+				return func() { m.context.desired.RebootRequired = append(m.context.desired.RebootRequired, id) }
+			}(inst.Name),
 			unrequireReboot,
 		)
 

@@ -3,6 +3,8 @@ package static
 import (
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/tree"
@@ -21,11 +23,12 @@ type machine struct {
 	id              *string
 	ip              string
 	rebootRequired  bool
+	requireReboot   func()
 	unrequireReboot func()
 	*ssh.Machine
 }
 
-func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, ip string, rebootRequired bool, unrequireReboot func()) *machine {
+func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, ip string, rebootRequired bool, requireReboot func(), unrequireReboot func()) *machine {
 	return &machine{
 		active:          false,
 		poolFile:        poolFile,
@@ -33,6 +36,7 @@ func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *st
 		ip:              ip,
 		Machine:         ssh.NewMachine(monitor, remoteUser, ip),
 		rebootRequired:  rebootRequired,
+		requireReboot:   requireReboot,
 		unrequireReboot: unrequireReboot,
 	}
 }
@@ -57,8 +61,8 @@ func (c *machine) Remove() error {
 	return nil
 }
 
-func (c *machine) RebootRequired() (bool, func()) {
-	return c.rebootRequired, c.unrequireReboot
+func (c *machine) RebootRequired() (bool, func(), func()) {
+	return c.rebootRequired, c.requireReboot, c.unrequireReboot
 }
 
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID string) (map[string]infra.Machine, error) {
@@ -75,6 +79,8 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID strin
 	if err := machinesSvc.updateKeys(); err != nil {
 		return nil, err
 	}
+
+	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
 
 	return core.ListMachines(machinesSvc)
 }
