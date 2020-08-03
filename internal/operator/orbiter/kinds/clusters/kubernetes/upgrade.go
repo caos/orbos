@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/pkg/errors"
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
@@ -36,7 +35,7 @@ func ensureSoftware(
 		"desiredKubernetes": to.Kubelet,
 	}).Debug("Ensuring kubernetes version")
 
-	return step(k8sClient, monitor, sortedMachines, to)
+	return step(k8sClient, monitor, sortedMachines, from, to)
 }
 
 func findPath(
@@ -141,12 +140,24 @@ func step(
 	k8sClient *Client,
 	monitor mntr.Monitor,
 	sortedMachines initializedMachines,
+	from common.Software,
 	to common.Software,
 ) (bool, error) {
 
+	for _, machine := range sortedMachines {
+		if machine.node != nil && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
+			delete(machine.node.Labels, "orbos.ch/updating")
+			if k8sClient.Tainted(machine.node, updating) {
+				machine.node.Spec.Taints = k8sClient.RemoveFromTaints(machine.node.Spec.Taints, updating)
+			}
+			if err := k8sClient.updateNode(machine.node); err != nil {
+				return false, err
+			}
+		}
+	}
 	for idx, machine := range sortedMachines {
 
-		next, err := plan(k8sClient, monitor, machine, idx == 0, to)
+		next, err := plan(k8sClient, monitor, machine, idx == 0, from, to)
 		if err != nil {
 			return false, errors.Wrapf(err, "planning machine %s failed", machine.infra.ID())
 		}
@@ -164,68 +175,75 @@ func plan(
 	monitor mntr.Monitor,
 	machine *initializedMachine,
 	isFirstControlplane bool,
+	from common.Software,
 	to common.Software,
 ) (func() error, error) {
+	from.Kubeadm = common.Package{}
+
+	isControlplane := machine.pool.tier == Controlplane
 
 	id := machine.infra.ID()
-	machinemonitor := monitor.WithFields(map[string]interface{}{
-		"machine": id,
-	})
+	machinemonitor := monitor.WithField("machine", id)
 
 	awaitNodeAgent := func() error {
 		machinemonitor.Info("Awaiting node agent")
 		return nil
 	}
 
-	ensureSoftware := func(k8sNode *v1.Node, isControlplane bool, isFirstControlplane bool) func() error {
-		return func() (err error) {
+	drain := func() error {
+		if isControlplane || machine.node == nil || machine.node.Spec.Unschedulable {
+			return nil
+		}
+		machine.node.Labels["orbos.ch/updating"] = to.Kubelet.Version
+		return k8sClient.Drain(machine.currentMachine, machine.node, updating)
+	}
 
-			defer func() {
-				err = errors.Wrapf(err, "ensuring software on node %s failed", machine.infra.ID())
-			}()
-
-			if !isControlplane {
-				k8sNode.Labels["orbos.ch/updating"] = to.Kubelet.Version
-				if err := k8sClient.Drain(machine.currentMachine, k8sNode, updating); err != nil {
+	ensureSoftware := func(packages common.Software, phase string) func() error {
+		swmonitor := machinemonitor.WithField("phase", phase)
+		zeroPkg := common.Package{}
+		return func() error {
+			if !packages.Kubelet.Equals(zeroPkg) &&
+				!machine.currentNodeagent.Software.Kubelet.Equals(packages.Kubelet) ||
+				!packages.Containerruntime.Equals(zeroPkg) &&
+					!machine.currentNodeagent.Software.Containerruntime.Equals(packages.Containerruntime) {
+				if err := drain(); err != nil {
 					return err
 				}
 			}
-
-			upgradeAction := "node"
-			if isFirstControlplane {
-				machinemonitor.Info("Migrating first controlplane node")
-				upgradeAction = fmt.Sprintf("apply %s --yes", to.Kubelet.Version)
+			if !softwareContains(*machine.desiredNodeagent.Software, packages) {
+				swmonitor.Changed("Kubernetes software desired")
 			} else {
-				machinemonitor.Info("Migrating node")
+				swmonitor.Info("Awaiting kubernetes software")
 			}
-
-			_, err = machine.infra.Execute(nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction))
-			if err != nil {
-				return err
-			}
-
-			if !softwareContains(*machine.desiredNodeagent.Software, to) {
-				machine.desiredNodeagent.Software.Merge(to)
-				machinemonitor.WithFields(map[string]interface{}{
-					"from": machine.currentNodeagent.Software.Kubelet.Version,
-					"to":   to.Kubelet.Version,
-				}).Changed("Updated Kubernetes packages desired")
-			}
+			machine.desiredNodeagent.Software.Merge(packages)
 			return nil
 		}
 	}
 
-	ensureTargetSoftware := func() error {
-		if !softwareContains(*machine.desiredNodeagent.Software, to) {
-			machine.desiredNodeagent.Software.Merge(to)
-			machinemonitor.WithFields(map[string]interface{}{
-				"current": KubernetesSoftware(machine.currentNodeagent.Software),
-				"desired": to,
-			}).Changed("Target software desired")
-		} else {
-			machinemonitor.Info("Awaiting kubernetes software")
+	migrate := func() (err error) {
+
+		defer func() {
+			err = errors.Wrapf(err, "migrating node %s failed", machine.infra.ID())
+		}()
+
+		if err := drain(); err != nil {
+			return err
 		}
-		return nil
+
+		upgradeAction := "node"
+		if isFirstControlplane {
+			machinemonitor.Info("Migrating first controlplane node")
+			upgradeAction = fmt.Sprintf("apply %s --yes", to.Kubelet.Version)
+		} else {
+			machinemonitor.Info("Migrating node")
+		}
+
+		if _, err := machine.infra.Execute(nil, fmt.Sprintf("sudo kubeadm upgrade %s", upgradeAction)); err != nil {
+			return err
+		}
+
+		machine.node.Labels["orbos.ch/kubeadm-upgraded"] = to.Kubelet.Version
+		return k8sClient.updateNode(machine.node)
 	}
 
 	nodeIsReady := machine.currentNodeagent.NodeIsReady
@@ -239,29 +257,22 @@ func plan(
 			// This node needs to be joined first
 			return nil, nil
 		}
-		return ensureTargetSoftware, nil
+		return ensureSoftware(to, "Prepare for joining"), nil
 	}
 
-	if machine.currentNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-		return func() error {
-			if machine.desiredNodeagent.Software.Kubeadm.Version != to.Kubeadm.Version {
-				machine.desiredNodeagent.Software.Kubeadm.Version = to.Kubeadm.Version
-				machinemonitor.WithFields(map[string]interface{}{
-					"current": machine.currentNodeagent.Software.Kubeadm.Version,
-					"desired": to.Kubeadm.Version,
-				}).Changed("Kubeadm desired")
-			}
-			return nil
-		}, nil
-	}
+	if !machine.currentNodeagent.Software.Kubeadm.Equals(to.Kubeadm) || !machine.desiredNodeagent.Software.Kubeadm.Equals(to.Kubeadm) {
+		if !softwareContains(machine.currentNodeagent.Software, from) || !softwareContains(*machine.desiredNodeagent.Software, from) {
+			return ensureSoftware(from, "Reconcile lower kubernetes software"), nil
+		}
 
-	isControlplane := machine.pool.tier == Controlplane
-	if machine.node.Status.NodeInfo.KubeletVersion != to.Kubelet.Version {
-		return ensureSoftware(machine.node, isControlplane, isFirstControlplane), nil
+		return ensureSoftware(common.Software{Kubeadm: to.Kubeadm}, "Update kubeadm"), nil
+	}
+	if machine.node.Labels["orbos.ch/kubeadm-upgraded"] != to.Kubelet.Version {
+		return migrate, nil
 	}
 
 	if !softwareContains(machine.currentNodeagent.Software, to) || !softwareContains(*machine.desiredNodeagent.Software, to) {
-		return ensureTargetSoftware, nil
+		return ensureSoftware(to, "Reconcile kubernetes software"), nil
 	}
 
 	if !nodeIsReady {

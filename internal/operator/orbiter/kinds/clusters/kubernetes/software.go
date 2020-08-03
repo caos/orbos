@@ -25,6 +25,9 @@ const (
 	V1x15x7
 	V1x15x8
 	V1x15x9
+	V1x15x10
+	V1x15x11
+	V1x15x12
 	V1x16x0
 	V1x16x1
 	V1x16x2
@@ -32,18 +35,38 @@ const (
 	V1x16x4
 	V1x16x5
 	V1x16x6
+	V1x16x7
+	V1x16x8
+	V1x16x9
+	V1x16x10
+	V1x16x11
+	V1x16x12
+	V1x16x13
 	V1x17x0
 	V1x17x1
 	V1x17x2
+	V1x17x3
+	V1x17x4
+	V1x17x5
+	V1x17x6
+	V1x17x7
+	V1x17x8
+	V1x17x9
 	V1x18x0
+	V1x18x1
+	V1x18x2
+	V1x18x3
+	V1x18x4
+	V1x18x5
+	V1x18x6
 )
 
 var kubernetesVersions = []string{
 	"unknown",
-	"v1.15.0", "v1.15.1", "v1.15.2", "v1.15.3", "v1.15.4", "v1.15.5", "v1.15.6", "v1.15.7", "v1.15.8", "v1.15.9",
-	"v1.16.0", "v1.16.1", "v1.16.2", "v1.16.3", "v1.16.4", "v1.16.5", "v1.16.6",
-	"v1.17.0", "v1.17.1", "v1.17.2",
-	"v1.18.0"}
+	"v1.15.0", "v1.15.1", "v1.15.2", "v1.15.3", "v1.15.4", "v1.15.5", "v1.15.6", "v1.15.7", "v1.15.8", "v1.15.9", "v1.15.10", "v1.15.11", "v1.15.12",
+	"v1.16.0", "v1.16.1", "v1.16.2", "v1.16.3", "v1.16.4", "v1.16.5", "v1.16.6", "v1.16.7", "v1.16.8", "v1.16.9", "v1.16.10", "v1.16.11", "v1.16.12", "v1.16.13",
+	"v1.17.0", "v1.17.1", "v1.17.2", "v1.17.3", "v1.17.4", "v1.17.5", "v1.17.6", "v1.17.7", "v1.17.8", "v1.17.9",
+	"v1.18.0", "v1.18.1", "v1.18.2", "v1.18.3", "v1.18.4", "v1.18.5", "v1.18.6"}
 
 func (k KubernetesVersion) String() string {
 	return kubernetesVersions[k]
@@ -104,12 +127,12 @@ func (k KubernetesVersion) equals(other KubernetesVersion) bool {
 
 func (k KubernetesVersion) NextHighestMinor() KubernetesVersion {
 	switch k {
-	case V1x15x0, V1x15x1, V1x15x2, V1x15x3, V1x15x4, V1x15x5, V1x15x6, V1x15x7, V1x15x8, V1x15x9:
-		return V1x16x6
-	case V1x16x0, V1x16x1, V1x16x2, V1x16x3, V1x16x4, V1x16x5, V1x16x6:
-		return V1x17x2
-	case V1x17x0, V1x17x1, V1x17x2:
-		return V1x18x0
+	case V1x15x0, V1x15x1, V1x15x2, V1x15x3, V1x15x4, V1x15x5, V1x15x6, V1x15x7, V1x15x8, V1x15x9, V1x15x10, V1x15x11, V1x15x12:
+		return V1x16x13
+	case V1x16x0, V1x16x1, V1x16x2, V1x16x3, V1x16x4, V1x16x5, V1x16x6, V1x16x7, V1x16x8, V1x16x9, V1x16x10, V1x16x11, V1x16x12, V1x16x13:
+		return V1x17x9
+	case V1x17x0, V1x17x1, V1x17x2, V1x17x3, V1x17x4, V1x17x5, V1x17x6, V1x17x7, V1x17x8, V1x17x9:
+		return V1x18x6
 	default:
 		return Unknown
 	}

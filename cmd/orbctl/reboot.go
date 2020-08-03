@@ -9,14 +9,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func ExecCommand(rv RootValues) *cobra.Command {
+func RebootCommand(rv RootValues) *cobra.Command {
 	var (
 		command   string
 		machineID string
 		cmd       = &cobra.Command{
-			Use:   "exec",
-			Short: "Exec shell command on machine",
-			Long:  "Exec shell command on machine",
+			Use:   "reboot",
+			Short: "Gracefully reboot machines",
+			Long:  "Gracefully reboot machines",
 		}
 	)
 
