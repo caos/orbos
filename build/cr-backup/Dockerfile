@@ -12,4 +12,7 @@ RUN chmod +x /scripts/backup.sh
 COPY build/scripts/restore-cockroach.sh /scripts/restore.sh
 RUN chmod +x /scripts/restore.sh
 
+COPY build/scripts/clean-cockroach.sh /scripts/clean.sh
+RUN chmod +x /scripts/clean.sh
+
 ENTRYPOINT [ "/cockroach" ]

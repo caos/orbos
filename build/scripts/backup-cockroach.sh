@@ -9,7 +9,7 @@ timestamp=$7
 filenamelocal=zitadel-${db}.sql
 filenamebucket=zitadel-${db}-${timestamp}.sql
 
-/cockroach/cockroach.sh dump --certs-dir=${certs} --host=cockroachdb-public:26257 ${db} > ${folder}/${filenamelocal}
+/cockroach/cockroach.sh dump --dump-mode=data --certs-dir=${certs} --host=cockroachdb-public:26257 ${db} > ${folder}/${filenamelocal}
 curl -X POST \
     -H "$(oauth2l header --json ${safile} cloud-platform)" \
     -H "Content-Type: application/json" \
