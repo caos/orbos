@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AdaptFunc(features ...string) zitadel.AdaptFunc {
+func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -29,7 +29,7 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		}
 
 		iamCurrent := &tree.Tree{}
-		queryIAM, destroyIAM, err := iam.AdaptFunc(features...)(orbMonitor, desiredKind.IAM, iamCurrent)
+		queryIAM, destroyIAM, err := iam.AdaptFunc(timestamp, features...)(orbMonitor, desiredKind.IAM, iamCurrent)
 		if err != nil {
 			return nil, nil, err
 		}

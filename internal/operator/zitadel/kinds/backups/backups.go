@@ -1,9 +1,8 @@
-package databases
+package backups
 
 import (
 	"github.com/caos/orbos/internal/operator/zitadel"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/provided"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -14,12 +13,15 @@ func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
+	name string,
 	namespace string,
-	users []string,
 	labels map[string]string,
+	databases []string,
+	checkDBReady zitadel.EnsureFunc,
 	timestamp string,
 	secretPasswordName string,
 	migrationUser string,
+	users []string,
 	features []string,
 ) (
 	zitadel.QueryFunc,
@@ -27,10 +29,8 @@ func GetQueryAndDestroyFuncs(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.AdaptFunc(labels, users, namespace, timestamp, secretPasswordName, migrationUser, features)(monitor, desiredTree, currentTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
-		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
+	case "zitadel.caos.ch/BucketBackup":
+		return bucket.AdaptFunc(name, namespace, labels, databases, checkDBReady, timestamp, secretPasswordName, migrationUser, users, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
@@ -45,10 +45,8 @@ func GetSecrets(
 ) {
 
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.SecretsFunc()(monitor, desiredTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
-		return provided.SecretsFunc()(monitor, desiredTree)
+	case "zitadel.caos.ch/BucketBackup":
+		return bucket.SecretsFunc()(monitor, desiredTree)
 	default:
 		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
@@ -56,16 +54,15 @@ func GetSecrets(
 
 func GetBackupList(
 	monitor mntr.Monitor,
+	name string,
 	desiredTree *tree.Tree,
 ) (
 	[]string,
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.BackupList()(monitor, desiredTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
-		return nil, errors.Errorf("no backups supported for database kind %s", desiredTree.Common.Kind)
+	case "zitadel.caos.ch/BucketBackup":
+		return bucket.BackupList()(monitor, name, desiredTree)
 	default:
 		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}

@@ -103,7 +103,7 @@ func AdaptFunc(
 								},
 								{
 									Name:  "create-flyway-user",
-									Image: "cockroachdb/cockroach:v20.1.3",
+									Image: "cockroachdb/cockroach:v20.1.4",
 									Env:   baseEnvVars(envMigrationUser, envMigrationPW, migrationUser, secretPasswordName),
 									VolumeMounts: []corev1.VolumeMount{{
 										Name:      rootUserInternal,
@@ -141,7 +141,7 @@ func AdaptFunc(
 							Containers: []corev1.Container{
 								{
 									Name:    "delete-flyway-user",
-									Image:   "cockroachdb/cockroach:v20.1.3",
+									Image:   "cockroachdb/cockroach:v20.1.4",
 									Command: []string{"/bin/bash", "-c", "--"},
 									Args: []string{
 										strings.Join([]string{
@@ -208,7 +208,12 @@ func AdaptFunc(
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for migration to be completed"))
 				return err
 			}
-			internalMonitor.Info("migration is completed")
+			internalMonitor.Info("migration is completed, cleanup")
+			if err := k8sClient.DeleteJob(namespace, jobName); err != nil {
+				internalMonitor.Error(errors.Wrap(err, "error while trying to cleanup migration"))
+				return err
+			}
+			internalMonitor.Info("migration cleanup is completed")
 			return nil
 		},
 		nil

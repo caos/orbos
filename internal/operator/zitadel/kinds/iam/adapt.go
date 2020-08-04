@@ -5,7 +5,6 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"
-	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/configuration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/deployment"
@@ -21,7 +20,7 @@ import (
 	"strconv"
 )
 
-func AdaptFunc(features ...string) zitadel.AdaptFunc {
+func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -94,7 +93,18 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 		})
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Database, databaseCurrent, namespaceStr, allUsers, labels)
+		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(
+			internalMonitor,
+			desiredKind.Database,
+			databaseCurrent,
+			namespaceStr,
+			allUsers,
+			labels,
+			timestamp,
+			secretPasswordName,
+			migrationUser,
+			features,
+		)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -199,6 +209,10 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					zitadel.ResourceQueryToZitadelQuery(queryIPS),
 					queryD,
 				)
+			case "restore", "instantbackup":
+				queriers = append(queriers,
+					queryDB,
+				)
 			}
 		}
 
@@ -221,13 +235,23 @@ func AdaptFunc(features ...string) zitadel.AdaptFunc {
 					destroyC,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
 				)
+			case "restore":
+				destroyers = append(destroyers,
+					destroyDB,
+				)
 			}
 		}
 
 		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
 				queried := map[string]interface{}{}
-				corenw.SetQueriedForNetworking(queried, networkingCurrent)
-				coredb.SetQueriedForDatabase(queried, databaseCurrent)
+				for _, feature := range features {
+					switch feature {
+					case "networking":
+						corenw.SetQueriedForNetworking(queried, networkingCurrent)
+						/*case "database":
+						coredb.SetQueriedForDatabase(queried, databaseCurrent)*/
+					}
+				}
 
 				internalMonitor.WithField("queriers", len(queriers)).Info("Querying")
 				return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
@@ -288,6 +312,13 @@ func getUsers(desired *DesiredV0) (map[string]string, string) {
 		notPassword = passwords.Notification.Value
 	}
 	users[notUser] = notPassword
+
+	esUser := "eventstore"
+	esPassword := esUser
+	if passwords != nil && passwords.Eventstore != nil {
+		esPassword = passwords.Notification.Value
+	}
+	users[esUser] = esPassword
 
 	return users, migrationUser
 }

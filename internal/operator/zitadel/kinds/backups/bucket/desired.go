@@ -1,6 +1,7 @@
-package managed
+package bucket
 
 import (
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 )
@@ -11,13 +12,10 @@ type DesiredV0 struct {
 }
 
 type Spec struct {
-	Verbose         bool
-	ReplicaCount    int                   `yaml:"replicaCount,omitempty"`
-	StorageCapacity string                `yaml:"storageCapacity,omitempty"`
-	StorageClass    string                `yaml:"storageClass,omitempty"`
-	NodeSelector    map[string]string     `yaml:"nodeSelector,omitempty"`
-	ClusterDns      string                `yaml:"clusterDNS,omitempty"`
-	Backups         map[string]*tree.Tree `yaml:"backups,omitempty"`
+	Verbose            bool
+	Cron               string         `yaml:"cron,omitempty"`
+	Bucket             string         `yaml:"bucket,omitempty"`
+	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

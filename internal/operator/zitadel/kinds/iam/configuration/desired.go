@@ -18,6 +18,7 @@ type Passwords struct {
 	Authz        *secret.Secret `yaml:"authz"`
 	Adminapi     *secret.Secret `yaml:"adminapi"`
 	Notification *secret.Secret `yaml:"notification"`
+	Eventstore   *secret.Secret `yaml:"eventstore"`
 }
 
 type Secrets struct {

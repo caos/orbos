@@ -223,12 +223,15 @@ func StartBoom(rv RootValues) *cobra.Command {
 
 func StartZitadel(rv RootValues) *cobra.Command {
 	var (
-		cmd = &cobra.Command{
+		kubeconfig string
+		cmd        = &cobra.Command{
 			Use:   "zitadel",
 			Short: "Launch a zitadel operator",
 			Long:  "Ensures a desired state",
 		}
 	)
+	flags := cmd.Flags()
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		_, monitor, orbConfig, _, errFunc := rv()
@@ -236,7 +239,11 @@ func StartZitadel(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		return start.Zitadel(monitor, orbConfig.Path, "/Users/benz/.kube/stefan-orbos-gce", "networking", "zitadel")
+		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+		if k8sClient.Available() {
+			return start.Zitadel(monitor, orbConfig.Path, k8sClient, "networking", "zitadel", "database", "backup")
+		}
+		return nil
 	}
 	return cmd
 }

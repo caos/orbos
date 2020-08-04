@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,9 +89,25 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
+	cleanup := func(k8sClient *kubernetes.Client) error {
+		internalMonitor.Info("waiting for initjob to be completed")
+		if err := k8sClient.WaitUntilJobCompleted(namespace, name, 60); err != nil {
+			internalMonitor.Error(errors.Wrap(err, "error while waiting for initjob to be completed"))
+			return err
+		}
+		internalMonitor.Info("initjob is completed, cleanup")
+		if err := k8sClient.DeleteJob(namespace, name); err != nil {
+			internalMonitor.Error(errors.Wrap(err, "error while trying to cleanup initjob"))
+			return err
+		}
+		internalMonitor.Info("initjob cleanup is completed")
+		return nil
+	}
+
 	queriers := []zitadel.QueryFunc{
 		zitadel.EnsureFuncToQueryFunc(checkDBRunning),
 		zitadel.ResourceQueryToZitadelQuery(query),
+		zitadel.EnsureFuncToQueryFunc(cleanup),
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {

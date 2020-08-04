@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -248,7 +249,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 	return nil
 }
 
-func Zitadel(monitor mntr.Monitor, orbConfigPath, kubeconfigpath string, features ...string) error {
+func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client, features ...string) error {
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}
@@ -267,7 +268,7 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath, kubeconfigpath string, feature
 			return err
 		}
 
-		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(features...), kubeconfigpath)
+		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc("", features...), k8sClient)
 
 		go func() {
 			started := time.Now()
@@ -281,6 +282,44 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath, kubeconfigpath string, feature
 			takeoffChan <- struct{}{}
 		}()
 	}
+
+	return nil
+}
+
+func ZitadelBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client) error {
+	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+	if err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc("", "instantbackup"), k8sClient)
+	takeoff()
+
+	return nil
+}
+
+func ZitadelRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client, timestamp string) error {
+	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+	if err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(timestamp, "restore"), k8sClient)
+	takeoff()
 
 	return nil
 }

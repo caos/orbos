@@ -1,16 +1,13 @@
 package zitadel
 
 import (
-	"errors"
-	"io/ioutil"
-
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 )
 
-func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, kubeconfig string) func() {
+func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, k8sClient *kubernetes.Client) func() {
 	return func() {
 		internalMonitor := monitor.WithField("operator", "zitadel")
 		internalMonitor.Info("Takeoff")
@@ -20,24 +17,6 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, kubec
 			return
 		}
 		treeCurrent := &tree.Tree{}
-
-		var k8sClient *kubernetes.Client
-		if kubeconfig != "" {
-			data, err := ioutil.ReadFile(kubeconfig)
-			if err != nil {
-				internalMonitor.Error(err)
-				return
-			}
-			dummyKubeconfig := string(data)
-
-			k8sClient = kubernetes.NewK8sClient(internalMonitor, &dummyKubeconfig)
-			//if err := k8sClient.RefreshLocal(); err != nil {
-			//	return nil, nil, err
-			//}
-		} else {
-			internalMonitor.Error(errors.New("In cluster kubeconfig is not yet supported"))
-			return
-		}
 
 		if !k8sClient.Available() {
 			internalMonitor.Error(err)

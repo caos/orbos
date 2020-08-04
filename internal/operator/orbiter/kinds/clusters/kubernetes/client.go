@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"k8s.io/api/batch/v1beta1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
@@ -182,6 +183,23 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 	})
 }
 
+func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
+	resources := c.set.BatchV1beta1().CronJobs(rsc.Namespace)
+	return c.apply("cronjob", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		j, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.GetName() != rsc.GetName() || j.GetNamespace() != rsc.GetNamespace() {
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		}
+		return nil
+	})
+}
 func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
@@ -211,6 +229,9 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSec
 	case <-time.After(timeoutSeconds * time.Second):
 		return errors.New("timeout while waiting for job to complete")
 	}
+}
+func (c *Client) DeleteJob(namespace string, name string) error {
+	return c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
@@ -287,6 +308,17 @@ func (c *Client) DeleteDeployment(namespace, name string) error {
 
 func (c *Client) ApplySecret(rsc *core.Secret) error {
 	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
+	return c.apply("secret", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) ApplyPVC(rsc *core.PersistentVolumeClaim) error {
+	resources := c.set.CoreV1().PersistentVolumeClaims(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
