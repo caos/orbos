@@ -18,10 +18,7 @@ func APICommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		_, monitor, orbConfig, gitClient := rv()
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err

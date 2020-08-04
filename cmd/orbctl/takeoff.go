@@ -42,10 +42,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		ctx, monitor, orbConfig, gitClient := rv()
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err
@@ -175,10 +172,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		ctx, monitor, orbConfig, gitClient := rv()
 
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
@@ -215,10 +209,7 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, _, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		_, monitor, orbConfig, _ := rv()
 
 		return start.Boom(monitor, orbConfig.Path, localmode, version)
 	}

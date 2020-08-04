@@ -24,10 +24,7 @@ func EditCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 
-			_, _, orbConfig, gitClient, errFunc := rv()
-			if errFunc != nil {
-				return errFunc(cmd)
-			}
+			_, _, orbConfig, gitClient := rv()
 
 			if err := orbConfig.IsConnectable(); err != nil {
 				return err

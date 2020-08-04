@@ -43,10 +43,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		ctx, monitor, orbConfig, gitClient := rv()
 
 		if orbConfig.URL == "" && newRepoURL == "" {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")

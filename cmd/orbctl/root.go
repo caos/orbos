@@ -13,18 +13,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc)
-
-type errFunc func(cmd *cobra.Command) error
-
-func curryErrFunc(rootCmd *cobra.Command, err error) errFunc {
-	return func(cmd *cobra.Command) error {
-		cmd.SetUsageFunc(func(_ *cobra.Command) error {
-			return rootCmd.Usage()
-		})
-		return err
-	}
-}
+type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client)
 
 func RootCommand() (*cobra.Command, RootValues) {
 
@@ -54,7 +43,7 @@ $ orbctl -f ~/.orb/myorb [command]
 	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc) {
+	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client) {
 
 		monitor := mntr.Monitor{
 			OnInfo:   mntr.LogMessage,
@@ -74,6 +63,6 @@ $ orbctl -f ~/.orb/myorb [command]
 
 		ctx := context.Background()
 
-		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch"), nil
+		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch")
 	}
 }

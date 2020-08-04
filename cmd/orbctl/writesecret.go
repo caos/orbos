@@ -40,10 +40,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		_, monitor, orbConfig, gitClient := rv()
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err
