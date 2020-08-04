@@ -230,7 +230,7 @@ stream { {{ range $nat := .NATs }}
 					var ok bool
 					vips, ok = desiredKind.Spec[forPool]
 					if !ok {
-						return false, nil
+						return true, nil
 					}
 
 					allPools, err := svc.ListPools()
