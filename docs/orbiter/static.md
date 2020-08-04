@@ -9,14 +9,14 @@ Install KVM according to the [docs](https://wiki.debian.org/KVM)
 Create a new SSH key pair
 
 ```bash
-mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "VM bootstrap key" -P "" -f /tmp/myorb_bootstrap -q
+mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "VM bootstrap key" -P "" -f ~/.ssh/myorb_bootstrap -q
 ```
 
 Create and setup two new Virtual Machines. Make sure you have a sudo user called orbiter on the guest OS
 
 ```bash
-./examples/orbiter/static/kvm/machine.sh ./examples/orbiter/static/kvm/kickstart.cfg /tmp/myorb_bootstrap.pub master1
-./examples/orbiter/static/kvm/machine.sh ./examples/orbiter/static/kvm/kickstart.cfg /tmp/myorb_bootstrap.pub worker1
+./examples/orbiter/static/kvm/machine.sh ./examples/orbiter/static/kvm/kickstart.cfg ~/.ssh/myorb_bootstrap.pub master1
+./examples/orbiter/static/kvm/machine.sh ./examples/orbiter/static/kvm/kickstart.cfg ~/.ssh/myorb_bootstrap.pub worker1
 ```
 
 ### Create a new repository on Github.com
