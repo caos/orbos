@@ -61,9 +61,7 @@ func main() {
 		if checkoutErr := checkout(ref); checkoutErr != nil {
 			panic(checkoutErr)
 		}
-		if testErr := testCurrentCommit(orbconfig); testErr != nil {
-			helpers.Concat(err, testErr)
-		}
+		err = helpers.Concat(err, testCurrentCommit(orbconfig))
 	}
 	if err != nil {
 		panic(err)
