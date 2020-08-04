@@ -39,7 +39,7 @@ func main() {
 	}
 
 	_, selfPath, _, _ := runtime.Caller(0)
-	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
+	cmdPath := filepath.Join(filepath.Dir(selfPath), "../..")
 	path := curryJoinPath(cmdPath)
 
 	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
