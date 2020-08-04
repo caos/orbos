@@ -36,6 +36,10 @@ func SecretsFunc() secret.Func {
 
 func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
 
+	if desiredKind.Spec.Keys == nil {
+		desiredKind.Spec.Keys = &Keys{}
+	}
+
 	if desiredKind.Spec.Keys.BootstrapKeyPrivate == nil {
 		desiredKind.Spec.Keys.BootstrapKeyPrivate = &secret.Secret{}
 	}
