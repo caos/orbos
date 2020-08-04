@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -80,6 +81,11 @@ func checkout(ref string) error {
 
 func testCurrentCommit(orbconfig string) error {
 	files, err := filepath.Glob("./cmd/chore/orbctl/*.go")
+
+	if len(files) <= 0 {
+		return errors.New("no files found in ./cmd/chore/orbctl/*.go")
+	}
+
 	if err != nil {
 		panic(err)
 	}
