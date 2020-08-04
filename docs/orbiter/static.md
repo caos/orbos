@@ -34,8 +34,8 @@ sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 orbctl configure --repourl 'git@github.com:me/my-orb.git' --masterkey "$(openssl rand -base64 21)"
 
 # Add your bootstrap key pair to the remote orbiter.yml
-orbctl writesecret orbiter.kvm.bootstrapkeyprivate --file /tmp/myorb_bootstrap
-orbctl writesecret orbiter.kvm.bootstrapkeypublic --file /tmp/myorb_bootstrap.pub
+orbctl writesecret orbiter.kvm.bootstrapkeyprivate --file ~/.ssh/myorb_bootstrap
+orbctl writesecret orbiter.kvm.bootstrapkeypublic --file ~/.ssh/myorb_bootstrap.pub
 
 # Note your machine names and IP addresses
 for VM in $(virsh list --all --name); do echo $VM; virsh domifaddr $VM; done
