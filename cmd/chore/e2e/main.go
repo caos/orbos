@@ -52,7 +52,7 @@ func main() {
 		panic(err)
 	}
 
-	original := strings.TrimSpace(string(out))
+	original := trimBranch(string(out))
 
 	testFunc := run
 	if graphiteURL != "" {
@@ -81,7 +81,7 @@ func main() {
 		}
 	}()
 
-	out, err = exec.Command("git", "for-each-ref", "--sort", "creatordate", "--format", "%(refname)", "refs/tags", "--no-merged").Output()
+	out, err = exec.Command("git", "for-each-ref", "--sort", "creatordate", "--format", "%(refname)", "refs/heads", "--no-merged").Output()
 	if err != nil {
 		panic(err)
 	}
@@ -97,8 +97,12 @@ func main() {
 	}
 }
 
+func trimBranch(ref string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(ref), "refs/"), "heads/")
+}
+
 func checkout(ref string) error {
-	out, err := exec.Command("git", "checkout", strings.TrimSpace(ref)).CombinedOutput()
+	out, err := exec.Command("git", "checkout", trimBranch(ref)).CombinedOutput()
 	fmt.Printf(string(out))
 	if err != nil {
 		return fmt.Errorf("checking out %s failed: %w", ref, err)
