@@ -3,10 +3,10 @@ package ambassador
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/zitadel"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador/grpc"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador/hosts"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador/http"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador/ui"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/ambassador/grpc"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/ambassador/hosts"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/ambassador/http"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/ambassador/ui"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -17,7 +17,6 @@ func AdaptFunc(
 	grpcURL string,
 	httpURL string,
 	uiURL string,
-	originCASecretName string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -30,11 +29,6 @@ func AdaptFunc(
 		internalLabels[k] = v
 	}
 	internalLabels["app.kubernetes.io/component"] = "ambassador"
-
-	queryHosts, destroyHosts, err := hosts.AdaptFunc(internalMonitor, namespace, labels, originCASecretName)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	queryGRPC, destroyGRPC, err := grpc.AdaptFunc(internalMonitor, namespace, labels, grpcURL)
 	if err != nil {
@@ -51,18 +45,25 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	queriers := []zitadel.QueryFunc{
-		queryHosts,
-		queryGRPC,
-		queryUI,
-		queryHTTP,
+	queryHosts, destroyHosts, err := hosts.AdaptFunc(internalMonitor, namespace, labels)
+	if err != nil {
+		return nil, nil, err
 	}
+
 	destroyers := []zitadel.DestroyFunc{
 		destroyGRPC,
 		destroyHTTP,
 		destroyUI,
 		destroyHosts,
 	}
+
+	queriers := []zitadel.QueryFunc{
+		queryHosts,
+		queryGRPC,
+		queryUI,
+		queryHTTP,
+	}
+
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 			return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 		},

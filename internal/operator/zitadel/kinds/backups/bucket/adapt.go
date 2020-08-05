@@ -7,7 +7,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket/backup"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket/clean"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket/restore"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/migration"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -52,8 +52,10 @@ func AdaptFunc(
 			desiredKind.Spec.Cron,
 			secretName,
 			secretKey,
+			timestamp,
 			features,
 		)
+
 		queryR, destroyR, checkAndCleanupR, err := restore.ApplyFunc(
 			monitor,
 			name,
@@ -64,6 +66,7 @@ func AdaptFunc(
 			timestamp,
 			checkDBReady,
 		)
+
 		queryC, destroyC, checkAndCleanupC, err := clean.ApplyFunc(
 			monitor,
 			name,

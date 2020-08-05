@@ -1,7 +1,7 @@
-package iam
+package zitadel
 
 import (
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/configuration"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 )

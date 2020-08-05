@@ -128,24 +128,37 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	})
 }
 
-func (c *Client) WaitUntilDeploymentReady(namespace string, name string) error {
-	ctx := context.Background()
-	deploy, err := c.set.AppsV1().Deployments(namespace).Get(ctx, name, mach.GetOptions{})
-	if err != nil {
-		return err
+func (c *Client) WaitUntilDeploymentReady(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		deploy, err := c.set.AppsV1().Deployments(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		labelSelector := getLabelSelector(deploy.Spec.Selector.MatchLabels)
+
+		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+		replicas := deploy.Spec.Replicas
+
+		returnChannel <- waitForPodsPhase(watch, int(*replicas), core.PodRunning, true, true)
+		returnChannel <- waitForPodsPhase(watch, 1, core.PodSucceeded, false, false)
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for deployment to be ready")
 	}
-
-	labelSelector := getLabelSelector(deploy.Spec.Selector.MatchLabels)
-
-	watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
-		LabelSelector: labelSelector,
-	})
-	if err != nil {
-		return err
-	}
-	replicas := deploy.Spec.Replicas
-
-	return waitForPodsPhase(watch, int(*replicas), core.PodRunning, true, true)
 }
 
 func (c *Client) ApplyService(rsc *core.Service) error {

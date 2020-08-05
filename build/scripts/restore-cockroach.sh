@@ -1,6 +1,6 @@
 bucket=$1
 env=$2
-timestamp=$3
+name=$3
 db=$4
 safile=$5
 certs=$6
@@ -23,11 +23,11 @@ urlencode() {
 }
 
 filenamelocal=zitadel-${db}.sql
-filenamebucket=zitadel-${db}-${timestamp}.sql
+filenamebucket=zitadel-${db}-${name}.sql
 
 curl -X GET \
   -H "$(oauth2l header --json ${safile} cloud-platform)" \
   -o "${filenamelocal}" \
-  "https://storage.googleapis.com/storage/v1/b/${bucket}/o/$(urlencode ${env}/${timestamp}/${filenamebucket})?alt=media"
+  "https://storage.googleapis.com/storage/v1/b/${bucket}/o/$(urlencode ${env}/${name}/${filenamebucket})?alt=media"
 
 /cockroach/cockroach.sh sql --certs-dir=${certs} --host=cockroachdb-public:26257 --database=${db} < ${filenamelocal}

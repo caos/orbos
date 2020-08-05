@@ -1,18 +1,17 @@
-package iam
+package zitadel
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/ambassador"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/configuration"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/deployment"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/imagepullsecret"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/services"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/ambassador"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/deployment"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/imagepullsecret"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/migration"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/services"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
-	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -20,7 +19,7 @@ import (
 	"strconv"
 )
 
-func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
+func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -53,24 +52,23 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 		}
 		internalLabels["app.kubernetes.io/component"] = "iam"
 
+		// shared elements
 		cmName := "zitadel-vars"
-		certPath := "/home/zitadel/dbsecrets-zitadel"
 		secretName := "zitadel-secret"
-		secretPath := "/secret"
 		consoleCMName := "console-config"
 		secretVarsName := "zitadel-secrets-vars"
 		secretPasswordName := "zitadel-passwords"
 		imagePullSecretName := "public-github-packages"
+		//paths which are used in the configuration and also are used for mounting the used files
+		certPath := "/home/zitadel/dbsecrets-zitadel"
+		secretPath := "/secret"
+		//services which are kubernetes resources and are used in the ambassador elements
 		grpcServiceName := "grpc-v1"
 		grpcPort := 80
 		httpServiceName := "http-v1"
 		httpPort := 80
 		uiServiceName := "ui-v1"
 		uiPort := 80
-		httpURL := "http://" + httpServiceName + "." + namespaceStr + ":" + strconv.Itoa(httpPort)
-		grpcURL := grpcServiceName + "." + namespaceStr + ":" + strconv.Itoa(grpcPort)
-		uiURL := "http://" + uiServiceName + "." + namespaceStr
-		originCASecretName := "tls-cert-wildcard"
 
 		users, migrationUser := getUsers(desiredKind)
 
@@ -151,7 +149,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryD, destroyD, err := deployment.AdaptFunc(
+		queryD, destroyD, deploymentDone, err := deployment.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
 			internalLabels,
@@ -175,12 +173,19 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 		}
 
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, originCASecretName, labels)
+		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(internalMonitor, namespaceStr, labels, grpcURL, httpURL, uiURL, originCASecretName)
+		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(
+			internalMonitor,
+			namespaceStr,
+			labels,
+			grpcServiceName+"."+namespaceStr+":"+strconv.Itoa(grpcPort),
+			"http://"+httpServiceName+"."+namespaceStr+":"+strconv.Itoa(httpPort),
+			"http://"+uiServiceName+"."+namespaceStr,
+		)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -208,6 +213,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 					queryS,
 					zitadel.ResourceQueryToZitadelQuery(queryIPS),
 					queryD,
+					zitadel.EnsureFuncToQueryFunc(deploymentDone),
 				)
 			case "restore", "instantbackup":
 				queriers = append(queriers,
@@ -242,24 +248,10 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 			}
 		}
 
-		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
-				queried := map[string]interface{}{}
-				for _, feature := range features {
-					switch feature {
-					case "networking":
-						corenw.SetQueriedForNetworking(queried, networkingCurrent)
-						/*case "database":
-						coredb.SetQueriedForDatabase(queried, databaseCurrent)*/
-					}
-				}
-
-				internalMonitor.WithField("queriers", len(queriers)).Info("Querying")
+		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 				return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 			},
-			func(k8sClient *kubernetes.Client) error {
-				internalMonitor.WithField("destroyers", len(destroyers)).Info("Destroying")
-				return zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers)(k8sClient)
-			},
+			zitadel.DestroyersToDestroyFunc(monitor, destroyers),
 			nil
 	}
 }

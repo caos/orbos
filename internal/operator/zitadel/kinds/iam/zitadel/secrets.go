@@ -1,4 +1,4 @@
-package iam
+package zitadel
 
 import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"

@@ -109,6 +109,10 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			if err := deployBoom(monitor, gitClient, &kubeconfig); err != nil {
 				return err
 			}
+
+			if err := deployZitadel(monitor, gitClient, &kubeconfig); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -143,6 +147,25 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		}
 	} else {
 		monitor.Info("No BOOM deployed as no boom.yml present")
+	}
+	return nil
+}
+
+func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+	found, err := api.ExistsZitadelYml(gitClient)
+	if err != nil {
+		return err
+	}
+	if found {
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+
+		zitadelVersion := version
+
+		if k8sClient.Available() {
+			if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, zitadelVersion); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -241,7 +264,7 @@ func StartZitadel(rv RootValues) *cobra.Command {
 
 		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {
-			return start.Zitadel(monitor, orbConfig.Path, k8sClient, "networking", "zitadel", "database", "backup")
+			return start.Zitadel(monitor, orbConfig.Path, k8sClient)
 		}
 		return nil
 	}

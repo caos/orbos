@@ -249,7 +249,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 	return nil
 }
 
-func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client, features ...string) error {
+func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client) error {
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}
@@ -268,7 +268,7 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.C
 			return err
 		}
 
-		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc("", features...), k8sClient)
+		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc("", "networking", "zitadel", "database", "backup"), k8sClient)
 
 		go func() {
 			started := time.Now()
@@ -286,7 +286,7 @@ func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.C
 	return nil
 }
 
-func ZitadelBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client) error {
+func ZitadelBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client, backup string) error {
 	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
 	if err != nil {
 		monitor.Error(err)
@@ -299,7 +299,7 @@ func ZitadelBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubern
 		return err
 	}
 
-	takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc("", "instantbackup"), k8sClient)
+	takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(backup, "instantbackup"), k8sClient)
 	takeoff()
 
 	return nil

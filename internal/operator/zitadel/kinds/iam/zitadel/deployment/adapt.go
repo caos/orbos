@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel"
 	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,6 +34,7 @@ func AdaptFunc(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
+	zitadel.EnsureFunc,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "deployment")
@@ -220,7 +222,7 @@ func AdaptFunc(
 
 	destroy, err := deployment.AdaptFuncToDestroy(deployName, namespace)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroy),
@@ -228,7 +230,7 @@ func AdaptFunc(
 
 	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
@@ -247,5 +249,14 @@ func AdaptFunc(
 			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
+		func(k8sClient *kubernetes.Client) error {
+			internalMonitor.Info("waiting for deployment to be ready")
+			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, 60); err != nil {
+				internalMonitor.Error(errors.Wrap(err, "error while waiting for deployment to be ready"))
+				return err
+			}
+			internalMonitor.Info("deployment is ready")
+			return nil
+		},
 		nil
 }

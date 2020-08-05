@@ -29,7 +29,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 		}
 
 		iamCurrent := &tree.Tree{}
-		queryIAM, destroyIAM, err := iam.AdaptFunc(timestamp, features...)(orbMonitor, desiredKind.IAM, iamCurrent)
+		queryIAM, destroyIAM, err := iam.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.IAM, iamCurrent, timestamp, features...)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -45,10 +45,15 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 			IAM: iamCurrent,
 		}
 
-		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (zitadel.EnsureFunc, error) {
+				queried := map[string]interface{}{}
+				monitor.WithField("queriers", len(queriers)).Info("Querying")
 				return zitadel.QueriersToEnsureFunc(monitor, true, queriers, k8sClient, queried)
 			},
-			zitadel.DestroyersToDestroyFunc(monitor, destroyers),
+			func(k8sClient *kubernetes.Client) error {
+				monitor.WithField("destroyers", len(queriers)).Info("Destroy")
+				return zitadel.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
+			},
 			nil
 	}
 }

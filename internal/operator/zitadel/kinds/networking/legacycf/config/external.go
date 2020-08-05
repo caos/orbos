@@ -19,7 +19,7 @@ type ExternalConfig struct {
 	Prefix      string       `yaml:"prefix"`
 }
 
-func (e *ExternalConfig) Internal(namespace string, originCASecretName string, labels map[string]string) (*InternalConfig, *current) {
+func (e *ExternalConfig) Internal(namespace string, labels map[string]string) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
 		Domains:            []*IntenalDomain{dom},
@@ -27,7 +27,7 @@ func (e *ExternalConfig) Internal(namespace string, originCASecretName string, l
 		Credentials:        e.Credentials,
 		Prefix:             e.Prefix,
 		Namespace:          namespace,
-		OriginCASecretName: originCASecretName,
+		OriginCASecretName: curr.tlsCertName,
 		Labels:             labels,
 	}, curr
 }
@@ -59,6 +59,7 @@ func (e *ExternalConfig) internalDomain() (*IntenalDomain, *current) {
 			consoleSubdomain:  "console",
 			apiSubdomain:      "api",
 			accountsSubdomain: "accounts",
+			tlsCertName:       "tls-cert-wildcard",
 		}
 }
 
@@ -80,6 +81,7 @@ type current struct {
 	consoleSubdomain  string `yaml:"-"`
 	apiSubdomain      string `yaml:"-"`
 	accountsSubdomain string `yaml:"-"`
+	tlsCertName       string `yaml:"-"`
 	ReadyCertificate  zitadel.EnsureFunc
 }
 
@@ -100,4 +102,7 @@ func (c *current) GetAccountsSubDomain() string {
 }
 func (c *current) GetReadyCertificate() zitadel.EnsureFunc {
 	return c.ReadyCertificate
+}
+func (c *current) GetTlsCertName() string {
+	return c.tlsCertName
 }

@@ -9,11 +9,7 @@ import (
 func AdaptFuncToEnsure(deployment *appsv1.Deployment) (resources.QueryFunc, error) {
 	return func(_ *kubernetes.Client) (resources.EnsureFunc, error) {
 		return func(k8sClient *kubernetes.Client) error {
-			if err := k8sClient.ApplyDeployment(deployment); err != nil {
-				return err
-			}
-
-			return k8sClient.WaitUntilDeploymentReady(deployment.Namespace, deployment.Name)
+			return k8sClient.ApplyDeployment(deployment)
 		}, nil
 	}, nil
 }

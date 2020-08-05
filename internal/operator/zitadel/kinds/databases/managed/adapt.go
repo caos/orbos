@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/pdb"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups"
-	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/initjob"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/rbac"
@@ -147,9 +147,16 @@ func AdaptFunc(
 				"notification",
 			}
 
+			oneBackup := false
+			for backupName := range desiredKind.Spec.Backups {
+				if timestamp != "" && strings.HasPrefix(timestamp, backupName) {
+					oneBackup = true
+				}
+			}
+
 			for backupName, desiredBackup := range desiredKind.Spec.Backups {
 				currentBackup := &tree.Tree{}
-				if timestamp == "" || (timestamp != "" && strings.HasPrefix(timestamp, backupName)) {
+				if timestamp == "" || !oneBackup || (timestamp != "" && strings.HasPrefix(timestamp, backupName)) {
 					queryB, destroyB, err := backups.GetQueryAndDestroyFuncs(
 						internalMonitor,
 						desiredBackup,
@@ -180,7 +187,7 @@ func AdaptFunc(
 				currentDB.Current.URL = publicServiceName
 				currentDB.Current.ReadyFunc = checkDBReady
 
-				coredb.SetQueriedForDatabase(queried, current)
+				core.SetQueriedForDatabase(queried, current)
 				internalMonitor.Info("set current state of managed database")
 
 				ensure, err := zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)

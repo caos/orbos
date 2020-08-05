@@ -12,7 +12,6 @@ func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
-	originCASecretName string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -67,6 +66,7 @@ func AdaptFunc(
 			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
 			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
 			issuerDomain := currentNW.GetIssuerSubDomain() + "." + currentNW.GetDomain()
+			originCASecretName := currentNW.GetTlsCertName()
 
 			accountsSelector := map[string]string{
 				"hostname": accountsDomain,

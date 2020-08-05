@@ -7,7 +7,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/migration/scripts"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/migration/scripts"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"

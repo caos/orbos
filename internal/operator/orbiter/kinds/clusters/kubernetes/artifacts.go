@@ -78,6 +78,149 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 	return nil
 }
 
+func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string) error {
+
+	monitor.WithFields(map[string]interface{}{
+		"zitadel": version,
+	}).Debug("Ensuring zitadel artifacts")
+
+	if version == "" {
+		return nil
+	}
+
+	if err := client.ApplyServiceAccount(&core.ServiceAccount{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "zitadel",
+			Namespace: "caos-zitadel",
+		},
+	}); err != nil {
+		return err
+	}
+
+	if err := client.ApplyClusterRole(&rbac.ClusterRole{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "zitadel-clusterrole",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":  "zitadel",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "zitadel",
+			},
+		},
+		Rules: []rbac.PolicyRule{{
+			APIGroups: []string{"*"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}},
+	}); err != nil {
+		return err
+	}
+
+	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "zitadel-clusterrolebinding",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":  "zitadel",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "zitadel",
+			},
+		},
+
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "zitadel-clusterrole",
+		},
+		Subjects: []rbac.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "zitadel",
+			Namespace: "caos-zitadel",
+		}},
+	}); err != nil {
+		return err
+	}
+
+	if err := client.ApplyDeployment(&apps.Deployment{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "zitadel-operator",
+			Namespace: "caos-zitadel",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":   "zitadel",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "zitadel",
+				"app.kubernetes.io/managed-by": "zitadel.caos.ch",
+			},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &mach.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/instance":  "zitadel",
+					"app.kubernetes.io/part-of":   "orbos",
+					"app.kubernetes.io/component": "zitadel",
+				},
+			},
+			Template: core.PodTemplateSpec{
+				ObjectMeta: mach.ObjectMeta{
+					Labels: map[string]string{
+						"app.kubernetes.io/instance":  "zitadel",
+						"app.kubernetes.io/part-of":   "orbos",
+						"app.kubernetes.io/component": "zitadel",
+					},
+				},
+				Spec: core.PodSpec{
+					ServiceAccountName: "zitadel",
+					ImagePullSecrets: []core.LocalObjectReference{{
+						Name: "public-github-packages",
+					}},
+					Containers: []core.Container{{
+						Name:            "boom",
+						ImagePullPolicy: core.PullIfNotPresent,
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},
+						Args:            []string{},
+						Ports: []core.ContainerPort{{
+							Name:          "metrics",
+							ContainerPort: 2112,
+							Protocol:      "TCP",
+						}},
+						VolumeMounts: []core.VolumeMount{{
+							Name:      "orbconfig",
+							ReadOnly:  true,
+							MountPath: "/secrets",
+						}},
+						Resources: core.ResourceRequirements{
+							Limits: core.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Requests: core.ResourceList{
+								"cpu":    resource.MustParse("250m"),
+								"memory": resource.MustParse("250Mi"),
+							},
+						},
+					}},
+					Volumes: []core.Volume{{
+						Name: "orbconfig",
+						VolumeSource: core.VolumeSource{
+							Secret: &core.SecretVolumeSource{
+								SecretName: "caos",
+							},
+						},
+					}},
+					TerminationGracePeriodSeconds: int64Ptr(10),
+				},
+			},
+		},
+	}); err != nil {
+		return err
+	}
+	monitor.WithFields(map[string]interface{}{
+		"version": version,
+	}).Debug("Zitadel Operator deployment ensured")
+
+	return nil
+}
+
 func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string) error {
 
 	monitor.WithFields(map[string]interface{}{

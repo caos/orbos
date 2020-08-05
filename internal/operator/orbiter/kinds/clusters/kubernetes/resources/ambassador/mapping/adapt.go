@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"strconv"
 )
 
 type CORS struct {
@@ -31,10 +32,22 @@ func AdaptFuncToEnsure(name, namespace string, labels map[string]string, grpc bo
 	}
 
 	if timeoutMS != "" {
-		spec["timeout_ms"] = timeoutMS
+		toMSint, err := strconv.Atoi(timeoutMS)
+		if err != nil {
+			return nil, err
+		}
+		if timeoutMS != "" {
+			spec["timeout_ms"] = toMSint
+		}
 	}
 	if connectTimeoutMS != "" {
-		spec["connect_timeout_ms"] = connectTimeoutMS
+		ctoMSint, err := strconv.Atoi(connectTimeoutMS)
+		if err != nil {
+			return nil, err
+		}
+		if connectTimeoutMS != "" {
+			spec["connect_timeout_ms"] = ctoMSint
+		}
 	}
 	if grpc {
 		spec["grpc"] = grpc

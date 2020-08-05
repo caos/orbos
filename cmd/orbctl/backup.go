@@ -9,12 +9,16 @@ import (
 
 func BackupCommand(rv RootValues) *cobra.Command {
 	var (
-		cmd = &cobra.Command{
+		backup string
+		cmd    = &cobra.Command{
 			Use:   "backup",
 			Short: "Instant backup",
 			Long:  "Instant backup",
 		}
 	)
+
+	flags := cmd.Flags()
+	flags.StringVar(&backup, "backup", "", "Name used for backup folder")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		_, monitor, orbConfig, gitClient, errFunc := rv()
@@ -42,7 +46,7 @@ func BackupCommand(rv RootValues) *cobra.Command {
 			for _, kubeconfig := range kubeconfigs {
 				k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					err := start.ZitadelBackup(monitor, orbConfig.Path, k8sClient)
+					err := start.ZitadelBackup(monitor, orbConfig.Path, k8sClient, backup)
 					if err != nil {
 						return err
 					}

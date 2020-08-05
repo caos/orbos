@@ -9,6 +9,7 @@ import (
 const queriedName = "networking"
 
 type NetworkingCurrent interface {
+	GetTlsCertName() string
 	GetDomain() string
 	GetIssuerSubDomain() string
 	GetConsoleSubDomain() string

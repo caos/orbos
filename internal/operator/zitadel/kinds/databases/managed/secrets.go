@@ -1,6 +1,7 @@
 package managed
 
 import (
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -19,6 +20,22 @@ func SecretsFunc() secret.Func {
 
 		desiredTree.Parsed = desiredKind
 
-		return make(map[string]*secret.Secret, 0), nil
+		allSecrets := make(map[string]*secret.Secret)
+		for k, v := range desiredKind.Spec.Backups {
+			backupSecrets, err := backups.GetSecrets(monitor, v)
+			if err != nil {
+				return nil, err
+			}
+
+			appendSecrets(k, allSecrets, backupSecrets)
+		}
+		return allSecrets, nil
+	}
+}
+
+func appendSecrets(prefix string, into, add map[string]*secret.Secret) {
+	for key, secret := range add {
+		name := prefix + "." + key
+		into[name] = secret
 	}
 }

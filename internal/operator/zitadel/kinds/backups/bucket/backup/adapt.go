@@ -25,6 +25,7 @@ func AdaptFunc(
 	cron string,
 	secretName string,
 	secretKey string,
+	timestamp string,
 	features []string,
 ) (
 	queryFunc zitadel.QueryFunc,
@@ -35,11 +36,15 @@ func AdaptFunc(
 	certPath := "/cockroach/cockroach-certs"
 	secretPath := "/secrets/sa.json"
 	backupPath := "/cockroach"
-	startTimeEnv := "MY_START_TIME"
+	backupNameEnv := "BACKUP_NAME"
 	cronjobName := "backup-" + name
 
 	backupCommands := make([]string, 0)
-	backupCommands = append(backupCommands, "export "+startTimeEnv+"=$(date +%Y-%m-%dT%H:%M:%SZ)")
+	if timestamp != "" {
+		backupCommands = append(backupCommands, "export "+backupNameEnv+"="+timestamp)
+	} else {
+		backupCommands = append(backupCommands, "export "+backupNameEnv+"=$(date +%Y-%m-%dT%H:%M:%SZ)")
+	}
 	for _, database := range databases {
 		backupCommands = append(backupCommands,
 			strings.Join([]string{
@@ -50,9 +55,10 @@ func AdaptFunc(
 				backupPath,
 				secretPath,
 				certPath,
-				"${" + startTimeEnv + "}",
+				"${" + backupNameEnv + "}",
 			}, " "))
 	}
+
 	//backupCommands = append(backupCommands, "while true; do sleep 30; done;")
 	jobSpecDef := batchv1.JobSpec{
 		Template: corev1.PodTemplateSpec{
