@@ -67,6 +67,10 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
+	if toolsetCRDSpec.APIGateway.ActivateDevPortal {
+		spec.ActivateDevPortal = true
+	}
+
 	return values
 }
 

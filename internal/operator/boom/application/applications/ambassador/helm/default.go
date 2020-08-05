@@ -4,7 +4,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 	adminAnnotations := map[string]string{"app.kubernetes.io/use": "admin-service"}
 
 	return &Values{
-		FullnameOverride: "ambassador",
+		CreateDevPortalMapping: false,
+		FullnameOverride:       "ambassador",
 		AdminService: &AdminService{
 			Annotations: adminAnnotations,
 			Create:      true,
@@ -58,6 +59,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			InitialDelaySeconds: 30,
 			PeriodSeconds:       3,
 		},
+
 		Redis: &Redis{
 			Create: true,
 			Annotations: &RedisAnnotations{
@@ -69,8 +71,13 @@ func DefaultValues(imageTags map[string]string) *Values {
 		Scope: &Scope{
 			SingleNamespace: false,
 		},
-		SecurityContext: &SecurityContext{
-			RunAsUser: 8888,
+		Security: &Security{
+			PodSecurityContext: &PodSecurityContext{
+				RunAsUser: 8888,
+			},
+			ContainerSecurityContext: &ContainerSecurityContext{
+				AllowPrivilegeEscalation: false,
+			},
 		},
 		Service: &Service{
 			Type: "NodePort",
