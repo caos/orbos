@@ -21,7 +21,7 @@ func graphite(orbID, cloudURL, cloudKey, branch string, test func(orbconfig stri
 	return func(orbconfig string) error {
 		send(0.5)
 		err := test(orbconfig)
-		var value float64
+		var value = 0.1
 		if err == nil {
 			value = 1
 		}

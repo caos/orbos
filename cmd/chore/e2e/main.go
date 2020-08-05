@@ -60,7 +60,7 @@ func main() {
 
 	if graphiteURL != "" {
 		testFunc = func(branch string) error {
-			branch = strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "")
+			branch = strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-")
 			return graphite(
 				strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
 				graphiteURL,
