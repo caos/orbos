@@ -54,18 +54,23 @@ func main() {
 
 	original := trimBranch(string(out))
 
-	testFunc := run
+	testFunc := func(_ string) error {
+		return run(orbconfig)
+	}
+
 	if graphiteURL != "" {
-		testFunc = graphite(
-			strings.ToLower(strings.ReplaceAll(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0], "-", "")),
-			graphiteURL,
-			graphiteKey,
-			strings.Join(strings.Split(original, "/")[1:], "/"),
-			run)
+		testFunc = func(branch string) error {
+			return graphite(
+				strings.ToLower(strings.ReplaceAll(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0], "-", "")),
+				graphiteURL,
+				graphiteKey,
+				trimBranch(branch),
+				run)(orbconfig)
+		}
 	}
 
 	if !unpublished {
-		if err := testFunc(orbconfig); err != nil {
+		if err := testFunc(original); err != nil {
 			panic(err)
 		}
 		return
@@ -87,10 +92,11 @@ func main() {
 	}
 
 	for _, ref := range strings.Fields(string(out)) {
+		ref = trimBranch(ref)
 		if checkoutErr := checkout(ref); checkoutErr != nil {
 			panic(checkoutErr)
 		}
-		err = helpers.Concat(err, testFunc(orbconfig))
+		err = helpers.Concat(err, testFunc(ref))
 	}
 	if err != nil {
 		panic(err)
@@ -102,7 +108,7 @@ func trimBranch(ref string) string {
 }
 
 func checkout(ref string) error {
-	out, err := exec.Command("git", "checkout", trimBranch(ref)).CombinedOutput()
+	out, err := exec.Command("git", "checkout", ref).CombinedOutput()
 	fmt.Printf(string(out))
 	if err != nil {
 		return fmt.Errorf("checking out %s failed: %w", ref, err)
