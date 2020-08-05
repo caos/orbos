@@ -47,9 +47,21 @@ func main() {
 		panic(err)
 	}
 
+	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	if err != nil {
+		panic(err)
+	}
+
+	original := strings.TrimSpace(string(out))
+
 	testFunc := run
 	if graphiteURL != "" {
-		testFunc = graphite(orb.URL, graphiteURL, graphiteKey, run)
+		testFunc = graphite(
+			strings.ToLower(strings.ReplaceAll(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0], "-", "")),
+			graphiteURL,
+			graphiteKey,
+			strings.Join(strings.Split(original, "/")[1:], "/"),
+			run)
 	}
 
 	if !unpublished {
@@ -59,10 +71,9 @@ func main() {
 		return
 	}
 
-	original, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	defer func() {
 		r := recover()
-		if err := checkout(string(original)); err != nil {
+		if err := checkout(original); err != nil {
 			panic(fmt.Errorf("checking out original branch failed: %w: original error: %v", err, r))
 		}
 		if r != nil {
@@ -70,7 +81,7 @@ func main() {
 		}
 	}()
 
-	out, err := exec.Command("git", "for-each-ref", "--sort", "creatordate", "--format", "%(refname)", "refs/tags", "--no-merged").Output()
+	out, err = exec.Command("git", "for-each-ref", "--sort", "creatordate", "--format", "%(refname)", "refs/tags", "--no-merged").Output()
 	if err != nil {
 		panic(err)
 	}

@@ -7,14 +7,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/cortexproject/cortex/pkg/ingester/client"
 	"gopkg.in/raintank/schema.v1"
 )
 
-func graphite(orbID, cloudURL, cloudKey string, test func(orbconfig string) error) func(orbconfig string) error {
+func graphite(orbID, cloudURL, cloudKey, branch string, test func(orbconfig string) error) func(orbconfig string) error {
 
 	send := func(value float64) {
-		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, value); err != nil {
+		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value); err != nil {
 			panic(err)
 		}
 	}
@@ -31,21 +30,16 @@ func graphite(orbID, cloudURL, cloudKey string, test func(orbconfig string) erro
 	}
 }
 
-func cort(orbID, cloudURL, cloudKey string) {
-	client.MakeIngesterClient()
-}
+func sendGraphiteStatus(orbID, cloudURL, cloudKey, branch string, value float64) error {
 
-func sendGraphiteStatus(orbID string, cloudURL, cloudKey string, value float64) error {
-	name := "my.test.metric"
+	name := fmt.Sprintf("e2e.%s.%s", orbID, branch)
+
 	metrics := schema.MetricDataArray{&schema.MetricData{
 		Name:     name,
-		Metric:   name,
-		Interval: 24 * 60 * 60,
+		Interval: 10,
 		Value:    value,
-		Unit:     "",
 		Time:     time.Now().Unix(),
 		Mtype:    "gauge",
-		Tags:     []string{fmt.Sprintf("orb=%s", orbID)},
 	}}
 
 	// encode as json
@@ -72,6 +66,6 @@ func sendGraphiteStatus(orbID string, cloudURL, cloudKey string, value float64) 
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("sending metric to graphana cloud graphite api at %s failed with status %s and response %s", cloudURL, resp.Status, string(buf[:n]))
 	}
-	fmt.Println("Value", value, "sent to grafana cloud graphite api")
+	fmt.Println("Metric", name, "with value", value, "sent to grafana cloud graphite api")
 	return nil
 }
