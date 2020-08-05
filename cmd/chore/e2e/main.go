@@ -1,14 +1,12 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"flag"
 	"fmt"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
+
+	"github.com/caos/orbos/internal/orb"
 
 	"github.com/caos/orbos/internal/helpers"
 )
@@ -18,6 +16,8 @@ func main() {
 	var (
 		unpublished bool
 		orbconfig   string
+		graphiteURL string
+		graphiteKey string
 	)
 
 	const (
@@ -25,17 +25,35 @@ func main() {
 		unpublishedUsage   = "Test all unpublished branches"
 		orbDefault         = "~/.orb/config"
 		orbUsage           = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
+		graphiteURLDefault = ""
+		graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
+		graphiteKeyDefault = ""
+		graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
 	flag.BoolVar(&unpublished, "u", unpublishedDefault, unpublishedUsage+" (shorthand)")
 	flag.StringVar(&orbconfig, "orbconfig", orbDefault, orbUsage)
 	flag.StringVar(&orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
+	flag.StringVar(&graphiteURL, "graphiteurl", graphiteURLDefault, graphiteURLUsage)
+	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
+	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
+	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
 
 	flag.Parse()
 
+	orb, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
+	if err != nil {
+		panic(err)
+	}
+
+	testFunc := run
+	if graphiteURL != "" {
+		testFunc = graphite(orb.URL, graphiteURL, graphiteKey, run)
+	}
+
 	if !unpublished {
-		if err := testCurrentCommit(orbconfig); err != nil {
+		if err := testFunc(orbconfig); err != nil {
 			panic(err)
 		}
 		return
@@ -61,7 +79,7 @@ func main() {
 		if checkoutErr := checkout(ref); checkoutErr != nil {
 			panic(checkoutErr)
 		}
-		err = helpers.Concat(err, testCurrentCommit(orbconfig))
+		err = helpers.Concat(err, testFunc(orbconfig))
 	}
 	if err != nil {
 		panic(err)
@@ -75,54 +93,4 @@ func checkout(ref string) error {
 		return fmt.Errorf("checking out %s failed: %w", ref, err)
 	}
 	return err
-}
-
-func testCurrentCommit(orbconfig string) error {
-	files, err := filepath.Glob("./cmd/chore/orbctl/*.go")
-
-	if len(files) <= 0 {
-		return errors.New("no files found in ./cmd/chore/orbctl/*.go")
-	}
-
-	if err != nil {
-		panic(err)
-	}
-
-	args := []string{"run"}
-	args = append(args, files...)
-	args = append(args, "--orbconfig", orbconfig)
-	args = append(args, "destroy")
-
-	cmd := exec.Command("go", args...)
-	cmd.Stderr = os.Stderr
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
-
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		panic(err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		panic(err)
-	}
-	scanner := bufio.NewScanner(stdout)
-	for scanner.Scan() {
-		line := scanner.Text()
-		fmt.Println(line)
-		if strings.HasPrefix(line, "Are you absolutely sure") {
-			if _, err := stdin.Write([]byte("y\n")); err != nil {
-				panic(err)
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		panic(err)
-	}
-	if err := cmd.Wait(); err != nil {
-		panic(err)
-	}
-	return nil
 }
