@@ -27,7 +27,7 @@ func graphite(orbID, cloudURL, cloudKey, branch string, test func(orbconfig stri
 			value = 1
 		}
 		stop := time.Now()
-		minStop := start.Add(11 * time.Second)
+		minStop := start.Add(21 * time.Second)
 		if minStop.After(stop) {
 			stop = minStop
 		}
