@@ -52,7 +52,7 @@ func main() {
 		panic(err)
 	}
 
-	original := trimBranch(string(out))
+	original := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/")
 
 	testFunc := func(_ string) error {
 		return run(orbconfig)
@@ -60,6 +60,7 @@ func main() {
 
 	if graphiteURL != "" {
 		testFunc = func(branch string) error {
+			branch = strings.TrimPrefix(branch, "origin/")
 			return graphite(
 				strings.ToLower(strings.ReplaceAll(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0], "-", "")),
 				graphiteURL,
@@ -86,13 +87,12 @@ func main() {
 		}
 	}()
 
-	out, err = exec.Command("git", "for-each-ref", "--sort", "creatordate", "--format", "%(refname)", "refs/heads", "--no-merged").Output()
+	out, err = exec.Command("git", "branch", "-r", "--no-merged", "origin/master").Output()
 	if err != nil {
 		panic(err)
 	}
 
 	for _, ref := range strings.Fields(string(out)) {
-		ref = trimBranch(ref)
 		if checkoutErr := checkout(ref); checkoutErr != nil {
 			panic(checkoutErr)
 		}
