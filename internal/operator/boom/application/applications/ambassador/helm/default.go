@@ -4,8 +4,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 	adminAnnotations := map[string]string{"app.kubernetes.io/use": "admin-service"}
 
 	return &Values{
-		CreateDevPortalMapping: false,
-		FullnameOverride:       "ambassador",
+		FullnameOverride: "ambassador",
 		AdminService: &AdminService{
 			Annotations: adminAnnotations,
 			Create:      true,
@@ -23,7 +22,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Enabled: true,
 			Keep:    true,
 		},
-		DaemonSet: false,
+		CreateDevPortalMapping: false,
+		DaemonSet:              false,
 		DeploymentStrategy: &DeploymentStrategy{
 			Type: "RollingUpdate",
 		},

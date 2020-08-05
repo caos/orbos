@@ -105,13 +105,13 @@ type ServiceAccount struct {
 }
 
 type Values struct {
-	CreateDevPortalMapping bool                `yaml:"createDevPortalMappings"`
 	AdminService           *AdminService       `yaml:"adminService"`
 	Affinity               struct{}            `yaml:"affinity"`
 	AmbassadorConfig       string              `yaml:"ambassadorConfig"`
 	AuthService            *AuthService        `yaml:"authService"`
 	Autoscaling            *Autoscaling        `yaml:"autoscaling"`
 	Crds                   *Crds               `yaml:"crds"`
+	CreateDevPortalMapping bool                `yaml:"createDevPortalMappings"`
 	DaemonSet              bool                `yaml:"daemonSet"`
 	DeploymentAnnotations  map[string]string   `yaml:"deploymentAnnotations"`
 	DeploymentStrategy     *DeploymentStrategy `yaml:"deploymentStrategy"`
