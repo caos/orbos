@@ -12,25 +12,31 @@ import (
 
 func graphite(orbID, cloudURL, cloudKey, branch string, test func(orbconfig string) error) func(orbconfig string) error {
 
-	send := func(value float64) {
-		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value); err != nil {
+	send := func(value float64, ts time.Time) {
+		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value, ts); err != nil {
 			panic(err)
 		}
 	}
 
 	return func(orbconfig string) error {
-		send(0.5)
+		start := time.Now()
+		send(0.5, start)
 		err := test(orbconfig)
 		var value = 0.1
 		if err == nil {
 			value = 1
 		}
-		send(value)
+		stop := time.Now()
+		minStop := start.Add(11 * time.Second)
+		if minStop.After(stop) {
+			stop = minStop
+		}
+		send(value, stop)
 		return err
 	}
 }
 
-func sendGraphiteStatus(orbID, cloudURL, cloudKey, branch string, value float64) error {
+func sendGraphiteStatus(orbID, cloudURL, cloudKey, branch string, value float64, ts time.Time) error {
 
 	name := fmt.Sprintf("e2e.%s.%s", orbID, branch)
 
@@ -38,7 +44,7 @@ func sendGraphiteStatus(orbID, cloudURL, cloudKey, branch string, value float64)
 		Name:     name,
 		Interval: 10,
 		Value:    value,
-		Time:     time.Now().Unix(),
+		Time:     ts.Unix(),
 		Mtype:    "gauge",
 	}}
 
