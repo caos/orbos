@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 )
 
 func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, version string) error {
@@ -10,7 +11,7 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, version strin
 
 	if k8sClient.Available() {
 		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, version); err != nil {
-			recMonitor.Info("Failed to deploy boom into k8s-cluster")
+			recMonitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
 			return err
 		}
 		recMonitor.Info("Applied boom")

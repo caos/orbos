@@ -163,8 +163,12 @@ func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *stri
 
 		if k8sClient.Available() {
 			if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, zitadelVersion); err != nil {
+				monitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
 				return err
 			}
+			monitor.Info("Applied zitadel-operator")
+		} else {
+			monitor.Info("Failed to connect to k8s")
 		}
 	}
 	return nil
