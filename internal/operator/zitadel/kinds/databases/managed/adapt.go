@@ -7,7 +7,6 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/certificate"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/initjob"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/rbac"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/services"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed/statefulset"
@@ -56,7 +55,6 @@ func AdaptFunc(
 
 		sfsName := "cockroachdb"
 		pdbName := sfsName + "-budget"
-		initJobName := sfsName + "-init"
 		serviceAccountName := sfsName
 		publicServiceName := sfsName + "-public"
 		cockroachPort := int32(26257)
@@ -73,12 +71,7 @@ func AdaptFunc(
 
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, interalLabels)
 
-		querySFS, destroySFS, checkDBRunning, checkDBReady, err := statefulset.AdaptFunc(internalMonitor, namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		queryJ, destroyJ, err := initjob.AdaptFunc(internalMonitor, namespace, initJobName, image, labels, serviceAccountName, checkDBRunning)
+		querySFS, destroySFS, ensureInit, checkDBReady, err := statefulset.AdaptFunc(internalMonitor, namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -118,7 +111,7 @@ func AdaptFunc(
 					zitadel.ResourceQueryToZitadelQuery(querySFS),
 					zitadel.ResourceQueryToZitadelQuery(queryPDB),
 					queryS,
-					queryJ,
+					zitadel.EnsureFuncToQueryFunc(ensureInit),
 				)
 			}
 		}
@@ -127,7 +120,6 @@ func AdaptFunc(
 		for _, feature := range features {
 			if feature == "database" {
 				destroyers = append(destroyers,
-					destroyJ,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyPDB),
 					destroyS,
 					zitadel.ResourceDestroyToZitadelDestroy(destroySFS),

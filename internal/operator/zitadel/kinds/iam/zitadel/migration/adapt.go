@@ -208,12 +208,7 @@ func AdaptFunc(
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for migration to be completed"))
 				return err
 			}
-			internalMonitor.Info("migration is completed, cleanup")
-			if err := k8sClient.DeleteJob(namespace, jobName); err != nil {
-				internalMonitor.Error(errors.Wrap(err, "error while trying to cleanup migration"))
-				return err
-			}
-			internalMonitor.Info("migration cleanup is completed")
+			internalMonitor.Info("migration is completed")
 			return nil
 		},
 		nil

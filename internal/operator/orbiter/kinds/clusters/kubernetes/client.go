@@ -3,6 +3,7 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,8 +11,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
+	"k8s.io/client-go/tools/remotecommand"
 	"strings"
 	"sync"
 	"time"
@@ -60,6 +63,7 @@ type Client struct {
 	dynamic           dynamic.Interface
 	apixv1beta1client *apixv1beta1client.ApiextensionsV1beta1Client
 	mapper            *restmapper.DeferredDiscoveryRESTMapper
+	restConfig        *rest.Config
 }
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
@@ -504,29 +508,40 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 		return err
 	}
 
-	c.set, err = kubernetes.NewForConfig(restCfg)
+	return c.refreshAllClients(restCfg)
+}
+
+func (c *Client) RefreshConfig(config *rest.Config) (err error) {
+	return c.refreshAllClients(config)
+}
+
+func (c *Client) refreshAllClients(config *rest.Config) error {
+	c.restConfig = config
+
+	set, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return err
 	}
+	c.set = set
 
-	c.apixv1beta1client, err = apixv1beta1client.NewForConfig(restCfg)
-
-	c.dynamic, err = dynamic.NewForConfig(restCfg)
+	apixv1beta1clientC, err := apixv1beta1client.NewForConfig(config)
 	if err != nil {
 		return err
 	}
+	c.apixv1beta1client = apixv1beta1clientC
 
-	dc, err := discovery.NewDiscoveryClientForConfig(restCfg)
+	dynamicC, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+	c.dynamic = dynamicC
+
+	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
 		return err
 	}
 	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
-	return err
-}
-
-func (c *Client) RefreshConfig(config *rest.Config) (err error) {
-	c.set, err = kubernetes.NewForConfig(config)
-	return err
+	return nil
 }
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {
@@ -935,4 +950,49 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
 		return err
 	})
+}
+
+func (c *Client) ExecInPod(namespace, name, container, command string) error {
+	cmd := []string{
+		"sh",
+		"-c",
+		command,
+	}
+
+	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("exec")
+	option := &core.PodExecOptions{
+		Command:   cmd,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       true,
+		Container: container,
+	}
+	req.VersionedParams(
+		option,
+		scheme.ParameterCodec,
+	)
+
+	exec, err := remotecommand.NewSPDYExecutor(c.restConfig, "POST", req.URL())
+	if err != nil {
+		return err
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  nil,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		return err
+	}
+
+	errStr := stderr.Bytes()
+	if len(errStr) > 0 {
+		return errors.New(string(errStr))
+	}
+
+	return nil
 }

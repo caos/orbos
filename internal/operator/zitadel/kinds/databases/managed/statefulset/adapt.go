@@ -53,10 +53,12 @@ func AdaptFunc(
 
 	locality := "zone=" + namespace
 	certPath := "/cockroach/cockroach-certs"
+	clientCertPath := "/cockroach/cockroach-client-certs"
 	datadirPath := "/cockroach/cockroach-data"
 	joinExec := "exec /cockroach/cockroach start --logtostderr --certs-dir " + certPath + " --advertise-host $(hostname -f) --http-addr 0.0.0.0 --join " + joinListStr + " --locality " + locality + " --cache 25% --max-sql-memory 25%"
 	datadirInternal := "datadir"
 	certsInternal := "certs"
+	clientCertsInternal := "client-certs"
 
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -133,6 +135,9 @@ func AdaptFunc(
 						}, {
 							Name:      certsInternal,
 							MountPath: certPath,
+						}, {
+							Name:      clientCertsInternal,
+							MountPath: clientCertPath,
 						}},
 						Env: []corev1.EnvVar{{
 							Name:  "COCKROACH_CHANNEL",
@@ -156,6 +161,14 @@ func AdaptFunc(
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName:  "cockroachdb.node",
+								DefaultMode: &defaultMode,
+							},
+						},
+					}, {
+						Name: clientCertsInternal,
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName:  "cockroachdb.client.root",
 								DefaultMode: &defaultMode,
 							},
 						},
@@ -205,6 +218,33 @@ func AdaptFunc(
 		return nil
 	}
 
+	checkDBNotReady := func(k8sClient *kubernetes.Client) error {
+		internalMonitor.Info("checking for statefulset to not be ready")
+		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, true, 1); err != nil {
+			internalMonitor.Info("statefulset is not ready")
+			return nil
+		}
+		internalMonitor.Info("statefulset is ready")
+		return errors.New("statefulset is ready")
+	}
+
+	ensureInit := func(k8sClient *kubernetes.Client) error {
+		if err := checkDBRunning(k8sClient); err != nil {
+			return err
+		}
+
+		if err := checkDBNotReady(k8sClient); err != nil {
+			return nil
+		}
+
+		command := "/cockroach/cockroach init --certs-dir=" + clientCertsInternal + " --host=" + name + "-0." + name
+
+		if err := k8sClient.ExecInPod(namespace, name+"-0", name, command); err != nil {
+			return err
+		}
+		return nil
+	}
+
 	checkDBReady := func(k8sClient *kubernetes.Client) error {
 		internalMonitor.Info("waiting for statefulset to be ready")
 		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, true, 60); err != nil {
@@ -215,5 +255,5 @@ func AdaptFunc(
 		return nil
 	}
 
-	return wrapedQuery, wrapedDestroy, checkDBRunning, checkDBReady, err
+	return wrapedQuery, wrapedDestroy, ensureInit, checkDBReady, err
 }
