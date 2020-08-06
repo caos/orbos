@@ -27,6 +27,7 @@ func destroy(orbctl orbctlFunc) error {
 		return err
 	}
 
+	cmd.Args = append(cmd.Args, "destroy")
 	cmd.Stderr = os.Stderr
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
