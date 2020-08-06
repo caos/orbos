@@ -22,7 +22,7 @@ func graphite(orbID, cloudURL, cloudKey, branch string, test func(orbconfig stri
 		start := time.Now()
 		send(0.5, start)
 		err := test(orbconfig)
-		var value = 0.1
+		var value float64 = 0
 		if err == nil {
 			value = 1
 		}
