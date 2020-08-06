@@ -22,7 +22,6 @@ func AdaptFuncToEnsure(namespace string) (resources.QueryFunc, error) {
 
 func AdaptFuncToDestroy(namespace string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteNamespace(namespace)
 	}, nil
 }

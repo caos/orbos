@@ -13,7 +13,7 @@ type Subject struct {
 	Namespace string
 }
 
-func AdaptFuncToEnsure(name string, namespace string, labels map[string]string, subjects []Subject, role string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, subjects []Subject, role string) (resources.QueryFunc, error) {
 	subjectsList := make([]rbac.Subject, 0)
 	for _, subject := range subjects {
 		subjectsList = append(subjectsList, rbac.Subject{
@@ -43,9 +43,8 @@ func AdaptFuncToEnsure(name string, namespace string, labels map[string]string, 
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteRoleBinding(namespace, name)
 	}, nil
 }

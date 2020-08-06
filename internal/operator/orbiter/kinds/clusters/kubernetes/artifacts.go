@@ -91,7 +91,7 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "zitadel",
-			Namespace: "caos-zitadel",
+			Namespace: "caos-system",
 		},
 	}); err != nil {
 		return err
@@ -133,7 +133,7 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
 			Name:      "zitadel",
-			Namespace: "caos-zitadel",
+			Namespace: "caos-system",
 		}},
 	}); err != nil {
 		return err
@@ -142,7 +142,7 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 	if err := client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "zitadel-operator",
-			Namespace: "caos-zitadel",
+			Namespace: "caos-system",
 			Labels: map[string]string{
 				"app.kubernetes.io/instance":   "zitadel",
 				"app.kubernetes.io/part-of":    "orbos",
@@ -173,7 +173,7 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 						Name: "public-github-packages",
 					}},
 					Containers: []core.Container{{
-						Name:            "boom",
+						Name:            "zitadel",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},

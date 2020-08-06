@@ -40,23 +40,23 @@ func AdaptFunc(
 	literalsSecretVars := literalsSecretVars(desired)
 	literalsConsoleCM := literalsConsoleCM(desired)
 
-	destroyCM, err := configmap.AdaptFuncToDestroy(cmName, namespace)
+	destroyCM, err := configmap.AdaptFuncToDestroy(namespace, cmName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	destroyS, err := secret.AdaptFuncToDestroy(secretName, namespace)
+	destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	destroyCCM, err := configmap.AdaptFuncToDestroy(consoleCMName, namespace)
+	destroyCCM, err := configmap.AdaptFuncToDestroy(namespace, consoleCMName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	destroySV, err := secret.AdaptFuncToDestroy(secretVarsName, namespace)
+	destroySV, err := secret.AdaptFuncToDestroy(namespace, secretVarsName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	destroySP, err := secret.AdaptFuncToDestroy(secretPasswordName, namespace)
+	destroySP, err := secret.AdaptFuncToDestroy(namespace, secretPasswordName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -70,19 +70,19 @@ func AdaptFunc(
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
-			queryS, err := secret.AdaptFuncToEnsure(secretName, namespace, labels, literalsSecret)
+			queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, literalsSecret)
 			if err != nil {
 				return nil, err
 			}
-			queryCCM, err := configmap.AdaptFuncToEnsure(consoleCMName, namespace, labels, literalsConsoleCM)
+			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM)
 			if err != nil {
 				return nil, err
 			}
-			querySV, err := secret.AdaptFuncToEnsure(secretVarsName, namespace, labels, literalsSecretVars)
+			querySV, err := secret.AdaptFuncToEnsure(namespace, secretVarsName, labels, literalsSecretVars)
 			if err != nil {
 				return nil, err
 			}
-			querySP, err := secret.AdaptFuncToEnsure(secretPasswordName, namespace, labels, users)
+			querySP, err := secret.AdaptFuncToEnsure(namespace, secretPasswordName, labels, users)
 			if err != nil {
 				return nil, err
 			}
@@ -97,7 +97,7 @@ func AdaptFunc(
 				return nil, err
 			}
 
-			queryCM, err := configmap.AdaptFuncToEnsure(cmName, namespace, labels, literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB))
+			queryCM, err := configmap.AdaptFuncToEnsure(namespace, cmName, labels, literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB))
 			if err != nil {
 				return nil, err
 			}

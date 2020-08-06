@@ -28,7 +28,6 @@ func AdaptFuncToEnsure(name string, labels map[string]string, apiGroups, kubeRes
 
 func AdaptFuncToDestroy(name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteClusterRole(name)
 	}, nil
 }

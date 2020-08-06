@@ -23,12 +23,12 @@ func AdaptFunc(
 	consoleName := "console-v1"
 	accountsName := "accounts-v1"
 
-	destroyAcc, err := mapping.AdaptFuncToDestroy(accountsName, namespace)
+	destroyAcc, err := mapping.AdaptFuncToDestroy(namespace, accountsName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyConsole, err := mapping.AdaptFuncToDestroy(consoleName, namespace)
+	destroyConsole, err := mapping.AdaptFuncToDestroy(namespace, consoleName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -53,8 +53,8 @@ func AdaptFunc(
 			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
 
 			queryConsole, err := mapping.AdaptFuncToEnsure(
-				consoleName,
 				namespace,
+				consoleName,
 				labels,
 				false,
 				consoleDomain,
@@ -70,8 +70,8 @@ func AdaptFunc(
 			}
 
 			queryAcc, err := mapping.AdaptFuncToEnsure(
-				accountsName,
 				namespace,
+				accountsName,
 				labels,
 				false,
 				accountsDomain,

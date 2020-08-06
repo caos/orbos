@@ -26,19 +26,19 @@ func AdaptFunc(
 	mgmtMName := "mgmt-grpc-v1"
 	moduleName := "ambassador"
 
-	destroyAdminG, err := mapping.AdaptFuncToDestroy(adminMName, namespace)
+	destroyAdminG, err := mapping.AdaptFuncToDestroy(namespace, adminMName)
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyAuthG, err := mapping.AdaptFuncToDestroy(authMName, namespace)
+	destroyAuthG, err := mapping.AdaptFuncToDestroy(namespace, authMName)
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyMgmtGRPC, err := mapping.AdaptFuncToDestroy(mgmtMName, namespace)
+	destroyMgmtGRPC, err := mapping.AdaptFuncToDestroy(namespace, mgmtMName)
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyModule, err := module.AdaptFuncToDestroy(moduleName, namespace)
+	destroyModule, err := module.AdaptFuncToDestroy(namespace, moduleName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +69,7 @@ func AdaptFunc(
 			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
 			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
 
-			queryModule, err := module.AdaptFuncToEnsure(moduleName, namespace, labels, &module.Config{EnableGrpcWeb: true})
+			queryModule, err := module.AdaptFuncToEnsure(namespace, moduleName, labels, &module.Config{EnableGrpcWeb: true})
 
 			cors := &mapping.CORS{
 				Origins:        "https://" + consoleDomain,
@@ -81,8 +81,8 @@ func AdaptFunc(
 			}
 
 			queryAdminG, err := mapping.AdaptFuncToEnsure(
-				adminMName,
 				namespace,
+				adminMName,
 				labels,
 				true,
 				"apiDomain",
@@ -98,8 +98,8 @@ func AdaptFunc(
 			}
 
 			queryAuthG, err := mapping.AdaptFuncToEnsure(
-				authMName,
 				namespace,
+				authMName,
 				labels,
 				true,
 				apiDomain,
@@ -115,8 +115,8 @@ func AdaptFunc(
 			}
 
 			queryMgmtGRPC, err := mapping.AdaptFuncToEnsure(
-				mgmtMName,
 				namespace,
+				mgmtMName,
 				labels,
 				true,
 				apiDomain,

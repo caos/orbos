@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFuncToEnsure(name string, namespace string, labels map[string]string, data map[string]string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, data map[string]string) (resources.QueryFunc, error) {
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -23,9 +23,8 @@ func AdaptFuncToEnsure(name string, namespace string, labels map[string]string, 
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteConfigmap(namespace, name)
 	}, nil
 }

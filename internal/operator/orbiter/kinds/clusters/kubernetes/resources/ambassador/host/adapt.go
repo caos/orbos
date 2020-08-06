@@ -7,11 +7,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func AdaptFuncToEnsure(name, namespace string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
-	group := "getambassador.io"
-	version := "v2"
-	kind := "Host"
+const (
+	group   = "getambassador.io"
+	version = "v2"
+	kind    = "Host"
+)
 
+func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
 	acme := map[string]interface{}{
 		"authority": authority,
 	}
@@ -74,9 +76,8 @@ func AdaptFuncToEnsure(name, namespace string, labels map[string]string, hostnam
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }

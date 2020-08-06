@@ -17,8 +17,8 @@ type Port struct {
 }
 
 func AdaptFuncToEnsure(
-	name string,
 	namespace string,
+	name string,
 	labels map[string]string,
 	ports []Port,
 	t string,
@@ -63,9 +63,8 @@ func AdaptFuncToEnsure(
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteService(namespace, name)
 	}, nil
 }

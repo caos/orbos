@@ -14,9 +14,8 @@ func AdaptFuncToEnsure(deployment *appsv1.Deployment) (resources.QueryFunc, erro
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteDeployment(namespace, name)
 	}, nil
 }

@@ -123,7 +123,7 @@ func AdaptFunc(
 		},
 	}
 
-	destroyCJ, err := cronjob.AdaptFuncToDestroy(cronjobName, namespace)
+	destroyCJ, err := cronjob.AdaptFuncToDestroy(namespace, cronjobName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -142,7 +142,7 @@ func AdaptFunc(
 		Spec: jobSpecDef,
 	}
 
-	destroyJ, err := job.AdaptFuncToDestroy(cronjobName, namespace)
+	destroyJ, err := job.AdaptFuncToDestroy(namespace, cronjobName)
 	if err != nil {
 		return nil, nil, err
 	}

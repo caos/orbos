@@ -17,10 +17,13 @@ type CORS struct {
 	MaxAge         string
 }
 
-func AdaptFuncToEnsure(name, namespace string, labels map[string]string, grpc bool, host, prefix, rewrite, service, timeoutMS, connectTimeoutMS string, cors *CORS) (resources.QueryFunc, error) {
-	group := "getambassador.io"
-	version := "v2"
-	kind := "Mapping"
+const (
+	group   = "getambassador.io"
+	version = "v2"
+	kind    = "Mapping"
+)
+
+func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bool, host, prefix, rewrite, service, timeoutMS, connectTimeoutMS string, cors *CORS) (resources.QueryFunc, error) {
 
 	spec := map[string]interface{}{
 		"host":    host,
@@ -99,9 +102,8 @@ func AdaptFuncToEnsure(name, namespace string, labels map[string]string, grpc bo
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }

@@ -28,37 +28,37 @@ func AdaptFunc(
 	endsessionName := "endsession-v1"
 	issuerName := "issuer-v1"
 
-	destroyAdminR, err := mapping.AdaptFuncToDestroy(adminRName, namespace)
+	destroyAdminR, err := mapping.AdaptFuncToDestroy(namespace, adminRName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyMgmtRest, err := mapping.AdaptFuncToDestroy(mgmtName, namespace)
+	destroyMgmtRest, err := mapping.AdaptFuncToDestroy(namespace, mgmtName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyOAuthv2, err := mapping.AdaptFuncToDestroy(oauthName, namespace)
+	destroyOAuthv2, err := mapping.AdaptFuncToDestroy(namespace, oauthName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyAuthR, err := mapping.AdaptFuncToDestroy(authRName, namespace)
+	destroyAuthR, err := mapping.AdaptFuncToDestroy(namespace, authRName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyAuthorize, err := mapping.AdaptFuncToDestroy(authorizeName, namespace)
+	destroyAuthorize, err := mapping.AdaptFuncToDestroy(namespace, authorizeName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyEndsession, err := mapping.AdaptFuncToDestroy(endsessionName, namespace)
+	destroyEndsession, err := mapping.AdaptFuncToDestroy(namespace, endsessionName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyIssuer, err := mapping.AdaptFuncToDestroy(issuerName, namespace)
+	destroyIssuer, err := mapping.AdaptFuncToDestroy(namespace, issuerName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -89,8 +89,8 @@ func AdaptFunc(
 			issuerDomain := currentNW.GetIssuerSubDomain() + "." + currentNW.GetDomain()
 
 			queryAdminR, err := mapping.AdaptFuncToEnsure(
-				adminRName,
 				namespace,
+				adminRName,
 				labels,
 				false,
 				apiDomain,
@@ -106,8 +106,8 @@ func AdaptFunc(
 			}
 
 			queryMgmtRest, err := mapping.AdaptFuncToEnsure(
-				mgmtName,
 				namespace,
+				mgmtName,
 				labels,
 				false,
 				apiDomain,
@@ -123,8 +123,8 @@ func AdaptFunc(
 			}
 
 			queryOAuthv2, err := mapping.AdaptFuncToEnsure(
-				oauthName,
 				namespace,
+				oauthName,
 				labels,
 				false,
 				apiDomain,
@@ -140,8 +140,8 @@ func AdaptFunc(
 			}
 
 			queryAuthR, err := mapping.AdaptFuncToEnsure(
-				authRName,
 				namespace,
+				authRName,
 				labels,
 				false,
 				apiDomain,
@@ -157,8 +157,8 @@ func AdaptFunc(
 			}
 
 			queryAuthorize, err := mapping.AdaptFuncToEnsure(
-				authorizeName,
 				namespace,
+				authorizeName,
 				labels,
 				false,
 				accountsDomain,
@@ -174,8 +174,8 @@ func AdaptFunc(
 			}
 
 			queryEndsession, err := mapping.AdaptFuncToEnsure(
-				endsessionName,
 				namespace,
+				endsessionName,
 				labels,
 				false,
 				accountsDomain,
@@ -191,8 +191,8 @@ func AdaptFunc(
 			}
 
 			queryIssuer, err := mapping.AdaptFuncToEnsure(
-				issuerName,
 				namespace,
+				issuerName,
 				labels,
 				false,
 				issuerDomain,

@@ -202,7 +202,7 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	destroy, err := statefulset.AdaptFuncToDestroy(name, namespace)
+	destroy, err := statefulset.AdaptFuncToDestroy(namespace, name)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -237,7 +237,7 @@ func AdaptFunc(
 			return nil
 		}
 
-		command := "/cockroach/cockroach init --certs-dir=" + clientCertsInternal + " --host=" + name + "-0." + name
+		command := "/cockroach/cockroach init --certs-dir=" + clientCertPath + " --host=" + name + "-0." + name
 
 		if err := k8sClient.ExecInPod(namespace, name+"-0", name, command); err != nil {
 			return err

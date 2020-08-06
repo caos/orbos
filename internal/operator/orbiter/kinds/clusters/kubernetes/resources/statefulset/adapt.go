@@ -14,9 +14,8 @@ func AdaptFuncToEnsure(statefulset *appsv1.StatefulSet) (resources.QueryFunc, er
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
+	return func(k8sClient *kubernetes.Client) error {
+		return k8sClient.DeleteStatefulset(namespace, name)
 	}, nil
 }

@@ -105,7 +105,7 @@ func AdaptFunc(
 					nodePrivKeyKey: string(pemNodePrivKey),
 					nodeCertKey:    string(pemNodeCert),
 				}
-				queryNodeSecret, err := secret.AdaptFuncToEnsure(nodeSecret, namespace, nodeLabels, nodeSecretData)
+				queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, nodeSecret, nodeLabels, nodeSecretData)
 				if err != nil {
 					return nil, err
 				}
@@ -157,14 +157,14 @@ func AdaptFunc(
 					clientCertKey:    string(pemClientCert),
 				}
 
-				queryClientSecret, err := secret.AdaptFuncToEnsure(createSecret.name, namespace, clientLabels, clientSecretData)
+				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, createSecret.name, clientLabels, clientSecretData)
 				if err != nil {
 					return nil, err
 				}
 				queriers = append(queriers, zitadel.ResourceQueryToZitadelQuery(queryClientSecret))
 			}
 			for _, deleteSecret := range deleteSecrets {
-				destroy, err := secret.AdaptFuncToDestroy(deleteSecret.name, namespace)
+				destroy, err := secret.AdaptFuncToDestroy(namespace, deleteSecret.name)
 				if err != nil {
 					return nil, err
 				}
@@ -184,7 +184,7 @@ func AdaptFunc(
 			}
 			_, deleteSecrets := queryCertificate([]*secretInternal{}, allClientSecrets.Items)
 			for _, deleteSecret := range deleteSecrets {
-				destroyer, err := secret.AdaptFuncToDestroy(deleteSecret.name, namespace)
+				destroyer, err := secret.AdaptFuncToDestroy(namespace, deleteSecret.name)
 				if err != nil {
 					return err
 				}

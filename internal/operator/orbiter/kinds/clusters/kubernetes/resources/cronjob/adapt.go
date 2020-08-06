@@ -14,9 +14,8 @@ func AdaptFuncToEnsure(job *v1beta1.CronJob) (resources.QueryFunc, error) {
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteCronJob(namespace, name)
 	}, nil
 }

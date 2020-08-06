@@ -24,22 +24,22 @@ func AdaptFunc(
 	consoleHostName := "console"
 	issuerHostName := "issuer"
 
-	destroyAccounts, err := host.AdaptFuncToDestroy(accountsHostName, namespace)
+	destroyAccounts, err := host.AdaptFuncToDestroy(namespace, accountsHostName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyAPI, err := host.AdaptFuncToDestroy(apiHostName, namespace)
+	destroyAPI, err := host.AdaptFuncToDestroy(namespace, apiHostName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyConsole, err := host.AdaptFuncToDestroy(consoleHostName, namespace)
+	destroyConsole, err := host.AdaptFuncToDestroy(namespace, consoleHostName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyIssuer, err := host.AdaptFuncToDestroy(issuerHostName, namespace)
+	destroyIssuer, err := host.AdaptFuncToDestroy(namespace, issuerHostName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -71,7 +71,7 @@ func AdaptFunc(
 			accountsSelector := map[string]string{
 				"hostname": accountsDomain,
 			}
-			queryAccounts, err := host.AdaptFuncToEnsure(accountsHostName, namespace, labels, accountsDomain, "none", "", accountsSelector, originCASecretName)
+			queryAccounts, err := host.AdaptFuncToEnsure(namespace, accountsHostName, labels, accountsDomain, "none", "", accountsSelector, originCASecretName)
 			if err != nil {
 				return nil, err
 			}
@@ -79,7 +79,7 @@ func AdaptFunc(
 			apiSelector := map[string]string{
 				"hostname": apiDomain,
 			}
-			queryAPI, err := host.AdaptFuncToEnsure(apiHostName, namespace, labels, apiDomain, "none", "", apiSelector, originCASecretName)
+			queryAPI, err := host.AdaptFuncToEnsure(namespace, apiHostName, labels, apiDomain, "none", "", apiSelector, originCASecretName)
 			if err != nil {
 				return nil, err
 			}
@@ -87,7 +87,7 @@ func AdaptFunc(
 			consoleSelector := map[string]string{
 				"hostname": consoleDomain,
 			}
-			queryConsole, err := host.AdaptFuncToEnsure(consoleHostName, namespace, labels, consoleDomain, "none", "", consoleSelector, originCASecretName)
+			queryConsole, err := host.AdaptFuncToEnsure(namespace, consoleHostName, labels, consoleDomain, "none", "", consoleSelector, originCASecretName)
 			if err != nil {
 				return nil, err
 			}
@@ -95,7 +95,7 @@ func AdaptFunc(
 			issuerSelector := map[string]string{
 				"hostname": issuerDomain,
 			}
-			queryIssuer, err := host.AdaptFuncToEnsure(issuerHostName, namespace, labels, issuerDomain, "none", "", issuerSelector, originCASecretName)
+			queryIssuer, err := host.AdaptFuncToEnsure(namespace, issuerHostName, labels, issuerDomain, "none", "", issuerSelector, originCASecretName)
 			if err != nil {
 				return nil, err
 			}

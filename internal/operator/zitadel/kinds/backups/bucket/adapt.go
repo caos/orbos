@@ -78,12 +78,12 @@ func AdaptFunc(
 
 		queryM, destroyM, checkMigrationDone, err := migration.AdaptFunc(monitor, namespace, labels, secretPasswordName, migrationUser, users)
 
-		destroyS, err := secret.AdaptFuncToDestroy(secretName, namespace)
+		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryS, err := secret.AdaptFuncToEnsure(secretName, namespace, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
+		queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
 		if err != nil {
 			return nil, nil, err
 		}

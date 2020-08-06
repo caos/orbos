@@ -29,9 +29,8 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, maxUnav
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeletePodDisruptionBudget(namespace, name)
 	}, nil
 }

@@ -14,9 +14,8 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteJob(namespace, name)
 	}, nil
 }

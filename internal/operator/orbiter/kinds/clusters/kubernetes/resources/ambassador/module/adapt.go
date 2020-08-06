@@ -11,11 +11,13 @@ type Config struct {
 	EnableGrpcWeb bool
 }
 
-func AdaptFuncToEnsure(name, namespace string, labels map[string]string, config *Config) (resources.QueryFunc, error) {
-	group := "getambassador.io"
-	version := "v2"
-	kind := "Module"
+const (
+	group   = "getambassador.io"
+	version = "v2"
+	kind    = "Module"
+)
 
+func AdaptFuncToEnsure(namespace, name string, labels map[string]string, config *Config) (resources.QueryFunc, error) {
 	spec := map[string]interface{}{}
 	if config != nil && config.EnableGrpcWeb {
 		spec["enable_grpc_web"] = config.EnableGrpcWeb
@@ -55,9 +57,8 @@ func AdaptFuncToEnsure(name, namespace string, labels map[string]string, config 
 	}, nil
 }
 
-func AdaptFuncToDestroy(name, namespace string) (resources.DestroyFunc, error) {
+func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
 	return func(client *kubernetes.Client) error {
-		//TODO
-		return nil
+		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }

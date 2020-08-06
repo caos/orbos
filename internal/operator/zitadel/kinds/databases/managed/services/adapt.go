@@ -23,15 +23,15 @@ func AdaptFunc(
 ) {
 	internalMonitor := monitor.WithField("component", "services")
 
-	destroySPD, err := service.AdaptFuncToDestroy(publicServiceName, "default")
+	destroySPD, err := service.AdaptFuncToDestroy("default", publicServiceName)
 	if err != nil {
 		return nil, nil, err
 	}
-	destroySP, err := service.AdaptFuncToDestroy(publicServiceName, namespace)
+	destroySP, err := service.AdaptFuncToDestroy(namespace, publicServiceName)
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyS, err := service.AdaptFuncToDestroy(serviceName, namespace)
+	destroyS, err := service.AdaptFuncToDestroy(namespace, serviceName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,15 +57,15 @@ func AdaptFunc(
 		{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},
 		{Port: 8080, TargetPort: strconv.Itoa(int(cockroachHTTPPort)), Name: "http"},
 	}
-	querySPD, err := service.AdaptFuncToEnsure(publicServiceName, "default", publicLabels, ports, "", labels, false, "", "")
+	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceName, publicLabels, ports, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	querySP, err := service.AdaptFuncToEnsure(publicServiceName, namespace, publicLabels, ports, "", labels, false, "", "")
+	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceName, publicLabels, ports, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	queryS, err := service.AdaptFuncToEnsure(serviceName, namespace, internalLabels, ports, "", labels, true, "None", "")
+	queryS, err := service.AdaptFuncToEnsure(namespace, serviceName, internalLabels, ports, "", labels, true, "None", "")
 	if err != nil {
 		return nil, nil, err
 	}

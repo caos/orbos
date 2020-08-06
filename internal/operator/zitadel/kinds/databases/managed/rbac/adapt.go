@@ -33,7 +33,7 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	destroyR, err := role.AdaptFuncToDestroy(roleName, namespace)
+	destroyR, err := role.AdaptFuncToDestroy(namespace, roleName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -43,7 +43,7 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	destroyRB, err := rolebinding.AdaptFuncToDestroy(roleName, namespace)
+	destroyRB, err := rolebinding.AdaptFuncToDestroy(namespace, roleName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -66,7 +66,7 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	queryR, err := role.AdaptFuncToEnsure(roleName, namespace, labels, []string{""}, []string{"secrets"}, []string{"create", "get"})
+	queryR, err := role.AdaptFuncToEnsure(namespace, roleName, labels, []string{""}, []string{"secrets"}, []string{"create", "get"})
 	if err != nil {
 		return nil, nil, err
 	}
@@ -77,7 +77,7 @@ func AdaptFunc(
 	}
 
 	subjects := []rolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountName, Namespace: namespace}}
-	queryRB, err := rolebinding.AdaptFuncToEnsure(roleName, namespace, labels, subjects, roleName)
+	queryRB, err := rolebinding.AdaptFuncToEnsure(namespace, roleName, labels, subjects, roleName)
 	if err != nil {
 		return nil, nil, err
 	}

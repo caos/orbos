@@ -24,17 +24,17 @@ func AdaptFunc(
 ) {
 	internalMonitor := monitor.WithField("component", "services")
 
-	destroyGRPC, err := service.AdaptFuncToDestroy(grpcServiceName, namespace)
+	destroyGRPC, err := service.AdaptFuncToDestroy(namespace, grpcServiceName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyHTTP, err := service.AdaptFuncToDestroy(httpServiceName, namespace)
+	destroyHTTP, err := service.AdaptFuncToDestroy(namespace, httpServiceName)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyUI, err := service.AdaptFuncToDestroy(uiServiceName, namespace)
+	destroyUI, err := service.AdaptFuncToDestroy(namespace, uiServiceName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -48,7 +48,7 @@ func AdaptFunc(
 	grpcPorts := []service.Port{
 		{Name: "grpc", Port: grpcPort, TargetPort: "grpc"},
 	}
-	queryGRPC, err := service.AdaptFuncToEnsure(grpcServiceName, namespace, labels, grpcPorts, "", labels, false, "", "")
+	queryGRPC, err := service.AdaptFuncToEnsure(namespace, grpcServiceName, labels, grpcPorts, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -56,7 +56,7 @@ func AdaptFunc(
 	httpPorts := []service.Port{
 		{Name: "http", Port: httpPort, TargetPort: "http"},
 	}
-	queryHTTP, err := service.AdaptFuncToEnsure(httpServiceName, namespace, labels, httpPorts, "", labels, false, "", "")
+	queryHTTP, err := service.AdaptFuncToEnsure(namespace, httpServiceName, labels, httpPorts, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -64,7 +64,7 @@ func AdaptFunc(
 	uiPorts := []service.Port{
 		{Name: "ui", Port: uiPort, TargetPort: "ui"},
 	}
-	queryUI, err := service.AdaptFuncToEnsure(uiServiceName, namespace, labels, uiPorts, "", labels, false, "", "")
+	queryUI, err := service.AdaptFuncToEnsure(namespace, uiServiceName, labels, uiPorts, "", labels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}

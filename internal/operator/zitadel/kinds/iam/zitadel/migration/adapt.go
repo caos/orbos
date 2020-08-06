@@ -43,7 +43,7 @@ func AdaptFunc(
 	grantFile := "grant.sql"
 	deleteFile := "delete.sql"
 
-	destroyCM, err := configmap.AdaptFuncToDestroy(migrationConfigmap, namespace)
+	destroyCM, err := configmap.AdaptFuncToDestroy(namespace, migrationConfigmap)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -185,7 +185,7 @@ func AdaptFunc(
 				},
 			}
 
-			queryCM, err := configmap.AdaptFuncToEnsure(migrationConfigmap, namespace, labels, allScripts)
+			queryCM, err := configmap.AdaptFuncToEnsure(namespace, migrationConfigmap, labels, allScripts)
 			if err != nil {
 				return nil, err
 			}

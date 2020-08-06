@@ -220,7 +220,7 @@ func AdaptFunc(
 		},
 	}
 
-	destroy, err := deployment.AdaptFuncToDestroy(deployName, namespace)
+	destroy, err := deployment.AdaptFuncToDestroy(namespace, deployName)
 	if err != nil {
 		return nil, nil, nil, err
 	}
