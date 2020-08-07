@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/manifoldco/promptui"
+	"github.com/AlecAivazis/survey/v2"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
@@ -94,16 +94,11 @@ func updateMap(structure map[string]interface{}, path []string, value string) er
 }
 
 func prompt(keys []string) (string, error) {
-	prompt := promptui.Select{
-		Label: "Select key",
-		Items: keys,
-	}
-
-	_, key, err := prompt.Run()
-	if err != nil {
-		return "", err
-	}
-	return key, nil
+	var key string
+	return key, survey.AskOne(&survey.Select{
+		Message: "Select key:",
+		Options: keys,
+	}, &key, survey.WithValidator(survey.Required))
 }
 
 func updateSlice(slice []interface{}, path []string, value string) error {
