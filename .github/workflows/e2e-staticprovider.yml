@@ -18,8 +18,13 @@ jobs:
     - name: Fail
       if: github.event.action == 'webhook-e2e-staticprovider' && github.event.client_payload.status == 'failure'
       run:  exit 1
+    - name: Source Checkout
+      id: source-checkout
+      uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
     - name: StaticProvider
-      run: go run ./cmd/chore/e2e/trigger/main.go --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.GITHUB_TOKEN_E2E }}"
+      run: go run ./cmd/chore/e2e/trigger/*.go --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.GITHUB_TOKEN_E2E }}"
     - name: Await Response
       run: sleep 3600
     - name: Fail
