@@ -6,8 +6,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/internal/orb"
-
 	"github.com/caos/orbos/internal/helpers"
 )
 
@@ -16,36 +14,26 @@ func main() {
 	var (
 		unpublished bool
 		orbconfig   string
-		graphiteURL string
-		graphiteKey string
+		ghToken     string
 	)
 
 	const (
-		unpublishedDefault = false
-		unpublishedUsage   = "Test all unpublished branches"
-		orbDefault         = "~/.orb/config"
-		orbUsage           = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
-		graphiteURLDefault = ""
-		graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
-		graphiteKeyDefault = ""
-		graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
+		unpublishedDefault  = false
+		unpublishedUsage    = "Test all unpublished branches"
+		orbDefault          = "~/.orb/config"
+		orbUsage            = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
+		githubTokenDefault  = ""
+		githubTokenKeyUsage = "Personal access token with repo scope for github.com/caos/orbos"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
 	flag.BoolVar(&unpublished, "u", unpublishedDefault, unpublishedUsage+" (shorthand)")
 	flag.StringVar(&orbconfig, "orbconfig", orbDefault, orbUsage)
 	flag.StringVar(&orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
-	flag.StringVar(&graphiteURL, "graphiteurl", graphiteURLDefault, graphiteURLUsage)
-	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
-	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
-	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
+	flag.StringVar(&ghToken, "github-access-token", githubTokenDefault, githubTokenKeyUsage)
+	flag.StringVar(&ghToken, "t", githubTokenDefault, githubTokenKeyUsage+" (shorthand)")
 
 	flag.Parse()
-
-	orb, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
-	if err != nil {
-		panic(err)
-	}
 
 	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
 	if err != nil {
@@ -58,15 +46,9 @@ func main() {
 		return run(orbconfig)
 	}
 
-	if graphiteURL != "" {
+	if ghToken != "" {
 		testFunc = func(branch string) error {
-			branch = strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-")
-			return graphite(
-				strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
-				graphiteURL,
-				graphiteKey,
-				trimBranch(branch),
-				run)(orbconfig)
+			return github(trimBranch(branch), ghToken, run)(orbconfig)
 		}
 	}
 

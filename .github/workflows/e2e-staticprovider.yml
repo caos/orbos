@@ -1,0 +1,26 @@
+name: "e2e static provider"
+on:
+  push:
+  pull_request:
+  repository_dispatch:
+    types: webhook-e2e-staticprovider
+jobs:
+  e2e-static-provider:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Cancel Previous Runs
+      uses: styfle/cancel-workflow-action@0.4.1
+      with:
+        access_token: ${{ github.token }}
+    - name: Succeed
+      if: github.event.action == 'webhook-e2e-staticprovider' && github.event.client_payload.status == 'success'
+      run:  exit 0
+    - name: Fail
+      if: github.event.action == 'webhook-e2e-staticprovider' && github.event.client_payload.status == 'failure'
+      run:  exit 1
+    - name: StaticProvider
+      run: go run ./cmd/chore/e2e/trigger/*.go --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.GITHUB_TOKEN_E2E }}"
+    - name: Await Response
+      run: sleep 3600
+    - name: Fail
+      run: exit 1
