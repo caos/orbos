@@ -67,6 +67,7 @@ github.com/beorn7/perks v1.0.0/go.mod h1:KWe93zE9D1o94FZ5RNwFwVgaQK1VOXiVxmqh+Ce
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver v3.5.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
+github.com/caos/logging v0.0.0-20191210002624-b3260f690a6a h1:HOU/3xL/afsZ+2aCstfJlrzRkwYMTFR1TIEgps5ny8s=
 github.com/caos/logging v0.0.0-20191210002624-b3260f690a6a/go.mod h1:9LKiDE2ChuGv6CHYif/kiugrfEXu9AwDiFWSreX7Wp0=
 github.com/caos/oidc v0.6.2 h1:ejp6uTepVSlgLoPhXIAqFe8SbCdoxqO4vZv1H4fF0Yk=
 github.com/caos/oidc v0.6.2/go.mod h1:ozoi3b+aY33gzdvjz4w90VZShIHGsmDa0goruuV0arQ=

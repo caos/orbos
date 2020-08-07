@@ -36,15 +36,24 @@ func main() {
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
 	)
+
+	file := FileCommand()
+	file.AddCommand(
+		EditCommand(rootValues),
+		PrintCommand(rootValues),
+		OverwriteCommand(rootValues),
+		PatchCommand(rootValues),
+	)
+
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
-		EditCommand(rootValues),
 		ExecCommand(rootValues),
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
 		takeoff,
+		file,
 	)
 
 	if err := rootCmd.Execute(); err != nil {
