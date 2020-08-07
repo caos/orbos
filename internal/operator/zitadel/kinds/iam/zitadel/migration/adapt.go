@@ -19,6 +19,7 @@ import (
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
+	reason string,
 	labels map[string]string,
 	secretPasswordName string,
 	migrationUser string,
@@ -26,6 +27,7 @@ func AdaptFunc(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
+	zitadel.EnsureFunc,
 	zitadel.EnsureFunc,
 	error,
 ) {
@@ -38,19 +40,19 @@ func AdaptFunc(
 	defaultMode := int32(0400)
 	envMigrationUser := "FLYWAY_USER"
 	envMigrationPW := "FLYWAY_PASSWORD"
-	jobName := "cockroachdb-cluster-migration"
+	jobName := "cockroachdb-cluster-migration-" + reason
 	createFile := "create.sql"
 	grantFile := "grant.sql"
 	deleteFile := "delete.sql"
 
 	destroyCM, err := configmap.AdaptFuncToDestroy(namespace, migrationConfigmap)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	destroyJ, err := job.AdaptFuncToDestroy(jobName, namespace)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	destroyers := []zitadel.DestroyFunc{
@@ -211,6 +213,15 @@ func AdaptFunc(
 			internalMonitor.Info("migration is completed")
 			return nil
 		},
+		func(k8sClient *kubernetes.Client) error {
+			internalMonitor.Info("cleanup migration job")
+			if err := k8sClient.DeleteJob(namespace, jobName); err != nil {
+				internalMonitor.Error(errors.Wrap(err, "error during job deletion"))
+				return err
+			}
+			internalMonitor.Info("migration cleanup is completed")
+			return nil
+		},
 		nil
 }
 
@@ -273,7 +284,7 @@ func migrationEnvVars(envMigrationUser, envMigrationPW, migrationUser, userPassw
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{Name: userPasswordsSecret},
-					Key:                  migrationUser,
+					Key:                  user,
 				},
 			},
 		})

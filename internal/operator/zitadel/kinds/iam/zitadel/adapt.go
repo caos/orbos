@@ -144,12 +144,12 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryM, destroyM, migrationDone, err := migration.AdaptFunc(internalMonitor, namespaceStr, internalLabels, secretPasswordName, migrationUser, allZitadelUsers)
+		queryM, destroyM, migrationDone, _, err := migration.AdaptFunc(internalMonitor, namespaceStr, "init", internalLabels, secretPasswordName, migrationUser, allZitadelUsers)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queryD, destroyD, deploymentDone, err := deployment.AdaptFunc(
+		queryD, destroyD, deploymentDone, scaleDeployment, err := deployment.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
 			internalLabels,
@@ -215,7 +215,13 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 					queryD,
 					zitadel.EnsureFuncToQueryFunc(deploymentDone),
 				)
-			case "restore", "instantbackup":
+			case "restore":
+				queriers = append(queriers,
+					zitadel.EnsureFuncToQueryFunc(scaleDeployment(0)),
+					queryDB,
+					zitadel.EnsureFuncToQueryFunc(scaleDeployment(desiredKind.Spec.ReplicaCount)),
+				)
+			case "instantbackup":
 				queriers = append(queriers,
 					queryDB,
 				)

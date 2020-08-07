@@ -76,7 +76,7 @@ func AdaptFunc(
 			checkDBReady,
 		)
 
-		queryM, destroyM, checkMigrationDone, err := migration.AdaptFunc(monitor, namespace, labels, secretPasswordName, migrationUser, users)
+		queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users)
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
@@ -107,6 +107,7 @@ func AdaptFunc(
 					zitadel.EnsureFuncToQueryFunc(checkAndCleanupC),
 					queryM,
 					zitadel.EnsureFuncToQueryFunc(checkMigrationDone),
+					zitadel.EnsureFuncToQueryFunc(cleanupMigration),
 					queryR,
 					zitadel.EnsureFuncToQueryFunc(checkAndCleanupR),
 				)

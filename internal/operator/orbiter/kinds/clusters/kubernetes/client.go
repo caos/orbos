@@ -6,39 +6,38 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"k8s.io/api/batch/v1beta1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/restmapper"
-	"k8s.io/client-go/tools/remotecommand"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-
+	"io"
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
+	"k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
-	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/watch"
-
 	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apixv1beta1client "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
+	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	clgocore "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 type NodeWithKubeadm interface {
@@ -122,6 +121,15 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 	}
 
 	return c.set.CoreV1().Secrets(namespace).List(context.Background(), mach.ListOptions{LabelSelector: labelSelector})
+}
+
+func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
+	patch := []byte(`{"spec":{"replicas":` + strconv.Itoa(replicaCount) + `}}`)
+	_, err := c.set.AppsV1().Deployments(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, patch, mach.PatchOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {

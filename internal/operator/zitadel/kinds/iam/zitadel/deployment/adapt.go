@@ -35,6 +35,7 @@ func AdaptFunc(
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
 	zitadel.EnsureFunc,
+	func(replicaCount int) zitadel.EnsureFunc,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "deployment")
@@ -222,7 +223,7 @@ func AdaptFunc(
 
 	destroy, err := deployment.AdaptFuncToDestroy(namespace, deployName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroy),
@@ -230,7 +231,7 @@ func AdaptFunc(
 
 	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
@@ -257,6 +258,12 @@ func AdaptFunc(
 			}
 			internalMonitor.Info("deployment is ready")
 			return nil
+		},
+		func(replicaCount int) zitadel.EnsureFunc {
+			return func(k8sClient *kubernetes.Client) error {
+				internalMonitor.Info("scaling deployment")
+				return k8sClient.ScaleDeployment(namespace, deployName, replicaCount)
+			}
 		},
 		nil
 }
