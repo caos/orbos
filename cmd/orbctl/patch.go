@@ -9,6 +9,7 @@ import (
 
 	"github.com/manifoldco/promptui"
 
+	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
 
 	"github.com/spf13/cobra"
@@ -49,15 +50,10 @@ func PatchCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		fmt.Println(string(common.MarshalYAML(structure)))
-
-		return nil
-		/*
-			return gitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), git.File{
-				Path:    args[0],
-				Content: []byte(content),
-			})
-		*/
+		return gitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), git.File{
+			Path:    args[0],
+			Content: common.MarshalYAML(structure),
+		})
 	}
 
 	return cmd
