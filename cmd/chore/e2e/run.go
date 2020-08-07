@@ -1,7 +1,11 @@
 package main
 
 func run(orbconfig string) error {
-	return seq(curryOrbctlCommand(orbconfig),
+	newOrbctl, err := buildOrbctl(orbconfig)
+	if err != nil {
+		return err
+	}
+	return seq(newOrbctl,
 		initORBITER,
 		destroy,
 		bootstrap,

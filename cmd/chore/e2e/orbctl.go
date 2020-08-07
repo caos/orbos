@@ -2,30 +2,24 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"os/exec"
-	"path/filepath"
+
+	"github.com/caos/orbos/cmd/chore"
 )
 
 type newOrbctlCommandFunc func() (*exec.Cmd, error)
 
-func curryOrbctlCommand(orbconfig string) newOrbctlCommandFunc {
+func buildOrbctl(orbconfig string) (newOrbctlCommandFunc, error) {
+	newCmd, err := chore.Orbctl(false)
+	if err != nil {
+		return nil, err
+	}
+
 	return func() (*exec.Cmd, error) {
-		return orbctlCommand(orbconfig)
-	}
-}
-
-func orbctlCommand(orbconfig string) (*exec.Cmd, error) {
-	files, _ := filepath.Glob("./cmd/chore/orbctl/*.go")
-	if len(files) <= 0 {
-		return nil, errors.New("no files found in ./cmd/chore/orbctl/*.go")
-	}
-
-	args := []string{"run"}
-	args = append(args, files...)
-	args = append(args, "--orbconfig", orbconfig)
-
-	return exec.Command("go", args...), nil
+		cmd := newCmd()
+		cmd.Args = append(cmd.Args, "--orbconfig", orbconfig)
+		return cmd, nil
+	}, nil
 }
 
 func simpleRunCommand(cmd *exec.Cmd, scan func(line string) bool) error {
