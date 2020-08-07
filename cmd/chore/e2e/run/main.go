@@ -15,6 +15,7 @@ func main() {
 		unpublished bool
 		orbconfig   string
 		ghToken     string
+		testcase    string
 	)
 
 	const (
@@ -24,6 +25,8 @@ func main() {
 		orbUsage            = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
 		githubTokenDefault  = ""
 		githubTokenKeyUsage = "Personal access token with repo scope for github.com/caos/orbos"
+		testcaseDefault     = ""
+		testcaseUsage       = "Personal access token with repo scope for github.com/caos/orbos"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
@@ -32,6 +35,8 @@ func main() {
 	flag.StringVar(&orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
 	flag.StringVar(&ghToken, "github-access-token", githubTokenDefault, githubTokenKeyUsage)
 	flag.StringVar(&ghToken, "t", githubTokenDefault, githubTokenKeyUsage+" (shorthand)")
+	flag.StringVar(&testcase, "testcase", testcaseDefault, testcaseUsage)
+	flag.StringVar(&testcase, "c", testcaseDefault, testcaseUsage+" (shorthand)")
 
 	flag.Parse()
 
@@ -48,7 +53,7 @@ func main() {
 
 	if ghToken != "" {
 		testFunc = func(branch string) error {
-			return github(trimBranch(branch), ghToken, run)(orbconfig)
+			return github(trimBranch(branch), ghToken, strings.ToLower(testcase), run)(orbconfig)
 		}
 	}
 
