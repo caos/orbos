@@ -26,7 +26,7 @@ func main() {
 		githubTokenDefault  = ""
 		githubTokenKeyUsage = "Personal access token with repo scope for github.com/caos/orbos"
 		testcaseDefault     = ""
-		testcaseUsage       = "Personal access token with repo scope for github.com/caos/orbos"
+		testcaseUsage       = "Testcase identifier"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
