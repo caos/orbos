@@ -241,10 +241,7 @@ func AdaptFunc(
 			}
 
 			deploy, err := k8sClient.GetDeployment(namespace, deployName)
-			if err != nil {
-				return nil, err
-			}
-			if !macherrs.IsNotFound(err) {
+			if err == nil {
 				prog, ok := deploy.Labels["zitadel.caos.ch/restore-in-progress"]
 				if ok {
 					deploymentDef.Labels["zitadel.caos.ch/restore-in-progress"] = prog
@@ -257,6 +254,8 @@ func AdaptFunc(
 				if ok {
 					deploymentDef.Labels["zitadel.caos.ch/last-restore"] = restore
 				}
+			} else if !macherrs.IsNotFound(err) {
+				return nil, err
 			}
 
 			query, err := deployment.AdaptFuncToEnsure(deploymentDef)
