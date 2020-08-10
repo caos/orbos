@@ -23,7 +23,7 @@ jobs:
       id: source-checkout
       uses: actions/checkout@v1
     - name: StaticProvider
-      run: go run ./cmd/chore/e2e/trigger/*.go --testcase staticprovider --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.E2E_TOKEN }}"
+      run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --testcase staticprovider --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.E2E_TOKEN }}"
 #    - name: Await Response
 #      run: sleep 3600
 #    - name: Fail
