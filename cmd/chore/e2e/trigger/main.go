@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -23,7 +24,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Print("Current Branch: ", string(ref))
 
+	branch := strings.TrimPrefix(strings.TrimSpace(string(ref)), "heads/")
+	fmt.Println("Pruned Branch:", branch)
 	if err := shared.Emit(shared.Event{
 		EventType: "webhook-trigger",
 		ClientPayload: map[string]string{
