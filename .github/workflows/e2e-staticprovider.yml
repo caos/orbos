@@ -1,4 +1,4 @@
-name: "Trigger e2e static provider"
+name: "Trigger e2e StaticProvider"
 on:
   push:
     branches-ignore:
