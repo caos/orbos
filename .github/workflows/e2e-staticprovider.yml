@@ -22,8 +22,6 @@ jobs:
     - name: Source Checkout
       id: source-checkout
       uses: actions/checkout@v1
-      with:
-        fetch-depth: 1
     - name: StaticProvider
       run: go run ./cmd/chore/e2e/trigger/*.go --testcase staticprovider --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.E2E_TOKEN }}"
 #    - name: Await Response
