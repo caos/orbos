@@ -17,7 +17,6 @@ import (
 	"github.com/pkg/errors"
 	"sort"
 	"strconv"
-	"strings"
 )
 
 func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
@@ -191,14 +190,6 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		progLabels := map[string]string{
-			"zitadel.caos.ch/restore-in-progress": "true",
-			"zitadel.caos.ch/last-restore":        strings.ReplaceAll(timestamp, ":", "-"),
-		}
-		finishedLabels := map[string]string{
-			"zitadel.caos.ch/restore-in-progress": "false",
-		}
-
 		queriers := make([]zitadel.QueryFunc, 0)
 		for _, feature := range features {
 			switch feature {
@@ -226,9 +217,8 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 				)
 			case "restore":
 				queriers = append(queriers,
-					zitadel.EnsureFuncToQueryFunc(scaleDeployment(0, progLabels)),
+					zitadel.EnsureFuncToQueryFunc(scaleDeployment(0)),
 					queryDB,
-					zitadel.EnsureFuncToQueryFunc(scaleDeployment(desiredKind.Spec.ReplicaCount, finishedLabels)),
 				)
 			case "instantbackup":
 				queriers = append(queriers,

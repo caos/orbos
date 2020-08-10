@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"fmt"
-
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -219,6 +218,10 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 	}).Debug("Zitadel Operator deployment ensured")
 
 	return nil
+}
+func ScaleZitadelOperator(monitor mntr.Monitor, client *Client, replicaCount int) error {
+	monitor.Debug("Scaling zitadel-operator")
+	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
 }
 
 func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string) error {

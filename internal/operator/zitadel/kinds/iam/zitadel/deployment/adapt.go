@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 )
@@ -36,7 +35,7 @@ func AdaptFunc(
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
 	zitadel.EnsureFunc,
-	func(replicaCount int, labels map[string]string) zitadel.EnsureFunc,
+	func(replicaCount int) zitadel.EnsureFunc,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "deployment")
@@ -160,10 +159,6 @@ func AdaptFunc(
 	}
 
 	deployName := "zitadel"
-	podLabels := map[string]string{}
-	for k, v := range labels {
-		podLabels[k] = v
-	}
 
 	deploymentDef := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -174,11 +169,11 @@ func AdaptFunc(
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: podLabels,
+				MatchLabels: labels,
 			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: podLabels,
+					Labels: labels,
 				},
 				Spec: v1.PodSpec{
 					NodeSelector: nodeSelector,
@@ -234,31 +229,13 @@ func AdaptFunc(
 		zitadel.ResourceDestroyToZitadelDestroy(destroy),
 	}
 
+	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 			currentDB, err := coredb.ParseQueriedForDatabase(queried)
-			if err != nil {
-				return nil, err
-			}
-
-			deploy, err := k8sClient.GetDeployment(namespace, deployName)
-			if err == nil {
-				prog, ok := deploy.Labels["zitadel.caos.ch/restore-in-progress"]
-				if ok {
-					deploymentDef.Labels["zitadel.caos.ch/restore-in-progress"] = prog
-					if prog == "true" {
-						deploymentDef.Spec.Replicas = deploy.Spec.Replicas
-					}
-				}
-
-				restore, ok := deploy.Labels["zitadel.caos.ch/last-restore"]
-				if ok {
-					deploymentDef.Labels["zitadel.caos.ch/last-restore"] = restore
-				}
-			} else if !macherrs.IsNotFound(err) {
-				return nil, err
-			}
-
-			query, err := deployment.AdaptFuncToEnsure(deploymentDef)
 			if err != nil {
 				return nil, err
 			}
@@ -282,10 +259,10 @@ func AdaptFunc(
 			internalMonitor.Info("deployment is ready")
 			return nil
 		},
-		func(replicaCount int, labels map[string]string) zitadel.EnsureFunc {
+		func(replicaCount int) zitadel.EnsureFunc {
 			return func(k8sClient *kubernetes.Client) error {
-				internalMonitor.Info("scaling deployment")
-				return k8sClient.ScaleDeployment(namespace, deployName, replicaCount, labels)
+				internalMonitor.Info("Scaling deployment")
+				return k8sClient.ScaleDeployment(namespace, deployName, replicaCount)
 			}
 		},
 		nil
