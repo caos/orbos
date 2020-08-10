@@ -1,4 +1,4 @@
-name: "e2e static provider"
+name: "Trigger e2e static provider"
 on:
   push:
     branches-ignore:
@@ -6,7 +6,7 @@ on:
 #  repository_dispatch:
 #    types: webhook-e2e-staticprovider
 jobs:
-  e2e-static-provider:
+  trigger-e2e-static-provider:
     runs-on: ubuntu-latest
     steps:
 #    - name: Cancel Previous Runs
