@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func initORBITER(orbctl newOrbctlCommandFunc) (err error) {
+func initORBITERTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error) {
 
 	print, err := orbctl()
 	if err != nil {

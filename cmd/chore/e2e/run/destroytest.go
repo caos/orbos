@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
-func destroy(orbctl newOrbctlCommandFunc) error {
+func destroyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 	cmd, err := orbctl()
 	if err != nil {
@@ -21,7 +22,7 @@ func destroy(orbctl newOrbctlCommandFunc) error {
 	}
 
 	var confirmed bool
-	return simpleRunCommand(cmd, func(line string) bool {
+	return simpleRunCommand(cmd, time.NewTimer(5*time.Minute), func(line string) bool {
 		fmt.Println(line)
 		if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 			confirmed = true
