@@ -35,7 +35,7 @@ func main() {
 	if err := shared.Emit(shared.Event{
 		EventType: "webhook-trigger",
 		ClientPayload: map[string]string{
-			"branch":   strings.TrimPrefix(strings.TrimSpace(string(ref)), "heads/"),
+			"branch":   branch,
 			"testcase": strings.ToLower(testcase),
 		},
 	}, token, org, repository); err != nil {
