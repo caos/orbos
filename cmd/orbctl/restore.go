@@ -70,13 +70,7 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 			for _, kubeconfig := range kubeconfigs {
 				k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					if err := kubernetes.ScaleZitadelOperator(monitor, k8sClient, 0); err != nil {
-						return err
-					}
 					if err := start.ZitadelRestore(monitor, orbConfig.Path, k8sClient, backup); err != nil {
-						return err
-					}
-					if err := kubernetes.ScaleZitadelOperator(monitor, k8sClient, 1); err != nil {
 						return err
 					}
 				}

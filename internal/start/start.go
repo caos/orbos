@@ -318,8 +318,15 @@ func ZitadelRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kuber
 		return err
 	}
 
-	takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(timestamp, "restore"), k8sClient)
-	takeoff()
+	if err := kubernetes.ScaleZitadelOperator(monitor, k8sClient, 0); err != nil {
+		return err
+	}
+
+	zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(timestamp, "restore"), k8sClient)()
+
+	if err := kubernetes.ScaleZitadelOperator(monitor, k8sClient, 1); err != nil {
+		return err
+	}
 
 	return nil
 }
