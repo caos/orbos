@@ -59,9 +59,7 @@ func main() {
 
 	original := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/")
 
-	testFunc := func(_ string) error {
-		return run(orbconfig)
-	}
+	testFunc := run
 	/*
 		if ghToken != "" {
 			testFunc = func(branch string) error {
@@ -76,19 +74,19 @@ func main() {
 			panic(err)
 		}
 
-		testFunc = func(branch string) error {
+		testFunc = func(branch, orbconfig string) error {
 			branch = strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-")
 			return graphite(
 				strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
 				graphiteURL,
 				graphiteKey,
 				trimBranch(branch),
-				run)(orbconfig)
+				run)(branch, orbconfig)
 		}
 	}
 
 	if !unpublished {
-		if err := testFunc(original); err != nil {
+		if err := testFunc(original, orbconfig); err != nil {
 			panic(err)
 		}
 		return
@@ -113,7 +111,7 @@ func main() {
 		if checkoutErr := checkout(ref); checkoutErr != nil {
 			panic(checkoutErr)
 		}
-		err = helpers.Concat(err, testFunc(ref))
+		err = helpers.Concat(err, testFunc(ref, orbconfig))
 	}
 	if err != nil {
 		panic(err)
