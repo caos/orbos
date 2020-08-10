@@ -59,7 +59,6 @@ func AdaptFunc(
 			}, " "))
 	}
 
-	//backupCommands = append(backupCommands, "while true; do sleep 30; done;")
 	jobSpecDef := batchv1.JobSpec{
 		Template: corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{

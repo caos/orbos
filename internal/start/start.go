@@ -188,7 +188,7 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, erro
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")
 		}
-		monitor.Info("Read kubeconfig for boom deployment")
+		monitor.Info("Read kubeconfigs")
 
 		kubeconfigs = append(kubeconfigs, value)
 	}

@@ -5,6 +5,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
@@ -123,13 +124,27 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 	return c.set.CoreV1().Secrets(namespace).List(context.Background(), mach.ListOptions{LabelSelector: labelSelector})
 }
 
-func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
-	patch := []byte(`{"spec":{"replicas":` + strconv.Itoa(replicaCount) + `}}`)
-	_, err := c.set.AppsV1().Deployments(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, patch, mach.PatchOptions{})
+func (c *Client) ScaleDeployment(namespace, name string, replicaCount int, labels map[string]string) error {
+	deploy, err := c.GetDeployment(namespace, name)
 	if err != nil {
 		return err
 	}
-	return nil
+	currentLabels := deploy.ObjectMeta.Labels
+	for k, v := range labels {
+		currentLabels[k] = strings.ReplaceAll(v, ":", "-")
+	}
+	data, err := json.Marshal(currentLabels)
+	if err != nil {
+		return err
+	}
+
+	patch := []byte(`{"metadata":{"labels":` + string(data) + `},"spec":{"replicas":` + strconv.Itoa(replicaCount) + `}}`)
+	_, err = c.set.AppsV1().Deployments(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, patch, mach.PatchOptions{})
+	return err
+}
+
+func (c *Client) GetDeployment(namespace, name string) (*apps.Deployment, error) {
+	return c.set.AppsV1().Deployments(namespace).Get(context.Background(), name, mach.GetOptions{})
 }
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {

@@ -1,7 +1,6 @@
 package restore
 
 import (
-	"fmt"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -49,7 +48,6 @@ func ApplyFunc(
 				certPath,
 			}, " "))
 	}
-	fmt.Println(backupCommands)
 
 	jobdef := &batchv1.Job{
 		ObjectMeta: v1.ObjectMeta{
@@ -67,7 +65,6 @@ func ApplyFunc(
 						Command: []string{
 							"/bin/bash",
 							"-c",
-							//"while true; do sleep 30; done;",
 							strings.Join(backupCommands, " && "),
 						},
 						VolumeMounts: []corev1.VolumeMount{{

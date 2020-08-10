@@ -72,7 +72,6 @@ func ApplyFunc(
 						Command: []string{
 							"/bin/bash",
 							"-c",
-							//"while true; do sleep 30; done;",
 							strings.Join(backupCommands, " && "),
 						},
 						VolumeMounts: []corev1.VolumeMount{{
