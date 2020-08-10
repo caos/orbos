@@ -22,7 +22,7 @@ func Orbctl(debug bool) (func() *exec.Cmd, error) {
 
 	noop := func() *exec.Cmd { return nil }
 
-	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd := exec.Command("git", "branch", "--show-current")
 	outBuf := new(bytes.Buffer)
 	cmd.Stdout = outBuf
 	if err := Run(cmd); err != nil {

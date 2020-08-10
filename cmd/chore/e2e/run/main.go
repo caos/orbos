@@ -52,7 +52,7 @@ func main() {
 
 	flag.Parse()
 
-	out, err := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD").Output()
+	out, err := exec.Command("git", "branch", "--show-current").Output()
 	if err != nil {
 		panic(err)
 	}
