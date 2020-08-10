@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/caos/orbos/internal/orb"
+
 	"github.com/caos/orbos/internal/helpers"
 )
 
@@ -14,29 +16,39 @@ func main() {
 	var (
 		unpublished bool
 		orbconfig   string
-		ghToken     string
-		testcase    string
+		//		ghToken     string
+		//		testcase    string
+		graphiteURL string
+		graphiteKey string
 	)
 
 	const (
-		unpublishedDefault  = false
-		unpublishedUsage    = "Test all unpublished branches"
-		orbDefault          = "~/.orb/config"
-		orbUsage            = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
-		githubTokenDefault  = ""
-		githubTokenKeyUsage = "Personal access token with repo scope for github.com/caos/orbos"
-		testcaseDefault     = ""
-		testcaseUsage       = "Testcase identifier"
+		unpublishedDefault = false
+		unpublishedUsage   = "Test all unpublished branches"
+		orbDefault         = "~/.orb/config"
+		orbUsage           = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
+		//		githubTokenDefault  = ""
+		//		githubTokenKeyUsage = "Personal access token with repo scope for github.com/caos/orbos"
+		//		testcaseDefault     = ""
+		//		testcaseUsage       = "Testcase identifier"
+		graphiteURLDefault = ""
+		graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
+		graphiteKeyDefault = ""
+		graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
 	flag.BoolVar(&unpublished, "u", unpublishedDefault, unpublishedUsage+" (shorthand)")
 	flag.StringVar(&orbconfig, "orbconfig", orbDefault, orbUsage)
 	flag.StringVar(&orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
-	flag.StringVar(&ghToken, "github-access-token", githubTokenDefault, githubTokenKeyUsage)
-	flag.StringVar(&ghToken, "t", githubTokenDefault, githubTokenKeyUsage+" (shorthand)")
-	flag.StringVar(&testcase, "testcase", testcaseDefault, testcaseUsage)
-	flag.StringVar(&testcase, "c", testcaseDefault, testcaseUsage+" (shorthand)")
+	//	flag.StringVar(&ghToken, "github-access-token", githubTokenDefault, githubTokenKeyUsage)
+	//	flag.StringVar(&ghToken, "t", githubTokenDefault, githubTokenKeyUsage+" (shorthand)")
+	//	flag.StringVar(&testcase, "testcase", testcaseDefault, testcaseUsage)
+	//	flag.StringVar(&testcase, "c", testcaseDefault, testcaseUsage+" (shorthand)")
+	flag.StringVar(&graphiteURL, "graphiteurl", graphiteURLDefault, graphiteURLUsage)
+	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
+	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
+	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
 
 	flag.Parse()
 
@@ -50,10 +62,28 @@ func main() {
 	testFunc := func(_ string) error {
 		return run(orbconfig)
 	}
+	/*
+		if ghToken != "" {
+			testFunc = func(branch string) error {
+				return github(trimBranch(branch), ghToken, strings.ToLower(testcase), run)(orbconfig)
+			}
+		}
+	*/
+	if graphiteURL != "" {
 
-	if ghToken != "" {
+		orb, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
+		if err != nil {
+			panic(err)
+		}
+
 		testFunc = func(branch string) error {
-			return github(trimBranch(branch), ghToken, strings.ToLower(testcase), run)(orbconfig)
+			branch = strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-")
+			return graphite(
+				strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
+				graphiteURL,
+				graphiteKey,
+				trimBranch(branch),
+				run)(orbconfig)
 		}
 	}
 
