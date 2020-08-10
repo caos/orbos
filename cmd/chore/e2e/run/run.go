@@ -28,7 +28,7 @@ func run(branch, orbconfig string) error {
 	if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()),
 		initORBITERTest,
 		destroyTest,
-		patchTestFunc("clusters.k8s.versions.orbiter", branch),
+		patchTestFunc("clusters.k8s.spec.versions.orbiter", branch),
 		bootstrapTest,
 		readKubeconfigTest,
 	); err != nil {
