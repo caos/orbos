@@ -17,7 +17,6 @@ func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) (
 		panic(err)
 	}
 	scanner := bufio.NewScanner(out)
-loop:
 	for scanner.Scan() {
 		select {
 		case <-timer.C:
