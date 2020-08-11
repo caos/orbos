@@ -4,8 +4,8 @@ import (
 	"os"
 )
 
-func readKubeconfigTestFunc(to string) (func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error), func() error) {
-	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error) {
+func readKubeconfigFunc(to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
+	return func(orbctl newOrbctlCommandFunc) (err error) {
 
 			readsecret, err := orbctl()
 			if err != nil {

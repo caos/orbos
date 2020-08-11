@@ -22,20 +22,19 @@ func runFunc(branch, orbconfig string, from int) func() error {
 			return err
 		}
 
-		readKubeconfigTest, deleteKubeconfig := readKubeconfigTestFunc(kubeconfig.Name())
+		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(kubeconfig.Name())
 		defer deleteKubeconfig()
 
 		branchParts := strings.Split(branch, "/")
 		branch = branchParts[len(branchParts)-1:][0]
 
-		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from,
+		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
 			/* 1 */ initORBITERTest,
 			/* 2 */ destroyTest,
 			/* 3 */ patchTestFunc("clusters.k8s.spec.versions.orbiter", branch),
 			/* 4 */ bootstrapTest,
-			/* 5 */ readKubeconfigTest,
-			/* 6 */ waitTest(15*time.Second),
-			/* 7 */ ensureORBITERTest(5*time.Minute),
+			/* 5 */ waitTest(15*time.Second),
+			/* 6 */ ensureORBITERTest(5*time.Minute),
 		); err != nil {
 			return err
 		}
@@ -43,7 +42,10 @@ func runFunc(branch, orbconfig string, from int) func() error {
 	}
 }
 
-func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, fns ...func(newOrbctlCommandFunc, newKubectlCommandFunc) error) error {
+func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...func(newOrbctlCommandFunc, newKubectlCommandFunc) error) error {
+
+	var kcRead bool
+
 	var at int
 	for _, fn := range fns {
 		at++
@@ -51,6 +53,14 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, f
 			fmt.Println("Skipping step", at)
 			continue
 		}
+
+		if at >= 6 && !kcRead {
+			kcRead = true
+			if err := readKubeconfigFunc(orbctl); err != nil {
+				return err
+			}
+		}
+
 		if err := fn(orbctl, kubectl); err != nil {
 			return err
 		}
