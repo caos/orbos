@@ -24,6 +24,7 @@ loop:
 			return errors.New("timeout")
 		default:
 			if !scan(scanner.Text()) {
+				cmd.Process.Kill()
 				break loop
 			}
 		}

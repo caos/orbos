@@ -16,7 +16,7 @@ func ensureORBITERTest(timeout time.Duration) func(newOrbctlCommandFunc, newKube
 
 		return simpleRunCommand(cmd, time.NewTimer(timeout), func(line string) bool {
 			fmt.Println(line)
-			return strings.Contains(line, "Desired state is ensured")
+			return !strings.Contains(line, "Desired state is ensured")
 		})
 	}
 }
