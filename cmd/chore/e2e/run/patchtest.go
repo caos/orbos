@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func patchTestFunc(key, value string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error) {
+func patchTestFunc(key, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		cmd, err := orbctl()

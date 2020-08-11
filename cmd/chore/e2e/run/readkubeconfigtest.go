@@ -15,7 +15,7 @@ func readKubeconfigTestFunc(to string) (func(orbctl newOrbctlCommandFunc, _ newK
 			readsecret.Args = append(readsecret.Args, "readsecret", "orbiter.k8s.kubeconfig")
 			readsecret.Stderr = os.Stderr
 
-			file, err := os.Open(to)
+			file, err := os.Create(to)
 			if err != nil {
 				return err
 			}

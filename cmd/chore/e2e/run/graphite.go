@@ -10,7 +10,7 @@ import (
 	"gopkg.in/raintank/schema.v1"
 )
 
-func graphite(orbID, cloudURL, cloudKey, branch string, test func(string, string) error) func(string, string) error {
+func graphite(orbID, cloudURL, cloudKey, branch string, test func(string, string, int) func() error) func(string, string, int) func() error {
 
 	send := func(value float64, ts time.Time) {
 		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value, ts); err != nil {
@@ -18,21 +18,23 @@ func graphite(orbID, cloudURL, cloudKey, branch string, test func(string, string
 		}
 	}
 
-	return func(branch, orbconfig string) error {
-		start := time.Now()
-		send(0.5, start)
-		err := test(branch, orbconfig)
-		var value float64 = 0
-		if err == nil {
-			value = 1
+	return func(branch, orbconfig string, from int) func() error {
+		return func() error {
+			start := time.Now()
+			send(0.5, start)
+			err := test(branch, orbconfig, from)()
+			var value float64 = 0
+			if err == nil {
+				value = 1
+			}
+			stop := time.Now()
+			minStop := start.Add(2 * time.Minute)
+			if minStop.After(stop) {
+				stop = minStop
+			}
+			send(value, stop)
+			return err
 		}
-		stop := time.Now()
-		minStop := start.Add(2 * time.Minute)
-		if minStop.After(stop) {
-			stop = minStop
-		}
-		send(value, stop)
-		return err
 	}
 }
 

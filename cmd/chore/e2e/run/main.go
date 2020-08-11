@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os/exec"
 	"strings"
 
@@ -20,6 +19,7 @@ func main() {
 		//		testcase    string
 		graphiteURL string
 		graphiteKey string
+		from        int
 	)
 
 	const (
@@ -35,6 +35,8 @@ func main() {
 		graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
 		graphiteKeyDefault = ""
 		graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
+		fromDefault        = 1
+		fromUsage          = "step to continue e2e tests from"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
@@ -49,6 +51,8 @@ func main() {
 	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
 	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
 	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
+	flag.IntVar(&from, "from", fromDefault, fromUsage)
+	flag.IntVar(&from, "s", fromDefault, fromUsage)
 
 	flag.Parse()
 
@@ -57,13 +61,13 @@ func main() {
 		panic(err)
 	}
 
-	original := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/")
+	branch := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/")
 
-	testFunc := run
+	testFunc := runFunc
 	/*
 		if ghToken != "" {
 			testFunc = func(branch string) error {
-				return github(trimBranch(branch), ghToken, strings.ToLower(testcase), run)(orbconfig)
+				return github(trimBranch(branch), ghToken, strings.ToLower(testcase), runFunc)(orbconfig)
 			}
 		}
 	*/
@@ -74,59 +78,20 @@ func main() {
 			panic(err)
 		}
 
-		testFunc = func(branch, orbconfig string) error {
-			branch = strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-")
-			return graphite(
-				strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
-				graphiteURL,
-				graphiteKey,
-				trimBranch(branch),
-				run)(branch, orbconfig)
-		}
+		testFunc = graphite(
+			strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
+			graphiteURL,
+			graphiteKey,
+			trimBranch(branch),
+			runFunc)
 	}
 
-	if !unpublished {
-		if err := testFunc(original, orbconfig); err != nil {
-			panic(err)
-		}
-		return
-	}
-
-	defer func() {
-		r := recover()
-		if err := checkout(original); err != nil {
-			panic(fmt.Errorf("checking out original branch failed: %w: original error: %v", err, r))
-		}
-		if r != nil {
-			panic(r)
-		}
-	}()
-
-	out, err = exec.Command("git", "branch", "-r", "--no-merged", "origin/master").Output()
-	if err != nil {
+	if err := testFunc(strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, from)(); err != nil {
 		panic(err)
 	}
-
-	for _, ref := range strings.Fields(string(out)) {
-		if checkoutErr := checkout(ref); checkoutErr != nil {
-			panic(checkoutErr)
-		}
-		err = helpers.Concat(err, testFunc(ref, orbconfig))
-	}
-	if err != nil {
-		panic(err)
-	}
+	return
 }
 
 func trimBranch(ref string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(ref), "refs/"), "heads/")
-}
-
-func checkout(ref string) error {
-	out, err := exec.Command("git", "checkout", ref).CombinedOutput()
-	fmt.Printf(string(out))
-	if err != nil {
-		return fmt.Errorf("checking out %s failed: %w", ref, err)
-	}
-	return err
 }
