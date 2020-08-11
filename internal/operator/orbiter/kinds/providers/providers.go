@@ -126,5 +126,5 @@ func ListMachines(
 }
 
 func orbID(repoURL string) string {
-	return alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-")
+	return strings.ToLower(alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"))
 }

@@ -11,13 +11,14 @@ import (
 
 func main() {
 
-	var token, org, repository, testcase, branch string
+	var token, org, repository, testcase, branch, from string
 
 	flag.StringVar(&token, "access-token", "", "Personal access token with repo scope")
 	flag.StringVar(&org, "organization", "", "Github organization")
 	flag.StringVar(&repository, "repository", "", "Github project")
 	flag.StringVar(&testcase, "testcase", "unknown", "Testcase identifier")
 	flag.StringVar(&branch, "branch", "", "Branch to test. Default is current")
+	flag.StringVar(&from, "from", "", "From e2e test stage")
 
 	flag.Parse()
 
@@ -37,6 +38,7 @@ func main() {
 		ClientPayload: map[string]string{
 			"branch":   branch,
 			"testcase": strings.ToLower(testcase),
+			"from":     from,
 		},
 	}, token, org, repository); err != nil {
 		panic(err)
