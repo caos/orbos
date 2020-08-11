@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) bool) error {
+func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) (goon bool)) error {
 	defer timer.Stop()
 	out, err := cmd.StdoutPipe()
 	if err != nil {
