@@ -25,7 +25,7 @@ loop:
 		default:
 			if !scan(scanner.Text()) {
 				cmd.Process.Kill()
-				break loop
+				return scanner.Err()
 			}
 		}
 	}
