@@ -5,11 +5,13 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	coredb "github.com/caos/orbos/internal/operator/zitadel/kinds/databases/core"
+	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"strings"
 )
 
@@ -31,6 +33,7 @@ func AdaptFunc(
 	nodeSelector map[string]string,
 	migrationDone zitadel.EnsureFunc,
 	configurationDone zitadel.EnsureFunc,
+	getConfigurationHashes func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -159,21 +162,32 @@ func AdaptFunc(
 	}
 
 	deployName := "zitadel"
+	maxUnavailable := intstr.FromInt(1)
+	maxSurge := intstr.FromInt(1)
 
 	deploymentDef := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      deployName,
-			Namespace: namespace,
-			Labels:    labels,
+			Name:        deployName,
+			Namespace:   namespace,
+			Labels:      labels,
+			Annotations: map[string]string{},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
+			Strategy: appsv1.DeploymentStrategy{
+				Type: appsv1.RollingUpdateDeploymentStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDeployment{
+					MaxUnavailable: &maxUnavailable,
+					MaxSurge:       &maxSurge,
+				},
+			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      labels,
+					Annotations: map[string]string{},
 				},
 				Spec: v1.PodSpec{
 					NodeSelector: nodeSelector,
@@ -229,13 +243,26 @@ func AdaptFunc(
 		zitadel.ResourceDestroyToZitadelDestroy(destroy),
 	}
 
-	query, err := deployment.AdaptFuncToEnsure(deploymentDef)
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 			currentDB, err := coredb.ParseQueriedForDatabase(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			currentNW, err := corenw.ParseQueriedForNetworking(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			hashes := getConfigurationHashes(currentDB, currentNW)
+			if hashes != nil && len(hashes) != 0 {
+				for k, v := range hashes {
+					deploymentDef.Annotations[k] = v
+					deploymentDef.Spec.Template.Annotations[k] = v
+				}
+			}
+
+			query, err := deployment.AdaptFuncToEnsure(deploymentDef)
 			if err != nil {
 				return nil, err
 			}

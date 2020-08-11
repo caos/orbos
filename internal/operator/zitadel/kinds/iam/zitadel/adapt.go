@@ -116,7 +116,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryC, destroyC, configurationDone, err := configuration.AdaptFunc(
+		queryC, destroyC, configurationDone, getConfigurationHashes, err := configuration.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
 			labels,
@@ -167,6 +167,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			desiredKind.Spec.NodeSelector,
 			migrationDone,
 			configurationDone,
+			getConfigurationHashes,
 		)
 		if err != nil {
 			return nil, nil, err

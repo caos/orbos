@@ -1,6 +1,9 @@
 package configuration
 
 import (
+	"crypto/sha512"
+	"encoding/base64"
+	"encoding/json"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
@@ -29,6 +32,7 @@ func AdaptFunc(
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
 	zitadel.EnsureFunc,
+	func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "configuration")
@@ -42,23 +46,23 @@ func AdaptFunc(
 
 	destroyCM, err := configmap.AdaptFuncToDestroy(namespace, cmName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroyCCM, err := configmap.AdaptFuncToDestroy(namespace, consoleCMName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroySV, err := secret.AdaptFuncToDestroy(namespace, secretVarsName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroySP, err := secret.AdaptFuncToDestroy(namespace, secretPasswordName)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	destroyers := []zitadel.DestroyFunc{
@@ -137,7 +141,25 @@ func AdaptFunc(
 			monitor.Debug("configuration is created")
 			return nil
 		},
+		func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string {
+			return map[string]string{
+				secretName:         getHash(literalsSecret),
+				secretVarsName:     getHash(literalsSecretVars),
+				secretPasswordName: getHash(users),
+				cmName:             getHash(literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB)),
+				consoleCMName:      getHash(literalsConsoleCM),
+			}
+		},
 		nil
+}
+
+func getHash(dataMap map[string]string) string {
+	data, err := json.Marshal(dataMap)
+	if err != nil {
+		return ""
+	}
+	h := sha512.New()
+	return base64.URLEncoding.EncodeToString(h.Sum(data))
 }
 
 func literalsConfigMap(
