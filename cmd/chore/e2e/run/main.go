@@ -54,8 +54,8 @@ func main() {
 	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
 	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
 	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
-	flag.BoolVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
-	flag.BoolVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
+	flag.BoolVar(&cleanup, "cleanup", cleanupDefault, cleanupUsage)
+	flag.BoolVar(&cleanup, "k", cleanupDefault, cleanupUsage+" (shorthand)")
 	flag.IntVar(&from, "from", fromDefault, fromUsage)
 	flag.IntVar(&from, "s", fromDefault, fromUsage)
 
@@ -95,7 +95,7 @@ func main() {
 			runFunc)
 	}
 
-	if err := testFunc(strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, from)(); err != nil {
+	if err := testFunc(strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, from, cleanup)(); err != nil {
 		panic(err)
 	}
 	return
