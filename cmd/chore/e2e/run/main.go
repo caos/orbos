@@ -55,7 +55,7 @@ func main() {
 	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
 	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
 	flag.BoolVar(&cleanup, "cleanup", cleanupDefault, cleanupUsage)
-	flag.BoolVar(&cleanup, "k", cleanupDefault, cleanupUsage+" (shorthand)")
+	flag.BoolVar(&cleanup, "c", cleanupDefault, cleanupUsage+" (shorthand)")
 	flag.IntVar(&from, "from", fromDefault, fromUsage)
 	flag.IntVar(&from, "s", fromDefault, fromUsage)
 
