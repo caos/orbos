@@ -78,6 +78,10 @@ func main() {
 			panic(err)
 		}
 
+		if err := orb.IsComplete(); err != nil {
+			panic(err)
+		}
+
 		testFunc = graphite(
 			strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
 			graphiteURL,
