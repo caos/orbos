@@ -20,6 +20,7 @@ func main() {
 		graphiteURL string
 		graphiteKey string
 		from        int
+		cleanup     bool
 	)
 
 	const (
@@ -37,6 +38,8 @@ func main() {
 		graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
 		fromDefault        = 1
 		fromUsage          = "step to continue e2e tests from"
+		cleanupDefault     = true
+		cleanupUsage       = "destroy orb after tests are done"
 	)
 
 	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
@@ -51,6 +54,8 @@ func main() {
 	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
 	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
 	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
+	flag.BoolVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
+	flag.BoolVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
 	flag.IntVar(&from, "from", fromDefault, fromUsage)
 	flag.IntVar(&from, "s", fromDefault, fromUsage)
 

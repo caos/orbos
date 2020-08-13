@@ -7,11 +7,20 @@ import (
 	"time"
 )
 
-func runFunc(branch, orbconfig string, from int) func() error {
+func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 	return func() error {
+
 		newOrbctl, err := buildOrbctl(orbconfig)
 		if err != nil {
 			return err
+		}
+
+		if cleanup {
+			defer func() {
+				if cuErr := destroyTest(newOrbctl, nil); cuErr != nil {
+					panic(cuErr)
+				}
+			}()
 		}
 
 		kubeconfig, err := ioutil.TempFile("", "kubeconfig-*")
