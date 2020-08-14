@@ -6,32 +6,33 @@ import (
 	"time"
 )
 
-func initORBITERTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+func initORBITERTest(branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
-	print, err := orbctl()
-	if err != nil {
-		return err
-	}
+		print, err := orbctl()
+		if err != nil {
+			return err
+		}
 
-	print.Args = append(print.Args, "file", "print", "provider.yml")
-	print.Stderr = os.Stderr
+		print.Args = append(print.Args, "file", "print", "provider.yml")
+		print.Stderr = os.Stderr
 
-	var indented string
-	if err := simpleRunCommand(print, time.NewTimer(30*time.Second), func(line string) (goon bool) {
-		indented += fmt.Sprintf("    %s\n", line)
-		return true
-	}); err != nil {
-		return err
-	}
+		var indented string
+		if err := simpleRunCommand(print, time.NewTimer(30*time.Second), func(line string) (goon bool) {
+			indented += fmt.Sprintf("    %s\n", line)
+			return true
+		}); err != nil {
+			return err
+		}
 
-	overwrite, err := orbctl()
-	if err != nil {
-		return err
-	}
+		overwrite, err := orbctl()
+		if err != nil {
+			return err
+		}
 
-	overwrite.Stderr = os.Stderr
-	overwrite.Stderr = os.Stdout
-	overwrite.Args = append(overwrite.Args, "file", "patch", "orbiter.yml", "--exact", "--value", fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+		overwrite.Stderr = os.Stderr
+		overwrite.Stderr = os.Stdout
+		overwrite.Args = append(overwrite.Args, "file", "patch", "orbiter.yml", "--exact", "--value", fmt.Sprintf(`kind: orbiter.caos.ch/Orb
 version: v0
 spec:
   verbose: false
@@ -57,7 +58,7 @@ clusters:
       verbose: false
       versions:
         kubernetes: v1.16.0
-        orbiter: v0.28.5
+        orbiter: %s
       workers:
       - updatesdisabled: false
         provider: provider-under-test
@@ -112,12 +113,13 @@ providers:
             healthchecks:
               protocol: https
               path: /healthz
-              code: 200`, indented))
+              code: 200`, branch, indented))
 
-	patch, err := orbctl()
-	patch.Stderr = os.Stderr
-	patch.Stdout = os.Stdout
-	patch.Args = append(patch.Args, "file", "patch", "orbiter.yml", "--exact", "--value", "")
+		patch, err := orbctl()
+		patch.Stderr = os.Stderr
+		patch.Stdout = os.Stdout
+		patch.Args = append(patch.Args, "file", "patch", "orbiter.yml", "--exact", "--value", "")
 
-	return err
+		return patch.Run()
+	}
 }

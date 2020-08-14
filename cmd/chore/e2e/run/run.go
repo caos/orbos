@@ -38,12 +38,11 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 		branch = branchParts[len(branchParts)-1:][0]
 
 		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
-			/* 1 */ initORBITERTest,
+			/* 1 */ initORBITERTest(branch),
 			/* 2 */ destroyTest,
-			/* 3 */ patchTestFunc("clusters.k8s.spec.versions.orbiter", branch),
-			/* 4 */ bootstrapTest,
-			/* 5 */ waitTest(15*time.Second),
-			/* 6 */ ensureORBITERTest(5*time.Minute),
+			/* 3 */ bootstrapTest,
+			/* 4 */ waitTest(15*time.Second),
+			/* 5 */ ensureORBITERTest(5*time.Minute),
 		); err != nil {
 			return err
 		}
