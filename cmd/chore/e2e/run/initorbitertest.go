@@ -63,7 +63,7 @@ clusters:
         pool: storage
 providers:
   provider-under-test:
-    %s
+%s
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
       version: v2
