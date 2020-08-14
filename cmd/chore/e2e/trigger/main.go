@@ -12,8 +12,11 @@ import (
 
 func main() {
 
-	var token, org, repository, testcase, branch string
-	var from int
+	var (
+		token, org, repository, testcase, branch string
+		from                                     int
+		cleanup                                  bool
+	)
 
 	flag.StringVar(&token, "access-token", "", "Personal access token with repo scope")
 	flag.StringVar(&org, "organization", "", "Github organization")
@@ -21,6 +24,7 @@ func main() {
 	flag.StringVar(&testcase, "testcase", "unknown", "Testcase identifier")
 	flag.StringVar(&branch, "branch", "", "Branch to test. Default is current")
 	flag.IntVar(&from, "from", 1, "From e2e test stage")
+	flag.BoolVar(&cleanup, "cleanup", true, "Cleanup after tests are done")
 
 	flag.Parse()
 
@@ -41,6 +45,7 @@ func main() {
 			"branch":   branch,
 			"testcase": strings.ToLower(testcase),
 			"from":     strconv.Itoa(from),
+			"cleanup":  strconv.FormatBool(cleanup),
 		},
 	}, token, org, repository); err != nil {
 		panic(err)

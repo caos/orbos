@@ -1,5 +1,6 @@
 package main
 
+/*
 import "github.com/caos/orbos/cmd/chore/e2e/shared"
 
 func github(branch, token, testcase string, test func(orbconfig string) error) func(orbconfig string) error {
@@ -29,3 +30,4 @@ func github(branch, token, testcase string, test func(orbconfig string) error) f
 	}
 
 }
+*/
