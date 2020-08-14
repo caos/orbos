@@ -115,11 +115,6 @@ providers:
               path: /healthz
               code: 200`, branch, indented))
 
-		patch, err := orbctl()
-		patch.Stderr = os.Stderr
-		patch.Stdout = os.Stdout
-		patch.Args = append(patch.Args, "file", "patch", "orbiter.yml", "--exact", "--value", "")
-
-		return patch.Run()
+		return overwrite.Run()
 	}
 }
