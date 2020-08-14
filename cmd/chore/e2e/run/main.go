@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -60,6 +61,12 @@ func main() {
 	flag.IntVar(&from, "s", fromDefault, fromUsage)
 
 	flag.Parse()
+
+	fmt.Printf("unpublished=%t\n", unpublished)
+	fmt.Printf("orbconfig=%s\n", orbconfig)
+	fmt.Printf("graphiteurl=%s\n", graphiteURL)
+	fmt.Printf("cleanup=%t\n", cleanup)
+	fmt.Printf("from=%d\n", from)
 
 	out, err := exec.Command("git", "branch", "--show-current").Output()
 	if err != nil {
