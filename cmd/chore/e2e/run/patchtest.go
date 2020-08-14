@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func patchTestFunc(key, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func patchTestFunc(path, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		cmd, err := orbctl()
@@ -14,7 +14,7 @@ func patchTestFunc(key, value string) func(newOrbctlCommandFunc, newKubectlComma
 			return err
 		}
 
-		cmd.Args = append(cmd.Args, "file", "patch", "orbiter.yml", key, "--value", value)
+		cmd.Args = append(cmd.Args, "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
 		cmd.Stderr = os.Stderr
 
 		return simpleRunCommand(cmd, time.NewTimer(15*time.Second), func(line string) bool {

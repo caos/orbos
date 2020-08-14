@@ -41,7 +41,6 @@ func main() {
 	file.AddCommand(
 		EditCommand(rootValues),
 		PrintCommand(rootValues),
-		OverwriteCommand(rootValues),
 		PatchCommand(rootValues),
 	)
 

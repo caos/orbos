@@ -35,7 +35,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
-		s, err := key(value, file, stdin)
+		s, err := content(value, file, stdin)
 		if err != nil {
 			return err
 		}
@@ -72,7 +72,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 	return cmd
 }
 
-func key(value string, file string, stdin bool) (string, error) {
+func content(value string, file string, stdin bool) (string, error) {
 
 	channels := 0
 	if value != "" {
@@ -86,7 +86,7 @@ func key(value string, file string, stdin bool) (string, error) {
 	}
 
 	if channels != 1 {
-		return "", errors.New("Key must be provided eighter by value or by file path or by standard input")
+		return "", errors.New("Content must be provided eighter by value or by file path or by standard input")
 	}
 
 	if value != "" {
@@ -102,9 +102,9 @@ func key(value string, file string, stdin bool) (string, error) {
 		}
 	}
 
-	key, err := readFunc()
+	c, err := readFunc()
 	if err != nil {
 		panic(err)
 	}
-	return string(key), err
+	return string(c), err
 }

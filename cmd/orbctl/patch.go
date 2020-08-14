@@ -19,14 +19,22 @@ import (
 func PatchCommand(rv RootValues) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:     "patch <filepath> [yamlpath]",
-		Short:   "Patch a yaml property",
-		Args:    cobra.MinimumNArgs(1),
-		Example: `orbctl file patch orbiter.yml`,
+		Use:   "patch <filepath> [yamlpath]",
+		Short: "Patch a yaml property",
+		Args:  cobra.MinimumNArgs(1),
+		Example: `Overwiting a file: orbctl file patch orbiter.yml --exact
+Patching an edge property interactively: orbctl file patch orbiter.yml
+Patching a node property non-interactively: orbctl file path orbiter.yml clusters.k8s --exact --file /path/to/my/cluster/definition.yml`,
 	}
 	flags := cmd.Flags()
-	var value string
-	flags.StringVar(&value, "value", "", "The properties new value")
+	var (
+		value string
+		file  string
+		exact bool
+	)
+	flags.StringVar(&value, "value", "", "Content value")
+	flags.StringVarP(&file, "file", "s", "", "File containing the content value")
+	flags.BoolVar(&exact, "exact", false, "Write the content exactly at the path given without further prompting")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
@@ -36,30 +44,47 @@ func PatchCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		structure := map[string]interface{}{}
-		if err := yaml.Unmarshal(gitClient.Read(args[0]), structure); err != nil {
-			return err
-		}
-
 		var path []string
 		if len(args) > 1 {
 			path = strings.Split(args[1], ".")
 		}
 
-		if err := updateMap(structure, path, value); err != nil {
+		contentStr, err := content(value, file, false)
+		if err != nil {
 			return err
+		}
+
+		contentYaml := yamlTypedValue(contentStr)
+
+		var result interface{}
+		if len(path) == 0 && exact {
+			result = contentYaml
+		} else {
+			structure := map[string]interface{}{}
+			if err := yaml.Unmarshal(gitClient.Read(args[0]), structure); err != nil {
+				return err
+			}
+			if err := updateMap(structure, path, contentYaml, exact); err != nil {
+				return err
+			}
+			result = structure
 		}
 
 		return gitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), git.File{
 			Path:    args[0],
-			Content: common.MarshalYAML(structure),
+			Content: common.MarshalYAML(result),
 		})
 	}
 
 	return cmd
 }
 
-func updateMap(structure map[string]interface{}, path []string, value string) error {
+func updateMap(structure map[string]interface{}, path []string, value interface{}, exact bool) error {
+
+	if len(path) == 1 && exact {
+		structure[path[0]] = value
+		return nil
+	}
 
 	path, nextStep := drillPath(path)
 
@@ -82,12 +107,12 @@ func updateMap(structure map[string]interface{}, path []string, value string) er
 		return fmt.Errorf("path element %s not found", nextStep)
 	}
 
-	drilled, err := drillContent(child, path, value)
+	drilled, err := drillContent(child, path, value, exact)
 	if err != nil {
 		return err
 	}
 	if !drilled {
-		structure[nextStep] = yamlTypedValue(value)
+		structure[nextStep] = value
 	}
 
 	return nil
@@ -101,7 +126,30 @@ func prompt(keys []string) (string, error) {
 	}, &key, survey.WithValidator(survey.Required))
 }
 
-func updateSlice(slice []interface{}, path []string, value string) error {
+func updateSlice(slice []interface{}, path []string, value interface{}, exact bool) error {
+
+	pos := func(pathNode string) (int, error) {
+		idx, err := strconv.Atoi(pathNode)
+		if err != nil {
+			return -1, err
+		}
+
+		length := len(slice)
+		if length < idx {
+			return -1, fmt.Errorf("property has only %d elements", length)
+		}
+		return idx, nil
+	}
+
+	if len(path) == 1 && exact {
+		idx, err := pos(path[0])
+		if err != nil {
+			return err
+		}
+
+		slice[idx] = value
+		return nil
+	}
 
 	path, nextStep := drillPath(path)
 
@@ -118,22 +166,14 @@ func updateSlice(slice []interface{}, path []string, value string) error {
 		}
 	}
 
-	idx, err := strconv.Atoi(nextStep)
-	if err != nil {
-		return err
-	}
+	idx, err := pos(nextStep)
 
-	length := len(slice)
-	if length < idx {
-		return fmt.Errorf("property has only %d elements", length)
-	}
-
-	drilled, err := drillContent(slice[idx-1], path, value)
+	drilled, err := drillContent(slice[idx-1], path, value, exact)
 	if err != nil {
 		return err
 	}
 	if !drilled {
-		slice[idx-1] = yamlTypedValue(value)
+		slice[idx-1] = value
 	}
 
 	return nil
@@ -149,12 +189,13 @@ func drillPath(path []string) ([]string, string) {
 	return path, next
 }
 
-func drillContent(child interface{}, path []string, value string) (bool, error) {
+func drillContent(child interface{}, path []string, value interface{}, exact bool) (bool, error) {
+
 	switch typedNext := child.(type) {
 	case map[string]interface{}:
-		return true, updateMap(typedNext, path, value)
+		return true, updateMap(typedNext, path, value, exact)
 	case []interface{}:
-		return true, updateSlice(typedNext, path, value)
+		return true, updateSlice(typedNext, path, value, exact)
 	}
 
 	if len(path) > 0 {
@@ -165,10 +206,10 @@ func drillContent(child interface{}, path []string, value string) (bool, error) 
 }
 
 func yamlTypedValue(value string) interface{} {
-	v, err := strconv.Atoi(value)
-	if err == nil {
-		return v
-	}
 
-	return value
+	var out interface{}
+	if err := yaml.Unmarshal([]byte(value), &out); err != nil {
+		panic(err)
+	}
+	return out
 }
