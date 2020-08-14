@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"reflect"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -38,11 +40,18 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 		branch = branchParts[len(branchParts)-1:][0]
 
 		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
-			/* 1 */ initORBITERTest(branch),
-			/* 2 */ destroyTest,
-			/* 3 */ bootstrapTest,
-			/* 4 */ waitTest(15*time.Second),
-			/* 5 */ ensureORBITERTest(5*time.Minute),
+			/*  1 */ initORBITERTest(branch),
+			/*  2 */ destroyTest,
+			/*  3 */ bootstrapTest,
+			/*  4 */ waitTest(15*time.Second),
+			/*  5 */ ensureORBITERTest(5*time.Minute),
+			/*  6 */ patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3"),
+			/*  7 */ waitTest(15*time.Second),
+			/*  8 */ ensureORBITERTest(20*time.Minute),
+			/*  9 */ patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.6"),
+			/* 10 */ waitTest(15*time.Second),
+			/* 11 */ ensureORBITERTest(60*time.Minute),
+			/* 12 */ ambassadorReadyTest,
 		); err != nil {
 			return err
 		}
@@ -70,7 +79,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 		}
 
 		if err := fn(orbctl, kubectl); err != nil {
-			return err
+			return fmt.Errorf("%s failed: %w", runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), err)
 		}
 	}
 	return nil
