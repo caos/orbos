@@ -17,22 +17,15 @@ func initORBITERTest(branch string) func(orbctl newOrbctlCommandFunc, _ newKubec
 		print.Args = append(print.Args, "file", "print", "provider.yml")
 		print.Stderr = os.Stderr
 
-		var indented string
+		var orbiterYml string
 		if err := simpleRunCommand(print, time.NewTimer(30*time.Second), func(line string) (goon bool) {
-			indented += fmt.Sprintf("    %s\n", line)
+			orbiterYml += fmt.Sprintf("    %s\n", line)
 			return true
 		}); err != nil {
 			return err
 		}
 
-		overwrite, err := orbctl()
-		if err != nil {
-			return err
-		}
-
-		overwrite.Stderr = os.Stderr
-		overwrite.Stderr = os.Stdout
-		overwrite.Args = append(overwrite.Args, "file", "patch", "orbiter.yml", "--exact", "--value", fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+		orbiterYml = fmt.Sprintf(`kind: orbiter.caos.ch/Orb
 version: v0
 spec:
   verbose: false
@@ -113,7 +106,18 @@ providers:
             healthchecks:
               protocol: https
               path: /healthz
-              code: 200`, branch, indented))
+              code: 200`, branch, orbiterYml)
+
+		fmt.Println(orbiterYml)
+
+		overwrite, err := orbctl()
+		if err != nil {
+			return err
+		}
+
+		overwrite.Stderr = os.Stderr
+		overwrite.Stderr = os.Stdout
+		overwrite.Args = append(overwrite.Args, "file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml)
 
 		return overwrite.Run()
 	}
