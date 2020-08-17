@@ -2,6 +2,7 @@ package zitadel
 
 import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 )
@@ -19,6 +20,18 @@ type Spec struct {
 	Version       string                       `yaml:"version"`
 	Configuration *configuration.Configuration `yaml:"configuration"`
 	NodeSelector  map[string]string            `yaml:"nodeSelector,omitempty"`
+	MultiCluster  *MultiCluster                `yaml:"multiCluster"`
+}
+
+type MultiCluster struct {
+	CA           *CA      `yaml:"ca"`
+	DatabaseURLs []string `yaml:"databaseurls,omitempty"`
+	ClusterName  string   `yaml:"clustername,omitempty"`
+}
+
+type CA struct {
+	Certificate *secret.Secret `yaml:"certificate,omitempty"`
+	Key         *secret.Secret `yaml:"key,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

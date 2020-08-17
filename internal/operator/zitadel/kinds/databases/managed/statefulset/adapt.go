@@ -29,6 +29,7 @@ func AdaptFunc(
 	httpPort int32,
 	storageClass string,
 	nodeSelector map[string]string,
+	dbs []string,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
@@ -49,6 +50,7 @@ func AdaptFunc(
 	for i := int32(0); i < replicaCountParsed; i++ {
 		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s:%d", name, i, name, namespace, dbPort))
 	}
+	joinList = append(joinList, dbs...)
 	joinListStr := strings.Join(joinList, ",")
 
 	locality := "zone=" + namespace

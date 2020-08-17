@@ -12,6 +12,7 @@ import (
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
+	additionalDNS []string,
 ) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
@@ -42,7 +43,7 @@ func AdaptFunc(
 			return nil, nil, err
 		}
 
-		internalSpec, current := desiredKind.Spec.Internal(namespace, labels)
+		internalSpec, current := desiredKind.Spec.Internal(namespace, labels, additionalDNS)
 
 		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
 		current.ReadyCertificate = readyCertificate

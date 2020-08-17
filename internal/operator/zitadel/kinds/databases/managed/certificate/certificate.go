@@ -85,6 +85,7 @@ func NewNode(caPrivKey *rsa.PrivateKey, ca []byte, namespace string, clusterDns 
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
 		DNSNames: []string{
 			"localhost",
+			"gce-benz.orbos.io",
 			"cockroachdb-public",
 			"cockroachdb-public.default",
 			"cockroachdb-public." + namespace,

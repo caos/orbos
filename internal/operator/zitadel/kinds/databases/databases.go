@@ -14,6 +14,9 @@ func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
+	caCertificate string,
+	caKey string,
+	dbs []string,
 	namespace string,
 	users []string,
 	labels map[string]string,
@@ -28,8 +31,8 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.AdaptFunc(labels, users, namespace, timestamp, secretPasswordName, migrationUser, features)(monitor, desiredTree, currentTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
+		return managed.AdaptFunc(caCertificate, caKey, dbs, labels, users, namespace, timestamp, secretPasswordName, migrationUser, features)(monitor, desiredTree, currentTree)
+	case "zitadel.caos.ch/ProvidedDatabase":
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)

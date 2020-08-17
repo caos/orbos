@@ -18,6 +18,9 @@ import (
 )
 
 func AdaptFunc(
+	caCertificate string,
+	caKey string,
+	dbs []string,
 	labels map[string]string,
 	users []string,
 	namespace string,
@@ -64,14 +67,28 @@ func AdaptFunc(
 		userList := []string{"root"}
 		userList = append(userList, users...)
 
-		queryCert, destroyCert, err := certificate.AdaptFunc(internalMonitor, namespace, userList, interalLabels, desiredKind.Spec.ClusterDns)
+		queryCert, destroyCert, err := certificate.AdaptFunc(internalMonitor, namespace, userList, interalLabels, desiredKind.Spec.ClusterDns, caCertificate, caKey)
 		if err != nil {
 			return nil, nil, err
 		}
 
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, interalLabels)
 
-		querySFS, destroySFS, ensureInit, checkDBReady, err := statefulset.AdaptFunc(internalMonitor, namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
+		querySFS, destroySFS, ensureInit, checkDBReady, err := statefulset.AdaptFunc(
+			internalMonitor,
+			namespace,
+			sfsName,
+			image,
+			interalLabels,
+			serviceAccountName,
+			desiredKind.Spec.ReplicaCount,
+			desiredKind.Spec.StorageCapacity,
+			cockroachPort,
+			cockroachHTTPPort,
+			desiredKind.Spec.StorageClass,
+			desiredKind.Spec.NodeSelector,
+			dbs,
+		)
 		if err != nil {
 			return nil, nil, err
 		}

@@ -2,11 +2,13 @@ package certificate
 
 import (
 	"crypto/rsa"
+	"errors"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/mntr"
+	"reflect"
 	"strings"
 )
 
@@ -16,6 +18,8 @@ func AdaptFunc(
 	clients []string,
 	labels map[string]string,
 	clusterDns string,
+	caCertificate string,
+	caKey string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -62,18 +66,40 @@ func AdaptFunc(
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 			queriers := make([]zitadel.QueryFunc, 0)
 
-			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
-			if err != nil {
-				return nil, err
-			}
+			if caCertificate != "" || caKey != "" {
+				if caCertificate == "" || caKey == "" {
+					return nil, errors.New("CA certificate and key required")
+				}
+				cert, err := PEMDecodeKey([]byte(caKey))
+				if err != nil {
+					return nil, err
+				}
+				caPrivKey = cert
 
-			if len(allNodeSecrets.Items) == 0 {
+				caCert = []byte(caCertificate)
+			} else {
 				caPrivKeyInternal, caCertInternal, err := NewCA()
 				if err != nil {
 					return nil, err
 				}
 				caPrivKey = caPrivKeyInternal
 				caCert = caCertInternal
+			}
+
+			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(allNodeSecrets.Items) == 0 {
+				if caPrivKey == nil && string(caCert) != "" {
+					caPrivKeyInternal, caCertInternal, err := NewCA()
+					if err != nil {
+						return nil, err
+					}
+					caPrivKey = caPrivKeyInternal
+					caCert = caCertInternal
+				}
 
 				nodePrivKey, nodeCert, err := NewNode(caPrivKey, caCert, namespace, clusterDns)
 				if err != nil {
@@ -115,9 +141,13 @@ func AdaptFunc(
 				if err != nil {
 					return nil, err
 				}
-				caPrivKey = cert
-
-				caCert = allNodeSecrets.Items[0].Data[caCertKey]
+				if !reflect.DeepEqual(*cert, *caPrivKey) || !reflect.DeepEqual(caCert, allNodeSecrets.Items[0].Data[caCertKey]) {
+					//TODO
+					return nil, errors.New("CA changed, not implemented yet")
+				}
+				/*
+					caPrivKey = cert
+					caCert = allNodeSecrets.Items[0].Data[caCertKey]*/
 			}
 
 			allClientSecrets, err := k8sClient.ListSecrets(namespace, clientLabels)

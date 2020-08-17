@@ -37,7 +37,15 @@ func (a *App) AddInternalPrefix(desc string) string {
 	return strings.Join([]string{a.internalPrefix, desc}, " ")
 }
 
-func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[string]string, domain string, subdomains []*config.Subdomain, rules []*config.Rule, originCASecretName string) error {
+func (a *App) Ensure(
+	k8sClient *kubernetes.Client,
+	namespace string,
+	labels map[string]string,
+	domain string,
+	subdomains []*config.Subdomain,
+	rules []*config.Rule,
+	originCASecretName string,
+) error {
 	firewallRulesInt := make([]*cloudflare.FirewallRule, 0)
 	filtersInt := make([]*cloudflare.Filter, 0)
 	recordsInt := make([]*cloudflare.DNSRecord, 0)

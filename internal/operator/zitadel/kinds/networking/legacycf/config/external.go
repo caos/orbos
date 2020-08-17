@@ -19,8 +19,8 @@ type ExternalConfig struct {
 	Prefix      string       `yaml:"prefix"`
 }
 
-func (e *ExternalConfig) Internal(namespace string, labels map[string]string) (*InternalConfig, *current) {
-	dom, curr := e.internalDomain()
+func (e *ExternalConfig) Internal(namespace string, labels map[string]string, additionalDNS []string) (*InternalConfig, *current) {
+	dom, curr := e.internalDomain(additionalDNS)
 	return &InternalConfig{
 		Domains:            []*IntenalDomain{dom},
 		Groups:             e.Groups,
@@ -42,16 +42,21 @@ func (e *ExternalConfig) Validate() error {
 	return e.IP.Validate()
 }
 
-func (e *ExternalConfig) internalDomain() (*IntenalDomain, *current) {
+func (e *ExternalConfig) internalDomain(additionalDNS []string) (*IntenalDomain, *current) {
+	subdomains := []*Subdomain{
+		subdomain("accounts", e.IP),
+		subdomain("api", e.IP),
+		subdomain("console", e.IP),
+		subdomain("issuer", e.IP),
+	}
+	for _, additional := range additionalDNS {
+		subdomains = append(subdomains, subdomain(additional, e.IP))
+	}
+
 	return &IntenalDomain{
-			Domain: e.Domain,
-			Subdomains: []*Subdomain{
-				subdomain("accounts", e.IP),
-				subdomain("api", e.IP),
-				subdomain("console", e.IP),
-				subdomain("issuer", e.IP),
-			},
-			Rules: e.Rules,
+			Domain:     e.Domain,
+			Subdomains: subdomains,
+			Rules:      e.Rules,
 		},
 		&current{
 			domain:            e.Domain,

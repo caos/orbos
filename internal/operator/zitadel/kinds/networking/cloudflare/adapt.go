@@ -24,6 +24,9 @@ func AdaptFunc() zitadel.AdaptFunc {
 		}
 		desired.Parsed = desiredKind
 
+		queriers := []zitadel.QueryFunc{}
+		destroyers := []zitadel.DestroyFunc{}
+
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
 				return zitadel.QueriersToEnsureFunc(monitor, true, queriers, k8sClient, queried)
 			},

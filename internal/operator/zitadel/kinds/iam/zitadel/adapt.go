@@ -10,6 +10,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/imagepullsecret"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/migration"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/multicluster"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/services"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
 	"github.com/caos/orbos/internal/tree"
@@ -90,11 +91,29 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return allUsers[i] < allUsers[j]
 		})
 
+		cert := ""
+		key := ""
+		if desiredKind.Spec.MultiCluster != nil && desiredKind.Spec.MultiCluster.CA != nil {
+			if desiredKind.Spec.MultiCluster.CA.Certificate != nil {
+				cert = desiredKind.Spec.MultiCluster.CA.Certificate.Value
+			}
+			if desiredKind.Spec.MultiCluster.CA.Key != nil {
+				key = desiredKind.Spec.MultiCluster.CA.Key.Value
+			}
+		}
+		dbs := make([]string, 0)
+		if desiredKind.Spec.MultiCluster != nil && desiredKind.Spec.MultiCluster.DatabaseURLs != nil {
+			dbs = append(dbs, desiredKind.Spec.MultiCluster.DatabaseURLs...)
+		}
+
 		databaseCurrent := &tree.Tree{}
 		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(
 			internalMonitor,
 			desiredKind.Database,
 			databaseCurrent,
+			cert,
+			key,
+			dbs,
 			namespaceStr,
 			allUsers,
 			labels,
@@ -173,8 +192,13 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
+		additionalDNS := make([]string, 0)
+		if desiredKind.Spec != nil && desiredKind.Spec.MultiCluster != nil && desiredKind.Spec.MultiCluster.ClusterName != "" {
+			additionalDNS = append(additionalDNS, desiredKind.Spec.MultiCluster.ClusterName)
+		}
+
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
+		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels, additionalDNS)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -186,6 +210,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			grpcServiceName+"."+namespaceStr+":"+strconv.Itoa(grpcPort),
 			"http://"+httpServiceName+"."+namespaceStr+":"+strconv.Itoa(httpPort),
 			"http://"+uiServiceName+"."+namespaceStr,
+			desiredKind.Spec.MultiCluster.ClusterName,
 		)
 		if err != nil {
 			return nil, nil, err
@@ -228,6 +253,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			}
 		}
 
+		featureZitadel := false
 		destroyers := make([]zitadel.DestroyFunc, 0)
 		for _, feature := range features {
 			switch feature {
@@ -247,11 +273,22 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 					destroyC,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyNS),
 				)
+				featureZitadel = true
 			case "restore":
 				destroyers = append(destroyers,
 					destroyDB,
 				)
 			}
+		}
+
+		if featureZitadel && desiredKind.Spec.MultiCluster != nil && desiredKind.Spec.MultiCluster.ClusterName != "" {
+			queryMDB, destroMDB, err := multicluster.AdaptFunc(internalMonitor, namespaceStr, labels, desiredKind.Spec.MultiCluster.ClusterName)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			queriers = append(queriers, queryMDB)
+			destroyers = append(destroyers, destroMDB)
 		}
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {

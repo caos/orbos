@@ -48,47 +48,61 @@ func appendSecrets(into, add map[string]*secret.Secret) {
 func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
 	secrets := map[string]*secret.Secret{}
 
-	if desiredKind.Spec != nil && desiredKind.Spec.Configuration != nil {
-		conf := desiredKind.Spec.Configuration
-		if conf.ConsoleEnvironmentJSON == nil {
-			conf.ConsoleEnvironmentJSON = &secret.Secret{}
-		}
-		secrets["consoleenvironmentjson"] = conf.ConsoleEnvironmentJSON
-
-		if conf.Tracing != nil {
-			if conf.Tracing.ServiceAccountJSON == nil {
-				conf.Tracing.ServiceAccountJSON = &secret.Secret{}
+	if desiredKind.Spec != nil {
+		if desiredKind.Spec.MultiCluster != nil && desiredKind.Spec.MultiCluster.CA != nil {
+			if desiredKind.Spec.MultiCluster.CA.Key == nil {
+				desiredKind.Spec.MultiCluster.CA.Key = &secret.Secret{}
 			}
-			secrets["serviceaccountjson"] = conf.Tracing.ServiceAccountJSON
-		}
+			secrets["cakey"] = desiredKind.Spec.MultiCluster.CA.Key
 
-		if conf.Secrets != nil {
-			if conf.Secrets.Keys == nil {
-				conf.Secrets.Keys = &secret.Secret{}
+			if desiredKind.Spec.MultiCluster.CA.Certificate == nil {
+				desiredKind.Spec.MultiCluster.CA.Certificate = &secret.Secret{}
 			}
-			secrets["keys"] = conf.Secrets.Keys
+			secrets["cacertificate"] = desiredKind.Spec.MultiCluster.CA.Certificate
 		}
 
-		if conf.Notifications != nil {
-			if conf.Notifications.GoogleChatURL == nil {
-				conf.Notifications.GoogleChatURL = &secret.Secret{}
+		if desiredKind.Spec.Configuration != nil {
+			conf := desiredKind.Spec.Configuration
+			if conf.ConsoleEnvironmentJSON == nil {
+				conf.ConsoleEnvironmentJSON = &secret.Secret{}
 			}
-			secrets["googlechaturl"] = conf.Notifications.GoogleChatURL
+			secrets["consoleenvironmentjson"] = conf.ConsoleEnvironmentJSON
 
-			if conf.Notifications.Twilio.SID == nil {
-				conf.Notifications.Twilio.SID = &secret.Secret{}
+			if conf.Tracing != nil {
+				if conf.Tracing.ServiceAccountJSON == nil {
+					conf.Tracing.ServiceAccountJSON = &secret.Secret{}
+				}
+				secrets["serviceaccountjson"] = conf.Tracing.ServiceAccountJSON
 			}
-			secrets["twiliosid"] = conf.Notifications.Twilio.SID
 
-			if conf.Notifications.Twilio.AuthToken == nil {
-				conf.Notifications.Twilio.AuthToken = &secret.Secret{}
+			if conf.Secrets != nil {
+				if conf.Secrets.Keys == nil {
+					conf.Secrets.Keys = &secret.Secret{}
+				}
+				secrets["keys"] = conf.Secrets.Keys
 			}
-			secrets["twilioauthtoken"] = conf.Notifications.Twilio.AuthToken
 
-			if conf.Notifications.Email.AppKey == nil {
-				conf.Notifications.Email.AppKey = &secret.Secret{}
+			if conf.Notifications != nil {
+				if conf.Notifications.GoogleChatURL == nil {
+					conf.Notifications.GoogleChatURL = &secret.Secret{}
+				}
+				secrets["googlechaturl"] = conf.Notifications.GoogleChatURL
+
+				if conf.Notifications.Twilio.SID == nil {
+					conf.Notifications.Twilio.SID = &secret.Secret{}
+				}
+				secrets["twiliosid"] = conf.Notifications.Twilio.SID
+
+				if conf.Notifications.Twilio.AuthToken == nil {
+					conf.Notifications.Twilio.AuthToken = &secret.Secret{}
+				}
+				secrets["twilioauthtoken"] = conf.Notifications.Twilio.AuthToken
+
+				if conf.Notifications.Email.AppKey == nil {
+					conf.Notifications.Email.AppKey = &secret.Secret{}
+				}
+				secrets["emailappkey"] = conf.Notifications.Email.AppKey
 			}
-			secrets["emailappkey"] = conf.Notifications.Email.AppKey
 		}
 	}
 	return secrets

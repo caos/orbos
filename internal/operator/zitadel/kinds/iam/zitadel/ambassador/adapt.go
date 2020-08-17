@@ -17,6 +17,7 @@ func AdaptFunc(
 	grpcURL string,
 	httpURL string,
 	uiURL string,
+	dbSubdomain string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
