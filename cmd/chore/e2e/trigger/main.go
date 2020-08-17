@@ -33,12 +33,16 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Print("Current Branch: ", string(ref))
-
 		branch = strings.TrimPrefix(strings.TrimSpace(string(ref)), "heads/")
 	}
 
-	fmt.Println("Tested branch:", branch)
+	fmt.Printf("organization=%s\n", org)
+	fmt.Printf("repository=%s\n", repository)
+	fmt.Printf("testcase=%s\n", testcase)
+	fmt.Printf("branch=%s\n", branch)
+	fmt.Printf("from=%d\n", from)
+	fmt.Printf("cleanup=%t\n", cleanup)
+
 	if err := shared.Emit(shared.Event{
 		EventType: "webhook-trigger",
 		ClientPayload: map[string]string{

@@ -43,15 +43,14 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 			/*  1 */ initORBITERTest(branch),
 			/*  2 */ destroyTest,
 			/*  3 */ bootstrapTest,
-			/*  4 */ waitTest(15*time.Second),
-			/*  5 */ ensureORBITERTest(5*time.Minute),
-			/*  6 */ patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3"),
-			/*  7 */ waitTest(15*time.Second),
-			/*  8 */ ensureORBITERTest(20*time.Minute),
-			/*  9 */ patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.6"),
-			/* 10 */ waitTest(15*time.Second),
-			/* 11 */ ensureORBITERTest(60*time.Minute),
-			/* 12 */ ambassadorReadyTest,
+			/*  4 */ ensureORBITERTest(5*time.Minute),
+			/*  5 */ patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3"),
+			/*  6 */ waitTest(15*time.Second),
+			/*  7 */ ensureORBITERTest(20*time.Minute),
+			/*  8 */ patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.6"),
+			/*  9 */ waitTest(15*time.Second),
+			/* 10 */ ensureORBITERTest(60*time.Minute),
+			/* 11 */ ambassadorReadyTest,
 		); err != nil {
 			return err
 		}
@@ -71,7 +70,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 			continue
 		}
 
-		if at >= 6 && !kcRead {
+		if at >= 4 && !kcRead {
 			kcRead = true
 			if err := readKubeconfigFunc(orbctl); err != nil {
 				return err
