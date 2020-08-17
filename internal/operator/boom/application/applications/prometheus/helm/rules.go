@@ -87,6 +87,8 @@ groups:
   rules:
    - expr: dist_node_boot_time_seconds
      record: caos_node_boot_time_seconds
+   - expr: floor(avg_over_time(dist_systemd_unit_active[5m])+0.2)
+     record: caos_systemd_unit_active
    - expr: min(min_over_time(caos_systemd_unit_active[5m])) by (instance)
      record: caos_systemd_ryg
    - expr: avg(max_over_time(caos_probe{type="Upstream",name!="httpingress"}[1m])) by (name)
