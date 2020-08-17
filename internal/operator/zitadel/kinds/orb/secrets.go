@@ -1,7 +1,7 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -20,6 +20,6 @@ func SecretsFunc() secret.Func {
 		}
 		desiredTree.Parsed = desiredKind
 
-		return zitadel.SecretsFunc()(monitor, desiredKind.IAM)
+		return iam.GetSecrets(monitor, desiredKind.IAM)
 	}
 }
