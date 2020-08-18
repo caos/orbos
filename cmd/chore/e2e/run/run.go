@@ -66,7 +66,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 	for _, fn := range fns {
 		at++
 		if at < from {
-			fmt.Println("Skipping step", at)
+			fmt.Printf("\033[1;32mSkipping step %d\033[0m\n", at)
 			continue
 		}
 
