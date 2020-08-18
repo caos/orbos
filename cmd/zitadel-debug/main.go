@@ -3,11 +3,12 @@ package main
 import (
 	"flag"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+
 	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
-	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func main() {
@@ -31,10 +32,12 @@ func main() {
 	if err := start.Zitadel(
 		monitor,
 		helpers.PruneHome(*orbconfig),
-		helpers.PruneHome(*kubeconfig),
-		"networking",
-		"zitadel",
+		kubernetes.NewK8sClient(monitor, strPtr(helpers.PruneHome(*kubeconfig))),
 	); err != nil {
 		panic(err)
 	}
+}
+
+func strPtr(str string) *string {
+	return &str
 }
