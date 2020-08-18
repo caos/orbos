@@ -43,13 +43,13 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 			/*  1 */ initORBITERTest(branch),
 			/*  2 */ destroyTest,
 			/*  3 */ bootstrapTest,
-			/*  4 */ ensureORBITERTest(5*time.Minute),
+			/*  4 */ ensureORBITERTest(5*time.Minute, false),
 			/*  5 */ patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3"),
 			/*  6 */ waitTest(15*time.Second),
-			/*  7 */ ensureORBITERTest(20*time.Minute),
+			/*  7 */ ensureORBITERTest(20*time.Minute, true),
 			/*  8 */ patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.0"),
 			/*  9 */ waitTest(15*time.Second),
-			/* 10 */ ensureORBITERTest(60*time.Minute),
+			/* 10 */ ensureORBITERTest(60*time.Minute, false),
 			/* 11 */ ambassadorReadyTest,
 		); err != nil {
 			return err

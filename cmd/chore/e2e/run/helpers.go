@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+var errTimeout = errors.New("timed out")
+
 func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) (goon bool)) error {
 	defer timer.Stop()
 	out, err := cmd.StdoutPipe()
@@ -20,7 +22,7 @@ func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) (
 	for scanner.Scan() {
 		select {
 		case <-timer.C:
-			return errors.New("timeout")
+			return errTimeout
 		default:
 			if !scan(scanner.Text()) {
 				cmd.Process.Kill()
