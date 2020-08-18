@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v3"
 )
 
 func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
@@ -20,6 +20,9 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 	buf := &bytes.Buffer{}
 	cmd.Args = append(cmd.Args, "file", "print", "caos-internal/orbiter/current.yml")
 	cmd.Stdout = buf
+	if err := cmd.Run(); err != nil {
+		return err
+	}
 
 	currentBytes, err := ioutil.ReadAll(buf)
 	if err != nil {
