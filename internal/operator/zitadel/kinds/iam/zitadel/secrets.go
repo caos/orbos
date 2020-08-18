@@ -59,7 +59,7 @@ func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
 			if conf.Tracing.ServiceAccountJSON == nil {
 				conf.Tracing.ServiceAccountJSON = &secret.Secret{}
 			}
-			secrets["serviceaccountjson"] = conf.Tracing.ServiceAccountJSON
+			secrets["tracingserviceaccountjson"] = conf.Tracing.ServiceAccountJSON
 		}
 
 		if conf.Secrets != nil {
