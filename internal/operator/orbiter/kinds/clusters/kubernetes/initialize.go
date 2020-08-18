@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
@@ -45,6 +46,7 @@ type initializedMachine struct {
 	desiredNodeagent *common.NodeAgentSpec
 	currentMachine   *Machine
 	pool             *initializedPool
+	node             *v1.Node
 }
 
 func initialize(
@@ -84,6 +86,7 @@ func initialize(
 					curr.Status = "maintaining"
 				}
 			}
+			sort.Sort(initializedMachines(machines))
 			return machines, nil
 		}
 		return pool
@@ -152,6 +155,7 @@ func initialize(
 			reconcile:        reconcile,
 			currentMachine:   current,
 			pool:             &pool,
+			node:             node,
 		}
 
 		postInit(initMachine)

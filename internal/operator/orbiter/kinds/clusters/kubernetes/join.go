@@ -2,9 +2,14 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/types"
+
+	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/pkg/errors"
 
@@ -23,7 +28,8 @@ func join(
 	kubeAPI *infra.Address,
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
-	certKey string) (*string, error) {
+	certKey string,
+	client *Client) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
@@ -144,7 +150,7 @@ nodeRegistration:
 	}).Debug("Written file")
 
 	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
-	resetStdout, err := joining.infra.Execute(nil, nil, cmd)
+	resetStdout, err := joining.infra.Execute(nil, cmd)
 	if err != nil {
 		return nil, errors.Wrapf(err, "executing %s failed", cmd)
 	}
@@ -154,16 +160,50 @@ nodeRegistration:
 
 	if joinAt != nil {
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.BackendPort, joinAt.IP(), kubeAPI.FrontendPort, kubeadmCfgPath)
-		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
+		joinStdout, err := joining.infra.Execute(nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
 		}
+
 		monitor.WithFields(map[string]interface{}{
 			"stdout": string(joinStdout),
 		}).Debug("Executed kubeadm join")
+
+		if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {
+			return nil, err
+		}
+
 		joining.currentMachine.Joined = true
 		monitor.Changed("Node joined")
-		return nil, joining.pool.infra.EnsureMember(joining.infra)
+
+		if _, err := client.set.AppsV1().Deployments("kube-system").Patch(context.Background(), "coredns", types.StrategicMergePatchType, []byte(`
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "affinity": {
+          "podAntiAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [{
+              "weight": 100,
+              "podAffinityTerm": {
+                "topologyKey": "kubernetes.io/hostname"
+              }
+            }]
+          }
+        }
+      }
+    }
+  }
+}`), mach.PatchOptions{}); err != nil {
+			return nil, err
+		}
+
+		dnsPods, err := client.set.CoreV1().Pods("kube-system").List(context.Background(), mach.ListOptions{LabelSelector: "k8s-app=kube-dns"})
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, client.set.CoreV1().Pods("kube-system").Delete(context.Background(), dnsPods.Items[0].Name, mach.DeleteOptions{})
 	}
 
 	if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {
@@ -171,7 +211,7 @@ nodeRegistration:
 	}
 
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && %s", kubeAPI.BackendPort, kubeadmCfgPath, applyNetworkCommand)
-	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
+	initStdout, err := joining.infra.Execute(nil, initCmd)
 	if err != nil {
 		return nil, err
 	}

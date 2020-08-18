@@ -187,7 +187,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
-						stdout, err := machine.Execute(nil, nil, whoami)
+						stdout, err := machine.Execute(nil, whoami)
 						if err != nil {
 							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
 						}
@@ -230,7 +230,7 @@ stream { {{ range $nat := .NATs }}
 					var ok bool
 					vips, ok = desiredKind.Spec[forPool]
 					if !ok {
-						return false, nil
+						return true, nil
 					}
 
 					allPools, err := svc.ListPools()

@@ -41,7 +41,7 @@ import (
 )
 
 type NodeWithKubeadm interface {
-	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
+	Execute(stdin io.Reader, cmd string) ([]byte, error)
 }
 
 type IDFunc func() string
@@ -640,6 +640,7 @@ func (c *Client) updateNode(node *core.Node) (err error) {
 	if err != nil {
 		return err
 	}
+	node.ResourceVersion = ""
 	_, err = api.Update(context.Background(), node, mach.UpdateOptions{})
 	return err
 }
@@ -733,7 +734,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	}
 
 	monitor.Info("Resetting kubeadm")
-	if _, resetErr := node.Execute(nil, nil, "sudo kubeadm reset --force"); resetErr != nil {
+	if _, resetErr := node.Execute(nil, "sudo kubeadm reset --force"); resetErr != nil {
 		if !strings.Contains(resetErr.Error(), "command not found") {
 			return resetErr
 		}

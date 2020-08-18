@@ -55,6 +55,10 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
 		allKubeconfigs := make([]string, 0)
 		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {

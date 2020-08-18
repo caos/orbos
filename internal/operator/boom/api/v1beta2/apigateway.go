@@ -9,6 +9,8 @@ type APIGateway struct {
 	ReplicaCount int `json:"replicaCount,omitempty" yaml:"replicaCount,omitempty"`
 	//Service definition for ambassador
 	Service *AmbassadorService `json:"service,omitempty" yaml:"service,omitempty"`
+	//Activate the dev portal mapping
+	ActivateDevPortal bool `json:"activateDevPortal,omitempty" yaml:"activateDevPortal,omitempty"`
 }
 
 type AmbassadorService struct {

@@ -75,7 +75,7 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cl
 	}
 
 	if err := c.manager.Install(&dep.Software{Package: c.pkg, Version: pkgVersion}); err != nil {
-		return errors.Wrap(err, "installing kubectl failed")
+		return errors.Wrapf(err, "installing %s failed", c.pkg)
 	}
 	return nil
 }

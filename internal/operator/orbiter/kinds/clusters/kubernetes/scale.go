@@ -49,8 +49,8 @@ func ensureScale(
 		if delta > 0 {
 			upscalingDone = false
 			machines, alignErr := newMachines(pool.infra, delta)
-			err = helpers.Concat(err, alignErr)
 			if alignErr != nil {
+				err = helpers.Concat(err, alignErr)
 				return
 			}
 			for _, machine := range machines {
@@ -59,8 +59,17 @@ func ensureScale(
 		} else {
 			for _, machine := range existing[pool.desired.Nodes:] {
 				id := machine.infra.ID()
-				err = helpers.Concat(err, k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false))
-				err = helpers.Concat(err, machine.infra.Remove())
+				delErr := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false)
+				if delErr != nil {
+					err = helpers.Concat(err, delErr)
+					return
+				}
+
+				rmErr := machine.infra.Remove()
+				if rmErr != nil {
+					err = helpers.Concat(err, rmErr)
+					return
+				}
 				uninitializeMachine(id)
 				monitor.WithFields(map[string]interface{}{
 					"machine": id,
@@ -73,8 +82,8 @@ func ensureScale(
 			return
 		}
 		poolMachines, listErr := pool.machines()
-		err = helpers.Concat(err, listErr)
 		if listErr != nil {
+			err = helpers.Concat(err, listErr)
 			return
 		}
 		machines = append(machines, poolMachines...)
@@ -165,14 +174,14 @@ nodes:
 	if certsCP != nil && (joinCP != nil || len(joinWorkers) > 0) {
 		runes := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 		jointoken = fmt.Sprintf("%s.%s", helpers.RandomStringRunes(6, runes), helpers.RandomStringRunes(16, runes))
-		if _, err := certsCP.Execute(nil, nil, "sudo kubeadm token create "+jointoken); err != nil {
+		if _, err := certsCP.Execute(nil, "sudo kubeadm token create "+jointoken); err != nil {
 			return false, errors.Wrap(err, "creating new join token failed")
 		}
 
-		defer certsCP.Execute(nil, nil, "sudo kubeadm token delete "+jointoken)
+		defer certsCP.Execute(nil, "sudo kubeadm token delete "+jointoken)
 
 		if k8sVersion.equals(V1x18x0) {
-			if _, err := certsCP.Execute(nil, nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
+			if _, err := certsCP.Execute(nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
 				return false, errors.Wrap(err, "Working around kubeadm bug failed, see https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#not-possible-to-join-a-v1-18-node-to-a-v1-17-cluster-due-to-missing-rbac")
 			}
 		}
@@ -189,7 +198,7 @@ nodes:
 
 		if !doKubeadmInit && certKey == nil {
 			var err error
-			certKey, err = certsCP.Execute(nil, nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
+			certKey, err = certsCP.Execute(nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
 			if err != nil {
 				return false, errors.Wrap(err, "uploading certs failed")
 			}
@@ -206,7 +215,8 @@ nodes:
 			kubeAPI,
 			jointoken,
 			k8sVersion,
-			string(certKey))
+			string(certKey),
+			k8sClient)
 
 		if err != nil {
 			return false, err
@@ -236,7 +246,8 @@ nodes:
 			kubeAPI,
 			jointoken,
 			k8sVersion,
-			""); err != nil {
+			"",
+			k8sClient); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}

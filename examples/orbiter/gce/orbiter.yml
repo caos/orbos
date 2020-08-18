@@ -42,13 +42,6 @@ providers:
       region: europe-west6
       zone: europe-west6-b
       pools:
-        application:
-          osimage: projects/centos-cloud/global/images/centos-7-v20200429
-          mincpucores: 2
-          minmemorygb: 7
-          storagegb: 20
-          preemptible: false
-          localssds: 0
         management:
           osimage: projects/centos-cloud/global/images/centos-7-v20200429
           mincpucores: 2
@@ -56,12 +49,19 @@ providers:
           storagegb: 20
           preemptible: false
           localssds: 0
+        application:
+          osimage: projects/centos-cloud/global/images/centos-7-v20200429
+          mincpucores: 2
+          minmemorygb: 7
+          storagegb: 20
+          preemptible: true
+          localssds: 0
         storage:
           osimage: projects/centos-cloud/global/images/centos-7-v20200429
           mincpucores: 2
           minmemorygb: 7
           storagegb: 20
-          preemptible: false
+          preemptible: true
           localssds: 3
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer

@@ -46,10 +46,10 @@ func (c *machine) Remove() error {
 		return err
 	}
 	c.active = false
-	c.Execute(nil, nil, "sudo systemctl stop node-agentd")
-	c.Execute(nil, nil, "sudo systemctl disable node-agentd")
-	c.Execute(nil, nil, "sudo kubeadm reset -f")
-	c.Execute(nil, nil, "sudo rm -rf /var/lib/etcd")
+	c.Execute(nil, "sudo systemctl stop node-agentd")
+	c.Execute(nil, "sudo systemctl disable node-agentd")
+	c.Execute(nil, "sudo kubeadm reset -f")
+	c.Execute(nil, "sudo rm -rf /var/lib/etcd")
 	return nil
 }
 

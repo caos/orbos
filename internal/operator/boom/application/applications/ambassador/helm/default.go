@@ -22,7 +22,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Enabled: true,
 			Keep:    true,
 		},
-		DaemonSet: false,
+		CreateDevPortalMapping: false,
+		DaemonSet:              false,
 		DeploymentStrategy: &DeploymentStrategy{
 			Type: "RollingUpdate",
 		},
@@ -58,6 +59,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			InitialDelaySeconds: 30,
 			PeriodSeconds:       3,
 		},
+
 		Redis: &Redis{
 			Create: true,
 			Annotations: &RedisAnnotations{
@@ -69,8 +71,13 @@ func DefaultValues(imageTags map[string]string) *Values {
 		Scope: &Scope{
 			SingleNamespace: false,
 		},
-		SecurityContext: &SecurityContext{
-			RunAsUser: 8888,
+		Security: &Security{
+			PodSecurityContext: &PodSecurityContext{
+				RunAsUser: 8888,
+			},
+			ContainerSecurityContext: &ContainerSecurityContext{
+				AllowPrivilegeEscalation: false,
+			},
 		},
 		Service: &Service{
 			Type: "NodePort",

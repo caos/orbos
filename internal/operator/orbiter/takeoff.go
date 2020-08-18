@@ -81,6 +81,7 @@ func Metrics() {
 }
 
 func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, error) {
+
 	treeDesired, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
 		return nil, nil, nil, false, nil, nil, err

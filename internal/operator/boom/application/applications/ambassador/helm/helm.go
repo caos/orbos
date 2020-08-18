@@ -5,7 +5,7 @@ import "github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 func GetChartInfo() *chart.Chart {
 	return &chart.Chart{
 		Name:    "ambassador",
-		Version: "6.1.5",
+		Version: "6.5.2",
 		Index: &chart.Index{
 			Name: "datawire",
 			URL:  "www.getambassador.io",

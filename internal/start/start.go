@@ -40,34 +40,47 @@ type OrbiterConfig struct {
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
 
+	go checks(monitor, orbctlGit)
+
 	finishedChan := make(chan struct{})
+	takeoffChan := make(chan struct{})
 
-	go func() {
-		takeoffChan := make(chan struct{})
-		go func() {
-			takeoffChan <- struct{}{}
-		}()
-
-		var initialized bool
-		for range takeoffChan {
-			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, takeoffChan)
-			initialized = true
+	on := func() { takeoffChan <- struct{}{} }
+	go on()
+	var initialized bool
+loop:
+	for {
+		select {
+		case <-finishedChan:
+			break loop
+		case <-takeoffChan:
+			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, func(iterated bool) {
+				if iterated {
+					initialized = true
+				}
+				go on()
+			})
 		}
-	}()
-
-	<-finishedChan
+	}
 
 	return GetKubeconfigs(monitor, orbctlGit)
 }
 
-func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, takeoffChan chan struct{}) {
+func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		monitor.Error(err)
+		done(false)
 		return
 	}
 
 	if err := gitClient.Configure(orbFile.URL, []byte(orbFile.Repokey)); err != nil {
+		monitor.Error(err)
+		done(false)
+		return
+	}
+
+	if err := gitClient.Clone(); err != nil {
 		monitor.Error(err)
 		return
 	}
@@ -160,7 +173,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 			"took": time.Since(started),
 		}).Info("Iteration done")
 		debug.FreeOSMemory()
-		takeoffChan <- struct{}{}
+		done(true)
 	}()
 }
 
@@ -197,6 +210,13 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, erro
 }
 
 func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version string) error {
+
+	ensureClient := gitClient(monitor, "ensure")
+	queryClient := gitClient(monitor, "query")
+
+	// We don't need to check both clients
+	go checks(monitor, queryClient)
+
 	boom.Metrics(monitor)
 
 	takeoffChan := make(chan struct{})
@@ -206,41 +226,43 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 
 	for range takeoffChan {
 
-		boomChan := make(chan struct{})
-		currentChan := make(chan struct{})
+		ensureChan := make(chan struct{})
+		queryChan := make(chan struct{})
 
-		takeoff, takeoffCurrent := boom.Takeoff(
+		ensure, query := boom.Takeoff(
 			monitor,
 			"/boom",
 			localmode,
 			orbConfigPath,
+			ensureClient,
+			queryClient,
 		)
 		go func() {
 			started := time.Now()
-			takeoffCurrent()
+			query()
 
 			monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			}).Info("Iteration done")
 			debug.FreeOSMemory()
 
-			currentChan <- struct{}{}
+			queryChan <- struct{}{}
 		}()
 		go func() {
 			started := time.Now()
-			takeoff()
+			ensure()
 
 			monitor.WithFields(map[string]interface{}{
 				"took": time.Since(started),
 			}).Info("Iteration done")
 			debug.FreeOSMemory()
 
-			boomChan <- struct{}{}
+			ensureChan <- struct{}{}
 		}()
 
 		go func() {
-			<-currentChan
-			<-boomChan
+			<-queryChan
+			<-ensureChan
 
 			takeoffChan <- struct{}{}
 		}()
@@ -249,6 +271,18 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 	return nil
 }
 
+func gitClient(monitor mntr.Monitor, task string) *git.Client {
+	return git.New(context.Background(), monitor.WithField("task", task), "Boom", "boom@caos.ch")
+}
+
+func checks(monitor mntr.Monitor, client *git.Client) {
+	t := time.NewTicker(13 * time.Hour)
+	for range t.C {
+		if err := client.Check(); err != nil {
+			monitor.Error(err)
+		}
+	}
+}
 func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client) error {
 	takeoffChan := make(chan struct{})
 	go func() {

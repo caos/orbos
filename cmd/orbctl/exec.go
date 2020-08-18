@@ -38,6 +38,10 @@ func ExecCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
 		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
 		if err != nil {
 			return err
@@ -78,13 +82,13 @@ func ExecCommand(rv RootValues) *cobra.Command {
 			}
 
 			if command != "" {
-				output, err := machine.Execute(nil, nil, command)
+				output, err := machine.Execute(nil, command)
 				if err != nil {
 					return err
 				}
 				fmt.Print(string(output))
 			} else {
-				if err := machine.Shell(nil); err != nil {
+				if err := machine.Shell(); err != nil {
 					return err
 				}
 			}
