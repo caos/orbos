@@ -23,7 +23,7 @@ func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
 		fmt.Println(line)
 		return !strings.Contains(line, "Desired state is ensured")
 	})
-	if !errors.Is(err, errTimeout) {
+	if err != nil && !errors.Is(err, errTimeout) {
 		return watchLogs(kubectl, timer)
 	}
 	return err
