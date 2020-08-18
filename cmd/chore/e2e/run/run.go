@@ -42,7 +42,7 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
 			/*  1 */ retry(3, initORBITERTest(branch)),
 			/*  2 */ retry(3, destroyTest),
-			/*  3 */ retry(3, initORBITERTest(branch)),
+			/*  3 */ retry(3, initBOOMTest(branch)),
 			/*  4 */ retry(3, bootstrapTest),
 			/*  5 */ ensureORBITERTest(5*time.Minute),
 			/*  6 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
