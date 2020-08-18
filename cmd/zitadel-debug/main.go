@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io/ioutil"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 
@@ -29,10 +30,15 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
+	kc, err := ioutil.ReadFile(helpers.PruneHome(*kubeconfig))
+	if err != nil {
+		panic(err)
+	}
+
 	if err := start.Zitadel(
 		monitor,
 		helpers.PruneHome(*orbconfig),
-		kubernetes.NewK8sClient(monitor, strPtr(helpers.PruneHome(*kubeconfig))),
+		kubernetes.NewK8sClient(monitor, strPtr(string(kc))),
 	); err != nil {
 		panic(err)
 	}

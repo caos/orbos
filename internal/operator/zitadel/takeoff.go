@@ -1,6 +1,8 @@
 package zitadel
 
 import (
+	"errors"
+
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/tree"
@@ -19,7 +21,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, k8sCl
 		treeCurrent := &tree.Tree{}
 
 		if !k8sClient.Available() {
-			internalMonitor.Error(err)
+			internalMonitor.Error(errors.New("kubeclient is not available"))
 			return
 		}
 
