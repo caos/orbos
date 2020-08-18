@@ -74,9 +74,9 @@ func AdaptFunc(
 			cors := &mapping.CORS{
 				Origins:        "https://" + consoleDomain,
 				Methods:        "POST, GET, OPTIONS, DELETE, PUT",
-				Headers:        "'*'",
+				Headers:        "*",
 				Credentials:    true,
-				ExposedHeaders: "'*'",
+				ExposedHeaders: "*",
 				MaxAge:         "86400",
 			}
 
