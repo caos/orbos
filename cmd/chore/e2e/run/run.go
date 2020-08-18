@@ -40,17 +40,17 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 		branch = branchParts[len(branchParts)-1:][0]
 
 		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
-			/*  1 */ initORBITERTest(branch),
-			/*  2 */ destroyTest,
-			/*  3 */ bootstrapTest,
-			/*  4 */ ensureORBITERTest(5*time.Minute),
+			/*  1 */ retry(3, initORBITERTest(branch)),
+			/*  2 */ retry(3, destroyTest),
+			/*  3 */ retry(3, bootstrapTest),
+			/*  4 */ retry(3, ensureORBITERTest(5*time.Minute)),
 			/*  5 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
 			/*  6 */ waitTest(15*time.Second),
 			/*  7 */ retry(3, ensureORBITERTest(20*time.Minute)),
 			/*  8 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.0")),
 			/*  9 */ waitTest(15*time.Second),
-			/* 10 */ ensureORBITERTest(60*time.Minute),
-			/* 11 */ ambassadorReadyTest,
+			/* 10 */ retry(3, ensureORBITERTest(60*time.Minute)),
+			/* 11 */ retry(3, ambassadorReadyTest),
 		); err != nil {
 			return err
 		}
