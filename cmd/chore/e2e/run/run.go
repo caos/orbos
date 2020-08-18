@@ -71,7 +71,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 			continue
 		}
 
-		if at >= 4 && !kcRead {
+		if at >= 5 && !kcRead {
 			kcRead = true
 			if err := readKubeconfigFunc(orbctl); err != nil {
 				return err
