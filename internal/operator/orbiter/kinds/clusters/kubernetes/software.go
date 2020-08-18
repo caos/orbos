@@ -42,6 +42,7 @@ const (
 	V1x16x11
 	V1x16x12
 	V1x16x13
+	V1x16x14
 	V1x17x0
 	V1x17x1
 	V1x17x2
@@ -52,6 +53,8 @@ const (
 	V1x17x7
 	V1x17x8
 	V1x17x9
+	V1x17x10
+	V1x17x11
 	V1x18x0
 	V1x18x1
 	V1x18x2
@@ -59,6 +62,8 @@ const (
 	V1x18x4
 	V1x18x5
 	V1x18x6
+	V1x18x7
+	V1x18x8
 )
 
 var kubernetesVersions = []string{
