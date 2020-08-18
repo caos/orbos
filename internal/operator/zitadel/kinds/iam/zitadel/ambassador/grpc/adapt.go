@@ -38,7 +38,7 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyModule, err := module.AdaptFuncToDestroy(namespace, moduleName)
+	destroyModule, err := module.AdaptFuncToDestroy("caos-system", moduleName)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -69,7 +69,7 @@ func AdaptFunc(
 			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
 			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
 
-			queryModule, err := module.AdaptFuncToEnsure(namespace, moduleName, labels, &module.Config{EnableGrpcWeb: true})
+			queryModule, err := module.AdaptFuncToEnsure("caos-system", moduleName, labels, &module.Config{EnableGrpcWeb: true})
 
 			cors := &mapping.CORS{
 				Origins:        "https://" + consoleDomain,
