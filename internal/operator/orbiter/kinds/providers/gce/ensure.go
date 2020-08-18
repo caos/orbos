@@ -36,7 +36,7 @@ func query(
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		errors.Errorf("Unknown or unsupported load balancing of type %T", lb)
+		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
 	normalized, firewalls := normalize(context, lbCurrent.Current.Spec)
 
@@ -138,7 +138,7 @@ func query(
 		}
 		panic(fmt.Errorf("external address for %v is not ensured", vip))
 	})
-	return func(psf api.SecretFunc) *orbiter.EnsureResult {
+	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
 
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{

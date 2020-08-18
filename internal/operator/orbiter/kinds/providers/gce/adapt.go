@@ -26,6 +26,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 		}
 		desiredTree.Parsed = desiredKind
 
+		if desiredKind.Spec.RebootRequired == nil {
+			desiredKind.Spec.RebootRequired = make([]string, 0)
+			migrate = true
+		}
+
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
 		}

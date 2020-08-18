@@ -52,9 +52,10 @@ func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 }
 
 type Machine struct {
-	ID       string
-	Hostname string
-	IP       orbiter.IPAddress
+	ID             string
+	Hostname       string
+	IP             orbiter.IPAddress
+	RebootRequired *bool
 }
 
 func (c *Machine) validate() error {

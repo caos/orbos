@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/types"
-
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/pkg/errors"
@@ -176,34 +174,16 @@ nodeRegistration:
 		joining.currentMachine.Joined = true
 		monitor.Changed("Node joined")
 
-		if _, err := client.set.AppsV1().Deployments("kube-system").Patch(context.Background(), "coredns", types.StrategicMergePatchType, []byte(`
-{
-  "spec": {
-    "template": {
-      "spec": {
-        "affinity": {
-          "podAntiAffinity": {
-            "preferredDuringSchedulingIgnoredDuringExecution": [{
-              "weight": 100,
-              "podAffinityTerm": {
-                "topologyKey": "kubernetes.io/hostname"
-              }
-            }]
-          }
-        }
-      }
-    }
-  }
-}`), mach.PatchOptions{}); err != nil {
-			return nil, err
-		}
-
 		dnsPods, err := client.set.CoreV1().Pods("kube-system").List(context.Background(), mach.ListOptions{LabelSelector: "k8s-app=kube-dns"})
 		if err != nil {
 			return nil, err
 		}
 
-		return nil, client.set.CoreV1().Pods("kube-system").Delete(context.Background(), dnsPods.Items[0].Name, mach.DeleteOptions{})
+		if len(dnsPods.Items) > 1 {
+			err = client.set.CoreV1().Pods("kube-system").Delete(context.Background(), dnsPods.Items[0].Name, mach.DeleteOptions{})
+		}
+
+		return nil, err
 	}
 
 	if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {

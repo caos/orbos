@@ -1,7 +1,10 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
+
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/caos/orbos/internal/orb"
 
@@ -368,6 +371,29 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 	}
 	monitor.Debug("Orbiter service ensured")
 
+	if _, err := client.set.AppsV1().Deployments("kube-system").Patch(context.Background(), "coredns", types.StrategicMergePatchType, []byte(`
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "affinity": {
+          "podAntiAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [{
+              "weight": 100,
+              "podAffinityTerm": {
+                "topologyKey": "kubernetes.io/hostname"
+              }
+            }]
+          }
+        }
+      }
+    }
+  }
+}`), mach.PatchOptions{}); err != nil {
+		return err
+	}
+
+	monitor.Debug("CoreDNS deployment patched")
 	return nil
 }
 

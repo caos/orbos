@@ -4,6 +4,8 @@ import (
 	"io"
 	"sort"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/tree"
@@ -33,19 +35,25 @@ type instance struct {
 	context *context
 	start   bool
 	machine
+	rebootRequired  bool
+	requireReboot   func()
+	unrequireReboot func()
 }
 
-func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine) *instance {
+func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine, rebootRequired bool, requireReboot func(), unrequireReboot func()) *instance {
 	return &instance{
-		Monitor: monitor,
-		id:      id,
-		ip:      ip,
-		url:     url,
-		pool:    pool,
-		remove:  remove,
-		context: context,
-		start:   start,
-		machine: machine,
+		Monitor:         monitor,
+		id:              id,
+		ip:              ip,
+		url:             url,
+		pool:            pool,
+		remove:          remove,
+		context:         context,
+		start:           start,
+		machine:         machine,
+		rebootRequired:  rebootRequired,
+		requireReboot:   requireReboot,
+		unrequireReboot: unrequireReboot,
 	}
 }
 
@@ -55,6 +63,10 @@ func (c *instance) ID() string {
 
 func (c *instance) IP() string {
 	return c.ip
+}
+
+func (c *instance) RebootRequired() (bool, func(), func()) {
+	return c.rebootRequired, c.requireReboot, c.unrequireReboot
 }
 
 func (c *instance) Remove() error {
@@ -98,6 +110,8 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	if err != nil {
 		return nil, err
 	}
+
+	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
 
 	return core.ListMachines(ctx.machinesService)
 }
