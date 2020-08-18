@@ -2,10 +2,10 @@ package main
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"net/http"
+
+	"github.com/caos/orbos/internal/helpers"
 
 	"gopkg.in/yaml.v3"
 )
@@ -49,13 +49,8 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 	}
 
 	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpingress
-	resp, err := http.Get(fmt.Sprintf("http://%s:%d/ambassador/v0/check_ready", ep.Location, ep.Frontendport))
-	if err != nil {
-		return err
-	}
 
-	if resp.StatusCode >= 400 {
-		return errors.New(resp.Status)
-	}
-	return nil
+	msg, err := helpers.Check(fmt.Sprintf("http://%s:%d/ambassador/v0/check_ready", ep.Location, ep.Frontendport), 200)
+	fmt.Println(msg)
+	return err
 }
