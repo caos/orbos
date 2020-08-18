@@ -10,19 +10,20 @@ import (
 )
 
 type ExternalConfig struct {
-	Verbose     bool
-	Domain      string
-	IP          orbiter.IPAddress
-	Rules       []*Rule
-	Groups      []*Group     `yaml:"groups"`
-	Credentials *Credentials `yaml:"credentials"`
-	Prefix      string       `yaml:"prefix"`
+	Verbose       bool
+	Domain        string
+	IP            orbiter.IPAddress
+	Rules         []*Rule
+	Groups        []*Group     `yaml:"groups"`
+	Credentials   *Credentials `yaml:"credentials"`
+	Prefix        string       `yaml:"prefix"`
+	AdditionalDNS []*Subdomain `yaml:"additionalSubdomains,omitempty"`
 }
 
 func (e *ExternalConfig) Internal(namespace string, labels map[string]string) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
-		Domains:            []*IntenalDomain{dom},
+		Domains:            []*InternalDomain{dom},
 		Groups:             e.Groups,
 		Credentials:        e.Credentials,
 		Prefix:             e.Prefix,
@@ -42,16 +43,21 @@ func (e *ExternalConfig) Validate() error {
 	return e.IP.Validate()
 }
 
-func (e *ExternalConfig) internalDomain() (*IntenalDomain, *current) {
-	return &IntenalDomain{
-			Domain: e.Domain,
-			Subdomains: []*Subdomain{
-				subdomain("accounts", e.IP),
-				subdomain("api", e.IP),
-				subdomain("console", e.IP),
-				subdomain("issuer", e.IP),
-			},
-			Rules: e.Rules,
+func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
+	subdomains := []*Subdomain{
+		subdomain("accounts", e.IP),
+		subdomain("api", e.IP),
+		subdomain("console", e.IP),
+		subdomain("issuer", e.IP),
+	}
+	for _, sd := range e.AdditionalDNS {
+		subdomains = append(subdomains, sd)
+	}
+
+	return &InternalDomain{
+			Domain:     e.Domain,
+			Subdomains: subdomains,
+			Rules:      e.Rules,
 		},
 		&current{
 			domain:            e.Domain,

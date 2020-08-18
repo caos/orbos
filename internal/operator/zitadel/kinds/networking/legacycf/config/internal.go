@@ -5,8 +5,8 @@ import (
 )
 
 type InternalConfig struct {
-	Domains            []*IntenalDomain `yaml:"domains"`
-	Groups             []*Group         `yaml:"groups"`
+	Domains            []*InternalDomain `yaml:"domains"`
+	Groups             []*Group          `yaml:"groups"`
 	Credentials        *Credentials
 	Prefix             string
 	Namespace          string
@@ -25,7 +25,7 @@ type Group struct {
 	List []string `yaml:"list"`
 }
 
-type IntenalDomain struct {
+type InternalDomain struct {
 	Domain     string       `yaml:"domain"`
 	Origin     *Origin      `yaml:"origin"`
 	Subdomains []*Subdomain `yaml:"subdomains"`
