@@ -14,54 +14,46 @@ import (
 )
 
 func RebootCommand(rv RootValues) *cobra.Command {
-	var (
-		command string
-		cmd     = &cobra.Command{
-			Use:   "reboot",
-			Short: "Gracefully reboot machines",
-			Long:  "Gracefully reboot machines",
-		}
-	)
-
-	flags := cmd.Flags()
-	flags.StringVar(&command, "command", "", "Command to be executed")
-
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
-
-		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error {
-
-			if len(args) <= 0 {
-				if err := survey.AskOne(&survey.MultiSelect{
-					Message: "Select machines:",
-					Options: machineIDs,
-				}, &args, survey.WithValidator(survey.Required)); err != nil {
-					return err
-				}
+	return &cobra.Command{
+		Use:   "reboot",
+		Short: "Gracefully reboot machines",
+		Long:  "Pass machine ids as arguments, omit arguments for selecting machines interactively",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			_, monitor, orbConfig, gitClient, errFunc := rv()
+			if errFunc != nil {
+				return errFunc(cmd)
 			}
 
-			var push bool
-			for _, arg := range args {
-				machine, found := machines[arg]
-				if !found {
-					panic(fmt.Sprintf("Machine with ID %s unknown", arg))
-				}
-				required, require, _ := machine.RebootRequired()
-				if !required {
-					require()
-					push = true
-				}
-			}
+			return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error {
 
-			if !push {
-				monitor.Info("Nothing changed")
-				return nil
-			}
-			return api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired)
-		})
+				if len(args) <= 0 {
+					if err := survey.AskOne(&survey.MultiSelect{
+						Message: "Select machines:",
+						Options: machineIDs,
+					}, &args, survey.WithValidator(survey.Required)); err != nil {
+						return err
+					}
+				}
+
+				var push bool
+				for _, arg := range args {
+					machine, found := machines[arg]
+					if !found {
+						panic(fmt.Sprintf("Machine with ID %s unknown", arg))
+					}
+					required, require, _ := machine.RebootRequired()
+					if !required {
+						require()
+						push = true
+					}
+				}
+
+				if !push {
+					monitor.Info("Nothing changed")
+					return nil
+				}
+				return api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired)
+			})
+		},
 	}
-	return cmd
 }
