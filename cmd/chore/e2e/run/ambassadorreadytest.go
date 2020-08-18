@@ -34,7 +34,7 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 			ProviderUnderTest struct {
 				Current struct {
 					Ingresses struct {
-						Httpsingress struct {
+						Httpingress struct {
 							Location     string
 							Frontendport uint16
 						}
@@ -48,7 +48,7 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 		return err
 	}
 
-	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpsingress
+	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpingress
 	resp, err := http.Get(fmt.Sprintf("https://%s:%d/ambassador/v0/check_ready", ep.Location, ep.Frontendport))
 	if err != nil {
 		return err
