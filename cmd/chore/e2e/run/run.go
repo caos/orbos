@@ -44,10 +44,10 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 			/*  2 */ destroyTest,
 			/*  3 */ bootstrapTest,
 			/*  4 */ ensureORBITERTest(5*time.Minute),
-			/*  5 */ patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3"),
+			/*  5 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
 			/*  6 */ waitTest(15*time.Second),
-			/*  7 */ ensureORBITERTest(20*time.Minute),
-			/*  8 */ patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.0"),
+			/*  7 */ retry(3, ensureORBITERTest(20*time.Minute)),
+			/*  8 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.0")),
 			/*  9 */ waitTest(15*time.Second),
 			/* 10 */ ensureORBITERTest(60*time.Minute),
 			/* 11 */ ambassadorReadyTest,
@@ -85,4 +85,18 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 		fmt.Printf("\033[1;32m%s succeeded\033[0m", fnName)
 	}
 	return nil
+}
+
+func retry(count uint8, fn func(newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+	return func(newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error {
+		return try(count, newOrbctl, newKubectl, fn)
+	}
+}
+
+func try(count uint8, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, fn func(newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error) error {
+	err := fn(newOrbctl, newKubectl)
+	if err != nil && count > 0 {
+		return try(count-1, newOrbctl, newKubectl, fn)
+	}
+	return err
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -10,21 +9,13 @@ import (
 
 func ensureORBITERTest(timeout time.Duration) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(_ newOrbctlCommandFunc, kubectl newKubectlCommandFunc) error {
-		return watchLogs(kubectl, time.NewTimer(timeout))
-	}
-}
+		cmd := kubectl()
+		cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "-f", "-l", "app=orbiter")
+		cmd.Stderr = os.Stderr
 
-func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
-	cmd := kubectl()
-	cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "-f", "-l", "app=orbiter")
-	cmd.Stderr = os.Stderr
-
-	err := simpleRunCommand(cmd, timer, func(line string) (goon bool) {
-		fmt.Println(line)
-		return !strings.Contains(line, "Desired state is ensured")
-	})
-	if err != nil && !errors.Is(err, errTimeout) {
-		return watchLogs(kubectl, timer)
+		return simpleRunCommand(cmd, time.NewTimer(timeout), func(line string) (goon bool) {
+			fmt.Println(line)
+			return !strings.Contains(line, "Desired state is ensured")
+		})
 	}
-	return err
 }
