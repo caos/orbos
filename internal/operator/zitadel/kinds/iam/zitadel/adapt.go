@@ -116,6 +116,16 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
+		queryS, destroyS, getClientID, err := services.AdaptFunc(internalMonitor, namespaceStr, internalLabels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(internalMonitor, namespaceStr, imagePullSecretName, internalLabels)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		queryC, destroyC, configurationDone, getConfigurationHashes, err := configuration.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
@@ -129,17 +139,8 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			secretVarsName,
 			secretPasswordName,
 			users,
+			getClientID,
 		)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		queryS, destroyS, err := services.AdaptFunc(internalMonitor, namespaceStr, internalLabels, grpcServiceName, grpcPort, httpServiceName, httpPort, uiServiceName, uiPort)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(internalMonitor, namespaceStr, imagePullSecretName, internalLabels)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -149,7 +150,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryD, destroyD, deploymentDone, scaleDeployment, err := deployment.AdaptFunc(
+		queryD, destroyD, deploymentReady, scaleDeployment, ensureInit, err := deployment.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
 			internalLabels,
@@ -214,7 +215,8 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 					queryS,
 					zitadel.ResourceQueryToZitadelQuery(queryIPS),
 					queryD,
-					zitadel.EnsureFuncToQueryFunc(deploymentDone),
+					zitadel.EnsureFuncToQueryFunc(ensureInit),
+					zitadel.EnsureFuncToQueryFunc(deploymentReady),
 				)
 			case "restore":
 				queriers = append(queriers,

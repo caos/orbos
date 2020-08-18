@@ -39,6 +39,7 @@ func AdaptFunc(
 	zitadel.DestroyFunc,
 	zitadel.EnsureFunc,
 	func(replicaCount int) zitadel.EnsureFunc,
+	zitadel.EnsureFunc,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "deployment")
@@ -49,6 +50,7 @@ func AdaptFunc(
 	runAsUser := int64(1000)
 	runAsNonRoot := true
 	certMountPath := "/dbsecrets"
+	containerName := "zitadel"
 
 	volumnes := []v1.Volume{{
 		Name: secretName,
@@ -206,11 +208,12 @@ func AdaptFunc(
 									},
 								},
 							},
+							Args: []string{"start"},
 							SecurityContext: &v1.SecurityContext{
 								RunAsUser:    &runAsUser,
 								RunAsNonRoot: &runAsNonRoot,
 							},
-							Name:            "zitadel",
+							Name:            containerName,
 							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:" + version,
 							ImagePullPolicy: "IfNotPresent",
 							Ports: []v1.ContainerPort{
@@ -224,6 +227,28 @@ func AdaptFunc(
 									LocalObjectReference: v1.LocalObjectReference{Name: cmName},
 								}}},
 							VolumeMounts: volMounts,
+							LivenessProbe: &v1.Probe{
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Path:   "/healthz",
+										Port:   intstr.Parse("http"),
+										Scheme: "HTTP",
+									},
+								},
+								PeriodSeconds:    5,
+								FailureThreshold: 2,
+							},
+							ReadinessProbe: &v1.Probe{
+								Handler: v1.Handler{
+									HTTPGet: &v1.HTTPGetAction{
+										Path:   "/ready",
+										Port:   intstr.Parse("http"),
+										Scheme: "HTTP",
+									},
+								},
+								PeriodSeconds:    5,
+								FailureThreshold: 2,
+							},
 						},
 					},
 					ImagePullSecrets: []v1.LocalObjectReference{{
@@ -237,10 +262,30 @@ func AdaptFunc(
 
 	destroy, err := deployment.AdaptFuncToDestroy(namespace, deployName)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroy),
+	}
+
+	checkDeployRunning := func(k8sClient *kubernetes.Client) error {
+		internalMonitor.Info("waiting for deployment to be running")
+		if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, false, 60); err != nil {
+			internalMonitor.Error(errors.Wrap(err, "error while waiting for deployment to be running"))
+			return err
+		}
+		internalMonitor.Info("deployment is running")
+		return nil
+	}
+
+	checkDeployNotReady := func(k8sClient *kubernetes.Client) error {
+		internalMonitor.Info("checking for statefulset to not be ready")
+		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, deployName, true, true, 1); err != nil {
+			internalMonitor.Info("statefulset is not ready")
+			return nil
+		}
+		internalMonitor.Info("statefulset is ready")
+		return errors.New("statefulset is ready")
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
@@ -279,7 +324,7 @@ func AdaptFunc(
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		func(k8sClient *kubernetes.Client) error {
 			internalMonitor.Info("waiting for deployment to be ready")
-			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, 60); err != nil {
+			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, true, 60); err != nil {
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for deployment to be ready"))
 				return err
 			}
@@ -291,6 +336,22 @@ func AdaptFunc(
 				internalMonitor.Info("Scaling deployment")
 				return k8sClient.ScaleDeployment(namespace, deployName, replicaCount)
 			}
+		},
+		func(k8sClient *kubernetes.Client) error {
+			if err := checkDeployRunning(k8sClient); err != nil {
+				return err
+			}
+
+			if err := checkDeployNotReady(k8sClient); err != nil {
+				return nil
+			}
+
+			command := "/zitadel setup"
+
+			if err := k8sClient.ExecInPodOfDeployment(namespace, deployName, containerName, command); err != nil {
+				return err
+			}
+			return nil
 		},
 		nil
 }

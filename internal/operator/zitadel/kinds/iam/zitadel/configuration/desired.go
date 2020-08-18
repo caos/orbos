@@ -3,12 +3,11 @@ package configuration
 import "github.com/caos/orbos/internal/secret"
 
 type Configuration struct {
-	Tracing                *Tracing       `yaml:"tracing,omitempty"`
-	Cache                  *Cache         `yaml:"cache,omitempty"`
-	Secrets                *Secrets       `yaml:"secrets,omitempty"`
-	Notifications          *Notifications `yaml:"notifications,omitempty"`
-	ConsoleEnvironmentJSON *secret.Secret `yaml:"consoleEnvironmentJSON,omitempty"`
-	Passwords              *Passwords     `yaml:"passwords,omitempty"`
+	Tracing       *Tracing       `yaml:"tracing,omitempty"`
+	Cache         *Cache         `yaml:"cache,omitempty"`
+	Secrets       *Secrets       `yaml:"secrets,omitempty"`
+	Notifications *Notifications `yaml:"notifications,omitempty"`
+	Passwords     *Passwords     `yaml:"passwords,omitempty"`
 }
 
 type Passwords struct {

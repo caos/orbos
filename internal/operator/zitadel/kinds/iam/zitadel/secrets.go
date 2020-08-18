@@ -50,11 +50,6 @@ func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
 
 	if desiredKind.Spec != nil && desiredKind.Spec.Configuration != nil {
 		conf := desiredKind.Spec.Configuration
-		if conf.ConsoleEnvironmentJSON == nil {
-			conf.ConsoleEnvironmentJSON = &secret.Secret{}
-		}
-		secrets["consoleenvironmentjson"] = conf.ConsoleEnvironmentJSON
-
 		if conf.Tracing != nil {
 			if conf.Tracing.ServiceAccountJSON == nil {
 				conf.Tracing.ServiceAccountJSON = &secret.Secret{}

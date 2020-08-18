@@ -148,7 +148,7 @@ func (c *Client) DeleteDeployment(namespace, name string) error {
 	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
-func (c *Client) WaitUntilDeploymentReady(namespace string, name string, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
@@ -169,8 +169,7 @@ func (c *Client) WaitUntilDeploymentReady(namespace string, name string, timeout
 		}
 		replicas := deploy.Spec.Replicas
 
-		returnChannel <- waitForPodsPhase(watch, int(*replicas), core.PodRunning, true, true)
-		returnChannel <- waitForPodsPhase(watch, 1, core.PodSucceeded, false, false)
+		returnChannel <- waitForPodsPhase(watch, int(*replicas), core.PodRunning, containerCheck, readyCheck)
 	}()
 
 	select {
@@ -1014,6 +1013,37 @@ func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, na
 	return c.dynamic.Resource(mapping.Resource).Namespace(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
+func (c *Client) ExecInPodOfDeployment(namespace, name, container, command string) error {
+	cmd := []string{
+		"sh",
+		"-c",
+		command,
+	}
+	deploy, err := c.GetDeployment(namespace, name)
+	if err != nil {
+		return err
+	}
+
+	labelSelector := ""
+	for k, v := range deploy.Spec.Selector.MatchLabels {
+		if labelSelector == "" {
+			labelSelector = fmt.Sprintf("%s=%s", k, v)
+		} else {
+			labelSelector = fmt.Sprintf("%s, %s=%s", labelSelector, k, v)
+		}
+	}
+	list, err := c.set.CoreV1().Pods(namespace).List(context.Background(), mach.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return err
+	}
+
+	firstPod := list.Items[0]
+	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(firstPod.Name).SubResource("exec")
+	return c.execInPod(cmd, container, req)
+}
+
 func (c *Client) ExecInPod(namespace, name, container, command string) error {
 	cmd := []string{
 		"sh",
@@ -1022,6 +1052,10 @@ func (c *Client) ExecInPod(namespace, name, container, command string) error {
 	}
 
 	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("exec")
+	return c.execInPod(cmd, container, req)
+}
+
+func (c *Client) execInPod(cmd []string, container string, req *rest.Request) error {
 	option := &core.PodExecOptions{
 		Command:   cmd,
 		Stdin:     false,

@@ -15,6 +15,13 @@ import (
 	"strings"
 )
 
+type ConsoleEnv struct {
+	AuthServiceURL string `json:"authServiceUrl"`
+	MgmtServiceURL string `json:"mgmtServiceUrl"`
+	Issuer         string `json:"issuer"`
+	ClientID       string `json:"clientid"`
+}
+
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
@@ -28,6 +35,7 @@ func AdaptFunc(
 	secretVarsName string,
 	secretPasswordName string,
 	users map[string]string,
+	getClientID func() string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -42,7 +50,6 @@ func AdaptFunc(
 
 	literalsSecret := literalsSecret(desired, googleServiceAccountJSONPath, zitadelKeysPath)
 	literalsSecretVars := literalsSecretVars(desired)
-	literalsConsoleCM := literalsConsoleCM(desired)
 
 	destroyCM, err := configmap.AdaptFuncToDestroy(namespace, cmName)
 	if err != nil {
@@ -74,11 +81,8 @@ func AdaptFunc(
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
+
 			queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, literalsSecret)
-			if err != nil {
-				return nil, err
-			}
-			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM)
 			if err != nil {
 				return nil, err
 			}
@@ -97,6 +101,11 @@ func AdaptFunc(
 			}
 
 			currentNW, err := corenw.ParseQueriedForNetworking(queried)
+			if err != nil {
+				return nil, err
+			}
+
+			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM(getClientID(), currentNW))
 			if err != nil {
 				return nil, err
 			}
@@ -147,7 +156,7 @@ func AdaptFunc(
 				secretVarsName:     getHash(literalsSecretVars),
 				secretPasswordName: getHash(users),
 				cmName:             getHash(literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB)),
-				consoleCMName:      getHash(literalsConsoleCM),
+				consoleCMName:      getHash(literalsConsoleCM(getClientID(), currentNW)),
 			}
 		},
 		nil
@@ -283,10 +292,26 @@ func literalsSecretVars(desired *Configuration) map[string]string {
 	return literalsSecretVars
 }
 
-func literalsConsoleCM(desired *Configuration) map[string]string {
+func literalsConsoleCM(
+	clientID string,
+	currentNW corenw.NetworkingCurrent,
+) map[string]string {
 	literalsConsoleCM := map[string]string{}
-	if desired != nil && desired.ConsoleEnvironmentJSON != nil {
-		literalsConsoleCM["environment.json"] = desired.ConsoleEnvironmentJSON.Value
+	consoleEnv := ConsoleEnv{
+		ClientID: clientID,
 	}
+
+	if currentNW != nil {
+		defaultDomain := currentNW.GetDomain()
+		consoleEnv.Issuer = "https://" + currentNW.GetIssuerSubDomain() + "." + defaultDomain
+		consoleEnv.AuthServiceURL = "https://" + currentNW.GetAPISubDomain() + "." + defaultDomain
+		consoleEnv.MgmtServiceURL = "https://" + currentNW.GetAPISubDomain() + "." + defaultDomain
+	}
+	data, err := json.Marshal(consoleEnv)
+	if err != nil {
+		return map[string]string{}
+	}
+
+	literalsConsoleCM["environment.json"] = string(data)
 	return literalsConsoleCM
 }
