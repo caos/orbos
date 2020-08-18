@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func AdaptFunc(
@@ -84,7 +85,7 @@ func AdaptFunc(
 		},
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		func() string {
-			resp, err := http.Get(httpServiceName + "." + namespace + ":" + strconv.Itoa(httpPort) + "/clientID")
+			resp, err := http.Get("http://" + httpServiceName + "." + namespace + ":" + strconv.Itoa(httpPort) + "/clientID")
 			if err != nil {
 				return ""
 			}
@@ -93,7 +94,7 @@ func AdaptFunc(
 			if err != nil {
 				return ""
 			}
-			return string(body)
+			return strings.TrimSuffix(strings.TrimPrefix(string(body), "\""), "\"")
 		},
 		nil
 }
