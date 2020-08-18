@@ -77,9 +77,12 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 			}
 		}
 
+		fnName := fmt.Sprintf("%s (%d. in stack)", runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), at)
+
 		if err := fn(orbctl, kubectl); err != nil {
-			return fmt.Errorf("%s (%d. in stack) failed: %w", runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), at, err)
+			return fmt.Errorf("%s failed: %w", fnName, err)
 		}
+		fmt.Printf("\033[1;32m%s succeeded\033[0m", fnName)
 	}
 	return nil
 }
