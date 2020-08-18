@@ -47,7 +47,7 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 			/*  5 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
 			/*  6 */ waitTest(15*time.Second),
 			/*  7 */ ensureORBITERTest(20*time.Minute),
-			/*  8 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v0.18.0")),
+			/*  8 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v1.18.0")),
 			/*  9 */ waitTest(15*time.Second),
 			/* 10 */ ensureORBITERTest(60*time.Minute),
 			/* 11 */ retry(3, ambassadorReadyTest),
