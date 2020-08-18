@@ -49,7 +49,7 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 	}
 
 	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpingress
-	resp, err := http.Get(fmt.Sprintf("https://%s:%d/ambassador/v0/check_ready", ep.Location, ep.Frontendport))
+	resp, err := http.Get(fmt.Sprintf("http://%s:%d/ambassador/v0/check_ready", ep.Location, ep.Frontendport))
 	if err != nil {
 		return err
 	}
