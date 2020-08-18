@@ -82,7 +82,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 		if err := fn(orbctl, kubectl); err != nil {
 			return fmt.Errorf("%s failed: %w", fnName, err)
 		}
-		fmt.Printf("\033[1;32m%s succeeded\033[0m", fnName)
+		fmt.Printf("\033[1;32m%s succeeded\033[0m\n", fnName)
 	}
 	return nil
 }
