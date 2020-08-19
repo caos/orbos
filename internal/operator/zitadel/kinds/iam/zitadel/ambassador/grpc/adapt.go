@@ -85,7 +85,7 @@ func AdaptFunc(
 				adminMName,
 				labels,
 				true,
-				"apiDomain",
+				apiDomain,
 				"/caos.zitadel.admin.api.v1.AdminService/",
 				"",
 				grpcURL,
