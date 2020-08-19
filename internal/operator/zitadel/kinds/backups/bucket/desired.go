@@ -8,7 +8,7 @@ import (
 
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
-	Spec   Spec
+	Spec   *Spec
 }
 
 type Spec struct {
@@ -21,7 +21,7 @@ type Spec struct {
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{
 		Common: desiredTree.Common,
-		Spec:   Spec{},
+		Spec:   &Spec{},
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {

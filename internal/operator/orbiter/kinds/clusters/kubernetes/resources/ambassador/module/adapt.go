@@ -19,8 +19,12 @@ const (
 
 func AdaptFuncToEnsure(namespace, name string, labels map[string]string, config *Config) (resources.QueryFunc, error) {
 	spec := map[string]interface{}{}
-	if config != nil && config.EnableGrpcWeb {
-		spec["enable_grpc_web"] = config.EnableGrpcWeb
+	if config != nil {
+		specConfig := map[string]interface{}{}
+		if config.EnableGrpcWeb {
+			specConfig["enable_grpc_web"] = config.EnableGrpcWeb
+		}
+		spec["config"] = specConfig
 	}
 
 	crd := &unstructured.Unstructured{

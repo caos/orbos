@@ -1,7 +1,8 @@
 package migration
 
 import (
-	"crypto/sha1"
+	"crypto/sha512"
+	"encoding/base64"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
@@ -76,10 +77,6 @@ func AdaptFunc(
 			internalLabels["app.kubernetes.io/component"] = "migration"
 
 			allScripts := scripts.GetAll()
-			hash, err := getHash(allScripts)
-			if err != nil {
-				return nil, err
-			}
 
 			jobDef := &batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
@@ -87,7 +84,7 @@ func AdaptFunc(
 					Namespace: namespace,
 					Labels:    internalLabels,
 					Annotations: map[string]string{
-						"migrationhash": hash,
+						"migrationhash": getHash(allScripts),
 					},
 				},
 				Spec: batchv1.JobSpec{
@@ -292,7 +289,7 @@ func migrationEnvVars(envMigrationUser, envMigrationPW, migrationUser, userPassw
 	return migrationEnvVars
 }
 
-func getHash(values map[string]string) (string, error) {
+func getHash(values map[string]string) string {
 	scriptsStr := ""
 	for k, v := range values {
 		if scriptsStr == "" {
@@ -302,11 +299,11 @@ func getHash(values map[string]string) (string, error) {
 		}
 	}
 
-	h := sha1.New()
+	h := sha512.New()
 	_, err := h.Write([]byte(scriptsStr))
 	if err != nil {
-		return "", err
+		return ""
 	}
 	hash := h.Sum(nil)
-	return string(hash), err
+	return base64.URLEncoding.EncodeToString(h.Sum(hash))
 }

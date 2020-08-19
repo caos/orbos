@@ -12,6 +12,7 @@ import (
 	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"strconv"
 	"strings"
 )
 
@@ -190,7 +191,7 @@ func literalsConfigMap(
 		"GOOGLE_APPLICATION_CREDENTIALS": secretPath + "/" + googleServiceAccountJSONPath,
 		"ZITADEL_KEY_PATH":               secretPath + "/" + zitadelKeysPath,
 		"ZITADEL_LOG_LEVEL":              "debug",
-		"DEBUG_MODE":                     "TRUE",
+		"DEBUG_MODE":                     strconv.FormatBool(desired.DebugMode),
 		"SMTP_TLS":                       tls,
 		"CAOS_OIDC_DEV":                  "true",
 		"CR_SSL_MODE":                    "require",

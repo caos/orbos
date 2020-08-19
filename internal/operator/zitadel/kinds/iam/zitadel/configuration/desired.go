@@ -8,6 +8,7 @@ type Configuration struct {
 	Secrets       *Secrets       `yaml:"secrets,omitempty"`
 	Notifications *Notifications `yaml:"notifications,omitempty"`
 	Passwords     *Passwords     `yaml:"passwords,omitempty"`
+	DebugMode     bool           `yaml:"debugMode"`
 }
 
 type Passwords struct {
