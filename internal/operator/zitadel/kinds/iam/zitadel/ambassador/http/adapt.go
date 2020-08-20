@@ -88,6 +88,15 @@ func AdaptFunc(
 			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
 			issuerDomain := currentNW.GetIssuerSubDomain() + "." + currentNW.GetDomain()
 
+			cors := &mapping.CORS{
+				Origins:        "*",
+				Methods:        "POST, GET, OPTIONS, DELETE, PUT",
+				Headers:        "*",
+				Credentials:    true,
+				ExposedHeaders: "*",
+				MaxAge:         "86400",
+			}
+
 			queryAdminR, err := mapping.AdaptFuncToEnsure(
 				namespace,
 				adminRName,
@@ -99,7 +108,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
@@ -116,7 +125,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
@@ -133,7 +142,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
@@ -150,7 +159,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
@@ -167,7 +176,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
@@ -184,7 +193,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
@@ -201,7 +210,7 @@ func AdaptFunc(
 				httpUrl,
 				"30000",
 				"30000",
-				nil,
+				cors,
 			)
 			if err != nil {
 				return nil, err
