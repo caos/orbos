@@ -3,6 +3,7 @@ package migration
 import (
 	"crypto/sha512"
 	"encoding/base64"
+	"encoding/json"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
@@ -77,6 +78,8 @@ func AdaptFunc(
 			internalLabels["app.kubernetes.io/component"] = "migration"
 
 			allScripts := scripts.GetAll()
+			gracePeriod := int64(30)
+			completions := int32(1)
 
 			jobDef := &batchv1.Job{
 				ObjectMeta: metav1.ObjectMeta{
@@ -88,8 +91,10 @@ func AdaptFunc(
 					},
 				},
 				Spec: batchv1.JobSpec{
+					Completions: &completions,
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
+							SecurityContext: &corev1.PodSecurityContext{},
 							InitContainers: []corev1.Container{
 								{
 									Name:  "check-db-ready",
@@ -99,6 +104,9 @@ func AdaptFunc(
 										"-c",
 										"until pg_isready -h " + dbHost + " -p " + dbPort + "; do echo waiting for database; sleep 2; done;",
 									},
+									TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+									TerminationMessagePolicy: "File",
+									ImagePullPolicy:          "IfNotPresent",
 								},
 								{
 									Name:  "create-flyway-user",
@@ -117,11 +125,13 @@ func AdaptFunc(
 										},
 											";"),
 									},
+									TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+									TerminationMessagePolicy: "File",
+									ImagePullPolicy:          "IfNotPresent",
 								},
 								{
-									Name:            "db-migration",
-									Image:           "flyway/flyway:6.5.0",
-									ImagePullPolicy: "Always",
+									Name:  "db-migration",
+									Image: "flyway/flyway:6.5.0",
 									Args: []string{
 										"-url=jdbc:postgresql://" + dbHost + ":" + dbPort + "/defaultdb?&sslmode=verify-full&ssl=true&sslrootcert=" + rootUserPath + "/ca.crt&sslfactory=org.postgresql.ssl.NonValidatingFactory",
 										"-locations=filesystem:" + migrationsPath,
@@ -135,6 +145,9 @@ func AdaptFunc(
 										Name:      rootUserInternal,
 										MountPath: rootUserPath,
 									}},
+									TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+									TerminationMessagePolicy: "File",
+									ImagePullPolicy:          "IfNotPresent",
 								},
 							},
 							Containers: []corev1.Container{
@@ -153,14 +166,21 @@ func AdaptFunc(
 										Name:      rootUserInternal,
 										MountPath: rootUserPath,
 									}},
+									TerminationMessagePath:   corev1.TerminationMessagePathDefault,
+									TerminationMessagePolicy: "File",
+									ImagePullPolicy:          "IfNotPresent",
 								},
 							},
-							RestartPolicy: "Never",
+							RestartPolicy:                 "Never",
+							DNSPolicy:                     "ClusterFirst",
+							SchedulerName:                 "default-scheduler",
+							TerminationGracePeriodSeconds: &gracePeriod,
 							Volumes: []corev1.Volume{{
 								Name: migrationConfigmap,
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{Name: migrationConfigmap},
+										DefaultMode:          &defaultMode,
 									},
 								},
 							}, {
@@ -289,21 +309,30 @@ func migrationEnvVars(envMigrationUser, envMigrationPW, migrationUser, userPassw
 	return migrationEnvVars
 }
 
-func getHash(values map[string]string) string {
-	scriptsStr := ""
-	for k, v := range values {
-		if scriptsStr == "" {
-			scriptsStr = k + ": " + v
-		} else {
-			scriptsStr = scriptsStr + "," + k + ": " + v
-		}
-	}
-
-	h := sha512.New()
-	_, err := h.Write([]byte(scriptsStr))
+func getHash(dataMap map[string]string) string {
+	data, err := json.Marshal(dataMap)
 	if err != nil {
 		return ""
 	}
-	hash := h.Sum(nil)
-	return base64.URLEncoding.EncodeToString(h.Sum(hash))
+	h := sha512.New()
+	return base64.URLEncoding.EncodeToString(h.Sum(data))
 }
+
+//func getHash(values map[string]string) string {
+//	scriptsStr := ""
+//	for k, v := range values {
+//		if scriptsStr == "" {
+//			scriptsStr = k + ": " + v
+//		} else {
+//			scriptsStr = scriptsStr + "," + k + ": " + v
+//		}
+//	}
+//
+//	h := sha512.New()
+//	_, err := h.Write([]byte(scriptsStr))
+//	if err != nil {
+//		return ""
+//	}
+//	hash := h.Sum(nil)
+//	return base64.URLEncoding.EncodeToString(h.Sum(hash))
+//}

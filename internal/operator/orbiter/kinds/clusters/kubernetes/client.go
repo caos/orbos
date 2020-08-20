@@ -201,6 +201,10 @@ func (c *Client) DeleteService(namespace, name string) error {
 	return c.set.CoreV1().Services(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
+func (c *Client) GetJob(namespace, name string) (*batch.Job, error) {
+	return c.set.BatchV1().Jobs(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
+
 func (c *Client) ApplyJob(rsc *batch.Job) error {
 	resources := c.set.BatchV1().Jobs(rsc.Namespace)
 	return c.apply("job", rsc.GetName(), func() error {
