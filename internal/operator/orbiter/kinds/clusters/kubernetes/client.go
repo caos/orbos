@@ -255,7 +255,17 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSec
 }
 
 func (c *Client) DeleteJob(namespace string, name string) error {
-	return c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	job, err := c.GetJob(namespace, name)
+	if err != nil {
+		return err
+	}
+
+	if err := c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
+		return err
+	}
+
+	//Pod cleanup if necessary
+	return c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels)
 }
 
 func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
@@ -868,9 +878,14 @@ func safeUint64(ptr *int64) int64 {
 	}
 	return *ptr
 }
+func (c *Client) DeletePodsByLabels(namespace string, labels map[string]string) error {
+	return c.set.CoreV1().Pods(namespace).DeleteCollection(context.Background(), mach.DeleteOptions{}, mach.ListOptions{
+		LabelSelector: getLabelSelector(labels),
+	})
+}
 
-func (c *Client) deletePod(pod *core.Pod) error {
-	return c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{})
+func (c *Client) DeletePod(namespace, name string) error {
+	return c.set.CoreV1().Pods(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func getLabelSelector(labels map[string]string) string {
