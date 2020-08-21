@@ -180,7 +180,6 @@ func AdaptFunc(
 								VolumeSource: corev1.VolumeSource{
 									ConfigMap: &corev1.ConfigMapVolumeSource{
 										LocalObjectReference: corev1.LocalObjectReference{Name: migrationConfigmap},
-										DefaultMode:          &defaultMode,
 									},
 								},
 							}, {
