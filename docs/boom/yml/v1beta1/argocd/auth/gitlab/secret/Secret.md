@@ -7,9 +7,8 @@
 ## Structure 
  
 
-| Attribute  | Description                          | Default | Collection  |
-| ---------- | ------------------------------------ | ------- | ----------  |
-| encryption | Used encryption for the secret       |         |             |
-| encoding   | Used encoding for the secret         |         |             |
-| value      | Value after encryption and encoding  |         |             |
-| -          |                                      |         |             |
+| Attribute  | Description                               | Default | Collection  |
+| ---------- | ----------------------------------------- | ------- | ----------  |
+| encryption | Encryption algorithm used for the secret  |         |             |
+| encoding   | Encoding algorithm used for the secret    |         |             |
+| value      | Encrypted and encoded Value               |         |             |
