@@ -60,6 +60,17 @@ func AdaptFunc(
 	certsInternal := "certs"
 	clientCertsInternal := "client-certs"
 
+	affinity := make([]metav1.LabelSelectorRequirement, 0)
+	for k, v := range labels {
+		affinity = append(affinity, metav1.LabelSelectorRequirement{
+			Key:      k,
+			Operator: metav1.LabelSelectorOpIn,
+			Values: []string{
+				v,
+			}})
+
+	}
+
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -80,18 +91,12 @@ func AdaptFunc(
 					NodeSelector:       nodeSelector,
 					ServiceAccountName: serviceAccountName,
 					Affinity: &corev1.Affinity{
-						PodAffinity: &corev1.PodAffinity{
+						PodAntiAffinity: &corev1.PodAntiAffinity{
 							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
 								Weight: 100,
 								PodAffinityTerm: corev1.PodAffinityTerm{
 									LabelSelector: &metav1.LabelSelector{
-										MatchExpressions: []metav1.LabelSelectorRequirement{{
-											Key:      "app",
-											Operator: "In",
-											Values: []string{
-												"cockroachdb",
-											}},
-										},
+										MatchExpressions: affinity,
 									},
 									TopologyKey: "kubernetes.io/hostname",
 								},
