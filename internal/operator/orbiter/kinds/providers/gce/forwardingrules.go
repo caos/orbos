@@ -27,21 +27,9 @@ func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalan
 createLoop:
 	for _, lb := range loadbalancing {
 		for _, gceRule := range gceRules.Items {
-			if gceRule.Description == lb.forwardingRule.gce.Description {
+			if gceRule.Description == lb.forwardingRule.gce.Description && gceRule.PortRange == lb.forwardingRule.gce.PortRange {
 				assignRefs(lb)
 				lb.forwardingRule.gce.Name = gceRule.Name
-				if gceRule.PortRange != lb.forwardingRule.gce.PortRange {
-					ensure = append(ensure, operateFunc(
-						func() {
-							assignRefs(lb)
-							lb.forwardingRule.log("Patching forwarding rule", true)
-						},
-						computeOpCall(context.client.ForwardingRules.Patch(context.projectID, context.desired.Region, gceRule.Name, lb.forwardingRule.gce).
-							RequestId(uuid.NewV1().String()).
-							Do),
-						toErrFunc(lb.forwardingRule.log("Forwarding rule patched", false)),
-					))
-				}
 				continue createLoop
 			}
 		}
