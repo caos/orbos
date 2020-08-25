@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/caos/orbos/internal/secret/operators"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -14,7 +15,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/mntr"
@@ -192,8 +192,8 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, erro
 		value, err := secret.Read(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(),
-			path)
+			path,
+			operators.GetAllSecretsFunc())
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")
 		}

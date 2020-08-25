@@ -157,10 +157,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err := secret.Rewrite(
 				monitor,
 				gitClient,
-				"orbiter",
 				rewriteKey,
 				desired,
-			); err != nil {
+				api.PushOrbiterDesiredFunc); err != nil {
 				panic(err)
 			}
 
@@ -203,9 +202,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err := secret.Rewrite(
 				monitor,
 				gitClient,
-				"boom",
 				rewriteKey,
-				tree); err != nil {
+				tree,
+				api.PushBoomDesiredFunc); err != nil {
 				return err
 			}
 		}
