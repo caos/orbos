@@ -11,7 +11,7 @@ func ensure(
 	clusterID string,
 	desired *DesiredV0,
 	kubeAPIAddress *infra.Address,
-	psf api.SecretFunc,
+	pdf api.PushDesiredFunc,
 	k8sClient *Client,
 	oneoff bool,
 	controlplane initializedPool,
@@ -22,23 +22,9 @@ func ensure(
 	uninitializeMachine uninitializeMachineFunc,
 ) (done bool, err error) {
 
-	initialized := true
-	for _, machine := range append(controlplaneMachines, workerMachines...) {
-
-		if err := machine.reconcile(); err != nil {
-			return false, err
-		}
-
-		machineMonitor := monitor.WithField("machine", machine.infra.ID())
-
-		if !machine.currentMachine.FirewallIsReady {
-			initialized = false
-			machineMonitor.Info("Firewall is not ready yet")
-		}
-	}
-
-	if !initialized {
-		return false, nil
+	done, err = maintainNodes(append(controlplaneMachines, workerMachines...), monitor, k8sClient, pdf)
+	if err != nil || !done {
+		return done, err
 	}
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
@@ -58,7 +44,7 @@ func ensure(
 		monitor,
 		clusterID,
 		desired,
-		psf,
+		pdf,
 		controlplane,
 		workers,
 		kubeAPIAddress,

@@ -1,3 +1,4 @@
+//go:generate stringer -type=drainReason
 //go:generate goderive .
 
 package kubernetes
@@ -39,6 +40,8 @@ import (
 	"sync"
 	"time"
 )
+
+const taintKeyPrefix = "node.orbos.ch/"
 
 type NodeWithKubeadm interface {
 	Execute(stdin io.Reader, cmd string) ([]byte, error)
@@ -659,7 +662,7 @@ func (c *Client) updateNode(node *core.Node) (err error) {
 	return err
 }
 
-func (c *Client) cordon(node *core.Node) (err error) {
+func (c *Client) cordon(node *core.Node, reason drainReason) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
 	}()
@@ -669,7 +672,14 @@ func (c *Client) cordon(node *core.Node) (err error) {
 	})
 	monitor.Info("Cordoning node")
 
-	node.Spec.Unschedulable = true
+	if c.Tainted(node, reason) {
+		return nil
+	}
+	node.Spec.Taints = append(node.Spec.Taints, core.Taint{
+		Key:    taintKeyPrefix + reason.String(),
+		Effect: "NoSchedule",
+	})
+
 	if err := c.updateNode(node); err != nil {
 		return err
 	}
@@ -677,27 +687,37 @@ func (c *Client) cordon(node *core.Node) (err error) {
 	return nil
 }
 
-func (c *Client) Uncordon(machine *Machine, node *core.Node) (err error) {
-	defer func() {
-		err = errors.Wrapf(err, "uncordoning node %s failed", node.GetName())
-	}()
-	monitor := c.monitor.WithFields(map[string]interface{}{
-		"machine": node.GetName(),
-	})
-	monitor.Info("Uncordoning node")
-
-	node.Spec.Unschedulable = false
-	if err := c.updateNode(node); err != nil {
-		return err
-	}
-	if !machine.Online {
-		machine.Online = true
-		monitor.Changed("Node uncordoned")
-	}
-	return nil
+func (c *Client) Tainted(node *core.Node, reason drainReason) bool {
+	return c.tainted(node.Spec.Taints, reason) != -1
 }
 
-func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
+func (c *Client) tainted(taints []core.Taint, reason drainReason) int {
+
+	for idx, taint := range taints {
+		if taint.Key == taintKeyPrefix+reason.String() {
+			return idx
+		}
+	}
+	return -1
+}
+
+func (c *Client) RemoveFromTaints(taints []core.Taint, reason drainReason) (result []core.Taint) {
+	idx := c.tainted(taints, reason)
+	if idx < 0 {
+		return taints
+	}
+	return append(taints[0:idx], taints[idx+1:]...)
+}
+
+type drainReason int
+
+const (
+	updating drainReason = iota
+	rebooting
+	deleting
+)
+
+func (c *Client) Drain(machine *Machine, node *core.Node, reason drainReason) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
@@ -707,21 +727,21 @@ func (c *Client) Drain(machine *Machine, node *core.Node) (err error) {
 	})
 	monitor.Info("Draining node")
 
-	if err = c.cordon(node); err != nil {
+	if err = c.cordon(node, reason); err != nil {
 		return err
 	}
 
 	if err := c.evictPods(node); err != nil {
 		return err
 	}
-	if machine.Online {
-		machine.Online = false
+	if !machine.Updating {
+		machine.Updating = true
 		monitor.Changed("Node drained")
 	}
 	return nil
 }
 
-func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubeadm, drain bool) (err error) {
+func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubeadm) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "deleting node %s failed", name)
@@ -742,7 +762,7 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 			return errors.Wrapf(err, "getting node %s from kube api failed", name)
 		}
 
-		if err = c.Drain(machine, nodeStruct); err != nil {
+		if err = c.Drain(machine, nodeStruct, deleting); err != nil {
 			return err
 		}
 	}
@@ -761,8 +781,8 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	if err := api.Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
 		return err
 	}
-	if machine.Online || machine.Joined {
-		machine.Online = false
+	if !machine.Updating || machine.Joined {
+		machine.Updating = true
 		machine.Joined = false
 		monitor.Changed("Node deleted")
 	}

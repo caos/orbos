@@ -179,6 +179,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		),
 		false,
 		machine,
+		false,
+		func() {},
+		func() {},
 	)
 
 	for _, name := range diskNames {
@@ -274,6 +277,18 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 			machine = sshMachine
 		}
 
+		rebootRequired := false
+		unrequireReboot := func() {}
+		for idx, req := range m.context.desired.RebootRequired {
+			if req == inst.Name {
+				rebootRequired = true
+				unrequireReboot = func() {
+					m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:idx], m.context.desired.RebootRequired[idx+1:]...)
+				}
+				break
+			}
+		}
+
 		mach := newMachine(
 			m.context,
 			m.context.monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
@@ -284,6 +299,11 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 			m.removeMachineFunc(pool, inst.Name),
 			inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
 			machine,
+			rebootRequired,
+			func(id string) func() {
+				return func() { m.context.desired.RebootRequired = append(m.context.desired.RebootRequired, id) }
+			}(inst.Name),
+			unrequireReboot,
 		)
 
 		m.cache.instances[pool] = append(m.cache.instances[pool], mach)

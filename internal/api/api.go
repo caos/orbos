@@ -14,7 +14,7 @@ const (
 	zitadelFile = "zitadel.yml"
 )
 
-type SecretFunc func(monitor mntr.Monitor) error
+type PushDesiredFunc func(monitor mntr.Monitor) error
 
 func ExistsOrbiterYml(gitClient *git.Client) (bool, error) {
 	return existsFileInGit(gitClient, orbiterFile)
@@ -28,10 +28,10 @@ func PushOrbiterYml(monitor mntr.Monitor, msg string, gitClient *git.Client, des
 	return pushFileInGit(monitor, msg, gitClient, desired, orbiterFile)
 }
 
-func OrbiterSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
+func PushOrbiterDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
-		monitor.Info("Writing orbiter secrets")
-		return PushOrbiterYml(monitor, "Orbiter secrets written", gitClient, desired)
+		monitor.Info("Writing orbiter desired state")
+		return PushOrbiterYml(monitor, "Orbiter desired state written", gitClient, desired)
 	}
 }
 
@@ -47,10 +47,10 @@ func PushBoomYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desire
 	return pushFileInGit(monitor, msg, gitClient, desired, boomFile)
 }
 
-func BoomSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
+func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
-		monitor.Info("Writing boom secrets")
-		return PushBoomYml(monitor, "Boom secrets written", gitClient, desired)
+		monitor.Info("Writing boom desired state")
+		return PushBoomYml(monitor, "Boom desired state written", gitClient, desired)
 	}
 }
 
@@ -66,10 +66,10 @@ func PushZitadelYml(monitor mntr.Monitor, msg string, gitClient *git.Client, des
 	return pushFileInGit(monitor, msg, gitClient, desired, zitadelFile)
 }
 
-func ZitadelSecretFunc(gitClient *git.Client, desired *tree.Tree) SecretFunc {
+func PushZitadelDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
-		monitor.Info("Writing zitadel secrets")
-		return PushZitadelYml(monitor, "Zitadel secrets written", gitClient, desired)
+		monitor.Info("Writing zitadel desired state")
+		return PushZitadelYml(monitor, "Zitadel desired state written", gitClient, desired)
 	}
 }
 

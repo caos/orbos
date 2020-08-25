@@ -172,7 +172,7 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf api.SecretFunc) *orbiter.EnsureResult {
+				return func(psf api.PushDesiredFunc) *orbiter.EnsureResult {
 					defer func() {
 						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 					}()

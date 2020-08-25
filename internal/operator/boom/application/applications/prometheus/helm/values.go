@@ -126,6 +126,8 @@ type RelabelConfig struct {
 	SourceLabels []string `yaml:"source_labels,omitempty"`
 	TargetLabel  string   `yaml:"target_label,omitempty"`
 	Replacement  string   `yaml:"replacement,omitempty"`
+	Modulus      uint64   `yaml:"modulus,omitempty"`
+	Separator    string   `yaml:"separator,omitempty"`
 }
 
 type ValuesRelabelConfig struct {
@@ -134,6 +136,8 @@ type ValuesRelabelConfig struct {
 	SourceLabels []string `yaml:"sourceLabels,omitempty"`
 	TargetLabel  string   `yaml:"targetLabel,omitempty"`
 	Replacement  string   `yaml:"replacement,omitempty"`
+	Modulus      uint64   `yaml:"modulus,omitempty"`
+	Separator    string   `yaml:"separator,omitempty"`
 }
 
 type AdditionalScrapeConfig struct {

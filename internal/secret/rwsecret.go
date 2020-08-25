@@ -6,12 +6,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+
 	"github.com/caos/orbos/internal/api"
 
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
-
-	"github.com/manifoldco/promptui"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/mntr"
@@ -74,12 +74,12 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, operator, newMasterKey
 		Masterkey = oldMasterKey
 	}()
 
-	if operator == orbiter {
-		return api.OrbiterSecretFunc(gitClient, desired)(monitor)
-	} else if operator == boom {
-		return api.BoomSecretFunc(gitClient, desired)(monitor)
+	if operator == "orbiter" {
+		return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
+	} else if operator == "boom" {
+		return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
 	} else if operator == zitadel {
-		return api.ZitadelSecretFunc(gitClient, desired)(monitor)
+		return api.PushZitadelDesiredFunc(gitClient, desired)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -100,12 +100,12 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 		secret.Value = value
 	}
 
-	if operator == orbiter {
-		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
-	} else if operator == boom {
-		return api.BoomSecretFunc(gitClient, tree)(monitor)
+	if operator == "orbiter" {
+		return api.PushOrbiterDesiredFunc(gitClient, tree)(monitor)
+	} else if operator == "boom" {
+		return api.PushBoomDesiredFunc(gitClient, tree)(monitor)
 	} else if operator == zitadel {
-		return api.ZitadelSecretFunc(gitClient, tree)(monitor)
+		return api.PushZitadelDesiredFunc(gitClient, tree)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -224,16 +224,13 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 		return iDots < jDots || iDots == jDots && selectItems[i] < selectItems[j]
 	})
 
-	prompt := promptui.Select{
-		Label: "Select Secret",
-		Items: selectItems,
-	}
-
-	_, result, err := prompt.Run()
-	if err != nil {
+	var result string
+	if err := survey.AskOne(&survey.Select{
+		Message: "Select a secret:",
+		Options: selectItems,
+	}, &result, survey.WithValidator(survey.Required)); err != nil {
 		return nil, nil, "", err
 	}
-
 	sec, err := exactSecret(secretsAll, result)
 	if strings.HasPrefix(result, orbiter) {
 		return sec, treeDesiredOrbiter, orbiter, err

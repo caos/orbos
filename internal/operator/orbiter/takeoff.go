@@ -36,9 +36,9 @@ func NoopConfigure(orb orbconfig.Orb) error {
 
 type QueryFunc func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, queried map[string]interface{}) (EnsureFunc, error)
 
-type EnsureFunc func(psf api.SecretFunc) *EnsureResult
+type EnsureFunc func(pdf api.PushDesiredFunc) *EnsureResult
 
-func NoopEnsure(_ api.SecretFunc) *EnsureResult {
+func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
 	return &EnsureResult{Done: true}
 }
 
@@ -192,7 +192,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		//		events = make([]*event, 0)
 
 		ensureFunc := func() *EnsureResult {
-			return ensure(api.OrbiterSecretFunc(conf.GitClient, treeDesired))
+			return ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
 		}
 
 		result := EnsureFuncGoroutine(ensureFunc)
