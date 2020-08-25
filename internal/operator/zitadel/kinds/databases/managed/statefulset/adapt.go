@@ -153,6 +153,16 @@ func AdaptFunc(
 							"-ecx",
 							joinExec,
 						},
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								"cpu":    resource.MustParse("1500m"),
+								"memory": resource.MustParse("6G"),
+							},
+							Limits: corev1.ResourceList{
+								"cpu":    resource.MustParse("1500m"),
+								"memory": resource.MustParse("6G"),
+							},
+						},
 					}},
 					Volumes: []corev1.Volume{{
 						Name: datadirInternal,
