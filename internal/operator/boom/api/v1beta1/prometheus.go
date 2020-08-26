@@ -14,6 +14,8 @@ type Prometheus struct {
 	Storage *storage.Spec `json:"storage,omitempty" yaml:"storage,omitempty"`
 	//Configuration to write to remote prometheus
 	RemoteWrite *RemoteWrite `json:"remoteWrite,omitempty" yaml:"remoteWrite,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.

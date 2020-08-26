@@ -126,6 +126,7 @@ type GrafanaValues struct {
 	Service                  *Service            `yaml:"service,omitempty"`
 	Labels                   map[string]string   `yaml:"labels,omitempty"`
 	PodLabels                map[string]string   `yaml:"podLabels,omitempty"`
+	NodeSelector             map[string]string   `yaml:"nodeSelector,omitempty"`
 }
 
 type Rules struct {

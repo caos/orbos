@@ -111,6 +111,12 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 			values.Server.Config.Dex = conf.Connectors
 
 			values.Dex = helm.DefaultDexValues(imageTags)
+
+			if spec.NodeSelector != nil {
+				for k, v := range spec.NodeSelector {
+					values.Dex.NodeSelector[k] = v
+				}
+			}
 			values.Server.Config.URL = strings.Join([]string{"https://", spec.Network.Domain}, "")
 		}
 	}
@@ -143,6 +149,16 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 		}
 
 		values.Configs.KnownHosts.Data["ssh_known_hosts"] = knownHostsStr
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.Dex.NodeSelector[k] = v
+			values.RepoServer.NodeSelector[k] = v
+			values.Redis.NodeSelector[k] = v
+			values.Controller.NodeSelector[k] = v
+			values.Server.NodeSelector[k] = v
+		}
 	}
 
 	return values

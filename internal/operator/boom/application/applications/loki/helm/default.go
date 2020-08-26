@@ -2,6 +2,7 @@ package helm
 
 func DefaultValues(imageTags map[string]string) *Values {
 	return &Values{
+		NodeSelector: map[string]string{},
 		Env: []*Env{
 			&Env{Name: "WORKAROUND", Value: "ignorethis"},
 		},

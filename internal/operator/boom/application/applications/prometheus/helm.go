@@ -161,6 +161,12 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 
 	values.FullnameOverride = info.GetInstanceName()
 
+	if toolsetCRDSpec.MetricsPersisting.NodeSelector != nil {
+		for k, v := range toolsetCRDSpec.MetricsPersisting.NodeSelector {
+			values.Prometheus.PrometheusSpec.NodeSelector[k] = v
+		}
+	}
+
 	return values
 }
 

@@ -37,6 +37,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			SelfMonitor: false,
 		},
 		PrometheusSpec: &PrometheusSpec{
+			NodeSelector: map[string]string{},
 			Image: &Image{
 				Repository: "quay.io/prometheus/prometheus",
 				Tag:        imageTags["quay.io/prometheus/prometheus"],

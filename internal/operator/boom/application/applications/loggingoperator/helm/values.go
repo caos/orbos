@@ -1,17 +1,17 @@
 package helm
 
 type Values struct {
-	ReplicaCount     int       `yaml:"replicaCount"`
-	Image            Image     `yaml:"image"`
-	ImagePullSecrets []string  `yaml:"imagePullSecrets"`
-	NameOverride     string    `yaml:"nameOverride"`
-	FullnameOverride string    `yaml:"fullnameOverride"`
-	Resources        Resources `yaml:"resources"`
-	NodeSelector     struct{}  `yaml:"nodeSelector"`
-	Tolerations      []string  `yaml:"tolerations"`
-	Affinity         struct{}  `yaml:"affinity"`
-	HTTP             HTTP      `yaml:"http"`
-	RBAC             RBAC      `yaml:"rbac"`
+	ReplicaCount     int               `yaml:"replicaCount"`
+	Image            Image             `yaml:"image"`
+	ImagePullSecrets []string          `yaml:"imagePullSecrets"`
+	NameOverride     string            `yaml:"nameOverride"`
+	FullnameOverride string            `yaml:"fullnameOverride"`
+	Resources        Resources         `yaml:"resources"`
+	NodeSelector     map[string]string `yaml:"nodeSelector,omitempty"`
+	Tolerations      []string          `yaml:"tolerations"`
+	Affinity         struct{}          `yaml:"affinity"`
+	HTTP             HTTP              `yaml:"http"`
+	RBAC             RBAC              `yaml:"rbac"`
 }
 
 type Image struct {

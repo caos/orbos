@@ -21,5 +21,6 @@ func DefaultValues(imageTags map[string]string) *Values {
 				Enabled: true,
 			},
 		},
+		NodeSelector: map[string]string{},
 	}
 }

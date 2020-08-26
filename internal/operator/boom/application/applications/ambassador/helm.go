@@ -67,6 +67,12 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
 	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
 
 	return values

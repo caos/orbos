@@ -11,6 +11,7 @@ type Config struct {
 	Namespace        string
 	ControlNamespace string
 	Replicas         int
+	NodeSelector     map[string]string
 	FluentdPVC       *Storage
 	FluentbitPVC     *Storage
 }
@@ -40,6 +41,7 @@ type Fluentd struct {
 	LogLevel            string             `yaml:"logLevel,omitempty"`
 	DisablePvc          bool               `yaml:"disablePvc"`
 	Scaling             *Scaling           `yaml:"scaling,omitempty"`
+	NodeSelector        map[string]string  `yaml:"nodeSelector,omitempty"`
 }
 type Metrics struct {
 	Port int `yaml:"port"`
@@ -94,7 +96,8 @@ func New(conf *Config) *Logging {
 				Metrics: &Metrics{
 					Port: 8080,
 				},
-				DisablePvc: true,
+				DisablePvc:   true,
+				NodeSelector: map[string]string{},
 			},
 			Fluentbit: &Fluentbit{
 				Metrics: &Metrics{
@@ -127,6 +130,12 @@ func New(conf *Config) *Logging {
 			values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = conf.FluentdPVC.AccessModes
 		} else {
 			values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = []string{"ReadWriteOnce"}
+		}
+	}
+
+	if conf.NodeSelector != nil {
+		for k, v := range conf.NodeSelector {
+			values.Spec.Fluentd.NodeSelector[k] = v
 		}
 	}
 

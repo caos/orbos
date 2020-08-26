@@ -15,6 +15,8 @@ type LogsPersisting struct {
 	//Flag if loki-output should be a clusteroutput instead a output crd
 	//@default: false
 	ClusterOutput bool `json:"clusterOutput,omitempty" yaml:"clusterOutput,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 // Logs: When the logs spec is nil all logs will get persisted in loki.

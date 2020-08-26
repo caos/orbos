@@ -15,6 +15,12 @@ func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolse
 	// 	values.ReplicaCount = spec.ReplicaCount
 	// }
 
+	if toolset.LogCollection.NodeSelector != nil {
+		for k, v := range toolset.Monitoring.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
 	return values
 }
 

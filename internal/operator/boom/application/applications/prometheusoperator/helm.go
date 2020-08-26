@@ -15,6 +15,12 @@ func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *too
 	// 	values.ReplicaCount = spec.ReplicaCount
 	// }
 
+	if toolset.MetricCollection.NodeSelector != nil {
+		for k, v := range toolset.MetricCollection.NodeSelector {
+			values.PrometheusOperator.NodeSelector[k] = v
+		}
+	}
+
 	return values
 }
 

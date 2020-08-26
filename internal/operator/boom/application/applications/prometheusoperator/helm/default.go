@@ -144,6 +144,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 				Tag:        imageTags["k8s.gcr.io/hyperkube"],
 				PullPolicy: "IfNotPresent",
 			},
+			NodeSelector: map[string]string{},
 		},
 		Prometheus: &DisabledTool{
 			Enabled: false,

@@ -7,4 +7,6 @@ type KubeMetricsExporter struct {
 	//Number of replicas used for deployment
 	//@default: 1
 	ReplicaCount int `json:"replicaCount,omitempty" yaml:"replicaCount,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }

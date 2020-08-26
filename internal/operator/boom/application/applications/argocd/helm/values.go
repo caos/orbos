@@ -101,7 +101,7 @@ type Controller struct {
 	VolumeMounts       []*VolumeMount      `yaml:"volumeMounts"`
 	Volumes            []*Volume           `yaml:"volumes"`
 	Service            *Service            `yaml:"service"`
-	NodeSelector       struct{}            `yaml:"nodeSelector"`
+	NodeSelector       map[string]string   `yaml:"nodeSelector"`
 	Tolerations        []interface{}       `yaml:"tolerations"`
 	Affinity           struct{}            `yaml:"affinity"`
 	PriorityClassName  string              `yaml:"priorityClassName"`
@@ -111,39 +111,39 @@ type Controller struct {
 	ClusterAdminAccess *ClusterAdminAccess `yaml:"clusterAdminAccess"`
 }
 type Dex struct {
-	Enabled           bool            `yaml:"enabled"`
-	Name              string          `yaml:"name"`
-	Image             *Image          `yaml:"image"`
-	InitImage         *Image          `yaml:"initImage,omitempty"`
-	Env               []interface{}   `yaml:"env"`
-	ServiceAccount    *ServiceAccount `yaml:"serviceAccount"`
-	VolumeMounts      []*VolumeMount  `yaml:"volumeMounts"`
-	Volumes           []*Volume       `yaml:"volumes"`
-	ContainerPortHTTP int             `yaml:"containerPortHttp"`
-	ServicePortHTTP   int             `yaml:"servicePortHttp"`
-	ContainerPortGrpc int             `yaml:"containerPortGrpc"`
-	ServicePortGrpc   int             `yaml:"servicePortGrpc"`
-	NodeSelector      struct{}        `yaml:"nodeSelector"`
-	Tolerations       []interface{}   `yaml:"tolerations"`
-	Affinity          struct{}        `yaml:"affinity"`
-	PriorityClassName string          `yaml:"priorityClassName"`
-	Resources         struct{}        `yaml:"resources"`
+	Enabled           bool              `yaml:"enabled"`
+	Name              string            `yaml:"name"`
+	Image             *Image            `yaml:"image"`
+	InitImage         *Image            `yaml:"initImage,omitempty"`
+	Env               []interface{}     `yaml:"env"`
+	ServiceAccount    *ServiceAccount   `yaml:"serviceAccount"`
+	VolumeMounts      []*VolumeMount    `yaml:"volumeMounts"`
+	Volumes           []*Volume         `yaml:"volumes"`
+	ContainerPortHTTP int               `yaml:"containerPortHttp"`
+	ServicePortHTTP   int               `yaml:"servicePortHttp"`
+	ContainerPortGrpc int               `yaml:"containerPortGrpc"`
+	ServicePortGrpc   int               `yaml:"servicePortGrpc"`
+	NodeSelector      map[string]string `yaml:"nodeSelector"`
+	Tolerations       []interface{}     `yaml:"tolerations"`
+	Affinity          struct{}          `yaml:"affinity"`
+	PriorityClassName string            `yaml:"priorityClassName"`
+	Resources         struct{}          `yaml:"resources"`
 }
 
 type Redis struct {
-	Enabled           bool           `yaml:"enabled"`
-	Name              string         `yaml:"name"`
-	Image             *Image         `yaml:"image"`
-	ContainerPort     int            `yaml:"containerPort"`
-	ServicePort       int            `yaml:"servicePort"`
-	Env               []interface{}  `yaml:"env"`
-	NodeSelector      struct{}       `yaml:"nodeSelector"`
-	Tolerations       []interface{}  `yaml:"tolerations"`
-	Affinity          struct{}       `yaml:"affinity"`
-	PriorityClassName string         `yaml:"priorityClassName"`
-	Resources         struct{}       `yaml:"resources"`
-	VolumeMounts      []*VolumeMount `yaml:"volumeMounts"`
-	Volumes           []*Volume      `yaml:"volumes"`
+	Enabled           bool              `yaml:"enabled"`
+	Name              string            `yaml:"name"`
+	Image             *Image            `yaml:"image"`
+	ContainerPort     int               `yaml:"containerPort"`
+	ServicePort       int               `yaml:"servicePort"`
+	Env               []interface{}     `yaml:"env"`
+	NodeSelector      map[string]string `yaml:"nodeSelector"`
+	Tolerations       []interface{}     `yaml:"tolerations"`
+	Affinity          struct{}          `yaml:"affinity"`
+	PriorityClassName string            `yaml:"priorityClassName"`
+	Resources         struct{}          `yaml:"resources"`
+	VolumeMounts      []*VolumeMount    `yaml:"volumeMounts"`
+	Volumes           []*Volume         `yaml:"volumes"`
 }
 type Certificate struct {
 	Enabled         bool          `yaml:"enabled"`
@@ -195,7 +195,7 @@ type Server struct {
 	LivenessProbe          *LivenessProbe    `yaml:"livenessProbe"`
 	VolumeMounts           []*VolumeMount    `yaml:"volumeMounts"`
 	Volumes                []*Volume         `yaml:"volumes"`
-	NodeSelector           struct{}          `yaml:"nodeSelector"`
+	NodeSelector           map[string]string `yaml:"nodeSelector"`
 	Tolerations            []interface{}     `yaml:"tolerations"`
 	Affinity               struct{}          `yaml:"affinity"`
 	PriorityClassName      string            `yaml:"priorityClassName"`
@@ -230,7 +230,7 @@ type RepoServer struct {
 	LivenessProbe     *LivenessProbe    `yaml:"livenessProbe"`
 	VolumeMounts      []*VolumeMount    `yaml:"volumeMounts"`
 	Volumes           []*Volume         `yaml:"volumes"`
-	NodeSelector      struct{}          `yaml:"nodeSelector"`
+	NodeSelector      map[string]string `yaml:"nodeSelector"`
 	Tolerations       []interface{}     `yaml:"tolerations"`
 	Affinity          struct{}          `yaml:"affinity"`
 	PriorityClassName string            `yaml:"priorityClassName"`

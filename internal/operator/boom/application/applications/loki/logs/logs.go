@@ -51,6 +51,12 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		ControlNamespace: "caos-system",
 	}
 
+	if toolsetCRDSpec.LogCollection.NodeSelector != nil {
+		for k, v := range toolsetCRDSpec.LogCollection.NodeSelector {
+			conf.NodeSelector[k] = v
+		}
+	}
+
 	if toolsetCRDSpec.LogCollection.FluentdPVC != nil {
 		conf.FluentdPVC = &logging.Storage{
 			StorageClassName: toolsetCRDSpec.LogCollection.FluentdPVC.StorageClass,

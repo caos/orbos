@@ -33,6 +33,7 @@ func DefaultDexValues(imageTags map[string]string) *Dex {
 		ServicePortHTTP:   5556,
 		ContainerPortGrpc: 5557,
 		ServicePortGrpc:   5557,
+		NodeSelector:      map[string]string{},
 	}
 }
 
@@ -115,9 +116,11 @@ func DefaultValues(imageTags map[string]string) *Values {
 			ClusterAdminAccess: &ClusterAdminAccess{
 				Enabled: true,
 			},
+			NodeSelector: map[string]string{},
 		},
 		Dex: &Dex{
-			Enabled: false,
+			Enabled:      false,
+			NodeSelector: map[string]string{},
 		},
 		Redis: &Redis{
 			Enabled: true,
@@ -129,6 +132,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 			ContainerPort: 6379,
 			ServicePort:   6379,
+			NodeSelector:  map[string]string{},
 		},
 		Server: &Server{
 			Image: &Image{
@@ -184,6 +188,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 				URL:                         "https://argocd.example.com",
 				ApplicationInstanceLabelKey: "argocd.argoproj.io/instance",
 			},
+			NodeSelector: map[string]string{},
 		},
 		RepoServer: &RepoServer{
 			Image: &Image{
@@ -223,6 +228,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			ServiceAccount: &ServiceAccount{
 				Create: false,
 			},
+			NodeSelector: map[string]string{},
 		},
 		Configs: &Configs{
 			KnownHosts: &Data{

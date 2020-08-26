@@ -11,6 +11,8 @@ type APIGateway struct {
 	Service *AmbassadorService `json:"service,omitempty" yaml:"service,omitempty"`
 	//Activate the dev portal mapping
 	ActivateDevPortal bool `json:"activateDevPortal,omitempty" yaml:"activateDevPortal,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 type AmbassadorService struct {

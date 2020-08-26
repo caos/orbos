@@ -14,6 +14,12 @@ func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *tools
 		values.Replicas = toolset.KubeMetricsExporter.ReplicaCount
 	}
 
+	if toolset.KubeMetricsExporter != nil && toolset.KubeMetricsExporter.NodeSelector != nil {
+		for k, v := range toolset.KubeMetricsExporter.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
 	return values
 }
 

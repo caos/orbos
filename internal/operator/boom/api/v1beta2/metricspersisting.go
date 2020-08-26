@@ -16,6 +16,8 @@ type MetricsPersisting struct {
 	RemoteWrite *RemoteWrite `json:"remoteWrite,omitempty" yaml:"remoteWrite,omitempty"`
 	//Static labels added to metrics
 	ExternalLabels map[string]string `json:"externalLabels,omitempty" yaml:"externalLabels,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.

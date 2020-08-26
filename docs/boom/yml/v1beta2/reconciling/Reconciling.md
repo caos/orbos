@@ -14,3 +14,4 @@
 | repositories | Repositories used by argocd , [here](repository/Repository.md)                       |         | X           |
 | credentials  | Credentials used by argocd , [here](repository/Repository.md)                        |         | X           |
 | knownHosts   | List of known_hosts as strings for argocd                                            |         | X           |
+| nodeSelector | NodeSelector for deployment                                                          |         |             |

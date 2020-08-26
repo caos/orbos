@@ -29,6 +29,13 @@ func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.T
 			}
 		}
 	}
+
+	if toolset.LogsPersisting.NodeSelector != nil {
+		for k, v := range toolset.Monitoring.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
 	values.FullNameOverride = info.GetName().String()
 	return values
 }

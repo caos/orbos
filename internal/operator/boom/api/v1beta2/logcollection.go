@@ -8,4 +8,6 @@ type LogCollection struct {
 	Deploy bool `json:"deploy" yaml:"deploy"`
 	//Spec to define how the persistence should be handled
 	FluentdPVC *storage.Spec `json:"fluentdStorage,omitempty" yaml:"fluentdStorage,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }

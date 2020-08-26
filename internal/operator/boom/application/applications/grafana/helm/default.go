@@ -62,6 +62,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 		Env: map[string]string{
 			"GF_SERVER_ROOT_URL": "%(protocol)s://%(domain)s/",
 		},
+		NodeSelector: map[string]string{},
 	}
 
 	return &Values{

@@ -143,7 +143,7 @@ type Values struct {
 	LivenessProbe                 *LivenessProbe    `yaml:"livenessProbe"`
 	NetworkPolicy                 *NetworkPolicy    `yaml:"networkPolicy"`
 	Client                        struct{}          `yaml:"client"`
-	NodeSelector                  struct{}          `yaml:"nodeSelector"`
+	NodeSelector                  map[string]string `yaml:"nodeSelector"`
 	Persistence                   *Persistence      `yaml:"persistence"`
 	PodLabels                     map[string]string `yaml:"podLabels"`
 	PodAnnotations                map[string]string `yaml:"podAnnotations"`

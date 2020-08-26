@@ -125,7 +125,7 @@ type Values struct {
 	LicenseKey             *LicenseKey         `yaml:"licenseKey"`
 	LivenessProbe          *LivenessProbe      `yaml:"livenessProbe"`
 	NameOverride           string              `yaml:"nameOverride"`
-	NodeSelector           struct{}            `yaml:"nodeSelector"`
+	NodeSelector           map[string]string   `yaml:"nodeSelector"`
 	PodAnnotations         map[string]string   `yaml:"podAnnotations"`
 	PodDisruptionBudget    struct{}            `yaml:"podDisruptionBudget"`
 	PodLabels              map[string]string   `yaml:"podLabels"`
