@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"github.com/caos/orbos/internal/git"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/boom"
@@ -26,11 +28,16 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
+	ensureClient := git.New(context.Background(), monitor.WithField("task", "ensure"), "Boom", "boom@caos.ch")
+	queryClient := git.New(context.Background(), monitor.WithField("task", "query"), "Boom", "boom@caos.ch")
+
 	takeoff, _ := boom.Takeoff(
 		monitor,
 		"./artifacts",
 		true,
 		helpers.PruneHome(*orbconfig),
+		ensureClient,
+		queryClient,
 	)
 	for {
 		takeoff()

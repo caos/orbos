@@ -34,6 +34,10 @@ func BackupCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
 		found, err := api.ExistsZitadelYml(gitClient)
 		if err != nil {
 			return err
