@@ -162,6 +162,8 @@ ExecStart=%s --id "%s"
 Restart=always
 MemoryLimit=250M
 RestartSec=10
+CPUAccounting=yes
+MemoryAccounting=yes
 
 [Install]
 WantedBy=multi-user.target

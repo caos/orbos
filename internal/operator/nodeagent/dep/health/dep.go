@@ -107,6 +107,8 @@ Restart=always
 MemoryMax=20M
 MemoryLimit=20M
 RestartSec=10
+CPUAccounting=yes
+MemoryAccounting=yes
 
 [Install]
 WantedBy=multi-user.target
