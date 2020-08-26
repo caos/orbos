@@ -49,6 +49,7 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		Name:             "logging",
 		Namespace:        "caos-system",
 		ControlNamespace: "caos-system",
+		NodeSelector:     map[string]string{},
 	}
 
 	if toolsetCRDSpec.LogCollection.NodeSelector != nil {
