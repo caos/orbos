@@ -16,7 +16,6 @@ type DesiredV0 struct {
 type Spec struct {
 	Verbose       bool
 	ReplicaCount  int                          `yaml:"replicaCount,omitempty"`
-	Version       string                       `yaml:"version"`
 	Configuration *configuration.Configuration `yaml:"configuration"`
 	NodeSelector  map[string]string            `yaml:"nodeSelector,omitempty"`
 }

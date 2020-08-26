@@ -9,5 +9,6 @@ func GetAll() map[string]string {
 		"V1.4__compliance.sql":               V14Compliance,
 		"V1.5__orgdomain_validationtype.sql": V15OrgDomainValidationType,
 		"V1.6__origin_allow_list.sql":        V16OriginAllowList,
+		"V1.7__idps.sql":                     V17IDPs,
 	}
 }

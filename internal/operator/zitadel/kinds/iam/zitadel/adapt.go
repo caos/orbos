@@ -155,7 +155,6 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			namespaceStr,
 			internalLabels,
 			desiredKind.Spec.ReplicaCount,
-			desiredKind.Spec.Version,
 			imagePullSecretName,
 			cmName,
 			certPath,
