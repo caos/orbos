@@ -161,6 +161,7 @@ User=root
 ExecStart=%s --id "%s"
 Restart=always
 MemoryLimit=250M
+MemoryAccounting=yes
 RestartSec=10
 
 [Install]

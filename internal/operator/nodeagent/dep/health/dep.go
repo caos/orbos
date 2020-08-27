@@ -104,8 +104,8 @@ Type=simple
 User=root
 ExecStart=/usr/local/bin/health --http %s %s
 Restart=always
-MemoryMax=20M
 MemoryLimit=20M
+MemoryAccounting=yes
 RestartSec=10
 
 [Install]

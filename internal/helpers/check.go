@@ -23,12 +23,18 @@ func Check(url string, status int) (string, error) {
 		Timeout:        1 * time.Second,
 		URL:            url,
 		ExpectedStatus: status,
+		Options: []checks.RequestOption{
+			func(r *http.Request) {
+				//				r.Close = true
+			},
+		},
 		Client: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
 					// Insecure health checks are ok
 					InsecureSkipVerify: true,
 				},
+				//				DisableKeepAlives: true,
 			},
 		},
 	}))
