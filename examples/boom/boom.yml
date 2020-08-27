@@ -1,0 +1,34 @@
+apiVersion: boom.caos.ch/v1beta2
+kind: Toolset
+metadata:
+  name: caos
+  namespace: caos-system
+spec:
+  forceApply: true
+  currentStatePath: caos-internal/boom
+  preApply:
+    deploy: true
+    folder: preapply
+  postApply:
+    deploy: true
+    folder: postapply
+  metricCollection:
+    deploy: true
+  logCollection:
+    deploy: true
+  nodeMetricsExporter:
+    deploy: true
+  systemdMetricsExporter:
+    deploy: true
+  monitoring:
+    deploy: true
+  apiGateway:
+    deploy: true
+  kubeMetricsExporter:
+    deploy: true
+  reconciling:
+    deploy: true
+  metricsPersisting:
+    deploy: true
+  logsPersisting:
+    deploy: true
