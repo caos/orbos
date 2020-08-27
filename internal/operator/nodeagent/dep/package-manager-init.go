@@ -81,6 +81,14 @@ mdpolicy = group:main
 		return errors.Wrapf(err, "cleaning up duplicates failed with stderr %s", errBuf.String())
 	}
 
-	return p.systemd.Enable("yum-cron")
+	for _, unit := range []string{"yum-cron", "firewalld"} {
+		if err := p.systemd.Enable(unit); err != nil {
+			return err
+		}
 
+		if err := p.systemd.Start(unit); err != nil {
+			return err
+		}
+	}
+	return nil
 }
