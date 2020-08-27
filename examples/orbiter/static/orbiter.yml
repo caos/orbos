@@ -45,7 +45,8 @@ providers:
       version: v2
       spec:
         application:
-        - transport:
+        - ip: 192.168.122.11
+          transport:
           - name: httpsingress
             frontendport: 443
             backendport: 30443
@@ -69,7 +70,8 @@ providers:
               path: /ambassador/v0/check_ready
               code: 200
         management:
-        - transport:
+        - ip: 192.168.122.10
+          transport:
           - name: kubeapi
             frontendport: 6443
             backendport: 6666
