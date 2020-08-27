@@ -11,3 +11,4 @@
 | storage      | Spec to define how the persistence should be handled , [here](storage/Spec.md) |  nil    |             |
 | remoteWrite  | Configuration to write to remote prometheus , [here](RemoteWrite.md)           |         |             |
 | nodeSelector | NodeSelector for statefulset                                                   |         |             |
+| tolerations  | Tolerations to run prometheus on nodes , [here](toleration/Toleration.md)      |         | X           |

@@ -156,7 +156,7 @@ type Values struct {
 	Service                       *Service          `yaml:"service"`
 	ServiceAccount                *ServiceAccount   `yaml:"serviceAccount"`
 	TerminationGracePeriodSeconds int               `yaml:"terminationGracePeriodSeconds"`
-	Tolerations                   []interface{}     `yaml:"tolerations"`
+	Tolerations                   []*Toleration     `yaml:"tolerations"`
 	PodDisruptionBudget           struct{}          `yaml:"podDisruptionBudget"`
 	UpdateStrategy                *UpdateStrategy   `yaml:"updateStrategy"`
 	ServiceMonitor                *ServiceMonitor   `yaml:"serviceMonitor"`
@@ -166,6 +166,14 @@ type Values struct {
 	ExtraVolumeMounts             []interface{}     `yaml:"extraVolumeMounts"`
 	ExtraPorts                    []interface{}     `yaml:"extraPorts"`
 	Env                           []*Env            `yaml:"env,omitempty"`
+}
+
+type Toleration struct {
+	Effect            string `yaml:"effect,omitempty"`
+	Key               string `yaml:"key,omitempty"`
+	Operator          string `yaml:"operator,omitempty"`
+	TolerationSeconds int    `yaml:"tolerationSeconds,omitempty"`
+	Value             string `yaml:"value,omitempty"`
 }
 type Env struct {
 	Name  string

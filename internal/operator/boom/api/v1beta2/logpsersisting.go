@@ -1,6 +1,9 @@
 package v1beta2
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+)
 
 type LogsPersisting struct {
 	//Flag if tool should be deployed
@@ -17,6 +20,8 @@ type LogsPersisting struct {
 	ClusterOutput bool `json:"clusterOutput,omitempty" yaml:"clusterOutput,omitempty"`
 	//NodeSelector for statefulset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run loki on nodes
+	Tolerations []*toleration.Toleration
 }
 
 // Logs: When the logs spec is nil all logs will get persisted in loki.

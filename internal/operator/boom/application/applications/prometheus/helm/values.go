@@ -150,13 +150,21 @@ type AdditionalScrapeConfig struct {
 	BearerTokenFile      string                `yaml:"bearer_token_file,omitempty"`
 }
 
+type Toleration struct {
+	Effect            string `yaml:"effect,omitempty"`
+	Key               string `yaml:"key,omitempty"`
+	Operator          string `yaml:"operator,omitempty"`
+	TolerationSeconds int    `yaml:"tolerationSeconds,omitempty"`
+	Value             string `yaml:"value,omitempty"`
+}
+
 type PrometheusSpec struct {
 	ScrapeInterval                          string                    `yaml:"scrapeInterval,omitempty"`
 	EvaluationInterval                      string                    `yaml:"evaluationInterval,omitempty"`
 	ListenLocal                             bool                      `yaml:"listenLocal,omitempty"`
 	EnableAdminAPI                          bool                      `yaml:"enableAdminAPI,omitempty"`
 	Image                                   *Image                    `yaml:"image,omitempty"`
-	Tolerations                             []interface{}             `yaml:"tolerations,omitempty"`
+	Tolerations                             []*Toleration             `yaml:"tolerations,omitempty"`
 	AlertingEndpoints                       []interface{}             `yaml:"alertingEndpoints,omitempty"`
 	ExternalLabels                          map[string]string         `yaml:"externalLabels,omitempty"`
 	ReplicaExternalLabelName                string                    `yaml:"replicaExternalLabelName,omitempty"`

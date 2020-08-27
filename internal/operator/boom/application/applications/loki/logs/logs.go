@@ -50,6 +50,7 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		Namespace:        "caos-system",
 		ControlNamespace: "caos-system",
 		NodeSelector:     map[string]string{},
+		Tolerations:      []*logging.Toleration{},
 	}
 
 	if toolsetCRDSpec.LogCollection.NodeSelector != nil {
@@ -65,6 +66,18 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		}
 		if toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes != nil {
 			conf.FluentdPVC.AccessModes = toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes
+		}
+	}
+
+	if toolsetCRDSpec.LogCollection.Tolerations != nil {
+		for _, t := range toolsetCRDSpec.LogCollection.Tolerations {
+			conf.Tolerations = append(conf.Tolerations, &logging.Toleration{
+				Effect:            t.Effect,
+				Key:               t.Key,
+				Operator:          t.Operator,
+				TolerationSeconds: t.TolerationSeconds,
+				Value:             t.Value,
+			})
 		}
 	}
 

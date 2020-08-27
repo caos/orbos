@@ -36,6 +36,18 @@ func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.T
 		}
 	}
 
+	if toolset.LogsPersisting.Tolerations != nil {
+		for _, t := range toolset.LogsPersisting.Tolerations {
+			values.Tolerations = append(values.Tolerations, &helm.Toleration{
+				Effect:            t.Effect,
+				Key:               t.Key,
+				Operator:          t.Operator,
+				TolerationSeconds: t.TolerationSeconds,
+				Value:             t.Value,
+			})
+		}
+	}
+
 	values.FullNameOverride = info.GetName().String()
 	return values
 }

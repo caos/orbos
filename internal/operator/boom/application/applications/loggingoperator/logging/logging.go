@@ -12,9 +12,19 @@ type Config struct {
 	ControlNamespace string
 	Replicas         int
 	NodeSelector     map[string]string
+	Tolerations      []*Toleration
 	FluentdPVC       *Storage
 	FluentbitPVC     *Storage
 }
+
+type Toleration struct {
+	Effect            string
+	Key               string
+	Operator          string
+	TolerationSeconds int
+	Value             string
+}
+
 type Requests struct {
 	Storage string `yaml:"storage,omitempty"`
 }
@@ -61,6 +71,7 @@ type Fluentbit struct {
 	FilterKubernetes    *FilterKubernetes  `yaml:"filterKubernetes,omitempty"`
 	Image               *Image             `yaml:"image,omitempty"`
 	BufferStorageVolume *KubernetesStorage `yaml:"bufferStorageVolume,omitempty"`
+	Tolerations         []*Toleration      `yaml:"tolerations,omitempty"`
 }
 type Spec struct {
 	Fluentd                                      *Fluentd   `yaml:"fluentd"`
@@ -108,6 +119,7 @@ func New(conf *Config) *Logging {
 					Tag:        "1.3.6",
 					PullPolicy: "IfNotPresent",
 				},
+				Tolerations: []*Toleration{},
 			},
 		},
 	}
@@ -137,6 +149,10 @@ func New(conf *Config) *Logging {
 		for k, v := range conf.NodeSelector {
 			values.Spec.Fluentd.NodeSelector[k] = v
 		}
+	}
+
+	if conf.Tolerations != nil {
+		values.Spec.Fluentbit.Tolerations = append(values.Spec.Fluentbit.Tolerations, conf.Tolerations...)
 	}
 
 	if conf.Replicas != 0 {

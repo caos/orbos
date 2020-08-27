@@ -1,6 +1,9 @@
 package v1beta2
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+)
 
 type MetricsPersisting struct {
 	//Flag if tool should be deployed
@@ -18,6 +21,8 @@ type MetricsPersisting struct {
 	ExternalLabels map[string]string `json:"externalLabels,omitempty" yaml:"externalLabels,omitempty"`
 	//NodeSelector for statefulset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run prometheus on nodes
+	Tolerations []*toleration.Toleration
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.
