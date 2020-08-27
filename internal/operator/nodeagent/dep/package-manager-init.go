@@ -85,10 +85,6 @@ mdpolicy = group:main
 		if err := p.systemd.Enable(unit); err != nil {
 			return err
 		}
-
-		if err := p.systemd.Start(unit); err != nil {
-			return err
-		}
 	}
 	return nil
 }
