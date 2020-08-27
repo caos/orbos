@@ -230,6 +230,7 @@ func V1beta1Tov1beta2(old *argocd.Argocd) *reconciling.Reconciling {
 			}
 			newAuth.OIDC = conn
 		}
+		new.Auth = &newAuth
 	}
 
 	return new
