@@ -9,32 +9,32 @@ clusters:
     spec:
       controlplane:
         updatesdisabled: false
-        provider: gce
+        provider: gcezurich
         nodes: 1
         pool: management
         taints:
           - key: node-role.kubernetes.io/master
             effect: NoSchedule
       networking:
-        dnsdomain: cluster.dev
+        dnsdomain: cluster.orbostest
         network: calico
         servicecidr: 100.126.4.0/22
         podcidr: 100.127.224.0/20
       verbose: false
       versions:
-        kubernetes: v1.18.0
-        orbiter: v0.21.0
+        kubernetes: v1.18.8
+        orbiter: v0.29.3
       workers:
         - updatesdisabled: false
-          provider: gce
+          provider: gcezurich
           nodes: 1
           pool: application
         - updatesdisabled: false
-          provider: gce
+          provider: gcezurich
           nodes: 1
           pool: storage
 providers:
-  gce:
+  gcezurich:
     kind: orbiter.caos.ch/GCEProvider
     version: v0
     spec:
@@ -48,7 +48,7 @@ providers:
           minmemorygb: 7
           storagegb: 20
           preemptible: false
-          localssds: 0
+          localssds: 2
         application:
           osimage: projects/centos-cloud/global/images/centos-7-v20200429
           mincpucores: 2
@@ -67,40 +67,40 @@ providers:
       kind: orbiter.caos.ch/DynamicLoadBalancer
       version: v2
       spec:
-        management:
-          - transport:
-              - name: kubeapi
-                frontendport: 6443
-                backendport: 6666
-                backendpools:
-                  - management
-                whitelist:
-                  - 0.0.0.0/0
-                healthchecks:
-                  protocol: https
-                  path: /healthz
-                  code: 200
         application:
-          - transport:
-              - name: httpsingress
-                frontendport: 443
-                backendport: 30443
-                backendpools:
-                  - application
-                whitelist:
-                  - 0.0.0.0/0
-                healthchecks:
-                  protocol: https
-                  path: /ambassador/v0/check_ready
-                  code: 200
-              - name: httpingress
-                frontendport: 80
-                backendport: 30080
-                backendpools:
-                  - application
-                whitelist:
-                  - 0.0.0.0/0
-                healthchecks:
-                  protocol: http
-                  path: /ambassador/v0/check_ready
-                  code: 200
+        - transport:
+          - name: httpsingress
+            frontendport: 443
+            backendport: 30443
+            backendpools:
+            - application
+            whitelist:
+            - 0.0.0.0/0
+            healthchecks:
+              protocol: https
+              path: /ambassador/v0/check_ready
+              code: 200
+          - name: httpingress
+            frontendport: 80
+            backendport: 30080
+            backendpools:
+            - application
+            whitelist:
+            - 0.0.0.0/0
+            healthchecks:
+              protocol: http
+              path: /ambassador/v0/check_ready
+              code: 200
+        management:
+        - transport:
+            - name: kubeapi
+              frontendport: 6443
+              backendport: 6666
+              backendpools:
+              - management
+              whitelist:
+              - 0.0.0.0/0
+              healthchecks:
+                protocol: https
+                path: /healthz
+                code: 200
