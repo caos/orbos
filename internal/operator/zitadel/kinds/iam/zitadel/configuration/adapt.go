@@ -217,6 +217,7 @@ func literalsConfigMap(
 			literalsConfigMap["ZITADEL_COOKIE_KEY"] = desired.Secrets.CookieID
 			literalsConfigMap["ZITADEL_CSRF_KEY"] = desired.Secrets.CSRFID
 			literalsConfigMap["ZITADEL_DOMAIN_VERIFICATION_KEY"] = desired.Secrets.DomainVerificationID
+			literalsConfigMap["ZITADEL_IDP_CONFIG_VERIFICATION_KEY"] = desired.Secrets.IDPConfigVerificationID
 		}
 		if desired.Notifications != nil {
 			literalsConfigMap["TWILIO_SENDER_NAME"] = desired.Notifications.Twilio.SenderName

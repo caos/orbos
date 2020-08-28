@@ -213,7 +213,7 @@ func AdaptFunc(
 								RunAsNonRoot: &runAsNonRoot,
 							},
 							Name:            containerName,
-							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:0.77.1",
+							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:0.78.2",
 							ImagePullPolicy: "IfNotPresent",
 							Ports: []v1.ContainerPort{
 								{Name: "grpc", ContainerPort: 50001},

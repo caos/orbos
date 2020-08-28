@@ -10,5 +10,7 @@ func GetAll() map[string]string {
 		"V1.5__orgdomain_validationtype.sql": V15OrgDomainValidationType,
 		"V1.6__origin_allow_list.sql":        V16OriginAllowList,
 		"V1.7__idps.sql":                     V17IDPs,
+		"V1.8__username_change.sql":          V18UsernameChange,
+		"V1.9__token.sql":                    V19Token,
 	}
 }

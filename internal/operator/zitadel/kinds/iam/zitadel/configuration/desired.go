@@ -22,13 +22,14 @@ type Passwords struct {
 }
 
 type Secrets struct {
-	Keys                 *secret.Secret `yaml:"keys,omitempty"`
-	UserVerificationID   string         `yaml:"userVerificationID,omitempty"`
-	OTPVerificationID    string         `yaml:"otpVerificationID,omitempty"`
-	OIDCKeysID           string         `yaml:"oidcKeysID,omitempty"`
-	CookieID             string         `yaml:"cookieID,omitempty"`
-	CSRFID               string         `yaml:"csrfID,omitempty"`
-	DomainVerificationID string         `yaml:"domainVerificationID,omitempty"`
+	Keys                    *secret.Secret `yaml:"keys,omitempty"`
+	UserVerificationID      string         `yaml:"userVerificationID,omitempty"`
+	OTPVerificationID       string         `yaml:"otpVerificationID,omitempty"`
+	OIDCKeysID              string         `yaml:"oidcKeysID,omitempty"`
+	CookieID                string         `yaml:"cookieID,omitempty"`
+	CSRFID                  string         `yaml:"csrfID,omitempty"`
+	DomainVerificationID    string         `yaml:"domainVerificationID,omitempty"`
+	IDPConfigVerificationID string         `yaml:"idpConfigVerificationID,omitempty"`
 }
 
 type Notifications struct {
