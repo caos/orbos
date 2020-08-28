@@ -3,12 +3,15 @@ package orb
 import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
 	Spec   struct {
-		Verbose bool
+		Verbose      bool
+		NodeSelector map[string]string   `yaml:"nodeSelector,omitempty"`
+		Tolerations  []corev1.Toleration `yaml:"tolerations,omitempty"`
 	}
 	IAM *tree.Tree
 }

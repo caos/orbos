@@ -1,6 +1,9 @@
 package zitadel
 
 import (
+	"sort"
+	"strconv"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -15,8 +18,6 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-	"sort"
-	"strconv"
 )
 
 func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
@@ -165,6 +166,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			secretPasswordName,
 			allZitadelUsers,
 			desiredKind.Spec.NodeSelector,
+			desiredKind.Spec.Tolerations,
 			migrationDone,
 			configurationDone,
 			getConfigurationHashes,

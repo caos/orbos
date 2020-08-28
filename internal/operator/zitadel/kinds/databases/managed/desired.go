@@ -3,6 +3,7 @@ package managed
 import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type DesiredV0 struct {
@@ -16,6 +17,7 @@ type Spec struct {
 	StorageCapacity string                `yaml:"storageCapacity,omitempty"`
 	StorageClass    string                `yaml:"storageClass,omitempty"`
 	NodeSelector    map[string]string     `yaml:"nodeSelector,omitempty"`
+	Tolerations     []corev1.Toleration   `yaml:"tolerations,omitempty"`
 	ClusterDns      string                `yaml:"clusterDNS,omitempty"`
 	Backups         map[string]*tree.Tree `yaml:"backups,omitempty"`
 }

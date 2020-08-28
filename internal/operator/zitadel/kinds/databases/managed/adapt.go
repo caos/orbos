@@ -1,6 +1,9 @@
 package managed
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/pdb"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -13,8 +16,6 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-	"strconv"
-	"strings"
 )
 
 func AdaptFunc(
@@ -71,7 +72,21 @@ func AdaptFunc(
 
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, interalLabels)
 
-		querySFS, destroySFS, ensureInit, checkDBReady, err := statefulset.AdaptFunc(internalMonitor, namespace, sfsName, image, interalLabels, serviceAccountName, desiredKind.Spec.ReplicaCount, desiredKind.Spec.StorageCapacity, cockroachPort, cockroachHTTPPort, desiredKind.Spec.StorageClass, desiredKind.Spec.NodeSelector)
+		querySFS, destroySFS, ensureInit, checkDBReady, err := statefulset.AdaptFunc(
+			internalMonitor,
+			namespace,
+			sfsName,
+			image,
+			interalLabels,
+			serviceAccountName,
+			desiredKind.Spec.ReplicaCount,
+			desiredKind.Spec.StorageCapacity,
+			cockroachPort,
+			cockroachHTTPPort,
+			desiredKind.Spec.StorageClass,
+			desiredKind.Spec.NodeSelector,
+			desiredKind.Spec.Tolerations,
+		)
 		if err != nil {
 			return nil, nil, err
 		}

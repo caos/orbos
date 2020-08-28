@@ -1,6 +1,8 @@
 package deployment
 
 import (
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -9,10 +11,9 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strings"
 )
 
 func AdaptFunc(
@@ -30,6 +31,7 @@ func AdaptFunc(
 	secretPasswordsName string,
 	users []string,
 	nodeSelector map[string]string,
+	tolerations []corev1.Toleration,
 	migrationDone zitadel.EnsureFunc,
 	configurationDone zitadel.EnsureFunc,
 	getConfigurationHashes func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
@@ -51,37 +53,37 @@ func AdaptFunc(
 	certMountPath := "/dbsecrets"
 	containerName := "zitadel"
 
-	volumnes := []v1.Volume{{
+	volumnes := []corev1.Volume{{
 		Name: secretName,
-		VolumeSource: v1.VolumeSource{
-			Secret: &v1.SecretVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
 				SecretName: secretName,
 			},
 		},
 	}, {
 		Name: rootSecret,
-		VolumeSource: v1.VolumeSource{
-			Secret: &v1.SecretVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
 				SecretName:  "cockroachdb.client.root",
 				DefaultMode: &secretMode,
 			},
 		},
 	}, {
 		Name: secretPasswordsName,
-		VolumeSource: v1.VolumeSource{
-			Secret: &v1.SecretVolumeSource{
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
 				SecretName: secretPasswordsName,
 			},
 		},
 	}, {
 		Name: consoleCMName,
-		VolumeSource: v1.VolumeSource{
-			ConfigMap: &v1.ConfigMapVolumeSource{
-				LocalObjectReference: v1.LocalObjectReference{Name: consoleCMName},
+		VolumeSource: corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{Name: consoleCMName},
 			},
 		},
 	}}
-	volMounts := []v1.VolumeMount{
+	volMounts := []corev1.VolumeMount{
 		{Name: secretName, MountPath: secretPath},
 		{Name: consoleCMName, MountPath: "/console/environment.json", SubPath: "environment.json"},
 		{Name: rootSecret, MountPath: certMountPath + "/ca.crt", SubPath: "ca.crt"},
@@ -90,22 +92,22 @@ func AdaptFunc(
 	for _, user := range users {
 		userReplaced := strings.ReplaceAll(user, "_", "-")
 		internalName := "client-" + userReplaced
-		volumnes = append(volumnes, v1.Volume{
+		volumnes = append(volumnes, corev1.Volume{
 			Name: internalName,
-			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
 					SecretName:  "cockroachdb.client." + userReplaced,
 					DefaultMode: &secretMode,
 				},
 			},
 		})
-		volMounts = append(volMounts, v1.VolumeMount{
+		volMounts = append(volMounts, corev1.VolumeMount{
 			Name: internalName,
 			//ReadOnly:  true,
 			MountPath: certMountPath + "/client." + user + ".crt",
 			SubPath:   "client." + user + ".crt",
 		})
-		volMounts = append(volMounts, v1.VolumeMount{
+		volMounts = append(volMounts, corev1.VolumeMount{
 			Name: internalName,
 			//ReadOnly:  true,
 			MountPath: certMountPath + "/client." + user + ".key",
@@ -113,49 +115,49 @@ func AdaptFunc(
 		})
 	}
 
-	envVars := []v1.EnvVar{
+	envVars := []corev1.EnvVar{
 		{Name: "POD_IP",
-			ValueFrom: &v1.EnvVarSource{
-				FieldRef: &v1.ObjectFieldSelector{
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
 					FieldPath: "status.podIP",
 				},
 			}},
 		{Name: "CHAT_URL",
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretVarsName},
 					Key:                  "ZITADEL_GOOGLE_CHAT_URL",
 				},
 			}},
 		{Name: "TWILIO_TOKEN",
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretVarsName},
 					Key:                  "ZITADEL_TWILIO_AUTH_TOKEN",
 				},
 			}},
 		{Name: "TWILIO_SERVICE_SID",
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretVarsName},
 					Key:                  "ZITADEL_TWILIO_SID",
 				},
 			}},
 		{Name: "SMTP_PASSWORD",
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{Name: secretVarsName},
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretVarsName},
 					Key:                  "ZITADEL_EMAILAPPKEY",
 				},
 			}},
 	}
 
 	for _, user := range users {
-		envVars = append(envVars, v1.EnvVar{
+		envVars = append(envVars, corev1.EnvVar{
 			Name: "CR_" + strings.ToUpper(user) + "_PASSWORD",
-			ValueFrom: &v1.EnvVarSource{
-				SecretKeyRef: &v1.SecretKeySelector{
-					LocalObjectReference: v1.LocalObjectReference{Name: secretPasswordsName},
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: secretPasswordsName},
 					Key:                  user,
 				},
 			},
@@ -185,22 +187,23 @@ func AdaptFunc(
 					MaxSurge:       &maxSurge,
 				},
 			},
-			Template: v1.PodTemplateSpec{
+			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
 					Annotations: map[string]string{},
 				},
-				Spec: v1.PodSpec{
+				Spec: corev1.PodSpec{
 					NodeSelector: nodeSelector,
-					SecurityContext: &v1.PodSecurityContext{
+					Tolerations:  tolerations,
+					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser:    &runAsUser,
 						RunAsNonRoot: &runAsNonRoot,
 					},
-					Containers: []v1.Container{
+					Containers: []corev1.Container{
 						{
-							Lifecycle: &v1.Lifecycle{
-								PostStart: &v1.Handler{
-									Exec: &v1.ExecAction{
+							Lifecycle: &corev1.Lifecycle{
+								PostStart: &corev1.Handler{
+									Exec: &corev1.ExecAction{
 										// TODO: until proper fix of https://github.com/kubernetes/kubernetes/issues/2630
 										Command: []string{"sh", "-c",
 											"mkdir -p " + certPath + "/ && cp " + certMountPath + "/* " + certPath + "/ && chmod 400 " + certPath + "/*"},
@@ -208,27 +211,27 @@ func AdaptFunc(
 								},
 							},
 							Args: []string{"start"},
-							SecurityContext: &v1.SecurityContext{
+							SecurityContext: &corev1.SecurityContext{
 								RunAsUser:    &runAsUser,
 								RunAsNonRoot: &runAsNonRoot,
 							},
 							Name:            containerName,
 							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:0.77.1",
 							ImagePullPolicy: "IfNotPresent",
-							Ports: []v1.ContainerPort{
+							Ports: []corev1.ContainerPort{
 								{Name: "grpc", ContainerPort: 50001},
 								{Name: "http", ContainerPort: 50002},
 								{Name: "ui", ContainerPort: 50003},
 							},
 							Env: envVars,
-							EnvFrom: []v1.EnvFromSource{
-								{ConfigMapRef: &v1.ConfigMapEnvSource{
-									LocalObjectReference: v1.LocalObjectReference{Name: cmName},
+							EnvFrom: []corev1.EnvFromSource{
+								{ConfigMapRef: &corev1.ConfigMapEnvSource{
+									LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
 								}}},
 							VolumeMounts: volMounts,
-							LivenessProbe: &v1.Probe{
-								Handler: v1.Handler{
-									HTTPGet: &v1.HTTPGetAction{
+							LivenessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/healthz",
 										Port:   intstr.Parse("http"),
 										Scheme: "HTTP",
@@ -237,9 +240,9 @@ func AdaptFunc(
 								PeriodSeconds:    5,
 								FailureThreshold: 2,
 							},
-							ReadinessProbe: &v1.Probe{
-								Handler: v1.Handler{
-									HTTPGet: &v1.HTTPGetAction{
+							ReadinessProbe: &corev1.Probe{
+								Handler: corev1.Handler{
+									HTTPGet: &corev1.HTTPGetAction{
 										Path:   "/ready",
 										Port:   intstr.Parse("http"),
 										Scheme: "HTTP",
@@ -250,7 +253,7 @@ func AdaptFunc(
 							},
 						},
 					},
-					ImagePullSecrets: []v1.LocalObjectReference{{
+					ImagePullSecrets: []corev1.LocalObjectReference{{
 						Name: imagePullSecret,
 					}},
 					Volumes: volumnes,

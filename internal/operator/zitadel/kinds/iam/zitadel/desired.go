@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type DesiredV0 struct {
@@ -18,6 +19,7 @@ type Spec struct {
 	ReplicaCount  int                          `yaml:"replicaCount,omitempty"`
 	Configuration *configuration.Configuration `yaml:"configuration"`
 	NodeSelector  map[string]string            `yaml:"nodeSelector,omitempty"`
+	Tolerations   []corev1.Toleration          `yaml:"tolerations,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

@@ -81,7 +81,7 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 	return nil
 }
 
-func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string) error {
+func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string, nodeselector map[string]string, tolerations []core.Toleration) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"zitadel": version,
@@ -202,6 +202,8 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 							},
 						},
 					}},
+					NodeSelector: nodeselector,
+					Tolerations:  tolerations,
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{
