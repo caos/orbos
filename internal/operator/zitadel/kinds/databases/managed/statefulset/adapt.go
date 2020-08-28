@@ -2,6 +2,8 @@ package statefulset
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/statefulset"
@@ -13,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"strings"
 )
 
 func AdaptFunc(
@@ -29,6 +30,7 @@ func AdaptFunc(
 	httpPort int32,
 	storageClass string,
 	nodeSelector map[string]string,
+	tolerations []corev1.Toleration,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
@@ -89,6 +91,7 @@ func AdaptFunc(
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,
+					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
 					Affinity: &corev1.Affinity{
 						PodAntiAffinity: &corev1.PodAntiAffinity{
