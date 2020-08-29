@@ -12,5 +12,6 @@ func GetAll() map[string]string {
 		"V1.7__idps.sql":                     V17IDPs,
 		"V1.8__username_change.sql":          V18UsernameChange,
 		"V1.9__token.sql":                    V19Token,
+		"V1.10__user_machine_keys.sql":       V110UserMachineKeys,
 	}
 }
