@@ -31,6 +31,11 @@ func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolse
 			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
 		}
 	}
+
+	if spec.Resources != nil {
+		values.Resources = spec.Resources
+	}
+
 	return values
 }
 

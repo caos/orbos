@@ -173,6 +173,26 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 		}
 	}
 
+	if spec.Redis != nil && spec.Redis.Resources != nil {
+		values.Redis.Resources = spec.Redis.Resources
+	}
+
+	if spec.Dex != nil && spec.Dex.Resources != nil {
+		values.Dex.Resources = spec.Dex.Resources
+	}
+
+	if spec.RepoServer != nil && spec.RepoServer.Resources != nil {
+		values.RepoServer.Resources = spec.RepoServer.Resources
+	}
+
+	if spec.Server != nil && spec.Server.Resources != nil {
+		values.Server.Resources = spec.Server.Resources
+	}
+
+	if spec.Controller != nil && spec.Controller.Resources != nil {
+		values.Controller.Resources = spec.Controller.Resources
+	}
+
 	return values
 }
 

@@ -46,6 +46,10 @@ func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.T
 		}
 	}
 
+	if spec.Resources != nil {
+		values.Resources = spec.Resources
+	}
+
 	return values
 }
 

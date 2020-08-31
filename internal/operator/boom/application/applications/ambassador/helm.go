@@ -81,6 +81,22 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 
 	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
 
+	if spec.Resources == nil {
+		values.Resources = spec.Resources
+	}
+
+	if spec.Caching == nil {
+		return values
+	}
+
+	if spec.Caching.Enable {
+		values.Redis.Create = true
+	}
+
+	if spec.Caching.Resources != nil {
+		values.Redis.Resources = spec.Caching.Resources
+	}
+
 	return values
 }
 

@@ -75,21 +75,22 @@ type Collectors struct {
 }
 
 type Values struct {
-	FullnameOverride  string              `yaml:"fullnameOverride,omitempty"`
-	PrometheusScrape  bool                `yaml:"prometheusScrape"`
-	Image             *Image              `yaml:"image"`
-	Replicas          int                 `yaml:"replicas"`
-	Service           *Service            `yaml:"service"`
-	CustomLabels      map[string]string   `yaml:"customLabels"`
-	HostNetwork       bool                `yaml:"hostNetwork"`
-	Rbac              *Rbac               `yaml:"rbac"`
-	ServiceAccount    *ServiceAccount     `yaml:"serviceAccount"`
-	Prometheus        *Prometheus         `yaml:"prometheus"`
-	PodSecurityPolicy *PodSecurityPolicy  `yaml:"podSecurityPolicy"`
-	SecurityContext   *SecurityContext    `yaml:"securityContext"`
-	NodeSelector      map[string]string   `yaml:"nodeSelector"`
-	Affinity          interface{}         `yaml:"affinity"`
-	Tolerations       []corev1.Toleration `yaml:"tolerations"`
-	PodAnnotations    map[string]string   `yaml:"podAnnotations"`
-	Collectors        *Collectors         `yaml:"collectors"`
+	FullnameOverride  string                       `yaml:"fullnameOverride,omitempty"`
+	PrometheusScrape  bool                         `yaml:"prometheusScrape"`
+	Image             *Image                       `yaml:"image"`
+	Replicas          int                          `yaml:"replicas"`
+	Service           *Service                     `yaml:"service"`
+	CustomLabels      map[string]string            `yaml:"customLabels"`
+	HostNetwork       bool                         `yaml:"hostNetwork"`
+	Rbac              *Rbac                        `yaml:"rbac"`
+	ServiceAccount    *ServiceAccount              `yaml:"serviceAccount"`
+	Prometheus        *Prometheus                  `yaml:"prometheus"`
+	PodSecurityPolicy *PodSecurityPolicy           `yaml:"podSecurityPolicy"`
+	SecurityContext   *SecurityContext             `yaml:"securityContext"`
+	NodeSelector      map[string]string            `yaml:"nodeSelector"`
+	Affinity          interface{}                  `yaml:"affinity"`
+	Tolerations       []corev1.Toleration          `yaml:"tolerations"`
+	PodAnnotations    map[string]string            `yaml:"podAnnotations"`
+	Collectors        *Collectors                  `yaml:"collectors"`
+	Resources         *corev1.ResourceRequirements `yaml:"resources"`
 }

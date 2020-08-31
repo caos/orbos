@@ -106,29 +106,30 @@ type Image struct {
 	PullPolicy string `yaml:"pullPolicy"`
 }
 type GrafanaValues struct {
-	FullnameOverride         string              `yaml:"fullnameOverride,omitempty"`
-	Enabled                  bool                `yaml:"enabled"`
-	DefaultDashboardsEnabled bool                `yaml:"defaultDashboardsEnabled"`
-	AdminPassword            string              `yaml:"adminPassword"`
-	Admin                    *Admin              `yaml:"admin"`
-	Ingress                  *Ingress            `yaml:"ingress"`
-	Sidecar                  *Sidecar            `yaml:"sidecar"`
-	ExtraConfigmapMounts     []interface{}       `yaml:"extraConfigmapMounts"`
-	AdditionalDataSources    []*Datasource       `yaml:"additionalDataSources"`
-	ServiceMonitor           *ServiceMonitor     `yaml:"serviceMonitor"`
-	DashboardProviders       *DashboardProviders `yaml:"dashboardProviders,omitempty"`
-	DashboardsConfigMaps     map[string]string   `yaml:"dashboardsConfigMaps,omitempty"`
-	Ini                      *Ini                `yaml:"grafana.ini,omitempty"`
-	Persistence              *Persistence        `yaml:"persistence,omitempty"`
-	TestFramework            *TestFramework      `yaml:"testFramework,omitempty"`
-	Plugins                  []string            `yaml:"plugins,omitempty"`
-	Image                    *Image              `yaml:"image,omitempty"`
-	Env                      map[string]string   `yaml:"env,omitempty"`
-	Service                  *Service            `yaml:"service,omitempty"`
-	Labels                   map[string]string   `yaml:"labels,omitempty"`
-	PodLabels                map[string]string   `yaml:"podLabels,omitempty"`
-	NodeSelector             map[string]string   `yaml:"nodeSelector,omitempty"`
-	Tolerations              []corev1.Toleration `yaml:"tolerations"`
+	FullnameOverride         string                       `yaml:"fullnameOverride,omitempty"`
+	Enabled                  bool                         `yaml:"enabled"`
+	DefaultDashboardsEnabled bool                         `yaml:"defaultDashboardsEnabled"`
+	AdminPassword            string                       `yaml:"adminPassword"`
+	Admin                    *Admin                       `yaml:"admin"`
+	Ingress                  *Ingress                     `yaml:"ingress"`
+	Sidecar                  *Sidecar                     `yaml:"sidecar"`
+	ExtraConfigmapMounts     []interface{}                `yaml:"extraConfigmapMounts"`
+	AdditionalDataSources    []*Datasource                `yaml:"additionalDataSources"`
+	ServiceMonitor           *ServiceMonitor              `yaml:"serviceMonitor"`
+	DashboardProviders       *DashboardProviders          `yaml:"dashboardProviders,omitempty"`
+	DashboardsConfigMaps     map[string]string            `yaml:"dashboardsConfigMaps,omitempty"`
+	Ini                      *Ini                         `yaml:"grafana.ini,omitempty"`
+	Persistence              *Persistence                 `yaml:"persistence,omitempty"`
+	TestFramework            *TestFramework               `yaml:"testFramework,omitempty"`
+	Plugins                  []string                     `yaml:"plugins,omitempty"`
+	Image                    *Image                       `yaml:"image,omitempty"`
+	Env                      map[string]string            `yaml:"env,omitempty"`
+	Service                  *Service                     `yaml:"service,omitempty"`
+	Labels                   map[string]string            `yaml:"labels,omitempty"`
+	PodLabels                map[string]string            `yaml:"podLabels,omitempty"`
+	NodeSelector             map[string]string            `yaml:"nodeSelector,omitempty"`
+	Tolerations              []corev1.Toleration          `yaml:"tolerations"`
+	Resources                *corev1.ResourceRequirements `yaml:"resources"`
 }
 
 type Rules struct {

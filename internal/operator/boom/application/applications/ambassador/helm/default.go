@@ -1,5 +1,10 @@
 package helm
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 func DefaultValues(imageTags map[string]string) *Values {
 	adminAnnotations := map[string]string{"app.kubernetes.io/use": "admin-service"}
 
@@ -63,6 +68,16 @@ func DefaultValues(imageTags map[string]string) *Values {
 
 		Redis: &Redis{
 			Create: true,
+			Resources: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+			},
 			Annotations: &RedisAnnotations{
 				Deployment: map[string]string{},
 				Service:    map[string]string{},
@@ -82,23 +97,31 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		Service: &Service{
 			Type: "NodePort",
-			Ports: []*Port{
-				&Port{
-					Name:       "http",
-					Port:       80,
-					TargetPort: 8080,
-					NodePort:   30080,
-				},
-				&Port{
-					Name:       "https",
-					Port:       443,
-					TargetPort: 8443,
-					NodePort:   30443,
-				},
+			Ports: []*Port{{
+				Name:       "http",
+				Port:       80,
+				TargetPort: 8080,
+				NodePort:   30080,
+			}, {
+				Name:       "https",
+				Port:       443,
+				TargetPort: 8443,
+				NodePort:   30443,
+			},
 			},
 		},
 		ServiceAccount: &ServiceAccount{
 			Create: true,
+		},
+		Resources: &corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("500m"),
+				corev1.ResourceMemory: resource.MustParse("500Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("250m"),
+				corev1.ResourceMemory: resource.MustParse("250Mi"),
+			},
 		},
 	}
 }

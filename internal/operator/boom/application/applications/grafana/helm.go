@@ -120,70 +120,78 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta
 		values.Grafana.AdditionalDataSources = datasources
 	}
 
-	if toolset.Monitoring != nil {
-		if toolset.Monitoring.Admin != nil {
-			values.Grafana.Admin = admin.GetConfig(toolset.Monitoring.Admin)
+	spec := toolset.Monitoring
+
+	if spec == nil {
+		return values
+	}
+
+	if spec.Admin != nil {
+		values.Grafana.Admin = admin.GetConfig(spec.Admin)
+	}
+
+	if spec.Storage != nil {
+		values.Grafana.Persistence.Enabled = true
+		values.Grafana.Persistence.Size = spec.Storage.Size
+		values.Grafana.Persistence.StorageClassName = spec.Storage.StorageClass
+
+		if spec.Storage.AccessModes != nil {
+			values.Grafana.Persistence.AccessModes = spec.Storage.AccessModes
 		}
+	}
 
-		if toolset.Monitoring.Storage != nil {
-			values.Grafana.Persistence.Enabled = true
-			values.Grafana.Persistence.Size = toolset.Monitoring.Storage.Size
-			values.Grafana.Persistence.StorageClassName = toolset.Monitoring.Storage.StorageClass
+	if spec.Network != nil && spec.Network.Domain != "" {
+		values.Grafana.Env["GF_SERVER_DOMAIN"] = spec.Network.Domain
 
-			if toolset.Monitoring.Storage.AccessModes != nil {
-				values.Grafana.Persistence.AccessModes = toolset.Monitoring.Storage.AccessModes
-			}
-		}
-
-		if toolset.Monitoring.Network != nil && toolset.Monitoring.Network.Domain != "" {
-			values.Grafana.Env["GF_SERVER_DOMAIN"] = toolset.Monitoring.Network.Domain
-
-			if toolset.Monitoring.Auth != nil {
-				if toolset.Monitoring.Auth.Google != nil {
-					google, err := auth.GetGoogleAuthConfig(toolset.Monitoring.Auth.Google)
-					if err == nil && google != nil {
-						values.Grafana.Ini.AuthGoogle = google
-					}
-				}
-
-				if toolset.Monitoring.Auth.Github != nil {
-					github, err := auth.GetGithubAuthConfig(toolset.Monitoring.Auth.Github)
-					if err == nil && github != nil {
-						values.Grafana.Ini.AuthGithub = github
-					}
-				}
-
-				if toolset.Monitoring.Auth.Gitlab != nil {
-					gitlab, err := auth.GetGitlabAuthConfig(toolset.Monitoring.Auth.Gitlab)
-					if err == nil && gitlab != nil {
-						values.Grafana.Ini.AuthGitlab = gitlab
-					}
-				}
-
-				if toolset.Monitoring.Auth.GenericOAuth != nil {
-					generic, err := auth.GetGenericOAuthConfig(toolset.Monitoring.Auth.GenericOAuth)
-					if err == nil && generic != nil {
-						values.Grafana.Ini.AuthGeneric = generic
-					}
+		if spec.Auth != nil {
+			if spec.Auth.Google != nil {
+				google, err := auth.GetGoogleAuthConfig(spec.Auth.Google)
+				if err == nil && google != nil {
+					values.Grafana.Ini.AuthGoogle = google
 				}
 			}
-		}
 
-		if toolset.Monitoring.Plugins != nil && len(toolset.Monitoring.Plugins) > 0 {
-			values.Grafana.Plugins = append(values.Grafana.Plugins, toolset.Monitoring.Plugins...)
-		}
+			if spec.Auth.Github != nil {
+				github, err := auth.GetGithubAuthConfig(spec.Auth.Github)
+				if err == nil && github != nil {
+					values.Grafana.Ini.AuthGithub = github
+				}
+			}
 
-		if toolset.Monitoring.NodeSelector != nil {
-			for k, v := range toolset.Monitoring.NodeSelector {
-				values.Grafana.NodeSelector[k] = v
+			if spec.Auth.Gitlab != nil {
+				gitlab, err := auth.GetGitlabAuthConfig(spec.Auth.Gitlab)
+				if err == nil && gitlab != nil {
+					values.Grafana.Ini.AuthGitlab = gitlab
+				}
+			}
+
+			if spec.Auth.GenericOAuth != nil {
+				generic, err := auth.GetGenericOAuthConfig(spec.Auth.GenericOAuth)
+				if err == nil && generic != nil {
+					values.Grafana.Ini.AuthGeneric = generic
+				}
 			}
 		}
+	}
 
-		if toolset.Monitoring.Tolerations != nil {
-			for _, tol := range toolset.Monitoring.Tolerations {
-				values.Grafana.Tolerations = append(values.Grafana.Tolerations, tol.ToKubeToleration())
-			}
+	if spec.Plugins != nil && len(spec.Plugins) > 0 {
+		values.Grafana.Plugins = append(values.Grafana.Plugins, spec.Plugins...)
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.Grafana.NodeSelector[k] = v
 		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Grafana.Tolerations = append(values.Grafana.Tolerations, tol.ToKubeToleration())
+		}
+	}
+
+	if spec.Resources != nil {
+		values.Grafana.Resources = spec.Resources
 	}
 
 	return values

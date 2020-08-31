@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Metadata struct {
@@ -54,6 +55,8 @@ type Boom struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	//Tolerations to run boom on nodes
 	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	//Resource requirements
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 type Toolset struct {

@@ -32,6 +32,10 @@ func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *too
 		}
 	}
 
+	if spec.Resources != nil {
+		values.PrometheusOperator.Resources = spec.Resources
+	}
+
 	return values
 }
 

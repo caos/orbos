@@ -14,6 +14,17 @@ func (p *PrometheusNodeExporter) SpecToHelmValues(monitor mntr.Monitor, toolset 
 	// if spec.ReplicaCount != 0 {
 	// 	values.ReplicaCount = spec.ReplicaCount
 	// }
+
+	spec := toolset.NodeMetricsExporter
+
+	if spec == nil {
+		return values
+	}
+
+	if spec.Resources != nil {
+		values.Resources = spec.Resources
+	}
+
 	return values
 }
 

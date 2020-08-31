@@ -173,6 +173,10 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		}
 	}
 
+	if toolsetCRDSpec.MetricsPersisting.Resources != nil {
+		values.Prometheus.PrometheusSpec.Resources = toolsetCRDSpec.MetricsPersisting.Resources
+	}
+
 	return values
 }
 

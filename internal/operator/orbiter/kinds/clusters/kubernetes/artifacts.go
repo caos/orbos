@@ -194,12 +194,12 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 						}},
 						Resources: core.ResourceRequirements{
 							Limits: core.ResourceList{
-								"cpu":    resource.MustParse("500m"),
-								"memory": resource.MustParse("500Mi"),
+								core.ResourceCPU:    resource.MustParse("500m"),
+								core.ResourceMemory: resource.MustParse("500Mi"),
 							},
 							Requests: core.ResourceList{
-								"cpu":    resource.MustParse("250m"),
-								"memory": resource.MustParse("250Mi"),
+								core.ResourceCPU:    resource.MustParse("250m"),
+								core.ResourceMemory: resource.MustParse("250Mi"),
 							},
 						},
 					}},
