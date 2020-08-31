@@ -68,11 +68,12 @@ func AdaptFunc(
 
 			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
 			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
+			_ = consoleDomain
 
 			queryModule, err := module.AdaptFuncToEnsure("caos-system", moduleName, labels, &module.Config{EnableGrpcWeb: true})
 
 			cors := &mapping.CORS{
-				Origins:        "https://" + consoleDomain,
+				Origins:        "*",
 				Methods:        "POST, GET, OPTIONS, DELETE, PUT",
 				Headers:        "*",
 				Credentials:    true,
