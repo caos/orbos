@@ -7,10 +7,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-	"io"
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
@@ -35,10 +40,6 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/remotecommand"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 const taintKeyPrefix = "node.orbos.ch/"
@@ -218,7 +219,7 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 		if err != nil {
 			return err
 		}
-		if j.GetName() != rsc.GetName() || j.GetNamespace() != rsc.GetNamespace() {
+		if j.GetName() == rsc.GetName() && j.GetNamespace() == rsc.GetNamespace() {
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
@@ -281,7 +282,7 @@ func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
 		if err != nil {
 			return err
 		}
-		if j.GetName() != rsc.GetName() || j.GetNamespace() != rsc.GetNamespace() {
+		if j.GetName() == rsc.GetName() && j.GetNamespace() == rsc.GetNamespace() {
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
@@ -303,7 +304,8 @@ func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error
 		if err != nil {
 			return err
 		}
-		if pdb.GetName() != rsc.GetName() || pdb.GetNamespace() != rsc.GetNamespace() {
+		if pdb.GetName() == rsc.GetName() && pdb.GetNamespace() == rsc.GetNamespace() {
+			rsc.ResourceVersion = pdb.ResourceVersion
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
@@ -325,7 +327,7 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 		if err != nil {
 			return err
 		}
-		if ss.GetName() != rsc.GetName() || ss.GetNamespace() != rsc.GetNamespace() {
+		if ss.GetName() == rsc.GetName() && ss.GetNamespace() == rsc.GetNamespace() {
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
@@ -459,7 +461,7 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 		if err != nil {
 			return err
 		}
-		if sa.GetName() != rsc.GetName() || sa.GetNamespace() != rsc.GetNamespace() {
+		if sa.GetName() == rsc.GetName() && sa.GetNamespace() == rsc.GetNamespace() {
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
