@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
+	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
 	"io/ioutil"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-	"github.com/caos/orbos/internal/operator/boom/cmd"
+	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -143,11 +144,13 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		boomVersion := version
 		if desiredKind.Spec.BoomVersion != "" {
 			boomVersion = desiredKind.Spec.BoomVersion
+		} else {
+			monitor.Info(fmt.Sprintf("No version set in boom.yml, so default version %s will get applied", version))
 		}
 
 		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-		if err := cmd.Reconcile(monitor, k8sClient, boomVersion); err != nil {
+		if err := cmdboom.Reconcile(monitor, k8sClient, boomVersion); err != nil {
 			return err
 		}
 	} else {
@@ -164,25 +167,15 @@ func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *stri
 	if found {
 		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-		zitadelVersion := version
-
 		if k8sClient.Available() {
-
 			tree, err := api.ReadZitadelYml(gitClient)
 			if err != nil {
 				return err
 			}
 
-			desired, err := orb.ParseDesiredV0(tree)
-			if err != nil {
+			if err := cmdzitadel.Reconcile(monitor, tree, version)(k8sClient); err != nil {
 				return err
 			}
-
-			if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, zitadelVersion, desired.Spec.NodeSelector, desired.Spec.Tolerations); err != nil {
-				monitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
-				return err
-			}
-			monitor.Info("Applied zitadel-operator")
 		} else {
 			monitor.Info("Failed to connect to k8s")
 		}

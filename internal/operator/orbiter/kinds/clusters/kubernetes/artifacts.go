@@ -81,7 +81,12 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 	return nil
 }
 
-func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string, nodeselector map[string]string, tolerations []core.Toleration) error {
+func EnsureZitadelArtifacts(
+	monitor mntr.Monitor,
+	client *Client,
+	version string,
+	nodeselector map[string]string,
+	tolerations []core.Toleration) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"zitadel": version,
@@ -225,7 +230,12 @@ func EnsureZitadelArtifacts(monitor mntr.Monitor, client *Client, version string
 
 	return nil
 }
-func ScaleZitadelOperator(monitor mntr.Monitor, client *Client, replicaCount int) error {
+
+func ScaleZitadelOperator(
+	monitor mntr.Monitor,
+	client *Client,
+	replicaCount int,
+) error {
 	monitor.Debug("Scaling zitadel-operator")
 	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
 }

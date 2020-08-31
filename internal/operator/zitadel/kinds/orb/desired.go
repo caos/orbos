@@ -12,6 +12,7 @@ type DesiredV0 struct {
 		Verbose      bool
 		NodeSelector map[string]string   `yaml:"nodeSelector,omitempty"`
 		Tolerations  []corev1.Toleration `yaml:"tolerations,omitempty"`
+		Version      string              `yaml:"version,omitempty"`
 	}
 	IAM *tree.Tree
 }

@@ -28,14 +28,28 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 			orbMonitor = orbMonitor.Verbose()
 		}
 
+		query := zitadel.EnsureFuncToQueryFunc(func(k8sClient *kubernetes.Client) error {
+			if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+				monitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
+				return err
+			}
+			return nil
+		})
+
 		iamCurrent := &tree.Tree{}
 		queryIAM, destroyIAM, err := iam.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.IAM, iamCurrent, timestamp, features...)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		queriers := []zitadel.QueryFunc{queryIAM}
-		destroyers := []zitadel.DestroyFunc{destroyIAM}
+		queriers := []zitadel.QueryFunc{
+			query,
+			queryIAM,
+		}
+
+		destroyers := []zitadel.DestroyFunc{
+			destroyIAM,
+		}
 
 		currentTree.Parsed = &DesiredV0{
 			Common: &tree.Common{
