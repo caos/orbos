@@ -147,6 +147,7 @@ func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
 				newAuth.GenericOAuth.Scopes = scopes
 			}
 		}
+		newSpec.Auth = &newAuth
 	}
 
 	return newSpec

@@ -144,11 +144,7 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 		buf := new(bytes.Buffer)
 		if err := machine.ReadFile(c.statusFile, buf); err != nil {
-			// treat as active and require reboot if ssh connection fails
-			rebootMachine := initializeMachine(true, spec)
-			rebootMachine.active = true
-			newCache = append(newCache, rebootMachine)
-			continue
+			// if error, treat as active
 		}
 		machine.active = strings.Contains(buf.String(), "active")
 		buf.Reset()

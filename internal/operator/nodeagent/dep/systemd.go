@@ -91,7 +91,15 @@ func (s *SystemD) Enable(binary string) error {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
-	return errors.Wrapf(cmd.Run(), "configuring systemd to manage %s failed with stderr %s", binary, errBuf.String())
+
+	if err := cmd.Run(); err != nil {
+		return errors.Wrapf(err, "enabling systemd unit %s failed with stderr %s", binary, errBuf.String())
+	}
+
+	if !s.Active(binary) {
+		return s.Start(binary)
+	}
+	return nil
 }
 
 func (s *SystemD) Active(binary string) bool {
