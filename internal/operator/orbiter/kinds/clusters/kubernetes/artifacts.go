@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -81,7 +82,7 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 	return nil
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string) error {
+func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string, tolerations toleration.Tolerations, nodeselector map[string]string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": boomversion,
@@ -202,6 +203,8 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 							},
 						},
 					}},
+					NodeSelector: nodeselector,
+					Tolerations:  tolerations.ToKubeToleartions(),
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{

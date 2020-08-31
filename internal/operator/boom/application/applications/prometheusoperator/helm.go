@@ -15,9 +15,20 @@ func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *too
 	// 	values.ReplicaCount = spec.ReplicaCount
 	// }
 
-	if toolset.MetricCollection.NodeSelector != nil {
-		for k, v := range toolset.MetricCollection.NodeSelector {
+	spec := toolset.MetricCollection
+	if spec == nil {
+		return values
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
 			values.PrometheusOperator.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.PrometheusOperator.Tolerations = append(values.PrometheusOperator.Tolerations, tol.ToKubeToleration())
 		}
 	}
 

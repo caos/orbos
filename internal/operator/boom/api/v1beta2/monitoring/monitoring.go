@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 )
 
 type Monitoring struct {
@@ -27,6 +28,8 @@ type Monitoring struct {
 	Plugins []string `json:"plugins,omitempty" yaml:"plugins,omitempty"`
 	//NodeSelector for deployment
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run grafana on nodes
+	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }
 
 type Datasource struct {

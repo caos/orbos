@@ -3,6 +3,8 @@ package main
 import (
 	"io/ioutil"
 
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
@@ -136,13 +138,19 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		}
 
 		boomVersion := version
-		if desiredKind.Spec.BoomVersion != "" {
-			boomVersion = desiredKind.Spec.BoomVersion
+
+		var tolerations toleration.Tolerations
+		var nodeselector map[string]string
+		boomSpec := desiredKind.Spec.Boom
+		if boomSpec != nil {
+			boomVersion = boomSpec.Version
+			tolerations = boomSpec.Tolerations
+			nodeselector = boomSpec.NodeSelector
 		}
 
 		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-		if err := cmd.Reconcile(monitor, k8sClient, boomVersion); err != nil {
+		if err := cmd.Reconcile(monitor, k8sClient, boomVersion, tolerations, nodeselector); err != nil {
 			return err
 		}
 	} else {

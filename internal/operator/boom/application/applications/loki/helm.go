@@ -18,37 +18,34 @@ func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.T
 
 	values := helm.DefaultValues(l.GetImageTags())
 
-	if toolset.LogsPersisting != nil {
-		spec := toolset.LogsPersisting
-		if spec.Storage != nil {
-			values.Persistence.Enabled = true
-			values.Persistence.Size = spec.Storage.Size
-			values.Persistence.StorageClassName = spec.Storage.StorageClass
-			if spec.Storage.AccessModes != nil {
-				values.Persistence.AccessModes = spec.Storage.AccessModes
-			}
+	values.FullNameOverride = info.GetName().String()
+
+	spec := toolset.LogsPersisting
+	if spec == nil {
+		return values
+	}
+
+	if spec.Storage != nil {
+		values.Persistence.Enabled = true
+		values.Persistence.Size = spec.Storage.Size
+		values.Persistence.StorageClassName = spec.Storage.StorageClass
+		if spec.Storage.AccessModes != nil {
+			values.Persistence.AccessModes = spec.Storage.AccessModes
 		}
 	}
 
-	if toolset.LogsPersisting.NodeSelector != nil {
-		for k, v := range toolset.Monitoring.NodeSelector {
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
 			values.NodeSelector[k] = v
 		}
 	}
 
-	if toolset.LogsPersisting.Tolerations != nil {
-		for _, t := range toolset.LogsPersisting.Tolerations {
-			values.Tolerations = append(values.Tolerations, &helm.Toleration{
-				Effect:            t.Effect,
-				Key:               t.Key,
-				Operator:          t.Operator,
-				TolerationSeconds: t.TolerationSeconds,
-				Value:             t.Value,
-			})
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
 		}
 	}
 
-	values.FullNameOverride = info.GetName().String()
 	return values
 }
 

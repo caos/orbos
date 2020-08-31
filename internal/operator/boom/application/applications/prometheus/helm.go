@@ -153,13 +153,7 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 
 	if toolsetCRDSpec.MetricsPersisting.Tolerations != nil {
 		for _, t := range toolsetCRDSpec.MetricsPersisting.Tolerations {
-			values.Prometheus.PrometheusSpec.Tolerations = append(values.Prometheus.PrometheusSpec.Tolerations, &helm.Toleration{
-				Effect:            t.Effect,
-				Key:               t.Key,
-				Operator:          t.Operator,
-				TolerationSeconds: t.TolerationSeconds,
-				Value:             t.Value,
-			})
+			values.Prometheus.PrometheusSpec.Tolerations = append(values.Prometheus.PrometheusSpec.Tolerations, t.ToKubeToleration())
 		}
 	}
 

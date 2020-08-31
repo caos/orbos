@@ -1,10 +1,11 @@
 package grafana
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/admin"
 	"path/filepath"
 	"sort"
+
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/admin"
 
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/auth"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"
@@ -175,6 +176,12 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta
 		if toolset.Monitoring.NodeSelector != nil {
 			for k, v := range toolset.Monitoring.NodeSelector {
 				values.Grafana.NodeSelector[k] = v
+			}
+		}
+
+		if toolset.Monitoring.Tolerations != nil {
+			for _, tol := range toolset.Monitoring.Tolerations {
+				values.Grafana.Tolerations = append(values.Grafana.Tolerations, tol.ToKubeToleration())
 			}
 		}
 	}

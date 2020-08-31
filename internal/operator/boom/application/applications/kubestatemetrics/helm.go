@@ -10,13 +10,23 @@ import (
 func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
 	values := helm.DefaultValues(k.GetImageTags())
 
-	if toolset.KubeMetricsExporter != nil && toolset.KubeMetricsExporter.ReplicaCount != 0 {
+	if toolset.KubeMetricsExporter == nil {
+		return values
+	}
+
+	if toolset.KubeMetricsExporter.ReplicaCount != 0 {
 		values.Replicas = toolset.KubeMetricsExporter.ReplicaCount
 	}
 
-	if toolset.KubeMetricsExporter != nil && toolset.KubeMetricsExporter.NodeSelector != nil {
+	if toolset.KubeMetricsExporter.NodeSelector != nil {
 		for k, v := range toolset.KubeMetricsExporter.NodeSelector {
 			values.NodeSelector[k] = v
+		}
+	}
+
+	if toolset.KubeMetricsExporter.Tolerations != nil {
+		for _, tol := range toolset.KubeMetricsExporter.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
 		}
 	}
 

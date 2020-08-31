@@ -1,10 +1,11 @@
 package argocd
 
 import (
+	"strings"
+
 	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
-	"strings"
 
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/customimage"
@@ -158,6 +159,17 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 			values.Redis.NodeSelector[k] = v
 			values.Controller.NodeSelector[k] = v
 			values.Server.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			t := tol.ToKubeToleration()
+			values.Dex.Tolerations = append(values.Dex.Tolerations, t)
+			values.RepoServer.Tolerations = append(values.RepoServer.Tolerations, t)
+			values.Redis.Tolerations = append(values.Redis.Tolerations, t)
+			values.Controller.Tolerations = append(values.Controller.Tolerations, t)
+			values.Server.Tolerations = append(values.Server.Tolerations, t)
 		}
 	}
 

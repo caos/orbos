@@ -1,5 +1,7 @@
 package helm
 
+import corev1 "k8s.io/api/core/v1"
+
 type AdminService struct {
 	Annotations map[string]string `yaml:"annotations"`
 	Create      bool              `yaml:"create"`
@@ -143,7 +145,7 @@ type Values struct {
 	Service                *Service            `yaml:"service"`
 	ServiceAccount         *ServiceAccount     `yaml:"serviceAccount"`
 	SidecarContainers      []interface{}       `yaml:"sidecarContainers"`
-	Tolerations            []interface{}       `yaml:"tolerations"`
+	Tolerations            []corev1.Toleration `yaml:"tolerations"`
 	VolumeMounts           []interface{}       `yaml:"volumeMounts"`
 	Volumes                []interface{}       `yaml:"volumes"`
 }

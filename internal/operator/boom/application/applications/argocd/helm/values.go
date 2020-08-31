@@ -1,5 +1,7 @@
 package helm
 
+import corev1 "k8s.io/api/core/v1"
+
 type Image struct {
 	Repository      string `yaml:"repository"`
 	Tag             string `yaml:"tag"`
@@ -102,7 +104,7 @@ type Controller struct {
 	Volumes            []*Volume           `yaml:"volumes"`
 	Service            *Service            `yaml:"service"`
 	NodeSelector       map[string]string   `yaml:"nodeSelector"`
-	Tolerations        []interface{}       `yaml:"tolerations"`
+	Tolerations        []corev1.Toleration `yaml:"tolerations"`
 	Affinity           struct{}            `yaml:"affinity"`
 	PriorityClassName  string              `yaml:"priorityClassName"`
 	Resources          struct{}            `yaml:"resources"`
@@ -111,39 +113,39 @@ type Controller struct {
 	ClusterAdminAccess *ClusterAdminAccess `yaml:"clusterAdminAccess"`
 }
 type Dex struct {
-	Enabled           bool              `yaml:"enabled"`
-	Name              string            `yaml:"name"`
-	Image             *Image            `yaml:"image"`
-	InitImage         *Image            `yaml:"initImage,omitempty"`
-	Env               []interface{}     `yaml:"env"`
-	ServiceAccount    *ServiceAccount   `yaml:"serviceAccount"`
-	VolumeMounts      []*VolumeMount    `yaml:"volumeMounts"`
-	Volumes           []*Volume         `yaml:"volumes"`
-	ContainerPortHTTP int               `yaml:"containerPortHttp"`
-	ServicePortHTTP   int               `yaml:"servicePortHttp"`
-	ContainerPortGrpc int               `yaml:"containerPortGrpc"`
-	ServicePortGrpc   int               `yaml:"servicePortGrpc"`
-	NodeSelector      map[string]string `yaml:"nodeSelector"`
-	Tolerations       []interface{}     `yaml:"tolerations"`
-	Affinity          struct{}          `yaml:"affinity"`
-	PriorityClassName string            `yaml:"priorityClassName"`
-	Resources         struct{}          `yaml:"resources"`
+	Enabled           bool                `yaml:"enabled"`
+	Name              string              `yaml:"name"`
+	Image             *Image              `yaml:"image"`
+	InitImage         *Image              `yaml:"initImage,omitempty"`
+	Env               []interface{}       `yaml:"env"`
+	ServiceAccount    *ServiceAccount     `yaml:"serviceAccount"`
+	VolumeMounts      []*VolumeMount      `yaml:"volumeMounts"`
+	Volumes           []*Volume           `yaml:"volumes"`
+	ContainerPortHTTP int                 `yaml:"containerPortHttp"`
+	ServicePortHTTP   int                 `yaml:"servicePortHttp"`
+	ContainerPortGrpc int                 `yaml:"containerPortGrpc"`
+	ServicePortGrpc   int                 `yaml:"servicePortGrpc"`
+	NodeSelector      map[string]string   `yaml:"nodeSelector"`
+	Tolerations       []corev1.Toleration `yaml:"tolerations"`
+	Affinity          struct{}            `yaml:"affinity"`
+	PriorityClassName string              `yaml:"priorityClassName"`
+	Resources         struct{}            `yaml:"resources"`
 }
 
 type Redis struct {
-	Enabled           bool              `yaml:"enabled"`
-	Name              string            `yaml:"name"`
-	Image             *Image            `yaml:"image"`
-	ContainerPort     int               `yaml:"containerPort"`
-	ServicePort       int               `yaml:"servicePort"`
-	Env               []interface{}     `yaml:"env"`
-	NodeSelector      map[string]string `yaml:"nodeSelector"`
-	Tolerations       []interface{}     `yaml:"tolerations"`
-	Affinity          struct{}          `yaml:"affinity"`
-	PriorityClassName string            `yaml:"priorityClassName"`
-	Resources         struct{}          `yaml:"resources"`
-	VolumeMounts      []*VolumeMount    `yaml:"volumeMounts"`
-	Volumes           []*Volume         `yaml:"volumes"`
+	Enabled           bool                `yaml:"enabled"`
+	Name              string              `yaml:"name"`
+	Image             *Image              `yaml:"image"`
+	ContainerPort     int                 `yaml:"containerPort"`
+	ServicePort       int                 `yaml:"servicePort"`
+	Env               []interface{}       `yaml:"env"`
+	NodeSelector      map[string]string   `yaml:"nodeSelector"`
+	Tolerations       []corev1.Toleration `yaml:"tolerations"`
+	Affinity          struct{}            `yaml:"affinity"`
+	PriorityClassName string              `yaml:"priorityClassName"`
+	Resources         struct{}            `yaml:"resources"`
+	VolumeMounts      []*VolumeMount      `yaml:"volumeMounts"`
+	Volumes           []*Volume           `yaml:"volumes"`
 }
 type Certificate struct {
 	Enabled         bool          `yaml:"enabled"`
@@ -183,33 +185,33 @@ type Config struct {
 }
 
 type Server struct {
-	Name                   string            `yaml:"name"`
-	Image                  *Image            `yaml:"image"`
-	ExtraArgs              map[string]string `yaml:"extraArgs"`
-	Env                    []interface{}     `yaml:"env"`
-	LogLevel               string            `yaml:"logLevel"`
-	PodAnnotations         map[string]string `yaml:"podAnnotations"`
-	PodLabels              map[string]string `yaml:"podLabels"`
-	ContainerPort          int               `yaml:"containerPort"`
-	ReadinessProbe         *ReadinessProbe   `yaml:"readinessProbe"`
-	LivenessProbe          *LivenessProbe    `yaml:"livenessProbe"`
-	VolumeMounts           []*VolumeMount    `yaml:"volumeMounts"`
-	Volumes                []*Volume         `yaml:"volumes"`
-	NodeSelector           map[string]string `yaml:"nodeSelector"`
-	Tolerations            []interface{}     `yaml:"tolerations"`
-	Affinity               struct{}          `yaml:"affinity"`
-	PriorityClassName      string            `yaml:"priorityClassName"`
-	Resources              struct{}          `yaml:"resources"`
-	Certificate            *Certificate      `yaml:"certificate"`
-	Service                *ServerService    `yaml:"service"`
-	Metrics                *Metrics          `yaml:"metrics"`
-	ServiceAccount         *ServiceAccount   `yaml:"serviceAccount"`
-	Ingress                *Ingress          `yaml:"ingress"`
-	Route                  *Route            `yaml:"route"`
-	Config                 *Config           `yaml:"config"`
-	RbacConfig             *RbacConfig       `yaml:"rbacConfig,omitempty"`
-	AdditionalApplications []interface{}     `yaml:"additionalApplications"`
-	AdditionalProjects     []interface{}     `yaml:"additionalProjects"`
+	Name                   string              `yaml:"name"`
+	Image                  *Image              `yaml:"image"`
+	ExtraArgs              map[string]string   `yaml:"extraArgs"`
+	Env                    []interface{}       `yaml:"env"`
+	LogLevel               string              `yaml:"logLevel"`
+	PodAnnotations         map[string]string   `yaml:"podAnnotations"`
+	PodLabels              map[string]string   `yaml:"podLabels"`
+	ContainerPort          int                 `yaml:"containerPort"`
+	ReadinessProbe         *ReadinessProbe     `yaml:"readinessProbe"`
+	LivenessProbe          *LivenessProbe      `yaml:"livenessProbe"`
+	VolumeMounts           []*VolumeMount      `yaml:"volumeMounts"`
+	Volumes                []*Volume           `yaml:"volumes"`
+	NodeSelector           map[string]string   `yaml:"nodeSelector"`
+	Tolerations            []corev1.Toleration `yaml:"tolerations"`
+	Affinity               struct{}            `yaml:"affinity"`
+	PriorityClassName      string              `yaml:"priorityClassName"`
+	Resources              struct{}            `yaml:"resources"`
+	Certificate            *Certificate        `yaml:"certificate"`
+	Service                *ServerService      `yaml:"service"`
+	Metrics                *Metrics            `yaml:"metrics"`
+	ServiceAccount         *ServiceAccount     `yaml:"serviceAccount"`
+	Ingress                *Ingress            `yaml:"ingress"`
+	Route                  *Route              `yaml:"route"`
+	Config                 *Config             `yaml:"config"`
+	RbacConfig             *RbacConfig         `yaml:"rbacConfig,omitempty"`
+	AdditionalApplications []interface{}       `yaml:"additionalApplications"`
+	AdditionalProjects     []interface{}       `yaml:"additionalProjects"`
 }
 type RbacConfig struct {
 	Csv     string `yaml:"policy.csv,omitempty"`
@@ -218,26 +220,26 @@ type RbacConfig struct {
 }
 
 type RepoServer struct {
-	Name              string            `yaml:"name"`
-	Image             *Image            `yaml:"image"`
-	ExtraArgs         struct{}          `yaml:"extraArgs"`
-	Env               []interface{}     `yaml:"env"`
-	LogLevel          string            `yaml:"logLevel"`
-	PodAnnotations    map[string]string `yaml:"podAnnotations"`
-	PodLabels         map[string]string `yaml:"podLabels"`
-	ContainerPort     int               `yaml:"containerPort"`
-	ReadinessProbe    *ReadinessProbe   `yaml:"readinessProbe"`
-	LivenessProbe     *LivenessProbe    `yaml:"livenessProbe"`
-	VolumeMounts      []*VolumeMount    `yaml:"volumeMounts"`
-	Volumes           []*Volume         `yaml:"volumes"`
-	NodeSelector      map[string]string `yaml:"nodeSelector"`
-	Tolerations       []interface{}     `yaml:"tolerations"`
-	Affinity          struct{}          `yaml:"affinity"`
-	PriorityClassName string            `yaml:"priorityClassName"`
-	Resources         struct{}          `yaml:"resources"`
-	Service           *Service          `yaml:"service"`
-	Metrics           *Metrics          `yaml:"metrics"`
-	ServiceAccount    *ServiceAccount   `yaml:"serviceAccount"`
+	Name              string              `yaml:"name"`
+	Image             *Image              `yaml:"image"`
+	ExtraArgs         struct{}            `yaml:"extraArgs"`
+	Env               []interface{}       `yaml:"env"`
+	LogLevel          string              `yaml:"logLevel"`
+	PodAnnotations    map[string]string   `yaml:"podAnnotations"`
+	PodLabels         map[string]string   `yaml:"podLabels"`
+	ContainerPort     int                 `yaml:"containerPort"`
+	ReadinessProbe    *ReadinessProbe     `yaml:"readinessProbe"`
+	LivenessProbe     *LivenessProbe      `yaml:"livenessProbe"`
+	VolumeMounts      []*VolumeMount      `yaml:"volumeMounts"`
+	Volumes           []*Volume           `yaml:"volumes"`
+	NodeSelector      map[string]string   `yaml:"nodeSelector"`
+	Tolerations       []corev1.Toleration `yaml:"tolerations"`
+	Affinity          struct{}            `yaml:"affinity"`
+	PriorityClassName string              `yaml:"priorityClassName"`
+	Resources         struct{}            `yaml:"resources"`
+	Service           *Service            `yaml:"service"`
+	Metrics           *Metrics            `yaml:"metrics"`
+	ServiceAccount    *ServiceAccount     `yaml:"serviceAccount"`
 }
 type Data struct {
 	Data map[string]string `yaml:"data"`

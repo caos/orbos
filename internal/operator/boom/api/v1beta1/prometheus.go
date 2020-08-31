@@ -20,7 +20,7 @@ type Prometheus struct {
 	//NodeSelector for statefulset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	//Tolerations to run prometheus on nodes
-	Tolerations []*toleration.Toleration
+	Tolerations []toleration.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.

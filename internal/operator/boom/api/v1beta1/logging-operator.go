@@ -14,5 +14,5 @@ type LoggingOperator struct {
 	//NodeSelector for deployment
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	//Tolerations to run fluentbit on nodes
-	Tolerations []*toleration.Toleration
+	Tolerations []toleration.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }

@@ -21,7 +21,7 @@ type LogsPersisting struct {
 	//NodeSelector for statefulset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	//Tolerations to run loki on nodes
-	Tolerations []*toleration.Toleration
+	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }
 
 // Logs: When the logs spec is nil all logs will get persisted in loki.

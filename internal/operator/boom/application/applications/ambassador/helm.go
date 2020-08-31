@@ -73,6 +73,12 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
+		}
+	}
+
 	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
 
 	return values
