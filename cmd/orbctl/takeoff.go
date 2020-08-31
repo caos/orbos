@@ -1,14 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
 
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-	"github.com/caos/orbos/internal/operator/boom/cmd"
+	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
@@ -115,6 +121,10 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			if err := deployBoom(monitor, gitClient, &kubeconfig); err != nil {
 				return err
 			}
+
+			if err := deployZitadel(monitor, gitClient, &kubeconfig); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
@@ -126,35 +136,78 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 	if err != nil {
 		return err
 	}
-	if foundBoom {
-		desiredTree, err := api.ReadBoomYml(gitClient)
-		if err != nil {
-			return err
+	if !foundBoom {
+		monitor.Info("No BOOM deployed as no boom.yml present")
+		return nil
+	}
+	desiredTree, err := api.ReadBoomYml(gitClient)
+	if err != nil {
+		return err
+	}
+
+	desiredKind, _, err := boomapi.ParseToolset(desiredTree)
+	if err != nil {
+		return err
+	}
+
+	var (
+		tolerations  toleration.Tolerations
+		nodeselector map[string]string
+		boomVersion  string
+	)
+
+	resources := corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("50m"),
+			corev1.ResourceMemory: resource.MustParse("50Mi"),
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("10Mi"),
+		},
+	}
+	boomSpec := desiredKind.Spec.Boom
+	if boomSpec != nil {
+		boomVersion = boomSpec.Version
+		tolerations = boomSpec.Tolerations
+		nodeselector = boomSpec.NodeSelector
+		if boomSpec.Resources != nil {
+			resources = *boomSpec.Resources
 		}
+	}
+	if boomVersion == "" {
+		boomVersion = version
+		monitor.Info(fmt.Sprintf("No version set in boom.yml, so default version %s will get applied", version))
+	}
 
-		desiredKind, _, err := boomapi.ParseToolset(desiredTree)
-		if err != nil {
-			return err
-		}
+	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-		boomVersion := version
+	if err := cmdboom.Reconcile(monitor, k8sClient, boomVersion, tolerations, nodeselector, resources); err != nil {
+		return err
+	}
+	return nil
+}
 
-		var tolerations toleration.Tolerations
-		var nodeselector map[string]string
-		boomSpec := desiredKind.Spec.Boom
-		if boomSpec != nil {
-			boomVersion = boomSpec.Version
-			tolerations = boomSpec.Tolerations
-			nodeselector = boomSpec.NodeSelector
-		}
-
+func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+	found, err := api.ExistsZitadelYml(gitClient)
+	if err != nil {
+		return err
+	}
+	if found {
 		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-		if err := cmd.Reconcile(monitor, k8sClient, boomVersion, tolerations, nodeselector); err != nil {
-			return err
+		if k8sClient.Available() {
+			tree, err := api.ReadZitadelYml(gitClient)
+			if err != nil {
+				return err
+			}
+
+			if err := cmdzitadel.Reconcile(monitor, tree, version)(k8sClient); err != nil {
+				return err
+			}
+		} else {
+			monitor.Info("Failed to connect to k8s")
 		}
-	} else {
-		monitor.Info("No BOOM deployed as no boom.yml present")
 	}
 	return nil
 }
@@ -229,6 +282,33 @@ func StartBoom(rv RootValues) *cobra.Command {
 		}
 
 		return start.Boom(monitor, orbConfig.Path, localmode, version)
+	}
+	return cmd
+}
+
+func StartZitadel(rv RootValues) *cobra.Command {
+	var (
+		kubeconfig string
+		cmd        = &cobra.Command{
+			Use:   "zitadel",
+			Short: "Launch a zitadel operator",
+			Long:  "Ensures a desired state",
+		}
+	)
+	flags := cmd.Flags()
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		_, monitor, orbConfig, _, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
+		}
+
+		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+		if k8sClient.Available() {
+			return start.Zitadel(monitor, orbConfig.Path, k8sClient)
+		}
+		return nil
 	}
 	return cmd
 }
