@@ -2,6 +2,7 @@ package statefulset
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -16,6 +17,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+type Affinity struct {
+	key   string
+	value string
+}
+
+type Affinitys []metav1.LabelSelectorRequirement
+
+func (a Affinitys) Len() int           { return len(a) }
+func (a Affinitys) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Affinitys) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 func AdaptFunc(
 	monitor mntr.Monitor,
@@ -62,7 +74,7 @@ func AdaptFunc(
 	certsInternal := "certs"
 	clientCertsInternal := "client-certs"
 
-	affinity := make([]metav1.LabelSelectorRequirement, 0)
+	affinity := Affinitys{}
 	for k, v := range labels {
 		affinity = append(affinity, metav1.LabelSelectorRequirement{
 			Key:      k,
@@ -70,8 +82,8 @@ func AdaptFunc(
 			Values: []string{
 				v,
 			}})
-
 	}
+	sort.Sort(affinity)
 
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{

@@ -43,7 +43,7 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 		}
 
 		return func(k8sClient *kubernetes.Client) error {
-			return k8sClient.ApplyJob(job)
+			return nil
 		}, nil
 
 	}, nil
