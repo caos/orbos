@@ -1,6 +1,7 @@
 package zitadel
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
@@ -20,6 +21,8 @@ type Spec struct {
 	Configuration *configuration.Configuration `yaml:"configuration"`
 	NodeSelector  map[string]string            `yaml:"nodeSelector,omitempty"`
 	Tolerations   []corev1.Toleration          `yaml:"tolerations,omitempty"`
+	Affinity      *k8s.Affinity                `yaml:"affinity,omitempty"`
+	Resources     *k8s.Resources               `yaml:"resources,omitempty"`
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

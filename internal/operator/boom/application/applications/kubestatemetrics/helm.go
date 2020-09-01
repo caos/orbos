@@ -20,6 +20,10 @@ func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *tools
 		values.Replicas = spec.ReplicaCount
 	}
 
+	if spec.Affinity != nil {
+		values.Affinity = spec.Affinity
+	}
+
 	if spec.NodeSelector != nil {
 		for k, v := range spec.NodeSelector {
 			values.NodeSelector[k] = v

@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -151,7 +151,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 				PullPolicy: "IfNotPresent",
 			},
 			NodeSelector: map[string]string{},
-			Resources: &resources.Resources{
+			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
 					corev1.ResourceMemory: resource.MustParse("50Mi"),

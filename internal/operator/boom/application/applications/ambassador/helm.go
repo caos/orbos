@@ -50,6 +50,10 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		values.ReplicaCount = spec.ReplicaCount
 	}
 
+	if spec.Affinity != nil {
+		values.Affinity = spec.Affinity
+	}
+
 	if spec.Service != nil {
 		values.Service.Type = spec.Service.Type
 		values.Service.LoadBalancerIP = spec.Service.LoadBalancerIP

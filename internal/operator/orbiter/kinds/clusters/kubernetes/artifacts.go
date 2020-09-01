@@ -6,8 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -242,7 +241,7 @@ func ScaleZitadelOperator(
 	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations toleration.Tolerations, nodeselector map[string]string, resources *resources.Resources) error {
+func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations k8s.Tolerations, nodeselector map[string]string, resources *k8s.Resources) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,

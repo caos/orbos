@@ -1,9 +1,8 @@
 package v1beta2
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 )
 
 type MetricsPersisting struct {
@@ -23,9 +22,9 @@ type MetricsPersisting struct {
 	//NodeSelector for statefulset
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	//Tolerations to run prometheus on nodes
-	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
-	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.

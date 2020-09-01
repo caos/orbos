@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -52,11 +52,11 @@ type LivenessProbe struct {
 	PeriodSeconds       int `yaml:"periodSeconds"`
 }
 type PrometheusExporter struct {
-	Enabled    bool                 `yaml:"enabled"`
-	PullPolicy string               `yaml:"pullPolicy"`
-	Repository string               `yaml:"repository"`
-	Resources  *resources.Resources `yaml:"resources"`
-	Tag        string               `yaml:"tag"`
+	Enabled    bool           `yaml:"enabled"`
+	PullPolicy string         `yaml:"pullPolicy"`
+	Repository string         `yaml:"repository"`
+	Resources  *k8s.Resources `yaml:"resources"`
+	Tag        string         `yaml:"tag"`
 }
 type RateLimit struct {
 	Create bool `yaml:"create"`
@@ -75,9 +75,9 @@ type RedisAnnotations struct {
 	Service    map[string]string `yaml:"service"`
 }
 type Redis struct {
-	Annotations *RedisAnnotations    `yaml:"annotations"`
-	Create      bool                 `yaml:"create"`
-	Resources   *resources.Resources `yaml:"resources"`
+	Annotations *RedisAnnotations `yaml:"annotations"`
+	Create      bool              `yaml:"create"`
+	Resources   *k8s.Resources    `yaml:"resources"`
 }
 type Scope struct {
 	SingleNamespace bool `yaml:"singleNamespace"`
@@ -110,45 +110,45 @@ type ServiceAccount struct {
 }
 
 type Values struct {
-	AdminService           *AdminService        `yaml:"adminService"`
-	Affinity               struct{}             `yaml:"affinity"`
-	AmbassadorConfig       string               `yaml:"ambassadorConfig"`
-	AuthService            *AuthService         `yaml:"authService"`
-	Autoscaling            *Autoscaling         `yaml:"autoscaling"`
-	Crds                   *Crds                `yaml:"crds"`
-	CreateDevPortalMapping bool                 `yaml:"createDevPortalMappings"`
-	DaemonSet              bool                 `yaml:"daemonSet"`
-	DeploymentAnnotations  map[string]string    `yaml:"deploymentAnnotations"`
-	DeploymentStrategy     *DeploymentStrategy  `yaml:"deploymentStrategy"`
-	DNSPolicy              string               `yaml:"dnsPolicy"`
-	Env                    map[string]string    `yaml:"env"`
-	FullnameOverride       string               `yaml:"fullnameOverride"`
-	HostNetwork            bool                 `yaml:"hostNetwork"`
-	Image                  *Image               `yaml:"image"`
-	ImagePullSecrets       []interface{}        `yaml:"imagePullSecrets"`
-	InitContainers         []interface{}        `yaml:"initContainers"`
-	LicenseKey             *LicenseKey          `yaml:"licenseKey"`
-	LivenessProbe          *LivenessProbe       `yaml:"livenessProbe"`
-	NameOverride           string               `yaml:"nameOverride"`
-	NodeSelector           map[string]string    `yaml:"nodeSelector"`
-	PodAnnotations         map[string]string    `yaml:"podAnnotations"`
-	PodDisruptionBudget    struct{}             `yaml:"podDisruptionBudget"`
-	PodLabels              map[string]string    `yaml:"podLabels"`
-	PriorityClassName      string               `yaml:"priorityClassName"`
-	PrometheusExporter     *PrometheusExporter  `yaml:"prometheusExporter"`
-	RateLimit              *RateLimit           `yaml:"rateLimit"`
-	Rbac                   *Rbac                `yaml:"rbac"`
-	ReadinessProbe         *ReadinessProbe      `yaml:"readinessProbe"`
-	Redis                  *Redis               `yaml:"redis"`
-	RedisURL               interface{}          `yaml:"redisURL"`
-	ReplicaCount           int                  `yaml:"replicaCount"`
-	Resources              *resources.Resources `yaml:"resources"`
-	Scope                  *Scope               `yaml:"scope"`
-	Security               *Security            `yaml:"security"`
-	Service                *Service             `yaml:"service"`
-	ServiceAccount         *ServiceAccount      `yaml:"serviceAccount"`
-	SidecarContainers      []interface{}        `yaml:"sidecarContainers"`
-	Tolerations            []corev1.Toleration  `yaml:"tolerations"`
-	VolumeMounts           []interface{}        `yaml:"volumeMounts"`
-	Volumes                []interface{}        `yaml:"volumes"`
+	AdminService           *AdminService       `yaml:"adminService"`
+	Affinity               *k8s.Affinity       `yaml:"affinity"`
+	AmbassadorConfig       string              `yaml:"ambassadorConfig"`
+	AuthService            *AuthService        `yaml:"authService"`
+	Autoscaling            *Autoscaling        `yaml:"autoscaling"`
+	Crds                   *Crds               `yaml:"crds"`
+	CreateDevPortalMapping bool                `yaml:"createDevPortalMappings"`
+	DaemonSet              bool                `yaml:"daemonSet"`
+	DeploymentAnnotations  map[string]string   `yaml:"deploymentAnnotations"`
+	DeploymentStrategy     *DeploymentStrategy `yaml:"deploymentStrategy"`
+	DNSPolicy              string              `yaml:"dnsPolicy"`
+	Env                    map[string]string   `yaml:"env"`
+	FullnameOverride       string              `yaml:"fullnameOverride"`
+	HostNetwork            bool                `yaml:"hostNetwork"`
+	Image                  *Image              `yaml:"image"`
+	ImagePullSecrets       []interface{}       `yaml:"imagePullSecrets"`
+	InitContainers         []interface{}       `yaml:"initContainers"`
+	LicenseKey             *LicenseKey         `yaml:"licenseKey"`
+	LivenessProbe          *LivenessProbe      `yaml:"livenessProbe"`
+	NameOverride           string              `yaml:"nameOverride"`
+	NodeSelector           map[string]string   `yaml:"nodeSelector"`
+	PodAnnotations         map[string]string   `yaml:"podAnnotations"`
+	PodDisruptionBudget    struct{}            `yaml:"podDisruptionBudget"`
+	PodLabels              map[string]string   `yaml:"podLabels"`
+	PriorityClassName      string              `yaml:"priorityClassName"`
+	PrometheusExporter     *PrometheusExporter `yaml:"prometheusExporter"`
+	RateLimit              *RateLimit          `yaml:"rateLimit"`
+	Rbac                   *Rbac               `yaml:"rbac"`
+	ReadinessProbe         *ReadinessProbe     `yaml:"readinessProbe"`
+	Redis                  *Redis              `yaml:"redis"`
+	RedisURL               interface{}         `yaml:"redisURL"`
+	ReplicaCount           int                 `yaml:"replicaCount"`
+	Resources              *k8s.Resources      `yaml:"resources"`
+	Scope                  *Scope              `yaml:"scope"`
+	Security               *Security           `yaml:"security"`
+	Service                *Service            `yaml:"service"`
+	ServiceAccount         *ServiceAccount     `yaml:"serviceAccount"`
+	SidecarContainers      []interface{}       `yaml:"sidecarContainers"`
+	Tolerations            []corev1.Toleration `yaml:"tolerations"`
+	VolumeMounts           []interface{}       `yaml:"volumeMounts"`
+	Volumes                []interface{}       `yaml:"volumes"`
 }

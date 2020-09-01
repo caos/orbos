@@ -3,6 +3,9 @@ package deployment
 import (
 	"strings"
 
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -21,6 +24,7 @@ func AdaptFunc(
 	namespace string,
 	labels map[string]string,
 	replicaCount int,
+	affinity *k8s.Affinity,
 	imagePullSecret string,
 	cmName string,
 	certPath string,
@@ -32,6 +36,7 @@ func AdaptFunc(
 	users []string,
 	nodeSelector map[string]string,
 	tolerations []corev1.Toleration,
+	resources *k8s.Resources,
 	migrationDone zitadel.EnsureFunc,
 	configurationDone zitadel.EnsureFunc,
 	getConfigurationHashes func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
@@ -53,7 +58,7 @@ func AdaptFunc(
 	certMountPath := "/dbsecrets"
 	containerName := "zitadel"
 
-	volumnes := []corev1.Volume{{
+	volumes := []corev1.Volume{{
 		Name: secretName,
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
@@ -92,7 +97,7 @@ func AdaptFunc(
 	for _, user := range users {
 		userReplaced := strings.ReplaceAll(user, "_", "-")
 		internalName := "client-" + userReplaced
-		volumnes = append(volumnes, corev1.Volume{
+		volumes = append(volumes, corev1.Volume{
 			Name: internalName,
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
@@ -168,6 +173,19 @@ func AdaptFunc(
 	maxUnavailable := intstr.FromInt(1)
 	maxSurge := intstr.FromInt(1)
 
+	if resources == nil {
+		resources = &k8s.Resources{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("2"),
+				corev1.ResourceMemory: resource.MustParse("2Gi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("500m"),
+				corev1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+		}
+	}
+
 	deploymentDef := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        deployName,
@@ -195,68 +213,68 @@ func AdaptFunc(
 				Spec: corev1.PodSpec{
 					NodeSelector: nodeSelector,
 					Tolerations:  tolerations,
+					Affinity:     affinity.K8s(),
 					SecurityContext: &corev1.PodSecurityContext{
 						RunAsUser:    &runAsUser,
 						RunAsNonRoot: &runAsNonRoot,
 					},
-					Containers: []corev1.Container{
-						{
-							Lifecycle: &corev1.Lifecycle{
-								PostStart: &corev1.Handler{
-									Exec: &corev1.ExecAction{
-										// TODO: until proper fix of https://github.com/kubernetes/kubernetes/issues/2630
-										Command: []string{"sh", "-c",
-											"mkdir -p " + certPath + "/ && cp " + certMountPath + "/* " + certPath + "/ && chmod 400 " + certPath + "/*"},
-									},
+					Containers: []corev1.Container{{
+						Resources: corev1.ResourceRequirements(*resources),
+						Lifecycle: &corev1.Lifecycle{
+							PostStart: &corev1.Handler{
+								Exec: &corev1.ExecAction{
+									// TODO: until proper fix of https://github.com/kubernetes/kubernetes/issues/2630
+									Command: []string{"sh", "-c",
+										"mkdir -p " + certPath + "/ && cp " + certMountPath + "/* " + certPath + "/ && chmod 400 " + certPath + "/*"},
 								},
-							},
-							Args: []string{"start"},
-							SecurityContext: &corev1.SecurityContext{
-								RunAsUser:    &runAsUser,
-								RunAsNonRoot: &runAsNonRoot,
-							},
-							Name:            containerName,
-							Image:           "docker.pkg.github.com/caos/zitadel/zitadel:0.81.0",
-							ImagePullPolicy: "IfNotPresent",
-							Ports: []corev1.ContainerPort{
-								{Name: "grpc", ContainerPort: 50001},
-								{Name: "http", ContainerPort: 50002},
-								{Name: "ui", ContainerPort: 50003},
-							},
-							Env: envVars,
-							EnvFrom: []corev1.EnvFromSource{
-								{ConfigMapRef: &corev1.ConfigMapEnvSource{
-									LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
-								}}},
-							VolumeMounts: volMounts,
-							LivenessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path:   "/healthz",
-										Port:   intstr.Parse("http"),
-										Scheme: "HTTP",
-									},
-								},
-								PeriodSeconds:    5,
-								FailureThreshold: 2,
-							},
-							ReadinessProbe: &corev1.Probe{
-								Handler: corev1.Handler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path:   "/ready",
-										Port:   intstr.Parse("http"),
-										Scheme: "HTTP",
-									},
-								},
-								PeriodSeconds:    5,
-								FailureThreshold: 2,
 							},
 						},
-					},
+						Args: []string{"start"},
+						SecurityContext: &corev1.SecurityContext{
+							RunAsUser:    &runAsUser,
+							RunAsNonRoot: &runAsNonRoot,
+						},
+						Name:            containerName,
+						Image:           "docker.pkg.github.com/caos/zitadel/zitadel:0.81.0",
+						ImagePullPolicy: "IfNotPresent",
+						Ports: []corev1.ContainerPort{
+							{Name: "grpc", ContainerPort: 50001},
+							{Name: "http", ContainerPort: 50002},
+							{Name: "ui", ContainerPort: 50003},
+						},
+						Env: envVars,
+						EnvFrom: []corev1.EnvFromSource{
+							{ConfigMapRef: &corev1.ConfigMapEnvSource{
+								LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
+							}}},
+						VolumeMounts: volMounts,
+						LivenessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/healthz",
+									Port:   intstr.Parse("http"),
+									Scheme: "HTTP",
+								},
+							},
+							PeriodSeconds:    5,
+							FailureThreshold: 2,
+						},
+						ReadinessProbe: &corev1.Probe{
+							Handler: corev1.Handler{
+								HTTPGet: &corev1.HTTPGetAction{
+									Path:   "/ready",
+									Port:   intstr.Parse("http"),
+									Scheme: "HTTP",
+								},
+							},
+							PeriodSeconds:    5,
+							FailureThreshold: 2,
+						},
+					}},
 					ImagePullSecrets: []corev1.LocalObjectReference{{
 						Name: imagePullSecret,
 					}},
-					Volumes: volumnes,
+					Volumes: volumes,
 				},
 			},
 		},

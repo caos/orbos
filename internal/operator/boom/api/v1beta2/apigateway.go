@@ -1,9 +1,6 @@
 package v1beta2
 
-import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
-)
+import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 
 type APIGateway struct {
 	//Flag if tool should be deployed
@@ -12,6 +9,8 @@ type APIGateway struct {
 	//Number of replicas used for deployment
 	//@default: 1
 	ReplicaCount int `json:"replicaCount,omitempty" yaml:"replicaCount,omitempty"`
+	//Pod scheduling constrains
+	Affinity *k8s.Affinity `json:"affinity,omitempty" yaml:"affinity,omitempty"`
 	//Service definition for ambassador
 	Service *AmbassadorService `json:"service,omitempty" yaml:"service,omitempty"`
 	//Activate the dev portal mapping
@@ -19,9 +18,9 @@ type APIGateway struct {
 	//NodeSelector for deployment
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 	//Tolerations to run ambassador on nodes
-	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
-	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 	//Caching options
 	Caching *Caching `json:"caching,omitempty" yaml:"caching,omitempty"`
 }
@@ -30,7 +29,7 @@ type Caching struct {
 	//Enable specifies, whether a redis instance should be deployed or not
 	Enable bool
 	//Resource requirements
-	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 type AmbassadorService struct {

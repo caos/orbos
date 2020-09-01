@@ -3,10 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
-
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -17,12 +15,12 @@ import (
 func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion string, boomSpec *v1beta2.Boom) error {
 
 	var (
-		tolerations  toleration.Tolerations
+		tolerations  k8s.Tolerations
 		nodeselector map[string]string
 		boomVersion  string
 	)
 
-	resources := resources.Resources(corev1.ResourceRequirements{
+	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("250m"),
 			corev1.ResourceMemory: resource.MustParse("256Mi"),

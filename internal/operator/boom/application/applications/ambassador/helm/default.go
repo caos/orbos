@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -54,7 +54,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			PullPolicy: "IfNotPresent",
 			Repository: "prom/statsd-exporter",
 			Tag:        imageTags["prom/statsd-exporter"],
-			Resources: &resources.Resources{
+			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
 					corev1.ResourceMemory: resource.MustParse("100Mi"),
@@ -79,7 +79,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 
 		Redis: &Redis{
 			Create: true,
-			Resources: &resources.Resources{
+			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("100m"),
 					corev1.ResourceMemory: resource.MustParse("256Mi"),
@@ -124,7 +124,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 		ServiceAccount: &ServiceAccount{
 			Create: true,
 		},
-		Resources: &resources.Resources{
+		Resources: &k8s.Resources{
 			Limits: corev1.ResourceList{
 				corev1.ResourceCPU:    resource.MustParse("500m"),
 				corev1.ResourceMemory: resource.MustParse("500Mi"),

@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
 	corev1 "k8s.io/api/core/v1"
@@ -194,7 +194,7 @@ type PrometheusSpec struct {
 	RemoteRead                              []interface{}             `yaml:"remoteRead,omitempty"`
 	RemoteWrite                             []*RemoteWrite            `yaml:"remoteWrite,omitempty"`
 	RemoteWriteDashboards                   bool                      `yaml:"remoteWriteDashboards,omitempty"`
-	Resources                               *resources.Resources      `yaml:"resources,omitempty"`
+	Resources                               *k8s.Resources            `yaml:"resources,omitempty"`
 	StorageSpec                             *StorageSpec              `yaml:"storageSpec,omitempty"`
 	AdditionalScrapeConfigs                 []*AdditionalScrapeConfig `yaml:"additionalScrapeConfigs,omitempty"`
 	AdditionalAlertManagerConfigs           []interface{}             `yaml:"additionalAlertManagerConfigs,omitempty"`
