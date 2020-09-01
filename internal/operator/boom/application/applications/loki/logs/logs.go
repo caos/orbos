@@ -3,6 +3,8 @@ package logs
 import (
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 
 	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/logs"
@@ -51,7 +53,7 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		Namespace:        "caos-system",
 		ControlNamespace: "caos-system",
 		NodeSelector:     map[string]string{},
-		Tolerations:      []*logging.Toleration{},
+		Tolerations:      []corev1.Toleration{},
 	}
 
 	if toolsetCRDSpec.LogCollection.NodeSelector != nil {
@@ -71,14 +73,8 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 	}
 
 	if toolsetCRDSpec.LogCollection.Tolerations != nil {
-		for _, t := range toolsetCRDSpec.LogCollection.Tolerations {
-			conf.Tolerations = append(conf.Tolerations, &logging.Toleration{
-				Effect:            t.Effect,
-				Key:               t.Key,
-				Operator:          t.Operator,
-				TolerationSeconds: int(*t.TolerationSeconds),
-				Value:             t.Value,
-			})
+		for _, tol := range toolsetCRDSpec.LogCollection.Tolerations {
+			conf.Tolerations = append(conf.Tolerations, tol)
 		}
 	}
 

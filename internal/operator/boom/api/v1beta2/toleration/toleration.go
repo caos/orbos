@@ -2,6 +2,9 @@ package toleration
 
 import corev1 "k8s.io/api/core/v1"
 
+type Tolerations []corev1.Toleration
+
+/*
 type Toleration struct {
 	//Effect indicates the taint effect to match. Empty means match all taint effects. When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
 	Effect string
@@ -30,7 +33,8 @@ type Tolerations []*Toleration
 func (t Tolerations) ToKubeToleartions() []corev1.Toleration {
 	result := make([]corev1.Toleration, len(t), len(t))
 	for idx, tol := range t {
-		result[idx] = tol.ToKubeToleration()
+		result[idx] = tol
 	}
 	return result
 }
+*/

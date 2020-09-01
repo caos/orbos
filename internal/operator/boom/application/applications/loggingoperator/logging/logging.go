@@ -1,5 +1,7 @@
 package logging
 
+import corev1 "k8s.io/api/core/v1"
+
 type Storage struct {
 	StorageClassName string
 	AccessModes      []string
@@ -12,17 +14,9 @@ type Config struct {
 	ControlNamespace string
 	Replicas         int
 	NodeSelector     map[string]string
-	Tolerations      []*Toleration
+	Tolerations      []corev1.Toleration
 	FluentdPVC       *Storage
 	FluentbitPVC     *Storage
-}
-
-type Toleration struct {
-	Effect            string
-	Key               string
-	Operator          string
-	TolerationSeconds int
-	Value             string
 }
 
 type Requests struct {
@@ -67,11 +61,11 @@ type FilterKubernetes struct {
 }
 
 type Fluentbit struct {
-	Metrics             *Metrics           `yaml:"metrics,omitempty"`
-	FilterKubernetes    *FilterKubernetes  `yaml:"filterKubernetes,omitempty"`
-	Image               *Image             `yaml:"image,omitempty"`
-	BufferStorageVolume *KubernetesStorage `yaml:"bufferStorageVolume,omitempty"`
-	Tolerations         []*Toleration      `yaml:"tolerations,omitempty"`
+	Metrics             *Metrics            `yaml:"metrics,omitempty"`
+	FilterKubernetes    *FilterKubernetes   `yaml:"filterKubernetes,omitempty"`
+	Image               *Image              `yaml:"image,omitempty"`
+	BufferStorageVolume *KubernetesStorage  `yaml:"bufferStorageVolume,omitempty"`
+	Tolerations         []corev1.Toleration `yaml:"tolerations,omitempty"`
 }
 type Spec struct {
 	Fluentd                                      *Fluentd   `yaml:"fluentd"`
@@ -119,7 +113,7 @@ func New(conf *Config) *Logging {
 					Tag:        "1.3.6",
 					PullPolicy: "IfNotPresent",
 				},
-				Tolerations: []*Toleration{},
+				Tolerations: []corev1.Toleration{},
 			},
 		},
 	}

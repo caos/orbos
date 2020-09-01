@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
 	corev1 "k8s.io/api/core/v1"
@@ -152,57 +153,57 @@ type AdditionalScrapeConfig struct {
 }
 
 type PrometheusSpec struct {
-	ScrapeInterval                          string                       `yaml:"scrapeInterval,omitempty"`
-	EvaluationInterval                      string                       `yaml:"evaluationInterval,omitempty"`
-	ListenLocal                             bool                         `yaml:"listenLocal,omitempty"`
-	EnableAdminAPI                          bool                         `yaml:"enableAdminAPI,omitempty"`
-	Image                                   *Image                       `yaml:"image,omitempty"`
-	Tolerations                             []corev1.Toleration          `yaml:"tolerations,omitempty"`
-	AlertingEndpoints                       []interface{}                `yaml:"alertingEndpoints,omitempty"`
-	ExternalLabels                          map[string]string            `yaml:"externalLabels,omitempty"`
-	ReplicaExternalLabelName                string                       `yaml:"replicaExternalLabelName,omitempty"`
-	ReplicaExternalLabelNameClear           bool                         `yaml:"replicaExternalLabelNameClear,omitempty"`
-	PrometheusExternalLabelName             string                       `yaml:"prometheusExternalLabelName,omitempty"`
-	PrometheusExternalLabelNameClear        bool                         `yaml:"prometheusExternalLabelNameClear,omitempty"`
-	ExternalURL                             string                       `yaml:"externalUrl,omitempty"`
-	NodeSelector                            map[string]string            `yaml:"nodeSelector,omitempty"`
-	Secrets                                 []interface{}                `yaml:"secrets,omitempty"`
-	ConfigMaps                              []interface{}                `yaml:"configMaps,omitempty"`
-	Query                                   *Query                       `yaml:"query,omitempty"`
-	RuleNamespaceSelector                   *NamespaceSelector           `yaml:"ruleNamespaceSelector,omitempty"`
-	RuleSelectorNilUsesHelmValues           bool                         `yaml:"ruleSelectorNilUsesHelmValues,omitempty"`
-	RuleSelector                            *RuleSelector                `yaml:"ruleSelector,omitempty"`
-	ServiceMonitorSelectorNilUsesHelmValues bool                         `yaml:"serviceMonitorSelectorNilUsesHelmValues,omitempty"`
-	ServiceMonitorSelector                  *MonitorSelector             `yaml:"serviceMonitorSelector,omitempty"`
-	ServiceMonitorNamespaceSelector         *NamespaceSelector           `yaml:"serviceMonitorNamespaceSelector,omitempty"`
-	PodMonitorSelectorNilUsesHelmValues     bool                         `yaml:"podMonitorSelectorNilUsesHelmValues,omitempty"`
-	PodMonitorSelector                      *MonitorSelector             `yaml:"podMonitorSelector,omitempty"`
-	PodMonitorNamespaceSelector             *NamespaceSelector           `yaml:"podMonitorNamespaceSelector,omitempty"`
-	Retention                               string                       `yaml:"retention,omitempty"`
-	RetentionSize                           string                       `yaml:"retentionSize,omitempty"`
-	WalCompression                          bool                         `yaml:"walCompression,omitempty"`
-	Paused                                  bool                         `yaml:"paused,omitempty"`
-	Replicas                                int                          `yaml:"replicas,omitempty"`
-	LogLevel                                string                       `yaml:"logLevel,omitempty"`
-	LogFormat                               string                       `yaml:"logFormat,omitempty"`
-	RoutePrefix                             string                       `yaml:"routePrefix,omitempty"`
-	PodMetadata                             *PodMetadata                 `yaml:"podMetadata,omitempty"`
-	PodAntiAffinity                         string                       `yaml:"podAntiAffinity,omitempty"`
-	PodAntiAffinityTopologyKey              string                       `yaml:"podAntiAffinityTopologyKey,omitempty"`
-	Affinity                                struct{}                     `yaml:"affinity,omitempty"`
-	RemoteRead                              []interface{}                `yaml:"remoteRead,omitempty"`
-	RemoteWrite                             []*RemoteWrite               `yaml:"remoteWrite,omitempty"`
-	RemoteWriteDashboards                   bool                         `yaml:"remoteWriteDashboards,omitempty"`
-	Resources                               *corev1.ResourceRequirements `yaml:"resources,omitempty"`
-	StorageSpec                             *StorageSpec                 `yaml:"storageSpec,omitempty"`
-	AdditionalScrapeConfigs                 []*AdditionalScrapeConfig    `yaml:"additionalScrapeConfigs,omitempty"`
-	AdditionalAlertManagerConfigs           []interface{}                `yaml:"additionalAlertManagerConfigs,omitempty"`
-	AdditionalAlertRelabelConfigs           []interface{}                `yaml:"additionalAlertRelabelConfigs,omitempty"`
-	SecurityContext                         *SecurityContext             `yaml:"securityContext,omitempty"`
-	PriorityClassName                       string                       `yaml:"priorityClassName,omitempty"`
-	Thanos                                  struct{}                     `yaml:"thanos,omitempty"`
-	Containers                              []interface{}                `yaml:"containers,omitempty"`
-	AdditionalScrapeConfigsExternal         bool                         `yaml:"additionalScrapeConfigsExternal,omitempty"`
+	ScrapeInterval                          string                    `yaml:"scrapeInterval,omitempty"`
+	EvaluationInterval                      string                    `yaml:"evaluationInterval,omitempty"`
+	ListenLocal                             bool                      `yaml:"listenLocal,omitempty"`
+	EnableAdminAPI                          bool                      `yaml:"enableAdminAPI,omitempty"`
+	Image                                   *Image                    `yaml:"image,omitempty"`
+	Tolerations                             []corev1.Toleration       `yaml:"tolerations,omitempty"`
+	AlertingEndpoints                       []interface{}             `yaml:"alertingEndpoints,omitempty"`
+	ExternalLabels                          map[string]string         `yaml:"externalLabels,omitempty"`
+	ReplicaExternalLabelName                string                    `yaml:"replicaExternalLabelName,omitempty"`
+	ReplicaExternalLabelNameClear           bool                      `yaml:"replicaExternalLabelNameClear,omitempty"`
+	PrometheusExternalLabelName             string                    `yaml:"prometheusExternalLabelName,omitempty"`
+	PrometheusExternalLabelNameClear        bool                      `yaml:"prometheusExternalLabelNameClear,omitempty"`
+	ExternalURL                             string                    `yaml:"externalUrl,omitempty"`
+	NodeSelector                            map[string]string         `yaml:"nodeSelector,omitempty"`
+	Secrets                                 []interface{}             `yaml:"secrets,omitempty"`
+	ConfigMaps                              []interface{}             `yaml:"configMaps,omitempty"`
+	Query                                   *Query                    `yaml:"query,omitempty"`
+	RuleNamespaceSelector                   *NamespaceSelector        `yaml:"ruleNamespaceSelector,omitempty"`
+	RuleSelectorNilUsesHelmValues           bool                      `yaml:"ruleSelectorNilUsesHelmValues,omitempty"`
+	RuleSelector                            *RuleSelector             `yaml:"ruleSelector,omitempty"`
+	ServiceMonitorSelectorNilUsesHelmValues bool                      `yaml:"serviceMonitorSelectorNilUsesHelmValues,omitempty"`
+	ServiceMonitorSelector                  *MonitorSelector          `yaml:"serviceMonitorSelector,omitempty"`
+	ServiceMonitorNamespaceSelector         *NamespaceSelector        `yaml:"serviceMonitorNamespaceSelector,omitempty"`
+	PodMonitorSelectorNilUsesHelmValues     bool                      `yaml:"podMonitorSelectorNilUsesHelmValues,omitempty"`
+	PodMonitorSelector                      *MonitorSelector          `yaml:"podMonitorSelector,omitempty"`
+	PodMonitorNamespaceSelector             *NamespaceSelector        `yaml:"podMonitorNamespaceSelector,omitempty"`
+	Retention                               string                    `yaml:"retention,omitempty"`
+	RetentionSize                           string                    `yaml:"retentionSize,omitempty"`
+	WalCompression                          bool                      `yaml:"walCompression,omitempty"`
+	Paused                                  bool                      `yaml:"paused,omitempty"`
+	Replicas                                int                       `yaml:"replicas,omitempty"`
+	LogLevel                                string                    `yaml:"logLevel,omitempty"`
+	LogFormat                               string                    `yaml:"logFormat,omitempty"`
+	RoutePrefix                             string                    `yaml:"routePrefix,omitempty"`
+	PodMetadata                             *PodMetadata              `yaml:"podMetadata,omitempty"`
+	PodAntiAffinity                         string                    `yaml:"podAntiAffinity,omitempty"`
+	PodAntiAffinityTopologyKey              string                    `yaml:"podAntiAffinityTopologyKey,omitempty"`
+	Affinity                                struct{}                  `yaml:"affinity,omitempty"`
+	RemoteRead                              []interface{}             `yaml:"remoteRead,omitempty"`
+	RemoteWrite                             []*RemoteWrite            `yaml:"remoteWrite,omitempty"`
+	RemoteWriteDashboards                   bool                      `yaml:"remoteWriteDashboards,omitempty"`
+	Resources                               *resources.Resources      `yaml:"resources,omitempty"`
+	StorageSpec                             *StorageSpec              `yaml:"storageSpec,omitempty"`
+	AdditionalScrapeConfigs                 []*AdditionalScrapeConfig `yaml:"additionalScrapeConfigs,omitempty"`
+	AdditionalAlertManagerConfigs           []interface{}             `yaml:"additionalAlertManagerConfigs,omitempty"`
+	AdditionalAlertRelabelConfigs           []interface{}             `yaml:"additionalAlertRelabelConfigs,omitempty"`
+	SecurityContext                         *SecurityContext          `yaml:"securityContext,omitempty"`
+	PriorityClassName                       string                    `yaml:"priorityClassName,omitempty"`
+	Thanos                                  struct{}                  `yaml:"thanos,omitempty"`
+	Containers                              []interface{}             `yaml:"containers,omitempty"`
+	AdditionalScrapeConfigsExternal         bool                      `yaml:"additionalScrapeConfigsExternal,omitempty"`
 }
 
 type RemoteWrite struct {

@@ -28,7 +28,7 @@ func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *too
 
 	if spec.Tolerations != nil {
 		for _, tol := range spec.Tolerations {
-			values.PrometheusOperator.Tolerations = append(values.PrometheusOperator.Tolerations, tol.ToKubeToleration())
+			values.PrometheusOperator.Tolerations = append(values.PrometheusOperator.Tolerations, tol)
 		}
 	}
 

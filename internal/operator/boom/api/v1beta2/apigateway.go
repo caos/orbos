@@ -1,8 +1,8 @@
 package v1beta2
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type APIGateway struct {
@@ -21,7 +21,7 @@ type APIGateway struct {
 	//Tolerations to run ambassador on nodes
 	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 	//Caching options
 	Caching *Caching `json:"caching,omitempty" yaml:"caching,omitempty"`
 }
@@ -30,7 +30,7 @@ type Caching struct {
 	//Enable specifies, whether a redis instance should be deployed or not
 	Enable bool
 	//Resource requirements
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 type AmbassadorService struct {

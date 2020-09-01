@@ -1,9 +1,9 @@
 package v1beta2
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type LogsPersisting struct {
@@ -24,7 +24,7 @@ type LogsPersisting struct {
 	//Tolerations to run loki on nodes
 	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // Logs: When the logs spec is nil all logs will get persisted in loki.

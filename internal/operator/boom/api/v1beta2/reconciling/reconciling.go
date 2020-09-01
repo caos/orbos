@@ -4,9 +4,9 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/repository"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 	"github.com/caos/orbos/internal/secret"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Reconciling struct {
@@ -46,7 +46,7 @@ type Reconciling struct {
 
 type CommonComponent struct {
 	//Resource requirements
-	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Resources *resources.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 /*

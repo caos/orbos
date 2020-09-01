@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 	"github.com/caos/orbos/internal/orb"
 
@@ -241,13 +242,13 @@ func ScaleZitadelOperator(
 	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string, tolerations toleration.Tolerations, nodeselector map[string]string, resources core.ResourceRequirements) error {
+func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations toleration.Tolerations, nodeselector map[string]string, resources *resources.Resources) error {
 
 	monitor.WithFields(map[string]interface{}{
-		"boom": boomversion,
+		"boom": version,
 	}).Debug("Ensuring boom artifacts")
 
-	if boomversion == "" {
+	if version == "" {
 		return nil
 	}
 
@@ -338,7 +339,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", boomversion),
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -351,10 +352,10 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 							ReadOnly:  true,
 							MountPath: "/secrets",
 						}},
-						Resources: resources,
+						Resources: core.ResourceRequirements(*resources),
 					}},
 					NodeSelector: nodeselector,
-					Tolerations:  tolerations.ToKubeToleartions(),
+					Tolerations:  tolerations,
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{
@@ -371,7 +372,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
-		"version": boomversion,
+		"version": version,
 	}).Debug("Boom deployment ensured")
 
 	if err := client.ApplyService(&core.Service{

@@ -3,12 +3,11 @@ package yaml
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/resources"
 	"gopkg.in/yaml.v3"
 )
 
-func Build(resources *corev1.ResourceRequirements) interface{} {
+func Build(resources *resources.Resources) interface{} {
 
 	ds, err := yaml.Marshal(map[string]interface{}{
 		"kind":       "DaemonSet",

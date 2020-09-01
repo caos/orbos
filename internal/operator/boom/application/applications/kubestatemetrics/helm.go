@@ -28,7 +28,7 @@ func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *tools
 
 	if spec.Tolerations != nil {
 		for _, tol := range spec.Tolerations {
-			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
+			values.Tolerations = append(values.Tolerations, tol)
 		}
 	}
 

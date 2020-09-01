@@ -164,7 +164,7 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 
 	if spec.Tolerations != nil {
 		for _, tol := range spec.Tolerations {
-			t := tol.ToKubeToleration()
+			t := tol
 			values.Dex.Tolerations = append(values.Dex.Tolerations, t)
 			values.RepoServer.Tolerations = append(values.RepoServer.Tolerations, t)
 			values.Redis.Tolerations = append(values.Redis.Tolerations, t)
