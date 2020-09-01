@@ -63,12 +63,12 @@ func DefaultValues(imageTags map[string]string) *Values {
 			RemoteWrite: nil,
 			Resources: &resources.Resources{
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("300m"),
-					corev1.ResourceMemory: resource.MustParse("512Mi"),
-				},
-				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("1000m"),
 					corev1.ResourceMemory: resource.MustParse("1Gi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("300m"),
+					corev1.ResourceMemory: resource.MustParse("512Mi"),
 				},
 			},
 		},
