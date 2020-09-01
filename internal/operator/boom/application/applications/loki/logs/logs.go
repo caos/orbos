@@ -1,8 +1,9 @@
 package logs
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"strings"
+
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 
 	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/logs"
 	aglogs "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/logs"
@@ -75,7 +76,7 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 				Effect:            t.Effect,
 				Key:               t.Key,
 				Operator:          t.Operator,
-				TolerationSeconds: t.TolerationSeconds,
+				TolerationSeconds: int(*t.TolerationSeconds),
 				Value:             t.Value,
 			})
 		}

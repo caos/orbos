@@ -20,7 +20,9 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 	if oldToolset.Spec != nil {
 		oldSpec := oldToolset.Spec
 		newSpec := &v1beta2.ToolsetSpec{
-			BoomVersion:        oldSpec.BoomVersion,
+			Boom: &v1beta2.Boom{
+				Version: oldSpec.BoomVersion,
+			},
 			CurrentStateFolder: oldSpec.CurrentStateFolder,
 			ForceApply:         oldSpec.ForceApply,
 		}
