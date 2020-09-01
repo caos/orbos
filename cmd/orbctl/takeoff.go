@@ -2,8 +2,14 @@ package main
 
 import (
 	"fmt"
-	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
 	"io/ioutil"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+
+	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
+
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
@@ -130,31 +136,54 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 	if err != nil {
 		return err
 	}
-	if foundBoom {
-		desiredTree, err := api.ReadBoomYml(gitClient)
-		if err != nil {
-			return err
-		}
-
-		desiredKind, _, err := boomapi.ParseToolset(desiredTree)
-		if err != nil {
-			return err
-		}
-
-		boomVersion := version
-		if desiredKind.Spec.BoomVersion != "" {
-			boomVersion = desiredKind.Spec.BoomVersion
-		} else {
-			monitor.Info(fmt.Sprintf("No version set in boom.yml, so default version %s will get applied", version))
-		}
-
-		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
-
-		if err := cmdboom.Reconcile(monitor, k8sClient, boomVersion); err != nil {
-			return err
-		}
-	} else {
+	if !foundBoom {
 		monitor.Info("No BOOM deployed as no boom.yml present")
+		return nil
+	}
+	desiredTree, err := api.ReadBoomYml(gitClient)
+	if err != nil {
+		return err
+	}
+
+	desiredKind, _, err := boomapi.ParseToolset(desiredTree)
+	if err != nil {
+		return err
+	}
+
+	var (
+		tolerations  toleration.Tolerations
+		nodeselector map[string]string
+		boomVersion  string
+	)
+
+	resources := corev1.ResourceRequirements{
+		Limits: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("50m"),
+			corev1.ResourceMemory: resource.MustParse("50Mi"),
+		},
+		Requests: corev1.ResourceList{
+			corev1.ResourceCPU:    resource.MustParse("10m"),
+			corev1.ResourceMemory: resource.MustParse("10Mi"),
+		},
+	}
+	boomSpec := desiredKind.Spec.Boom
+	if boomSpec != nil {
+		boomVersion = boomSpec.Version
+		tolerations = boomSpec.Tolerations
+		nodeselector = boomSpec.NodeSelector
+		if boomSpec.Resources != nil {
+			resources = *boomSpec.Resources
+		}
+	}
+	if boomVersion == "" {
+		boomVersion = version
+		monitor.Info(fmt.Sprintf("No version set in boom.yml, so default version %s will get applied", version))
+	}
+
+	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+
+	if err := cmdboom.Reconcile(monitor, k8sClient, boomVersion, tolerations, nodeselector, resources); err != nil {
+		return err
 	}
 	return nil
 }

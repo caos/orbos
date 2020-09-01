@@ -3,10 +3,12 @@ package yaml
 import (
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"gopkg.in/yaml.v3"
 )
 
-func GetDefault() interface{} {
+func Build(resources *corev1.ResourceRequirements) interface{} {
 
 	ds, err := yaml.Marshal(map[string]interface{}{
 		"kind":       "DaemonSet",
@@ -76,17 +78,8 @@ func GetDefault() interface{} {
 							MountPath: "/run/systemd",
 							ReadOnly:  true,
 						}},
-						"resources": map[string]*resourceList{
-							"limits": {
-								Memory: "100Mi",
-								Cpu:    "250m",
-							},
-							"requests": {
-								Memory: "100Mi",
-								Cpu:    "10m",
-							},
-						}},
-					},
+						"resources": resources,
+					}},
 					"volumes": []*volume{{
 						Name: "proc",
 						HostPath: hostPath{
@@ -144,11 +137,6 @@ type volumeMount struct {
 	Name      string `yaml:"name,omitempty"`
 	MountPath string `yaml:"mountPath,omitempty"`
 	ReadOnly  bool   `yaml:"readOnly,omitempty"`
-}
-
-type resourceList struct {
-	Memory string `yaml:"memory,omitempty"`
-	Cpu    string `yaml:"cpu,omitempty"`
 }
 
 type volume struct {

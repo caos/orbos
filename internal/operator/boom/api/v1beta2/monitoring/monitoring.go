@@ -5,6 +5,8 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Monitoring struct {
@@ -25,6 +27,12 @@ type Monitoring struct {
 	Auth *auth.Auth `json:"auth,omitempty" yaml:"auth,omitempty"`
 	//List of plugins which get added to the grafana instance
 	Plugins []string `json:"plugins,omitempty" yaml:"plugins,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run grafana on nodes
+	Tolerations toleration.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	//Resource requirements
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 type Datasource struct {

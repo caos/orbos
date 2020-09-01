@@ -18,18 +18,38 @@ func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.T
 
 	values := helm.DefaultValues(l.GetImageTags())
 
-	if toolset.LogsPersisting != nil {
-		spec := toolset.LogsPersisting
-		if spec.Storage != nil {
-			values.Persistence.Enabled = true
-			values.Persistence.Size = spec.Storage.Size
-			values.Persistence.StorageClassName = spec.Storage.StorageClass
-			if spec.Storage.AccessModes != nil {
-				values.Persistence.AccessModes = spec.Storage.AccessModes
-			}
+	values.FullNameOverride = info.GetName().String()
+
+	spec := toolset.LogsPersisting
+	if spec == nil {
+		return values
+	}
+
+	if spec.Storage != nil {
+		values.Persistence.Enabled = true
+		values.Persistence.Size = spec.Storage.Size
+		values.Persistence.StorageClassName = spec.Storage.StorageClass
+		if spec.Storage.AccessModes != nil {
+			values.Persistence.AccessModes = spec.Storage.AccessModes
 		}
 	}
-	values.FullNameOverride = info.GetName().String()
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
+		}
+	}
+
+	if spec.Resources != nil {
+		values.Resources = spec.Resources
+	}
+
 	return values
 }
 

@@ -11,9 +11,20 @@ type Config struct {
 	Namespace        string
 	ControlNamespace string
 	Replicas         int
+	NodeSelector     map[string]string
+	Tolerations      []*Toleration
 	FluentdPVC       *Storage
 	FluentbitPVC     *Storage
 }
+
+type Toleration struct {
+	Effect            string
+	Key               string
+	Operator          string
+	TolerationSeconds int
+	Value             string
+}
+
 type Requests struct {
 	Storage string `yaml:"storage,omitempty"`
 }
@@ -40,6 +51,7 @@ type Fluentd struct {
 	LogLevel            string             `yaml:"logLevel,omitempty"`
 	DisablePvc          bool               `yaml:"disablePvc"`
 	Scaling             *Scaling           `yaml:"scaling,omitempty"`
+	NodeSelector        map[string]string  `yaml:"nodeSelector,omitempty"`
 }
 type Metrics struct {
 	Port int `yaml:"port"`
@@ -59,6 +71,7 @@ type Fluentbit struct {
 	FilterKubernetes    *FilterKubernetes  `yaml:"filterKubernetes,omitempty"`
 	Image               *Image             `yaml:"image,omitempty"`
 	BufferStorageVolume *KubernetesStorage `yaml:"bufferStorageVolume,omitempty"`
+	Tolerations         []*Toleration      `yaml:"tolerations,omitempty"`
 }
 type Spec struct {
 	Fluentd                                      *Fluentd   `yaml:"fluentd"`
@@ -94,7 +107,8 @@ func New(conf *Config) *Logging {
 				Metrics: &Metrics{
 					Port: 8080,
 				},
-				DisablePvc: true,
+				DisablePvc:   true,
+				NodeSelector: map[string]string{},
 			},
 			Fluentbit: &Fluentbit{
 				Metrics: &Metrics{
@@ -105,6 +119,7 @@ func New(conf *Config) *Logging {
 					Tag:        "1.3.6",
 					PullPolicy: "IfNotPresent",
 				},
+				Tolerations: []*Toleration{},
 			},
 		},
 	}
@@ -128,6 +143,16 @@ func New(conf *Config) *Logging {
 		} else {
 			values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = []string{"ReadWriteOnce"}
 		}
+	}
+
+	if conf.NodeSelector != nil {
+		for k, v := range conf.NodeSelector {
+			values.Spec.Fluentd.NodeSelector[k] = v
+		}
+	}
+
+	if conf.Tolerations != nil {
+		values.Spec.Fluentbit.Tolerations = append(values.Spec.Fluentbit.Tolerations, conf.Tolerations...)
 	}
 
 	if conf.Replicas != 0 {

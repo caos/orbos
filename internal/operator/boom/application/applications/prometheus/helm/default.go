@@ -2,6 +2,8 @@ package helm
 
 import (
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func DefaultValues(imageTags map[string]string) *Values {
@@ -37,6 +39,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			SelfMonitor: false,
 		},
 		PrometheusSpec: &PrometheusSpec{
+			Tolerations:  nil,
+			NodeSelector: map[string]string{},
 			Image: &Image{
 				Repository: "quay.io/prometheus/prometheus",
 				Tag:        imageTags["quay.io/prometheus/prometheus"],
@@ -56,6 +60,16 @@ func DefaultValues(imageTags map[string]string) *Values {
 				FsGroup:      2000,
 			},
 			RemoteWrite: nil,
+			Resources: &corev1.ResourceRequirements{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("300m"),
+					corev1.ResourceMemory: resource.MustParse("512Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("1000m"),
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
+				},
+			},
 		},
 	}
 

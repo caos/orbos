@@ -67,7 +67,35 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
+		}
+	}
+
 	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
+
+	if spec.Resources == nil {
+		values.Resources = spec.Resources
+	}
+
+	if spec.Caching == nil {
+		return values
+	}
+
+	if spec.Caching.Enable {
+		values.Redis.Create = true
+	}
+
+	if spec.Caching.Resources != nil {
+		values.Redis.Resources = spec.Caching.Resources
+	}
 
 	return values
 }

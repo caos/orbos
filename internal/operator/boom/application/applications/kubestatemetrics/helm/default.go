@@ -1,5 +1,10 @@
 package helm
 
+import (
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 func DefaultValues(imageTags map[string]string) *Values {
 	return &Values{
 		FullnameOverride: "kube-state-metrics",
@@ -68,6 +73,16 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Statefulsets:               true,
 			Storageclasses:             true,
 			Verticalpodautoscalers:     false,
+		},
+		Resources: &corev1.ResourceRequirements{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("50m"),
+				corev1.ResourceMemory: resource.MustParse("50Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("10m"),
+				corev1.ResourceMemory: resource.MustParse("10Mi"),
+			},
 		},
 	}
 }

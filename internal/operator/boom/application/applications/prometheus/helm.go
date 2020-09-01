@@ -151,6 +151,12 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		})
 	}
 
+	if toolsetCRDSpec.MetricsPersisting.Tolerations != nil {
+		for _, t := range toolsetCRDSpec.MetricsPersisting.Tolerations {
+			values.Prometheus.PrometheusSpec.Tolerations = append(values.Prometheus.PrometheusSpec.Tolerations, t.ToKubeToleration())
+		}
+	}
+
 	ruleLabels := labels.GetRuleLabels(info.GetInstanceName())
 	rules, _ := helm.GetDefaultRules(ruleLabels)
 
@@ -160,6 +166,16 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
 
 	values.FullnameOverride = info.GetInstanceName()
+
+	if toolsetCRDSpec.MetricsPersisting.NodeSelector != nil {
+		for k, v := range toolsetCRDSpec.MetricsPersisting.NodeSelector {
+			values.Prometheus.PrometheusSpec.NodeSelector[k] = v
+		}
+	}
+
+	if toolsetCRDSpec.MetricsPersisting.Resources != nil {
+		values.Prometheus.PrometheusSpec.Resources = toolsetCRDSpec.MetricsPersisting.Resources
+	}
 
 	return values
 }

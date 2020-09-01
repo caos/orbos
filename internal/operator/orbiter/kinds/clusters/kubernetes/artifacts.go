@@ -6,6 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/toleration"
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -240,7 +241,7 @@ func ScaleZitadelOperator(
 	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string) error {
+func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string, tolerations toleration.Tolerations, nodeselector map[string]string, resources core.ResourceRequirements) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": boomversion,
@@ -350,17 +351,10 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 							ReadOnly:  true,
 							MountPath: "/secrets",
 						}},
-						Resources: core.ResourceRequirements{
-							Limits: core.ResourceList{
-								"cpu":    resource.MustParse("500m"),
-								"memory": resource.MustParse("500Mi"),
-							},
-							Requests: core.ResourceList{
-								"cpu":    resource.MustParse("250m"),
-								"memory": resource.MustParse("250Mi"),
-							},
-						},
+						Resources: resources,
 					}},
+					NodeSelector: nodeselector,
+					Tolerations:  tolerations.ToKubeToleartions(),
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{

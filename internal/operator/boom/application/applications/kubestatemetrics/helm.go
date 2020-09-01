@@ -10,8 +10,30 @@ import (
 func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
 	values := helm.DefaultValues(k.GetImageTags())
 
-	if toolset.KubeMetricsExporter != nil && toolset.KubeMetricsExporter.ReplicaCount != 0 {
-		values.Replicas = toolset.KubeMetricsExporter.ReplicaCount
+	spec := toolset.KubeMetricsExporter
+
+	if spec == nil {
+		return values
+	}
+
+	if spec.ReplicaCount != 0 {
+		values.Replicas = spec.ReplicaCount
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol.ToKubeToleration())
+		}
+	}
+
+	if spec.Resources != nil {
+		values.Resources = spec.Resources
 	}
 
 	return values

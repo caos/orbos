@@ -140,7 +140,8 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		return
 	}
 
-	if toolsetCRD.Spec.BoomVersion != "" {
+	boomSpec := toolsetCRD.Spec.Boom
+	if boomSpec != nil && boomSpec.Version != "" {
 		conf, err := clientgo.GetClusterConfig()
 		if err != nil {
 			c.status = err
@@ -154,7 +155,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			return
 		}
 
-		if err := cmd.Reconcile(monitor, k8sClient, toolsetCRD.Spec.BoomVersion); err != nil {
+		if err := cmd.Reconcile(monitor, k8sClient, boomSpec.Version, boomSpec.Tolerations, boomSpec.NodeSelector, *boomSpec.Resources); err != nil {
 			c.status = err
 			return
 		}
