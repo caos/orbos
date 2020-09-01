@@ -12,4 +12,4 @@
 | remoteWrite    | Configuration to write to remote prometheus , [here](RemoteWrite.md)           |         |             |
 | externalLabels | Static labels added to metrics                                                 |         |             |
 | nodeSelector   | NodeSelector for statefulset                                                   |         |             |
-| tolerations    | Tolerations to run prometheus on nodes , [here](toleration/Toleration.md)      |         | X           |
+| resources      | Resource requirements , [here](v1/ResourceRequirements.md)                     |         |             |

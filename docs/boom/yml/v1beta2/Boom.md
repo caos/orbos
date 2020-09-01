@@ -1,4 +1,4 @@
-# MetricCollection 
+# Boom 
  
 
 ## Structure 
@@ -6,6 +6,6 @@
 
 | Attribute    | Description                                                | Default | Collection  |
 | ------------ | ---------------------------------------------------------- | ------- | ----------  |
-| deploy       | Flag if tool should be deployed                            |  false  |             |
-| nodeSelector | NodeSelector for deployment                                |         |             |
+| version      | Version of BOOM which should be reconciled                 |         |             |
+| nodeSelector | NodeSelector for boom deployment                           |         |             |
 | resources    | Resource requirements , [here](v1/ResourceRequirements.md) |         |             |
