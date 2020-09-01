@@ -23,7 +23,7 @@ type APIGateway struct {
 	//Resource requirements
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty" yaml:"resources,omitempty"`
 	//Caching options
-	Caching *Caching `json:"resources,omitempty" yaml:"resources,omitempty"`
+	Caching *Caching `json:"caching,omitempty" yaml:"caching,omitempty"`
 }
 
 type Caching struct {
