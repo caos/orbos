@@ -65,5 +65,5 @@ type Values struct {
 	ExtraHostVolumeMounts interface{}                  `yaml:"extraHostVolumeMounts"`
 	Configmaps            interface{}                  `yaml:"configmaps"`
 	PodLabels             map[string]string            `yaml:"podLabels"`
-	Resources             *corev1.ResourceRequirements `yaml:"resources,omitempty"`
+	Resources             *corev1.ResourceRequirements `yaml:"resources"`
 }

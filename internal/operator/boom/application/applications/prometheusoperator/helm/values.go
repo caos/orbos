@@ -129,7 +129,7 @@ type PrometheusOperatorValues struct {
 	ConfigReloaderCPU             string                       `yaml:"configReloaderCpu"`
 	ConfigReloaderMemory          string                       `yaml:"configReloaderMemory"`
 	HyperkubeImage                *Image                       `yaml:"hyperkubeImage"`
-	Resources                     *corev1.ResourceRequirements `yaml:"resources,omitempty"`
+	Resources                     *corev1.ResourceRequirements `yaml:"resources"`
 }
 
 type Values struct {

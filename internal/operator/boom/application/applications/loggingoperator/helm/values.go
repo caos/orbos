@@ -9,7 +9,7 @@ type Values struct {
 	NameOverride     string                       `yaml:"nameOverride"`
 	FullnameOverride string                       `yaml:"fullnameOverride"`
 	Resources        *corev1.ResourceRequirements `yaml:"resources"`
-	NodeSelector     map[string]string            `yaml:"nodeSelector,omitempty"`
+	NodeSelector     map[string]string            `yaml:"nodeSelector"`
 	Tolerations      []corev1.Toleration          `yaml:"tolerations"`
 	Affinity         struct{}                     `yaml:"affinity"`
 	HTTP             HTTP                         `yaml:"http"`

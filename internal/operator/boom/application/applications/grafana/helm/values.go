@@ -128,8 +128,8 @@ type GrafanaValues struct {
 	Labels                   map[string]string            `yaml:"labels,omitempty"`
 	PodLabels                map[string]string            `yaml:"podLabels,omitempty"`
 	NodeSelector             map[string]string            `yaml:"nodeSelector,omitempty"`
-	Tolerations              []corev1.Toleration          `yaml:"tolerations"`
-	Resources                *corev1.ResourceRequirements `yaml:"resources"`
+	Tolerations              []corev1.Toleration          `yaml:"tolerations,omitempty"`
+	Resources                *corev1.ResourceRequirements `yaml:"resources,omitempty"`
 }
 
 type Rules struct {
