@@ -50,11 +50,12 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 		}
 
 		recordsInt = append(recordsInt, &cloudflare.DNSRecord{
-			Type:    record.Type,
-			Name:    name,
-			Content: record.IP,
-			Proxied: record.Proxied,
-			TTL:     ttl,
+			Type:     record.Type,
+			Name:     name,
+			Content:  record.IP,
+			Proxied:  record.Proxied,
+			TTL:      ttl,
+			Priority: record.Priority,
 		})
 	}
 

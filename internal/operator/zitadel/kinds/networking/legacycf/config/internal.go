@@ -43,6 +43,7 @@ type Subdomain struct {
 	Proxied   bool   `yaml:"proxied"`
 	TTL       int    `yaml:"ttl"`
 	Type      string `yaml:"type"`
+	Priority  int    `yaml:"priority"`
 }
 
 type Rule struct {
