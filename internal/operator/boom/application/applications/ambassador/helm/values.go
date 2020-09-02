@@ -75,9 +75,10 @@ type RedisAnnotations struct {
 	Service    map[string]string `yaml:"service"`
 }
 type Redis struct {
-	Annotations *RedisAnnotations `yaml:"annotations"`
-	Create      bool              `yaml:"create"`
-	Resources   *k8s.Resources    `yaml:"resources"`
+	Annotations  *RedisAnnotations `yaml:"annotations"`
+	Create       bool              `yaml:"create"`
+	Resources    *k8s.Resources    `yaml:"resources"`
+	NodeSelector map[string]string `yaml:"nodeSelector"`
 }
 type Scope struct {
 	SingleNamespace bool `yaml:"singleNamespace"`

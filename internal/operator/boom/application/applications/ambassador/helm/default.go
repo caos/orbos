@@ -81,18 +81,19 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Create: true,
 			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("100m"),
-					corev1.ResourceMemory: resource.MustParse("256Mi"),
+					corev1.ResourceCPU:    resource.MustParse("200m"),
+					corev1.ResourceMemory: resource.MustParse("360Mi"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("50m"),
-					corev1.ResourceMemory: resource.MustParse("128Mi"),
+					corev1.ResourceMemory: resource.MustParse("180Mi"),
 				},
 			},
 			Annotations: &RedisAnnotations{
 				Deployment: map[string]string{},
 				Service:    map[string]string{},
 			},
+			NodeSelector: map[string]string{},
 		},
 		ReplicaCount: 3,
 		Scope: &Scope{
