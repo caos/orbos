@@ -26,6 +26,8 @@ func AdaptFunc(
 	secretPasswordName string,
 	migrationUser string,
 	users []string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -94,6 +96,8 @@ func AdaptFunc(
 					Completions: &completions,
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
+							NodeSelector:    nodeselector,
+							Tolerations:     tolerations,
 							SecurityContext: &corev1.PodSecurityContext{},
 							InitContainers: []corev1.Container{
 								{

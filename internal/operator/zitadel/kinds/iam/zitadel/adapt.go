@@ -1,6 +1,7 @@
 package zitadel
 
 import (
+	core "k8s.io/api/core/v1"
 	"sort"
 	"strconv"
 
@@ -20,7 +21,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
+func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []core.Toleration, features []string) zitadel.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -102,6 +103,8 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			timestamp,
 			secretPasswordName,
 			migrationUser,
+			nodeselector,
+			tolerations,
 			features,
 		)
 		if err != nil {
@@ -146,7 +149,7 @@ func AdaptFunc(timestamp string, features []string) zitadel.AdaptFunc {
 			return nil, nil, err
 		}
 
-		queryM, destroyM, migrationDone, _, err := migration.AdaptFunc(internalMonitor, namespaceStr, "init", internalLabels, secretPasswordName, migrationUser, allZitadelUsers)
+		queryM, destroyM, migrationDone, _, err := migration.AdaptFunc(internalMonitor, namespaceStr, "init", internalLabels, secretPasswordName, migrationUser, allZitadelUsers, nodeselector, tolerations)
 		if err != nil {
 			return nil, nil, err
 		}

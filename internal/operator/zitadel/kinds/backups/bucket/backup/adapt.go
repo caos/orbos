@@ -26,6 +26,8 @@ func AdaptFunc(
 	secretName string,
 	secretKey string,
 	timestamp string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
 	features []string,
 ) (
 	queryFunc zitadel.QueryFunc,
@@ -63,6 +65,8 @@ func AdaptFunc(
 		Template: corev1.PodTemplateSpec{
 			Spec: corev1.PodSpec{
 				RestartPolicy: corev1.RestartPolicyNever,
+				NodeSelector:  nodeselector,
+				Tolerations:   tolerations,
 				Containers: []corev1.Container{{
 					Name:  name,
 					Image: "docker.pkg.github.com/caos/orbos/crbackup:zitadel",

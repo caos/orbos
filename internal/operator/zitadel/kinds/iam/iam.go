@@ -7,12 +7,15 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 )
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
+	nodeselector map[string]string,
+	tolerations []core.Toleration,
 	timestamp string,
 	features ...string,
 ) (
@@ -22,7 +25,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/Zitadel":
-		return zitadel.AdaptFunc(timestamp, features)(monitor, desiredTree, currentTree)
+		return zitadel.AdaptFunc(timestamp, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, errors.Errorf("unknown iam kind %s", desiredTree.Common.Kind)
 	}
