@@ -1,6 +1,7 @@
 package managed
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
 
@@ -25,6 +26,8 @@ func AdaptFunc(
 	timestamp string,
 	secretPasswordName string,
 	migrationUser string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
 	features []string,
 ) zitadel.AdaptFunc {
 	return func(
@@ -177,6 +180,8 @@ func AdaptFunc(
 						secretPasswordName,
 						migrationUser,
 						users,
+						nodeselector,
+						tolerations,
 						features,
 					)
 					if err != nil {

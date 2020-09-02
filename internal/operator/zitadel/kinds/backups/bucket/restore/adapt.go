@@ -20,6 +20,8 @@ func ApplyFunc(
 	databases []string,
 	bucket string,
 	timestamp string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
 	checkDBReady zitadel.EnsureFunc,
 ) (
 	queryFunc zitadel.QueryFunc,
@@ -58,6 +60,8 @@ func ApplyFunc(
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
+					NodeSelector:  nodeselector,
+					Tolerations:   tolerations,
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
 						Name:  jobName,

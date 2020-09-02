@@ -11,6 +11,7 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func AdaptFunc(
@@ -23,6 +24,8 @@ func AdaptFunc(
 	secretPasswordName string,
 	migrationUser string,
 	users []string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
 	features []string,
 ) zitadel.AdaptFunc {
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, err error) {
@@ -53,6 +56,8 @@ func AdaptFunc(
 			secretName,
 			secretKey,
 			timestamp,
+			nodeselector,
+			tolerations,
 			features,
 		)
 
@@ -64,6 +69,8 @@ func AdaptFunc(
 			databases,
 			desiredKind.Spec.Bucket,
 			timestamp,
+			nodeselector,
+			tolerations,
 			checkDBReady,
 		)
 
@@ -73,10 +80,12 @@ func AdaptFunc(
 			namespace,
 			labels,
 			databases,
+			nodeselector,
+			tolerations,
 			checkDBReady,
 		)
 
-		queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users)
+		queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users, nodeselector, tolerations)
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {

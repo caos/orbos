@@ -37,7 +37,14 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 		})
 
 		iamCurrent := &tree.Tree{}
-		queryIAM, destroyIAM, err := iam.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.IAM, iamCurrent, timestamp, features...)
+		queryIAM, destroyIAM, err := iam.GetQueryAndDestroyFuncs(
+			orbMonitor,
+			desiredKind.IAM,
+			iamCurrent,
+			desiredKind.Spec.NodeSelector,
+			desiredKind.Spec.Tolerations,
+			timestamp,
+			features...)
 		if err != nil {
 			return nil, nil, err
 		}

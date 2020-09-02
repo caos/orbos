@@ -8,6 +8,7 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -20,6 +21,8 @@ func GetQueryAndDestroyFuncs(
 	timestamp string,
 	secretPasswordName string,
 	migrationUser string,
+	nodeselector map[string]string,
+	tolerations []core.Toleration,
 	features []string,
 ) (
 	zitadel.QueryFunc,
@@ -28,7 +31,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.AdaptFunc(labels, users, namespace, timestamp, secretPasswordName, migrationUser, features)(monitor, desiredTree, currentTree)
+		return managed.AdaptFunc(labels, users, namespace, timestamp, secretPasswordName, migrationUser, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
 	case "zitadel.caos.ch/ProvidedDatabse":
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:

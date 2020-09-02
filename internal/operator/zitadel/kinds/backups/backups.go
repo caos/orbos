@@ -7,6 +7,7 @@ import (
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -22,6 +23,8 @@ func GetQueryAndDestroyFuncs(
 	secretPasswordName string,
 	migrationUser string,
 	users []string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
 	features []string,
 ) (
 	zitadel.QueryFunc,
@@ -30,7 +33,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/BucketBackup":
-		return bucket.AdaptFunc(name, namespace, labels, databases, checkDBReady, timestamp, secretPasswordName, migrationUser, users, features)(monitor, desiredTree, currentTree)
+		return bucket.AdaptFunc(name, namespace, labels, databases, checkDBReady, timestamp, secretPasswordName, migrationUser, users, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
