@@ -40,12 +40,13 @@ type Scaling struct {
 	Replicas int `yaml:"replicas"`
 }
 type Fluentd struct {
-	Metrics             *Metrics           `yaml:"metrics,omitempty"`
-	BufferStorageVolume *KubernetesStorage `yaml:"bufferStorageVolume,omitempty"`
-	LogLevel            string             `yaml:"logLevel,omitempty"`
-	DisablePvc          bool               `yaml:"disablePvc"`
-	Scaling             *Scaling           `yaml:"scaling,omitempty"`
-	NodeSelector        map[string]string  `yaml:"nodeSelector,omitempty"`
+	Metrics             *Metrics            `yaml:"metrics,omitempty"`
+	BufferStorageVolume *KubernetesStorage  `yaml:"bufferStorageVolume,omitempty"`
+	LogLevel            string              `yaml:"logLevel,omitempty"`
+	DisablePvc          bool                `yaml:"disablePvc"`
+	Scaling             *Scaling            `yaml:"scaling,omitempty"`
+	NodeSelector        map[string]string   `yaml:"nodeSelector,omitempty"`
+	Tolerations         []corev1.Toleration `yaml:"tolerations,omitempty"`
 }
 type Metrics struct {
 	Port int `yaml:"port"`
@@ -101,6 +102,7 @@ func New(conf *Config) *Logging {
 				Metrics: &Metrics{
 					Port: 8080,
 				},
+				Tolerations:  []corev1.Toleration{},
 				DisablePvc:   true,
 				NodeSelector: map[string]string{},
 			},
@@ -147,6 +149,7 @@ func New(conf *Config) *Logging {
 
 	if conf.Tolerations != nil {
 		values.Spec.Fluentbit.Tolerations = append(values.Spec.Fluentbit.Tolerations, conf.Tolerations...)
+		values.Spec.Fluentd.Tolerations = append(values.Spec.Fluentd.Tolerations, conf.Tolerations...)
 	}
 
 	if conf.Replicas != 0 {
