@@ -23,11 +23,11 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion
 	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("250m"),
-			corev1.ResourceMemory: resource.MustParse("256Mi"),
+			corev1.ResourceMemory: resource.MustParse("512Mi"),
 		},
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("100m"),
-			corev1.ResourceMemory: resource.MustParse("128Mi"),
+			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		},
 	})
 	if boomSpec != nil {
