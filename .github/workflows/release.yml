@@ -3,9 +3,10 @@ on:
   push:
     branches:
       - master
+
 jobs:
   release:
-    name: Release Orbos
+    name: Release ORBOS
     runs-on: ubuntu-18.04
     steps:
       - name: Source Checkout
@@ -20,6 +21,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GO111MODULE: on
           CGO_ENABLED: 0
+          CR_PAT: ${{ secrets.CR_PAT }}
+          REGISTRY: ghcr.io
         run: |
           npm install semantic-release@v16.0.2
           export BRANCH=${GITHUB_REF##*/}
@@ -27,7 +30,7 @@ jobs:
           VERSION="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
           [[ "$VERSION" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
 
-          export IMAGE=docker.pkg.github.com/caos/orbos/orbos
+          export IMAGE=$REGISTRY/$GITHUB_REPOSITORY
           export TAG_LATEST=${IMAGE}:latest
           export TAG_VERSION=${IMAGE}:${VERSION}
 
@@ -37,8 +40,8 @@ jobs:
 
           CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/gen-charts/*.go
 
-          echo "Publishing Orbos version $VERSION"
-          docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
+          echo "Publishing ORBOS version $VERSION"
+          docker login $REGISTRY -u $GITHUB_ACTOR -p $CR_PAT
           docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --file ./Dockerfile .
 
           docker push ${TAG_VERSION}
