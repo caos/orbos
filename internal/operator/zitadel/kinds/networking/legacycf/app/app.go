@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -45,8 +46,12 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 
 	for _, record := range subdomains {
 
-		name := "@"
-		if record.Subdomain != "@" {
+		if record.Subdomain == "@" {
+			record.Subdomain = domain
+		}
+
+		name := domain
+		if record.Subdomain != domain {
 			name = strings.Join([]string{record.Subdomain, domain}, ".")
 		}
 		ttl := record.TTL
@@ -66,7 +71,7 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 
 	records, err := a.EnsureDNSRecords(domain, recordsInt)
 	if len(records) != len(subdomains) {
-		return errors.New("Error while ensuring dns records")
+		return fmt.Errorf("error while ensuring dns records: %w", err)
 	}
 
 	for _, rule := range rules {
