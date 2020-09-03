@@ -41,7 +41,7 @@ func AdaptFunc(
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
 	zitadel.EnsureFunc,
-	func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
+	func(k8sClient *kubernetes.Client, currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "configuration")
@@ -106,7 +106,7 @@ func AdaptFunc(
 				return nil, err
 			}
 
-			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM(getClientID(), currentNW))
+			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM(getClientID(), currentNW, k8sClient, namespace, consoleCMName))
 			if err != nil {
 				return nil, err
 			}
@@ -151,13 +151,13 @@ func AdaptFunc(
 			monitor.Debug("configuration is created")
 			return nil
 		},
-		func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string {
+		func(k8sClient *kubernetes.Client, currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string {
 			return map[string]string{
 				secretName:         getHash(literalsSecret),
 				secretVarsName:     getHash(literalsSecretVars),
 				secretPasswordName: getHash(users),
 				cmName:             getHash(literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB)),
-				consoleCMName:      getHash(literalsConsoleCM(getClientID(), currentNW)),
+				consoleCMName:      getHash(literalsConsoleCM(getClientID(), currentNW, k8sClient, namespace, consoleCMName)),
 			}
 		},
 		nil
@@ -298,10 +298,32 @@ func literalsSecretVars(desired *Configuration) map[string]string {
 func literalsConsoleCM(
 	clientID string,
 	currentNW corenw.NetworkingCurrent,
+	k8sClient *kubernetes.Client,
+	namespace string,
+	cmName string,
 ) map[string]string {
 	literalsConsoleCM := map[string]string{}
 	consoleEnv := ConsoleEnv{
 		ClientID: clientID,
+	}
+
+	jsonName := "environment.json"
+
+	cm, err := k8sClient.GetConfigMap(namespace, cmName)
+	//only try to use the old CM when there is a CM found
+	if cm != nil && err == nil {
+		jsonData, ok := cm.Data[jsonName]
+		if ok {
+			literalsData := map[string]string{}
+			err := json.Unmarshal([]byte(jsonData), &literalsData)
+			if err == nil {
+				oldClientID, ok := literalsData["clientid"]
+				//only use the old ClientID if no new clientID is provided
+				if ok && consoleEnv.ClientID == "" {
+					consoleEnv.ClientID = oldClientID
+				}
+			}
+		}
 	}
 
 	if currentNW != nil {
@@ -315,6 +337,6 @@ func literalsConsoleCM(
 		return map[string]string{}
 	}
 
-	literalsConsoleCM["environment.json"] = string(data)
+	literalsConsoleCM[jsonName] = string(data)
 	return literalsConsoleCM
 }
