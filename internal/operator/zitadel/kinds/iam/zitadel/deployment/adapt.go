@@ -39,7 +39,7 @@ func AdaptFunc(
 	resources *k8s.Resources,
 	migrationDone zitadel.EnsureFunc,
 	configurationDone zitadel.EnsureFunc,
-	getConfigurationHashes func(currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
+	getConfigurationHashes func(k8sClient *kubernetes.Client, currentDB coredb.DatabaseCurrent, currentNW corenw.NetworkingCurrent) map[string]string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -319,7 +319,7 @@ func AdaptFunc(
 				return nil, err
 			}
 
-			hashes := getConfigurationHashes(currentDB, currentNW)
+			hashes := getConfigurationHashes(k8sClient, currentDB, currentNW)
 			if hashes != nil && len(hashes) != 0 {
 				for k, v := range hashes {
 					deploymentDef.Annotations[k] = v
