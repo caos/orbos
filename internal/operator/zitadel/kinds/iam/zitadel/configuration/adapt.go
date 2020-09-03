@@ -4,6 +4,9 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"strconv"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/secret"
@@ -12,8 +15,6 @@ import (
 	corenw "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-	"strconv"
-	"strings"
 )
 
 type ConsoleEnv struct {
@@ -190,7 +191,7 @@ func literalsConfigMap(
 	literalsConfigMap := map[string]string{
 		"GOOGLE_APPLICATION_CREDENTIALS": secretPath + "/" + googleServiceAccountJSONPath,
 		"ZITADEL_KEY_PATH":               secretPath + "/" + zitadelKeysPath,
-		"ZITADEL_LOG_LEVEL":              "debug",
+		"ZITADEL_LOG_LEVEL":              "info",
 		"DEBUG_MODE":                     strconv.FormatBool(desired.DebugMode),
 		"SMTP_TLS":                       tls,
 		"CAOS_OIDC_DEV":                  "true",
@@ -231,6 +232,10 @@ func literalsConfigMap(
 			literalsConfigMap["ZITADEL_CACHE_SHARED_MAXAGE"] = desired.Cache.SharedMaxAge
 			literalsConfigMap["ZITADEL_SHORT_CACHE_MAXAGE"] = desired.Cache.ShortMaxAge
 			literalsConfigMap["ZITADEL_SHORT_CACHE_SHARED_MAXAGE"] = desired.Cache.ShortSharedMaxAge
+		}
+
+		if desired.LogLevel != "" {
+			literalsConfigMap["ZITADEL_LOG_LEVEL"] = desired.LogLevel
 		}
 	}
 
