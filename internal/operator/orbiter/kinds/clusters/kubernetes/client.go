@@ -411,6 +411,10 @@ func (c *Client) DeleteSecret(namespace, name string) error {
 	return c.set.CoreV1().Secrets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
+func (c *Client) GetConfigMap(namespace, name string) (*core.ConfigMap, error) {
+	return c.set.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
+
 func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 	resources := c.set.CoreV1().ConfigMaps(rsc.GetNamespace())
 	return c.apply("secret", rsc.GetName(), func() error {
