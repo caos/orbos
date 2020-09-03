@@ -1,6 +1,10 @@
 package app
 
-import "github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
+import (
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
+)
 
 func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) ([]*cloudflare.DNSRecord, error) {
 
@@ -10,7 +14,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) (
 		return nil, err
 	}
 
-	createRecords, updateRecords := getRecordsToCreateAndUpdate(currentRecords, records)
+	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
 	if len(createRecords) > 0 {
 		created, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
 		if err != nil {
@@ -58,14 +62,15 @@ func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloud
 	return deleteRecords
 }
 
-func getRecordsToCreateAndUpdate(currentRecords []*cloudflare.DNSRecord, records []*cloudflare.DNSRecord) ([]*cloudflare.DNSRecord, []*cloudflare.DNSRecord) {
+func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNSRecord, records []*cloudflare.DNSRecord) ([]*cloudflare.DNSRecord, []*cloudflare.DNSRecord) {
 	createRecords := make([]*cloudflare.DNSRecord, 0)
 	updateRecords := make([]*cloudflare.DNSRecord, 0)
 
 	for _, record := range records {
 		found := false
 		for _, currentRecord := range currentRecords {
-			if currentRecord.Name == record.Name {
+			if record.Name != domain && record.Name == currentRecord.Name ||
+				record.Name == domain && strings.ToLower(record.Content) == currentRecord.Content {
 
 				record.ID = currentRecord.ID
 				updateRecords = append(updateRecords, record)
