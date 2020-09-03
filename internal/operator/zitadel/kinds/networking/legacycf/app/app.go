@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare/expression"
@@ -43,7 +44,11 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 	recordsInt := make([]*cloudflare.DNSRecord, 0)
 
 	for _, record := range subdomains {
-		name := strings.Join([]string{record.Subdomain, domain}, ".")
+
+		name := "@"
+		if record.Subdomain != "@" {
+			name = strings.Join([]string{record.Subdomain, domain}, ".")
+		}
 		ttl := record.TTL
 		if ttl == 0 {
 			ttl = 1
