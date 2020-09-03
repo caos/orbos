@@ -89,6 +89,7 @@ func AdaptFunc(
 			desiredKind.Spec.StorageClass,
 			desiredKind.Spec.NodeSelector,
 			desiredKind.Spec.Tolerations,
+			desiredKind.Spec.Resources,
 		)
 		if err != nil {
 			return nil, nil, err

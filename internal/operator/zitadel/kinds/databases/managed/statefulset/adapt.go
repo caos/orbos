@@ -2,6 +2,7 @@ package statefulset
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"sort"
 	"strings"
 
@@ -43,6 +44,7 @@ func AdaptFunc(
 	storageClass string,
 	nodeSelector map[string]string,
 	tolerations []corev1.Toleration,
+	resourcesSFS *k8s.Resources,
 ) (
 	resources.QueryFunc,
 	resources.DestroyFunc,
@@ -84,6 +86,27 @@ func AdaptFunc(
 			}})
 	}
 	sort.Sort(affinity)
+
+	internalResources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("512Mi"),
+		},
+		Limits: corev1.ResourceList{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("512Mi"),
+		},
+	}
+
+	if resourcesSFS != nil {
+		internalResources = corev1.ResourceRequirements{}
+		if resourcesSFS.Requests != nil {
+			internalResources.Requests = resourcesSFS.Requests
+		}
+		if resourcesSFS.Limits != nil {
+			internalResources.Limits = resourcesSFS.Limits
+		}
+	}
 
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -168,16 +191,7 @@ func AdaptFunc(
 							"-ecx",
 							joinExec,
 						},
-						Resources: corev1.ResourceRequirements{
-							Requests: corev1.ResourceList{
-								"cpu":    resource.MustParse("1500m"),
-								"memory": resource.MustParse("6G"),
-							},
-							Limits: corev1.ResourceList{
-								"cpu":    resource.MustParse("1500m"),
-								"memory": resource.MustParse("6G"),
-							},
-						},
+						Resources: internalResources,
 					}},
 					Volumes: []corev1.Volume{{
 						Name: datadirInternal,
