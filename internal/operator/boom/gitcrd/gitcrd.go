@@ -249,7 +249,8 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 
 func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply, force bool) error {
 	if apply.Folder == "" {
-		return errors.New("No folder provided")
+		monitor.Info("No folder provided")
+		return nil
 	}
 
 	err := helper.CopyFolderToLocal(c.git, c.crdDirectoryPath, apply.Folder)
@@ -263,7 +264,8 @@ func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply,
 	}
 
 	if empty, err := helper.FolderEmpty(localFolder); empty == true || err != nil {
-		return errors.New("Provided folder is empty")
+		monitor.Info("Provided folder is empty")
+		return nil
 	}
 
 	if err := useFolder(monitor, apply.Deploy, localFolder, force); err != nil {
