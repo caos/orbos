@@ -61,7 +61,7 @@ func (d *DesiredV0) validate() error {
 		return errors.Errorf("Unknown kubernetes version %s", d.Spec.Versions.Kubernetes)
 	}
 
-	if d.Spec.Networking.Network != "cilium" && d.Spec.Networking.Network != "calico" {
+	if d.Spec.Networking.Network != "cilium" && d.Spec.Networking.Network != "calico" && d.Spec.Networking.Network != "flannel" {
 		return errors.Errorf("Network must eighter be calico or cilium, but got %s", d.Spec.Networking.Network)
 	}
 
