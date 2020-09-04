@@ -51,7 +51,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.dev-release.outputs.relbranch }}
+          tag_name: ${{ steps.dev-release.outputs.relbranch }}-dev
           release_name: Branch ${{ steps.dev-release.outputs.relbranch }}
           body: |
             This is a release from a development branch.
