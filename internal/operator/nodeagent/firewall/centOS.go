@@ -22,7 +22,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		errBuf := new(bytes.Buffer)
 		defer errBuf.Reset()
 
-		cmd := exec.Command("firewall-cmd", "--list-ports")
+		cmd := exec.Command("firewall-cmd", "--list-ports", "--zone=public")
 		cmd.Stderr = errBuf
 		cmd.Stdout = outBuf
 
