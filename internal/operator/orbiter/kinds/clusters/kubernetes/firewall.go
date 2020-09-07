@@ -48,7 +48,9 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0) (desire func(machine 
 				Protocol: "udp",
 			}
 		}
-
+		for idx, value := range desired.Spec.Networking.OpenFirewallPorts {
+			fw[fmt.Sprintf("custom-%d", idx)] = &value
+		}
 		firewall := common.ToFirewall(fw)
 		if firewall.IsContainedIn(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Contains(firewall) {
 			machine.currentMachine.FirewallIsReady = true

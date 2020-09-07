@@ -8,6 +8,7 @@ import (
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
+	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
@@ -26,10 +27,11 @@ type Spec struct {
 	ControlPlane Pool
 	Kubeconfig   *secret.Secret `yaml:",omitempty"`
 	Networking   struct {
-		DNSDomain   string
-		Network     string
-		ServiceCidr orbiter.CIDR
-		PodCidr     orbiter.CIDR
+		DNSDomain         string
+		Network           string
+		ServiceCidr       orbiter.CIDR
+		PodCidr           orbiter.CIDR
+		OpenFirewallPorts []common.Allowed
 	}
 	Verbose  bool
 	Versions struct {
@@ -71,6 +73,12 @@ func (d *DesiredV0) validate() error {
 
 	if err := d.Spec.Networking.PodCidr.Validate(); err != nil {
 		return err
+	}
+
+	for _, port := range d.Spec.Networking.OpenFirewallPorts {
+		if err := port.Validate(); err != nil {
+			return err
+		}
 	}
 
 	seenPools := map[string][]string{
