@@ -41,7 +41,7 @@ func join(
 	case "calico":
 		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.16/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
 	case "flannel":
-		applyNetworkCommand = fmt.Sprintf(`curl https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml -O && sed -i -e "s?10.244.0.0/16?%s?g" kube-flannel.yaml && kubectl apply -f kube-flannel.yaml`, desired.Spec.Networking.PodCidr)
+		applyNetworkCommand = fmt.Sprintf(`curl https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml -O && sed -i -e "s?10.244.0.0/16?%s?g" kube-flannel.yaml && kubectl apply -f kube-flannel.yml`, desired.Spec.Networking.PodCidr)
 	default:
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
