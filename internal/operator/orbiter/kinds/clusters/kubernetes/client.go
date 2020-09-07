@@ -409,7 +409,9 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	}
 	monitor.Info("Deleting node")
 	if err := api.Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
-		return err
+		if !macherrs.IsNotFound(err) {
+			return err
+		}
 	}
 	if !machine.Updating || machine.Joined {
 		machine.Updating = true
