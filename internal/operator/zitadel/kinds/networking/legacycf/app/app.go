@@ -70,62 +70,69 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 	}
 
 	records, err := a.EnsureDNSRecords(domain, recordsInt)
+	if err != nil {
+		return err
+	}
 	if len(records) != len(subdomains) {
 		return fmt.Errorf("error while ensuring dns records: %w", err)
 	}
 
-	for _, rule := range rules {
-		filterExp := cloudflare.EmptyExpression()
-		for _, filter := range rule.Filters {
-			filterExpAdd := cloudflare.EmptyExpression()
+	if rules != nil {
+		for _, rule := range rules {
+			filterExp := cloudflare.EmptyExpression()
+			for _, filter := range rule.Filters {
+				filterExpAdd := cloudflare.EmptyExpression()
 
-			// get all targets
-			addContainsTargetsFromList(domain, filter.ContainsTargets, filterExpAdd)
-			a.addContainsTargetGroupsFromList(domain, filter.ContainsTargetsGroups, filterExpAdd)
+				// get all targets
+				addContainsTargetsFromList(domain, filter.ContainsTargets, filterExpAdd)
+				a.addContainsTargetGroupsFromList(domain, filter.ContainsTargetsGroups, filterExpAdd)
 
-			// get all targets
-			addTargetsFromList(domain, filter.Targets, filterExpAdd)
-			a.addTargetGroupsFromList(domain, filter.TargetGroups, filterExpAdd)
+				// get all targets
+				addTargetsFromList(domain, filter.Targets, filterExpAdd)
+				a.addTargetGroupsFromList(domain, filter.TargetGroups, filterExpAdd)
 
-			// get all sources
-			addSourcesFromList(filter.Sources, filterExpAdd)
-			a.addSourceGroupsFromList(filter.SourceGroups, filterExpAdd)
+				// get all sources
+				addSourcesFromList(filter.Sources, filterExpAdd)
+				a.addSourceGroupsFromList(filter.SourceGroups, filterExpAdd)
 
-			if filter.SSL == "true" {
-				filterExpAdd.And(cloudflare.SSLExpression())
-			} else if filter.SSL == "false" {
-				filterExpAdd.And(cloudflare.NotSSLExpression())
+				if filter.SSL == "true" {
+					filterExpAdd.And(cloudflare.SSLExpression())
+				} else if filter.SSL == "false" {
+					filterExpAdd.And(cloudflare.NotSSLExpression())
+				}
+
+				// add expression as or-element
+				filterExp.Or(filterExpAdd)
 			}
 
-			// add expression as or-element
-			filterExp.Or(filterExpAdd)
+			filterInt := &cloudflare.Filter{
+				Description: a.AddInternalPrefix(rule.Description),
+				Expression:  filterExp.ToString(),
+				Paused:      false,
+			}
+			filtersInt = append(filtersInt, filterInt)
 		}
 
-		filterInt := &cloudflare.Filter{
-			Description: a.AddInternalPrefix(rule.Description),
-			Expression:  filterExp.ToString(),
-			Paused:      false,
-		}
-		filtersInt = append(filtersInt, filterInt)
 	}
-
 	filters, deleteFiltersFunc, err := a.EnsureFilters(domain, filtersInt)
 	if err != nil {
 		return err
 	}
 
-	for _, rule := range rules {
-		for _, filter := range filters {
-			descInt := a.AddInternalPrefix(rule.Description)
-			if filter.Description == descInt {
-				firewallRule := &cloudflare.FirewallRule{
-					Paused:      false,
-					Description: descInt,
-					Action:      rule.Action,
-					Filter:      filter,
-					Priority:    rule.Priority,
+	if rules != nil {
+		for _, rule := range rules {
+			for _, filter := range filters {
+				descInt := a.AddInternalPrefix(rule.Description)
+				if filter.Description == descInt {
+					firewallRule := &cloudflare.FirewallRule{
+						Paused:      false,
+						Description: descInt,
+						Action:      rule.Action,
+						Filter:      filter,
+						Priority:    rule.Priority,
+					}
+					firewallRulesInt = append(firewallRulesInt, firewallRule)
 				}
-				firewallRulesInt = append(firewallRulesInt, firewallRule)
 			}
 		}
 	}

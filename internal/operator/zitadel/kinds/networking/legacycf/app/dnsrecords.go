@@ -15,7 +15,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) (
 	}
 
 	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
-	if len(createRecords) > 0 {
+	if createRecords != nil && len(createRecords) > 0 {
 		created, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
 		if err != nil {
 			return nil, err
@@ -24,7 +24,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) (
 		result = append(result, created...)
 	}
 
-	if len(updateRecords) > 0 {
+	if updateRecords != nil && len(updateRecords) > 0 {
 		updated, err := a.cloudflare.UpdateDNSRecords(domain, updateRecords)
 		if err != nil {
 			return nil, err
@@ -34,7 +34,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) (
 	}
 
 	deleteRecords := getRecordsToDelete(currentRecords, records)
-	if len(deleteRecords) > 0 {
+	if deleteRecords != nil && len(deleteRecords) > 0 {
 		if err := a.cloudflare.DeleteDNSRecords(domain, deleteRecords); err != nil {
 			return nil, err
 		}
@@ -48,9 +48,11 @@ func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloud
 
 	for _, currentRecord := range currentRecords {
 		found := false
-		for _, record := range records {
-			if currentRecord.Name == record.Name {
-				found = true
+		if records != nil {
+			for _, record := range records {
+				if currentRecord.Name == record.Name {
+					found = true
+				}
 			}
 		}
 
@@ -66,20 +68,22 @@ func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNS
 	createRecords := make([]*cloudflare.DNSRecord, 0)
 	updateRecords := make([]*cloudflare.DNSRecord, 0)
 
-	for _, record := range records {
-		found := false
-		for _, currentRecord := range currentRecords {
-			if record.Name != domain && record.Name == currentRecord.Name ||
-				record.Name == domain && strings.ToLower(record.Content) == currentRecord.Content {
+	if records != nil {
+		for _, record := range records {
+			found := false
+			for _, currentRecord := range currentRecords {
+				if record.Name != domain && record.Name == currentRecord.Name ||
+					record.Name == domain && strings.ToLower(record.Content) == currentRecord.Content {
 
-				record.ID = currentRecord.ID
-				updateRecords = append(updateRecords, record)
-				found = true
-				break
+					record.ID = currentRecord.ID
+					updateRecords = append(updateRecords, record)
+					found = true
+					break
+				}
 			}
-		}
-		if found == false {
-			createRecords = append(createRecords, record)
+			if found == false {
+				createRecords = append(createRecords, record)
+			}
 		}
 	}
 

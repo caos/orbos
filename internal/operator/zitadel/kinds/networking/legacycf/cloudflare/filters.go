@@ -53,7 +53,12 @@ func (c *Cloudflare) DeleteFilters(domain string, filterIDs []string) error {
 		return err
 	}
 
-	return c.api.DeleteFilters(id, filterIDs)
+	for _, filterID := range filterIDs {
+		if err := c.api.DeleteFilter(id, filterID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func filtersToInternalFilters(filters []cloudflare.Filter) []*Filter {

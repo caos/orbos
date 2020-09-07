@@ -14,14 +14,14 @@ func (a *App) EnsureFirewallRules(domain string, rules []*cloudflare.FirewallRul
 	}
 
 	deleteRules := getFirewallRulesToDelete(currentRules, rules, a.TrimInternalPrefix)
-	if len(deleteRules) > 0 {
+	if deleteRules != nil && len(deleteRules) > 0 {
 		if err := a.cloudflare.DeleteFirewallRules(domain, deleteRules); err != nil {
 			return nil, err
 		}
 	}
 
 	createRules := getFirewallRulesToCreate(currentRules, rules, a.TrimInternalPrefix)
-	if len(createRules) > 0 {
+	if createRules != nil && len(createRules) > 0 {
 		created, err := a.cloudflare.CreateFirewallRules(domain, createRules)
 		if err != nil {
 			return nil, err
@@ -31,7 +31,7 @@ func (a *App) EnsureFirewallRules(domain string, rules []*cloudflare.FirewallRul
 	}
 
 	updateRules := getFirewallRulesToUpdate(currentRules, rules, a.TrimInternalPrefix)
-	if len(updateRules) > 0 {
+	if updateRules != nil && len(updateRules) > 0 {
 		updated, err := a.cloudflare.UpdateFirewallRules(domain, updateRules)
 		if err != nil {
 			return nil, err
@@ -48,9 +48,11 @@ func getFirewallRulesToDelete(currentRules []*cloudflare.FirewallRule, rules []*
 
 	for _, currentRule := range currentRules {
 		found := false
-		for _, rule := range rules {
-			if currentRule.Description == rule.Description {
-				found = true
+		if rules != nil {
+			for _, rule := range rules {
+				if currentRule.Description == rule.Description {
+					found = true
+				}
 			}
 		}
 
@@ -65,16 +67,18 @@ func getFirewallRulesToDelete(currentRules []*cloudflare.FirewallRule, rules []*
 func getFirewallRulesToCreate(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule, trimInternalPrefix func(string) string) []*cloudflare.FirewallRule {
 	createRules := make([]*cloudflare.FirewallRule, 0)
 
-	for _, rule := range rules {
-		found := false
-		for _, currentRule := range currentRules {
-			if currentRule.Description == rule.Description {
-				found = true
-				break
+	if rules != nil {
+		for _, rule := range rules {
+			found := false
+			for _, currentRule := range currentRules {
+				if currentRule.Description == rule.Description {
+					found = true
+					break
+				}
 			}
-		}
-		if found == false {
-			createRules = append(createRules, rule)
+			if found == false {
+				createRules = append(createRules, rule)
+			}
 		}
 	}
 
@@ -84,12 +88,14 @@ func getFirewallRulesToCreate(currentRules []*cloudflare.FirewallRule, rules []*
 func getFirewallRulesToUpdate(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule, trimInternalPrefix func(string) string) []*cloudflare.FirewallRule {
 	updateRules := make([]*cloudflare.FirewallRule, 0)
 
-	for _, rule := range rules {
-		for _, currentRule := range currentRules {
-			if currentRule.Description == rule.Description &&
-				!reflect.DeepEqual(currentRule, rule) {
-				rule.ID = currentRule.ID
-				updateRules = append(updateRules, rule)
+	if rules != nil {
+		for _, rule := range rules {
+			for _, currentRule := range currentRules {
+				if currentRule.Description == rule.Description &&
+					!reflect.DeepEqual(currentRule, rule) {
+					rule.ID = currentRule.ID
+					updateRules = append(updateRules, rule)
+				}
 			}
 		}
 	}
