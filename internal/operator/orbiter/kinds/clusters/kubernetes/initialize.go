@@ -134,7 +134,7 @@ func initialize(
 		return pool, nil
 	}
 
-	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
+	initializeMachine = func(machine infra.Machine, pool *initializedPool) *initializedMachine {
 
 		current := &Machine{
 			Metadata: MachineMetadata{
@@ -196,7 +196,7 @@ func initialize(
 			desiredNodeagent: naSpec,
 			reconcile:        reconcile,
 			currentMachine:   current,
-			pool:             &pool,
+			pool:             pool,
 			node:             node,
 		}
 
