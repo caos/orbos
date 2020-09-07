@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -167,6 +168,7 @@ func (c *Client) WaitUntilDeploymentReady(namespace string, name string, contain
 		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
 			LabelSelector: labelSelector,
 		})
+		defer watch.Stop()
 		if err != nil {
 			returnChannel <- err
 			return
@@ -242,6 +244,7 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSec
 		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
 			LabelSelector: labelSelector,
 		})
+		defer watch.Stop()
 		if err != nil {
 			returnChannel <- err
 			return
@@ -254,6 +257,16 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSec
 	case res := <-returnChannel:
 		return res
 	case <-time.After(timeoutSeconds * time.Second):
+		ctx := context.Background()
+		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			return errors.New("timeout while waiting for job to complete, no job found")
+		}
+
+		if job.Status.Succeeded > 0 {
+			c.monitor.Debug("no pods found for job, but job succeeded, so ignoring the timeout")
+			return nil
+		}
 		return errors.New("timeout while waiting for job to complete")
 	}
 }
@@ -354,6 +367,7 @@ func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, cont
 		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
 			LabelSelector: labelSelector,
 		})
+		defer watch.Stop()
 		if err != nil {
 			returnChannel <- err
 			return
@@ -465,7 +479,19 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 		if err != nil {
 			return err
 		}
-		if sa.GetName() == rsc.GetName() && sa.GetNamespace() == rsc.GetNamespace() {
+
+		different := false
+		//workaround as 1 token will always be created by kubeapi
+		if (!(sa.Secrets != nil && len(sa.Secrets) == 1 && (rsc.Secrets == nil || len(rsc.Secrets) == 0)) && (!reflect.DeepEqual(sa.Secrets, rsc.Secrets))) ||
+			(sa.ImagePullSecrets != nil && rsc.ImagePullSecrets != nil && !reflect.DeepEqual(sa.ImagePullSecrets, rsc.ImagePullSecrets)) ||
+			(sa.AutomountServiceAccountToken != nil && rsc.AutomountServiceAccountToken != nil && *sa.AutomountServiceAccountToken != *rsc.AutomountServiceAccountToken) {
+			different = true
+		}
+
+		if different &&
+			sa.GetName() == rsc.GetName() &&
+			sa.GetNamespace() == rsc.GetNamespace() {
+
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
