@@ -62,7 +62,7 @@ func (d *DesiredV0) validate() error {
 	}
 
 	if d.Spec.Networking.Network != "cilium" && d.Spec.Networking.Network != "calico" && d.Spec.Networking.Network != "flannel" {
-		return errors.Errorf("Network must eighter be calico or cilium, but got %s", d.Spec.Networking.Network)
+		return errors.Errorf("Network must eighter be calico, flannel or cilium, but got %s", d.Spec.Networking.Network)
 	}
 
 	if err := d.Spec.Networking.ServiceCidr.Validate(); err != nil {
