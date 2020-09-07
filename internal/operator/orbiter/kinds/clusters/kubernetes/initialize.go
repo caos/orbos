@@ -109,26 +109,42 @@ func initialize(
 		}
 
 		var replace initializedMachines
+		var joined initializedMachines
+		var unjoined initializedMachines
 		for _, machine := range machines {
 			if req, _, _ := machine.infra.ReplacementRequired(); req {
 				replace = append(replace, machine)
 			}
+			if machine.currentMachine.Joined {
+				joined = append(joined, machine)
+				continue
+			}
+			unjoined = append(unjoined, machine)
 		}
 
-		pool.upscaling = desired.Nodes + len(replace) - len(machines)
-		if pool.upscaling > 0 {
+		delta := desired.Nodes + len(replace) - len(machines)
+		if delta > 0 {
+			pool.upscaling = delta
 			return pool, nil
 		}
 
-		pool.downscaling = replace
-
-		for _, machine := range machines {
-			if desired.Nodes-len(machines)-len(pool.downscaling) <= 0 {
-				break
+		downscale := -1 * delta
+		for i := 0; i < downscale; i++ {
+			// First scale down replaceable machines
+			if len(replace) > 0 {
+				pool.downscaling = append(pool.downscaling, replace[0])
+				replace = replace[1:]
+				continue
 			}
-			if req, _, _ := machine.infra.ReplacementRequired(); !req {
-				pool.downscaling = append(pool.downscaling, machine)
+			// Then scale down unjoined machines
+			if len(unjoined) > 0 {
+				pool.downscaling = append(pool.downscaling, unjoined[0])
+				unjoined = unjoined[1:]
+				continue
 			}
+			// Last scale down joined machines
+			pool.downscaling = append(pool.downscaling, joined[0])
+			joined = joined[1:]
 		}
 
 		return pool, nil
