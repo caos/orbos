@@ -31,7 +31,7 @@ type Spec struct {
 		Network           string
 		ServiceCidr       orbiter.CIDR
 		PodCidr           orbiter.CIDR
-		OpenFirewallPorts []common.Allowed
+		OpenFirewallPorts []*common.Allowed
 	}
 	Verbose  bool
 	Versions struct {
