@@ -1,46 +1,39 @@
 package app
 
 import (
-	"strings"
-
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
+	"strings"
 )
 
-func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) ([]*cloudflare.DNSRecord, error) {
+func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) error {
 
-	result := make([]*cloudflare.DNSRecord, 0)
 	currentRecords, err := a.cloudflare.GetDNSRecords(domain)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
 	if createRecords != nil && len(createRecords) > 0 {
-		created, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
+		_, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		result = append(result, created...)
 	}
 
 	if updateRecords != nil && len(updateRecords) > 0 {
-		updated, err := a.cloudflare.UpdateDNSRecords(domain, updateRecords)
+		_, err := a.cloudflare.UpdateDNSRecords(domain, updateRecords)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		result = append(result, updated...)
 	}
 
 	deleteRecords := getRecordsToDelete(currentRecords, records)
 	if deleteRecords != nil && len(deleteRecords) > 0 {
 		if err := a.cloudflare.DeleteDNSRecords(domain, deleteRecords); err != nil {
-			return nil, err
+			return err
 		}
 	}
-
-	return result, nil
+	return nil
 }
 
 func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloudflare.DNSRecord) []string {
@@ -49,9 +42,19 @@ func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloud
 	for _, currentRecord := range currentRecords {
 		found := false
 		if records != nil {
-			for _, record := range records {
-				if currentRecord.Name == record.Name {
-					found = true
+			if currentRecord.Type == "MX" {
+				for _, record := range records {
+					if currentRecord.Type == record.Type &&
+						currentRecord.Name == record.Name &&
+						(record.Content == currentRecord.Content || strings.ToLower(record.Content) == currentRecord.Content) {
+						found = true
+					}
+				}
+			} else {
+				for _, record := range records {
+					if currentRecord.Type == record.Type && currentRecord.Name == record.Name {
+						found = true
+					}
 				}
 			}
 		}
@@ -70,19 +73,41 @@ func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNS
 
 	if records != nil {
 		for _, record := range records {
-			found := false
-			for _, currentRecord := range currentRecords {
-				if record.Name != domain && record.Name == currentRecord.Name ||
-					record.Name == domain && strings.ToLower(record.Content) == currentRecord.Content {
-
-					record.ID = currentRecord.ID
-					updateRecords = append(updateRecords, record)
-					found = true
-					break
+			if record.Type == "MX" {
+				found := false
+				for _, currentRecord := range currentRecords {
+					if record.Type == currentRecord.Type &&
+						record.Name == currentRecord.Name &&
+						(record.Content == currentRecord.Content || strings.ToLower(record.Content) == currentRecord.Content) {
+						found = true
+					}
+				}
+				if !found {
+					createRecords = append(createRecords, record)
 				}
 			}
-			if found == false {
-				createRecords = append(createRecords, record)
+		}
+		for _, record := range records {
+			if record.Type != "MX" {
+				found := false
+				for _, currentRecord := range currentRecords {
+					if record.Type == currentRecord.Type &&
+						record.Name == currentRecord.Name {
+
+						record.ID = currentRecord.ID
+						if record.Content != currentRecord.Content ||
+							record.TTL != currentRecord.TTL ||
+							record.Proxied != currentRecord.Proxied ||
+							record.Priority != currentRecord.Priority {
+							updateRecords = append(updateRecords, record)
+						}
+						found = true
+						break
+					}
+				}
+				if found == false {
+					createRecords = append(createRecords, record)
+				}
 			}
 		}
 	}

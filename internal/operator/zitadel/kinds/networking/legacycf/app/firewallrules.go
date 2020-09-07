@@ -6,44 +6,40 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
 )
 
-func (a *App) EnsureFirewallRules(domain string, rules []*cloudflare.FirewallRule) ([]*cloudflare.FirewallRule, error) {
-	result := make([]*cloudflare.FirewallRule, 0)
+func (a *App) EnsureFirewallRules(domain string, rules []*cloudflare.FirewallRule) error {
 	currentRules, err := a.cloudflare.GetFirewallRules(domain)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	deleteRules := getFirewallRulesToDelete(currentRules, rules, a.TrimInternalPrefix)
+	deleteRules := getFirewallRulesToDelete(currentRules, rules)
 	if deleteRules != nil && len(deleteRules) > 0 {
 		if err := a.cloudflare.DeleteFirewallRules(domain, deleteRules); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	createRules := getFirewallRulesToCreate(currentRules, rules, a.TrimInternalPrefix)
+	createRules := getFirewallRulesToCreate(currentRules, rules)
 	if createRules != nil && len(createRules) > 0 {
-		created, err := a.cloudflare.CreateFirewallRules(domain, createRules)
+		_, err := a.cloudflare.CreateFirewallRules(domain, createRules)
 		if err != nil {
-			return nil, err
+			return err
 		}
-
-		result = append(result, created...)
 	}
 
-	updateRules := getFirewallRulesToUpdate(currentRules, rules, a.TrimInternalPrefix)
+	updateRules := getFirewallRulesToUpdate(currentRules, rules)
 	if updateRules != nil && len(updateRules) > 0 {
-		updated, err := a.cloudflare.UpdateFirewallRules(domain, updateRules)
+		_, err := a.cloudflare.UpdateFirewallRules(domain, updateRules)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		result = append(result, updated...)
 	}
 
-	return result, nil
+	return nil
 }
 
-func getFirewallRulesToDelete(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule, trimInternalPrefix func(string) string) []string {
+func getFirewallRulesToDelete(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule) []string {
 	deleteRules := make([]string, 0)
 
 	for _, currentRule := range currentRules {
@@ -64,7 +60,7 @@ func getFirewallRulesToDelete(currentRules []*cloudflare.FirewallRule, rules []*
 	return deleteRules
 }
 
-func getFirewallRulesToCreate(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule, trimInternalPrefix func(string) string) []*cloudflare.FirewallRule {
+func getFirewallRulesToCreate(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule) []*cloudflare.FirewallRule {
 	createRules := make([]*cloudflare.FirewallRule, 0)
 
 	if rules != nil {
@@ -85,7 +81,7 @@ func getFirewallRulesToCreate(currentRules []*cloudflare.FirewallRule, rules []*
 	return createRules
 }
 
-func getFirewallRulesToUpdate(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule, trimInternalPrefix func(string) string) []*cloudflare.FirewallRule {
+func getFirewallRulesToUpdate(currentRules []*cloudflare.FirewallRule, rules []*cloudflare.FirewallRule) []*cloudflare.FirewallRule {
 	updateRules := make([]*cloudflare.FirewallRule, 0)
 
 	if rules != nil {

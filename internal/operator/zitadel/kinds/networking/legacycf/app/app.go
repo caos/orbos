@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -9,7 +8,6 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/cloudflare/expression"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/config"
-	"github.com/pkg/errors"
 )
 
 type App struct {
@@ -69,12 +67,9 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 		})
 	}
 
-	records, err := a.EnsureDNSRecords(domain, recordsInt)
+	err := a.EnsureDNSRecords(domain, recordsInt)
 	if err != nil {
 		return err
-	}
-	if len(records) != len(subdomains) {
-		return fmt.Errorf("error while ensuring dns records: %w", err)
 	}
 
 	if rules != nil {
@@ -137,18 +132,13 @@ func (a *App) Ensure(k8sClient *kubernetes.Client, namespace string, labels map[
 		}
 	}
 
-	firewallRules, err := a.EnsureFirewallRules(domain, firewallRulesInt)
-	if err != nil {
+	if err := a.EnsureFirewallRules(domain, firewallRulesInt); err != nil {
 		return err
 	}
 
 	// filters can only be deleted after there is no use left in the firewall rules
 	if err := deleteFiltersFunc(); err != nil {
 		return err
-	}
-
-	if len(firewallRules) != len(rules) {
-		return errors.New("Error while ensuring firewall rule")
 	}
 
 	return a.EnsureOriginCACertificate(k8sClient, namespace, labels, domain, originCASecretName)
