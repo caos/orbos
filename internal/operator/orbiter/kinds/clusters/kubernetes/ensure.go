@@ -14,13 +14,17 @@ func ensure(
 	pdf api.PushDesiredFunc,
 	k8sClient *Client,
 	oneoff bool,
-	controlplane initializedPool,
+	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
-	workers []initializedPool,
+	workers []*initializedPool,
 	workerMachines []*initializedMachine,
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
 ) (done bool, err error) {
+
+	if err := scaleDown(append(workers, controlplane), k8sClient, uninitializeMachine, monitor, pdf); err != nil {
+		return false, err
+	}
 
 	done, err = maintainNodes(append(controlplaneMachines, workerMachines...), monitor, k8sClient, pdf)
 	if err != nil || !done {
@@ -40,7 +44,7 @@ func ensure(
 	}
 
 	var scalingDone bool
-	scalingDone, err = ensureScale(
+	scalingDone, err = ensureUpScale(
 		monitor,
 		clusterID,
 		desired,
@@ -51,13 +55,12 @@ func ensure(
 		targetVersion,
 		k8sClient,
 		oneoff,
-		func(created infra.Machine, pool initializedPool) initializedMachine {
+		func(created infra.Machine, pool *initializedPool) initializedMachine {
 			machine := initializeMachine(created, pool)
 			target := targetVersion.DefineSoftware()
 			machine.desiredNodeagent.Software = &target
 			return *machine
-		},
-		uninitializeMachine)
+		})
 	if !scalingDone {
 		monitor.Info("Scaling is not done yet")
 	}

@@ -43,6 +43,7 @@ type Machine struct {
 	Joined          bool
 	Updating        bool
 	Rebooting       bool
+	Replacing       bool
 	Ready           bool
 	FirewallIsReady bool
 	Unknown         bool

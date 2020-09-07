@@ -15,10 +15,12 @@ import (
 )
 
 type initializedPool struct {
-	infra    infra.Pool
-	tier     Tier
-	desired  Pool
-	machines func() ([]*initializedMachine, error)
+	upscaling   int
+	downscaling []*initializedMachine
+	infra       infra.Pool
+	tier        Tier
+	desired     Pool
+	machines    func() ([]*initializedMachine, error)
 }
 
 func (i *initializedMachines) forEach(baseMonitor mntr.Monitor, do func(machine *initializedMachine, machineMonitor mntr.Monitor) (goon bool)) {
@@ -34,7 +36,7 @@ func (i *initializedMachines) forEach(baseMonitor mntr.Monitor, do func(machine 
 
 type initializeFunc func(initializedPool, []*initializedMachine) error
 type uninitializeMachineFunc func(id string)
-type initializeMachineFunc func(machine infra.Machine, pool initializedPool) *initializedMachine
+type initializeMachineFunc func(machine infra.Machine, pool *initializedPool) *initializedMachine
 
 func (i *initializedPool) enhance(initialize initializeFunc) {
 	original := i.machines
@@ -69,9 +71,9 @@ func initialize(
 	providerPools map[string]map[string]infra.Pool,
 	k8s *Client,
 	postInit func(machine *initializedMachine)) (
-	controlplane initializedPool,
+	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
-	workers []initializedPool,
+	workers []*initializedPool,
 	workerMachines []*initializedMachine,
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
@@ -79,8 +81,8 @@ func initialize(
 
 	curr.Status = "running"
 
-	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
-		pool := initializedPool{
+	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) (*initializedPool, error) {
+		pool := &initializedPool{
 			infra:   infraPool,
 			tier:    tier,
 			desired: desired,
@@ -100,7 +102,36 @@ func initialize(
 			sort.Sort(initializedMachines(machines))
 			return machines, nil
 		}
-		return pool
+
+		machines, err := pool.machines()
+		if err != nil {
+			return pool, err
+		}
+
+		var replace initializedMachines
+		for _, machine := range machines {
+			if req, _, _ := machine.infra.ReplacementRequired(); req {
+				replace = append(replace, machine)
+			}
+		}
+
+		pool.upscaling = desired.Nodes + len(replace) - len(machines)
+		if pool.upscaling > 0 {
+			return pool, nil
+		}
+
+		pool.downscaling = replace
+
+		for _, machine := range machines {
+			if desired.Nodes-len(machines)-len(pool.downscaling) <= 0 {
+				break
+			}
+			if req, _, _ := machine.infra.ReplacementRequired(); !req {
+				pool.downscaling = append(pool.downscaling, machine)
+			}
+		}
+
+		return pool, nil
 	}
 
 	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
@@ -178,7 +209,16 @@ func initialize(
 	pools:
 		for poolName, pool := range provider {
 			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == poolName {
-				controlplane = initializePool(pool, desired.Spec.ControlPlane, Controlplane)
+				controlplane, err = initializePool(pool, desired.Spec.ControlPlane, Controlplane)
+				if err != nil {
+					return controlplane,
+						controlplaneMachines,
+						workers,
+						workerMachines,
+						initializeMachine,
+						uninitializeMachine,
+						err
+				}
 				controlplaneMachines, err = controlplane.machines()
 				if err != nil {
 					return controlplane,
@@ -194,7 +234,16 @@ func initialize(
 
 			for _, desiredPool := range desired.Spec.Workers {
 				if providerName == desiredPool.Provider && poolName == desiredPool.Pool {
-					workerPool := initializePool(pool, *desiredPool, Workers)
+					workerPool, err := initializePool(pool, *desiredPool, Workers)
+					if err != nil {
+						return controlplane,
+							controlplaneMachines,
+							workers,
+							workerMachines,
+							initializeMachine,
+							uninitializeMachine,
+							err
+					}
 					workers = append(workers, workerPool)
 					initializedWorkerMachines, err := workerPool.machines()
 					if err != nil {
