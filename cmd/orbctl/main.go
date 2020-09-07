@@ -36,16 +36,23 @@ func main() {
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
 	)
+
+	nodes := NodeCommand()
+	nodes.AddCommand(
+		ReplaceCommand(rootValues),
+		RebootCommand(rootValues),
+		ExecCommand(rootValues),
+	)
+
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
 		EditCommand(rootValues),
-		ExecCommand(rootValues),
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
-		RebootCommand(rootValues),
 		takeoff,
+		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {
