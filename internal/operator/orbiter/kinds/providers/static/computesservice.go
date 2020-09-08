@@ -130,24 +130,20 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
 			rebootRequired,
 			func() {
-				t := true
-				spec.RebootRequired = &t
+				spec.RebootRequired = true
 			}, func() {
-				f := false
-				spec.RebootRequired = &f
+				spec.RebootRequired = false
 			},
 			replacementRequired,
 			func() {
-				t := true
-				spec.ReplacementRequired = &t
+				spec.ReplacementRequired = true
 			}, func() {
-				f := false
-				spec.ReplacementRequired = &f
+				spec.ReplacementRequired = false
 			})
 	}
 	for _, spec := range specifiedMachines {
 
-		machine := initializeMachine(*spec.RebootRequired, *spec.ReplacementRequired, spec)
+		machine := initializeMachine(spec.RebootRequired, spec.ReplacementRequired, spec)
 		if err := machine.UseKey(keys...); err != nil {
 			return nil, err
 		}

@@ -55,8 +55,8 @@ type Machine struct {
 	ID                  string
 	Hostname            string
 	IP                  orbiter.IPAddress
-	RebootRequired      *bool
-	ReplacementRequired *bool
+	RebootRequired      bool
+	ReplacementRequired bool
 }
 
 func (c *Machine) validate() error {

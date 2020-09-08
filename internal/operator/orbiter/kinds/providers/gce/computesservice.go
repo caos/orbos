@@ -285,9 +285,11 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		for idx, req := range m.context.desired.RebootRequired {
 			if req == inst.Name {
 				rebootRequired = true
-				unrequireReboot = func() {
-					m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:idx], m.context.desired.RebootRequired[idx+1:]...)
-				}
+				unrequireReboot = func(pos int) func() {
+					return func() {
+						m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:pos], m.context.desired.RebootRequired[pos+1:]...)
+					}
+				}(idx)
 				break
 			}
 		}
@@ -297,9 +299,11 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		for idx, req := range m.context.desired.ReplacementRequired {
 			if req == inst.Name {
 				replacementRequired = true
-				unrequireReplacement = func() {
-					m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired[0:idx], m.context.desired.ReplacementRequired[idx+1:]...)
-				}
+				unrequireReplacement = func(pos int) func() {
+					return func() {
+						m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired[0:pos], m.context.desired.ReplacementRequired[pos+1:]...)
+					}
+				}(idx)
 				break
 			}
 		}
