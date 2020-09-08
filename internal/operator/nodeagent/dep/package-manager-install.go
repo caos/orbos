@@ -29,7 +29,8 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 			continue
 		}
 
-		installPkgs = append(installPkgs, fmt.Sprintf("%s-%s", sw.Package, sw.Version))
+		installPkg := fmt.Sprintf("%s-%s", sw.Package, sw.Version)
+		installPkgs = append(installPkgs, installPkg)
 		cmd := exec.Command("yum", "versionlock", "delete", sw.Package)
 		cmd.Stderr = errBuf
 		if p.monitor.IsVerbose() {
@@ -43,7 +44,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		}
 		errBuf.Reset()
 
-		cmd = exec.Command("yum", "versionlock", "add", "-y", installPkgs[idx])
+		cmd = exec.Command("yum", "versionlock", "add", "-y", installPkg)
 		cmd.Stderr = errBuf
 		if p.monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
