@@ -5,7 +5,7 @@ import "github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 func GetChartInfo() *chart.Chart {
 	return &chart.Chart{
 		Name:    "logging-operator",
-		Version: "3.2.1",
+		Version: "3.6.0",
 		Index: &chart.Index{
 			Name: "banzaicloud-stable",
 			URL:  "kubernetes-charts.banzaicloud.com",
@@ -15,6 +15,6 @@ func GetChartInfo() *chart.Chart {
 
 func GetImageTags() map[string]string {
 	return map[string]string{
-		"banzaicloud/logging-operator": "3.2.0",
+		"banzaicloud/logging-operator": "3.6.0",
 	}
 }

@@ -1,11 +1,12 @@
 package logging
 
 type FlowConfig struct {
-	Name         string
-	Namespace    string
-	SelectLabels map[string]string
-	Outputs      []string
-	ParserType   string
+	Name           string
+	Namespace      string
+	SelectLabels   map[string]string
+	Outputs        []string
+	ClusterOutputs []string
+	ParserType     string
 }
 
 type Parse struct {
@@ -26,9 +27,10 @@ type Filter struct {
 }
 
 type FlowSpec struct {
-	Filters    []*Filter `yaml:"filters,omitempty"`
-	Match      []*Match  `yaml:"match,omitempty"`
-	OutputRefs []string  `yaml:"outputRefs"`
+	Filters           []*Filter `yaml:"filters,omitempty"`
+	Match             []*Match  `yaml:"match,omitempty"`
+	OutputRefs        []string  `yaml:"localOutputRefs"`
+	ClusterOutputRefs []string  `yaml:"globalOutputRefs"`
 }
 type Match struct {
 	Select  *Select `yaml:"select"`
@@ -80,7 +82,8 @@ func NewFlow(conf *FlowConfig) *Flow {
 					},
 				},
 			},
-			OutputRefs: conf.Outputs,
+			OutputRefs:        conf.Outputs,
+			ClusterOutputRefs: conf.ClusterOutputs,
 		},
 	}
 }
