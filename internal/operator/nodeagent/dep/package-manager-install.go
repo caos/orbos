@@ -15,21 +15,21 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	installPkgs := make([]string, len(more)+1)
-	for idx, sw := range append([]*Software{installVersion}, more...) {
+	installPkgs := make([]string, 0)
+	for _, sw := range append([]*Software{installVersion}, more...) {
 
 		installedVersion, ok := p.installed[sw.Package]
 		if ok && (sw.Version == "" || sw.Version == installedVersion) {
 			continue
 		}
 
-		installPkgs[idx] = sw.Package
+		installPkgs = append(installPkgs, sw.Package)
 
 		if sw.Version == "" {
 			continue
 		}
 
-		installPkgs[idx] = fmt.Sprintf("%s-%s", sw.Package, sw.Version)
+		installPkgs = append(installPkgs, fmt.Sprintf("%s-%s", sw.Package, sw.Version))
 		cmd := exec.Command("yum", "versionlock", "delete", sw.Package)
 		cmd.Stderr = errBuf
 		if p.monitor.IsVerbose() {
@@ -53,6 +53,10 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 			return errors.Wrapf(err, "locking package %s at version %s failed with stderr %s", sw.Package, sw.Version, errBuf.String())
 		}
 		errBuf.Reset()
+	}
+
+	if len(installPkgs) <= 0 {
+		return nil
 	}
 
 	cmd := exec.Command("yum", append([]string{"install", "-y"}, installPkgs...)...)

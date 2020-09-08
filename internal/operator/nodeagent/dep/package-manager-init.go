@@ -38,7 +38,7 @@ update_cmd = default
 update_messages = yes
 download_updates = yes
 apply_updates = yes
-random_sleep = 0
+random_sleep = 57
 [emitters]
 system_name = None
 emit_via = stdio
@@ -61,7 +61,7 @@ mdpolicy = group:main
 
 	if err := p.rembasedInstall(
 		&Software{Package: "yum-utils"},
-		&Software{Package: "yum-versionlock"},
+		&Software{Package: "yum-plugin-versionlock"},
 		&Software{Package: "yum-cron"},
 		&Software{Package: "firewalld"},
 	); err != nil {
