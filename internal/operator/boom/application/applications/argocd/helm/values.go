@@ -91,7 +91,7 @@ type Controller struct {
 	Image              *Image              `yaml:"image"`
 	Args               *Args               `yaml:"args"`
 	LogLevel           string              `yaml:"logLevel"`
-	ExtraArgs          struct{}            `yaml:"extraArgs"`
+	ExtraArgs          []string            `yaml:"extraArgs"`
 	Env                []interface{}       `yaml:"env"`
 	PodAnnotations     map[string]string   `yaml:"podAnnotations"`
 	PodLabels          map[string]string   `yaml:"podLabels"`
@@ -185,7 +185,7 @@ type Config struct {
 type Server struct {
 	Name                   string            `yaml:"name"`
 	Image                  *Image            `yaml:"image"`
-	ExtraArgs              map[string]string `yaml:"extraArgs"`
+	ExtraArgs              []string          `yaml:"extraArgs"`
 	Env                    []interface{}     `yaml:"env"`
 	LogLevel               string            `yaml:"logLevel"`
 	PodAnnotations         map[string]string `yaml:"podAnnotations"`
@@ -220,7 +220,7 @@ type RbacConfig struct {
 type RepoServer struct {
 	Name              string            `yaml:"name"`
 	Image             *Image            `yaml:"image"`
-	ExtraArgs         struct{}          `yaml:"extraArgs"`
+	ExtraArgs         []string          `yaml:"extraArgs"`
 	Env               []interface{}     `yaml:"env"`
 	LogLevel          string            `yaml:"logLevel"`
 	PodAnnotations    map[string]string `yaml:"podAnnotations"`
