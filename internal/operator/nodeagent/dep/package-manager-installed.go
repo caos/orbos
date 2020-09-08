@@ -63,7 +63,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 			fmt.Println(line)
 		}
 
-		if strings.Contains(line, afterLineContaining) {
+		if afterLineContaining == "" || strings.Contains(line, afterLineContaining) {
 			doParse = true
 			continue
 		}
