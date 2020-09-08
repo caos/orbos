@@ -68,7 +68,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+
+				funcBuildContext := func() (*context, error) {
+					return buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				}
+				ctx, err := buildContextGoroutine(funcBuildContext)
 				if err != nil {
 					return nil, err
 				}
@@ -78,7 +82,10 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				if err := lbDestroy(); err != nil {
 					return err
 				}
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				funcBuildContext := func() (*context, error) {
+					return buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+				}
+				ctx, err := buildContextGoroutine(funcBuildContext)
 				if err != nil {
 					return err
 				}
@@ -107,7 +114,10 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil
 				}
 
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, true)
+				funcBuildContext := func() (*context, error) {
+					return buildContext(monitor, &desiredKind.Spec, orbID, providerID, true)
+				}
+				ctx, err := buildContextGoroutine(funcBuildContext)
 				if err != nil {
 					return err
 				}
