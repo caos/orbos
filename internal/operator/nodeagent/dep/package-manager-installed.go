@@ -55,7 +55,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		return errors.Wrap(err, "listing packages failed")
 	}
 
-	doParse := false
+	doParse := afterLineContaining == ""
 	for err == nil {
 		var line string
 		line, err = bufferedReader.ReadString('\n')
@@ -63,7 +63,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 			fmt.Println(line)
 		}
 
-		if afterLineContaining == "" || strings.Contains(line, afterLineContaining) {
+		if !doParse && strings.Contains(line, afterLineContaining) {
 			doParse = true
 			continue
 		}
