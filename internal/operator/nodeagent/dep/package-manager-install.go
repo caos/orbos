@@ -12,21 +12,24 @@ import (
 
 func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Software) error {
 
-	if err := p.systemd.Disable("yum-cron"); err != nil {
-		return err
-	}
-	defer p.systemd.Enable("yum-cron")
-
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	pkgs := make([]string, len(more)+1)
+	installPkgs := make([]string, len(more)+1)
 	for idx, sw := range append([]*Software{installVersion}, more...) {
-		pkgs[idx] = sw.Package
+
+		installedVersion, ok := p.installed[sw.Package]
+		if ok && (sw.Version == "" || sw.Version == installedVersion) {
+			continue
+		}
+
+		installPkgs[idx] = sw.Package
+
 		if sw.Version == "" {
 			continue
 		}
-		pkgs[idx] = fmt.Sprintf("%s-%s", sw.Package, sw.Version)
+
+		installPkgs[idx] = fmt.Sprintf("%s-%s", sw.Package, sw.Version)
 		cmd := exec.Command("yum", "versionlock", "delete", sw.Package)
 		cmd.Stderr = errBuf
 		if p.monitor.IsVerbose() {
@@ -40,7 +43,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		}
 		errBuf.Reset()
 
-		cmd = exec.Command("yum", "versionlock", "add", "-y", pkgs[idx])
+		cmd = exec.Command("yum", "versionlock", "add", "-y", installPkgs[idx])
 		cmd.Stderr = errBuf
 		if p.monitor.IsVerbose() {
 			fmt.Println(strings.Join(cmd.Args, " "))
@@ -52,13 +55,13 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		errBuf.Reset()
 	}
 
-	cmd := exec.Command("yum", append([]string{"install", "-y"}, pkgs...)...)
+	cmd := exec.Command("yum", append([]string{"install", "-y"}, installPkgs...)...)
 	cmd.Stderr = errBuf
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
-	return errors.Wrapf(cmd.Run(), "installing yum packages %s failed with stderr %s", strings.Join(pkgs, " and "), errBuf.String())
+	return errors.Wrapf(cmd.Run(), "installing yum packages %s failed with stderr %s", strings.Join(installPkgs, " and "), errBuf.String())
 }
 
 // TODO: Use lower level apt instead of apt-get?

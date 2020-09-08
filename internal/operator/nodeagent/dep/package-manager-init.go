@@ -71,16 +71,6 @@ mdpolicy = group:main
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.Command("package-cleanup", "--cleandupes", "-y")
-	cmd.Stderr = errBuf
-	if p.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "cleaning up duplicates failed with stderr %s", errBuf.String())
-	}
-
 	for _, unit := range []string{"yum-cron", "firewalld"} {
 		if err := p.systemd.Enable(unit); err != nil {
 			return err
