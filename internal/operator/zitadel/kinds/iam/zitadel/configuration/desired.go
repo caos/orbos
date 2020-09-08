@@ -9,6 +9,7 @@ type Configuration struct {
 	Notifications *Notifications `yaml:"notifications,omitempty"`
 	Passwords     *Passwords     `yaml:"passwords,omitempty"`
 	DebugMode     bool           `yaml:"debugMode"`
+	LogLevel      string         `yaml:"logLevel"`
 }
 
 type Passwords struct {
