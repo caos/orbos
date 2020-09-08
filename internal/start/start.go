@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"log"
+	"net/http"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -25,6 +27,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
 	"google.golang.org/grpc"
+	_ "net/http/pprof"
 )
 
 type OrbiterConfig struct {
@@ -39,6 +42,10 @@ type OrbiterConfig struct {
 }
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
+
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	go checks(monitor, orbctlGit)
 
