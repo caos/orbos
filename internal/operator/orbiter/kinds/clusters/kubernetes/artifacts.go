@@ -382,7 +382,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 				"app.kubernetes.io/instance":   "boom",
 				"app.kubernetes.io/part-of":    "orbos",
 				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				"app.kubernetes.io/managed-by": "boom.caos.ch",
 			},
 		},
 		Spec: core.ServiceSpec{
@@ -457,6 +457,9 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 						Ports: []core.ContainerPort{{
 							Name:          "metrics",
 							ContainerPort: 9000,
+						}, {
+							Name:          "pprof",
+							ContainerPort: 6060,
 						}},
 						Resources: core.ResourceRequirements{
 							Limits: core.ResourceList{
