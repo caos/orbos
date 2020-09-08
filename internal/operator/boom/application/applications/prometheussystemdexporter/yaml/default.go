@@ -52,7 +52,7 @@ func GetDefault() interface{} {
 					"hostPID": true,
 					"containers": []map[string]interface{}{{
 						"name":  "systemd-exporter",
-						"image": "quay.io/povilasv/systemd_exporter:v0.2.0",
+						"image": "quay.io/povilasv/systemd_exporter:v0.4.0",
 						"securityContext": map[string]bool{
 							"privileged": true,
 						},
