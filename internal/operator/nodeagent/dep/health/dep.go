@@ -110,7 +110,7 @@ RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
-`, location, quote(args))), 0600); err != nil {
+`, location, quote(args))), 0644); err != nil {
 			return err
 		}
 
