@@ -11,6 +11,7 @@ import (
 const (
 	orbiterFile = "orbiter.yml"
 	boomFile    = "boom.yml"
+	zitadelFile = "zitadel.yml"
 )
 
 type PushDesiredFunc func(monitor mntr.Monitor) error
@@ -50,6 +51,25 @@ func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredF
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing boom desired state")
 		return PushBoomYml(monitor, "Boom desired state written", gitClient, desired)
+	}
+}
+
+func ExistsZitadelYml(gitClient *git.Client) (bool, error) {
+	return existsFileInGit(gitClient, zitadelFile)
+}
+
+func ReadZitadelYml(gitClient *git.Client) (*tree.Tree, error) {
+	return readFileInGit(gitClient, zitadelFile)
+}
+
+func PushZitadelYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
+	return pushFileInGit(monitor, msg, gitClient, desired, zitadelFile)
+}
+
+func PushZitadelDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
+	return func(monitor mntr.Monitor) error {
+		monitor.Info("Writing zitadel desired state")
+		return PushZitadelYml(monitor, "Zitadel desired state written", gitClient, desired)
 	}
 }
 

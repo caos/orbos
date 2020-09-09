@@ -1,5 +1,11 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 func DefaultValues(imageTags map[string]string) *Values {
 	return &Values{
 		FullnameOverride: "prometheus",
@@ -143,6 +149,17 @@ func DefaultValues(imageTags map[string]string) *Values {
 				Repository: "k8s.gcr.io/hyperkube",
 				Tag:        imageTags["k8s.gcr.io/hyperkube"],
 				PullPolicy: "IfNotPresent",
+			},
+			NodeSelector: map[string]string{},
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("20m"),
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("10m"),
+					corev1.ResourceMemory: resource.MustParse("50Mi"),
+				},
 			},
 		},
 		Prometheus: &DisabledTool{

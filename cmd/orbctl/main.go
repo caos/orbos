@@ -35,6 +35,7 @@ func main() {
 	takeoff.AddCommand(
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
+		StartZitadel(rootValues),
 	)
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
@@ -45,6 +46,9 @@ func main() {
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
 		RebootCommand(rootValues),
+		BackupListCommand(rootValues),
+		RestoreCommand(rootValues),
+		BackupCommand(rootValues),
 		takeoff,
 	)
 
