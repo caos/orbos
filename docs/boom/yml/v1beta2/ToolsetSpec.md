@@ -9,7 +9,7 @@
 
 | Attribute              | Description                                                                                                                 | Default | Collection  |
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- | ----------  |
-| boomVersion            | Version of BOOM which should be reconciled                                                                                  |         |             |
+| boom                   | Boom self reconciling specs , [here](Boom.md)                                                                               |         |             |
 | forceApply             | Relative folder path where the currentstate is written to                                                                   |         |             |
 | currentStatePath       | Flag if --force should be used by apply of resources                                                                        |         |             |
 | preApply               | Spec for the yaml-files applied before the applications, for example used secrets , [here](Apply.md)                        |         |             |

@@ -1,8 +1,11 @@
 package logs
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"strings"
+
+	corev1 "k8s.io/api/core/v1"
+
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 
 	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/logs"
 	aglogs "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/logs"
@@ -49,6 +52,14 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		Name:             "logging",
 		Namespace:        "caos-system",
 		ControlNamespace: "caos-system",
+		NodeSelector:     map[string]string{},
+		Tolerations:      []corev1.Toleration{},
+	}
+
+	if toolsetCRDSpec.LogCollection.NodeSelector != nil {
+		for k, v := range toolsetCRDSpec.LogCollection.NodeSelector {
+			conf.NodeSelector[k] = v
+		}
 	}
 
 	if toolsetCRDSpec.LogCollection.FluentdPVC != nil {
@@ -58,6 +69,12 @@ func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
 		}
 		if toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes != nil {
 			conf.FluentdPVC.AccessModes = toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes
+		}
+	}
+
+	if toolsetCRDSpec.LogCollection.Tolerations != nil {
+		for _, tol := range toolsetCRDSpec.LogCollection.Tolerations {
+			conf.Tolerations = append(conf.Tolerations, tol)
 		}
 	}
 

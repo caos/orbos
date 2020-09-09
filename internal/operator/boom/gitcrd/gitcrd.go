@@ -140,7 +140,8 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		return
 	}
 
-	if toolsetCRD.Spec.BoomVersion != "" {
+	boomSpec := toolsetCRD.Spec.Boom
+	if boomSpec != nil && boomSpec.Version != "" {
 		conf, err := clientgo.GetClusterConfig()
 		if err != nil {
 			c.status = err
@@ -154,7 +155,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			return
 		}
 
-		if err := cmd.Reconcile(monitor, k8sClient, toolsetCRD.Spec.BoomVersion); err != nil {
+		if err := cmd.Reconcile(monitor, k8sClient, "", boomSpec); err != nil {
 			c.status = err
 			return
 		}
@@ -248,7 +249,8 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 
 func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply, force bool) error {
 	if apply.Folder == "" {
-		return errors.New("No folder provided")
+		monitor.Info("No folder provided")
+		return nil
 	}
 
 	err := helper.CopyFolderToLocal(c.git, c.crdDirectoryPath, apply.Folder)
@@ -262,7 +264,8 @@ func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply,
 	}
 
 	if empty, err := helper.FolderEmpty(localFolder); empty == true || err != nil {
-		return errors.New("Provided folder is empty")
+		monitor.Info("Provided folder is empty")
+		return nil
 	}
 
 	if err := useFolder(monitor, apply.Deploy, localFolder, force); err != nil {

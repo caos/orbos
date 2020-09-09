@@ -21,10 +21,12 @@ jobs:
           GO111MODULE: on
           CGO_ENABLED: 0
         run: |
-          export VERSION=${GITHUB_REF##*/}
+          export VERSION=${GITHUB_REF##*/}-dev
 
           export IMAGE=docker.pkg.github.com/caos/orbos/orbos
           export TAG_VERSION=${IMAGE}:${VERSION}
+          export CRBACKUPIMAGE=docker.pkg.github.com/caos/orbos/crbackup
+          export CRBACKUP_TAG_VERSION=${CRBACKUPIMAGE}:${VERSION}
 
           go mod download
           mkdir -p ./artifacts
@@ -34,11 +36,14 @@ jobs:
 
           echo "Publishing Orbos dev-version $VERSION"
           docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
-          docker build --tag ${TAG_VERSION} --file ./Dockerfile .
+          docker build --tag ${TAG_VERSION} --file ./build/orbos/Dockerfile .
           docker push ${TAG_VERSION}
 
+          docker build --tag ${CRBACKUP_TAG_VERSION} --file ./build/cr-backup/Dockerfile .
+          docker push ${CRBACKUP_TAG_VERSION}
+
           echo "##[set-output name=relbranch;]$(echo ${VERSION})"
-          curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/$VERSION | jq .id))
+          curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/${VERSION} | jq .id))
       - name: Dev Release Create
         id: dev-release-create
         uses: actions/create-release@v1

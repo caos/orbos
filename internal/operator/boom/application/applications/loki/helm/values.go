@@ -1,5 +1,10 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+)
+
 type Tracing struct {
 	JaegerAgentHost interface{} `yaml:"jaegerAgentHost"`
 }
@@ -133,39 +138,47 @@ type ServiceMonitor struct {
 }
 
 type Values struct {
-	FullNameOverride              string            `yaml:"fullNameOverride,omitempty"`
-	Affinity                      struct{}          `yaml:"affinity"`
-	Annotations                   map[string]string `yaml:"annotations"`
-	Tracing                       *Tracing          `yaml:"tracing"`
-	Config                        *Config           `yaml:"config"`
-	Image                         *Image            `yaml:"image"`
-	ExtraArgs                     struct{}          `yaml:"extraArgs"`
-	LivenessProbe                 *LivenessProbe    `yaml:"livenessProbe"`
-	NetworkPolicy                 *NetworkPolicy    `yaml:"networkPolicy"`
-	Client                        struct{}          `yaml:"client"`
-	NodeSelector                  struct{}          `yaml:"nodeSelector"`
-	Persistence                   *Persistence      `yaml:"persistence"`
-	PodLabels                     map[string]string `yaml:"podLabels"`
-	PodAnnotations                map[string]string `yaml:"podAnnotations"`
-	PodManagementPolicy           string            `yaml:"podManagementPolicy"`
-	Rbac                          *Rbac             `yaml:"rbac"`
-	ReadinessProbe                *ReadinessProbe   `yaml:"readinessProbe"`
-	Replicas                      int               `yaml:"replicas"`
-	Resources                     struct{}          `yaml:"resources"`
-	SecurityContext               *SecurityContext  `yaml:"securityContext"`
-	Service                       *Service          `yaml:"service"`
-	ServiceAccount                *ServiceAccount   `yaml:"serviceAccount"`
-	TerminationGracePeriodSeconds int               `yaml:"terminationGracePeriodSeconds"`
-	Tolerations                   []interface{}     `yaml:"tolerations"`
-	PodDisruptionBudget           struct{}          `yaml:"podDisruptionBudget"`
-	UpdateStrategy                *UpdateStrategy   `yaml:"updateStrategy"`
-	ServiceMonitor                *ServiceMonitor   `yaml:"serviceMonitor"`
-	InitContainers                []interface{}     `yaml:"initContainers"`
-	ExtraContainers               []interface{}     `yaml:"extraContainers"`
-	ExtraVolumes                  []interface{}     `yaml:"extraVolumes"`
-	ExtraVolumeMounts             []interface{}     `yaml:"extraVolumeMounts"`
-	ExtraPorts                    []interface{}     `yaml:"extraPorts"`
-	Env                           []*Env            `yaml:"env,omitempty"`
+	FullNameOverride              string              `yaml:"fullNameOverride,omitempty"`
+	Affinity                      struct{}            `yaml:"affinity"`
+	Annotations                   map[string]string   `yaml:"annotations"`
+	Tracing                       *Tracing            `yaml:"tracing"`
+	Config                        *Config             `yaml:"config"`
+	Image                         *Image              `yaml:"image"`
+	ExtraArgs                     struct{}            `yaml:"extraArgs"`
+	LivenessProbe                 *LivenessProbe      `yaml:"livenessProbe"`
+	NetworkPolicy                 *NetworkPolicy      `yaml:"networkPolicy"`
+	Client                        struct{}            `yaml:"client"`
+	NodeSelector                  map[string]string   `yaml:"nodeSelector"`
+	Persistence                   *Persistence        `yaml:"persistence"`
+	PodLabels                     map[string]string   `yaml:"podLabels"`
+	PodAnnotations                map[string]string   `yaml:"podAnnotations"`
+	PodManagementPolicy           string              `yaml:"podManagementPolicy"`
+	Rbac                          *Rbac               `yaml:"rbac"`
+	ReadinessProbe                *ReadinessProbe     `yaml:"readinessProbe"`
+	Replicas                      int                 `yaml:"replicas"`
+	Resources                     *k8s.Resources      `yaml:"resources"`
+	SecurityContext               *SecurityContext    `yaml:"securityContext"`
+	Service                       *Service            `yaml:"service"`
+	ServiceAccount                *ServiceAccount     `yaml:"serviceAccount"`
+	TerminationGracePeriodSeconds int                 `yaml:"terminationGracePeriodSeconds"`
+	Tolerations                   []corev1.Toleration `yaml:"tolerations"`
+	PodDisruptionBudget           struct{}            `yaml:"podDisruptionBudget"`
+	UpdateStrategy                *UpdateStrategy     `yaml:"updateStrategy"`
+	ServiceMonitor                *ServiceMonitor     `yaml:"serviceMonitor"`
+	InitContainers                []interface{}       `yaml:"initContainers"`
+	ExtraContainers               []interface{}       `yaml:"extraContainers"`
+	ExtraVolumes                  []interface{}       `yaml:"extraVolumes"`
+	ExtraVolumeMounts             []interface{}       `yaml:"extraVolumeMounts"`
+	ExtraPorts                    []interface{}       `yaml:"extraPorts"`
+	Env                           []*Env              `yaml:"env,omitempty"`
+}
+
+type Toleration struct {
+	Effect            string `yaml:"effect,omitempty"`
+	Key               string `yaml:"key,omitempty"`
+	Operator          string `yaml:"operator,omitempty"`
+	TolerationSeconds int    `yaml:"tolerationSeconds,omitempty"`
+	Value             string `yaml:"value,omitempty"`
 }
 type Env struct {
 	Name  string
