@@ -149,9 +149,6 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "boom",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
@@ -265,9 +262,6 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 					},
 				},
 				Spec: core.PodSpec{
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
