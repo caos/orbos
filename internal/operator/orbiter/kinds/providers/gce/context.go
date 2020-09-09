@@ -65,18 +65,3 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 	newContext.machinesService = newMachinesService(newContext, oneoff, []byte(desired.SSHKey.Private.Value), []byte(desired.SSHKey.Public.Value))
 	return newContext, nil
 }
-
-type retBuild struct {
-	context *context
-	err     error
-}
-
-func buildContextGoroutine(build func() (*context, error)) (*context, error) {
-	retChan := make(chan retBuild)
-	go func() {
-		ctx, err := build()
-		retChan <- retBuild{ctx, err}
-	}()
-	ret := <-retChan
-	return ret.context, ret.err
-}
