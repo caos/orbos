@@ -50,6 +50,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			migrate = true
 		}
 
+		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+		if err != nil {
+			return nil, nil, nil, migrate, err
+		}
+
 		current := &Current{
 			Common: &tree.Common{
 				Kind:    "orbiter.caos.ch/GCEProvider",
@@ -69,24 +74,9 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
 
-				funcBuildContext := func() (*context, error) {
-					return buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-				}
-				ctx, err := buildContextGoroutine(funcBuildContext)
-				if err != nil {
-					return nil, err
-				}
-
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func() error {
 				if err := lbDestroy(); err != nil {
-					return err
-				}
-				funcBuildContext := func() (*context, error) {
-					return buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-				}
-				ctx, err := buildContextGoroutine(funcBuildContext)
-				if err != nil {
 					return err
 				}
 
@@ -112,14 +102,6 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				if desiredKind.Spec.JSONKey == nil {
 					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
 					return nil
-				}
-
-				funcBuildContext := func() (*context, error) {
-					return buildContext(monitor, &desiredKind.Spec, orbID, providerID, true)
-				}
-				ctx, err := buildContextGoroutine(funcBuildContext)
-				if err != nil {
-					return err
 				}
 
 				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)
