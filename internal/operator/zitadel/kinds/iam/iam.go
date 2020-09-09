@@ -1,6 +1,8 @@
 package iam
 
 import (
+	"fmt"
+
 	zitadelbase "github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel"
 	"github.com/caos/orbos/internal/secret"
@@ -19,10 +21,17 @@ func GetQueryAndDestroyFuncs(
 	timestamp string,
 	features ...string,
 ) (
-	zitadelbase.QueryFunc,
-	zitadelbase.DestroyFunc,
-	error,
+	query zitadelbase.QueryFunc,
+	destroy zitadelbase.DestroyFunc,
+	err error,
 ) {
+
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("adapting %s failed: %w", desiredTree.Common.Kind)
+		}
+	}()
+
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/Zitadel":
 		return zitadel.AdaptFunc(timestamp, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)

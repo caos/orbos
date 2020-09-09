@@ -21,11 +21,13 @@ func SecretsFunc() secret.Func {
 		}
 		desiredTree.Parsed = desiredKind
 
-		networkingSecrets, err := networking.GetSecrets(monitor, desiredKind.Networking)
-		if err != nil {
-			return nil, err
+		var networkingSecrets map[string]*secret.Secret
+		if desiredKind.Networking != nil {
+			networkingSecrets, err = networking.GetSecrets(monitor, desiredKind.Networking)
+			if err != nil {
+				return nil, err
+			}
 		}
-
 		databaseSecrets, err := databases.GetSecrets(monitor, desiredKind.Database)
 		if err != nil {
 			return nil, err

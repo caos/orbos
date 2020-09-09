@@ -14,9 +14,21 @@ type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree
 
 type EnsureFunc func(k8sClient *kubernetes.Client) error
 
+func NoopEnsureFunc(*kubernetes.Client) error {
+	return nil
+}
+
 type DestroyFunc func(k8sClient *kubernetes.Client) error
 
+func NoopDestroyFunc(*kubernetes.Client) error {
+	return nil
+}
+
 type QueryFunc func(k8sClient *kubernetes.Client, queried map[string]interface{}) (EnsureFunc, error)
+
+func NoopQueryFunc(k8sClient *kubernetes.Client, queried map[string]interface{}) (EnsureFunc, error) {
+	return NoopEnsureFunc, nil
+}
 
 func Parse(gitClient *git.Client, file string) (*tree.Tree, error) {
 	if err := gitClient.Clone(); err != nil {
