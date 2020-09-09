@@ -210,6 +210,7 @@ func literalsConfigMap(
 		if desired.Tracing != nil {
 			literalsConfigMap["ZITADEL_TRACING_PROJECT_ID"] = desired.Tracing.ProjectID
 			literalsConfigMap["ZITADEL_TRACING_FRACTION"] = desired.Tracing.Fraction
+			literalsConfigMap["ZITADEL_TRACING_TYPE"] = desired.Tracing.Type
 		}
 		if desired.Secrets != nil {
 			literalsConfigMap["ZITADEL_USER_VERIFICATION_KEY"] = desired.Secrets.UserVerificationID

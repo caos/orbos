@@ -43,6 +43,7 @@ type Tracing struct {
 	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
 	ProjectID          string         `yaml:"projectID,omitempty"`
 	Fraction           string         `yaml:"fraction,omitempty"`
+	Type               string         `yaml:"type,omitempty"`
 }
 
 type Twilio struct {
