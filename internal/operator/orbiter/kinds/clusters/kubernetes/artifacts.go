@@ -457,9 +457,6 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 						Ports: []core.ContainerPort{{
 							Name:          "metrics",
 							ContainerPort: 9000,
-						}, {
-							Name:          "pprof",
-							ContainerPort: 6060,
 						}},
 						Resources: core.ResourceRequirements{
 							Limits: core.ResourceList{
