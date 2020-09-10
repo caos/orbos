@@ -20,12 +20,15 @@ func SecretsFunc() secret.Func {
 		desiredTree.Parsed = desiredKind
 
 		secrets = make(map[string]*secret.Secret, 0)
-		if desiredKind.Spec != nil {
-			if desiredKind.Spec.ServiceAccountJSON == nil {
-				desiredKind.Spec.ServiceAccountJSON = &secret.Secret{}
-			}
-			secrets["serviceaccountjson"] = desiredKind.Spec.ServiceAccountJSON
+		if desiredKind.Spec == nil {
+			desiredKind.Spec = &Spec{}
 		}
+
+		if desiredKind.Spec.ServiceAccountJSON == nil {
+			desiredKind.Spec.ServiceAccountJSON = &secret.Secret{}
+		}
+		secrets["serviceaccountjson"] = desiredKind.Spec.ServiceAccountJSON
+
 		return secrets, nil
 	}
 }

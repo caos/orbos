@@ -19,11 +19,11 @@ var Masterkey = "empty"
 // Secret: Secret handled with orbctl so no manual changes are required
 type Secret struct {
 	//Encryption algorithm used for the secret
-	Encryption string
+	Encryption string `json:"encryption,omitempty" yaml:"encryption,omitempty"`
 	//Encoding algorithm used for the secret
-	Encoding string
+	Encoding string `json:"encoding,omitempty" yaml:"encoding,omitempty"`
 	//Encrypted and encoded Value
-	Value string
+	Value string `json:"value,omitempty" yaml:"value,omitempty"`
 }
 type secretAlias Secret
 
@@ -47,6 +47,13 @@ type ExistingIDSecret struct {
 	SecretKey string `json:"secretKey" yaml:"secretKey"`
 	//Name which should be used internally, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
+}
+
+func (s *Secret) IsZero() bool {
+	if s.Value == "" {
+		return true
+	}
+	return false
 }
 
 func (s *Secret) UnmarshalYAMLWithExisting(node *yaml.Node, existing *Existing) error {
@@ -133,13 +140,13 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 	alias := new(secretAlias)
 	err := node.Decode(alias)
 
-	if alias.Value == "" {
-		return nil
-	}
-
 	s.Encoding = alias.Encoding
 	s.Encryption = alias.Encryption
 	s.Value = alias.Value
+
+	if alias.Value == "" {
+		return nil
+	}
 
 	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return nil

@@ -67,7 +67,8 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			gitClient,
 			path,
 			s,
-			operators.GetAllSecretsFunc()); err != nil {
+			operators.GetAllSecretsFunc(),
+			operators.PushFunc()); err != nil {
 			panic(err)
 		}
 		return nil
