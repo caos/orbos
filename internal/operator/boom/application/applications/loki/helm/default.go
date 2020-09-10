@@ -1,7 +1,15 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 func DefaultValues(imageTags map[string]string) *Values {
 	return &Values{
+		NodeSelector: map[string]string{},
+		Tolerations:  nil,
 		Env: []*Env{
 			&Env{Name: "WORKAROUND", Value: "ignorethis"},
 		},
@@ -117,6 +125,16 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		ServiceMonitor: &ServiceMonitor{
 			Enabled: false,
+		},
+		Resources: &k8s.Resources{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("256Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("50m"),
+				corev1.ResourceMemory: resource.MustParse("128Mi"),
+			},
 		},
 	}
 }

@@ -3,10 +3,13 @@ package start
 import (
 	"context"
 	"errors"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/secret/operators"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/zitadel"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
@@ -15,6 +18,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	orbzitadel "github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/mntr"
@@ -197,7 +201,7 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, erro
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")
 		}
-		monitor.Info("Read kubeconfig for boom deployment")
+		monitor.Info("Read kubeconfigs")
 
 		kubeconfigs = append(kubeconfigs, value)
 	}
@@ -278,4 +282,85 @@ func checks(monitor mntr.Monitor, client *git.Client) {
 			monitor.Error(err)
 		}
 	}
+}
+func Zitadel(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client) error {
+	takeoffChan := make(chan struct{})
+	go func() {
+		takeoffChan <- struct{}{}
+	}()
+
+	for range takeoffChan {
+		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		if err != nil {
+			monitor.Error(err)
+			return err
+		}
+
+		gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+			monitor.Error(err)
+			return err
+		}
+
+		takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc("", "networking", "zitadel", "database", "backup"), k8sClient)
+
+		go func() {
+			started := time.Now()
+			takeoff()
+
+			monitor.WithFields(map[string]interface{}{
+				"took": time.Since(started),
+			}).Info("Iteration done")
+			debug.FreeOSMemory()
+
+			takeoffChan <- struct{}{}
+		}()
+	}
+
+	return nil
+}
+
+func ZitadelBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client, backup string) error {
+	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+	if err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	takeoff := zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(backup, "instantbackup"), k8sClient)
+	takeoff()
+
+	return nil
+}
+
+func ZitadelRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes.Client, timestamp string) error {
+	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+	if err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+		monitor.Error(err)
+		return err
+	}
+
+	if err := kubernetes.ScaleZitadelOperator(monitor, k8sClient, 0); err != nil {
+		return err
+	}
+
+	zitadel.Takeoff(monitor, gitClient, orbzitadel.AdaptFunc(timestamp, "restore"), k8sClient)()
+
+	if err := kubernetes.ScaleZitadelOperator(monitor, k8sClient, 1); err != nil {
+		return err
+	}
+
+	return nil
 }

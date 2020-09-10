@@ -1,10 +1,11 @@
 package argocd
 
 import (
+	"strings"
+
 	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
-	"strings"
 
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/customimage"
@@ -111,6 +112,12 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 			values.Server.Config.Dex = conf.Connectors
 
 			values.Dex = helm.DefaultDexValues(imageTags)
+
+			if spec.NodeSelector != nil {
+				for k, v := range spec.NodeSelector {
+					values.Dex.NodeSelector[k] = v
+				}
+			}
 			values.Server.Config.URL = strings.Join([]string{"https://", spec.Network.Domain}, "")
 		}
 	}
@@ -143,6 +150,47 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 		}
 
 		values.Configs.KnownHosts.Data["ssh_known_hosts"] = knownHostsStr
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.Dex.NodeSelector[k] = v
+			values.RepoServer.NodeSelector[k] = v
+			values.Redis.NodeSelector[k] = v
+			values.Controller.NodeSelector[k] = v
+			values.Server.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			t := tol
+			values.Dex.Tolerations = append(values.Dex.Tolerations, t)
+			values.RepoServer.Tolerations = append(values.RepoServer.Tolerations, t)
+			values.Redis.Tolerations = append(values.Redis.Tolerations, t)
+			values.Controller.Tolerations = append(values.Controller.Tolerations, t)
+			values.Server.Tolerations = append(values.Server.Tolerations, t)
+		}
+	}
+
+	if spec.Redis != nil && spec.Redis.Resources != nil {
+		values.Redis.Resources = spec.Redis.Resources
+	}
+
+	if spec.Dex != nil && spec.Dex.Resources != nil {
+		values.Dex.Resources = spec.Dex.Resources
+	}
+
+	if spec.RepoServer != nil && spec.RepoServer.Resources != nil {
+		values.RepoServer.Resources = spec.RepoServer.Resources
+	}
+
+	if spec.Server != nil && spec.Server.Resources != nil {
+		values.Server.Resources = spec.Server.Resources
+	}
+
+	if spec.Controller != nil && spec.Controller.Resources != nil {
+		values.Controller.Resources = spec.Controller.Resources
 	}
 
 	return values

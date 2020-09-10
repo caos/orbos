@@ -3,7 +3,6 @@ package gce
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -100,9 +99,31 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 
 	providerDescription := fmt.Sprintf("orb=%s;provider=%s", ctx.orbID, ctx.providerID)
 
-	for _, ips := range spec {
-		for _, ip := range ips {
-			address := &address{}
+	for ipName, ips := range spec {
+		for ipIdx, ip := range ips {
+			ipID := fmt.Sprintf("%s-%d", ipName, ipIdx)
+			normalizedAddress := &address{
+				gce: &compute.Address{
+					Description: fmt.Sprintf("orb=%s;provider=%s;id=%s", ctx.orbID, ctx.providerID, ipID),
+				},
+			}
+			normalizedAddress.log = func(addr *address, monitor mntr.Monitor, internalID string) func(msg string, debug bool) func() {
+				localMonitor := monitor.WithField("internal-id", internalID)
+				return func(msg string, debug bool) func() {
+					if addr.gce.Name != "" {
+						localMonitor = localMonitor.WithField("external-id", addr.gce.Name)
+					}
+					level := localMonitor.Info
+					if debug {
+						level = localMonitor.Debug
+					}
+
+					return func() {
+						level(msg)
+					}
+				}
+			}(normalizedAddress, ctx.monitor, ipID)
+
 			addressTransports := make([]string, 0)
 			for _, src := range ip.Transport {
 				addressTransports = append(addressTransports, src.Name)
@@ -182,7 +203,7 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 						desired: src.HealthChecks,
 						pools:   src.BackendPools,
 					},
-					address:   address,
+					address:   normalizedAddress,
 					transport: src.Name,
 				})
 
@@ -198,23 +219,6 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 				}, destMonitor))
 			}
 			sort.Strings(addressTransports)
-			address.gce = &compute.Address{
-				Description: fmt.Sprintf("orb=%s;provider=%s;transports=%s", ctx.orbID, ctx.providerID, strings.Join(addressTransports, ",")),
-			}
-			address.log = func(msg string, debug bool) func() {
-				localMonitor := ctx.monitor.WithField("transports", addressTransports)
-				if address.gce.Name != "" {
-					localMonitor = localMonitor.WithField("id", address.gce.Name)
-				}
-				level := localMonitor.Info
-				if debug {
-					level = localMonitor.Debug
-				}
-
-				return func() {
-					level(msg)
-				}
-			}
 		}
 	}
 
@@ -372,7 +376,7 @@ func chainInEnsureOrder(ctx *context, lb []*normalizedLoadbalancer, query ...ens
 		removeOperations[i], removeOperations[j] = removeOperations[j], removeOperations[i]
 	}
 
-	return append(ensureOperations, removeOperations...), nil
+	return append(removeOperations, ensureOperations...), nil
 }
 
 func whitelistStrings(cidrs []*orbiter.CIDR) []string {

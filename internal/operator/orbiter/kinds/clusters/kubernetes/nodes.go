@@ -24,8 +24,10 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 		if !req {
 			return true
 		}
-		if err = k8sClient.Drain(machine.currentMachine, machine.node, rebooting); err != nil {
-			return false
+		if k8sClient.Available() {
+			if err = k8sClient.Drain(machine.currentMachine, machine.node, rebooting); err != nil {
+				return false
+			}
 		}
 		machine.currentMachine.Rebooting = true
 		machineMonitor.Info("Requiring reboot")

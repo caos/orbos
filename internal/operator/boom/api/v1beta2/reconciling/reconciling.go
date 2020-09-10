@@ -1,6 +1,7 @@
 package reconciling
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/repository"
@@ -26,7 +27,34 @@ type Reconciling struct {
 	Credentials []*repository.Repository `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	//List of known_hosts as strings for argocd
 	KnownHosts []string `json:"knownHosts,omitempty" yaml:"knownHosts,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run argocd on nodes
+	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	//Dex options
+	Dex *CommonComponent `json:"dex,omitempty" yaml:"dex,omitempty"`
+	//RepoServer options
+	RepoServer *CommonComponent `json:"repoServer,omitempty" yaml:"repoServer,omitempty"`
+	//Redis options
+	Redis *CommonComponent `json:"redis,omitempty" yaml:"redis,omitempty"`
+	//Controller options
+	Controller *CommonComponent `json:"controller,omitempty" yaml:"controller,omitempty"`
+	//Server options
+	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
 }
+
+type CommonComponent struct {
+	//Resource requirements
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+}
+
+/*
+	values.Dex.Tolerations = append(values.Dex.Tolerations, t)
+	values.RepoServer.Tolerations = append(values.RepoServer.Tolerations, t)
+	values.Redis.Tolerations = append(values.Redis.Tolerations, t)
+	values.Controller.Tolerations = append(values.Controller.Tolerations, t)
+	values.Server.Tolerations = append(values.Server.Tolerations, t)
+*/
 
 type Rbac struct {
 	//Attribute policy.csv which goes into configmap argocd-rbac-cm

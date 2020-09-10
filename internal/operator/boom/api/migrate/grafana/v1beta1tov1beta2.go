@@ -14,7 +14,10 @@ import (
 )
 
 func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
-	newSpec := &monitoring.Monitoring{Deploy: grafana.Deploy}
+	newSpec := &monitoring.Monitoring{
+		Deploy:       grafana.Deploy,
+		NodeSelector: grafana.NodeSelector,
+	}
 	if grafana.Datasources != nil && len(grafana.Datasources) > 0 {
 		datasources := make([]*monitoring.Datasource, 0)
 		for _, v := range grafana.Datasources {
@@ -144,6 +147,7 @@ func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
 				newAuth.GenericOAuth.Scopes = scopes
 			}
 		}
+		newSpec.Auth = &newAuth
 	}
 
 	return newSpec

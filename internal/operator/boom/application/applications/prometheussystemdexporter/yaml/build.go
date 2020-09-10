@@ -3,10 +3,11 @@ package yaml
 import (
 	"fmt"
 
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"gopkg.in/yaml.v3"
 )
 
-func GetDefault() interface{} {
+func Build(resources *k8s.Resources) interface{} {
 
 	ds, err := yaml.Marshal(map[string]interface{}{
 		"kind":       "DaemonSet",
@@ -76,17 +77,8 @@ func GetDefault() interface{} {
 							MountPath: "/run/systemd",
 							ReadOnly:  true,
 						}},
-						"resources": map[string]*resourceList{
-							"limits": {
-								Memory: "100Mi",
-								Cpu:    "250m",
-							},
-							"requests": {
-								Memory: "100Mi",
-								Cpu:    "10m",
-							},
-						}},
-					},
+						"resources": resources,
+					}},
 					"volumes": []*volume{{
 						Name: "proc",
 						HostPath: hostPath{
@@ -144,11 +136,6 @@ type volumeMount struct {
 	Name      string `yaml:"name,omitempty"`
 	MountPath string `yaml:"mountPath,omitempty"`
 	ReadOnly  bool   `yaml:"readOnly,omitempty"`
-}
-
-type resourceList struct {
-	Memory string `yaml:"memory,omitempty"`
-	Cpu    string `yaml:"cpu,omitempty"`
 }
 
 type volume struct {

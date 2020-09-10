@@ -1,9 +1,16 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 func DefaultValues(imageTags map[string]string) *Values {
 	adminAnnotations := map[string]string{"app.kubernetes.io/use": "admin-service"}
 
 	return &Values{
+		NodeSelector:     map[string]string{},
 		FullnameOverride: "ambassador",
 		AdminService: &AdminService{
 			Annotations: adminAnnotations,
@@ -47,6 +54,16 @@ func DefaultValues(imageTags map[string]string) *Values {
 			PullPolicy: "IfNotPresent",
 			Repository: "prom/statsd-exporter",
 			Tag:        imageTags["prom/statsd-exporter"],
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("100Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("10m"),
+					corev1.ResourceMemory: resource.MustParse("20Mi"),
+				},
+			},
 		},
 		RateLimit: &RateLimit{
 			Create: true,
@@ -62,10 +79,21 @@ func DefaultValues(imageTags map[string]string) *Values {
 
 		Redis: &Redis{
 			Create: true,
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("200m"),
+					corev1.ResourceMemory: resource.MustParse("360Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("180Mi"),
+				},
+			},
 			Annotations: &RedisAnnotations{
 				Deployment: map[string]string{},
 				Service:    map[string]string{},
 			},
+			NodeSelector: map[string]string{},
 		},
 		ReplicaCount: 3,
 		Scope: &Scope{
@@ -81,23 +109,31 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		Service: &Service{
 			Type: "NodePort",
-			Ports: []*Port{
-				&Port{
-					Name:       "http",
-					Port:       80,
-					TargetPort: 8080,
-					NodePort:   30080,
-				},
-				&Port{
-					Name:       "https",
-					Port:       443,
-					TargetPort: 8443,
-					NodePort:   30443,
-				},
+			Ports: []*Port{{
+				Name:       "http",
+				Port:       80,
+				TargetPort: 8080,
+				NodePort:   30080,
+			}, {
+				Name:       "https",
+				Port:       443,
+				TargetPort: 8443,
+				NodePort:   30443,
+			},
 			},
 		},
 		ServiceAccount: &ServiceAccount{
 			Create: true,
+		},
+		Resources: &k8s.Resources{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("500m"),
+				corev1.ResourceMemory: resource.MustParse("500Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("250m"),
+				corev1.ResourceMemory: resource.MustParse("250Mi"),
+			},
 		},
 	}
 }
