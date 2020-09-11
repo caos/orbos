@@ -4,30 +4,43 @@
 package kubernetes
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
+	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"k8s.io/client-go/rest"
-
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
-
 	apps "k8s.io/api/apps/v1"
+	batch "k8s.io/api/batch/v1"
+	"k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
+	apixv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apixv1beta1client "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1beta1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/discovery/cached/memory"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	clgocore "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 const taintKeyPrefix = "node.orbos.ch/"
@@ -49,8 +62,12 @@ func (n *NotAvailableError) Error() string {
 }
 
 type Client struct {
-	monitor mntr.Monitor
-	set     *kubernetes.Clientset
+	monitor           mntr.Monitor
+	set               *kubernetes.Clientset
+	dynamic           dynamic.Interface
+	apixv1beta1client *apixv1beta1client.ApiextensionsV1beta1Client
+	mapper            *restmapper.DeferredDiscoveryRESTMapper
+	restConfig        *rest.Config
 }
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
@@ -80,7 +97,6 @@ type File struct {
 
 func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 	resources := c.set.CoreV1().Namespaces()
-
 	return c.apply("namespace", rsc.GetName(), func() error {
 
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
@@ -89,6 +105,37 @@ func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
+}
+
+func (c *Client) DeleteNamespace(name string) error {
+	return c.set.CoreV1().Namespaces().Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ListNamespaces() (*core.NamespaceList, error) {
+	return c.set.CoreV1().Namespaces().List(context.Background(), mach.ListOptions{})
+}
+
+func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error) {
+	labelSelector := ""
+	for k, v := range labels {
+		if labelSelector == "" {
+			labelSelector = fmt.Sprintf("%s=%s", k, v)
+		} else {
+			labelSelector = fmt.Sprintf("%s, %s=%s", labelSelector, k, v)
+		}
+	}
+
+	return c.set.CoreV1().Secrets(namespace).List(context.Background(), mach.ListOptions{LabelSelector: labelSelector})
+}
+
+func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
+	patch := []byte(`{"spec":{"replicas":` + strconv.Itoa(replicaCount) + `}}`)
+	_, err := c.set.AppsV1().Deployments(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, patch, mach.PatchOptions{})
+	return err
+}
+
+func (c *Client) GetDeployment(namespace, name string) (*apps.Deployment, error) {
+	return c.set.AppsV1().Deployments(namespace).Get(context.Background(), name, mach.GetOptions{})
 }
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
@@ -100,6 +147,43 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
+}
+
+func (c *Client) DeleteDeployment(namespace, name string) error {
+	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		deploy, err := c.set.AppsV1().Deployments(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		labelSelector := getLabelSelector(deploy.Spec.Selector.MatchLabels)
+
+		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		defer watch.Stop()
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+		replicas := deploy.Spec.Replicas
+
+		returnChannel <- waitForPodsPhase(watch, int(*replicas), core.PodRunning, containerCheck, readyCheck)
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for deployment to be ready")
+	}
 }
 
 func (c *Client) ApplyService(rsc *core.Service) error {
@@ -119,8 +203,186 @@ func (c *Client) ApplyService(rsc *core.Service) error {
 	})
 }
 
-func (c *Client) DeleteDeployment(namespace, name string) error {
-	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+func (c *Client) DeleteService(namespace, name string) error {
+	return c.set.CoreV1().Services(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) GetJob(namespace, name string) (*batch.Job, error) {
+	return c.set.BatchV1().Jobs(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) ApplyJob(rsc *batch.Job) error {
+	resources := c.set.BatchV1().Jobs(rsc.Namespace)
+	return c.apply("job", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		j, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.GetName() == rsc.GetName() && j.GetNamespace() == rsc.GetNamespace() {
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		labelSelector := getLabelSelector(job.Spec.Selector.MatchLabels)
+
+		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		defer watch.Stop()
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		returnChannel <- waitForPodsPhase(watch, 1, core.PodSucceeded, false, false)
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		ctx := context.Background()
+		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			return errors.New("timeout while waiting for job to complete, no job found")
+		}
+
+		if job.Status.Succeeded > 0 {
+			c.monitor.Debug("no pods found for job, but job succeeded, so ignoring the timeout")
+			return nil
+		}
+		return errors.New("timeout while waiting for job to complete")
+	}
+}
+
+func (c *Client) DeleteJob(namespace string, name string) error {
+	job, err := c.GetJob(namespace, name)
+	if err != nil {
+		return err
+	}
+
+	if err := c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
+		return err
+	}
+
+	//Pod cleanup if necessary
+	return c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels)
+}
+
+func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
+	resources := c.set.BatchV1beta1().CronJobs(rsc.Namespace)
+	return c.apply("cronjob", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		j, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.GetName() == rsc.GetName() && j.GetNamespace() == rsc.GetNamespace() {
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Client) DeleteCronJob(namespace string, name string) error {
+	return c.set.BatchV1beta1().CronJobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
+	resources := c.set.PolicyV1beta1().PodDisruptionBudgets(rsc.Namespace)
+	return c.apply("poddisruptionbudget", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		pdb, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if pdb.GetName() == rsc.GetName() && pdb.GetNamespace() == rsc.GetNamespace() {
+			rsc.ResourceVersion = pdb.ResourceVersion
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error {
+	return c.set.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
+	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
+	return c.apply("statefulset", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		ss, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if ss.GetName() == rsc.GetName() && ss.GetNamespace() == rsc.GetNamespace() {
+			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		}
+		return nil
+	})
+}
+
+func (c *Client) DeleteStatefulset(namespace, name string) error {
+	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		sfs, err := c.set.AppsV1().StatefulSets(namespace).Get(ctx, name, mach.GetOptions{})
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+
+		labelSelector := getLabelSelector(sfs.Spec.Selector.MatchLabels)
+
+		watch, err := c.set.CoreV1().Pods(namespace).Watch(ctx, mach.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		defer watch.Stop()
+		if err != nil {
+			returnChannel <- err
+			return
+		}
+		replicas := sfs.Spec.Replicas
+
+		returnChannel <- waitForPodsPhase(watch, int(*replicas), core.PodRunning, containerCheck, readyCheck)
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for job to complete")
+	}
 }
 
 func (c *Client) ApplySecret(rsc *core.Secret) error {
@@ -134,6 +396,79 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 	})
 }
 
+func (c *Client) WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		for i := 0; i < int(timeoutSeconds); i++ {
+			secret, err := c.set.CoreV1().Secrets(namespace).Get(ctx, name, mach.GetOptions{})
+			if err != nil && !macherrs.IsNotFound(err) {
+				returnChannel <- err
+				return
+			} else if secret != nil {
+				returnChannel <- nil
+				return
+			}
+			time.Sleep(1)
+		}
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for secret to be created")
+	}
+}
+
+func (c *Client) DeleteSecret(namespace, name string) error {
+	return c.set.CoreV1().Secrets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) GetConfigMap(namespace, name string) (*core.ConfigMap, error) {
+	return c.set.CoreV1().ConfigMaps(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
+	resources := c.set.CoreV1().ConfigMaps(rsc.GetNamespace())
+	return c.apply("secret", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) DeleteConfigmap(namespace, name string) error {
+	return c.set.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error {
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		for i := 0; i < int(timeoutSeconds); i++ {
+			secret, err := c.set.CoreV1().ConfigMaps(namespace).Get(ctx, name, mach.GetOptions{})
+			if err != nil && !macherrs.IsNotFound(err) {
+				returnChannel <- err
+				return
+			} else if secret != nil {
+				returnChannel <- nil
+				return
+			}
+			time.Sleep(1)
+		}
+	}()
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeoutSeconds * time.Second):
+		return errors.New("timeout while waiting for configmap to be created")
+	}
+}
+
 func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 	resources := c.set.CoreV1().ServiceAccounts(rsc.Namespace)
 	return c.apply("serviceaccount", rsc.GetName(), func() error {
@@ -144,12 +479,28 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 		if err != nil {
 			return err
 		}
-		if sa.GetName() != rsc.GetName() || sa.GetNamespace() != rsc.GetNamespace() {
+
+		different := false
+		//workaround as 1 token will always be created by kubeapi
+		if (!(sa.Secrets != nil && len(sa.Secrets) == 1 && (rsc.Secrets == nil || len(rsc.Secrets) == 0)) && (!reflect.DeepEqual(sa.Secrets, rsc.Secrets))) ||
+			(sa.ImagePullSecrets != nil && rsc.ImagePullSecrets != nil && !reflect.DeepEqual(sa.ImagePullSecrets, rsc.ImagePullSecrets)) ||
+			(sa.AutomountServiceAccountToken != nil && rsc.AutomountServiceAccountToken != nil && *sa.AutomountServiceAccountToken != *rsc.AutomountServiceAccountToken) {
+			different = true
+		}
+
+		if different &&
+			sa.GetName() == rsc.GetName() &&
+			sa.GetNamespace() == rsc.GetNamespace() {
+
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
 		return nil
 	})
+}
+
+func (c *Client) DeleteServiceAccount(namespace, name string) error {
+	return c.set.CoreV1().ServiceAccounts(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
@@ -161,6 +512,9 @@ func (c *Client) ApplyRole(rsc *rbac.Role) error {
 		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
+}
+func (c *Client) DeleteRole(namespace, name string) error {
+	return c.set.RbacV1().Roles(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
@@ -174,6 +528,10 @@ func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
 	})
 }
 
+func (c *Client) DeleteClusterRole(name string) error {
+	return c.set.RbacV1().ClusterRoles().Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
 func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
 	resources := c.set.RbacV1().RoleBindings(rsc.Namespace)
 	return c.apply("rolebinding", rsc.GetName(), func() error {
@@ -183,6 +541,10 @@ func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
 		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
+}
+
+func (c *Client) DeleteRoleBinding(namespace, name string) error {
+	return c.set.RbacV1().RoleBindings(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
@@ -196,6 +558,10 @@ func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
 	})
 }
 
+func (c *Client) DeleteClusterRoleBinding(name string) error {
+	return c.set.RbacV1().ClusterRoleBindings().Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
 func (c *Client) apply(object, name string, create func() error, update func() error) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
@@ -206,7 +572,8 @@ func (c *Client) apply(object, name string, create func() error, update func() e
 	}
 
 	err = update()
-	if err == nil || !macherrs.IsNotFound(err) {
+	reason := macherrs.ReasonForError(err)
+	if err == nil || (reason != "" && !macherrs.IsNotFound(err)) {
 		return err
 	}
 	return create()
@@ -221,23 +588,58 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 		err = errors.Wrap(err, "refreshing Kubernetes client failed")
 	}()
 
-	clientCfg, err := clientcmd.NewClientConfigFromBytes([]byte(*kubeconfig))
-	if err != nil {
-		return err
+	restCfg := new(rest.Config)
+	if *kubeconfig == "" {
+		restCfg, err = rest.InClusterConfig()
+		if err != nil {
+			return err
+		}
+	} else {
+		clientCfg, err := clientcmd.NewClientConfigFromBytes([]byte(*kubeconfig))
+		if err != nil {
+			return err
+		}
+
+		restCfg, err = clientCfg.ClientConfig()
+		if err != nil {
+			return err
+		}
 	}
 
-	restCfg, err := clientCfg.ClientConfig()
-	if err != nil {
-		return err
-	}
-
-	c.set, err = kubernetes.NewForConfig(restCfg)
-	return err
+	return c.refreshAllClients(restCfg)
 }
 
 func (c *Client) RefreshConfig(config *rest.Config) (err error) {
-	c.set, err = kubernetes.NewForConfig(config)
-	return err
+	return c.refreshAllClients(config)
+}
+
+func (c *Client) refreshAllClients(config *rest.Config) error {
+	c.restConfig = config
+
+	set, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+	c.set = set
+
+	apixv1beta1clientC, err := apixv1beta1client.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+	c.apixv1beta1client = apixv1beta1clientC
+
+	dynamicC, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+	c.dynamic = dynamicC
+
+	dc, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return err
+	}
+	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
+	return nil
 }
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {
@@ -538,7 +940,237 @@ func safeUint64(ptr *int64) int64 {
 	}
 	return *ptr
 }
+func (c *Client) DeletePodsByLabels(namespace string, labels map[string]string) error {
+	return c.set.CoreV1().Pods(namespace).DeleteCollection(context.Background(), mach.DeleteOptions{}, mach.ListOptions{
+		LabelSelector: getLabelSelector(labels),
+	})
+}
 
-func (c *Client) deletePod(pod *core.Pod) error {
-	return c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{})
+func (c *Client) DeletePod(namespace, name string) error {
+	return c.set.CoreV1().Pods(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func getLabelSelector(labels map[string]string) string {
+	labelSelector := ""
+	for k, v := range labels {
+		if labelSelector == "" {
+			labelSelector = k + "=" + v
+		} else {
+			labelSelector = labelSelector + ", " + k + "=" + v
+
+		}
+	}
+	return labelSelector
+}
+
+type podStatus struct {
+	name              string
+	phase             core.PodPhase
+	containerStatuses []containerStatus
+}
+type containerStatus struct {
+	containerState core.ContainerStatus
+}
+
+func waitForPodsPhase(watch watch.Interface, replicaCount int, phase core.PodPhase, containerCheck bool, readyCheck bool) error {
+	statusChan := make(chan podStatus)
+	pods := make(map[string]core.PodPhase, 0)
+
+	if watch == nil {
+		return errors.New("no pods watched")
+	}
+
+	go func() {
+		for event := range watch.ResultChan() {
+			p, ok := event.Object.(*core.Pod)
+			if !ok {
+				continue
+			}
+			containerStatuses := make([]containerStatus, 0)
+			for _, podContainerStatus := range p.Status.ContainerStatuses {
+				containerStatuses = append(containerStatuses, containerStatus{
+					containerState: podContainerStatus,
+				})
+			}
+
+			statusChan <- podStatus{p.Name, p.Status.Phase, containerStatuses}
+
+		}
+	}()
+
+	runningPods := 0
+	for runningPods < replicaCount {
+		podStat := <-statusChan
+		if podStat.phase == phase {
+			running := true
+			ready := true
+			if containerCheck {
+				running = checkContainer(podStat.containerStatuses)
+			}
+			if readyCheck {
+				ready = checkReady(podStat.containerStatuses)
+			}
+
+			if running && ready {
+				pods[podStat.name] = podStat.phase
+			} else {
+				delete(pods, podStat.name)
+			}
+		} else {
+			delete(pods, podStat.name)
+		}
+		runningPods = len(pods)
+	}
+	return nil
+}
+
+func checkContainer(containers []containerStatus) bool {
+	running := true
+	for _, stat := range containers {
+		if stat.containerState.State.Running == nil {
+			running = false
+		}
+	}
+	return running
+}
+
+func checkReady(containers []containerStatus) bool {
+	ready := true
+	for _, stat := range containers {
+		if !stat.containerState.Ready {
+			ready = false
+		}
+	}
+	return ready
+}
+
+func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error) {
+	crds := c.apixv1beta1client.CustomResourceDefinitions()
+
+	return crds.Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error) {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return nil, err
+	}
+	resource := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
+
+	return resource.Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return err
+	}
+
+	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
+
+	return c.apply("crd", name, func() error {
+		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
+		return err
+	}, func() error {
+		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return err
+	}
+
+	return c.dynamic.Resource(mapping.Resource).Namespace(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ExecInPodOfDeployment(namespace, name, container, command string) error {
+	cmd := []string{
+		"sh",
+		"-c",
+		command,
+	}
+	deploy, err := c.GetDeployment(namespace, name)
+	if err != nil {
+		return err
+	}
+
+	labelSelector := ""
+	for k, v := range deploy.Spec.Selector.MatchLabels {
+		if labelSelector == "" {
+			labelSelector = fmt.Sprintf("%s=%s", k, v)
+		} else {
+			labelSelector = fmt.Sprintf("%s, %s=%s", labelSelector, k, v)
+		}
+	}
+	list, err := c.set.CoreV1().Pods(namespace).List(context.Background(), mach.ListOptions{
+		LabelSelector: labelSelector,
+	})
+	if err != nil {
+		return err
+	}
+
+	firstPod := list.Items[0]
+	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(firstPod.Name).SubResource("exec")
+	return c.execInPod(cmd, container, req)
+}
+
+func (c *Client) ExecInPod(namespace, name, container, command string) error {
+	cmd := []string{
+		"sh",
+		"-c",
+		command,
+	}
+
+	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("exec")
+	return c.execInPod(cmd, container, req)
+}
+
+func (c *Client) execInPod(cmd []string, container string, req *rest.Request) error {
+	option := &core.PodExecOptions{
+		Command:   cmd,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+		Container: container,
+	}
+	req.VersionedParams(
+		option,
+		scheme.ParameterCodec,
+	)
+
+	exec, err := remotecommand.NewSPDYExecutor(c.restConfig, "POST", req.URL())
+	if err != nil {
+		return err
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  nil,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    true,
+	})
+	if err != nil {
+		return err
+	}
+
+	errStr := stderr.Bytes()
+	if len(errStr) > 0 {
+		return errors.New(string(errStr))
+	}
+
+	return nil
 }

@@ -20,7 +20,9 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 	if oldToolset.Spec != nil {
 		oldSpec := oldToolset.Spec
 		newSpec := &v1beta2.ToolsetSpec{
-			BoomVersion:        oldSpec.BoomVersion,
+			Boom: &v1beta2.Boom{
+				Version: oldSpec.BoomVersion,
+			},
 			CurrentStateFolder: oldSpec.CurrentStateFolder,
 			ForceApply:         oldSpec.ForceApply,
 		}
@@ -31,6 +33,7 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 				Folder: oldSpec.PreApply.Folder,
 			}
 		}
+
 		if oldSpec.PostApply != nil {
 			newSpec.PostApply = &v1beta2.Apply{
 				Deploy: oldSpec.PostApply.Deploy,
@@ -39,11 +42,17 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 		}
 
 		if oldSpec.PrometheusOperator != nil {
-			newSpec.MetricCollection = &v1beta2.MetricCollection{Deploy: oldSpec.PrometheusOperator.Deploy}
+			newSpec.MetricCollection = &v1beta2.MetricCollection{
+				Deploy:       oldSpec.PrometheusOperator.Deploy,
+				NodeSelector: oldSpec.PrometheusOperator.NodeSelector,
+			}
 		}
 
 		if oldSpec.LoggingOperator != nil {
-			newSpec.LogCollection = &v1beta2.LogCollection{Deploy: oldSpec.LoggingOperator.Deploy}
+			newSpec.LogCollection = &v1beta2.LogCollection{
+				Deploy:       oldSpec.LoggingOperator.Deploy,
+				NodeSelector: oldSpec.LoggingOperator.NodeSelector,
+			}
 			if oldSpec.LoggingOperator.FluentdPVC != nil {
 				newSpec.LogCollection.FluentdPVC = storage.V1beta1Tov1beta2(oldSpec.LoggingOperator.FluentdPVC)
 			}
@@ -59,8 +68,10 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 
 		if oldSpec.Ambassador != nil {
 			newSpec.APIGateway = &v1beta2.APIGateway{
-				Deploy:       oldSpec.Ambassador.Deploy,
-				ReplicaCount: oldSpec.Ambassador.ReplicaCount,
+				Deploy:            oldSpec.Ambassador.Deploy,
+				ReplicaCount:      oldSpec.Ambassador.ReplicaCount,
+				ActivateDevPortal: oldSpec.Ambassador.ActivateDevPortal,
+				NodeSelector:      oldSpec.Ambassador.NodeSelector,
 			}
 			if oldSpec.Ambassador.Service != nil {
 				newSpec.APIGateway.Service = &v1beta2.AmbassadorService{
@@ -93,11 +104,13 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 			newSpec.KubeMetricsExporter = &v1beta2.KubeMetricsExporter{
 				Deploy:       oldSpec.KubeStateMetrics.Deploy,
 				ReplicaCount: oldSpec.KubeStateMetrics.ReplicaCount,
+				NodeSelector: oldSpec.KubeStateMetrics.NodeSelector,
 			}
 		}
 		if oldSpec.Prometheus != nil {
 			newSpec.MetricsPersisting = &v1beta2.MetricsPersisting{
-				Deploy: oldSpec.Prometheus.Deploy,
+				Deploy:       oldSpec.Prometheus.Deploy,
+				NodeSelector: oldSpec.Prometheus.NodeSelector,
 			}
 			if oldSpec.Prometheus.Storage != nil {
 				newSpec.MetricsPersisting.Storage = storage.V1beta1Tov1beta2(oldSpec.Prometheus.Storage)
@@ -142,6 +155,7 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 			newSpec.LogsPersisting = &v1beta2.LogsPersisting{
 				Deploy:        oldSpec.Loki.Deploy,
 				ClusterOutput: oldSpec.Loki.ClusterOutput,
+				NodeSelector:  oldSpec.Loki.NodeSelector,
 			}
 			if oldSpec.Loki != nil {
 				newSpec.LogsPersisting.Storage = storage.V1beta1Tov1beta2(oldSpec.Loki.Storage)

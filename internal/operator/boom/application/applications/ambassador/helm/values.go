@@ -1,5 +1,10 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+)
+
 type AdminService struct {
 	Annotations map[string]string `yaml:"annotations"`
 	Create      bool              `yaml:"create"`
@@ -47,11 +52,11 @@ type LivenessProbe struct {
 	PeriodSeconds       int `yaml:"periodSeconds"`
 }
 type PrometheusExporter struct {
-	Enabled    bool     `yaml:"enabled"`
-	PullPolicy string   `yaml:"pullPolicy"`
-	Repository string   `yaml:"repository"`
-	Resources  struct{} `yaml:"resources"`
-	Tag        string   `yaml:"tag"`
+	Enabled    bool           `yaml:"enabled"`
+	PullPolicy string         `yaml:"pullPolicy"`
+	Repository string         `yaml:"repository"`
+	Resources  *k8s.Resources `yaml:"resources"`
+	Tag        string         `yaml:"tag"`
 }
 type RateLimit struct {
 	Create bool `yaml:"create"`
@@ -70,9 +75,10 @@ type RedisAnnotations struct {
 	Service    map[string]string `yaml:"service"`
 }
 type Redis struct {
-	Annotations *RedisAnnotations `yaml:"annotations"`
-	Create      bool              `yaml:"create"`
-	Resources   struct{}          `yaml:"resources"`
+	Annotations  *RedisAnnotations `yaml:"annotations"`
+	Create       bool              `yaml:"create"`
+	Resources    *k8s.Resources    `yaml:"resources"`
+	NodeSelector map[string]string `yaml:"nodeSelector"`
 }
 type Scope struct {
 	SingleNamespace bool `yaml:"singleNamespace"`
@@ -106,7 +112,7 @@ type ServiceAccount struct {
 
 type Values struct {
 	AdminService           *AdminService       `yaml:"adminService"`
-	Affinity               struct{}            `yaml:"affinity"`
+	Affinity               *k8s.Affinity       `yaml:"affinity"`
 	AmbassadorConfig       string              `yaml:"ambassadorConfig"`
 	AuthService            *AuthService        `yaml:"authService"`
 	Autoscaling            *Autoscaling        `yaml:"autoscaling"`
@@ -125,7 +131,7 @@ type Values struct {
 	LicenseKey             *LicenseKey         `yaml:"licenseKey"`
 	LivenessProbe          *LivenessProbe      `yaml:"livenessProbe"`
 	NameOverride           string              `yaml:"nameOverride"`
-	NodeSelector           struct{}            `yaml:"nodeSelector"`
+	NodeSelector           map[string]string   `yaml:"nodeSelector"`
 	PodAnnotations         map[string]string   `yaml:"podAnnotations"`
 	PodDisruptionBudget    struct{}            `yaml:"podDisruptionBudget"`
 	PodLabels              map[string]string   `yaml:"podLabels"`
@@ -137,13 +143,13 @@ type Values struct {
 	Redis                  *Redis              `yaml:"redis"`
 	RedisURL               interface{}         `yaml:"redisURL"`
 	ReplicaCount           int                 `yaml:"replicaCount"`
-	Resources              struct{}            `yaml:"resources"`
+	Resources              *k8s.Resources      `yaml:"resources"`
 	Scope                  *Scope              `yaml:"scope"`
 	Security               *Security           `yaml:"security"`
 	Service                *Service            `yaml:"service"`
 	ServiceAccount         *ServiceAccount     `yaml:"serviceAccount"`
 	SidecarContainers      []interface{}       `yaml:"sidecarContainers"`
-	Tolerations            []interface{}       `yaml:"tolerations"`
+	Tolerations            []corev1.Toleration `yaml:"tolerations"`
 	VolumeMounts           []interface{}       `yaml:"volumeMounts"`
 	Volumes                []interface{}       `yaml:"volumes"`
 }

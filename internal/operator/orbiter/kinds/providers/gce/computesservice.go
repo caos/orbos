@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -18,24 +19,29 @@ import (
 var _ core.MachinesService = (*machinesService)(nil)
 
 type machinesService struct {
-	context           *context
-	oneoff            bool
-	maintenanceKey    []byte
-	maintenanceKeyPub []byte
-	cache             struct {
+	context *context
+	oneoff  bool
+	key     *SSHKey
+	cache   struct {
 		instances map[string][]*instance
 		sync.Mutex
 	}
 	onCreate func(pool string, machine infra.Machine) error
 }
 
-func newMachinesService(context *context, oneoff bool, maintenanceKey []byte, maintenanceKeyPub []byte) *machinesService {
+func newMachinesService(context *context, oneoff bool) *machinesService {
 	return &machinesService{
-		context:           context,
-		oneoff:            oneoff,
-		maintenanceKey:    maintenanceKey,
-		maintenanceKeyPub: maintenanceKeyPub,
+		context: context,
+		oneoff:  oneoff,
 	}
+}
+
+func (m *machinesService) use(key *SSHKey) error {
+	if key == nil || key.Private == nil || key.Public == nil || key.Private.Value == "" || key.Public.Value == "" {
+		return errors.New("machines are not connectable. have you configured the orb by running orbctl configure?")
+	}
+	m.key = key
+	return nil
 }
 
 func (m *machinesService) restartPreemptibleMachines() error {
@@ -116,7 +122,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	name := newName()
-	sshKey := fmt.Sprintf("orbiter:%s", m.maintenanceKeyPub)
+	sshKey := fmt.Sprintf("orbiter:%s", m.key.Public.Value)
 	createInstance := &compute.Instance{
 		Name:        name,
 		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
@@ -156,11 +162,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	var machine machine
-	if m.oneoff || m.maintenanceKey == nil || len(m.maintenanceKey) == 0 {
+	if m.oneoff {
 		machine = newGCEMachine(m.context, monitor, createInstance.Name)
 	} else {
 		sshMachine := ssh.NewMachine(monitor, "orbiter", newInstance.NetworkInterfaces[0].NetworkIP)
-		if err := sshMachine.UseKey(m.maintenanceKey); err != nil {
+		if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
 			return nil, err
 		}
 		machine = sshMachine
@@ -270,11 +276,11 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		pool := inst.Labels["pool"]
 
 		var machine machine
-		if m.oneoff || m.maintenanceKey == nil || len(m.maintenanceKey) == 0 {
+		if m.oneoff {
 			machine = newGCEMachine(m.context, m.context.monitor.WithFields(toFields(inst.Labels)), inst.Name)
 		} else {
 			sshMachine := ssh.NewMachine(m.context.monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
-			if err := sshMachine.UseKey(m.maintenanceKey); err != nil {
+			if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
 				return nil, err
 			}
 			machine = sshMachine

@@ -35,6 +35,7 @@ func main() {
 	takeoff.AddCommand(
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
+		StartZitadel(rootValues),
 	)
 
 	nodes := NodeCommand()
@@ -51,6 +52,9 @@ func main() {
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
+		BackupListCommand(rootValues),
+		RestoreCommand(rootValues),
+		BackupCommand(rootValues),
 		takeoff,
 		nodes,
 	)

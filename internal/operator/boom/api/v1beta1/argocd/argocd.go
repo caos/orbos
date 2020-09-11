@@ -26,6 +26,8 @@ type Argocd struct {
 	Credentials []*repository.Repository `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	//List of known_hosts as strings for argocd
 	KnownHosts []string `json:"knownHosts,omitempty" yaml:"knownHosts,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 type Rbac struct {

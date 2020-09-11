@@ -1,7 +1,9 @@
 package helm
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	prometheusoperatorhelm "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Ingress struct {
@@ -126,6 +128,9 @@ type GrafanaValues struct {
 	Service                  *Service            `yaml:"service,omitempty"`
 	Labels                   map[string]string   `yaml:"labels,omitempty"`
 	PodLabels                map[string]string   `yaml:"podLabels,omitempty"`
+	NodeSelector             map[string]string   `yaml:"nodeSelector,omitempty"`
+	Tolerations              []corev1.Toleration `yaml:"tolerations,omitempty"`
+	Resources                *k8s.Resources      `yaml:"resources,omitempty"`
 }
 
 type Rules struct {

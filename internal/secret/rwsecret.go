@@ -20,6 +20,7 @@ import (
 const (
 	boom    string = "boom"
 	orbiter string = "orbiter"
+	zitadel string = "zitadel"
 	yml     string = "yml"
 )
 
@@ -77,6 +78,8 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, operator, newMasterKey
 		return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
 	} else if operator == "boom" {
 		return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
+	} else if operator == zitadel {
+		return api.PushZitadelDesiredFunc(gitClient, desired)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -89,12 +92,20 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 		return err
 	}
 
-	secret.Value = value
+	if secret == nil {
+		secret = &Secret{
+			Value: value,
+		}
+	} else {
+		secret.Value = value
+	}
 
 	if operator == "orbiter" {
 		return api.PushOrbiterDesiredFunc(gitClient, tree)(monitor)
 	} else if operator == "boom" {
 		return api.PushBoomDesiredFunc(gitClient, tree)(monitor)
+	} else if operator == zitadel {
+		return api.PushZitadelDesiredFunc(gitClient, tree)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -177,12 +188,26 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 		}
 	}
 
+	secretsZitadel, treeDesiredZitadel, err := getOperatorSecrets(monitor, zitadel, gitClient, secretFunc)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	if secretsZitadel != nil && len(secretsZitadel) > 0 {
+		for k, v := range secretsZitadel {
+			if k != "" && v != nil {
+				secretsAll[k] = v
+			}
+		}
+	}
+
 	if path != "" {
 		operator := ""
 		if strings.HasPrefix(path, orbiter) {
 			operator = orbiter
 		} else if strings.HasPrefix(path, boom) {
 			operator = boom
+		} else if strings.HasPrefix(path, zitadel) {
+			operator = zitadel
 		} else {
 			return nil, nil, "", errors.New("Operator unknown")
 		}
@@ -211,6 +236,8 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 		return sec, treeDesiredOrbiter, orbiter, err
 	} else if strings.HasPrefix(result, boom) {
 		return sec, treeDesiredBoom, boom, err
+	} else if strings.HasPrefix(result, zitadel) {
+		return sec, treeDesiredZitadel, zitadel, err
 	}
 
 	return nil, nil, "", errors.New("Operator unknown")

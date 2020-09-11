@@ -63,8 +63,5 @@ func (c *Machine) validate() error {
 	if c.ID == "" {
 		return errors.New("No id provided")
 	}
-	if c.Hostname == "" {
-		return errors.New("No hostname provided")
-	}
 	return c.IP.Validate()
 }
