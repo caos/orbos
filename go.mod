@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.8.0
 	github.com/AlecAivazis/survey/v2 v2.1.1
 	github.com/AppsFlyer/go-sundheit v0.2.0
-	github.com/aws/aws-sdk-go v1.31.12
+	github.com/aws/aws-sdk-go v1.34.9
 	github.com/caos/oidc v0.6.2
 	github.com/cloudflare/cloudflare-go v0.13.2
 	github.com/ghodss/yaml v1.0.0
