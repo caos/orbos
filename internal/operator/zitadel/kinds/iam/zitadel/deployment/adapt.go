@@ -25,7 +25,6 @@ func AdaptFunc(
 	labels map[string]string,
 	replicaCount int,
 	affinity *k8s.Affinity,
-	imagePullSecret string,
 	cmName string,
 	certPath string,
 	secretName string,
