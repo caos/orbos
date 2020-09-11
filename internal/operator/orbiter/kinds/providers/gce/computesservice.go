@@ -188,6 +188,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		false,
 		func() {},
 		func() {},
+		false,
+		func() {},
+		func() {},
 	)
 
 	for _, name := range diskNames {
@@ -288,9 +291,25 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		for idx, req := range m.context.desired.RebootRequired {
 			if req == inst.Name {
 				rebootRequired = true
-				unrequireReboot = func() {
-					m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:idx], m.context.desired.RebootRequired[idx+1:]...)
-				}
+				unrequireReboot = func(pos int) func() {
+					return func() {
+						m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:pos], m.context.desired.RebootRequired[pos+1:]...)
+					}
+				}(idx)
+				break
+			}
+		}
+
+		replacementRequired := false
+		unrequireReplacement := func() {}
+		for idx, req := range m.context.desired.ReplacementRequired {
+			if req == inst.Name {
+				replacementRequired = true
+				unrequireReplacement = func(pos int) func() {
+					return func() {
+						m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired[0:pos], m.context.desired.ReplacementRequired[pos+1:]...)
+					}
+				}(idx)
 				break
 			}
 		}
@@ -310,6 +329,11 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 				return func() { m.context.desired.RebootRequired = append(m.context.desired.RebootRequired, id) }
 			}(inst.Name),
 			unrequireReboot,
+			replacementRequired,
+			func(id string) func() {
+				return func() { m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired, id) }
+			}(inst.Name),
+			unrequireReplacement,
 		)
 
 		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
