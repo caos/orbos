@@ -155,13 +155,10 @@ func EnsureZitadelArtifacts(
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "zitadel",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "zitadel",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
