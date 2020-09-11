@@ -1,6 +1,7 @@
 package v1beta2
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 )
@@ -14,8 +15,8 @@ type Metadata struct {
 
 // ToolsetSpec: BOOM reconciles itself if a boomVersion is defined, if no boomVersion is defined there is no reconciling.
 type ToolsetSpec struct {
-	//Version of BOOM which should be reconciled
-	BoomVersion string `json:"boomVersion,omitempty" yaml:"boomVersion,omitempty"`
+	//Boom self reconciling specs
+	Boom *Boom `json:"boom,omitempty" yaml:"boom,omitempty"`
 	//Relative folder path where the currentstate is written to
 	ForceApply bool `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
 	//Flag if --force should be used by apply of resources
@@ -44,6 +45,17 @@ type ToolsetSpec struct {
 	MetricsPersisting *MetricsPersisting `json:"metricsPersisting,omitempty" yaml:"metricsPersisting,omitempty"`
 	//Spec for the Loki instance
 	LogsPersisting *LogsPersisting `json:"logsPersisting,omitempty" yaml:"logsPersisting,omitempty"`
+}
+
+type Boom struct {
+	//Version of BOOM which should be reconciled
+	Version string `json:"version,omitempty" yaml:"version,omitempty"`
+	//NodeSelector for boom deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run boom on nodes
+	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	//Resource requirements
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 type Toolset struct {

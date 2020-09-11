@@ -14,7 +14,8 @@ import (
 
 func V1beta1Tov1beta2(old *argocd.Argocd) *reconciling.Reconciling {
 	new := &reconciling.Reconciling{
-		Deploy: old.Deploy,
+		Deploy:       old.Deploy,
+		NodeSelector: old.NodeSelector,
 	}
 	if old.Network != nil {
 		new.Network = network.V1beta1Tov1beta2(old.Network)

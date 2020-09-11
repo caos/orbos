@@ -3,10 +3,9 @@ on:
   push:
     branches:
       - master
-
 jobs:
   release:
-    name: Release ORBOS
+    name: Release Orbos
     runs-on: ubuntu-18.04
     steps:
       - name: Source Checkout
@@ -33,6 +32,9 @@ jobs:
           export IMAGE=$REGISTRY/$GITHUB_REPOSITORY
           export TAG_LATEST=${IMAGE}:latest
           export TAG_VERSION=${IMAGE}:${VERSION}
+          export CRBACKUPIMAGE=$REGISTRY/caos/crbackup
+          export CRBACKUP_TAG_LATEST=${IMAGE}:latest
+          export CRBACKUP_TAG_VERSION=${CRBACKUPIMAGE}:${VERSION}
 
           go mod download
           mkdir -p ./artifacts
@@ -42,8 +44,13 @@ jobs:
 
           echo "Publishing ORBOS version $VERSION"
           docker login $REGISTRY -u $GITHUB_ACTOR -p $CR_PAT
-          docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --file ./Dockerfile .
+          docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --file ./build/orbos/Dockerfile .
 
           docker push ${TAG_VERSION}
           docker push ${TAG_LATEST}
+
+          docker build --tag ${CRBACKUP_TAG_VERSION} --tag ${CRBACKUP_TAG_LATEST} --file ./build/cr-backup/Dockerfile .
+          docker push ${CRBACKUP_TAG_VERSION}
+          docker push ${CRBACKUP_TAG_LATEST}
+
           npx semantic-release && exit 0

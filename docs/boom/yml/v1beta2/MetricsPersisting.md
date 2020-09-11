@@ -11,3 +11,5 @@
 | storage        | Spec to define how the persistence should be handled , [here](storage/Spec.md) |  nil    |             |
 | remoteWrite    | Configuration to write to remote prometheus , [here](RemoteWrite.md)           |         |             |
 | externalLabels | Static labels added to metrics                                                 |         |             |
+| nodeSelector   | NodeSelector for statefulset                                                   |         |             |
+| resources      | Resource requirements , [here](v1/ResourceRequirements.md)                     |         |             |

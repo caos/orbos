@@ -15,6 +15,27 @@ func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolse
 	// 	values.ReplicaCount = spec.ReplicaCount
 	// }
 
+	spec := toolset.LogCollection
+	if spec == nil {
+		return values
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol)
+		}
+	}
+
+	if spec.Resources != nil {
+		values.Resources = spec.Resources
+	}
+
 	return values
 }
 

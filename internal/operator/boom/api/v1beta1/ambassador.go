@@ -1,5 +1,7 @@
 package v1beta1
 
+import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/toleration"
+
 type Ambassador struct {
 	//Flag if tool should be deployed
 	//@default: false
@@ -11,6 +13,10 @@ type Ambassador struct {
 	Service *AmbassadorService `json:"service,omitempty" yaml:"service,omitempty"`
 	//Activate the dev portal mapping
 	ActivateDevPortal bool `json:"activateDevPortal,omitempty" yaml:"activateDevPortal,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run ambassador on nodes
+	Tolerations []toleration.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }
 
 type AmbassadorService struct {

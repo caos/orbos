@@ -25,6 +25,8 @@ type Grafana struct {
 	Auth *auth.Auth `json:"auth,omitempty" yaml:"auth,omitempty"`
 	//List of plugins which get added to the grafana instance
 	Plugins []string `json:"plugins,omitempty" yaml:"plugins,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 type Datasource struct {
