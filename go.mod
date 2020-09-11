@@ -36,5 +36,5 @@ require (
 	k8s.io/apiextensions-apiserver v0.18.8
 	k8s.io/apimachinery v0.18.8
 	k8s.io/client-go v0.18.8
-	k8s.io/kubectl v0.18.3
+	k8s.io/kubectl v0.18.8
 )
