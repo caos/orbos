@@ -15,9 +15,9 @@ func GetChartInfo() *chart.Chart {
 
 func GetImageTags() map[string]string {
 	return map[string]string{
-		"argoproj/argocd":    "v1.7.4",
-		"quay.io/dexidp/dex": "v2.22.0",
-		"redis":              "5.0.8",
-		"docker.pkg.github.com/caos/argocd-secrets/argocd": "v1.0.19",
+		"argoproj/argocd":             "v1.7.4",
+		"quay.io/dexidp/dex":          "v2.22.0",
+		"redis":                       "5.0.8",
+		"ghcr.io/caos/argocd-secrets": "v1.0.20",
 	}
 }

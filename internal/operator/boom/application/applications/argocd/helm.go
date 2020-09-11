@@ -27,11 +27,7 @@ func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolset
 func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, resultFilePath string) error {
 	spec := toolsetCRDSpec.Argocd
 
-	if spec.CustomImage != nil && spec.CustomImage.Enabled && spec.CustomImage.ImagePullSecret != "" {
-		if err := customimage.AddImagePullSecretFromSpec(spec, resultFilePath); err != nil {
-			return err
-		}
-
+	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		if spec.CustomImage.GopassStores != nil && len(spec.CustomImage.GopassStores) > 0 {
 			if err := customimage.AddPostStartFromSpec(spec, resultFilePath); err != nil {
 				return err

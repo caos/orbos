@@ -26,9 +26,8 @@ type Rbac struct {
 }
 
 type CustomImage struct {
-	Enabled         bool           `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	ImagePullSecret string         `json:"imagePullSecret,omitempty" yaml:"imagePullSecret,omitempty"`
-	GopassStores    []*GopassStore `json:"gopassStores,omitempty" yaml:"gopassStores,omitempty"`
+	Enabled      bool           `json:"enabled,omitempty" yaml:"enabled,omitempty"`
+	GopassStores []*GopassStore `json:"gopassStores,omitempty" yaml:"gopassStores,omitempty"`
 }
 
 type GopassStore struct {
