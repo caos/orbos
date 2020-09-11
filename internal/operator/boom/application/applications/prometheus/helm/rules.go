@@ -130,12 +130,12 @@ groups:
        clamp_max(
          clamp_min(
            (
-             max_over_time(dist_kube_deployment_status_replicas_available{namespace=~"(caos|kube)-system"}[5m]) -
-             dist_kube_deployment_spec_replicas{namespace=~"(caos|kube)-system"} or
-             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace=~"(caos|kube)-system"}[5m]) -
-             dist_kube_statefulset_replicas{namespace=~"(caos|kube)-system"} or
-             max_over_time(dist_kube_daemonset_status_number_available{namespace=~"(caos|kube)-system"}[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled{namespace=~"(caos|kube)-system"}
+             max_over_time(dist_kube_deployment_status_replicas_available{namespace=~"(kube-system|caos-system|caos-zitadel)"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace=~"(kube-system|caos-system|caos-zitadel)"} or
+             max_over_time(dist_kube_statefulset_status_replicas_ready{namespace=~"(kube-system|caos-system|caos-zitadel)"}[5m]) -
+             dist_kube_statefulset_replicas{namespace=~"(kube-system|caos-system|caos-zitadel)"} or
+             max_over_time(dist_kube_daemonset_status_number_available{namespace=~"(kube-system|caos-system|caos-zitadel)"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace=~"(kube-system|caos-system|caos-zitadel)"}
            ) + 
            1,
            0
@@ -147,12 +147,12 @@ groups:
        clamp_max(
          clamp_min(
            (
-             max_over_time(dist_kube_deployment_status_replicas{namespace=~"(caos|kube)-system"}[5m]) -
-             dist_kube_deployment_spec_replicas{namespace=~"(caos|kube)-system"} or
-             max_over_time(dist_kube_statefulset_status_replicas_current{namespace=~"(caos|kube)-system"}[5m]) -
-             dist_kube_statefulset_replicas{namespace=~"(caos|kube)-system"} or
-             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace=~"(caos|kube)-system"}[5m]) -
-             dist_kube_daemonset_status_desired_number_scheduled{namespace=~"(caos|kube)-system"}
+             max_over_time(dist_kube_deployment_status_replicas{namespace=~"(kube-system|caos-system|caos-zitadel)"}[5m]) -
+             dist_kube_deployment_spec_replicas{namespace=~"(kube-system|caos-system|caos-zitadel)"} or
+             max_over_time(dist_kube_statefulset_status_replicas_current{namespace=~"(kube-system|caos-system|caos-zitadel)"}[5m]) -
+             dist_kube_statefulset_replicas{namespace=~"(kube-system|caos-system|caos-zitadel)"} or
+             max_over_time(dist_kube_daemonset_status_current_number_scheduled{namespace=~"(kube-system|caos-system|caos-zitadel)"}[5m]) -
+             dist_kube_daemonset_status_desired_number_scheduled{namespace=~"(kube-system|caos-system|caos-zitadel)"}
            ) +
            1,
            0
@@ -169,7 +169,7 @@ groups:
    - expr: |-
        sum(dist_kube_deployment_status_replicas_available) + sum(dist_kube_statefulset_status_replicas_ready) + sum(dist_kube_daemonset_status_number_available)
      record: caos_ready_pods
-   - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(caos|kube)-system"}) * min(caos_scheduled_pods_ryg{namespace=~"(caos|kube)-system"})
+   - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"}) * min(caos_scheduled_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"})
      record: caos_orb_ryg
 `
 
