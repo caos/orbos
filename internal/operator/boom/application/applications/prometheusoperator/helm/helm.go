@@ -15,7 +15,7 @@ func GetImageTags() map[string]string {
 		"quay.io/prometheus/alertmanager":           "v0.21.0",
 		"squareup/ghostunnel":                       "v1.5.2",
 		"jettech/kube-webhook-certgen":              "v1.2.1",
-		"quay.io/coreos/prometheus-operator":        "v0.38.3",
+		"quay.io/coreos/prometheus-operator":        "v0.38.2",
 		"quay.io/coreos/configmap-reload":           "v0.0.1",
 		"quay.io/coreos/prometheus-config-reloader": "v0.38.1",
 		"k8s.gcr.io/hyperkube":                      "v1.12.1",
