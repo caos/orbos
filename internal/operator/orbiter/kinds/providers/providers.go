@@ -1,62 +1,67 @@
 package providers
 
 import (
+	"regexp"
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
 
+var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
+
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
-	orb *orb.Orb,
 	provID string,
 	providerTree *tree.Tree,
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
-	finishedChan chan bool,
+	finishedChan chan struct{},
+	orbiterCommit, repoURL, repoKey string,
+	oneoff bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
+	orbiter.ConfigureFunc,
 	bool,
 	error,
 ) {
-	switch providerTree.Common.Kind {
-	//			case "orbiter.caos.ch/GCEProvider":
-	//				var lbs map[string]*infra.Ingress
-	//
-	//				if !kind.Spec.Destroyed && kind.Spec.ControlPlane.Provider == depID {
-	//					lbs = map[string]*infra.Ingress{
-	//						"kubeapi": &infra.Ingress{
-	//							Pools:            []string{kind.Spec.ControlPlane.Pool},
-	//							HealthChecksPath: "/healthz",
-	//						},
-	//					}
-	//				}
-	//				subassemblers[provIdx] = gce.New(providerPath, generalOverwriteSpec, gceadapter.New(providermonitor, providerID, lbs, nil, "", cfg.Params.ConnectFromOutside))
-	case "orbiter.caos.ch/StaticProvider":
-		//				updatesDisabled := make([]string, 0)
-		//				for _, pool := range desiredKind.Spec.Workers {
-		//					if pool.UpdatesDisabled {
-		//						updatesDisabled = append(updatesDisabled, pool.Pool)
-		//					}
-		//				}
-		//
-		//				if desiredKind.Spec.ControlPlane.UpdatesDisabled {
-		//					updatesDisabled = append(updatesDisabled, desiredKind.Spec.ControlPlane.Pool)
-		//				}
 
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, bool, error) {
+	monitor = monitor.WithFields(map[string]interface{}{"provider": provID})
+
+	wlFunc := func() []*orbiter.CIDR {
+		monitor.Debug("Reading whitelist")
+		wl := <-whitelistChan
+		return wl
+	}
+
+	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.AdaptFunc(
+			provID,
+			orbID(repoURL),
+			wlFunc,
+			orbiterCommit, repoURL, repoKey,
+			oneoff,
+		)(
+			monitor,
+			finishedChan,
+			providerTree,
+			providerCurrent,
+		)
+	case "orbiter.caos.ch/StaticProvider":
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
 			return static.AdaptFunc(
-				orb.Masterkey,
 				provID,
-				func() []*orbiter.CIDR {
-					monitor.Debug("Reading whitelist")
-					return <-whitelistChan
-				},
+				wlFunc,
+				orbiterCommit, repoURL, repoKey,
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				finishedChan,
@@ -65,23 +70,25 @@ func GetQueryAndDestroyFuncs(
 		}
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
-		return nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
 }
 
 func GetSecrets(
 	monitor mntr.Monitor,
-	masterkey string,
 	providerTree *tree.Tree,
 ) (
 	map[string]*secret.Secret,
 	error,
 ) {
 	switch providerTree.Common.Kind {
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.SecretsFunc()(
+			monitor,
+			providerTree,
+		)
 	case "orbiter.caos.ch/StaticProvider":
-		return static.SecretsFunc(
-			masterkey,
-		)(
+		return static.SecretsFunc()(
 			monitor,
 			providerTree,
 		)
@@ -90,25 +97,35 @@ func GetSecrets(
 	}
 }
 
-func RewriteMasterkey(
+func ListMachines(
 	monitor mntr.Monitor,
-	oldMasterkey string,
-	newMasterkey string,
 	providerTree *tree.Tree,
+	provID string,
+	repoURL string,
 ) (
-	map[string]*secret.Secret,
+	map[string]infra.Machine,
 	error,
 ) {
+
 	switch providerTree.Common.Kind {
-	case "orbiter.caos.ch/StaticProvider":
-		return static.RewriteFunc(
-			oldMasterkey,
-			newMasterkey,
-		)(
+	case "orbiter.caos.ch/GCEProvider":
+		return gce.ListMachines(
 			monitor,
 			providerTree,
+			orbID(repoURL),
+			provID,
+		)
+	case "orbiter.caos.ch/StaticProvider":
+		return static.ListMachines(
+			monitor,
+			providerTree,
+			provID,
 		)
 	default:
 		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
+}
+
+func orbID(repoURL string) string {
+	return alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-")
 }

@@ -1,44 +1,103 @@
 package crd
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	"errors"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/crd/config"
-	v1beta1config "github.com/caos/orbos/internal/operator/boom/crd/v1beta1/config"
+	"github.com/caos/orbos/internal/operator/boom/metrics"
+	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/internal/utils/clientgo"
-
-	"github.com/caos/orbos/internal/operator/boom/crd/v1beta1"
-
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/mntr"
 )
 
-type Crd interface {
-	SetBundle(*bundleconfig.Config)
-	GetBundle() *bundle.Bundle
-	//ReconcileWithFunc([]*clientgo.Resource, func(instance runtime.Object) error)
-	Reconcile([]*clientgo.Resource, *toolsetsv1beta1.Toolset)
-	CleanUp()
-	GetStatus() error
-	SetBackStatus()
+const (
+	version name.Version = "v1beta2"
+)
+
+type Crd struct {
+	bundle  *bundle.Bundle
+	monitor mntr.Monitor
+	status  error
 }
 
-func New(conf *config.Config) (Crd, error) {
+func (c *Crd) GetStatus() error {
+	return c.status
+}
+
+func (c *Crd) SetBackStatus() {
+	c.status = nil
+}
+
+func (c *Crd) CleanUp() {
+	if c.GetStatus() != nil {
+		return
+	}
+
+	c.status = c.bundle.CleanUp()
+}
+
+func GetVersion() name.Version {
+	return version
+}
+
+func New(conf *config.Config) *Crd {
 	crdMonitor := conf.Monitor.WithFields(map[string]interface{}{
-		"version": conf.Version,
+		"version": GetVersion(),
 	})
 
-	crdMonitor.Info("New CRD")
+	return &Crd{
+		monitor: crdMonitor,
+		status:  nil,
+	}
+}
 
-	if conf.Version != "v1beta1" {
-		return nil, errors.Errorf("Unknown CRD version %s", conf.Version)
+func (c *Crd) SetBundle(conf *bundleconfig.Config) {
+	if c.GetStatus() != nil {
+		return
+	}
+	bundle := bundle.New(conf)
+
+	c.status = bundle.AddApplicationsByBundleName(conf.BundleName)
+	if c.status != nil {
+		return
 	}
 
-	crdConf := &v1beta1config.Config{
-		Monitor: crdMonitor,
+	c.bundle = bundle
+}
+
+func (c *Crd) GetBundle() *bundle.Bundle {
+	return c.bundle
+}
+
+func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetsv1beta2.Toolset) {
+	if c.GetStatus() != nil {
+		return
 	}
 
-	crd := v1beta1.New(crdConf)
+	logFields := map[string]interface{}{
+		"CRD":    toolsetCRD.Metadata.Name,
+		"action": "reconciling",
+	}
+	monitor := c.monitor.WithFields(logFields)
 
-	return crd, nil
+	if toolsetCRD == nil {
+		c.status = errors.New("ToolsetCRD is nil")
+		monitor.Error(c.status)
+		return
+	}
+
+	if c.bundle == nil {
+		c.status = errors.New("No bundle for crd")
+		monitor.Error(c.status)
+		return
+	}
+
+	c.status = c.bundle.Reconcile(currentResourceList, toolsetCRD.Spec)
+	if c.status != nil {
+		metrics.FailureReconcilingBundle(c.bundle.GetPredefinedBundle())
+		return
+	}
+	metrics.SuccessfulReconcilingBundle(c.bundle.GetPredefinedBundle())
 }

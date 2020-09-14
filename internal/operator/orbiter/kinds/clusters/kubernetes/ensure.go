@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/push"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -10,46 +10,25 @@ func ensure(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	curr *CurrentCluster,
-	kubeAPIAddress infra.Address,
-	psf push.Func,
+	kubeAPIAddress *infra.Address,
+	pdf api.PushDesiredFunc,
 	k8sClient *Client,
 	oneoff bool,
-	controlplane initializedPool,
+	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
-	workers []initializedPool,
+	workers []*initializedPool,
 	workerMachines []*initializedMachine,
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
-	installNodeAgent func(*initializedMachine) error,
-) (err error) {
+) (done bool, err error) {
 
-	initialized := true
-
-	for _, machine := range append(controlplaneMachines, workerMachines...) {
-
-		if err := machine.reconcile(); err != nil {
-			return err
-		}
-
-		machineMonitor := monitor.WithField("machine", machine.infra.ID())
-		if !machine.currentMachine.NodeAgentIsRunning {
-			machineMonitor.Info("Node agent is not running on the correct version yet")
-			if err := installNodeAgent(machine); err != nil {
-				return err
-			}
-
-			initialized = false
-		}
-
-		if !machine.currentMachine.FirewallIsReady {
-			initialized = false
-			machineMonitor.Info("Firewall is not ready yet")
-		}
+	if err := scaleDown(append(workers, controlplane), k8sClient, uninitializeMachine, monitor, pdf); err != nil {
+		return false, err
 	}
 
-	if !initialized {
-		return nil
+	done, err = maintainNodes(append(controlplaneMachines, workerMachines...), monitor, k8sClient, pdf)
+	if err != nil || !done {
+		return done, err
 	}
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
@@ -61,33 +40,29 @@ func ensure(
 		workerMachines)
 	if err != nil || !upgradingDone {
 		monitor.Info("Upgrading is not done yet")
-		return err
+		return upgradingDone, err
 	}
 
 	var scalingDone bool
-	scalingDone, err = ensureScale(
+	scalingDone, err = ensureUpScale(
 		monitor,
 		clusterID,
 		desired,
-		psf,
+		pdf,
 		controlplane,
 		workers,
 		kubeAPIAddress,
 		targetVersion,
 		k8sClient,
 		oneoff,
-		func(created infra.Machine, pool initializedPool) (initializedMachine, error) {
+		func(created infra.Machine, pool *initializedPool) initializedMachine {
 			machine := initializeMachine(created, pool)
 			target := targetVersion.DefineSoftware()
 			machine.desiredNodeagent.Software = &target
-			if machine.currentMachine.NodeAgentIsRunning {
-				return *machine, nil
-			}
-			return *machine, installNodeAgent(machine)
-		},
-		uninitializeMachine)
+			return *machine
+		})
 	if !scalingDone {
 		monitor.Info("Scaling is not done yet")
 	}
-	return err
+	return scalingDone, err
 }

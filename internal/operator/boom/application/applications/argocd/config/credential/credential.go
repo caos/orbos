@@ -1,7 +1,7 @@
 package credential
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
@@ -17,6 +17,12 @@ type Credential struct {
 	SSHPrivateKeySecret *secret `yaml:"sshPrivateKeySecret,omitempty"`
 }
 
+const (
+	cert = "certificate"
+	user = "username"
+	pw   = "password"
+)
+
 type secret struct {
 	Name string
 	Key  string
@@ -30,20 +36,18 @@ func getSecretKey(ty string) string {
 	return ty
 }
 
-func GetSecrets(spec *argocd.Argocd) []interface{} {
+func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 	secrets := make([]interface{}, 0)
 	namespace := "caos-system"
 
 	for _, v := range spec.Credentials {
 		if helper2.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
-			ty := "username"
-
 			data := map[string]string{
-				getSecretKey(ty): v.Username.Value,
+				getSecretKey(user): v.Username.Value,
 			}
 
 			conf := &resources.SecretConfig{
-				Name:      getSecretName(v.Name, ty),
+				Name:      getSecretName(v.Name, user),
 				Namespace: namespace,
 				Labels:    labels.GetAllApplicationLabels(info.GetName()),
 				Data:      data,
@@ -52,14 +56,13 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 			secrets = append(secrets, secretRes)
 		}
 		if helper2.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
-			ty := "password"
 
 			data := map[string]string{
-				getSecretKey(ty): v.Password.Value,
+				getSecretKey(pw): v.Password.Value,
 			}
 
 			conf := &resources.SecretConfig{
-				Name:      getSecretName(v.Name, ty),
+				Name:      getSecretName(v.Name, pw),
 				Namespace: namespace,
 				Labels:    labels.GetAllApplicationLabels(info.GetName()),
 				Data:      data,
@@ -68,14 +71,12 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 			secrets = append(secrets, secretRes)
 		}
 		if helper2.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
-			ty := "certificate"
-
 			data := map[string]string{
-				getSecretKey(ty): v.Certificate.Value,
+				getSecretKey(cert): v.Certificate.Value,
 			}
 
 			conf := &resources.SecretConfig{
-				Name:      getSecretName(v.Name, ty),
+				Name:      getSecretName(v.Name, cert),
 				Namespace: namespace,
 				Labels:    labels.GetAllApplicationLabels(info.GetName()),
 				Data:      data,
@@ -88,7 +89,7 @@ func GetSecrets(spec *argocd.Argocd) []interface{} {
 	return secrets
 }
 
-func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Credential {
+func GetFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) []*Credential {
 	credentials := make([]*Credential, 0)
 
 	if spec.Credentials == nil || len(spec.Credentials) == 0 {
@@ -98,10 +99,9 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Credential {
 	for _, v := range spec.Credentials {
 		var us, ps, ssh *secret
 		if helper2.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
-			ty := "username"
 			us = &secret{
-				Name: getSecretName(v.Name, ty),
-				Key:  getSecretKey(ty),
+				Name: getSecretName(v.Name, user),
+				Key:  getSecretKey(user),
 			}
 		} else if helper2.IsExistentSecret(v.Username, v.ExistingUsernameSecret) {
 			us = &secret{
@@ -111,26 +111,24 @@ func GetFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) []*Credential {
 		}
 
 		if helper2.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
-			ty := "password"
-			us = &secret{
-				Name: getSecretName(v.Name, ty),
-				Key:  getSecretKey(ty),
+			ps = &secret{
+				Name: getSecretName(v.Name, pw),
+				Key:  getSecretKey(pw),
 			}
 		} else if helper2.IsExistentSecret(v.Password, v.ExistingPasswordSecret) {
-			us = &secret{
+			ps = &secret{
 				Name: v.ExistingPasswordSecret.Name,
 				Key:  v.ExistingPasswordSecret.Key,
 			}
 		}
 
 		if helper2.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
-			ty := "username"
-			us = &secret{
-				Name: getSecretName(v.Name, ty),
-				Key:  getSecretKey(ty),
+			ssh = &secret{
+				Name: getSecretName(v.Name, cert),
+				Key:  getSecretKey(cert),
 			}
 		} else if helper2.IsExistentSecret(v.Certificate, v.ExistingCertificateSecret) {
-			us = &secret{
+			ssh = &secret{
 				Name: v.ExistingCertificateSecret.Name,
 				Key:  v.ExistingCertificateSecret.Key,
 			}

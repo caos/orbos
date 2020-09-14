@@ -3,14 +3,19 @@
 package common
 
 import (
+	"fmt"
 	"regexp"
+	"strings"
+	"sync"
+	"time"
 )
 
 type NodeAgentSpec struct {
 	ChangesAllowed bool
 	//	RebootEnabled  bool
-	Software *Software
-	Firewall *Firewall
+	Software       *Software
+	Firewall       *Firewall
+	RebootRequired time.Time
 }
 
 type NodeAgentCurrent struct {
@@ -18,6 +23,7 @@ type NodeAgentCurrent struct {
 	Software    Software
 	Open        []*Allowed
 	Commit      string
+	Booted      time.Time
 }
 
 type Software struct {
@@ -30,6 +36,8 @@ type Software struct {
 	Nginx            Package `yaml:",omitempty"`
 	SSHD             Package `yaml:",omitempty"`
 	Hostname         Package `yaml:",omitempty"`
+	Sysctl           Package `yaml:",omitempty"`
+	Health           Package `yaml:",omitempty"`
 }
 
 func (s *Software) Merge(sw Software) {
@@ -71,6 +79,19 @@ func (s *Software) Merge(sw Software) {
 	if !sw.Hostname.Equals(zeroPkg) {
 		s.Hostname = sw.Hostname
 	}
+
+	if !sw.Sysctl.Equals(zeroPkg) && s.Sysctl.Config == nil {
+		s.Sysctl.Config = make(map[string]string)
+	}
+	for key, value := range sw.Sysctl.Config {
+		s.Sysctl.Config[key] = value
+	}
+	if !sw.Health.Equals(zeroPkg) && s.Health.Config == nil {
+		s.Health.Config = make(map[string]string)
+	}
+	for key, value := range sw.Health.Config {
+		s.Health.Config[key] = value
+	}
 }
 
 type Package struct {
@@ -101,61 +122,50 @@ func configEquals(this, that map[string]string) bool {
 }
 
 func (p Package) Equals(other Package) bool {
-	return packageEquals(p, other)
+	return PackageEquals(p, other)
 }
-func packageEquals(this, that Package) bool {
+func PackageEquals(this, that Package) bool {
 	equals := this.Version == that.Version &&
 		configEquals(this.Config, that.Config)
 	return equals
 }
 
-func (this *Software) Contains(that Software) bool {
-	return contains(this.Swap, that.Swap) &&
-		contains(this.Kubelet, that.Kubelet) &&
-		contains(this.Kubeadm, that.Kubeadm) &&
-		contains(this.Kubectl, that.Kubectl) &&
-		contains(this.Containerruntime, that.Containerruntime) &&
-		contains(this.KeepaliveD, that.KeepaliveD) &&
-		contains(this.Nginx, that.Nginx) &&
-		contains(this.Hostname, that.Hostname)
+type Firewall struct {
+	mux sync.Mutex          `yaml:"-"`
+	FW  map[string]*Allowed `yaml:",inline"`
 }
 
-func contains(this, that Package) bool {
-	return that.Version == "" && that.Config == nil || packageEquals(this, that)
+func ToFirewall(fw map[string]*Allowed) Firewall {
+	return Firewall{FW: fw}
 }
-
-func (this *Software) Defines(that Software) bool {
-	return defines(this.Swap, that.Swap) &&
-		defines(this.Kubelet, that.Kubelet) &&
-		defines(this.Kubeadm, that.Kubeadm) &&
-		defines(this.Kubectl, that.Kubectl) &&
-		defines(this.Containerruntime, that.Containerruntime) &&
-		defines(this.KeepaliveD, that.KeepaliveD) &&
-		defines(this.Nginx, that.Nginx) &&
-		defines(this.Hostname, that.Hostname)
-}
-
-func defines(this, that Package) bool {
-	zeroPkg := Package{}
-	defines := packageEquals(that, zeroPkg) || !packageEquals(this, zeroPkg)
-	return defines
-}
-
-type Firewall map[string]*Allowed
 
 func (f *Firewall) Merge(fw Firewall) {
-	for key, value := range fw {
-		m := *f
-		m[key] = value
+	f.mux.Lock()
+	defer f.mux.Unlock()
+	if len(fw.FW) > 0 && f.FW == nil {
+		f.FW = make(map[string]*Allowed)
+	}
+	for key, value := range fw.FW {
+		f.FW[key] = value
 	}
 }
 
-func (f *Firewall) Ports() []*Allowed {
+func (f *Firewall) Ports() Ports {
 	ports := make([]*Allowed, 0)
-	for _, value := range *f {
+	for _, value := range f.FW {
 		ports = append(ports, value)
 	}
 	return ports
+}
+
+type Ports []*Allowed
+
+func (p Ports) String() string {
+	strs := make([]string, len(p))
+	for idx, port := range p {
+		strs[idx] = fmt.Sprintf("%s/%s", port.Port, port.Protocol)
+	}
+	return strings.Join(strs, " ")
 }
 
 type Allowed struct {
@@ -164,8 +174,8 @@ type Allowed struct {
 }
 
 func (f Firewall) Contains(other Firewall) bool {
-	for name, port := range other {
-		found, ok := f[name]
+	for name, port := range other.FW {
+		found, ok := f.FW[name]
 		if !ok {
 			return false
 		}
@@ -177,11 +187,8 @@ func (f Firewall) Contains(other Firewall) bool {
 }
 
 func (f Firewall) IsContainedIn(ports []*Allowed) bool {
-	if len(f) > len(ports) {
-		return false
-	}
 checks:
-	for _, fwPort := range f {
+	for _, fwPort := range f.FW {
 		for _, port := range ports {
 			if deriveEqualPort(*port, *fwPort) {
 				continue checks
@@ -195,12 +202,79 @@ checks:
 type NodeAgentsCurrentKind struct {
 	Kind    string
 	Version string
-	Current map[string]*NodeAgentCurrent `yaml:",omitempty"`
+	Current CurrentNodeAgents
+}
+
+type CurrentNodeAgents struct {
+	// NA is exported for yaml (de)serialization and not intended to be accessed by any other code outside this package
+	NA  map[string]*NodeAgentCurrent `yaml:",inline"`
+	mux sync.Mutex                   `yaml:"-"`
+}
+
+func (n *CurrentNodeAgents) Set(id string, na *NodeAgentCurrent) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	if n.NA == nil {
+		n.NA = make(map[string]*NodeAgentCurrent)
+	}
+	n.NA[id] = na
+}
+
+func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+
+	if n.NA == nil {
+		n.NA = make(map[string]*NodeAgentCurrent)
+	}
+
+	na, ok := n.NA[id]
+	if !ok {
+		na = &NodeAgentCurrent{
+			Open: make([]*Allowed, 0),
+		}
+		n.NA[id] = na
+	}
+	return na, ok
+
 }
 
 type NodeAgentsSpec struct {
 	Commit     string
-	NodeAgents map[string]*NodeAgentSpec
+	NodeAgents DesiredNodeAgents
+}
+
+type DesiredNodeAgents struct {
+	// NA is exported for yaml (de)serialization and not intended to be accessed by any other code outside this package
+	NA  map[string]*NodeAgentSpec `yaml:",inline"`
+	mux sync.Mutex                `yaml:"-"`
+}
+
+func (n *DesiredNodeAgents) Delete(id string) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	delete(n.NA, id)
+}
+
+func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+
+	if n.NA == nil {
+		n.NA = make(map[string]*NodeAgentSpec)
+	}
+
+	na, ok := n.NA[id]
+	if !ok {
+		na = &NodeAgentSpec{
+			Software: &Software{},
+			Firewall: &Firewall{
+				FW: make(map[string]*Allowed),
+			},
+		}
+		n.NA[id] = na
+	}
+	return na, ok
 }
 
 type NodeAgentsDesiredKind struct {

@@ -3,20 +3,22 @@ package infra
 import (
 	"fmt"
 	"io"
+	"sort"
 )
 
 type Address struct {
-	Location string
-	Port     uint16
+	Location     string
+	FrontendPort uint16
+	BackendPort  uint16
 }
 
 func (a Address) String() string {
-	return fmt.Sprintf("%s:%d", a.Location, a.Port)
+	return fmt.Sprintf("%s:%d", a.Location, a.FrontendPort)
 }
 
 type ProviderCurrent interface {
 	Pools() map[string]Pool
-	Ingresses() map[string]Address
+	Ingresses() map[string]*Address
 }
 
 type Ingress struct {
@@ -26,7 +28,8 @@ type Ingress struct {
 
 type Pool interface {
 	EnsureMembers() error
-	GetMachines(active bool) (Machines, error)
+	EnsureMember(Machine) error
+	GetMachines() (Machines, error)
 	AddMachine() (Machine, error)
 }
 
@@ -34,10 +37,12 @@ type Machine interface {
 	ID() string
 	IP() string
 	Remove() error
-	Execute(env map[string]string, stdin io.Reader, cmd string) ([]byte, error)
+	Execute(stdin io.Reader, cmd string) ([]byte, error)
+	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
-	UseKey(keys ...[]byte) error
+	RebootRequired() (required bool, require func(), unrequire func())
+	ReplacementRequired() (required bool, require func(), unrequire func())
 }
 
 type Machines []Machine
@@ -67,3 +72,15 @@ func (c Machines) String() string {
 func (c Machines) Len() int           { return len(c) }
 func (c Machines) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
 func (c Machines) Less(i, j int) bool { return c[i].ID() < c[j].ID() }
+
+func (c Machines) IDs() []string {
+	l := len(c)
+	machines := make([]Machine, l, l)
+	copy(machines, c)
+	sort.Sort(Machines(machines))
+	ids := make([]string, l, l)
+	for idx, machine := range machines {
+		ids[idx] = machine.ID()
+	}
+	return ids
+}

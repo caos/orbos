@@ -2,69 +2,77 @@
 
 package executables
 
+// deriveTuplePackable returns a function, which returns the input values.
+// Since tuples are not first class citizens in Go, this is a way to fake it, because functions that return tuples are first class citizens.
+func deriveTuplePackable(v0 *packable, v1 error) func() (*packable, error) {
+	return func() (*packable, error) {
+		return v0, v1
+	}
+}
+
 // deriveTupleBuilt returns a function, which returns the input values.
 // Since tuples are not first class citizens in Go, this is a way to fake it, because functions that return tuples are first class citizens.
-func deriveTupleBuilt(v0 Bin, v1 error) func() (Bin, error) {
-	return func() (Bin, error) {
+func deriveTupleBuilt(v0 Buildable, v1 error) func() (Buildable, error) {
+	return func() (Buildable, error) {
 		return v0, v1
 	}
 }
 
 // deriveTuplePacked returns a function, which returns the input values.
 // Since tuples are not first class citizens in Go, this is a way to fake it, because functions that return tuples are first class citizens.
-func deriveTuplePacked(v0 Bin, v1 *string, v2 error) func() (Bin, *string, error) {
-	return func() (Bin, *string, error) {
+func deriveTuplePacked(v0 *packable, v1 *string, v2 error) func() (*packable, *string, error) {
+	return func() (*packable, *string, error) {
 		return v0, v1, v2
 	}
 }
 
 // deriveCurryDebug returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryDebug(f func(debug bool, gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(debug bool) func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
-	return func(debug bool) func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
-		return func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+func deriveCurryDebug(f func(debug bool, gitCommit string, version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple)) func(debug bool) func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+	return func(debug bool) func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+		return func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
 			return f(debug, gitCommit, version, githubClientID, githubClientSecret, bin)
 		}
 	}
 }
 
 // deriveCurryCommit returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryCommit(f func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(gitCommit string) func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
-	return func(gitCommit string) func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
-		return func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+func deriveCurryCommit(f func(gitCommit string, version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple)) func(gitCommit string) func(version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+	return func(gitCommit string) func(version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+		return func(version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
 			return f(gitCommit, version, githubClientID, githubClientSecret, bin)
 		}
 	}
 }
 
 // deriveCurryTag returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryTag(f func(version string, githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(version string) func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
-	return func(version string) func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
-		return func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple {
+func deriveCurryTag(f func(version string, githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple)) func(version string) func(githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+	return func(version string) func(githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+		return func(githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
 			return f(version, githubClientID, githubClientSecret, bin)
 		}
 	}
 }
 
 // deriveCurryGithubClientID returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryGithubClientID(f func(githubClientID string, githubClientSecret string, bin Bin) BuiltTuple) func(githubClientID string) func(githubClientSecret string, bin Bin) BuiltTuple {
-	return func(githubClientID string) func(githubClientSecret string, bin Bin) BuiltTuple {
-		return func(githubClientSecret string, bin Bin) BuiltTuple {
+func deriveCurryGithubClientID(f func(githubClientID string, githubClientSecret string, bin Buildable) (bt BuiltTuple)) func(githubClientID string) func(githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+	return func(githubClientID string) func(githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+		return func(githubClientSecret string, bin Buildable) (bt BuiltTuple) {
 			return f(githubClientID, githubClientSecret, bin)
 		}
 	}
 }
 
 // deriveCurryGithubClientSecret returns a function that has one parameter, which corresponds to the input functions first parameter, and a result that is a function, which takes the rest of the parameters as input and finally returns the original input function's results.
-func deriveCurryGithubClientSecret(f func(githubClientSecret string, bin Bin) BuiltTuple) func(githubClientSecret string) func(bin Bin) BuiltTuple {
-	return func(githubClientSecret string) func(bin Bin) BuiltTuple {
-		return func(bin Bin) BuiltTuple {
+func deriveCurryGithubClientSecret(f func(githubClientSecret string, bin Buildable) (bt BuiltTuple)) func(githubClientSecret string) func(bin Buildable) (bt BuiltTuple) {
+	return func(githubClientSecret string) func(bin Buildable) (bt BuiltTuple) {
+		return func(bin Buildable) (bt BuiltTuple) {
 			return f(githubClientSecret, bin)
 		}
 	}
 }
 
-// deriveFmap returns an output channel where the items are the result of the input function being applied to the items on the input channel.
-func deriveFmap(f func(Bin) BuiltTuple, in <-chan Bin) <-chan BuiltTuple {
+// deriveFmapBuild returns an output channel where the items are the result of the input function being applied to the items on the input channel.
+func deriveFmapBuild(f func(Buildable) BuiltTuple, in <-chan Buildable) <-chan BuiltTuple {
 	out := make(chan BuiltTuple, cap(in))
 	go func() {
 		for a := range in {
@@ -76,9 +84,48 @@ func deriveFmap(f func(Bin) BuiltTuple, in <-chan Bin) <-chan BuiltTuple {
 	return out
 }
 
+// deriveFmapPackableFromBuild returns an output channel where the items are the result of the input function being applied to the items on the input channel.
+func deriveFmapPackableFromBuild(f func(BuiltTuple) PackableTuple, in <-chan BuiltTuple) <-chan PackableTuple {
+	out := make(chan PackableTuple, cap(in))
+	go func() {
+		for a := range in {
+			b := f(a)
+			out <- b
+		}
+		close(out)
+	}()
+	return out
+}
+
+// deriveFmapDownload returns an output channel where the items are the result of the input function being applied to the items on the input channel.
+func deriveFmapDownload(f func(Downloadable) PackableTuple, in <-chan Downloadable) <-chan PackableTuple {
+	out := make(chan PackableTuple, cap(in))
+	go func() {
+		for a := range in {
+			b := f(a)
+			out <- b
+		}
+		close(out)
+	}()
+	return out
+}
+
 // deriveFmapPack returns an output channel where the items are the result of the input function being applied to the items on the input channel.
-func deriveFmapPack(f func(BuiltTuple) packedTuple, in <-chan BuiltTuple) <-chan packedTuple {
+func deriveFmapPack(f func(PackableTuple) packedTuple, in <-chan PackableTuple) <-chan packedTuple {
 	out := make(chan packedTuple, cap(in))
+	go func() {
+		for a := range in {
+			b := f(a)
+			out <- b
+		}
+		close(out)
+	}()
+	return out
+}
+
+// deriveFmapExtractOneFile returns an output channel where the items are the result of the input function being applied to the items on the input channel.
+func deriveFmapExtractOneFile(f func(PackableTuple) PackableTuple, in <-chan PackableTuple) <-chan PackableTuple {
+	out := make(chan PackableTuple, cap(in))
 	go func() {
 		for a := range in {
 			b := f(a)

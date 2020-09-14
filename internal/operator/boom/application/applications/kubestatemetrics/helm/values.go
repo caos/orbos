@@ -1,5 +1,10 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+)
+
 type Image struct {
 	Repository string `yaml:"repository"`
 	Tag        string `yaml:"tag"`
@@ -95,9 +100,10 @@ type Values struct {
 	PodSecurityPolicy   *PodSecurityPolicy   `yaml:"podSecurityPolicy"`
 	SecurityContext     *SecurityContext     `yaml:"securityContext"`
 	NodeSelector        map[string]string    `yaml:"nodeSelector"`
-	Affinity            interface{}          `yaml:"affinity"`
-	Tolerations         []interface{}        `yaml:"tolerations"`
+	Affinity            *k8s.Affinity        `yaml:"affinity"`
+	Tolerations         []corev1.Toleration  `yaml:"tolerations"`
 	PodAnnotations      map[string]string    `yaml:"podAnnotations"`
 	Collectors          *Collectors          `yaml:"collectors"`
 	PodDisruptionBudget *PodDisruptionBudget `yaml:"podDisruptionBudget"`
+	Resources           *k8s.Resources       `yaml:"resources"`
 }

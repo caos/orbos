@@ -1,7 +1,7 @@
 package config
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	ambassadormetrics "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/metrics"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/apiserver"
 	argocdmetrics "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/metrics"
@@ -18,63 +18,62 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) *Config {
+func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *Config {
 	servicemonitors := make([]*servicemonitor.Config, 0)
 
-	if toolsetCRDSpec.Ambassador != nil && toolsetCRDSpec.Ambassador.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Ambassador) {
+	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Ambassador) {
 		servicemonitors = append(servicemonitors, ambassadormetrics.GetServicemonitor(instanceName))
 	}
 
-	if toolsetCRDSpec.PrometheusOperator != nil && toolsetCRDSpec.PrometheusOperator.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusOperator) {
+	if toolsetCRDSpec.MetricCollection != nil && toolsetCRDSpec.MetricCollection.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.PrometheusOperator) {
 		servicemonitors = append(servicemonitors, pometrics.GetServicemonitor(instanceName))
 	}
 
-	if toolsetCRDSpec.PrometheusNodeExporter != nil && toolsetCRDSpec.PrometheusNodeExporter.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusNodeExporter) {
+	if toolsetCRDSpec.NodeMetricsExporter != nil && toolsetCRDSpec.NodeMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.PrometheusNodeExporter) {
 		servicemonitors = append(servicemonitors, pnemetrics.GetServicemonitors(instanceName)...)
 	}
 
-	if toolsetCRDSpec.PrometheusSystemdExporter != nil && toolsetCRDSpec.PrometheusSystemdExporter.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.PrometheusSystemdExporter) {
+	if toolsetCRDSpec.SystemdMetricsExporter != nil && toolsetCRDSpec.SystemdMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.PrometheusSystemdExporter) {
 		servicemonitors = append(servicemonitors, psemetrics.GetServicemonitor(instanceName))
 	}
 
-	if toolsetCRDSpec.KubeStateMetrics != nil && toolsetCRDSpec.KubeStateMetrics.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.KubeStateMetrics) {
+	if toolsetCRDSpec.KubeMetricsExporter != nil && toolsetCRDSpec.KubeMetricsExporter.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.KubeStateMetrics) {
 		servicemonitors = append(servicemonitors, kubestatemetrics.GetServicemonitors(instanceName)...)
 	}
 
-	if toolsetCRDSpec.Argocd != nil && toolsetCRDSpec.Argocd.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Argocd) {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Argocd) {
 		servicemonitors = append(servicemonitors, argocdmetrics.GetServicemonitors(instanceName)...)
 	}
 
-	if toolsetCRDSpec.LoggingOperator != nil && toolsetCRDSpec.LoggingOperator.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.LoggingOperator) {
+	if toolsetCRDSpec.LogCollection != nil && toolsetCRDSpec.LogCollection.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.LoggingOperator) {
 		servicemonitors = append(servicemonitors, lometrics.GetServicemonitors(instanceName)...)
 	}
 
-	if toolsetCRDSpec.Loki != nil && toolsetCRDSpec.Loki.Deploy &&
-		(toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Loki) {
+	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy &&
+		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Loki) {
 		servicemonitors = append(servicemonitors, lokimetrics.GetServicemonitor(instanceName))
 	}
 
-	if toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.APIServer {
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.APIServer) {
 		servicemonitors = append(servicemonitors, apiserver.GetServicemonitor(instanceName))
 	}
 
-	if toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Boom {
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Boom) {
 		servicemonitors = append(servicemonitors, boom.GetServicemonitor(instanceName))
 	}
 
-	if toolsetCRDSpec.Prometheus.Metrics == nil || toolsetCRDSpec.Prometheus.Metrics.Orbiter {
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Orbiter) {
 		servicemonitors = append(servicemonitors, orbiter.GetServicemonitor(instanceName))
 	}
 
 	if len(servicemonitors) > 0 {
-
 		servicemonitors = append(servicemonitors, metrics.GetServicemonitor(instanceName))
 
 		prom := &Config{
@@ -86,14 +85,14 @@ func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSp
 			AdditionalScrapeConfigs: getScrapeConfigs(),
 		}
 
-		if toolsetCRDSpec.Prometheus.Storage != nil {
+		if toolsetCRDSpec.MetricsPersisting != nil && toolsetCRDSpec.MetricsPersisting.Storage != nil {
 			prom.StorageSpec = &StorageSpec{
-				StorageClass: toolsetCRDSpec.Prometheus.Storage.StorageClass,
-				Storage:      toolsetCRDSpec.Prometheus.Storage.Size,
+				StorageClass: toolsetCRDSpec.MetricsPersisting.Storage.StorageClass,
+				Storage:      toolsetCRDSpec.MetricsPersisting.Storage.Size,
 			}
 
-			if toolsetCRDSpec.Prometheus.Storage.AccessModes != nil {
-				prom.StorageSpec.AccessModes = toolsetCRDSpec.Prometheus.Storage.AccessModes
+			if toolsetCRDSpec.MetricsPersisting.Storage.AccessModes != nil {
+				prom.StorageSpec.AccessModes = toolsetCRDSpec.MetricsPersisting.Storage.AccessModes
 			}
 		}
 

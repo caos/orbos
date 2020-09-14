@@ -1,8 +1,10 @@
 package helm
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Service struct {
@@ -126,6 +128,8 @@ type RelabelConfig struct {
 	SourceLabels []string `yaml:"source_labels,omitempty"`
 	TargetLabel  string   `yaml:"target_label,omitempty"`
 	Replacement  string   `yaml:"replacement,omitempty"`
+	Modulus      uint64   `yaml:"modulus,omitempty"`
+	Separator    string   `yaml:"separator,omitempty"`
 }
 
 type ValuesRelabelConfig struct {
@@ -134,6 +138,8 @@ type ValuesRelabelConfig struct {
 	SourceLabels []string `yaml:"sourceLabels,omitempty"`
 	TargetLabel  string   `yaml:"targetLabel,omitempty"`
 	Replacement  string   `yaml:"replacement,omitempty"`
+	Modulus      uint64   `yaml:"modulus,omitempty"`
+	Separator    string   `yaml:"separator,omitempty"`
 }
 
 type AdditionalScrapeConfig struct {
@@ -152,7 +158,7 @@ type PrometheusSpec struct {
 	ListenLocal                             bool                      `yaml:"listenLocal,omitempty"`
 	EnableAdminAPI                          bool                      `yaml:"enableAdminAPI,omitempty"`
 	Image                                   *Image                    `yaml:"image,omitempty"`
-	Tolerations                             []interface{}             `yaml:"tolerations,omitempty"`
+	Tolerations                             []corev1.Toleration       `yaml:"tolerations,omitempty"`
 	AlertingEndpoints                       []interface{}             `yaml:"alertingEndpoints,omitempty"`
 	ExternalLabels                          map[string]string         `yaml:"externalLabels,omitempty"`
 	ReplicaExternalLabelName                string                    `yaml:"replicaExternalLabelName,omitempty"`
@@ -188,7 +194,7 @@ type PrometheusSpec struct {
 	RemoteRead                              []interface{}             `yaml:"remoteRead,omitempty"`
 	RemoteWrite                             []*RemoteWrite            `yaml:"remoteWrite,omitempty"`
 	RemoteWriteDashboards                   bool                      `yaml:"remoteWriteDashboards,omitempty"`
-	Resources                               struct{}                  `yaml:"resources,omitempty"`
+	Resources                               *k8s.Resources            `yaml:"resources,omitempty"`
 	StorageSpec                             *StorageSpec              `yaml:"storageSpec,omitempty"`
 	AdditionalScrapeConfigs                 []*AdditionalScrapeConfig `yaml:"additionalScrapeConfigs,omitempty"`
 	AdditionalAlertManagerConfigs           []interface{}             `yaml:"additionalAlertManagerConfigs,omitempty"`

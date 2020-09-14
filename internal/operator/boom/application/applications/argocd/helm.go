@@ -1,12 +1,13 @@
 package argocd
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
 	"github.com/caos/orbos/internal/utils/helper"
 	"strings"
 
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
+
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/customimage"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/helm"
@@ -14,20 +15,25 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) ([]interface{}, error) {
-	addedSecrets := customimage.GetSecrets(toolsetCRDSpec.Argocd)
-	repoSecrets := repository.GetSecrets(toolsetCRDSpec.Argocd)
-	credSecrets := credential.GetSecrets(toolsetCRDSpec.Argocd)
+func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
+	secrets := make([]interface{}, 0)
+	if toolsetCRDSpec.Reconciling == nil {
+		return secrets, nil
+	}
+	customimagesecrets := customimage.GetSecrets(toolsetCRDSpec.Reconciling)
+	repoSecrets := repository.GetSecrets(toolsetCRDSpec.Reconciling)
+	credSecrets := credential.GetSecrets(toolsetCRDSpec.Reconciling)
 
-	addedSecrets = append(addedSecrets, repoSecrets...)
-	addedSecrets = append(addedSecrets, credSecrets...)
-	return addedSecrets, nil
+	secrets = append(secrets, customimagesecrets...)
+	secrets = append(secrets, repoSecrets...)
+	secrets = append(secrets, credSecrets...)
+	return secrets, nil
 }
 
-func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec, resultFilePath string) error {
-	spec := toolsetCRDSpec.Argocd
+func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled && toolsetCRDSpec.Reconciling.CustomImage.ImagePullSecret != "" {
+		spec := toolsetCRDSpec.Reconciling
 
-	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		if spec.CustomImage.GopassStores != nil && len(spec.CustomImage.GopassStores) > 0 {
 			if err := customimage.AddPostStartFromSpec(spec, resultFilePath); err != nil {
 				return err
@@ -53,11 +59,14 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 	return nil
 }
 
-func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.Argocd
-
+func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
 	values := helm.DefaultValues(imageTags)
+	if toolsetCRDSpec.Reconciling == nil {
+		return values
+	}
+
+	spec := toolsetCRDSpec.Reconciling
 	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		conf := customimage.FromSpec(spec, imageTags)
 		values.RepoServer.Image = &helm.Image{
@@ -116,6 +125,12 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 			values.Server.Config.Dex = conf.Connectors
 
 			values.Dex = helm.DefaultDexValues(imageTags)
+
+			if spec.NodeSelector != nil {
+				for k, v := range spec.NodeSelector {
+					values.Dex.NodeSelector[k] = v
+				}
+			}
 			values.Server.Config.URL = strings.Join([]string{"https://", spec.Network.Domain}, "")
 		}
 	}
@@ -148,6 +163,47 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 		}
 
 		values.Configs.KnownHosts.Data["ssh_known_hosts"] = knownHostsStr
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.Dex.NodeSelector[k] = v
+			values.RepoServer.NodeSelector[k] = v
+			values.Redis.NodeSelector[k] = v
+			values.Controller.NodeSelector[k] = v
+			values.Server.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			t := tol
+			values.Dex.Tolerations = append(values.Dex.Tolerations, t)
+			values.RepoServer.Tolerations = append(values.RepoServer.Tolerations, t)
+			values.Redis.Tolerations = append(values.Redis.Tolerations, t)
+			values.Controller.Tolerations = append(values.Controller.Tolerations, t)
+			values.Server.Tolerations = append(values.Server.Tolerations, t)
+		}
+	}
+
+	if spec.Redis != nil && spec.Redis.Resources != nil {
+		values.Redis.Resources = spec.Redis.Resources
+	}
+
+	if spec.Dex != nil && spec.Dex.Resources != nil {
+		values.Dex.Resources = spec.Dex.Resources
+	}
+
+	if spec.RepoServer != nil && spec.RepoServer.Resources != nil {
+		values.RepoServer.Resources = spec.RepoServer.Resources
+	}
+
+	if spec.Server != nil && spec.Server.Resources != nil {
+		values.Server.Resources = spec.Server.Resources
+	}
+
+	if spec.Controller != nil && spec.Controller.Resources != nil {
+		values.Controller.Resources = spec.Controller.Resources
 	}
 
 	return values

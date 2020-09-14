@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/admin"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
@@ -28,9 +28,19 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 	secrets := make([]interface{}, 0)
 
 	if !helper2.IsExistentClientSecret(adminSpec.ExistingSecret) {
-		data := map[string]string{
-			getUserKey():     adminSpec.Username.Value,
-			getPasswordKey(): adminSpec.Password.Value,
+		if adminSpec.Username.Value == "" && adminSpec.Password.Value == "" {
+			return secrets
+		}
+
+		data := make(map[string]string, 0)
+		if adminSpec.Username.Value != "" {
+			key := getUserKey()
+			data[key] = adminSpec.Username.Value
+		}
+		if adminSpec.Password.Value != "" {
+			key := getPasswordKey()
+			data[key] = adminSpec.Password.Value
+
 		}
 
 		conf := &resources.SecretConfig{
@@ -47,12 +57,14 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 
 func GetConfig(adminSpec *admin.Admin) *helm.Admin {
 	if helper2.IsExistentClientSecret(adminSpec.ExistingSecret) {
-
 		return &helm.Admin{
 			ExistingSecret: adminSpec.ExistingSecret.Name,
 			UserKey:        adminSpec.ExistingSecret.IDKey,
 			PasswordKey:    adminSpec.ExistingSecret.SecretKey,
 		}
+	}
+	if len(GetSecrets(adminSpec)) == 0 {
+		return nil
 	}
 
 	return &helm.Admin{

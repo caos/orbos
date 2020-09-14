@@ -1,5 +1,7 @@
 package helm
 
+import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+
 type Image struct {
 	Repository string `yaml:"repository"`
 	Tag        string `yaml:"tag"`
@@ -51,7 +53,6 @@ type Values struct {
 	Image                 *Image            `yaml:"image"`
 	Service               *Service          `yaml:"service"`
 	Prometheus            *Prometheus       `yaml:"prometheus"`
-	Resources             interface{}       `yaml:"resources"`
 	ServiceAccount        *ServiceAccount   `yaml:"serviceAccount"`
 	SecurityContext       *SecurityContext  `yaml:"securityContext"`
 	Rbac                  *Rbac             `yaml:"rbac"`
@@ -64,4 +65,5 @@ type Values struct {
 	ExtraHostVolumeMounts interface{}       `yaml:"extraHostVolumeMounts"`
 	Configmaps            interface{}       `yaml:"configmaps"`
 	PodLabels             map[string]string `yaml:"podLabels"`
+	Resources             *k8s.Resources    `yaml:"resources"`
 }

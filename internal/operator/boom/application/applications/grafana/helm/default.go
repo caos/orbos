@@ -1,12 +1,15 @@
 package helm
 
-import prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
-
-import "github.com/caos/orbos/internal/operator/boom/application/applications/grafanastandalone"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
 
 func DefaultValues(imageTags map[string]string) *Values {
 	grafana := &GrafanaValues{
-		Image: &grafanastandalone.Image{
+		Image: &Image{
 			Repository: "grafana/grafana",
 			Tag:        imageTags["grafana/grafana"],
 			PullPolicy: "IfNotPresent",
@@ -38,7 +41,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Size:        "10Gi",
 			Finalizers:  []string{"kubernetes.io/pvc-protection"},
 		},
-		TestFramework: &grafanastandalone.TestFramework{
+		TestFramework: &TestFramework{
 			Enabled: false,
 			Image:   "dduportal/bats",
 			Tag:     imageTags["dduportal/bats"],
@@ -63,6 +66,17 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		Env: map[string]string{
 			"GF_SERVER_ROOT_URL": "%(protocol)s://%(domain)s/",
+		},
+		NodeSelector: map[string]string{},
+		Resources: &k8s.Resources{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("300Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("50m"),
+				corev1.ResourceMemory: resource.MustParse("200Mi"),
+			},
 		},
 	}
 

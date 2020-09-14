@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -34,7 +33,6 @@ func main() {
 
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")
-	repoURL := flag.String("repourl", "", "Repository URL")
 	ignorePorts := flag.String("ignore-ports", "", "Comma separated list of firewall ports that are ignored")
 	nodeAgentID := flag.String("id", "", "The managed machines ID")
 
@@ -45,7 +43,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *repoURL == "" || *nodeAgentID == "" {
+	if *nodeAgentID == "" {
 		panic("flags --repourl and --id are required")
 	}
 	monitor := mntr.Monitor{
@@ -62,7 +60,6 @@ func main() {
 		"version":     version,
 		"commit":      gitCommit,
 		"verbose":     *verbose,
-		"repourl":     *repoURL,
 		"nodeAgentID": *nodeAgentID,
 	}).Info("Node Agent is starting")
 
@@ -71,20 +68,20 @@ func main() {
 		panic(err)
 	}
 
-	repoKeyPath := "/etc/nodeagent/repokey"
-	repoKey, err := ioutil.ReadFile(repoKeyPath)
+	repoKey, err := nodeagent.RepoKey()
 	if err != nil {
-		panic(fmt.Sprintf("repokey not found at %s", repoKeyPath))
+		panic(err)
 	}
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
 	conv := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
 
-	ctx := context.Background()
-	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch", *repoURL)
-	if err := gitClient.Init(repoKey); err != nil {
-		panic(err)
+	gitClient := git.New(context.Background(), monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
+
+	var portsSlice []string
+	if len(*ignorePorts) > 0 {
+		portsSlice = strings.Split(*ignorePorts, ",")
 	}
 
 	itFunc := nodeagent.Iterator(
@@ -92,7 +89,7 @@ func main() {
 		gitClient,
 		gitCommit,
 		*nodeAgentID,
-		firewall.Ensurer(monitor, os.OperatingSystem, strings.Split(*ignorePorts, ",")),
+		firewall.Ensurer(monitor, os.OperatingSystem, portsSlice),
 		conv,
 		conv.Init())
 

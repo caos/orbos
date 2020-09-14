@@ -1,15 +1,11 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/operator/boom/cmd"
+	"github.com/caos/orbos/cmd/orbctl/cmds"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
-	"github.com/caos/orbos/internal/utils/orbgit"
-	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
@@ -40,97 +36,27 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, errFunc := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "takeoff",
-		}
-
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
-		defer cleanUp()
-		if err != nil {
-			return err
-		}
-
-		allKubeconfigs := make([]string, 0)
-		foundOrbiter, err := existsFileInGit(gitClient, "orbiter.yml")
-		if err != nil {
-			return err
-		}
-		if foundOrbiter {
-			orbiterConfig := &start.OrbiterConfig{
-				Recur:            recur,
-				Destroy:          destroy,
-				Deploy:           deploy,
-				Verbose:          verbose,
-				Version:          version,
-				OrbConfigPath:    orbConfig.Path,
-				GitCommit:        gitCommit,
-				IngestionAddress: ingestionAddress,
-			}
-
-			kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
-			if err != nil {
-				return err
-			}
-			allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
-		} else {
-			if kubeconfig == "" {
-				return errors.New("Error to deploy BOOM as no kubeconfig is provided")
-			}
-			value, err := ioutil.ReadFile(kubeconfig)
-			if err != nil {
-				return err
-			}
-			allKubeconfigs = append(allKubeconfigs, string(value))
-		}
-
-		for _, kubeconfig := range allKubeconfigs {
-			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
-			if k8sClient.Available() {
-				if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
-					monitor.Info("failed to apply common resources into k8s-cluster")
-					return err
-				}
-				monitor.Info("Applied common resources")
-
-				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-					monitor.Info("failed to apply configuration resources into k8s-cluster")
-					return err
-				}
-				monitor.Info("Applied configuration resources")
-			} else {
-				monitor.Info("Failed to connect to k8s")
-			}
-
-			if err := deployBoom(monitor, gitClient, &kubeconfig); err != nil {
-				return err
-			}
-		}
-		return nil
+		return cmds.Takeoff(
+			monitor,
+			ctx,
+			orbConfig,
+			gitClient,
+			recur,
+			destroy,
+			deploy,
+			verbose,
+			ingestionAddress,
+			version,
+			gitCommit,
+			kubeconfig,
+		)
 	}
 	return cmd
-}
-
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
-	foundBoom, err := existsFileInGit(gitClient, "boom.yml")
-	if err != nil {
-		return err
-	}
-	if foundBoom {
-		if err := cmd.Reconcile(monitor, kubeconfig, version); err != nil {
-			return err
-		}
-	} else {
-		monitor.Info("No BOOM deployed as no boom.yml present")
-	}
-	return nil
 }
 
 func StartOrbiter(rv RootValues) *cobra.Command {
@@ -149,7 +75,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", true, "Ensure the desired state continously")
-	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
+	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -157,21 +83,12 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, errFunc := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
 
-		gitClientConf := &orbgit.Config{
-			Comitter:  "orbctl",
-			Email:     "orbctl@caos.ch",
-			OrbConfig: orbConfig,
-			Action:    "takeoff",
-		}
-
-		gitClient, cleanUp, err := orbgit.NewGitClient(ctx, monitor, gitClientConf)
-		defer cleanUp()
-		if err != nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
@@ -186,7 +103,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
+		_, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
 		return err
 	}
 	return cmd
@@ -206,7 +123,7 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, errFunc := rv()
+		_, monitor, orbConfig, _, errFunc := rv()
 		if errFunc != nil {
 			return errFunc(cmd)
 		}
@@ -216,14 +133,29 @@ func StartBoom(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func existsFileInGit(g *git.Client, path string) (bool, error) {
-	if err := g.Clone(); err != nil {
-		return false, err
-	}
+func StartZitadel(rv RootValues) *cobra.Command {
+	var (
+		kubeconfig string
+		cmd        = &cobra.Command{
+			Use:   "zitadel",
+			Short: "Launch a zitadel operator",
+			Long:  "Ensures a desired state",
+		}
+	)
+	flags := cmd.Flags()
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
 
-	of := g.Read(path)
-	if of != nil && len(of) > 0 {
-		return true, nil
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		_, monitor, orbConfig, _, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
+		}
+
+		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+		if k8sClient.Available() {
+			return start.Zitadel(monitor, orbConfig.Path, k8sClient)
+		}
+		return nil
 	}
-	return false, nil
+	return cmd
 }

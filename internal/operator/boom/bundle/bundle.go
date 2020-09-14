@@ -3,7 +3,7 @@ package bundle
 import (
 	"errors"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"sync"
 
 	"github.com/caos/orbos/internal/operator/boom/metrics"
@@ -103,7 +103,7 @@ func (b *Bundle) AddApplication(app application.Application) error {
 	return nil
 }
 
-func (b *Bundle) Reconcile(currentResourceList []*clientgo.Resource, spec *v1beta1.ToolsetSpec) error {
+func (b *Bundle) Reconcile(currentResourceList []*clientgo.Resource, spec *v1beta2.ToolsetSpec) error {
 
 	applicationCount := 0
 	// go through list of application until every application is reconciled
@@ -132,7 +132,7 @@ func (b *Bundle) Reconcile(currentResourceList []*clientgo.Resource, spec *v1bet
 	return nil
 }
 
-func (b *Bundle) ReconcileApplication(currentResourceList []*clientgo.Resource, appName name.Application, spec *v1beta1.ToolsetSpec, wg *sync.WaitGroup, errChan chan error) {
+func (b *Bundle) ReconcileApplication(currentResourceList []*clientgo.Resource, appName name.Application, spec *v1beta2.ToolsetSpec, wg *sync.WaitGroup, errChan chan error) {
 	defer wg.Done()
 
 	logFields := map[string]interface{}{

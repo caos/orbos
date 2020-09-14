@@ -27,6 +27,7 @@ type PackageManager struct {
 	monitor   mntr.Monitor
 	os        OperatingSystem
 	installed map[string]string
+	systemd   *SystemD
 }
 
 func (p *PackageManager) RefreshInstalled() error {
@@ -47,8 +48,7 @@ func (p *PackageManager) RefreshInstalled() error {
 
 func (p *PackageManager) Init() error {
 
-	p.monitor.Info("Updating packages")
-
+	p.monitor.Debug("Initializing package manager")
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
@@ -61,12 +61,12 @@ func (p *PackageManager) Init() error {
 		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
 	}
 
-	p.monitor.Info("Packages are updated")
+	p.monitor.Debug("Package manager initialized")
 	return nil
 }
 
-func NewPackageManager(monitor mntr.Monitor, os OperatingSystem) *PackageManager {
-	return &PackageManager{monitor, os, nil}
+func NewPackageManager(monitor mntr.Monitor, os OperatingSystem, systemd *SystemD) *PackageManager {
+	return &PackageManager{monitor, os, nil, systemd}
 }
 
 func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Software, error) {

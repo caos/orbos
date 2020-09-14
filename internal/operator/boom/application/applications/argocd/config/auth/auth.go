@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"strings"
 
 	"github.com/caos/orbos/mntr"
@@ -19,18 +19,18 @@ type connector struct {
 	Config interface{}
 }
 
-func GetDexConfigFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Connectors {
+func GetDexConfigFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) *Connectors {
 	logFields := map[string]interface{}{
 		"application": "argocd",
 	}
 
 	connectors := make([]*connector, 0)
 
-	if spec.Auth == nil || (spec.Auth.OIDC == nil && spec.Auth.GithubConnector == nil && spec.Auth.GoogleConnector == nil && spec.Auth.GitlabConnector == nil) ||
-		(spec.Auth.OIDC.ClientSecret == nil || (spec.Auth.OIDC.ClientSecret.Value == "" && (spec.Auth.OIDC.ExistingClientSecretSecret == nil || spec.Auth.OIDC.ExistingClientSecretSecret.Name == "")) &&
-			(spec.Auth.GithubConnector.Config.ClientSecret == nil || (spec.Auth.GithubConnector.Config.ClientSecret.Value == "" && (spec.Auth.GithubConnector.Config.ExistingClientSecretSecret == nil || spec.Auth.GithubConnector.Config.ExistingClientSecretSecret.Name == ""))) ||
-			(spec.Auth.GitlabConnector.Config.ClientSecret == nil || (spec.Auth.GitlabConnector.Config.ClientSecret.Value == "" && (spec.Auth.GitlabConnector.Config.ExistingClientSecretSecret == nil || spec.Auth.GitlabConnector.Config.ExistingClientSecretSecret.Name == ""))) ||
-			(spec.Auth.GoogleConnector.Config.ClientSecret == nil || (spec.Auth.GoogleConnector.Config.ClientSecret.Value == "" && (spec.Auth.GoogleConnector.Config.ExistingClientSecretSecret == nil || spec.Auth.GoogleConnector.Config.ExistingClientSecretSecret.Name == "")))) {
+	if spec.Auth == nil ||
+		((spec.Auth.OIDC == nil || (spec.Auth.OIDC.ClientSecret == nil || spec.Auth.OIDC.ClientSecret.Value == "") && (spec.Auth.OIDC.ExistingClientSecretSecret == nil || spec.Auth.OIDC.ExistingClientSecretSecret.Name == "")) &&
+			(spec.Auth.GithubConnector == nil || (spec.Auth.GithubConnector.Config.ClientSecret == nil || spec.Auth.GithubConnector.Config.ClientSecret.Value == "") && (spec.Auth.GithubConnector.Config.ExistingClientSecretSecret == nil || spec.Auth.GithubConnector.Config.ExistingClientSecretSecret.Name == "")) &&
+			(spec.Auth.GitlabConnector == nil || (spec.Auth.GitlabConnector.Config.ClientSecret == nil || spec.Auth.GitlabConnector.Config.ClientSecret.Value == "") && (spec.Auth.GitlabConnector.Config.ExistingClientSecretSecret == nil || spec.Auth.GitlabConnector.Config.ExistingClientSecretSecret.Name == "")) &&
+			(spec.Auth.GoogleConnector == nil || (spec.Auth.GoogleConnector.Config.ClientSecret == nil || spec.Auth.GoogleConnector.Config.ClientSecret.Value == "") && (spec.Auth.GoogleConnector.Config.ExistingClientSecretSecret == nil || spec.Auth.GoogleConnector.Config.ExistingClientSecretSecret.Name == ""))) {
 		return &Connectors{Connectors: connectors}
 	}
 
@@ -42,7 +42,7 @@ func GetDexConfigFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Connectors
 
 	if spec.Auth.GithubConnector != nil {
 		github, err := getGithub(spec.Auth.GithubConnector, redirect)
-		if err == nil {
+		if err == nil && github != nil {
 			connectors = append(connectors, &connector{
 				Name:   spec.Auth.GithubConnector.Name,
 				ID:     spec.Auth.GithubConnector.ID,
@@ -56,7 +56,7 @@ func GetDexConfigFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Connectors
 
 	if spec.Auth.GitlabConnector != nil {
 		gitlab, err := getGitlab(spec.Auth.GitlabConnector, redirect)
-		if err == nil {
+		if err == nil && gitlab != nil {
 			connectors = append(connectors, &connector{
 				Name:   spec.Auth.GitlabConnector.Name,
 				ID:     spec.Auth.GitlabConnector.ID,
@@ -70,7 +70,7 @@ func GetDexConfigFromSpec(monitor mntr.Monitor, spec *argocd.Argocd) *Connectors
 
 	if spec.Auth.GoogleConnector != nil {
 		google, err := getGoogle(spec.Auth.GoogleConnector, redirect)
-		if err == nil {
+		if err == nil && google != nil {
 			connectors = append(connectors, &connector{
 				Name:   spec.Auth.GoogleConnector.Name,
 				ID:     spec.Auth.GoogleConnector.ID,

@@ -6,32 +6,47 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"gopkg.in/yaml.v3"
 	"io"
 	"strings"
 	"unicode/utf8"
+
+	"github.com/caos/orbos/internal/utils/clientgo"
+	"gopkg.in/yaml.v3"
 )
 
+var Masterkey = "empty"
+
+// Secret: Secret handled with orbctl so no manual changes are required
 type Secret struct {
+	//Encryption algorithm used for the secret
 	Encryption string
-	Encoding   string
-	Value      string
-	Masterkey  string `yaml:"-"`
+	//Encoding algorithm used for the secret
+	Encoding string
+	//Encrypted and encoded Value
+	Value string
 }
 type secretAlias Secret
 
+// Existing: Used secret that has to be already existing in the cluster
 type Existing struct {
-	Name         string `json:"name" yaml:"name"`
-	Key          string `json:"key" yaml:"key"`
-	InternalName string `json:"internalName" yaml:"internalName"`
+	//Name of the Secret
+	Name string `json:"name" yaml:"name"`
+	//Key in the secret from where the value should be used
+	Key string `json:"key" yaml:"key"`
+	//Name which should be used internally, should be unique for the volume and volumemounts
+	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
+// Existing: Used secret that has to be already existing in the cluster and should contain id/username and secret/password
 type ExistingIDSecret struct {
-	Name         string `json:"name" yaml:"name"`
-	IDKey        string `json:"idKey" yaml:"idKey"`
-	SecretKey    string `json:"secretKey" yaml:"secretKey"`
-	InternalName string `json:"internalName" yaml:"internalName"`
+	//Name of the Secret
+	Name string `json:"name" yaml:"name"`
+	//Key in the secret which contains the ID
+	IDKey string `json:"idKey" yaml:"idKey"`
+	//Key in the secret which contains the secret
+	SecretKey string `json:"secretKey" yaml:"secretKey"`
+	//Name which should be used internally, should be unique for the volume and volumemounts
+	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
 func (s *Secret) UnmarshalYAMLWithExisting(node *yaml.Node, existing *Existing) error {
@@ -67,13 +82,13 @@ func unmarshal(s *Secret) (string, error) {
 		return "", err
 	}
 
-	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return "", nil
 		//return errors.New("Master key size must be between 1 and 32 characters")
 	}
 
 	masterKeyLocal := make([]byte, 32)
-	for idx, char := range []byte(strings.Trim(s.Masterkey, "\n")) {
+	for idx, char := range []byte(strings.Trim(Masterkey, "\n")) {
 		masterKeyLocal[idx] = char
 	}
 
@@ -103,7 +118,7 @@ func unmarshal(s *Secret) (string, error) {
 }
 
 func (s *Secret) Unmarshal(masterkey string) error {
-	s.Masterkey = masterkey
+	Masterkey = masterkey
 
 	unm, err := unmarshal(s)
 	if err != nil {
@@ -126,7 +141,7 @@ func (s *Secret) UnmarshalYAML(node *yaml.Node) error {
 	s.Encryption = alias.Encryption
 	s.Value = alias.Value
 
-	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return nil
 		//return errors.New("Master key size must be between 1 and 32 characters")
 	}
@@ -149,12 +164,12 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 		return nil, nil
 	}
 
-	if len(s.Masterkey) < 1 || len(s.Masterkey) > 32 {
+	if len(Masterkey) < 1 || len(Masterkey) > 32 {
 		return nil, errors.New("Master key size must be between 1 and 32 characters")
 	}
 
 	masterKey := make([]byte, 32)
-	for idx, char := range []byte(strings.Trim(s.Masterkey, "\n")) {
+	for idx, char := range []byte(strings.Trim(Masterkey, "\n")) {
 		masterKey[idx] = char
 	}
 
@@ -172,20 +187,12 @@ func (s *Secret) MarshalYAML() (interface{}, error) {
 	stream := cipher.NewCFBEncrypter(c, iv)
 	stream.XORKeyStream(cipherText[aes.BlockSize:], []byte(s.Value))
 
-	return &secretAlias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText), Masterkey: ""}, nil
+	return &secretAlias{Encryption: "AES256", Encoding: "Base64", Value: base64.URLEncoding.EncodeToString(cipherText)}, nil
 }
 
-func ClearEmpty(secret *Secret) *Secret {
-	if secret != nil && secret.Value == "" {
-		return nil
-	}
-	return secret
-}
-
-func InitIfNil(sec *Secret, masterkey string) *Secret {
+func InitIfNil(sec *Secret) *Secret {
 	if sec == nil {
-		return &Secret{Masterkey: masterkey}
+		return &Secret{}
 	}
-	sec.Masterkey = masterkey
 	return sec
 }

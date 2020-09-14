@@ -2,6 +2,10 @@ package helm
 
 import (
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func DefaultDexValues(imageTags map[string]string) *Dex {
@@ -115,12 +119,34 @@ func DefaultValues(imageTags map[string]string) *Values {
 			ClusterAdminAccess: &ClusterAdminAccess{
 				Enabled: true,
 			},
+			NodeSelector: map[string]string{},
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+			},
 		},
 		Dex: &Dex{
 			Enabled: false,
 			ServiceAccount: &ServiceAccount{
 				Create: false,
 				Name:   "argocd-dex-server",
+			},
+			NodeSelector: map[string]string{},
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
 			},
 		},
 		Redis: &Redis{
@@ -133,6 +159,17 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 			ContainerPort: 6379,
 			ServicePort:   6379,
+			NodeSelector:  map[string]string{},
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+			},
 		},
 		RedisHA: &RedisHA{
 			Enabled:           false,
@@ -201,6 +238,17 @@ func DefaultValues(imageTags map[string]string) *Values {
 				URL:                         "https://argocd.example.com",
 				ApplicationInstanceLabelKey: "argocd.argoproj.io/instance",
 			},
+			NodeSelector: map[string]string{},
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
+			},
 		},
 		RepoServer: &RepoServer{
 			Image: &Image{
@@ -239,6 +287,17 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 			ServiceAccount: &ServiceAccount{
 				Create: false,
+			},
+			NodeSelector: map[string]string{},
+			Resources: &k8s.Resources{
+				Limits: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("100m"),
+					corev1.ResourceMemory: resource.MustParse("256Mi"),
+				},
+				Requests: corev1.ResourceList{
+					corev1.ResourceCPU:    resource.MustParse("50m"),
+					corev1.ResourceMemory: resource.MustParse("128Mi"),
+				},
 			},
 		},
 		Configs: &Configs{

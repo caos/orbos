@@ -1,6 +1,7 @@
 package clientgo
 
 import (
+	"context"
 	"fmt"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -85,7 +86,7 @@ func (a ResourceSorter) Less(i, j int) bool {
 
 func GetResource(group, version, resource, namespace, name string) (*Resource, error) {
 	res := schema.GroupVersionResource{Group: group, Version: version, Resource: resource}
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +96,7 @@ func GetResource(group, version, resource, namespace, name string) (*Resource, e
 		return nil, err
 	}
 
-	result, err := clientset.Resource(res).Namespace(namespace).Get(name, metav1.GetOptions{})
+	result, err := clientset.Resource(res).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func GetResource(group, version, resource, namespace, name string) (*Resource, e
 
 func DeleteResource(resource *Resource) error {
 	res := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Resource}
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return err
 	}
@@ -127,9 +128,9 @@ func DeleteResource(resource *Resource) error {
 
 	clientRes := client.Resource(res)
 	if resource.Namespace != "" {
-		err = clientRes.Namespace(resource.Namespace).Delete(resource.Name, deleteOptions)
+		err = clientRes.Namespace(resource.Namespace).Delete(context.Background(), resource.Name, *deleteOptions)
 	} else {
-		err = clientRes.Delete(resource.Name, deleteOptions)
+		err = clientRes.Delete(context.Background(), resource.Name, *deleteOptions)
 	}
 
 	return errors.Wrapf(err, "Error while deleting %s", resource.Name)
@@ -140,7 +141,7 @@ func GetGroupVersionsResources(monitor mntr.Monitor, filtersResources []string) 
 		"action": "groupVersionResources",
 	})
 
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +202,7 @@ func ListResources(monitor mntr.Monitor, resourceInfoList []*ResourceInfo, label
 	listMonitor := monitor.WithFields(map[string]interface{}{
 		"action": "listResources",
 	})
-	conf, err := getClusterConfig()
+	conf, err := GetClusterConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +235,7 @@ func ListResources(monitor mntr.Monitor, resourceInfoList []*ResourceInfo, label
 			LabelSelector: labelSelector,
 			Limit:         Limit,
 		}
-		list, err := client.Resource(gvr).List(listOpt)
+		list, err := client.Resource(gvr).List(context.Background(), listOpt)
 		if err != nil {
 			continue
 		}
@@ -246,7 +247,7 @@ func ListResources(monitor mntr.Monitor, resourceInfoList []*ResourceInfo, label
 
 		for list.GetContinue() != "" {
 			listOpt.Continue = list.GetContinue()
-			listInternal, err := client.Resource(gvr).List(listOpt)
+			listInternal, err := client.Resource(gvr).List(context.Background(), listOpt)
 			if err != nil {
 				continue
 			}

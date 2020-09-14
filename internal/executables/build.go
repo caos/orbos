@@ -9,24 +9,42 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	"github.com/pkg/errors"
 )
 
 var Unpack func(string)
 
-type Bin struct {
+type Buildable struct {
 	MainDir string
 	OutDir  string
 	Env     map[string]string
 }
 
-type BuiltTuple func() (bin Bin, err error)
+type BuiltTuple func() (bin Buildable, err error)
 
-func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bins ...Bin) <-chan BuiltTuple {
-	return deriveFmap(curryBuild(debug, gitCommit, version, githubClientID, githubClientSecret), toChan(bins))
+func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bins ...Buildable) <-chan BuiltTuple {
+	return deriveFmapBuild(curryBuild(debug, gitCommit, version, githubClientID, githubClientSecret), toBuildableChan(bins))
 }
 
-func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecret string) func(bin Bin) BuiltTuple {
+func PackableBuilds(builds <-chan BuiltTuple) <-chan PackableTuple {
+	return deriveFmapPackableFromBuild(packableBuild, builds)
+}
+
+func packableBuild(built BuiltTuple) PackableTuple {
+	bin, err := built()
+
+	file, openErr := os.Open(bin.OutDir)
+	err = helpers.Concat(err, openErr)
+
+	return deriveTuplePackable(&packable{
+		key:  filepath.Base(bin.MainDir),
+		data: file,
+	}, err)
+}
+
+func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecret string) func(bin Buildable) BuiltTuple {
 	debugCurried := deriveCurryDebug(build)(debug)
 	commitCurried := deriveCurryCommit(debugCurried)(gitCommit)
 	tagCurried := deriveCurryTag(commitCurried)(version)
@@ -35,8 +53,8 @@ func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecr
 	return githubClientSecretCurried
 }
 
-func toChan(bins []Bin) <-chan Bin {
-	binChan := make(chan Bin, 0)
+func toBuildableChan(bins []Buildable) <-chan Buildable {
+	binChan := make(chan Buildable, 0)
 	go func() {
 		for _, bin := range bins {
 			binChan <- bin
@@ -46,7 +64,15 @@ func toChan(bins []Bin) <-chan Bin {
 	return binChan
 }
 
-func build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bin Bin) BuiltTuple {
+func build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+
+	defer func() {
+		if _, err := bt(); err != nil {
+			fmt.Printf("Building %s failed\n", bin.OutDir)
+			return
+		}
+		fmt.Printf("Successfully built %s\n", bin.OutDir)
+	}()
 
 	if bin.OutDir == "" {
 		bin.OutDir = filepath.Join(os.TempDir(), filepath.Base(bin.MainDir))
@@ -79,7 +105,7 @@ func build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 	return builtTuple(errors.Wrapf(cmd.Run(), "building %s failed", bin.OutDir))
 }
 
-func builtTupleFunc(bin Bin) func(error) BuiltTuple {
+func builtTupleFunc(bin Buildable) func(error) BuiltTuple {
 	return func(err error) BuiltTuple {
 		return deriveTupleBuilt(bin, err)
 	}

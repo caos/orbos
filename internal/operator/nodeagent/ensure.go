@@ -4,16 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 )
-
-func init() {
-	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
-		panic(err)
-	}
-}
 
 type FirewallEnsurer interface {
 	Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
@@ -44,62 +41,100 @@ type Installer interface {
 	fmt.Stringer
 }
 
-func query(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter, desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
+func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
 
-	curr.Commit = commit
-	curr.NodeIsReady = isReady()
-
-	defer persistReadyness(curr.NodeIsReady)
-
-	var (
-		err            error
-		ensureFirewall func() error
-	)
-	curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
-	if err != nil {
-		return noop, err
+	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
+		panic(err)
 	}
 
-	installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
-	if err != nil {
-		return noop, err
-	}
+	return func(desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
+		curr.Commit = commit
 
-	curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
-		return dep.Current
-	})
+		curr.NodeIsReady = isReady()
 
-	divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-	if len(divergentSw) == 0 && ensureFirewall == nil {
-		curr.NodeIsReady = true
-		return noop, nil
-	}
+		defer persistReadyness(curr.NodeIsReady)
 
-	if curr.NodeIsReady {
-		curr.NodeIsReady = false
-		monitor.Changed("Marked node as unready")
-		return noop, nil
-	}
-
-	return func() error {
-
-		if !desired.ChangesAllowed {
-			monitor.Info("Changes are not allowed")
-			return nil
+		who, err := exec.Command("who", "-b").CombinedOutput()
+		if err != nil {
+			return noop, err
 		}
 
-		if ensureFirewall != nil {
-			if err := ensureFirewall(); err != nil {
-				return err
+		dateTime := strings.Fields(string(who))[2:]
+		str := strings.Join(dateTime, " ") + ":00"
+		t, err := time.Parse("2006-01-02 15:04:05", str)
+		if err != nil {
+			return noop, err
+		}
+
+		curr.Booted = t
+
+		if desired.RebootRequired.After(curr.Booted) {
+			curr.NodeIsReady = false
+			if !desired.ChangesAllowed {
+				monitor.Info("Not rebooting as changes are not allowed")
+				return noop, nil
 			}
-			curr.Open = desired.Firewall.Ports()
-			monitor.Changed("Firewall changed")
+			return func() error {
+				monitor.Info("Rebooting")
+				if err := exec.Command("sudo", "reboot").Run(); err != nil {
+					return fmt.Errorf("rebooting system failed: %w", err)
+				}
+				return nil
+			}, nil
 		}
 
-		ensureDep := ensureFunc(monitor, conv, curr)
-		_, err := deriveTraverse(ensureDep, divergentSw)
-		return err
-	}, nil
+		var ensureFirewall func() error
+		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
+		if err != nil {
+			return noop, err
+		}
+
+		installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
+		if err != nil {
+			return noop, err
+		}
+
+		curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
+			return dep.Current
+		})
+
+		divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
+		if len(divergentSw) == 0 && ensureFirewall == nil {
+			curr.NodeIsReady = true
+			return noop, nil
+		}
+
+		if curr.NodeIsReady {
+			curr.NodeIsReady = false
+			monitor.Changed("Marked node as unready")
+			return noop, nil
+		}
+
+		return func() error {
+
+			if !desired.ChangesAllowed {
+				monitor.Info("Not ensuring anything as changes are not allowed")
+				return nil
+			}
+
+			if ensureFirewall != nil {
+				if err := ensureFirewall(); err != nil {
+					return err
+				}
+				curr.Open = desired.Firewall.Ports()
+				monitor.Changed("firewall changed")
+			}
+
+			if len(divergentSw) > 0 {
+				monitor.WithField("software", deriveFmap(func(dependency *Dependency) string {
+					return dependency.Installer.String()
+				}, divergentSw)).Info("Ensuring software")
+			}
+			ensureDep := ensureFunc(monitor, conv, curr)
+			_, err := deriveTraverse(ensureDep, divergentSw)
+			return err
+		}, nil
+	}
 }
 
 func queryFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error) {
@@ -115,7 +150,7 @@ func queryFunc(monitor mntr.Monitor) func(dep *Dependency) (*Dependency, error) 
 }
 
 func divergent(dep *Dependency) bool {
-	return !dep.Desired.Equals(dep.Current)
+	return !dep.Desired.Equals(common.Package{}) && !dep.Desired.Equals(dep.Current)
 }
 
 func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurrent) func(dep *Dependency) (*Dependency, error) {

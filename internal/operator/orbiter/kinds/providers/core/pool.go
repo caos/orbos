@@ -1,60 +1,37 @@
 package core
 
-import "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+import (
+	"sync"
 
-type EnsuredGroup interface {
-	EnsureMembers(machine []infra.Machine) error
-	AddMember(machine infra.Machine) error
-}
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+)
 
+// TODO: Do we still need this?
 type MachinesService interface {
 	ListPools() ([]string, error)
-	List(poolName string, active bool) (infra.Machines, error)
+	List(poolName string) (infra.Machines, error)
 	Create(poolName string) (infra.Machine, error)
 }
 
-type pool struct {
-	poolName string
-	groups   []EnsuredGroup
-	svc      MachinesService
-}
-
-func NewPool(poolName string, groups []EnsuredGroup, svc MachinesService) infra.Pool {
-	return &pool{poolName, groups, svc}
-}
-
-func (p *pool) EnsureMembers() error {
-
-	machines, err := p.GetMachines(true)
+func Each(svc MachinesService, do func(pool string, machine infra.Machine) error) error {
+	pools, err := svc.ListPools()
 	if err != nil {
 		return err
 	}
 
-	for _, group := range p.groups {
-		if err := group.EnsureMembers(machines); err != nil {
-			return err
+	var wg sync.WaitGroup
+	for _, pool := range pools {
+		machines, listErr := svc.List(pool)
+		err = helpers.Concat(err, listErr)
+		for _, machine := range machines {
+			wg.Add(1)
+			go func(p string, m infra.Machine) {
+				defer wg.Done()
+				err = helpers.Concat(err, do(p, m))
+			}(pool, machine)
 		}
 	}
-
-	return nil
-}
-
-func (p *pool) GetMachines(active bool) (infra.Machines, error) {
-	return p.svc.List(p.poolName, active)
-}
-
-func (p *pool) AddMachine() (infra.Machine, error) {
-
-	newMachine, err := p.svc.Create(p.poolName)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, group := range p.groups {
-		if err := group.AddMember(newMachine); err != nil {
-			return nil, err
-		}
-	}
-
-	return newMachine, nil
+	wg.Wait()
+	return err
 }

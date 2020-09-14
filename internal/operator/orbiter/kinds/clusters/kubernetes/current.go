@@ -1,12 +1,37 @@
 package kubernetes
 
 import (
+	"sync"
+
 	"github.com/caos/orbos/internal/tree"
 )
 
 type CurrentCluster struct {
 	Status   string
-	Machines map[string]*Machine `yaml:"machines"`
+	Machines Machines
+}
+
+type Machines struct {
+	// M is exported for yaml (de)serialization and not intended to be accessed by any other code outside this package
+	M   map[string]*Machine `yaml:",inline"`
+	mux sync.Mutex          `yaml:"-"`
+}
+
+func (m *Machines) Delete(id string) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+	delete(m.M, id)
+}
+
+func (m *Machines) Set(id string, machine *Machine) {
+	m.mux.Lock()
+	defer m.mux.Unlock()
+
+	if m.M == nil {
+		m.M = make(map[string]*Machine)
+	}
+
+	m.M[id] = machine
 }
 
 type Current struct {
@@ -15,12 +40,13 @@ type Current struct {
 }
 
 type Machine struct {
-	Joined             bool
-	Online             bool
-	Ready              bool
-	FirewallIsReady    bool
-	NodeAgentIsRunning bool
-	Metadata           MachineMetadata `yaml:",inline"`
+	Joined          bool
+	Updating        bool
+	Rebooting       bool
+	Ready           bool
+	FirewallIsReady bool
+	Unknown         bool
+	Metadata        MachineMetadata `yaml:",inline"`
 }
 
 type Versions struct {

@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: boom-debug
+  namespace: caos-system
+  labels:
+    app.kubernetes.io/component: boom
+    app.kubernetes.io/instance: boom
+    app.kubernetes.io/managed-by: boom.caos.ch
+    app.kubernetes.io/part-of: orbos
+spec:
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 2112
+      targetPort: 2112
+    - name: debug
+      protocol: TCP
+      port: 2346
+      targetPort: 2345
+  selector:
+    app.kubernetes.io/instance: boom
+  type: ClusterIP

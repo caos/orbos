@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/tree"
 	core "k8s.io/api/core/v1"
 
@@ -15,16 +14,13 @@ import (
 var deployErrors int
 
 func AdaptFunc(
-	orb *orb.Orb,
-	orbiterCommit string,
 	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
 	destroyProviders func() (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
-		finished := false
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -33,9 +29,9 @@ func AdaptFunc(
 			migrate = true
 		}
 
-		desiredKind, err := parseDesiredV0(desiredTree, orb.Masterkey)
+		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -48,11 +44,17 @@ func AdaptFunc(
 			migrate = true
 		}
 
-		if err := desiredKind.validate(); err != nil {
-			return nil, nil, migrate, err
+		for _, workers := range desiredKind.Spec.Workers {
+			if workers.Taints == nil {
+				taints := Taints(make([]Taint, 0))
+				workers.Taints = &taints
+				migrate = true
+			}
 		}
 
-		initializeNecessarySecrets(desiredKind, orb.Masterkey)
+		if err := desiredKind.validate(); err != nil {
+			return nil, nil, nil, migrate, err
+		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
@@ -61,7 +63,7 @@ func AdaptFunc(
 		whitelist([]*orbiter.CIDR{&desiredKind.Spec.Networking.PodCidr})
 
 		var kc *string
-		if desiredKind.Spec.Kubeconfig.Value != "" {
+		if desiredKind.Spec.Kubeconfig != nil && desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
 		k8sClient := NewK8sClient(monitor, kc)
@@ -78,17 +80,6 @@ func AdaptFunc(
 				panic(err)
 			}
 
-			if err := EnsureConfigArtifacts(monitor, k8sClient, orb); err != nil {
-				deployErrors++
-				monitor.WithFields(map[string]interface{}{
-					"count": deployErrors,
-					"error": err.Error(),
-				}).Info("Applying configuration failed, awaiting next iteration")
-			}
-			if deployErrors > 50 {
-				panic(err)
-			}
-
 			if err := EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
@@ -98,7 +89,7 @@ func AdaptFunc(
 			} else {
 				if oneoff {
 					monitor.Info("Deployed Orbiter takes over control")
-					finished = true
+					finishedChan <- struct{}{}
 				}
 				deployErrors = 0
 			}
@@ -116,11 +107,7 @@ func AdaptFunc(
 			Current: current,
 		}
 
-		go func() {
-			finishedChan <- finished
-		}()
-
-		return func(nodeAgentsCurrent map[string]*common.NodeAgentCurrent, nodeAgentsDesired map[string]*common.NodeAgentSpec, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
+		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, providers map[string]interface{}) (orbiter.EnsureFunc, error) {
 				ensureFunc, err := query(
 					monitor,
 					clusterID,
@@ -130,9 +117,6 @@ func AdaptFunc(
 					nodeAgentsCurrent,
 					nodeAgentsDesired,
 					k8sClient,
-					orb.URL,
-					orb.Repokey,
-					orbiterCommit,
 					oneoff)
 				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 			}, func() error {
@@ -148,10 +132,10 @@ func AdaptFunc(
 				desiredKind.Spec.Kubeconfig = nil
 
 				destroyFunc := func() error {
-					return destroy(monitor, providers, k8sClient)
+					return destroy(providers, k8sClient)
 				}
 
 				return orbiter.DestroyFuncGoroutine(destroyFunc)
-			}, migrate, nil
+			}, orbiter.NoopConfigure, migrate, nil
 	}
 }

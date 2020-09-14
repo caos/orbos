@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/google"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/google"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"io/ioutil"
 	"os"
@@ -35,6 +35,10 @@ func getGoogle(spec *google.Connector, redirect string) (interface{}, error) {
 	serviceAccountJSON, err := helper2.GetSecretValue(spec.Config.ServiceAccountJSON, spec.Config.ExistingServiceAccountJSONSecret)
 	if err != nil {
 		return nil, err
+	}
+
+	if clientID == "" || clientSecret == "" {
+		return nil, nil
 	}
 
 	// get base path

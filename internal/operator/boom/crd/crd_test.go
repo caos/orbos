@@ -1,6 +1,7 @@
 package crd
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/migrate"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
 	"os"
@@ -24,8 +25,7 @@ import (
 var (
 	fullToolset = &v1beta1.Toolset{
 		Metadata: &v1beta1.Metadata{
-			Name:      "caos_test",
-			Namespace: "caos-system",
+			Name: "caos_test",
 		},
 		Spec: &v1beta1.ToolsetSpec{
 			Ambassador: &v1beta1.Ambassador{
@@ -50,8 +50,7 @@ var (
 	}
 	changedToolset = &v1beta1.Toolset{
 		Metadata: &v1beta1.Metadata{
-			Name:      "caos_test",
-			Namespace: "caos-system",
+			Name: "caos_test",
 		},
 		Spec: &v1beta1.ToolsetSpec{
 			Ambassador: &v1beta1.Ambassador{
@@ -94,7 +93,7 @@ var (
 	}
 )
 
-func newCrd() (Crd, error) {
+func newCrd() *Crd {
 
 	monitor := mntr.Monitor{
 		OnInfo:   mntr.LogMessage,
@@ -104,13 +103,12 @@ func newCrd() (Crd, error) {
 
 	conf := &config.Config{
 		Monitor: monitor,
-		Version: "v1beta1",
 	}
 
 	return New(conf)
 }
 
-func setBundle(c Crd, bundle name.Bundle) func() {
+func setBundle(c *Crd, bundle name.Bundle) func() {
 	basePath := "/tmp/crd_test"
 	os.MkdirAll(basePath, os.ModePerm)
 
@@ -140,16 +138,14 @@ func init() {
 }
 
 func TestNew(t *testing.T) {
-	crd, err := newCrd()
-	assert.NoError(t, err)
+	crd := newCrd()
 	assert.NotNil(t, crd)
 }
 
 func TestNew_noexistendbundle(t *testing.T) {
 	var nonexistent name.Bundle
 	nonexistent = "nonexistent"
-	crd, err := newCrd()
-	assert.NoError(t, err)
+	crd := newCrd()
 	clean := setBundle(crd, nonexistent)
 	defer clean()
 	assert.Error(t, crd.GetStatus())
@@ -157,7 +153,7 @@ func TestNew_noexistendbundle(t *testing.T) {
 }
 
 func TestCrd_Reconcile_initial(t *testing.T) {
-	crd, err := newCrd()
+	crd := newCrd()
 	clean := setBundle(crd, bundles.Empty)
 	defer clean()
 	bundle := crd.GetBundle()
@@ -165,18 +161,17 @@ func TestCrd_Reconcile_initial(t *testing.T) {
 	app := application.NewTestYAMLApplication(t)
 	app.SetDeploy(fullToolset.Spec, true).SetGetYaml(fullToolset.Spec, "test")
 	bundle.AddApplication(app.Application())
-	assert.NoError(t, err)
 	assert.NotNil(t, crd)
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, fullToolset)
-	err = crd.GetStatus()
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	err := crd.GetStatus()
 	assert.NoError(t, err)
 }
 
 func TestCrd_Reconcile_changed(t *testing.T) {
-	crd, err := newCrd()
+	crd := newCrd()
 	clean := setBundle(crd, bundles.Empty)
 	defer clean()
 	bundle := crd.GetBundle()
@@ -184,24 +179,23 @@ func TestCrd_Reconcile_changed(t *testing.T) {
 	app := application.NewTestYAMLApplication(t)
 	app.SetDeploy(fullToolset.Spec, true).SetGetYaml(fullToolset.Spec, "test")
 	bundle.AddApplication(app.Application())
-	assert.NoError(t, err)
 	assert.NotNil(t, crd)
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, fullToolset)
-	err = crd.GetStatus()
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	err := crd.GetStatus()
 	assert.NoError(t, err)
 
 	//changed crd
 	app.SetDeploy(changedToolset.Spec, true).SetGetYaml(changedToolset.Spec, "test2")
-	crd.Reconcile(resources, changedToolset)
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(changedToolset))
 	err = crd.GetStatus()
 	assert.NoError(t, err)
 }
 
 func TestCrd_Reconcile_changedDelete(t *testing.T) {
-	crd, err := newCrd()
+	crd := newCrd()
 	clean := setBundle(crd, bundles.Empty)
 	defer clean()
 	bundle := crd.GetBundle()
@@ -209,24 +203,23 @@ func TestCrd_Reconcile_changedDelete(t *testing.T) {
 	app := application.NewTestYAMLApplication(t)
 	app.SetDeploy(fullToolset.Spec, true).SetGetYaml(fullToolset.Spec, "test")
 	bundle.AddApplication(app.Application())
-	assert.NoError(t, err)
 	assert.NotNil(t, crd)
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, fullToolset)
-	err = crd.GetStatus()
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	err := crd.GetStatus()
 	assert.NoError(t, err)
 
 	//changed crd
 	app.SetDeploy(changedToolset.Spec, false).SetGetYaml(changedToolset.Spec, "test2")
-	crd.Reconcile(resources, changedToolset)
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(changedToolset))
 	err = crd.GetStatus()
 	assert.NoError(t, err)
 }
 
 func TestCrd_Reconcile_initialNotDeployed(t *testing.T) {
-	crd, err := newCrd()
+	crd := newCrd()
 	clean := setBundle(crd, bundles.Empty)
 	defer clean()
 	bundle := crd.GetBundle()
@@ -234,44 +227,17 @@ func TestCrd_Reconcile_initialNotDeployed(t *testing.T) {
 	app := application.NewTestYAMLApplication(t)
 	app.SetDeploy(fullToolset.Spec, false).SetGetYaml(fullToolset.Spec, "test")
 	bundle.AddApplication(app.Application())
-	assert.NoError(t, err)
 	assert.NotNil(t, crd)
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, fullToolset)
-	err = crd.GetStatus()
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	err := crd.GetStatus()
 	assert.NoError(t, err)
 
 	//changed crd
 	app.SetDeploy(changedToolset.Spec, false).SetGetYaml(changedToolset.Spec, "test2")
-	crd.Reconcile(resources, changedToolset)
+	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(changedToolset))
 	err = crd.GetStatus()
 	assert.NoError(t, err)
-}
-
-func TestCrd_ReconcileWithFunc(t *testing.T) {
-	assert.True(t, true)
-
-	//TODO: correct function to read crd
-
-	// crd, err := newCrd()
-	// setBundle(crd, bundles.Empty)
-	// bundle := crd.GetBundle()
-
-	// app := application.NewTestYAMLApplication(t)
-	// app.AllowSetAppliedSpec(fullToolset.Spec).SetChanged(fullToolset.Spec, true).SetDeploy(fullToolset.Spec, false).SetInitial(true).SetGetYaml("test")
-	// bundle.AddApplication(app.Application())
-	// assert.NoError(t, err)
-	// assert.NotNil(t, crd)
-
-	// getToolsetFunc := func(obj runtime.Object) error {
-	// 	obj = fullToolset
-	// 	return nil
-	// }
-
-	// // when crd is nil
-	// crd.ReconcileWithFunc(getToolsetFunc)
-	// err = crd.GetStatus()
-	// assert.NoError(t, err)
 }

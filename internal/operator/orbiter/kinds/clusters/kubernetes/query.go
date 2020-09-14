@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -16,35 +16,14 @@ func query(
 	desired *DesiredV0,
 	current *CurrentCluster,
 	providerCurrents map[string]interface{},
-	nodeAgentsCurrent map[string]*common.NodeAgentCurrent,
-	nodeAgentsDesired map[string]*common.NodeAgentSpec,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
+	nodeAgentsDesired *common.DesiredNodeAgents,
 	k8sClient *Client,
-	repoURL string,
-	repoKey string,
-	orbiterCommit string,
 	oneoff bool) (orbiter.EnsureFunc, error) {
 
-	current.Machines = make(map[string]*Machine)
-
-	cloudPools := make(map[string]map[string]infra.Pool)
-	var kubeAPIAddress infra.Address
-
-	for providerName, provider := range providerCurrents {
-		if cloudPools[providerName] == nil {
-			cloudPools[providerName] = make(map[string]infra.Pool)
-		}
-		prov := provider.(infra.ProviderCurrent)
-		providerPools := prov.Pools()
-		providerIngresses := prov.Ingresses()
-		for providerPoolName, providerPool := range providerPools {
-			cloudPools[providerName][providerPoolName] = providerPool
-			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
-				kubeAPIAddress = providerIngresses["kubeapi"]
-				monitor.WithFields(map[string]interface{}{
-					"address": kubeAPIAddress,
-				}).Debug("Found kubernetes api address")
-			}
-		}
+	cloudPools, kubeAPIAddress, err := GetProviderInfos(desired, providerCurrents)
+	if err != nil {
+		panic(err)
 	}
 
 	if err := poolIsConfigured(&desired.Spec.ControlPlane, cloudPools); err != nil {
@@ -57,13 +36,6 @@ func query(
 		}
 	}
 
-	queryNodeAgent, installNodeAgent := nodeAgentFuncs(
-		monitor,
-		orbiterCommit,
-		repoURL,
-		repoKey,
-	)
-
 	controlplane, controlplaneMachines, workers, workerMachines, initializeMachine, uninitializeMachine, err := initialize(
 		monitor,
 		current,
@@ -73,16 +45,14 @@ func query(
 		cloudPools,
 		k8sClient,
 		func(machine *initializedMachine) {
-			queryNodeAgent(machine)
-			firewallFunc(monitor, *desired, kubeAPIAddress.Port)(machine)
+			firewallFunc(monitor, *desired)(machine)
 		})
 
-	return func(psf push.Func) error {
-		return ensure(
+	return func(psf api.PushDesiredFunc) *orbiter.EnsureResult {
+		return orbiter.ToEnsureResult(ensure(
 			monitor,
 			clusterID,
 			desired,
-			current,
 			kubeAPIAddress,
 			psf,
 			k8sClient,
@@ -92,8 +62,7 @@ func query(
 			workers,
 			workerMachines,
 			initializeMachine,
-			uninitializeMachine,
-			installNodeAgent)
+			uninitializeMachine))
 	}, err
 }
 
@@ -106,4 +75,29 @@ func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) er
 		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Provider, poolSpec.Pool)
 	}
 	return nil
+}
+
+func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{}) (map[string]map[string]infra.Pool, *infra.Address, error) {
+	cloudPools := make(map[string]map[string]infra.Pool)
+	var kubeAPIAddress *infra.Address
+
+	for providerName, provider := range providerCurrents {
+		if cloudPools[providerName] == nil {
+			cloudPools[providerName] = make(map[string]infra.Pool)
+		}
+		prov := provider.(infra.ProviderCurrent)
+		providerPools := prov.Pools()
+		providerIngresses := prov.Ingresses()
+		for providerPoolName, providerPool := range providerPools {
+			cloudPools[providerName][providerPoolName] = providerPool
+			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == providerPoolName {
+				var ok bool
+				kubeAPIAddress, ok = providerIngresses["kubeapi"]
+				if !ok {
+					return nil, nil, errors.New("no externally reachable address named kubeapi found")
+				}
+			}
+		}
+	}
+	return cloudPools, kubeAPIAddress, nil
 }

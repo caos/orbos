@@ -3,6 +3,7 @@ package dep
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
@@ -31,36 +32,21 @@ func (p *PackageManager) debSpecificUpdatePackages() error {
 
 func (p *PackageManager) remSpecificUpdatePackages() error {
 
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-
-	cmd := exec.Command("yum", "update", "-y")
-	cmd.Stderr = errBuf
-	if p.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "updating yum packages failed with stderr %s", errBuf.String())
-	}
-
-	if err := p.rembasedInstall(&Software{Package: "yum-utils"}); err != nil {
+	if err := ioutil.WriteFile("/etc/cron.daily/yumupdate.sh", []byte(`#!/bin/bash
+YUM=/usr/bin/yum
+$YUM -y -R 120 -d 3 -e 3 update yum
+$YUM -y -R 10 -e 3 -d 3 update
+`), 0777); err != nil {
 		return err
 	}
 
-	errBuf.Reset()
-	cmd = exec.Command("package-cleanup", "--cleandupes", "-y")
-	cmd.Stderr = errBuf
-	if p.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "cleaning up duplicates failed with stderr %s", errBuf.String())
+	if err := p.rembasedInstall(
+		&Software{Package: "yum-utils"},
+		&Software{Package: "yum-plugin-versionlock"},
+		&Software{Package: "firewalld"},
+	); err != nil {
+		return err
 	}
 
-	return p.rembasedInstall(
-		&Software{Package: "yum-versionlock"},
-		&Software{Package: "firewalld"},
-	)
+	return p.systemd.Enable("firewalld")
 }

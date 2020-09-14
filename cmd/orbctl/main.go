@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/stores/github"
 	"math/rand"
 	"os"
+
+	"github.com/caos/orbos/internal/stores/github"
 )
 
 var (
@@ -34,14 +35,28 @@ func main() {
 	takeoff.AddCommand(
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
+		StartZitadel(rootValues),
 	)
+
+	nodes := NodeCommand()
+	nodes.AddCommand(
+		ReplaceCommand(rootValues),
+		RebootCommand(rootValues),
+		ExecCommand(rootValues),
+	)
+
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
 		EditCommand(rootValues),
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
+		APICommand(rootValues),
+		BackupListCommand(rootValues),
+		RestoreCommand(rootValues),
+		BackupCommand(rootValues),
 		takeoff,
+		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {

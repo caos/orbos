@@ -2,6 +2,8 @@ package cri
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"regexp"
 	"strings"
 
@@ -48,6 +50,10 @@ func (s *criDep) Equals(other nodeagent.Installer) bool {
 }
 
 func (c *criDep) Current() (pkg common.Package, err error) {
+	if !c.systemd.Active("docker") {
+		return pkg, err
+	}
+
 	installed, err := c.manager.CurrentVersions("docker-ce")
 	if err != nil {
 		return pkg, err
@@ -57,10 +63,28 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 		version = fmt.Sprintf("%s %s %s", version, pkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(pkg.Version))
 	}
 	pkg.Version = strings.TrimSpace(version)
+
+	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
+	if pkg.Config == nil {
+		pkg.Config = map[string]string{}
+	}
+	pkg.Config["daemon.json"] = string(daemonJson)
 	return pkg, nil
 }
 
-func (c *criDep) Ensure(uninstall common.Package, install common.Package) error {
+func (c *criDep) Ensure(_ common.Package, install common.Package) error {
+
+	if install.Config == nil {
+		return errors.New("Docker config is nil")
+	}
+
+	if err := os.MkdirAll("/etc/docker", 600); err != nil {
+		return err
+	}
+
+	if err := ioutil.WriteFile("/etc/docker/daemon.json", []byte(install.Config["daemon.json"]), 600); err != nil {
+		return err
+	}
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {

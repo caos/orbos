@@ -7,35 +7,59 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 )
 
-type cmpSvcLB struct {
-	original      core.MachinesService
+var _ core.MachinesService = (*CmpSvcLB)(nil)
+
+type CmpSvcLB struct {
+	core.MachinesService
 	dynamic       dynamic.Current
-	nodeagents    map[string]*common.NodeAgentSpec
-	notifymasters string
+	nodeagents    *common.DesiredNodeAgents
+	notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string
+	vrrp          bool
+	vip           func(*dynamic.VIP) string
 }
 
-func MachinesService(svc core.MachinesService, curr dynamic.Current, nodeagents map[string]*common.NodeAgentSpec, notifymasters string) core.MachinesService {
-	return &cmpSvcLB{
-		original:   svc,
-		dynamic:    curr,
-		nodeagents: nodeagents,
+func MachinesService(svc core.MachinesService, curr dynamic.Current, vrrp bool, notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) *CmpSvcLB {
+	return &CmpSvcLB{
+		MachinesService: svc,
+		dynamic:         curr,
+		notifyMasters:   notifyMasters,
+		vrrp:            vrrp,
+		vip:             vip,
 	}
 }
 
-func (i *cmpSvcLB) ListPools() ([]string, error) {
-	return i.original.ListPools()
+func (i *CmpSvcLB) InitializeDesiredNodeAgents() (bool, error) {
+	pools, err := i.ListPools()
+	if err != nil {
+		return false, err
+	}
+
+	done := true
+	for _, pool := range pools {
+		poolDone, err := i.desire(pool)
+		if !poolDone {
+			done = false
+		}
+		if err != nil {
+			return done, err
+		}
+	}
+	return done, nil
 }
 
-func (i *cmpSvcLB) List(poolName string, active bool) (infra.Machines, error) {
-	return i.original.List(poolName, active)
-}
-
-func (i *cmpSvcLB) Create(poolName string) (infra.Machine, error) {
-	cmp, err := i.original.Create(poolName)
+func (i *CmpSvcLB) Create(poolName string) (infra.Machine, error) {
+	cmp, err := i.MachinesService.Create(poolName)
 	if err != nil {
 		return nil, err
 	}
 
-	desireFunc := desire(poolName, true, i.dynamic, i.original, i.nodeagents, i.notifymasters)
-	return machine(cmp, desireFunc), desireFunc()
+	_, err = i.desire(poolName)
+	return machine(cmp, func() error {
+		_, err := i.desire(poolName)
+		return err
+	}), err
+}
+
+func (c *CmpSvcLB) desire(selfPool string) (bool, error) {
+	return c.dynamic.Current.Desire(selfPool, c, c.vrrp, c.notifyMasters, c.vip)
 }
