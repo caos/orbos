@@ -57,20 +57,28 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 
 		if grafana.Auth != nil {
 			if grafana.Auth.GenericOAuth != nil {
-				ret["grafana.sso.oauth.clientid"] = secret.InitIfNil(grafana.Auth.GenericOAuth.ClientID)
-				ret["grafana.sso.oauth.clientsecret"] = secret.InitIfNil(grafana.Auth.GenericOAuth.ClientSecret)
+				grafana.Auth.GenericOAuth.ClientID = secret.InitIfNil(grafana.Auth.GenericOAuth.ClientID)
+				ret["grafana.sso.oauth.clientid"] = grafana.Auth.GenericOAuth.ClientID
+				grafana.Auth.GenericOAuth.ClientSecret = secret.InitIfNil(grafana.Auth.GenericOAuth.ClientSecret)
+				ret["grafana.sso.oauth.clientsecret"] = grafana.Auth.GenericOAuth.ClientSecret
 			}
 			if grafana.Auth.Google != nil {
-				ret["grafana.sso.google.clientid"] = secret.InitIfNil(grafana.Auth.Google.ClientID)
-				ret["grafana.sso.google.clientsecret"] = secret.InitIfNil(grafana.Auth.Google.ClientSecret)
+				grafana.Auth.Google.ClientID = secret.InitIfNil(grafana.Auth.Google.ClientID)
+				ret["grafana.sso.google.clientid"] = grafana.Auth.Google.ClientID
+				grafana.Auth.Google.ClientSecret = secret.InitIfNil(grafana.Auth.Google.ClientSecret)
+				ret["grafana.sso.google.clientsecret"] = grafana.Auth.Google.ClientSecret
 			}
 			if grafana.Auth.Github != nil {
-				ret["grafana.sso.github.clientid"] = secret.InitIfNil(grafana.Auth.Github.ClientID)
-				ret["grafana.sso.github.clientsecret"] = secret.InitIfNil(grafana.Auth.Github.ClientSecret)
+				grafana.Auth.Github.ClientID = secret.InitIfNil(grafana.Auth.Github.ClientID)
+				ret["grafana.sso.github.clientid"] = grafana.Auth.Github.ClientID
+				grafana.Auth.Github.ClientSecret = secret.InitIfNil(grafana.Auth.Github.ClientSecret)
+				ret["grafana.sso.github.clientsecret"] = grafana.Auth.Github.ClientSecret
 			}
 			if grafana.Auth.Gitlab != nil {
-				ret["grafana.sso.gitlab.clientid"] = secret.InitIfNil(grafana.Auth.Gitlab.ClientID)
-				ret["grafana.sso.gitlab.clientsecret"] = secret.InitIfNil(grafana.Auth.Gitlab.ClientSecret)
+				grafana.Auth.Gitlab.ClientID = secret.InitIfNil(grafana.Auth.Gitlab.ClientID)
+				ret["grafana.sso.gitlab.clientid"] = grafana.Auth.Gitlab.ClientID
+				grafana.Auth.Gitlab.ClientSecret = secret.InitIfNil(grafana.Auth.Gitlab.ClientSecret)
+				ret["grafana.sso.gitlab.clientsecret"] = grafana.Auth.Gitlab.ClientSecret
 			}
 		}
 	}
@@ -80,18 +88,31 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 		if argocd.Auth != nil {
 			auth := argocd.Auth
 			if auth.GoogleConnector != nil {
-				ret["argocd.sso.google.clientid"] = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientID)
-				ret["argocd.sso.google.clientsecret"] = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientSecret)
-				ret["argocd.sso.google.serviceaccountjson"] = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ServiceAccountJSON)
+				argocd.Auth.GoogleConnector.Config.ClientID = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientID)
+				ret["argocd.sso.google.clientid"] = argocd.Auth.GoogleConnector.Config.ClientID
+				argocd.Auth.GoogleConnector.Config.ClientSecret = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientSecret)
+				ret["argocd.sso.google.clientsecret"] = argocd.Auth.GoogleConnector.Config.ClientSecret
+				argocd.Auth.GoogleConnector.Config.ServiceAccountJSON = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ServiceAccountJSON)
+				ret["argocd.sso.google.serviceaccountjson"] = argocd.Auth.GoogleConnector.Config.ServiceAccountJSON
 			}
 			if auth.GitlabConnector != nil {
-				ret["argocd.sso.gitlab.clientid"] = secret.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientID)
-				ret["argocd.sso.gitlab.clientsecret"] = secret.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientSecret)
+				argocd.Auth.GitlabConnector.Config.ClientID = secret.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientID)
+				ret["argocd.sso.gitlab.clientid"] = argocd.Auth.GitlabConnector.Config.ClientID
+				argocd.Auth.GitlabConnector.Config.ClientSecret = secret.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientSecret)
+				ret["argocd.sso.gitlab.clientsecret"] = argocd.Auth.GitlabConnector.Config.ClientSecret
+			}
+			if auth.GithubConnector != nil {
+				argocd.Auth.GithubConnector.Config.ClientID = secret.InitIfNil(argocd.Auth.GithubConnector.Config.ClientID)
+				ret["argocd.sso.github.clientid"] = argocd.Auth.GithubConnector.Config.ClientID
+				argocd.Auth.GithubConnector.Config.ClientSecret = secret.InitIfNil(argocd.Auth.GithubConnector.Config.ClientSecret)
+				ret["argocd.sso.github.clientsecret"] = argocd.Auth.GithubConnector.Config.ClientSecret
 			}
 
 			if auth.OIDC != nil {
-				ret["argocd.sso.oidc.clientid"] = secret.InitIfNil(argocd.Auth.OIDC.ClientID)
-				ret["argocd.sso.oidc.clientsecret"] = secret.InitIfNil(argocd.Auth.OIDC.ClientSecret)
+				argocd.Auth.OIDC.ClientID = secret.InitIfNil(argocd.Auth.OIDC.ClientID)
+				ret["argocd.sso.oidc.clientid"] = argocd.Auth.OIDC.ClientID
+				argocd.Auth.OIDC.ClientSecret = secret.InitIfNil(argocd.Auth.OIDC.ClientSecret)
+				ret["argocd.sso.oidc.clientsecret"] = argocd.Auth.OIDC.ClientSecret
 			}
 		}
 		if argocd.Credentials != nil {

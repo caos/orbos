@@ -68,8 +68,6 @@ type Rbac struct {
 type CustomImage struct {
 	//Flag if custom argocd-image should get used with gopass
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	//Name of used imagePullSecret to pull customImage
-	ImagePullSecret string `json:"imagePullSecret,omitempty" yaml:"imagePullSecret,omitempty"`
 	//List of gopass stores which should get cloned by argocd on startup
 	GopassStores []*GopassStore `json:"gopassStores,omitempty" yaml:"gopassStores,omitempty"`
 }

@@ -33,6 +33,7 @@ func DefaultDexValues(imageTags map[string]string) *Dex {
 				EmptyDir: struct{}{},
 			},
 		},
+		NodeSelector:      map[string]string{},
 		ContainerPortHTTP: 5556,
 		ServicePortHTTP:   5556,
 		ContainerPortGrpc: 5557,

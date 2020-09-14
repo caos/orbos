@@ -109,7 +109,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 }
 
 func FromSpec(spec *reconciling.Reconciling, imageTags map[string]string) *CustomImage {
-	imageRepository := "docker.pkg.github.com/caos/argocd-secrets/argocd"
+	imageRepository := "ghcr.io/caos/argocd-secrets"
 
 	vols := make([]*SecretVolume, 0)
 	volMounts := make([]*VolumeMount, 0)
