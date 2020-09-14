@@ -65,7 +65,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 		},
 		Env: map[string]string{
-			"GF_SERVER_ROOT_URL": "%(protocol)s://%(domain)s/",
+			"GF_SERVER_ROOT_URL": "https://%(domain)s/",
 		},
 		NodeSelector: map[string]string{},
 		Resources: &k8s.Resources{
