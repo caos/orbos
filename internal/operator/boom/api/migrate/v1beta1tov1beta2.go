@@ -162,16 +162,23 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 			}
 			if oldSpec.Loki.Logs != nil {
 				newSpec.LogsPersisting.Logs = &v1beta2.Logs{
-					Ambassador:             oldSpec.Loki.Logs.Ambassador,
-					Grafana:                oldSpec.Loki.Logs.Grafana,
-					Argocd:                 oldSpec.Loki.Logs.Argocd,
-					KubeStateMetrics:       oldSpec.Loki.Logs.KubeStateMetrics,
-					PrometheusNodeExporter: oldSpec.Loki.Logs.PrometheusNodeExporter,
-					PrometheusOperator:     oldSpec.Loki.Logs.PrometheusOperator,
-					LoggingOperator:        oldSpec.Loki.Logs.LoggingOperator,
-					Loki:                   oldSpec.Loki.Logs.Loki,
-					Prometheus:             oldSpec.Loki.Logs.Prometheus,
+					Ambassador:                oldSpec.Loki.Logs.Ambassador,
+					Grafana:                   oldSpec.Loki.Logs.Grafana,
+					Argocd:                    oldSpec.Loki.Logs.Argocd,
+					KubeStateMetrics:          oldSpec.Loki.Logs.KubeStateMetrics,
+					PrometheusNodeExporter:    oldSpec.Loki.Logs.PrometheusNodeExporter,
+					PrometheusOperator:        oldSpec.Loki.Logs.PrometheusOperator,
+					LoggingOperator:           oldSpec.Loki.Logs.LoggingOperator,
+					Loki:                      oldSpec.Loki.Logs.Loki,
+					Prometheus:                oldSpec.Loki.Logs.Prometheus,
+					MetricsServer:             oldSpec.Loki.Logs.MetricsServer,
+					PrometheusSystemdExporter: oldSpec.Loki.Logs.PrometheusSystemdExporter,
 				}
+			}
+		}
+		if oldSpec.MetricsServer != nil {
+			newSpec.MetricsServer = &v1beta2.MetricsServer{
+				Deploy: oldSpec.MetricsServer.Deploy,
 			}
 		}
 		newToolset.Spec = newSpec
