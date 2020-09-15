@@ -1,9 +1,10 @@
 package helmcommand
 
 import (
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"path/filepath"
 	"strings"
+
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 type TemplateConfig struct {

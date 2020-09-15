@@ -106,6 +106,7 @@ func ListMachines(
 	map[string]infra.Machine,
 	error,
 ) {
+
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/GCEProvider":
 		return gce.ListMachines(

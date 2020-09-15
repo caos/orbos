@@ -1,0 +1,7 @@
+# Always validate the PR title AND all the commits
+titleAndCommits: false
+# Require at least one commit to be valid
+# this is only relevant when using commitsOnly: true or titleAndCommits: true,
+# which validate all commits by default
+anyCommit: true
+# Related docs https://github.com/zeke/semantic-pull-requests#configuration

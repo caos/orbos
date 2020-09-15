@@ -44,6 +44,14 @@ func AdaptFunc(
 			migrate = true
 		}
 
+		for _, workers := range desiredKind.Spec.Workers {
+			if workers.Taints == nil {
+				taints := Taints(make([]Taint, 0))
+				workers.Taints = &taints
+				migrate = true
+			}
+		}
+
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, nil, migrate, err
 		}

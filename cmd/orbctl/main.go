@@ -35,6 +35,7 @@ func main() {
 	takeoff.AddCommand(
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
+		StartZitadel(rootValues),
 	)
 
 	file := FileCommand()
@@ -44,15 +45,25 @@ func main() {
 		PatchCommand(rootValues),
 	)
 
+	nodes := NodeCommand()
+	nodes.AddCommand(
+		ReplaceCommand(rootValues),
+		RebootCommand(rootValues),
+		ExecCommand(rootValues),
+	)
+
 	rootCmd.AddCommand(
 		ReadSecretCommand(rootValues),
 		WriteSecretCommand(rootValues),
-		ExecCommand(rootValues),
 		TeardownCommand(rootValues),
 		ConfigCommand(rootValues),
 		APICommand(rootValues),
+		BackupListCommand(rootValues),
+		RestoreCommand(rootValues),
+		BackupCommand(rootValues),
 		takeoff,
 		file,
+		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {

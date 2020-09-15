@@ -14,19 +14,18 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func ensureScale(
+func ensureUpScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf api.SecretFunc,
-	controlplanePool initializedPool,
-	workerPools []initializedPool,
+	psf api.PushDesiredFunc,
+	controlplanePool *initializedPool,
+	workerPools []*initializedPool,
 	kubeAPI *infra.Address,
 	k8sVersion KubernetesVersion,
 	k8sClient *Client,
 	oneoff bool,
-	initializeMachine func(infra.Machine, initializedPool) initializedMachine,
-	uninitializeMachine uninitializeMachineFunc) (changed bool, err error) {
+	initializeMachine func(infra.Machine, *initializedPool) initializedMachine) (changed bool, err error) {
 
 	wCount := 0
 	for _, w := range workerPools {
@@ -40,41 +39,18 @@ func ensureScale(
 	var machines []*initializedMachine
 	upscalingDone := true
 	var wg sync.WaitGroup
-	alignPool := func(pool initializedPool, ensured func(int)) {
+	alignPool := func(pool *initializedPool, ensured func(int)) {
 		defer wg.Done()
 
-		existing, alignErr := pool.machines()
-		err = helpers.Concat(err, alignErr)
-		delta := pool.desired.Nodes - len(existing)
-		if delta > 0 {
+		if pool.upscaling > 0 {
 			upscalingDone = false
-			machines, alignErr := newMachines(pool.infra, delta)
+			machines, alignErr := newMachines(pool.infra, pool.upscaling)
 			if alignErr != nil {
 				err = helpers.Concat(err, alignErr)
 				return
 			}
 			for _, machine := range machines {
 				initializeMachine(machine, pool)
-			}
-		} else {
-			for _, machine := range existing[pool.desired.Nodes:] {
-				id := machine.infra.ID()
-				delErr := k8sClient.EnsureDeleted(id, machine.currentMachine, machine.infra, false)
-				if delErr != nil {
-					err = helpers.Concat(err, delErr)
-					return
-				}
-
-				rmErr := machine.infra.Remove()
-				if rmErr != nil {
-					err = helpers.Concat(err, rmErr)
-					return
-				}
-				uninitializeMachine(id)
-				monitor.WithFields(map[string]interface{}{
-					"machine": id,
-					"tier":    machine.pool.tier,
-				}).Changed("Machine removed")
 			}
 		}
 
@@ -134,17 +110,17 @@ nodes:
 
 		isJoinedControlPlane := machine.pool.tier == Controlplane && machine.currentMachine.Joined
 
-		if isJoinedControlPlane && machine.currentMachine.Online {
+		if isJoinedControlPlane && !machine.currentMachine.Updating && !machine.currentMachine.Rebooting {
 			certsCP = machine.infra
 			continue nodes
 		}
 
-		if isJoinedControlPlane && !machine.currentMachine.Online {
+		if isJoinedControlPlane && machine.node != nil && machine.node.Spec.Unschedulable {
 			machineMonitor.Info("Awaiting controlplane to become ready")
 			return false, nil
 		}
 
-		if machine.currentMachine.Online {
+		if machine.node != nil && !machine.node.Spec.Unschedulable {
 			continue nodes
 		}
 

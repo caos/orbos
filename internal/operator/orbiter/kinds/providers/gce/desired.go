@@ -53,12 +53,14 @@ type SSHKey struct {
 }
 
 type Spec struct {
-	Verbose bool
-	JSONKey *secret.Secret `yaml:",omitempty"`
-	Region  string
-	Zone    string
-	Pools   map[string]*Pool
-	SSHKey  *SSHKey
+	Verbose             bool
+	JSONKey             *secret.Secret `yaml:",omitempty"`
+	Region              string
+	Zone                string
+	Pools               map[string]*Pool
+	SSHKey              *SSHKey
+	RebootRequired      []string
+	ReplacementRequired []string
 }
 
 func (d Desired) validate() error {

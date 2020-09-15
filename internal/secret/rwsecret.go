@@ -6,12 +6,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/AlecAivazis/survey/v2"
+
 	"github.com/caos/orbos/internal/api"
 
 	"github.com/caos/orbos/internal/tree"
 	"gopkg.in/yaml.v3"
-
-	"github.com/manifoldco/promptui"
 
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/mntr"
@@ -20,6 +20,7 @@ import (
 const (
 	boom    string = "boom"
 	orbiter string = "orbiter"
+	zitadel string = "zitadel"
 	yml     string = "yml"
 )
 
@@ -74,9 +75,11 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, operator, newMasterKey
 	}()
 
 	if operator == "orbiter" {
-		return api.OrbiterSecretFunc(gitClient, desired)(monitor)
+		return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
 	} else if operator == "boom" {
-		return api.BoomSecretFunc(gitClient, desired)(monitor)
+		return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
+	} else if operator == zitadel {
+		return api.PushZitadelDesiredFunc(gitClient, desired)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -89,12 +92,20 @@ func Write(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc, path
 		return err
 	}
 
-	secret.Value = value
+	if secret == nil {
+		secret = &Secret{
+			Value: value,
+		}
+	} else {
+		secret.Value = value
+	}
 
 	if operator == "orbiter" {
-		return api.OrbiterSecretFunc(gitClient, tree)(monitor)
+		return api.PushOrbiterDesiredFunc(gitClient, tree)(monitor)
 	} else if operator == "boom" {
-		return api.BoomSecretFunc(gitClient, tree)(monitor)
+		return api.PushBoomDesiredFunc(gitClient, tree)(monitor)
+	} else if operator == zitadel {
+		return api.PushZitadelDesiredFunc(gitClient, tree)(monitor)
 	}
 
 	monitor.Info("No secrets written")
@@ -177,12 +188,26 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 		}
 	}
 
+	secretsZitadel, treeDesiredZitadel, err := getOperatorSecrets(monitor, zitadel, gitClient, secretFunc)
+	if err != nil {
+		return nil, nil, "", err
+	}
+	if secretsZitadel != nil && len(secretsZitadel) > 0 {
+		for k, v := range secretsZitadel {
+			if k != "" && v != nil {
+				secretsAll[k] = v
+			}
+		}
+	}
+
 	if path != "" {
 		operator := ""
 		if strings.HasPrefix(path, orbiter) {
 			operator = orbiter
 		} else if strings.HasPrefix(path, boom) {
 			operator = boom
+		} else if strings.HasPrefix(path, zitadel) {
+			operator = zitadel
 		} else {
 			return nil, nil, "", errors.New("Operator unknown")
 		}
@@ -199,21 +224,20 @@ func findSecret(monitor mntr.Monitor, gitClient *git.Client, secretFunc GetFunc,
 		return iDots < jDots || iDots == jDots && selectItems[i] < selectItems[j]
 	})
 
-	prompt := promptui.Select{
-		Label: "Select Secret",
-		Items: selectItems,
-	}
-
-	_, result, err := prompt.Run()
-	if err != nil {
+	var result string
+	if err := survey.AskOne(&survey.Select{
+		Message: "Select a secret:",
+		Options: selectItems,
+	}, &result, survey.WithValidator(survey.Required)); err != nil {
 		return nil, nil, "", err
 	}
-
 	sec, err := exactSecret(secretsAll, result)
 	if strings.HasPrefix(result, orbiter) {
 		return sec, treeDesiredOrbiter, orbiter, err
 	} else if strings.HasPrefix(result, boom) {
 		return sec, treeDesiredBoom, boom, err
+	} else if strings.HasPrefix(result, zitadel) {
+		return sec, treeDesiredZitadel, zitadel, err
 	}
 
 	return nil, nil, "", errors.New("Operator unknown")

@@ -32,55 +32,21 @@ func (p *PackageManager) debSpecificUpdatePackages() error {
 
 func (p *PackageManager) remSpecificUpdatePackages() error {
 
-	if err := ioutil.WriteFile("/etc/yum/yum-cron-hourly.conf", []byte(`
-[commands]
-update_cmd = default
-update_messages = yes
-download_updates = yes
-apply_updates = yes
-random_sleep = 0
-[emitters]
-system_name = None
-emit_via = stdio
-output_width = 80
-[email]
-email_from = root
-email_to = root
-email_host = localhost
-[groups]
-group_list = None
-group_package_types = mandatory, default
-[base]
-debuglevel = -2
-# skip_broken = True
-mdpolicy = group:main
-# assumeyes = True
-`), 0600); err != nil {
+	if err := ioutil.WriteFile("/etc/cron.daily/yumupdate.sh", []byte(`#!/bin/bash
+YUM=/usr/bin/yum
+$YUM -y -R 120 -d 3 -e 3 update yum
+$YUM -y -R 10 -e 3 -d 3 update
+`), 0777); err != nil {
 		return err
 	}
 
 	if err := p.rembasedInstall(
 		&Software{Package: "yum-utils"},
-		&Software{Package: "yum-versionlock"},
-		&Software{Package: "yum-cron"},
+		&Software{Package: "yum-plugin-versionlock"},
 		&Software{Package: "firewalld"},
 	); err != nil {
 		return err
 	}
 
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-
-	cmd := exec.Command("package-cleanup", "--cleandupes", "-y")
-	cmd.Stderr = errBuf
-	if p.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "cleaning up duplicates failed with stderr %s", errBuf.String())
-	}
-
-	return p.systemd.Enable("yum-cron")
-
+	return p.systemd.Enable("firewalld")
 }

@@ -52,17 +52,16 @@ func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 }
 
 type Machine struct {
-	ID       string
-	Hostname string
-	IP       orbiter.IPAddress
+	ID                  string
+	Hostname            string
+	IP                  orbiter.IPAddress
+	RebootRequired      bool
+	ReplacementRequired bool
 }
 
 func (c *Machine) validate() error {
 	if c.ID == "" {
 		return errors.New("No id provided")
-	}
-	if c.Hostname == "" {
-		return errors.New("No hostname provided")
 	}
 	return c.IP.Validate()
 }

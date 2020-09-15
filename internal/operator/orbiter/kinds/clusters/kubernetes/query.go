@@ -48,7 +48,7 @@ func query(
 			firewallFunc(monitor, *desired)(machine)
 		})
 
-	return func(psf api.SecretFunc) *orbiter.EnsureResult {
+	return func(psf api.PushDesiredFunc) *orbiter.EnsureResult {
 		return orbiter.ToEnsureResult(ensure(
 			monitor,
 			clusterID,

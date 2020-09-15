@@ -74,24 +74,21 @@ func (s *SystemD) Enable(binary string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.Command("systemctl", "daemon-reload")
+	cmd := exec.Command("systemctl", "enable", binary)
 	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "reloading systemd in order to use new %s failed with stderr %s", binary, errBuf.String())
 	}
 
-	errBuf.Reset()
-	cmd = exec.Command("systemctl", "enable", binary)
-	cmd.Stderr = errBuf
-	if s.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
+	if err := cmd.Run(); err != nil {
+		return errors.Wrapf(err, "enabling systemd unit %s failed with stderr %s", binary, errBuf.String())
 	}
-	return errors.Wrapf(cmd.Run(), "configuring systemd to manage %s failed with stderr %s", binary, errBuf.String())
+
+	if !s.Active(binary) {
+		return s.Start(binary)
+	}
+	return nil
 }
 
 func (s *SystemD) Active(binary string) bool {

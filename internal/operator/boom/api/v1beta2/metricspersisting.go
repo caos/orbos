@@ -1,6 +1,9 @@
 package v1beta2
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+)
 
 type MetricsPersisting struct {
 	//Flag if tool should be deployed
@@ -14,6 +17,14 @@ type MetricsPersisting struct {
 	Storage *storage.Spec `json:"storage,omitempty" yaml:"storage,omitempty"`
 	//Configuration to write to remote prometheus
 	RemoteWrite *RemoteWrite `json:"remoteWrite,omitempty" yaml:"remoteWrite,omitempty"`
+	//Static labels added to metrics
+	ExternalLabels map[string]string `json:"externalLabels,omitempty" yaml:"externalLabels,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run prometheus on nodes
+	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	//Resource requirements
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.
@@ -47,6 +58,24 @@ type RemoteWrite struct {
 	URL string `json:"url" yaml:"url"`
 	//Basic-auth-configuration to push metrics to remote prometheus
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty" yaml:"basicAuth,omitempty"`
+	//RelabelConfigs for remote write
+	RelabelConfigs []*RelabelConfig `json:"relabelConfigs,omitempty" yaml:"relabelConfigs,omitempty"`
+}
+type RelabelConfig struct {
+	//The source labels select values from existing labels. Their content is concatenated using the configured separator and matched against the configured regular expression for the replace, keep, and drop actions.
+	SourceLabels []string `json:"sourceLabels,omitempty" yaml:"sourceLabels,omitempty"`
+	//Separator placed between concatenated source label values. default is ';'.
+	Separator string `json:"separator,omitempty" yaml:"separator,omitempty"`
+	//Label to which the resulting value is written in a replace action. It is mandatory for replace actions. Regex capture groups are available.
+	TargetLabel string `json:"targetLabel,omitempty" yaml:"targetLabel,omitempty"`
+	//Regular expression against which the extracted value is matched. Default is '(.*)'
+	Regex string `json:"regex,omitempty" yaml:"regex,omitempty"`
+	//Modulus to take of the hash of the source label values.
+	Modulus string `json:"modulus,omitempty" yaml:"modulus,omitempty"`
+	//Replacement value against which a regex replace is performed if the regular expression matches. Regex capture groups are available. Default is '$1'
+	Replacement string `json:"replacement,omitempty" yaml:"replacement,omitempty"`
+	//Action to perform based on regex matching. Default is 'replace'
+	Action string `json:"action,omitempty" yaml:"action,omitempty"`
 }
 type BasicAuth struct {
 	//Username to push metrics to remote prometheus

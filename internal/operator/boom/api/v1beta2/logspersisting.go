@@ -1,6 +1,9 @@
 package v1beta2
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+)
 
 type LogsPersisting struct {
 	//Flag if tool should be deployed
@@ -15,6 +18,12 @@ type LogsPersisting struct {
 	//Flag if loki-output should be a clusteroutput instead a output crd
 	//@default: false
 	ClusterOutput bool `json:"clusterOutput,omitempty" yaml:"clusterOutput,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run loki on nodes
+	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	//Resource requirements
+	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
 // Logs: When the logs spec is nil all logs will get persisted in loki.

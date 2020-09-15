@@ -50,6 +50,10 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		values.ReplicaCount = spec.ReplicaCount
 	}
 
+	if spec.Affinity != nil {
+		values.Affinity = spec.Affinity
+	}
+
 	if spec.Service != nil {
 		values.Service.Type = spec.Service.Type
 		values.Service.LoadBalancerIP = spec.Service.LoadBalancerIP
@@ -65,6 +69,37 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 			}
 			values.Service.Ports = ports
 		}
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			values.NodeSelector[k] = v
+			values.Redis.NodeSelector[k] = v
+		}
+	}
+
+	if spec.Tolerations != nil {
+		for _, tol := range spec.Tolerations {
+			values.Tolerations = append(values.Tolerations, tol)
+		}
+	}
+
+	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
+
+	if spec.Resources == nil {
+		values.Resources = spec.Resources
+	}
+
+	if spec.Caching == nil {
+		return values
+	}
+
+	if spec.Caching.Enable {
+		values.Redis.Create = true
+	}
+
+	if spec.Caching.Resources != nil {
+		values.Redis.Resources = spec.Caching.Resources
 	}
 
 	return values

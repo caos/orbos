@@ -125,15 +125,32 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 	keys := privateKeys(c.desired.Spec)
 
 	newCache := make([]*machine, 0)
+
+	initializeMachine := func(rebootRequired bool, replacementRequired bool, spec *Machine) *machine {
+		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
+			rebootRequired,
+			func() {
+				spec.RebootRequired = true
+			}, func() {
+				spec.RebootRequired = false
+			},
+			replacementRequired,
+			func() {
+				spec.ReplacementRequired = true
+			}, func() {
+				spec.ReplacementRequired = false
+			})
+	}
 	for _, spec := range specifiedMachines {
-		machine := newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP))
+
+		machine := initializeMachine(spec.RebootRequired, spec.ReplacementRequired, spec)
 		if err := machine.UseKey(keys...); err != nil {
 			return nil, err
 		}
 
 		buf := new(bytes.Buffer)
 		if err := machine.ReadFile(c.statusFile, buf); err != nil {
-			// treat as inactive
+			// if error, treat as active
 		}
 		machine.active = strings.Contains(buf.String(), "active")
 		buf.Reset()

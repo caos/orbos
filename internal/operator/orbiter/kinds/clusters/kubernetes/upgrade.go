@@ -147,18 +147,14 @@ func step(
 	for _, machine := range sortedMachines {
 		if machine.node != nil && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
 			delete(machine.node.Labels, "orbos.ch/updating")
-			if machine.node.Spec.Unschedulable {
-				if err := k8sClient.Uncordon(machine.currentMachine, machine.node); err != nil {
-					return false, err
-				}
-			} else {
-				if err := k8sClient.updateNode(machine.node); err != nil {
-					return false, err
-				}
+			if k8sClient.Tainted(machine.node, updating) {
+				machine.node.Spec.Taints = k8sClient.RemoveFromTaints(machine.node.Spec.Taints, updating)
+			}
+			if err := k8sClient.updateNode(machine.node); err != nil {
+				return false, err
 			}
 		}
 	}
-
 	for idx, machine := range sortedMachines {
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, from, to)
@@ -187,9 +183,7 @@ func plan(
 	isControlplane := machine.pool.tier == Controlplane
 
 	id := machine.infra.ID()
-	machinemonitor := monitor.WithFields(map[string]interface{}{
-		"machine": id,
-	})
+	machinemonitor := monitor.WithField("machine", id)
 
 	awaitNodeAgent := func() error {
 		machinemonitor.Info("Awaiting node agent")
@@ -201,7 +195,7 @@ func plan(
 			return nil
 		}
 		machine.node.Labels["orbos.ch/updating"] = to.Kubelet.Version
-		return k8sClient.Drain(machine.currentMachine, machine.node)
+		return k8sClient.Drain(machine.currentMachine, machine.node, updating)
 	}
 
 	ensureSoftware := func(packages common.Software, phase string) func() error {

@@ -1,5 +1,11 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+)
+
 func DefaultValues(imageTags map[string]string) *Values {
 	return &Values{
 		FullnameOverride: "logging-operator",
@@ -19,6 +25,17 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Enabled: true,
 			PSP: PSP{
 				Enabled: true,
+			},
+		},
+		NodeSelector: map[string]string{},
+		Resources: &k8s.Resources{
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("250m"),
+				corev1.ResourceMemory: resource.MustParse("200Mi"),
+			},
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("50m"),
+				corev1.ResourceMemory: resource.MustParse("100Mi"),
 			},
 		},
 	}

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strings"
+	"time"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
@@ -46,14 +49,41 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 
 	return func(desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
 		curr.Commit = commit
+
 		curr.NodeIsReady = isReady()
 
 		defer persistReadyness(curr.NodeIsReady)
 
-		var (
-			err            error
-			ensureFirewall func() error
-		)
+		who, err := exec.Command("who", "-b").CombinedOutput()
+		if err != nil {
+			return noop, err
+		}
+
+		dateTime := strings.Fields(string(who))[2:]
+		str := strings.Join(dateTime, " ") + ":00"
+		t, err := time.Parse("2006-01-02 15:04:05", str)
+		if err != nil {
+			return noop, err
+		}
+
+		curr.Booted = t
+
+		if desired.RebootRequired.After(curr.Booted) {
+			curr.NodeIsReady = false
+			if !desired.ChangesAllowed {
+				monitor.Info("Not rebooting as changes are not allowed")
+				return noop, nil
+			}
+			return func() error {
+				monitor.Info("Rebooting")
+				if err := exec.Command("sudo", "reboot").Run(); err != nil {
+					return fmt.Errorf("rebooting system failed: %w", err)
+				}
+				return nil
+			}, nil
+		}
+
+		var ensureFirewall func() error
 		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
 		if err != nil {
 			return noop, err
@@ -83,7 +113,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		return func() error {
 
 			if !desired.ChangesAllowed {
-				monitor.Info("Changes are not allowed")
+				monitor.Info("Not ensuring anything as changes are not allowed")
 				return nil
 			}
 
