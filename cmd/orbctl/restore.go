@@ -23,10 +23,7 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&backup, "backup", "", "Backup used for db restore")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		_, monitor, orbConfig, gitClient := rv()
 
 		if err := orbConfig.IsConnectable(); err != nil {
 			return err

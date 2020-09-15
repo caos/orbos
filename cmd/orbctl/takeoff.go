@@ -137,10 +137,7 @@ func StartZitadel(rv RootValues) *cobra.Command {
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, _, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		_, monitor, orbConfig, _ := rv()
 
 		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {

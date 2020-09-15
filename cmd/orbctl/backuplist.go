@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	"github.com/spf13/cobra"
@@ -17,10 +18,7 @@ func BackupListCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
-		}
+		_, monitor, orbConfig, gitClient := rv()
 
 		if err := orbConfig.IsConnectable(); err != nil {
 			return err
