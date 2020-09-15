@@ -171,6 +171,88 @@ groups:
      record: caos_ready_pods
    - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"}) * min(caos_scheduled_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"})
      record: caos_orb_ryg
+
+	 # ZITADEL CockroachDB Runtime
+   - record: cr_instance_flapping
+     expr: resets(sys_uptime{job="cockroachdb"}[10m])
+   - record: cr_version_mismatches
+     expr: count by(cluster) (count_values by(tag, cluster) ("version", build_timestamp{job="cockroachdb"}))
+   - record: caos_cr_runtime_ryg
+     expr: |-
+		caos_ready_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"} *
+		caos_scheduled_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"} *
+		clamp_min(2 - cr_version_mismatches, 0) *
+		clamp_min(1 - resets(sys_uptime{job="cockroachdb"}[10m]))
+
+ # ZITADEL CockroachDB Capacity
+   - record: node:capacity
+     expr: sum without(store) (capacity{job="cockroachdb"})
+   - record: cluster:capacity
+     expr: sum without(instance) (node:capacity{job="cockroachdb"})
+   - record: node:capacity_available
+     expr: sum without(store) (capacity_available{job="cockroachdb"})
+   - record: cluster:capacity_available
+     expr: sum without(instance) (node:capacity_available{job="cockroachdb"})
+   - record: capacity_available:ratio
+     expr: capacity_available{job="cockroachdb"} / capacity{job="cockroachdb"}
+   - record: node:capacity_available:ratio
+     expr: node:capacity_available{job="cockroachdb"} / node:capacity{job="cockroachdb"}
+   - record: cluster:capacity_available:ratio
+     expr: cluster:capacity_available{job="cockroachdb"} / cluster:capacity{job="cockroachdb"}
+
+   - record: cr_store_disk_low
+     expr: capacity_available:ratio{job="cockroachdb"} < 0.15
+   - record: cr_cluster_disk_low
+     expr: cluster:capacity_available:ratio{job="cockroachdb"} < 0.2
+
+#   - record: caos_cr_capacity_ryg
+#     expr: |-
+       
+
+   - record: cr_unavailable_ranges
+     expr: (sum by(instance, cluster) (ranges_unavailable{job="cockroachdb"})) > 0
+#     for: 10m
+   - record: cr_clock_offset_near_max
+     expr: clock_offset_meannanos{job="cockroachdb"} > 300 * 1000 * 1000
+#     for: 5m
+   - record: cr_ca_certificate_expires_soon
+     expr: (security_certificate_expiration_ca{job="cockroachdb"} > 0) and (security_certificate_expiration_ca{job="cockroachdb"}
+       - time()) < 86400 * 366
+#     labels:
+#       frequency: daily
+   - record: cr_client_ca_certificate_expires_soon
+     expr: (security_certificate_expiration_client_ca{job="cockroachdb"} > 0) and (security_certificate_expiration_client_ca{job="cockroachdb"}
+       - time()) < 86400 * 366
+#     labels:
+#       frequency: daily
+   - record: cr_node_certificate_expires_soon
+     expr: (security_certificate_expiration_node{job="cockroachdb"} > 0) and (security_certificate_expiration_node{job="cockroachdb"}
+       - time()) < 86400 * 183
+#     labels:
+#       frequency: daily
+   - record: cr_node_client_certificate_expires_soon
+     expr: (security_certificate_expiration_node_client{job="cockroachdb"} > 0) and (security_certificate_expiration_node_client{job="cockroachdb"}
+       - time()) < 86400 * 183
+#     labels:
+#       frequency: daily
+   - record: cr_slow_latch_request
+     expr: requests_slow_latch{job="cockroachdb"} > 0
+#     for: 5m
+#     labels:
+#       severity: testing
+   - record: cr_slow_lease_request
+     expr: requests_slow_lease{job="cockroachdb"} > 0
+#     for: 5m
+#     labels:
+#       severity: testing
+   - record: cr_slow_raft_request
+     expr: requests_slow_raft{job="cockroachdb"} > 0
+#     for: 5m
+#     labels:
+#       severity: testing
+   - record: cr_high_open_fd_count
+     expr: sys_fd_open{job="cockroachdb"} / sys_fd_softlimit{job="cockroachdb"} > 0.8
+#     for: 10m
 `
 
 	struc := &AdditionalPrometheusRules{

@@ -1,8 +1,9 @@
 package config
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"path/filepath"
+
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 )
 
 var orgID = 0
@@ -75,6 +76,19 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 				"grafana-dashboard-boom",
 			},
 			Folder: filepath.Join(dashboardsfolder, "boom"),
+		}
+		providers = append(providers, provider)
+	}
+
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Zitadel) {
+		provider := &Provider{
+			ConfigMaps: []string{
+				"grafana-dashboard-zitadel-cockroachdb-replicas",
+				"grafana-dashboard-zitadel-cockroachdb-runtime",
+				"grafana-dashboard-zitadel-cockroachdb-sql",
+				"grafana-dashboard-zitadel-cockroachdb-storage",
+			},
+			Folder: filepath.Join(dashboardsfolder, "zitadel"),
 		}
 		providers = append(providers, provider)
 	}

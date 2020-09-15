@@ -63,8 +63,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			RemoteWrite: nil,
 			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("600m"),
-					corev1.ResourceMemory: resource.MustParse("600Mi"),
+					corev1.ResourceCPU:    resource.MustParse("1"),
+					corev1.ResourceMemory: resource.MustParse("1Gi"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("300m"),

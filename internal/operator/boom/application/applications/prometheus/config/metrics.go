@@ -15,7 +15,7 @@ import (
 	pnemetrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/metrics"
 	pometrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/metrics"
 	psemetrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/metrics"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/zitadel"
 )
 
 func ScrapeMetricsCrdsConfig(instanceName string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *Config {
@@ -73,13 +73,16 @@ func ScrapeMetricsCrdsConfig(instanceName string, toolsetCRDSpec *toolsetsv1beta
 		servicemonitors = append(servicemonitors, orbiter.GetServicemonitor(instanceName))
 	}
 
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Zitadel) {
+		servicemonitors = append(servicemonitors, zitadel.GetServicemonitor(instanceName))
+	}
+
 	if len(servicemonitors) > 0 {
 		servicemonitors = append(servicemonitors, metrics.GetServicemonitor(instanceName))
 
 		prom := &Config{
 			Prefix:                  "",
 			Namespace:               "caos-system",
-			MonitorLabels:           labels.GetMonitorSelectorLabels(instanceName),
 			ServiceMonitors:         servicemonitors,
 			AdditionalScrapeConfigs: getScrapeConfigs(),
 		}

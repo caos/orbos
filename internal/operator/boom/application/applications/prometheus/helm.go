@@ -53,12 +53,6 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 			values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
 		}
 
-		if config.MonitorLabels != nil {
-			values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{
-				MatchLabels: config.MonitorLabels,
-			}
-		}
-
 		if config.ServiceMonitors != nil {
 			additionalServiceMonitors := make([]*servicemonitor.Values, 0)
 			for _, specServiceMonitor := range config.ServiceMonitors {
@@ -157,11 +151,18 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		}
 	}
 
-	ruleLabels := labels.GetRuleLabels(info.GetInstanceName())
-	rules, _ := helm.GetDefaultRules(ruleLabels)
+	promSelectorLabels := labels.GetPromSelector(info.GetInstanceName())
+	promSelector := &helm.Selector{MatchLabels: promSelectorLabels}
 
-	values.Prometheus.PrometheusSpec.RuleSelector = &helm.RuleSelector{MatchLabels: ruleLabels}
-	values.DefaultRules.Labels = ruleLabels
+	values.Prometheus.PrometheusSpec.RuleSelector = promSelector
+	values.Prometheus.PrometheusSpec.PodMonitorSelector = promSelector
+	values.Prometheus.PrometheusSpec.ServiceMonitorSelector = promSelector
+
+	rules, err := helm.GetDefaultRules(promSelectorLabels)
+	if err != nil {
+		panic(err)
+	}
+	values.DefaultRules.Labels = promSelectorLabels
 	values.KubeTargetVersionOverride = version
 	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
 
