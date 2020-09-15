@@ -1,52 +1,9 @@
 package zitadel
 
 import (
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
 	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
-	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
-
-func SecretsFunc() secret.Func {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
-		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
-		}()
-
-		desiredKind, err := parseDesiredV0(desiredTree)
-		if err != nil {
-			return nil, errors.Wrap(err, "parsing desired state failed")
-		}
-		desiredTree.Parsed = desiredKind
-
-		var networkingSecrets map[string]*secret.Secret
-		if desiredKind.Networking != nil {
-			networkingSecrets, err = networking.GetSecrets(monitor, desiredKind.Networking)
-			if err != nil {
-				return nil, err
-			}
-		}
-		databaseSecrets, err := databases.GetSecrets(monitor, desiredKind.Database)
-		if err != nil {
-			return nil, err
-		}
-
-		allSecrets := make(map[string]*secret.Secret)
-		appendSecrets(allSecrets, getSecretsMap(desiredKind))
-		appendSecrets(allSecrets, networkingSecrets)
-		appendSecrets(allSecrets, databaseSecrets)
-		return allSecrets, nil
-	}
-}
-
-func appendSecrets(into, add map[string]*secret.Secret) {
-	for key, secret := range add {
-		into[key] = secret
-	}
-}
 
 func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {
 	secrets := map[string]*secret.Secret{}

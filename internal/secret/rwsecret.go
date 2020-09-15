@@ -17,14 +17,6 @@ import (
 type PushFunc func(gitClient *git.Client, desired *tree.Tree) api.PushDesiredFunc
 type PushFuncs func(monitor mntr.Monitor, gitClient *git.Client, trees map[string]*tree.Tree, path string) error
 type GetFuncs func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*Secret, map[string]*tree.Tree, error)
-type Func func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*Secret, err error)
-
-func JoinPath(base string, append ...string) string {
-	for _, item := range append {
-		base = fmt.Sprintf("%s.%s", base, item)
-	}
-	return base
-}
 
 func Read(monitor mntr.Monitor, gitClient *git.Client, path string, getFunc GetFuncs) (string, error) {
 	allSecrets, _, err := getFunc(monitor, gitClient)

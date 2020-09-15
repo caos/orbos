@@ -9,30 +9,17 @@ import (
 	"strings"
 )
 
-func ParseToolset(desiredTree *tree.Tree) (*Toolset, error) {
+func ParseToolset(desiredTree *tree.Tree) (*Toolset, map[string]*secret.Secret, error) {
 	desiredKind := &Toolset{}
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
-	}
-
-	return desiredKind, nil
-}
-
-func SecretsFunc(desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
-	defer func() {
-		err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
-	}()
-
-	desiredKind, err := ParseToolset(desiredTree)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desiredKind
 
-	return getSecretsMap(desiredKind), nil
+	return desiredKind, GetSecretsMap(desiredKind), nil
 }
 
-func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
+func GetSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 	ret := make(map[string]*secret.Secret, 0)
 
 	if desiredKind.Spec.Monitoring == nil {

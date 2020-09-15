@@ -16,15 +16,17 @@ import (
 )
 
 func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
+		secrets = make(map[string]*secret.Secret, 0)
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
 
 		for _, pool := range desiredKind.Spec.Pools {
 			for _, machine := range pool {
@@ -41,19 +43,20 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 		}
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
 
-		lbQuery, lbDestroy, lbConfigure, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
+		lbQuery, lbDestroy, lbConfigure, migrateLocal, lbsecrets, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
 		if err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 		if migrateLocal {
 			migrate = true
 		}
+		secret.AppendSecrets("", secrets, lbsecrets)
 
 		current := &Current{
 			Common: &tree.Common{
@@ -118,6 +121,9 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 				}
 
 				return core.ConfigureNodeAgents(svc, monitor, orb)
-			}, migrate, nil
+			},
+			migrate,
+			secrets,
+			nil
 	}
 }

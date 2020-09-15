@@ -7,6 +7,7 @@ import (
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	zitadelOrb "github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
+	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
@@ -19,9 +20,8 @@ const (
 	zitadel string = "zitadel"
 )
 
-func GetAllSecretsFunc() func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
+func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
-		monitor.Info("Reading all secrets")
 		allSecrets := make(map[string]*secret.Secret, 0)
 		allTrees := make(map[string]*tree.Tree, 0)
 		foundBoom, err := api.ExistsBoomYml(gitClient)
@@ -35,18 +35,13 @@ func GetAllSecretsFunc() func(monitor mntr.Monitor, gitClient *git.Client) (map[
 				return nil, nil, err
 			}
 			allTrees["boom"] = boomYML
-
-			boomSecrets, err := boomapi.SecretsFunc()(monitor, boomYML)
+			_, _, boomSecrets, err := boomapi.ParseToolset(boomYML)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			if boomSecrets != nil && len(boomSecrets) > 0 {
-				for k, v := range boomSecrets {
-					if k != "" && v != nil {
-						allSecrets["boom."+k] = v
-					}
-				}
+				secret.AppendSecrets("boom", allSecrets, boomSecrets)
 			}
 		}
 
@@ -61,17 +56,13 @@ func GetAllSecretsFunc() func(monitor mntr.Monitor, gitClient *git.Client) (map[
 			}
 			allTrees["orbiter"] = orbiterYML
 
-			orbiterSecrets, err := orbiterOrb.SecretsFunc()(monitor, orbiterYML)
+			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(orb, "", true, false)(monitor, make(chan struct{}), orbiterYML, &tree.Tree{})
 			if err != nil {
 				return nil, nil, err
 			}
 
 			if orbiterSecrets != nil && len(orbiterSecrets) > 0 {
-				for k, v := range orbiterSecrets {
-					if k != "" && v != nil {
-						allSecrets["orbiter."+k] = v
-					}
-				}
+				secret.AppendSecrets("orbiter", allSecrets, orbiterSecrets)
 			}
 		}
 
@@ -85,16 +76,13 @@ func GetAllSecretsFunc() func(monitor mntr.Monitor, gitClient *git.Client) (map[
 				return nil, nil, err
 			}
 			allTrees["zitadel"] = zitadelYML
-			zitadelSecrets, err := zitadelOrb.SecretsFunc()(monitor, zitadelYML)
+
+			_, _, zitadelSecrets, err := zitadelOrb.AdaptFunc("", "networking", "zitadel", "database", "backup")(monitor, zitadelYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}
 			if zitadelSecrets != nil && len(zitadelSecrets) > 0 {
-				for k, v := range zitadelSecrets {
-					if k != "" && v != nil {
-						allSecrets["zitadel."+k] = v
-					}
-				}
+				secret.AppendSecrets("zitadel", allSecrets, zitadelSecrets)
 			}
 		}
 

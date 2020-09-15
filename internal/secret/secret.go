@@ -203,3 +203,13 @@ func InitIfNil(sec *Secret) *Secret {
 	}
 	return sec
 }
+
+func AppendSecrets(prefix string, into, add map[string]*Secret) {
+	for key, secret := range add {
+		name := key
+		if prefix != "" {
+			name = prefix + "." + name
+		}
+		into[name] = secret
+	}
+}
