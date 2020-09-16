@@ -235,7 +235,7 @@ func AdaptFunc(
 							RunAsNonRoot: &runAsNonRoot,
 						},
 						Name:            containerName,
-						Image:           "ghcr.io/caos/zitadel:0.85.2",
+						Image:           "ghcr.io/caos/zitadel:0.85.3",
 						ImagePullPolicy: "IfNotPresent",
 						Ports: []corev1.ContainerPort{
 							{Name: "grpc", ContainerPort: 50001},
