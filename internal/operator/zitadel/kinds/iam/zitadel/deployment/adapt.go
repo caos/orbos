@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	zitadelImage = "ghcr.io/caos/zitadel:0.85.4"	
+	zitadelImage = "ghcr.io/caos/zitadel:0.86.0"	
 )
 
 func AdaptFunc(
