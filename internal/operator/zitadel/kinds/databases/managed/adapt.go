@@ -152,7 +152,7 @@ func AdaptFunc(
 			}
 		}
 
-		if desiredKind.Spec.Backups != nil {
+		if desiredKind.Backups != nil {
 			databases := []string{
 				"adminapi",
 				"auth",
@@ -163,13 +163,13 @@ func AdaptFunc(
 			}
 
 			oneBackup := false
-			for backupName := range desiredKind.Spec.Backups {
+			for backupName := range desiredKind.Backups {
 				if timestamp != "" && strings.HasPrefix(timestamp, backupName) {
 					oneBackup = true
 				}
 			}
 
-			for backupName, desiredBackup := range desiredKind.Spec.Backups {
+			for backupName, desiredBackup := range desiredKind.Backups {
 				currentBackup := &tree.Tree{}
 				if timestamp == "" || !oneBackup || (timestamp != "" && strings.HasPrefix(timestamp, backupName)) {
 					queryB, destroyB, backupSecrets, err := backups.GetQueryAndDestroyFuncs(

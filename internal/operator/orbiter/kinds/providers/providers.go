@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"github.com/caos/orbos/internal/docu"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"regexp"
 	"strings"
 
@@ -16,6 +18,11 @@ import (
 )
 
 var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
+
+const (
+	staticKind = "orbiter.caos.ch/StaticProvider"
+	gceKind    = "orbiter.caos.ch/GCEProvider"
+)
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -44,7 +51,7 @@ func GetQueryAndDestroyFuncs(
 	}
 
 	switch providerTree.Common.Kind {
-	case "orbiter.caos.ch/GCEProvider":
+	case gceKind:
 		return gce.AdaptFunc(
 			provID,
 			orbID(repoURL),
@@ -57,7 +64,7 @@ func GetQueryAndDestroyFuncs(
 			providerTree,
 			providerCurrent,
 		)
-	case "orbiter.caos.ch/StaticProvider":
+	case staticKind:
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
 			return static.AdaptFunc(
 				provID,
@@ -73,6 +80,30 @@ func GetQueryAndDestroyFuncs(
 	default:
 		return nil, nil, nil, false, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
+}
+
+func GetDocuInfo() []*docu.Type {
+	kinds := []*docu.Info{}
+	gcepath, gceVersions := gce.GetDocuInfo()
+
+	kinds = append(kinds, &docu.Info{
+		Path:     gcepath,
+		Kind:     gceKind,
+		Versions: gceVersions,
+	})
+
+	staticpath, staticVersions := static.GetDocuInfo()
+	kinds = append(kinds, &docu.Info{
+		Path:     staticpath,
+		Kind:     staticKind,
+		Versions: staticVersions,
+	})
+
+	typeList := []*docu.Type{{
+		Name:  "providers",
+		Kinds: kinds,
+	}}
+	return append(loadbalancers.GetDocuInfo(), typeList...)
 }
 
 func ListMachines(

@@ -9,7 +9,9 @@ type Tree struct {
 }
 
 type Common struct {
-	Kind    string
+	//Kind of the used Type, which gives the structure for spec
+	Kind string
+	//Version of the used Kind
 	Version string `yaml:"version" yaml:"apiVersion"`
 }
 

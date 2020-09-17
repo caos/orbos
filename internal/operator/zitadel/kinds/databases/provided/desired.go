@@ -7,15 +7,21 @@ import (
 
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
-	Spec   Spec
+	//Configuration to connect to an existing database
+	Spec Spec
 }
 
 type Spec struct {
-	Verbose   bool
+	//Verbose flag to set debug-level to debug
+	Verbose bool
+	//Namespace where database service exists
 	Namespace string
-	URL       string
-	Port      string
-	Users     []string
+	//URL to connect to database
+	URL string
+	//Port to connecto to database
+	Port string
+	//List of users to connect to database
+	Users []string
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

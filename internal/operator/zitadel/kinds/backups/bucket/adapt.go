@@ -29,9 +29,11 @@ func AdaptFunc(
 	tolerations []corev1.Toleration,
 	features []string,
 ) zitadel.AdaptFunc {
+
+	secretName := "backup-serviceaccountjson"
+	secretKey := "serviceaccountjson"
+
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, secrets map[string]*orbossecret.Secret, err error) {
-		secretName := "backup-serviceaccountjson"
-		secretKey := "serviceaccountjson"
 
 		internalMonitor := monitor.WithField("component", "backup")
 

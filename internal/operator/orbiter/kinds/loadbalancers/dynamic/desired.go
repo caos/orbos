@@ -3,16 +3,16 @@
 package dynamic
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
-
-	"github.com/caos/orbos/internal/operator/orbiter"
 )
 
 type Desired struct {
 	Common *tree.Common `yaml:",inline"`
-	Spec   map[string][]*VIP
+	//Configuration for the ensured virtual IPs which get loadbalanced to defined ports on the nodes
+	Spec map[string][]*VIP
 }
 
 func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
@@ -74,7 +74,9 @@ func (d *Desired) Validate() error {
 }
 
 type VIP struct {
-	IP        string `yaml:",omitempty"`
+	//Desired IP
+	IP string `yaml:",omitempty"`
+	//List of defined transport-connections
 	Transport []*Transport
 }
 
@@ -94,9 +96,12 @@ func (v *VIP) validate() error {
 }
 
 type HealthChecks struct {
+	//Protocol used for healthchecks
 	Protocol string
-	Path     string
-	Code     uint16
+	//Path used for healthchecks
+	Path string
+	//Expected code from healthcheck
+	Code uint16
 }
 
 func (h *HealthChecks) validate() error {
@@ -146,11 +151,17 @@ func (s *Transport) validate() (err error) {
 }
 
 type Transport struct {
-	Name         string
+	//Internally used ID for this connection
+	Name string
+	//Port to connect to from the front
 	FrontendPort Port
-	BackendPort  Port
+	//Port to connect to on the nodes
+	BackendPort Port
+	//Pools included in this transport-connection
 	BackendPools []string
-	Whitelist    []*orbiter.CIDR
+	//Whitelist for firewall
+	Whitelist []*orbiter.CIDR
+	//Defined healthcheck that transport is functional
 	HealthChecks HealthChecks
 }
 

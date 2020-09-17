@@ -8,22 +8,31 @@ import (
 )
 
 type DesiredV0 struct {
-	Common        *tree.Common `yaml:",inline"`
-	Spec          Spec
+	Common *tree.Common `yaml:",inline"`
+	//Configruation for the static machines
+	Spec Spec
+	//Descriptive configuration for the desired loadbalancing to connect the nodes
 	Loadbalancing *tree.Tree
 }
 
 type Spec struct {
+	//Flag to set log-level to debug
 	Verbose bool
-	Pools   map[string][]*Machine
-	Keys    *Keys
+	//List of Pools with an identification key which will get ensured
+	Pools map[string][]*Machine
+	//Used SSH-keys used for ensuring
+	Keys *Keys
 }
 
 type Keys struct {
-	BootstrapKeyPrivate   *secret.Secret `yaml:",omitempty"`
-	BootstrapKeyPublic    *secret.Secret `yaml:",omitempty"`
+	//SSH-private-key used for bootstrapping
+	BootstrapKeyPrivate *secret.Secret `yaml:",omitempty"`
+	//SSH-public-key used for bootstrapping
+	BootstrapKeyPublic *secret.Secret `yaml:",omitempty"`
+	//SSH-private-key used for maintaining
 	MaintenanceKeyPrivate *secret.Secret `yaml:",omitempty"`
-	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
+	//SSH-public-key used for maintaining
+	MaintenanceKeyPublic *secret.Secret `yaml:",omitempty"`
 }
 
 func (d DesiredV0) validate() error {
@@ -52,8 +61,11 @@ func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 }
 
 type Machine struct {
-	ID             string
-	IP             orbiter.IPAddress
+	//Used ID for the machine
+	ID string
+	//IP of the machine to connect to
+	IP orbiter.IPAddress
+	//Flag if reboot of the machine is required
 	RebootRequired *bool
 }
 

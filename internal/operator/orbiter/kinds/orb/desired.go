@@ -5,12 +5,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+//Configuration to describe an Orb for Orbiter
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
-	Spec   struct {
+	//Configuration for Orbiter
+	Spec struct {
+		//Verbose flag to set debug-level to debug
 		Verbose bool
 	}
-	Clusters  map[string]*tree.Tree
+	//Descriptive configuration for the desired clusters
+	Clusters map[string]*tree.Tree
+	//Descriptive configuration for the desired providers
 	Providers map[string]*tree.Tree
 }
 

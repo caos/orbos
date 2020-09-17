@@ -8,13 +8,18 @@ import (
 
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
-	Spec   *Spec
+	//Configuration for backups in GCS bucket
+	Spec *Spec
 }
 
 type Spec struct {
-	Verbose            bool
-	Cron               string         `yaml:"cron,omitempty"`
-	Bucket             string         `yaml:"bucket,omitempty"`
+	//Verbose flag to set debug-level to debug
+	Verbose bool
+	//Cron-job interval when the backups should be done
+	Cron string `yaml:"cron,omitempty"`
+	//Name of the bucket in the google cloud project as the service account exists
+	Bucket string `yaml:"bucket,omitempty"`
+	//JSON for the service account used to write the backup to the bucket
 	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
 }
 

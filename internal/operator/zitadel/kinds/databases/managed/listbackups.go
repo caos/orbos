@@ -20,8 +20,8 @@ func BackupList() func(monitor mntr.Monitor, desired *tree.Tree) ([]string, erro
 		}
 
 		backuplists := make([]string, 0)
-		if desiredKind.Spec.Backups != nil {
-			for name, def := range desiredKind.Spec.Backups {
+		if desiredKind.Backups != nil {
+			for name, def := range desiredKind.Backups {
 				backuplist, err := backups.GetBackupList(monitor, name, def)
 				if err != nil {
 					return nil, err

@@ -1,6 +1,7 @@
 package backups
 
 import (
+	"github.com/caos/orbos/internal/docu"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket"
 	"github.com/caos/orbos/internal/secret"
@@ -8,6 +9,10 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
+)
+
+const (
+	bucketKind = "zitadel.caos.ch/BucketBackup"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -33,7 +38,7 @@ func GetQueryAndDestroyFuncs(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/BucketBackup":
+	case bucketKind:
 		return bucket.AdaptFunc(name, namespace, labels, databases, checkDBReady, timestamp, secretPasswordName, migrationUser, users, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
@@ -49,9 +54,23 @@ func GetBackupList(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/BucketBackup":
+	case bucketKind:
 		return bucket.BackupList()(monitor, name, desiredTree)
 	default:
 		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
+}
+
+func GetDocuInfo() []*docu.Type {
+	path, versions := bucket.GetDocuInfo()
+	return []*docu.Type{{
+		Name: "backup",
+		Kinds: []*docu.Info{
+			{
+				Path:     path,
+				Kind:     bucketKind,
+				Versions: versions,
+			},
+		},
+	}}
 }

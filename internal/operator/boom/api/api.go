@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/caos/orbos/internal/docu"
 	"github.com/caos/orbos/internal/operator/boom/api/common"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
@@ -33,6 +34,29 @@ func ParseToolset(desiredTree *tree.Tree) (*v1beta2.Toolset, bool, map[string]*s
 	default:
 		return nil, false, nil, errors.New("APIVersion unknown")
 	}
+}
+
+func GetDocuInfo() []*docu.Type {
+	infos := []*docu.Info{}
+
+	path, v1beta1Versions := v1beta1.GetDocuInfo()
+	infos = append(infos, &docu.Info{
+		Path:     path,
+		Kind:     "boom.caos.ch",
+		Versions: v1beta1Versions,
+	})
+
+	path, v1beta2Versions := v1beta2.GetDocuInfo()
+	infos = append(infos, &docu.Info{
+		Path:     path,
+		Kind:     "boom.caos.ch",
+		Versions: v1beta2Versions,
+	})
+
+	return []*docu.Type{{
+		Name:  "toolset",
+		Kinds: infos,
+	}}
 }
 
 /*

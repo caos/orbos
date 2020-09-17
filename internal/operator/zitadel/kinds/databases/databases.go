@@ -1,7 +1,9 @@
 package databases
 
 import (
+	"github.com/caos/orbos/internal/docu"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/managed"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/databases/provided"
 	"github.com/caos/orbos/internal/secret"
@@ -9,6 +11,11 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
+)
+
+const (
+	managedKind  = "zitadel.caos.ch/ManagedDatabase"
+	providedKind = "zitadel.caos.ch/ProvidedDatabase"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -31,9 +38,9 @@ func GetQueryAndDestroyFuncs(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/ManagedDatabase":
+	case managedKind:
 		return managed.AdaptFunc(labels, users, namespace, timestamp, secretPasswordName, migrationUser, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
+	case providedKind:
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
@@ -48,11 +55,41 @@ func GetBackupList(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/ManagedDatabase":
+	case managedKind:
 		return managed.BackupList()(monitor, desiredTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
+	case providedKind:
 		return nil, errors.Errorf("no backups supported for database kind %s", desiredTree.Common.Kind)
 	default:
 		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
+}
+
+func GetDocuInfo() []*docu.Type {
+	infos := []*docu.Info{}
+
+	path, versions := managed.GetDocuInfo()
+	infos = append(infos,
+		&docu.Info{
+			Path:     path,
+			Kind:     managedKind,
+			Versions: versions,
+		},
+	)
+
+	path, versions = provided.GetDocuInfo()
+	infos = append(infos,
+		&docu.Info{
+			Path:     path,
+			Kind:     providedKind,
+			Versions: versions,
+		},
+	)
+
+	types := []*docu.Type{{
+		Name:  "databases",
+		Kinds: infos,
+	}}
+
+	types = append(types, backups.GetDocuInfo()...)
+	return types
 }

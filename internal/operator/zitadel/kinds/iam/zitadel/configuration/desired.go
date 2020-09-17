@@ -3,13 +3,20 @@ package configuration
 import "github.com/caos/orbos/internal/secret"
 
 type Configuration struct {
-	Tracing       *Tracing       `yaml:"tracing,omitempty"`
-	Cache         *Cache         `yaml:"cache,omitempty"`
-	Secrets       *Secrets       `yaml:"secrets,omitempty"`
+	//Tracing configuration for zitadel
+	Tracing *Tracing `yaml:"tracing,omitempty"`
+	//Cache configuration for zitadel
+	Cache *Cache `yaml:"cache,omitempty"`
+	//Secrets used by zitadel
+	Secrets *Secrets `yaml:"secrets,omitempty"`
+	//Notification configuration for zitadel
 	Notifications *Notifications `yaml:"notifications,omitempty"`
-	Passwords     *Passwords     `yaml:"passwords,omitempty"`
-	DebugMode     bool           `yaml:"debugMode"`
-	LogLevel      string         `yaml:"logLevel"`
+	//Passwords used for the maintaining of the users in the database
+	Passwords *Passwords `yaml:"passwords,omitempty"`
+	//Debug mode for zitadel if notifications should be only sent by chat
+	DebugMode bool `yaml:"debugMode"`
+	//Log-level for zitadel
+	LogLevel string `yaml:"logLevel"`
 }
 
 func (c *Configuration) IsZero() bool {
@@ -26,13 +33,20 @@ func (c *Configuration) IsZero() bool {
 }
 
 type Passwords struct {
-	Migration    *secret.Secret `yaml:"migration"`
-	Management   *secret.Secret `yaml:"management"`
-	Auth         *secret.Secret `yaml:"auth"`
-	Authz        *secret.Secret `yaml:"authz"`
-	Adminapi     *secret.Secret `yaml:"adminapi"`
+	//Password for the User "migration"
+	Migration *secret.Secret `yaml:"migration"`
+	//Password for the User "management"
+	Management *secret.Secret `yaml:"management"`
+	//Password for the User "auth"
+	Auth *secret.Secret `yaml:"auth"`
+	//Password for the User "authz"
+	Authz *secret.Secret `yaml:"authz"`
+	//Password for the User "adminapi"
+	Adminapi *secret.Secret `yaml:"adminapi"`
+	//Password for the User "notification"
 	Notification *secret.Secret `yaml:"notification"`
-	Eventstore   *secret.Secret `yaml:"eventstore"`
+	//Password for the User "eventstore"
+	Eventstore *secret.Secret `yaml:"eventstore"`
 }
 
 func (p *Passwords) IsZero() bool {
@@ -49,14 +63,22 @@ func (p *Passwords) IsZero() bool {
 }
 
 type Secrets struct {
-	Keys                    *secret.Secret `yaml:"keys,omitempty"`
-	UserVerificationID      string         `yaml:"userVerificationID,omitempty"`
-	OTPVerificationID       string         `yaml:"otpVerificationID,omitempty"`
-	OIDCKeysID              string         `yaml:"oidcKeysID,omitempty"`
-	CookieID                string         `yaml:"cookieID,omitempty"`
-	CSRFID                  string         `yaml:"csrfID,omitempty"`
-	DomainVerificationID    string         `yaml:"domainVerificationID,omitempty"`
-	IDPConfigVerificationID string         `yaml:"idpConfigVerificationID,omitempty"`
+	//Text-file which consists of a list of key/value to provide the keys to encrypt data in zitadel
+	Keys *secret.Secret `yaml:"keys,omitempty"`
+	//Key used from keys-file for user verification
+	UserVerificationID string `yaml:"userVerificationID,omitempty"`
+	//Key used from keys-file for OTP verification
+	OTPVerificationID string `yaml:"otpVerificationID,omitempty"`
+	//Key used from keys-file for OIDC
+	OIDCKeysID string `yaml:"oidcKeysID,omitempty"`
+	//Key used from keys-file for cookies
+	CookieID string `yaml:"cookieID,omitempty"`
+	//Key used from keys-file for CSRF
+	CSRFID string `yaml:"csrfID,omitempty"`
+	//Key used from keys-file for domain verification
+	DomainVerificationID string `yaml:"domainVerificationID,omitempty"`
+	//Key used from keys-file for IDP configuration verification
+	IDPConfigVerificationID string `yaml:"idpConfigVerificationID,omitempty"`
 }
 
 func (s *Secrets) IsZero() bool {
@@ -74,9 +96,12 @@ func (s *Secrets) IsZero() bool {
 }
 
 type Notifications struct {
+	//Google chat URL used for notifications
 	GoogleChatURL *secret.Secret `yaml:"googleChatURL,omitempty"`
-	Email         *Email         `yaml:"email,omitempty"`
-	Twilio        *Twilio        `yaml:"twilio,omitempty"`
+	//Configuration for email notifications
+	Email *Email `yaml:"email,omitempty"`
+	//Configuration for twilio notifications
+	Twilio *Twilio `yaml:"twilio,omitempty"`
 }
 
 func (n *Notifications) IsZero() bool {
@@ -107,9 +132,12 @@ func (t *Tracing) IsZero() bool {
 }
 
 type Twilio struct {
-	SenderName string         `yaml:"senderName,omitempty"`
-	AuthToken  *secret.Secret `yaml:"authToken,omitempty"`
-	SID        *secret.Secret `yaml:"sid,omitempty"`
+	//Sender name for Twilio
+	SenderName string `yaml:"senderName,omitempty"`
+	//Auth token to connect with Twilio
+	AuthToken *secret.Secret `yaml:"authToken,omitempty"`
+	//SID to connect with Twilio
+	SID *secret.Secret `yaml:"sid,omitempty"`
 }
 
 func (t *Twilio) IsZero() bool {
@@ -122,12 +150,18 @@ func (t *Twilio) IsZero() bool {
 }
 
 type Email struct {
-	SMTPHost      string         `yaml:"smtpHost,omitempty"`
-	SMTPUser      string         `yaml:"smtpUser,omitempty"`
-	SenderAddress string         `yaml:"senderAddress,omitempty"`
-	SenderName    string         `yaml:"senderName,omitempty"`
-	TLS           bool           `yaml:"tls,omitempty"`
-	AppKey        *secret.Secret `yaml:"appKey,omitempty"`
+	//SMTP host used for email notifications
+	SMTPHost string `yaml:"smtpHost,omitempty"`
+	//SMTP user used for email notifications
+	SMTPUser string `yaml:"smtpUser,omitempty"`
+	//Sender address from where the emails should get sent
+	SenderAddress string `yaml:"senderAddress,omitempty"`
+	//Sender name form where the emails should get sent
+	SenderName string `yaml:"senderName,omitempty"`
+	//Flag if TLS should be used for the communication with the SMTP host
+	TLS bool `yaml:"tls,omitempty"`
+	//Application-key used for SMTP communication
+	AppKey *secret.Secret `yaml:"appKey,omitempty"`
 }
 
 func (e *Email) IsZero() bool {
@@ -143,8 +177,12 @@ func (e *Email) IsZero() bool {
 }
 
 type Cache struct {
-	MaxAge            string `yaml:"maxAge,omitempty"`
-	SharedMaxAge      string `yaml:"sharedMaxAge,omitempty"`
-	ShortMaxAge       string `yaml:"shortMaxAge,omitempty"`
+	//Max age for cache records
+	MaxAge string `yaml:"maxAge,omitempty"`
+	//Max age for the shared cache records
+	SharedMaxAge string `yaml:"sharedMaxAge,omitempty"`
+	//Max age for the short cache records
+	ShortMaxAge string `yaml:"shortMaxAge,omitempty"`
+	//Max age for the short shared cache records
 	ShortSharedMaxAge string `yaml:"shortSharedMaxAge,omitempty"`
 }

@@ -7,8 +7,9 @@ import (
 )
 
 type Desired struct {
-	Common *tree.Common           `yaml:",inline"`
-	Spec   *config.ExternalConfig `yaml:"spec"`
+	Common *tree.Common `yaml:",inline"`
+	//Configuration for Cloudflare
+	Spec *config.ExternalConfig `yaml:"spec"`
 }
 
 func parseDesired(desiredTree *tree.Tree) (*Desired, error) {
