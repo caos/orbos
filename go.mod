@@ -7,14 +7,20 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.0.8
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.31.12
-	github.com/caos/documentation v1.0.0
+	github.com/caos/documentation v1.0.1
 	github.com/caos/oidc v0.6.2
 	github.com/cloudflare/cloudflare-go v0.12.1
+	github.com/evanphx/json-patch v4.9.0+incompatible // indirect
+	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github/v31 v31.0.0
+	github.com/imdario/mergo v0.3.6 // indirect
+	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/manifoldco/promptui v0.7.0
+	github.com/mattn/go-colorable v0.1.4 // indirect
+	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.6.0
 	github.com/satori/go.uuid v1.2.0
@@ -23,8 +29,11 @@ require (
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
+	golang.org/x/sys v0.0.0-20200622214017-ed371f2e16b4 // indirect
+	golang.org/x/text v0.3.3 // indirect
 	google.golang.org/api v0.26.0
 	google.golang.org/grpc v1.29.1
+	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.3.0
@@ -33,5 +42,6 @@ require (
 	k8s.io/apiextensions-apiserver v0.18.5
 	k8s.io/apimachinery v0.18.5
 	k8s.io/client-go v0.18.5
+	k8s.io/kube-openapi v0.0.0-20200805222855-6aeccd4b50c6 // indirect
 	k8s.io/kubectl v0.18.3
 )
