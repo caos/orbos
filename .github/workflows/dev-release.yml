@@ -7,13 +7,16 @@ jobs:
   documentation:
     name: Documentation generation
     runs-on: ubuntu-18.04
+    outputs:
+      docuchanged: ${{ steps.docuchanged.outputs.docuchanged }}
     steps:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
       - run: |
           #CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
-      - run: |
+      - id: docuchanged
+        run: |
           if [ -z "$(git status --porcelain)" ]; then
               echo "::set-output docuchanged=true"
           else
