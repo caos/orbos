@@ -16,6 +16,6 @@ func GetAll() map[string]string {
 		"V1.11__usermembership.sql":          V111UserMembership,
 		"V1.12__machine_keys.sql":            V112MachineKeys,
 		"V1.13__machine_keys_public.sql":     V113MachineKeysPublic,
-		"V1.14__auth_loginpolicy.sql":        V114AUTHLOGINPOLICY,
+		"V1.14__auth_loginpolicy.sql":        V114AuthLoginPolicy,
 	}
 }
