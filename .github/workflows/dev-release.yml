@@ -14,21 +14,21 @@ jobs:
         with:
           fetch-depth: 1
       - run: |
-          #CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
+          CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
       - id: docuchangedcheck
         run: |
-          #if [ -z "$(git status --porcelain)" ]; then
-          #    echo "::set-output name=docuchanged::${{ true }}"
-          #else
+          if [ -z "$(git status --porcelain)" ]; then
+              echo "::set-output name=docuchanged::${{ true }}"
+          else
           echo "::set-output name=docuchanged::${{ false }}"
-          #fi
+          fi
       - name: Commit files
         if: steps.docuchangedcheck.outputs.docuchanged == 'true'
         id: commit
         run: |
           echo ${{ steps.docuchangedcheck.outputs.docuchanged }}
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "hi@caos.ch"
+          git config --local user.name "Automated Documentation Generation"
           git add .
           git commit -m "docs: generated documentation changes" -a
       - name: Push changes
