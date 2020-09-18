@@ -89,7 +89,7 @@ CREATE TABLE management.user_external_idps (
 
     PRIMARY KEY (external_user_id, idp_config_id)
 );
-
+ 
 CREATE TABLE adminapi.user_external_idps (
     idp_config_id TEXT,
     external_user_id TEXT,
