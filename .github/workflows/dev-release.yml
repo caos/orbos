@@ -14,7 +14,7 @@ jobs:
       - run: |
           #CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
       - run: |
-          if [[ $(git status --procelain) ]]; then
+          if [ -z "$(git status --porcelain)" ]; then
               echo "::set-output docuchanged=true"
           else
               echo "::set-output docuchanged=false"
@@ -26,7 +26,7 @@ jobs:
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add .
-          git commit -m "Add changes" -a
+          git commit -m "docs: generated documentation changes" -a
       - name: Push changes
         if: needs.check.outputs.docuchanged == 'true'
         uses: ad-m/github-push-action@master
