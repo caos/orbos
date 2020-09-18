@@ -18,9 +18,9 @@ jobs:
       - id: docuchanged
         run: |
           if [ -z "$(git status --porcelain)" ]; then
-              echo "::set-output docuchanged=true"
+              echo "::set-output name=docuchanged::true"
           else
-              echo "::set-output docuchanged=false"
+              echo "::set-output name=docuchanged::false"
           fi
       - name: Commit files
         if: needs.check.outputs.docuchanged == 'true'
