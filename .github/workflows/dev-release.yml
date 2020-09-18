@@ -7,26 +7,33 @@ jobs:
   documentation:
     name: Documentation generation
     runs-on: ubuntu-18.04
-    outputs:
-      status: ${{ steps.commit.conclusion }}
     steps:
       - uses: actions/checkout@v1
         with:
           fetch-depth: 1
       - run: |
           #CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
+      - run: |
+          if [[ $(git status --procelain) ]]; then
+              echo "::set-output docuchanged=true"
+          else
+              echo "::set-output docuchanged=false"
+          fi
       - name: Commit files
+        if: needs.check.outputs.docuchanged == 'true'
         id: commit
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          git add .
           git commit -m "Add changes" -a
       - name: Push changes
+        if: needs.check.outputs.docuchanged == 'true'
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
   dev-release:
-    if: needs.check.outputs.status != 'success'
+    if: needs.check.outputs.docuchanged == 'false'
     name: Dev-Release Orbos
     runs-on: ubuntu-18.04
     steps:
