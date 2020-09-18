@@ -36,7 +36,7 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
   dev-release:
-    if: needs.check.outputs.docuchanged == 'false'
+    if: needs.documentation.outputs.docuchanged == 'false'
     name: Dev-Release Orbos
     runs-on: ubuntu-18.04
     steps:
