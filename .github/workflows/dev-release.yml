@@ -4,7 +4,29 @@ on:
     branches-ignore:
       - master
 jobs:
+  documentation:
+    name: Documentation generation
+    runs-on: ubuntu-18.04
+    outputs:
+      status: ${{ steps.commit.conclusion }}
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - run: |
+          #CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
+      - name: Commit files
+        id: commit
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git commit -m "Add changes" -a
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
   dev-release:
+    if: needs.check.outputs.status != 'success'
     name: Dev-Release Orbos
     runs-on: ubuntu-18.04
     steps:
