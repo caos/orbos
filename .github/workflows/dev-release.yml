@@ -26,6 +26,7 @@ jobs:
         if: ${{ steps.docuchangedcheck.outputs.docuchanged }} == 'true'
         id: commit
         run: |
+          echo ${{ steps.docuchangedcheck.outputs.docuchanged }}
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add .
