@@ -46,7 +46,6 @@ jobs:
           branch: ${{ steps.commit.outputs.branch }}
   dev-release:
     needs: documentation
-    if: needs.documentation.outputs.docuchanged == 'false'
     name: Dev-Release Orbos
     runs-on: ubuntu-18.04
     steps:
