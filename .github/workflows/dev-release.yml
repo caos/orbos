@@ -26,12 +26,15 @@ jobs:
         if: steps.docuchangedcheck.outputs.docuchanged == 'true'
         id: commit
         run: |
+          export BRANCH=${GITHUB_REF##*/}
+          echo "::set-output name=branch::${BRANCH}"
+
           git config --local user.email "hi@caos.ch"
           git config --local user.name "Automated Documentation Generation"
 
           git add .
           git stash
-          git checkout ${GITHUB_REF##*/}
+          git checkout ${BRANCH}
 
           git stash apply
           git commit -m "docs: generated documentation changes" -a
@@ -40,7 +43,7 @@ jobs:
         uses: ad-m/github-push-action@master
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ GITHUB_REF##*/ }}
+          branch: ${{ steps.commit.outputs.branch }}
   dev-release:
     needs: documentation
     if: needs.documentation.outputs.docuchanged == 'false'
