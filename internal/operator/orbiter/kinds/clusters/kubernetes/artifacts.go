@@ -30,7 +30,8 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
-				"name": "caos-system",
+				"name":                      "caos-system",
+				"app.kubernetes.io/part-of": "orbos",
 			},
 		},
 	}); err != nil {
@@ -71,6 +72,9 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "caos",
 			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app.kubernetes.io/part-of": "orbos",
+			},
 		},
 		StringData: map[string]string{
 			"orbconfig": string(orbfile),
@@ -97,10 +101,18 @@ func EnsureZitadelArtifacts(
 		return nil
 	}
 
+	labels := map[string]string{
+		"app.kubernetes.io/instance":   "zitadel-operator",
+		"app.kubernetes.io/part-of":    "orbos",
+		"app.kubernetes.io/component":  "zitadel-operator",
+		"app.kubernetes.io/managed-by": "zitadel-operator.caos.ch",
+	}
+
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "zitadel",
+			Name:      "zitadel-operator",
 			Namespace: "caos-system",
+			Labels:    labels,
 		},
 	}); err != nil {
 		return err
@@ -108,12 +120,8 @@ func EnsureZitadelArtifacts(
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "zitadel-clusterrole",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "zitadel",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "zitadel",
-			},
+			Name:   "zitadel-operator-clusterrole",
+			Labels: labels,
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -126,22 +134,18 @@ func EnsureZitadelArtifacts(
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "zitadel-clusterrolebinding",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "zitadel",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "zitadel",
-			},
+			Name:   "zitadel-operator-clusterrolebinding",
+			Labels: labels,
 		},
 
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "zitadel-clusterrole",
+			Name:     "zitadel-operator-clusterrole",
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "zitadel",
+			Name:      "zitadel-operator",
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
@@ -152,29 +156,16 @@ func EnsureZitadelArtifacts(
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "zitadel-operator",
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "zitadel",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "zitadel",
-				"app.kubernetes.io/managed-by": "zitadel.caos.ch",
-			},
+			Labels:    labels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/instance":  "zitadel",
-					"app.kubernetes.io/part-of":   "orbos",
-					"app.kubernetes.io/component": "zitadel",
-				},
+				MatchLabels: labels,
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/instance":  "zitadel",
-						"app.kubernetes.io/part-of":   "orbos",
-						"app.kubernetes.io/component": "zitadel",
-					},
+					Labels: labels,
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "zitadel",
@@ -182,7 +173,7 @@ func EnsureZitadelArtifacts(
 						Name: "public-github-packages",
 					}},
 					Containers: []core.Container{{
-						Name:            "zitadel",
+						Name:            "zitadel-operator",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},
@@ -242,6 +233,12 @@ func ScaleZitadelOperator(
 }
 
 func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations k8s.Tolerations, nodeselector map[string]string, resources *k8s.Resources) error {
+	labels := map[string]string{
+		"app.kubernetes.io/instance":   "boom",
+		"app.kubernetes.io/part-of":    "orbos",
+		"app.kubernetes.io/component":  "boom",
+		"app.kubernetes.io/managed-by": "boom.caos.ch",
+	}
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,
@@ -262,12 +259,8 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-clusterrole",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "boom",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "boom",
-			},
+			Name:   "boom-clusterrole",
+			Labels: labels,
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -280,12 +273,8 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-clusterrolebinding",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "boom",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "boom",
-			},
+			Name:   "boom-clusterrolebinding",
+			Labels: labels,
 		},
 
 		RoleRef: rbac.RoleRef{
@@ -306,29 +295,16 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom",
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "boom",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "boom.caos.ch",
-			},
+			Labels:    labels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/instance":  "boom",
-					"app.kubernetes.io/part-of":   "orbos",
-					"app.kubernetes.io/component": "boom",
-				},
+				MatchLabels: labels,
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/instance":  "boom",
-						"app.kubernetes.io/part-of":   "orbos",
-						"app.kubernetes.io/component": "boom",
-					},
+					Labels: labels,
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "boom",
@@ -378,12 +354,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom",
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "boom",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "boom.caos.ch",
-			},
+			Labels:    labels,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{
@@ -392,12 +363,8 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 				Port:       2112,
 				TargetPort: intstr.FromInt(2112),
 			}},
-			Selector: map[string]string{
-				"app.kubernetes.io/instance":  "boom",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "boom",
-			},
-			Type: core.ServiceTypeClusterIP,
+			Selector: labels,
+			Type:     core.ServiceTypeClusterIP,
 		},
 	}); err != nil {
 		return err
@@ -416,16 +383,18 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 		return nil
 	}
 
+	labels := map[string]string{
+		"app.kubernetes.io/instance":   "orbiter",
+		"app.kubernetes.io/part-of":    "orbos",
+		"app.kubernetes.io/component":  "orbiter",
+		"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+	}
+
 	if err := client.ApplyDeployment(&apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "orbiter",
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "orbiter",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "orbiter",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-			},
+			Labels:    labels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
@@ -500,12 +469,7 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "orbiter",
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "orbiter",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "orbiter",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-			},
+			Labels:    labels,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{

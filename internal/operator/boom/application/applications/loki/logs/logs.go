@@ -1,6 +1,9 @@
 package logs
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/application/applications/boom"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/orbiter"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/zitadeloperator"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -126,6 +129,21 @@ func getAllFlows(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, outputNames []stri
 	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy &&
 		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Loki) {
 		flows = append(flows, logging.NewFlow(getLokiFlow(outputNames)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy &&
+		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Boom) {
+		flows = append(flows, logging.NewFlow(boom.GetFlow(outputNames)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy &&
+		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Orbiter) {
+		flows = append(flows, logging.NewFlow(orbiter.GetFlow(outputNames)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy &&
+		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.ZitadelOperator) {
+		flows = append(flows, logging.NewFlow(zitadeloperator.GetFlow(outputNames)))
 	}
 
 	return flows

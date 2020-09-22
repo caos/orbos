@@ -46,4 +46,10 @@ type Logs struct {
 	Loki bool `json:"loki"`
 	//Bool if logs will get persisted for prometheus
 	Prometheus bool `json:"prometheus"`
+	//Bool if logs will get persisted for ORBITER
+	Orbiter bool `json:"orbiter"`
+	//Bool if logs will get persisted for BOOM
+	Boom bool `json:"boom"`
+	//Bool if logs will get persisted for Zitadel-Operator
+	ZitadelOperator bool `json:"zitadel-operator"`
 }
