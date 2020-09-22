@@ -1,0 +1,89 @@
+kind: zitadel.caos.ch/Orb
+version: v0
+spec:
+  verbose: true
+iam:
+  kind: zitadel.caos.ch/Zitadel
+  version: v0
+  spec:
+    verbose: true
+    replicaCount: 1
+    configuration:
+      tracing:
+        projectID: zitadel
+        fraction: "0.1"
+        type: google
+      cache:
+        maxAge: 12h
+        sharedMaxAge: 168h
+        shortMaxAge: 5m
+        shortSharedMaxAge: 15m
+      secrets:
+        userVerificationID: UserVerificationKey_1
+        otpVerificationID: OTPVerificationKey_1
+        oidcKeysID: OIDCKey_1
+        cookieID: CookieKey_1
+        csrfID: CookieKey_1
+        domainVerificationID: DomainVerificationKey_1
+        idpConfigVerificationID: IdpConfigVerificationKey_1
+      notifications:
+        email:
+          smtpHost: smtp.gmail.com:465
+          smtpUser: zitadel@caos.ch
+          senderAddress: noreply@caos.ch
+          senderName: CAOS AG
+          tls: true
+        twilio:
+          senderName: CAOS AG
+      debugMode: false
+  database:
+    kind: zitadel.caos.ch/ManagedDatabase
+    version: v0
+    spec:
+      verbose: true
+      replicaCount: 1
+      storageCapacity: 368Gi
+      storageClass: storage
+      clusterDNS: cluster.dev
+      backups:
+        bucket:
+          kind: zitadel.caos.ch/BucketBackup
+          version: v0
+          spec:
+            verbose: true
+            cron: 0 * * * *
+            bucket: zitadel-backups
+  networking:
+    kind: zitadel.caos.ch/LegacyCloudflare
+    version: v0
+    spec:
+      verbose: true
+      domain: zitadel.ch
+      ip: 10.1.2.3
+      rules:
+        - description: all allow
+          priority: 1
+          action: allow
+          filters:
+            - description: internal addresses allow for all subdomains
+              targets: []
+              targetgroups: []
+              sources: []
+              sourcegroups: []
+              containstargets:
+                - ""
+              containstargetsgroups: []
+              ssl: ""
+        - description: all block
+          priority: 2
+          action: block
+          filters:
+            - description: block all non internal addresses for subdomains
+              targets: []
+              targetgroups: []
+              sources: []
+              sourcegroups: []
+              containstargets: []
+              containstargetsgroups: []
+              ssl: "true"
+      prefix: ""

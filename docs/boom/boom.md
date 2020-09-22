@@ -22,55 +22,11 @@ Upcoming tools:
 
 ## How does it work
 
-The operator works by reading a configuration (crd) located in a GIT Repository.
+The operator works by reading a configuration (crd) located in a GIT Repository and 
+calculates what actions have to be taken to ensure the desired state in the Git repository on the cluster.
+
 In our default setup our "cluster lifecycle" tool `ORBITER`, shares the repository and secrets with `BOOM`.
 
-```yaml
-apiVersion: boom.caos.ch/v1beta1
-kind: Toolset
-metadata:
-  name: caos
-  namespace: caos-system
-spec:
-  preApply:
-    deploy: true
-    folder: preapply
-  postApply:
-    deploy: true
-    folder: postapply
-  prometheus-operator:
-    deploy: true
-  logging-operator:
-    deploy: true
-  prometheus-node-exporter:
-    deploy: true
-  grafana:
-    deploy: true
-  ambassador:
-    deploy: true
-    service:
-      type: LoadBalancer
-  kube-state-metrics:
-    deploy: true
-  prometheus:
-    deploy: true
-    storage:
-      size: 5Gi
-      storageClass: standard
-  loki:
-    deploy: true
-    storage:
-      size: 5Gi
-      storageClass: standard
-```
 
 ## How to use it
 
-There has to be a git-repository with an boom.yml in the base. Then a `BOOM` instance can be started with 
-```bash
-orbctl -f $HOME/.orb/config takeoff
-```
-
-## Structure of the used boom.yml 
-
-The structure is documented in v1beta1 [here](yml/v1beta1/ToolsetSpec.md) and v1beta2 [here](yml/v1beta2/ToolsetSpec.md), from there you can follow the file-tree to what configurations you want to make.

@@ -20,9 +20,9 @@ What makes Orbiter special is that it ships with a nice **Mission Control UI** (
 
 ## How To Use It
 
-In order to manage a Kubernetes cluster on already provisioned VMs, follow this guide.  
+In order to manage a Kubernetes cluster on already provisioned VMs, [follow this guide](./static.md).  
 
-If you'd rather run a Kubernetes cluster on Google Compute Engine with ORBITER managed VMs, click here.
+If you'd rather run a Kubernetes cluster on Google Compute Engine with ORBITER managed VMs, [click here](./gce.md).
 
 ## Operating System Requirements
 
