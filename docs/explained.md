@@ -78,6 +78,24 @@ BOOM can be used in close conjunction with ORBITER but also standalone on any su
   - Pre and Postapply of known Kubernetes-manifests
     - Kubernetes-native resources
     - CRDs(Argocd-applications, Logging-flows, Metric-monitors)
+    
+### Zitadel-Operator
+
+The Zitadel-Operator is responsible for installing and maintaining all necessary components to run Zitadel on any available orchestration system. This components include the integration with BOOM and all provided tools, a database and everything networking related so that Zitadel is also available from outside, if necessary.
+
+- Identity and Access Management
+  - Configuration Management for Zitadel
+  - Scalable and Cloud Native Database (CockroachDB)
+    - Migrations from Release to Release
+    - Setup through Zitadel itself
+  - Networking (Cloudflare)
+    - DNS entries
+    - Firewall rules
+    - TLS secure with "Origin CA certificates"
+  - Backup and Restore
+    - Periodically at fixed times, dates, or intervals run backups
+    - Manually started instant backups
+    - Manually started restore from backup
 
 ### MISSION
 

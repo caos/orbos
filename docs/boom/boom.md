@@ -27,6 +27,6 @@ calculates what actions have to be taken to ensure the desired state in the Git 
 
 In our default setup our "cluster lifecycle" tool `ORBITER`, shares the repository and secrets with `BOOM`.
 
-
 ## How to use it
 
+In order to see how to use `BOOM` in combination with `Orbos` or on a standalone Kubernetes-cluster, follow the instructions [here](./setup.md).

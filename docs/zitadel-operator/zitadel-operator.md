@@ -11,4 +11,4 @@ The Operator ensures all resources needed to run `Zitadel` on the Orb and outsid
 
 ## How To Use It
 
-In order to see how to use the Zitadel-Operator in combination with Orbos or on a standalone Kubernetes-cluster, follow the instructions [here](./setup.md).
+In order to see how to use the `Zitadel-Operator` in combination with `Orbos` or on a standalone Kubernetes-cluster, follow the instructions [here](./setup.md).
