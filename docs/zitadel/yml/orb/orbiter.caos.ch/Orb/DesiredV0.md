@@ -4,6 +4,6 @@
 ## Structure 
  
 
-| Attribute | Description                         | Default | Collection | Map  |
-| --------- | ----------------------------------- | ------- | ---------- | ---  |
-| spec      | Configuration for zitadel-operator  |         |            |      |
+| Attribute | Description                                               | Default | Collection | Map  |
+| --------- | --------------------------------------------------------- | ------- | ---------- | ---  |
+| spec      | Configuration for zitadel-operator , [here](Spec/Spec.md) |         |            |      |
