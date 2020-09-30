@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
+	"github.com/caos/orbos/internal/operator/database/kinds/orb"
 	"github.com/caos/orbos/internal/start"
+	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
@@ -40,12 +40,12 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		found, err := api.ExistsZitadelYml(gitClient)
+		found, err := api.ExistsDatabaseYml(gitClient)
 		if err != nil {
 			return err
 		}
 		if found {
-			zitadel, err := api.ReadZitadelYml(gitClient)
+			zitadel, err := api.ReadDatabaseYml(gitClient)
 			if err != nil {
 				return err
 			}
@@ -72,9 +72,9 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 			for _, kubeconfig := range kubeconfigs {
-				k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+				k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					if err := start.ZitadelRestore(monitor, orbConfig.Path, k8sClient, backup); err != nil {
+					if err := start.DatabaseRestore(monitor, orbConfig.Path, k8sClient, backup); err != nil {
 						return err
 					}
 				}

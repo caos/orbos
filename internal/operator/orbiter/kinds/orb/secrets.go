@@ -3,15 +3,15 @@ package orb
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/mntr"
 )
 
-func SecretsFunc() secret.Func {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+func SecretsFunc() secret2.Func {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret2.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -22,7 +22,7 @@ func SecretsFunc() secret.Func {
 		}
 		desiredTree.Parsed = desiredKind
 
-		secrets = make(map[string]*secret.Secret)
+		secrets = make(map[string]*secret2.Secret)
 
 		for provID, providerTree := range desiredKind.Providers {
 
@@ -35,7 +35,7 @@ func SecretsFunc() secret.Func {
 			}
 
 			for path, providerSecret := range providerSecrets {
-				secrets[secret.JoinPath(provID, path)] = providerSecret
+				secrets[secret2.JoinPath(provID, path)] = providerSecret
 			}
 		}
 
@@ -50,7 +50,7 @@ func SecretsFunc() secret.Func {
 			}
 
 			for path, clusterSecret := range clusterSecrets {
-				secrets[secret.JoinPath(clusterID, path)] = clusterSecret
+				secrets[secret2.JoinPath(clusterID, path)] = clusterSecret
 			}
 		}
 

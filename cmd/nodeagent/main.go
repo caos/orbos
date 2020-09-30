@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"

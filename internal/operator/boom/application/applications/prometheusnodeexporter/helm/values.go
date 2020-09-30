@@ -1,6 +1,6 @@
 package helm
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+import "github.com/caos/orbos/pkg/kubernetes/k8s"
 
 type Image struct {
 	Repository string `yaml:"repository"`

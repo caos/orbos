@@ -1,8 +1,8 @@
 package v1beta2
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type LogCollection struct {

@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
+	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +38,7 @@ func BackupCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		found, err := api.ExistsZitadelYml(gitClient)
+		found, err := api.ExistsDatabaseYml(gitClient)
 		if err != nil {
 			return err
 		}
@@ -48,9 +48,9 @@ func BackupCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 			for _, kubeconfig := range kubeconfigs {
-				k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+				k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					err := start.ZitadelBackup(monitor, orbConfig.Path, k8sClient, backup)
+					err := start.DatabaseBackup(monitor, orbConfig.Path, k8sClient, backup)
 					if err != nil {
 						return err
 					}

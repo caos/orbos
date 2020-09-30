@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"

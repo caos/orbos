@@ -1,6 +1,7 @@
 package providers
 
 import (
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"regexp"
 	"strings"
 
@@ -9,9 +10,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
@@ -78,7 +78,7 @@ func GetSecrets(
 	monitor mntr.Monitor,
 	providerTree *tree.Tree,
 ) (
-	map[string]*secret.Secret,
+	map[string]*secret2.Secret,
 	error,
 ) {
 	switch providerTree.Common.Kind {

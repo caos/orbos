@@ -2,12 +2,10 @@ package kubernetes
 
 import (
 	"bytes"
-	"context"
 	"fmt"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"strings"
 	"time"
-
-	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/pkg/errors"
 
@@ -27,7 +25,7 @@ func join(
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
 	certKey string,
-	client *Client) (*string, error) {
+	client *kubernetes.Client) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
@@ -173,14 +171,13 @@ nodeRegistration:
 
 		joining.currentMachine.Joined = true
 		monitor.Changed("Node joined")
-
-		dnsPods, err := client.set.CoreV1().Pods("kube-system").List(context.Background(), mach.ListOptions{LabelSelector: "k8s-app=kube-dns"})
+		dnsPods, err := client.ListPods("kube-system", map[string]string{"k8s-app": "kube-dns"})
 		if err != nil {
 			return nil, err
 		}
 
 		if len(dnsPods.Items) > 1 {
-			err = client.set.CoreV1().Pods("kube-system").Delete(context.Background(), dnsPods.Items[0].Name, mach.DeleteOptions{})
+			err = client.DeletePod("kube-system", dnsPods.Items[0].Name)
 		}
 
 		return nil, err

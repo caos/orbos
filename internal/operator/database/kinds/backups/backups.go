@@ -1,0 +1,72 @@
+package backups
+
+import (
+	"github.com/caos/orbos/internal/operator/core"
+	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket"
+	"github.com/caos/orbos/mntr"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
+	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+)
+
+func GetQueryAndDestroyFuncs(
+	monitor mntr.Monitor,
+	desiredTree *tree.Tree,
+	currentTree *tree.Tree,
+	name string,
+	namespace string,
+	labels map[string]string,
+	databases []string,
+	checkDBReady core.EnsureFunc,
+	timestamp string,
+	secretPasswordName string,
+	migrationUser string,
+	users []string,
+	nodeselector map[string]string,
+	tolerations []corev1.Toleration,
+	features []string,
+) (
+	core.QueryFunc,
+	core.DestroyFunc,
+	error,
+) {
+	switch desiredTree.Common.Kind {
+	case "zitadel.caos.ch/BucketBackup":
+		return bucket.AdaptFunc(name, namespace, labels, databases, checkDBReady, timestamp, secretPasswordName, migrationUser, users, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
+	default:
+		return nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
+	}
+}
+
+func GetSecrets(
+	monitor mntr.Monitor,
+	desiredTree *tree.Tree,
+) (
+	map[string]*secret2.Secret,
+	error,
+) {
+
+	switch desiredTree.Common.Kind {
+	case "zitadel.caos.ch/BucketBackup":
+		return bucket.SecretsFunc()(monitor, desiredTree)
+	default:
+		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
+	}
+}
+
+func GetBackupList(
+	monitor mntr.Monitor,
+	name string,
+	desiredTree *tree.Tree,
+) (
+	[]string,
+	error,
+) {
+	switch desiredTree.Common.Kind {
+	case "zitadel.caos.ch/BucketBackup":
+		return bucket.BackupList()(monitor, name, desiredTree)
+	default:
+		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
+	}
+}

@@ -5,9 +5,9 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/internal/tree"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -98,8 +98,8 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 						return err
 					}
 					desiredKind.Spec.SSHKey = &SSHKey{
-						Private: &secret.Secret{Value: priv},
-						Public:  &secret.Secret{Value: pub},
+						Private: &secret2.Secret{Value: priv},
+						Public:  &secret2.Secret{Value: pub},
 					}
 				}
 

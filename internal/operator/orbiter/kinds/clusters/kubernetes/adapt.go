@@ -1,7 +1,8 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/tree"
 	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
@@ -66,10 +67,10 @@ func AdaptFunc(
 		if desiredKind.Spec.Kubeconfig != nil && desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
-		k8sClient := NewK8sClient(monitor, kc)
+		k8sClient := kubernetes.NewK8sClient(monitor, kc)
 
 		if k8sClient.Available() && deployOrbiter {
-			if err := EnsureCommonArtifacts(monitor, k8sClient); err != nil {
+			if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
@@ -80,7 +81,7 @@ func AdaptFunc(
 				panic(err)
 			}
 
-			if err := EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter); err != nil {
+			if err := kubernetes.EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,

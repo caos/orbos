@@ -1,15 +1,13 @@
 package gitcrd
 
 import (
+	"github.com/caos/orbos/pkg/kubernetes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-
 	orbosapi "github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
@@ -24,6 +22,7 @@ import (
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )

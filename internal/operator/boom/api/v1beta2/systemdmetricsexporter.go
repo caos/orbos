@@ -1,6 +1,6 @@
 package v1beta2
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+import "github.com/caos/orbos/pkg/kubernetes/k8s"
 
 type SystemdMetricsExporter struct {
 	//Flag if tool should be deployed

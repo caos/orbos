@@ -3,9 +3,9 @@ package loadbalancers
 import (
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +40,7 @@ func GetSecrets(
 	monitor mntr.Monitor,
 	loadBalancingTree *tree.Tree,
 ) (
-	map[string]*secret.Secret,
+	map[string]*secret2.Secret,
 	error,
 ) {
 

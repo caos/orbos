@@ -3,13 +3,13 @@ package gce_test
 import (
 	"bytes"
 	"fmt"
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
 )
@@ -38,13 +38,13 @@ func TestComputeService(t *testing.T) {
 		mntr.Monitor{OnInfo: mntr.LogMessage},
 		&gce.Spec{
 			Verbose: false,
-			JSONKey: &secret.Secret{Value: jsonKey},
+			JSONKey: &secret2.Secret{Value: jsonKey},
 
 			Region: "europe-west1",
 			Zone:   "europe-west1-b",
 			SSHKey: &gce.SSHKey{
-				Private: &secret.Secret{Value: private},
-				Public:  &secret.Secret{Value: public},
+				Private: &secret2.Secret{Value: private},
+				Public:  &secret2.Secret{Value: public},
 			},
 			Pools: map[string]*gce.Pool{
 				"apool":       pool,

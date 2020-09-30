@@ -5,9 +5,9 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
@@ -36,8 +36,8 @@ func ParseToolset(desiredTree *tree.Tree) (*v1beta2.Toolset, bool, error) {
 
 }
 
-func SecretsFunc() secret.Func {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+func SecretsFunc() secret2.Func {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret2.Secret, err error) {
 		desiredKindCommon := common.New()
 		if err := desiredTree.Original.Decode(desiredKindCommon); err != nil {
 			return nil, errors.Wrap(err, "parsing desired state failed")

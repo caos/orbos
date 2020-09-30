@@ -1,9 +1,9 @@
 package v1beta2
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type Metadata struct {

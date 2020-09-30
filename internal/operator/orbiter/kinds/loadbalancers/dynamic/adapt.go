@@ -10,7 +10,7 @@ import (
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"

@@ -2,15 +2,14 @@ package main
 
 import (
 	"github.com/caos/orbos/cmd/orbctl/cmds"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
+	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
-
 	var (
 		verbose          bool
 		recur            bool
@@ -133,13 +132,13 @@ func StartBoom(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func StartZitadel(rv RootValues) *cobra.Command {
+func StartDatabase(rv RootValues) *cobra.Command {
 	var (
 		kubeconfig string
 		cmd        = &cobra.Command{
-			Use:   "zitadel",
-			Short: "Launch a zitadel operator",
-			Long:  "Ensures a desired state",
+			Use:   "database",
+			Short: "Launch a database operator",
+			Long:  "Ensures a desired state of the database",
 		}
 	)
 	flags := cmd.Flags()
@@ -151,9 +150,36 @@ func StartZitadel(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+		k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {
-			return start.Zitadel(monitor, orbConfig.Path, k8sClient)
+			return start.Database(monitor, orbConfig.Path, k8sClient)
+		}
+		return nil
+	}
+	return cmd
+}
+
+func StartNetworking(rv RootValues) *cobra.Command {
+	var (
+		kubeconfig string
+		cmd        = &cobra.Command{
+			Use:   "networking",
+			Short: "Launch a networking operator",
+			Long:  "Ensures a desired state of networking for an application",
+		}
+	)
+	flags := cmd.Flags()
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
+
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		_, monitor, orbConfig, _, errFunc := rv()
+		if errFunc != nil {
+			return errFunc(cmd)
+		}
+
+		k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
+		if k8sClient.Available() {
+			return start.Networking(monitor, orbConfig.Path, k8sClient)
 		}
 		return nil
 	}

@@ -2,9 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
+	"github.com/caos/orbos/pkg/kubernetes"
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"sync"
-
-	"github.com/caos/orbos/internal/secret"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
@@ -23,7 +23,7 @@ func ensureUpScale(
 	workerPools []*initializedPool,
 	kubeAPI *infra.Address,
 	k8sVersion KubernetesVersion,
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	oneoff bool,
 	initializeMachine func(infra.Machine, *initializedPool) initializedMachine) (changed bool, err error) {
 
@@ -201,7 +201,7 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		desired.Spec.Kubeconfig = &secret.Secret{Value: *joinKubeconfig}
+		desired.Spec.Kubeconfig = &secret2.Secret{Value: *joinKubeconfig}
 		return false, psf(monitor.WithFields(map[string]interface{}{
 			"type": "kubeconfig",
 		}))

@@ -1,11 +1,11 @@
 package monitoring
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/storage"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type Monitoring struct {

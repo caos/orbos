@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"path/filepath"
 	"strings"
-
-	"github.com/caos/orbos/internal/secret"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -178,7 +177,7 @@ func (c cachedMachines) Machines() infra.Machines {
 
 func privateKeys(spec Spec) [][]byte {
 	var privateKeys [][]byte
-	toBytes := func(key *secret.Secret) {
+	toBytes := func(key *secret2.Secret) {
 		if key != nil {
 			privateKeys = append(privateKeys, []byte(key.Value))
 		}

@@ -35,7 +35,8 @@ func main() {
 	takeoff.AddCommand(
 		StartBoom(rootValues),
 		StartOrbiter(rootValues),
-		StartZitadel(rootValues),
+		StartDatabase(rootValues),
+		StartNetworking(rootValues),
 	)
 
 	nodes := NodeCommand()

@@ -1,10 +1,10 @@
 package push
 
 import (
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type Func func(monitor mntr.Monitor) error

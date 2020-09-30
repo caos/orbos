@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"io/ioutil"
 )
 
@@ -93,7 +93,10 @@ func Takeoff(
 			return err
 		}
 
-		if err := deployZitadel(monitor, gitClient, &kubeconfig, version); err != nil {
+		if err := deployDatabase(monitor, gitClient, &kubeconfig, version); err != nil {
+			return err
+		}
+		if err := deployNetworking(monitor, gitClient, &kubeconfig, version); err != nil {
 			return err
 		}
 	}

@@ -6,14 +6,14 @@ import (
 
 	"github.com/caos/orbos/internal/api"
 	orbconfig "github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 )
 
 func ToEnsureResult(done bool, err error) *EnsureResult {

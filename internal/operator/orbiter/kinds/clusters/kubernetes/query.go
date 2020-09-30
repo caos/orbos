@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -18,7 +19,7 @@ func query(
 	providerCurrents map[string]interface{},
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	oneoff bool) (orbiter.EnsureFunc, error) {
 
 	cloudPools, kubeAPIAddress, err := GetProviderInfos(desired, providerCurrents)

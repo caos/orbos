@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
+	"github.com/caos/orbos/internal/operator/database/kinds/orb"
 	"github.com/spf13/cobra"
 )
 
@@ -34,12 +34,12 @@ func BackupListCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		found, err := api.ExistsZitadelYml(gitClient)
+		found, err := api.ExistsDatabaseYml(gitClient)
 		if err != nil {
 			return err
 		}
 		if found {
-			zitadel, err := api.ReadZitadelYml(gitClient)
+			zitadel, err := api.ReadDatabaseYml(gitClient)
 			if err != nil {
 				return err
 			}

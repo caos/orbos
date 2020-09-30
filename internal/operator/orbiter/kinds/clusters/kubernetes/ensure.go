@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func ensure(
@@ -12,7 +13,7 @@ func ensure(
 	desired *DesiredV0,
 	kubeAPIAddress *infra.Address,
 	pdf api.PushDesiredFunc,
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	oneoff bool,
 	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,

@@ -1,17 +1,18 @@
 package api
 
 import (
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/tree"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	orbiterFile = "orbiter.yml"
-	boomFile    = "boom.yml"
-	zitadelFile = "zitadel.yml"
+	orbiterFile    = "orbiter.yml"
+	boomFile       = "boom.yml"
+	databaseFile   = "database.yml"
+	networkingFile = "networking.yml"
 )
 
 type PushDesiredFunc func(monitor mntr.Monitor) error
@@ -54,22 +55,41 @@ func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredF
 	}
 }
 
-func ExistsZitadelYml(gitClient *git.Client) (bool, error) {
-	return existsFileInGit(gitClient, zitadelFile)
+func ExistsDatabaseYml(gitClient *git.Client) (bool, error) {
+	return existsFileInGit(gitClient, databaseFile)
 }
 
-func ReadZitadelYml(gitClient *git.Client) (*tree.Tree, error) {
-	return readFileInGit(gitClient, zitadelFile)
+func ReadDatabaseYml(gitClient *git.Client) (*tree.Tree, error) {
+	return readFileInGit(gitClient, databaseFile)
 }
 
-func PushZitadelYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
-	return pushFileInGit(monitor, msg, gitClient, desired, zitadelFile)
+func PushDatabaseYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
+	return pushFileInGit(monitor, msg, gitClient, desired, databaseFile)
 }
 
-func PushZitadelDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
+func PushDatabaseDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
+	return func(monitor mntr.Monitor) error {
+		monitor.Info("Writing database desired state")
+		return PushDatabaseYml(monitor, "Database desired state written", gitClient, desired)
+	}
+}
+
+func ExistsNetworkingYml(gitClient *git.Client) (bool, error) {
+	return existsFileInGit(gitClient, networkingFile)
+}
+
+func ReadNetworkinglYml(gitClient *git.Client) (*tree.Tree, error) {
+	return readFileInGit(gitClient, networkingFile)
+}
+
+func PushNetworkingYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
+	return pushFileInGit(monitor, msg, gitClient, desired, networkingFile)
+}
+
+func PushNetworkingDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing zitadel desired state")
-		return PushZitadelYml(monitor, "Zitadel desired state written", gitClient, desired)
+		return PushNetworkingYml(monitor, "Zitadel desired state written", gitClient, desired)
 	}
 }
 

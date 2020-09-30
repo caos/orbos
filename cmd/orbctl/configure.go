@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/caos/orbos/pkg/kubernetes"
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"io/ioutil"
 	"path/filepath"
 
@@ -18,8 +20,6 @@ import (
 	"github.com/caos/orbos/internal/stores/github"
 
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +64,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		if newMasterKey != "" {
 			monitor.Info("Changing masterkey in current orbconfig")
 			if orbConfig.Masterkey == "" {
-				secret.Masterkey = newMasterKey
+				secret2.Masterkey = newMasterKey
 			}
 			orbConfig.Masterkey = newMasterKey
 			changes = true
@@ -154,7 +154,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			monitor.Info("Repopulating orbiter secrets")
-			if err := secret.Rewrite(
+			if err := secret2.Rewrite(
 				monitor,
 				gitClient,
 				"orbiter",
@@ -200,7 +200,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			tree.Parsed = toolset
-			if err := secret.Rewrite(
+			if err := secret2.Rewrite(
 				monitor,
 				gitClient,
 				"boom",

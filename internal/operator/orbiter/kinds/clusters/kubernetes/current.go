@@ -3,7 +3,7 @@ package kubernetes
 import (
 	"sync"
 
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type CurrentCluster struct {
@@ -47,6 +47,22 @@ type Machine struct {
 	FirewallIsReady bool
 	Unknown         bool
 	Metadata        MachineMetadata `yaml:",inline"`
+}
+
+func (m *Machine) GetUpdating() bool {
+	return m.Updating
+}
+
+func (m *Machine) SetUpdating(u bool) {
+	m.Updating = u
+}
+
+func (m *Machine) GetJoined() bool {
+	return m.Joined
+}
+
+func (m *Machine) SetJoined(j bool) {
+	m.Joined = j
 }
 
 type Versions struct {

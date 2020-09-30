@@ -1,8 +1,8 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type AdaptFunc func(monitor mntr.Monitor, finishedChan chan struct{}, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, ConfigureFunc, bool, error)

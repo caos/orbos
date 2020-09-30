@@ -2,9 +2,9 @@ package kubernetes
 
 import (
 	"fmt"
+	secret2 "github.com/caos/orbos/pkg/secret"
 
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
@@ -24,7 +24,7 @@ type DesiredV0 struct {
 
 type Spec struct {
 	ControlPlane Pool
-	Kubeconfig   *secret.Secret `yaml:",omitempty"`
+	Kubeconfig   *secret2.Secret `yaml:",omitempty"`
 	Networking   struct {
 		DNSDomain   string
 		Network     string

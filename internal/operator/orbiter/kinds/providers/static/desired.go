@@ -2,8 +2,8 @@ package static
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
@@ -20,10 +20,10 @@ type Spec struct {
 }
 
 type Keys struct {
-	BootstrapKeyPrivate   *secret.Secret `yaml:",omitempty"`
-	BootstrapKeyPublic    *secret.Secret `yaml:",omitempty"`
-	MaintenanceKeyPrivate *secret.Secret `yaml:",omitempty"`
-	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
+	BootstrapKeyPrivate   *secret2.Secret `yaml:",omitempty"`
+	BootstrapKeyPublic    *secret2.Secret `yaml:",omitempty"`
+	MaintenanceKeyPrivate *secret2.Secret `yaml:",omitempty"`
+	MaintenanceKeyPublic  *secret2.Secret `yaml:",omitempty"`
 }
 
 func (d DesiredV0) validate() error {

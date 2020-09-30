@@ -1,8 +1,8 @@
 package v1beta1
 
 import (
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 	"strings"
 )
@@ -16,7 +16,7 @@ func ParseToolset(desiredTree *tree.Tree) (*Toolset, error) {
 	return desiredKind, nil
 }
 
-func SecretsFunc(desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
+func SecretsFunc(desiredTree *tree.Tree) (secrets map[string]*secret2.Secret, err error) {
 	defer func() {
 		err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 	}()
@@ -30,7 +30,7 @@ func SecretsFunc(desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err
 	return getSecretsMap(desiredKind), nil
 }
 
-func RewriteFunc(desiredTree *tree.Tree, newMasterkey string) (secrets map[string]*secret.Secret, err error) {
+func RewriteFunc(desiredTree *tree.Tree, newMasterkey string) (secrets map[string]*secret2.Secret, err error) {
 	defer func() {
 		err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 	}()
@@ -40,13 +40,13 @@ func RewriteFunc(desiredTree *tree.Tree, newMasterkey string) (secrets map[strin
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desiredKind
-	secret.Masterkey = newMasterkey
+	secret2.Masterkey = newMasterkey
 
 	return getSecretsMap(desiredKind), nil
 }
 
-func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
-	ret := make(map[string]*secret.Secret, 0)
+func getSecretsMap(desiredKind *Toolset) map[string]*secret2.Secret {
+	ret := make(map[string]*secret2.Secret, 0)
 
 	if desiredKind.Spec.Grafana != nil {
 		grafana := desiredKind.Spec.Grafana
@@ -57,20 +57,20 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 
 		if grafana.Auth != nil {
 			if grafana.Auth.GenericOAuth != nil {
-				ret["grafana.sso.oauth.clientid"] = secret.InitIfNil(grafana.Auth.GenericOAuth.ClientID)
-				ret["grafana.sso.oauth.clientsecret"] = secret.InitIfNil(grafana.Auth.GenericOAuth.ClientSecret)
+				ret["grafana.sso.oauth.clientid"] = secret2.InitIfNil(grafana.Auth.GenericOAuth.ClientID)
+				ret["grafana.sso.oauth.clientsecret"] = secret2.InitIfNil(grafana.Auth.GenericOAuth.ClientSecret)
 			}
 			if grafana.Auth.Google != nil {
-				ret["grafana.sso.google.clientid"] = secret.InitIfNil(grafana.Auth.Google.ClientID)
-				ret["grafana.sso.google.clientsecret"] = secret.InitIfNil(grafana.Auth.Google.ClientSecret)
+				ret["grafana.sso.google.clientid"] = secret2.InitIfNil(grafana.Auth.Google.ClientID)
+				ret["grafana.sso.google.clientsecret"] = secret2.InitIfNil(grafana.Auth.Google.ClientSecret)
 			}
 			if grafana.Auth.Github != nil {
-				ret["grafana.sso.github.clientid"] = secret.InitIfNil(grafana.Auth.Github.ClientID)
-				ret["grafana.sso.github.clientsecret"] = secret.InitIfNil(grafana.Auth.Github.ClientSecret)
+				ret["grafana.sso.github.clientid"] = secret2.InitIfNil(grafana.Auth.Github.ClientID)
+				ret["grafana.sso.github.clientsecret"] = secret2.InitIfNil(grafana.Auth.Github.ClientSecret)
 			}
 			if grafana.Auth.Gitlab != nil {
-				ret["grafana.sso.gitlab.clientid"] = secret.InitIfNil(grafana.Auth.Gitlab.ClientID)
-				ret["grafana.sso.gitlab.clientsecret"] = secret.InitIfNil(grafana.Auth.Gitlab.ClientSecret)
+				ret["grafana.sso.gitlab.clientid"] = secret2.InitIfNil(grafana.Auth.Gitlab.ClientID)
+				ret["grafana.sso.gitlab.clientsecret"] = secret2.InitIfNil(grafana.Auth.Gitlab.ClientSecret)
 			}
 		}
 	}
@@ -80,18 +80,18 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 		if argocd.Auth != nil {
 			auth := argocd.Auth
 			if auth.GoogleConnector != nil {
-				ret["argocd.sso.google.clientid"] = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientID)
-				ret["argocd.sso.google.clientsecret"] = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientSecret)
-				ret["argocd.sso.google.serviceaccountjson"] = secret.InitIfNil(argocd.Auth.GoogleConnector.Config.ServiceAccountJSON)
+				ret["argocd.sso.google.clientid"] = secret2.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientID)
+				ret["argocd.sso.google.clientsecret"] = secret2.InitIfNil(argocd.Auth.GoogleConnector.Config.ClientSecret)
+				ret["argocd.sso.google.serviceaccountjson"] = secret2.InitIfNil(argocd.Auth.GoogleConnector.Config.ServiceAccountJSON)
 			}
 			if auth.GitlabConnector != nil {
-				ret["argocd.sso.gitlab.clientid"] = secret.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientID)
-				ret["argocd.sso.gitlab.clientsecret"] = secret.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientSecret)
+				ret["argocd.sso.gitlab.clientid"] = secret2.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientID)
+				ret["argocd.sso.gitlab.clientsecret"] = secret2.InitIfNil(argocd.Auth.GitlabConnector.Config.ClientSecret)
 			}
 
 			if auth.OIDC != nil {
-				ret["argocd.sso.oidc.clientid"] = secret.InitIfNil(argocd.Auth.OIDC.ClientID)
-				ret["argocd.sso.oidc.clientsecret"] = secret.InitIfNil(argocd.Auth.OIDC.ClientSecret)
+				ret["argocd.sso.oidc.clientid"] = secret2.InitIfNil(argocd.Auth.OIDC.ClientID)
+				ret["argocd.sso.oidc.clientsecret"] = secret2.InitIfNil(argocd.Auth.OIDC.ClientSecret)
 			}
 		}
 		if argocd.Credentials != nil {
@@ -99,15 +99,15 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 				base := strings.Join([]string{"argocd", "credential", value.Name}, ".")
 
 				key := strings.Join([]string{base, "username"}, ".")
-				value.Username = secret.InitIfNil(value.Username)
+				value.Username = secret2.InitIfNil(value.Username)
 				ret[key] = value.Username
 
 				key = strings.Join([]string{base, "password"}, ".")
-				value.Password = secret.InitIfNil(value.Password)
+				value.Password = secret2.InitIfNil(value.Password)
 				ret[key] = value.Password
 
 				key = strings.Join([]string{base, "certificate"}, ".")
-				value.Certificate = secret.InitIfNil(value.Certificate)
+				value.Certificate = secret2.InitIfNil(value.Certificate)
 				ret[key] = value.Certificate
 			}
 		}
@@ -116,15 +116,15 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 				base := strings.Join([]string{"argocd", "repository", value.Name}, ".")
 
 				key := strings.Join([]string{base, "username"}, ".")
-				value.Username = secret.InitIfNil(value.Username)
+				value.Username = secret2.InitIfNil(value.Username)
 				ret[key] = value.Username
 
 				key = strings.Join([]string{base, "password"}, ".")
-				value.Password = secret.InitIfNil(value.Password)
+				value.Password = secret2.InitIfNil(value.Password)
 				ret[key] = value.Password
 
 				key = strings.Join([]string{base, "certificate"}, ".")
-				value.Certificate = secret.InitIfNil(value.Certificate)
+				value.Certificate = secret2.InitIfNil(value.Certificate)
 				ret[key] = value.Certificate
 			}
 		}
@@ -134,11 +134,11 @@ func getSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 				base := strings.Join([]string{"argocd", "gopass", value.StoreName}, ".")
 
 				key := strings.Join([]string{base, "ssh"}, ".")
-				value.SSHKey = secret.InitIfNil(value.SSHKey)
+				value.SSHKey = secret2.InitIfNil(value.SSHKey)
 				ret[key] = value.SSHKey
 
 				key = strings.Join([]string{base, "gpg"}, ".")
-				value.GPGKey = secret.InitIfNil(value.GPGKey)
+				value.GPGKey = secret2.InitIfNil(value.GPGKey)
 				ret[key] = value.GPGKey
 			}
 		}

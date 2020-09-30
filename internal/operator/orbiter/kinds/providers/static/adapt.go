@@ -5,9 +5,9 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/internal/tree"
+	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -102,8 +102,8 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					if initKeys {
 						desiredKind.Spec.Keys = &Keys{}
 					}
-					desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret.Secret{Value: priv}
-					desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret.Secret{Value: pub}
+					desiredKind.Spec.Keys.MaintenanceKeyPrivate = &secret2.Secret{Value: priv}
+					desiredKind.Spec.Keys.MaintenanceKeyPublic = &secret2.Secret{Value: pub}
 					return nil
 				}
 

@@ -2,12 +2,13 @@ package cmds
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
+	orbdb "github.com/caos/orbos/internal/operator/database/kinds/orb"
+	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 )
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
@@ -29,7 +30,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		return err
 	}
 
-	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+	k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
 
 	if err := cmdboom.Reconcile(monitor, k8sClient, version, desiredKind.Spec.Boom); err != nil {
 		return err
@@ -37,21 +38,45 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 	return nil
 }
 
-func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
-	found, err := api.ExistsZitadelYml(gitClient)
+func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
+	found, err := api.ExistsDatabaseYml(gitClient)
 	if err != nil {
 		return err
 	}
 	if found {
-		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+		k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
 
 		if k8sClient.Available() {
-			tree, err := api.ReadZitadelYml(gitClient)
+			tree, err := api.ReadDatabaseYml(gitClient)
 			if err != nil {
 				return err
 			}
 
-			if err := cmdzitadel.Reconcile(monitor, tree, version)(k8sClient); err != nil {
+			if err := orbdb.Reconcile(monitor, tree, version)(k8sClient); err != nil {
+				return err
+			}
+		} else {
+			monitor.Info("Failed to connect to k8s")
+		}
+	}
+	return nil
+}
+
+func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
+	found, err := api.ExistsNetworkingYml(gitClient)
+	if err != nil {
+		return err
+	}
+	if found {
+		k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
+
+		if k8sClient.Available() {
+			tree, err := api.ReadNetworkinglYml(gitClient)
+			if err != nil {
+				return err
+			}
+
+			if err := orbnw.Reconcile(monitor, tree, version)(k8sClient); err != nil {
 				return err
 			}
 		} else {

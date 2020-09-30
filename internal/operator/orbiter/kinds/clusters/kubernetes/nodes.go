@@ -1,13 +1,15 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"time"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/mntr"
 )
 
-func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Monitor, k8sClient *Client, pdf api.PushDesiredFunc) (done bool, err error) {
+func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Monitor, k8sClient *kubernetes.Client, pdf api.PushDesiredFunc) (done bool, err error) {
 
 	allInitializedMachines.forEach(monitor, func(machine *initializedMachine, machineMonitor mntr.Monitor) bool {
 		if err = machine.reconcile(); err != nil {
@@ -25,7 +27,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 			return true
 		}
 		if k8sClient.Available() {
-			if err = k8sClient.Drain(machine.currentMachine, machine.node, rebooting); err != nil {
+			if err = k8sClient.Drain(machine.currentMachine, machine.node, drainreason.Rebooting); err != nil {
 				return false
 			}
 		}
