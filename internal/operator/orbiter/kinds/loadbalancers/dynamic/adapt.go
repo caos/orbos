@@ -57,6 +57,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			for _, vip := range pool {
 				for _, t := range vip.Transport {
 					sort.Strings(t.BackendPools)
+					if t.ProxyProtocol == nil {
+						trueVal := true
+						t.ProxyProtocol = &trueVal
+						migrate = true
+					}
 					if t.Name == "kubeapi" {
 						if t.HealthChecks.Path != "/healthz" {
 							t.HealthChecks.Path = "/healthz"
@@ -66,15 +71,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 							t.HealthChecks.Protocol = "https"
 							migrate = true
 						}
+						if t.ProxyProtocol == nil || *t.ProxyProtocol {
+							f := false
+							t.ProxyProtocol = &f
+							migrate = true
+						}
 					}
 					if len(t.Whitelist) == 0 {
 						allIPs := orbiter.CIDR("0.0.0.0/0")
 						t.Whitelist = []*orbiter.CIDR{&allIPs}
-						migrate = true
-					}
-					if t.ProxyProtocol == nil {
-						trueVal := true
-						t.ProxyProtocol = &trueVal
 						migrate = true
 					}
 				}
