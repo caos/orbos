@@ -25,10 +25,10 @@ type APIGateway struct {
 	Caching *Caching `json:"caching,omitempty" yaml:"caching,omitempty"`
 	//Enable gRPC Web
 	//@default: false
-	GRPCWeb bool `json:"caching,omitempty" yaml:"caching,omitempty"`
+	GRPCWeb bool `json:"grpcWeb,omitempty" yaml:"grpcWeb,omitempty"`
 	//Enable proxy protocol
 	//@default: true
-	ProxyProtocol bool `json:"caching,omitempty" yaml:"caching,omitempty"`
+	ProxyProtocol bool `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 }
 
 type Caching struct {
