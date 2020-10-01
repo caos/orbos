@@ -44,6 +44,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 			timestamp,
 			desiredKind.Spec.NodeSelector,
 			desiredKind.Spec.Tolerations,
+			desiredKind.Spec.Version,
 			features,
 		)
 

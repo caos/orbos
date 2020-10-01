@@ -23,14 +23,15 @@ func ApplyFunc(
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
 	checkDBReady core.EnsureFunc,
+	secretName string,
+	secretKey string,
+	version string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
 	ensureFunc core.EnsureFunc,
 	err error,
 ) {
-	secretName := "backup-serviceaccountjson"
-	secretkey := "serviceaccountjson"
 	defaultMode := int32(256)
 	certPath := "/cockroach/cockroach-certs"
 	secretPath := "/secrets/sa.json"
@@ -65,7 +66,7 @@ func ApplyFunc(
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
 						Name:  jobName,
-						Image: "docker.pkg.github.com/caos/orbos/crbackup:zitadel",
+						Image: "docker.pkg.github.com/caos/orbos/crbackup:" + version,
 						Command: []string{
 							"/bin/bash",
 							"-c",
@@ -75,8 +76,8 @@ func ApplyFunc(
 							Name:      "client-certs",
 							MountPath: certPath,
 						}, {
-							Name:      secretkey,
-							SubPath:   secretkey,
+							Name:      secretKey,
+							SubPath:   secretKey,
 							MountPath: secretPath,
 						}},
 						ImagePullPolicy: corev1.PullAlways,
@@ -90,7 +91,7 @@ func ApplyFunc(
 							},
 						},
 					}, {
-						Name: secretkey,
+						Name: secretKey,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
 								SecretName: secretName,

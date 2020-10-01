@@ -56,7 +56,7 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 
 			if backup == "" {
 				prompt := promptui.Select{
-					Label: "Select machine",
+					Label: "Select backup to restore",
 					Items: list,
 				}
 

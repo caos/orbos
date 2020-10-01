@@ -1145,6 +1145,17 @@ func (c *Client) ExecInPod(namespace, name, container, command string) error {
 	return c.execInPod(cmd, container, req)
 }
 
+func (c *Client) ExecInPodWithOutput(namespace, name, container, command string) (string, error) {
+	cmd := []string{
+		"sh",
+		"-c",
+		command,
+	}
+
+	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(name).SubResource("exec")
+	return c.execInPodWithOutput(cmd, container, req)
+}
+
 func (c *Client) execInPod(cmd []string, container string, req *rest.Request) error {
 	option := &core.PodExecOptions{
 		Command:   cmd,
@@ -1181,4 +1192,43 @@ func (c *Client) execInPod(cmd []string, container string, req *rest.Request) er
 	}
 
 	return nil
+}
+
+func (c *Client) execInPodWithOutput(cmd []string, container string, req *rest.Request) (string, error) {
+	option := &core.PodExecOptions{
+		Command:   cmd,
+		Stdin:     false,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       false,
+		Container: container,
+	}
+	req.VersionedParams(
+		option,
+		scheme.ParameterCodec,
+	)
+
+	exec, err := remotecommand.NewSPDYExecutor(c.restConfig, "POST", req.URL())
+	if err != nil {
+		return "", err
+	}
+
+	var stdout, stderr bytes.Buffer
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdin:  nil,
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    true,
+	})
+	if err != nil {
+		return "", err
+	}
+
+	errStr := stderr.Bytes()
+	if len(errStr) > 0 {
+		return "", errors.New(string(errStr))
+	}
+
+	outData := stdout.Bytes()
+	return string(outData), nil
 }

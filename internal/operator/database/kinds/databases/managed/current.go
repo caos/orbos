@@ -14,13 +14,14 @@ type Current struct {
 }
 
 type CurrentDB struct {
-	URL            string
-	Port           string
-	ReadyFunc      core.EnsureFunc
-	CA             *certificate.Current
-	AddUserFunc    func(user string) (core.QueryFunc, error)
-	DeleteUserFunc func(user string) (core.DestroyFunc, error)
-	ListUsersFunc  func(k8sClient *kubernetes2.Client) ([]string, error)
+	URL               string
+	Port              string
+	ReadyFunc         core.EnsureFunc
+	CA                *certificate.Current
+	AddUserFunc       func(user string) (core.QueryFunc, error)
+	DeleteUserFunc    func(user string) (core.DestroyFunc, error)
+	ListUsersFunc     func(k8sClient *kubernetes2.Client) ([]string, error)
+	ListDatabasesFunc func(k8sClient *kubernetes2.Client) ([]string, error)
 }
 
 func (c *Current) GetURL() string {
@@ -53,6 +54,10 @@ func (c *Current) GetCertificate() []byte {
 
 func (c *Current) SetCertificate(cert []byte) {
 	c.Current.CA.Certificate = cert
+}
+
+func (c *Current) GetListDatabasesFunc() func(k8sClient *kubernetes2.Client) ([]string, error) {
+	return c.Current.ListDatabasesFunc
 }
 
 func (c *Current) GetListUsersFunc() func(k8sClient *kubernetes2.Client) ([]string, error) {

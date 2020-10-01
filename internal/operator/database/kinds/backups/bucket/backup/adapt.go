@@ -3,7 +3,7 @@ package backup
 import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/cronjob"
 	"github.com/caos/orbos/pkg/kubernetes/resources/job"
 	"github.com/pkg/errors"
@@ -29,6 +29,7 @@ func AdaptFunc(
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
 	features []string,
+	version string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -69,7 +70,7 @@ func AdaptFunc(
 				Tolerations:   tolerations,
 				Containers: []corev1.Container{{
 					Name:  name,
-					Image: "docker.pkg.github.com/caos/orbos/crbackup:zitadel",
+					Image: "docker.pkg.github.com/caos/orbos/crbackup:" + version,
 					Command: []string{
 						"/bin/bash",
 						"-c",
@@ -155,7 +156,7 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	cleanupJ := func(k8sClient *kubernetes2.Client) error {
+	cleanupJ := func(k8sClient *kubernetes.Client) error {
 		monitor.Info("waiting for backup to be completed")
 		if err := k8sClient.WaitUntilJobCompleted(namespace, cronjobName, 60); err != nil {
 			monitor.Error(errors.Wrap(err, "error while waiting for backup to be completed"))
@@ -192,7 +193,7 @@ func AdaptFunc(
 		}
 	}
 
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(monitor, destroyers),

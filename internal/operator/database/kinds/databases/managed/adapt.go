@@ -26,6 +26,7 @@ func AdaptFunc(
 	timestamp string,
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
+	version string,
 	features []string,
 ) func(
 	monitor mntr.Monitor,
@@ -86,7 +87,7 @@ func AdaptFunc(
 
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, internalLabels)
 
-		querySFS, destroySFS, ensureInit, checkDBReady, err := statefulset.AdaptFunc(
+		querySFS, destroySFS, ensureInit, checkDBReady, listDatabases, err := statefulset.AdaptFunc(
 			internalMonitor,
 			namespace,
 			sfsName,
@@ -150,6 +151,7 @@ func AdaptFunc(
 			}
 		}
 
+		featureRestore := false
 		destroyers := make([]core2.DestroyFunc, 0)
 		for _, feature := range features {
 			if feature == "database" {
@@ -161,18 +163,12 @@ func AdaptFunc(
 					destroyCert,
 					destroyRoot,
 				)
+			} else if feature == "restore" {
+				featureRestore = true
 			}
 		}
 
 		if desiredKind.Spec.Backups != nil {
-			databases := []string{
-				"adminapi",
-				"auth",
-				"authz",
-				"eventstore",
-				"management",
-				"notification",
-			}
 
 			oneBackup := false
 			for backupName := range desiredKind.Spec.Backups {
@@ -191,14 +187,11 @@ func AdaptFunc(
 						backupName,
 						namespace,
 						internalLabels,
-						databases,
 						checkDBReady,
 						strings.TrimPrefix(timestamp, backupName+"."),
-						"",
-						"",
-						[]string{},
 						nodeselector,
 						tolerations,
+						version,
 						features,
 					)
 					if err != nil {
@@ -212,22 +205,24 @@ func AdaptFunc(
 		}
 
 		return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
-				currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
-				currentDB.Current.URL = publicServiceName
-				currentDB.Current.ReadyFunc = checkDBReady
-				currentDB.Current.AddUserFunc = func(user string) (core2.QueryFunc, error) {
-					return addUser(user)
-				}
-				currentDB.Current.DeleteUserFunc = func(user string) (core2.DestroyFunc, error) {
-					return deleteUser(user)
-				}
-				currentDB.Current.ListUsersFunc = listUsers
+				if !featureRestore {
+					currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
+					currentDB.Current.URL = publicServiceName
+					currentDB.Current.ReadyFunc = checkDBReady
+					currentDB.Current.AddUserFunc = func(user string) (core2.QueryFunc, error) {
+						return addUser(user)
+					}
+					currentDB.Current.DeleteUserFunc = func(user string) (core2.DestroyFunc, error) {
+						return deleteUser(user)
+					}
+					currentDB.Current.ListUsersFunc = listUsers
+					currentDB.Current.ListDatabasesFunc = listDatabases
 
-				core.SetQueriedForDatabase(queried, current)
-				internalMonitor.Info("set current state of managed database")
+					core.SetQueriedForDatabase(queried, current)
+					internalMonitor.Info("set current state of managed database")
+				}
 
 				ensure, err := core2.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
-
 				return ensure, err
 			},
 			core2.DestroyersToDestroyFunc(internalMonitor, destroyers),

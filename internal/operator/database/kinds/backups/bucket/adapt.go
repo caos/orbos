@@ -5,8 +5,9 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/backup"
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/clean"
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/restore"
+	coreDB "github.com/caos/orbos/internal/operator/database/kinds/databases/core"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -17,14 +18,11 @@ func AdaptFunc(
 	name string,
 	namespace string,
 	labels map[string]string,
-	databases []string,
 	checkDBReady core.EnsureFunc,
 	timestamp string,
-	secretPasswordName string,
-	migrationUser string,
-	users []string,
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
+	version string,
 	features []string,
 ) core.AdaptFunc {
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, err error) {
@@ -43,47 +41,6 @@ func AdaptFunc(
 			internalMonitor.Verbose()
 		}
 
-		queryB, destroyB, err := backup.AdaptFunc(
-			internalMonitor,
-			name,
-			namespace,
-			labels,
-			databases,
-			checkDBReady,
-			desiredKind.Spec.Bucket,
-			desiredKind.Spec.Cron,
-			secretName,
-			secretKey,
-			timestamp,
-			nodeselector,
-			tolerations,
-			features,
-		)
-
-		queryR, destroyR, checkAndCleanupR, err := restore.ApplyFunc(
-			monitor,
-			name,
-			namespace,
-			labels,
-			databases,
-			desiredKind.Spec.Bucket,
-			timestamp,
-			nodeselector,
-			tolerations,
-			checkDBReady,
-		)
-
-		queryC, destroyC, checkAndCleanupC, err := clean.ApplyFunc(
-			monitor,
-			name,
-			namespace,
-			labels,
-			databases,
-			nodeselector,
-			tolerations,
-			checkDBReady,
-		)
-
 		//queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users, nodeselector, tolerations)
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
@@ -96,38 +53,161 @@ func AdaptFunc(
 			return nil, nil, err
 		}
 
-		queriers := make([]core.QueryFunc, 0)
+		_, destroyB, err := backup.AdaptFunc(
+			internalMonitor,
+			name,
+			namespace,
+			labels,
+			[]string{},
+			checkDBReady,
+			desiredKind.Spec.Bucket,
+			desiredKind.Spec.Cron,
+			secretName,
+			secretKey,
+			timestamp,
+			nodeselector,
+			tolerations,
+			features,
+			version,
+		)
+
+		_, destroyR, _, err := restore.ApplyFunc(
+			monitor,
+			name,
+			namespace,
+			labels,
+			[]string{},
+			desiredKind.Spec.Bucket,
+			timestamp,
+			nodeselector,
+			tolerations,
+			checkDBReady,
+			secretName,
+			secretKey,
+			version,
+		)
+
+		_, destroyC, _, err := clean.ApplyFunc(
+			monitor,
+			name,
+			namespace,
+			labels,
+			[]string{},
+			nodeselector,
+			tolerations,
+			checkDBReady,
+			secretName,
+			secretKey,
+			version,
+		)
 		destroyers := make([]core.DestroyFunc, 0)
 		for _, feature := range features {
 			switch feature {
 			case "backup", "instantbackup":
-				queriers = append(queriers,
-					core.ResourceQueryToZitadelQuery(queryS),
-					queryB,
-				)
 				destroyers = append(destroyers,
 					core.ResourceDestroyToZitadelDestroy(destroyS),
 					destroyB,
 				)
-			case "restore":
-				queriers = append(queriers,
-					queryC,
-					core.EnsureFuncToQueryFunc(checkAndCleanupC),
-					//queryM,
-					//core.EnsureFuncToQueryFunc(checkMigrationDone),
-					//core.EnsureFuncToQueryFunc(cleanupMigration),
-					queryR,
-					core.EnsureFuncToQueryFunc(checkAndCleanupR),
-				)
+			case "clear":
 				destroyers = append(destroyers,
 					destroyC,
-					//destroyM,
+				)
+			case "restore":
+				destroyers = append(destroyers,
 					destroyR,
 				)
 			}
 		}
 
-		return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+				currentDB, err := coreDB.ParseQueriedForDatabase(queried)
+				if err != nil {
+					return nil, err
+				}
+
+				databases, err := currentDB.GetListDatabasesFunc()(k8sClient)
+				if err != nil {
+					return nil, err
+				}
+
+				queryB, _, err := backup.AdaptFunc(
+					internalMonitor,
+					name,
+					namespace,
+					labels,
+					databases,
+					checkDBReady,
+					desiredKind.Spec.Bucket,
+					desiredKind.Spec.Cron,
+					secretName,
+					secretKey,
+					timestamp,
+					nodeselector,
+					tolerations,
+					features,
+					version,
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				queryR, _, checkAndCleanupR, err := restore.ApplyFunc(
+					monitor,
+					name,
+					namespace,
+					labels,
+					databases,
+					desiredKind.Spec.Bucket,
+					timestamp,
+					nodeselector,
+					tolerations,
+					checkDBReady,
+					secretName,
+					secretKey,
+					version,
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				queryC, _, checkAndCleanupC, err := clean.ApplyFunc(
+					monitor,
+					name,
+					namespace,
+					labels,
+					databases,
+					nodeselector,
+					tolerations,
+					checkDBReady,
+					secretName,
+					secretKey,
+					version,
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				queriers := make([]core.QueryFunc, 0)
+				for _, feature := range features {
+					switch feature {
+					case "backup", "instantbackup":
+						queriers = append(queriers,
+							core.ResourceQueryToZitadelQuery(queryS),
+							queryB,
+						)
+					case "clear":
+						queriers = append(queriers,
+							queryC,
+							core.EnsureFuncToQueryFunc(checkAndCleanupC),
+						)
+					case "restore":
+						queriers = append(queriers,
+							queryR,
+							core.EnsureFuncToQueryFunc(checkAndCleanupR),
+						)
+					}
+				}
+
 				return core.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 			},
 			core.DestroyersToDestroyFunc(internalMonitor, destroyers),

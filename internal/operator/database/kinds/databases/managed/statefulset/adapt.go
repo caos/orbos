@@ -50,6 +50,7 @@ func AdaptFunc(
 	resources.DestroyFunc,
 	core.EnsureFunc,
 	core.EnsureFunc,
+	func(k8sClient *kubernetes2.Client) ([]string, error),
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "statefulset")
@@ -57,7 +58,7 @@ func AdaptFunc(
 	defaultMode := int32(256)
 	quantity, err := resource.ParseQuantity(storageCapacity)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	replicaCountParsed := int32(replicaCount)
@@ -244,11 +245,11 @@ func AdaptFunc(
 
 	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 	destroy, err := statefulset.AdaptFuncToDestroy(namespace, name)
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	wrapedQuery, wrapedDestroy, err := resources.WrapFuncs(internalMonitor, query, destroy)
@@ -299,5 +300,24 @@ func AdaptFunc(
 		return nil
 	}
 
-	return wrapedQuery, wrapedDestroy, ensureInit, checkDBReady, err
+	getAllDBs := func(k8sClient *kubernetes2.Client) ([]string, error) {
+		if err := checkDBRunning(k8sClient); err != nil {
+			return nil, err
+		}
+
+		if err := checkDBReady(k8sClient); err != nil {
+			return nil, err
+		}
+
+		command := "/cockroach/cockroach sql --certs-dir=" + clientCertPath + " --host=" + name + "-0." + name + " -e 'SHOW DATABASES;'"
+
+		databasesStr, err := k8sClient.ExecInPodWithOutput(namespace, name+"-0", name, command)
+		if err != nil {
+			return nil, err
+		}
+		databases := strings.Split(databasesStr, "\n")
+		return databases[2 : len(databases)-1], nil
+	}
+
+	return wrapedQuery, wrapedDestroy, ensureInit, checkDBReady, getAllDBs, err
 }

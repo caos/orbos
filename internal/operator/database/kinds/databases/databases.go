@@ -20,6 +20,7 @@ func GetQueryAndDestroyFuncs(
 	timestamp string,
 	nodeselector map[string]string,
 	tolerations []core.Toleration,
+	version string,
 	features []string,
 ) (
 	core2.QueryFunc,
@@ -28,7 +29,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, features)(monitor, desiredTree, currentTree)
+		return managed.AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
 	case "zitadel.caos.ch/ProvidedDatabse":
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:
