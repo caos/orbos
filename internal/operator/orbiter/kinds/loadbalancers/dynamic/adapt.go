@@ -191,9 +191,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
 					"forMachines": svc.List,
-					"add": func(i, y int) int {
-						return i + y
-					},
+					"add":         func(i, y int) int { return i + y },
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
@@ -209,7 +207,8 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}).Debug("Executed command")
 						return user, nil
 					},
-					"vip": mapVIP,
+					"vip":       mapVIP,
+					"derefBool": func(in *bool) bool { return in != nil && *in },
 				})
 
 				var nginxNATTemplate *template.Template
@@ -327,7 +326,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
-		proxy_protocol {{ if $src.ProxyProtocol }}on{{ else }}off{{ end }};
+		proxy_protocol {{ if derefBool $src.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}
 
@@ -471,12 +470,13 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 		newTransport := make([]*Transport, len(vip.Transport))
 		for srcIdx, src := range vip.Transport {
 			newSource := &Transport{
-				Name:         src.Name,
-				FrontendPort: src.FrontendPort,
-				BackendPort:  src.BackendPort,
-				BackendPools: src.BackendPools,
-				Whitelist:    append(src.Whitelist, cidr...),
-				HealthChecks: src.HealthChecks,
+				Name:          src.Name,
+				FrontendPort:  src.FrontendPort,
+				BackendPort:   src.BackendPort,
+				BackendPools:  src.BackendPools,
+				Whitelist:     append(src.Whitelist, cidr...),
+				HealthChecks:  src.HealthChecks,
+				ProxyProtocol: src.ProxyProtocol,
 			}
 			if makeUnique {
 				newSource.Whitelist = unique(newSource.Whitelist)
