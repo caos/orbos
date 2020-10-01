@@ -327,7 +327,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
-		proxy_protocol {{ if $src.ProxyProtocol }}on{{ else }}off{{ end }}on;
+		proxy_protocol {{ if $src.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}
 

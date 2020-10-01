@@ -77,7 +77,7 @@ func query(
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
 		}
-		deployPools, err := lbCurrent.Current.Spec(machinesSvc)
+		deployPools, err := lbCurrent.Current.Spec(internalMachinesService)
 		if err != nil {
 			return nil, err
 		}
