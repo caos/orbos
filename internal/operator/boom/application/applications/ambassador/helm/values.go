@@ -2,7 +2,7 @@ package helm
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
-	"github.com/ghodss/yaml"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -108,16 +108,7 @@ type Service struct {
 }
 
 type ModuleAnnotation struct {
-	Module AmbassadorModuleAnnotation `yaml:"getambassador.io/config"`
-}
-
-func (m *ModuleAnnotation) MarshalYAML() (interface{}, error) {
-	if m == nil {
-		return nil, nil
-	}
-
-	bytes, err := yaml.Marshal(m)
-	return string(bytes), err
+	Module *AmbassadorModuleAnnotation `yaml:"getambassador.io/config"`
 }
 
 type AmbassadorModuleAnnotation struct {
@@ -127,14 +118,25 @@ type AmbassadorModuleAnnotation struct {
 	Config     *AmbassadorModuleConfig `yaml:"config"`
 }
 
+func (m *AmbassadorModuleAnnotation) MarshalYAML() (interface{}, error) {
+	if m == nil {
+		return nil, nil
+	}
+
+	i := *m
+	bytes, err := yaml.Marshal(i)
+
+	return string(bytes), err
+}
+
 type AmbassadorModuleConfig struct {
-	UseProxyProto bool `yaml:"use_proxy_proto,omitempty"`
-	EnableGRPCWeb bool `yaml:"enable_grpc_web,omitempty"`
+	UseProxyProto bool `yaml:"use_proxy_proto"`
+	EnableGRPCWeb bool `yaml:"enable_grpc_web"`
 	Diagnostics   *AmbassadorDiagnosticst
 }
 
 type AmbassadorDiagnosticst struct {
-	Enabled bool `yaml:"enabled,omitempty"`
+	Enabled bool `yaml:"enabled"`
 }
 
 type ServiceAccount struct {

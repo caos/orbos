@@ -72,6 +72,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						t.Whitelist = []*orbiter.CIDR{&allIPs}
 						migrate = true
 					}
+					if t.ProxyProtocol == nil {
+						trueVal := true
+						t.ProxyProtocol = &trueVal
+						migrate = true
+					}
 				}
 			}
 		}
@@ -322,7 +327,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
-		proxy_protocol on;
+		proxy_protocol {{ if $src.ProxyProtocol }}on{{ else }}off{{ end }}on;
 	}
 {{ end }}{{ end }}}
 
