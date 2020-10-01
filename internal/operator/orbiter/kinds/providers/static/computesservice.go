@@ -7,41 +7,57 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/caos/orbos/internal/secret"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/mntr"
 )
 
+var _ core.MachinesService = (*machinesService)(nil)
+
 type machinesService struct {
-	monitor           mntr.Monitor
-	desired           *DesiredV0
-	bootstrapKey      []byte
-	maintenanceKey    []byte
-	maintenanceKeyPub []byte
-	statusFile        string
-	onCreate          func(machine infra.Machine, pool string) error
-	cache             map[string]cachedMachines
+	monitor    mntr.Monitor
+	desired    *DesiredV0
+	statusFile string
+	onCreate   func(machine infra.Machine, pool string) error
+	cache      map[string]cachedMachines
 }
 
-// TODO: Dont accept the whole spec. Accept exactly the values needed (check other constructors too)
 func NewMachinesService(
 	monitor mntr.Monitor,
 	desired *DesiredV0,
-	bootstrapKey []byte,
-	maintenanceKey []byte,
-	maintenanceKeyPub []byte,
-	id string,
-	onCreate func(machine infra.Machine, pool string) error) core.MachinesService {
+	id string) *machinesService {
 	return &machinesService{
 		monitor,
 		desired,
-		bootstrapKey,
-		maintenanceKey,
-		maintenanceKeyPub,
 		filepath.Join("/var/orbiter", id),
-		onCreate,
+		nil,
 		nil,
 	}
+}
+
+func (c *machinesService) updateKeys() error {
+
+	pools, err := c.ListPools()
+	if err != nil {
+		panic(err)
+	}
+
+	keys := privateKeys(c.desired.Spec)
+
+	for _, pool := range pools {
+		machines, err := c.cachedPool(pool)
+		if err != nil {
+			return err
+		}
+		for _, machine := range machines {
+			if err := machine.UseKey(keys...); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func (c *machinesService) ListPools() ([]string, error) {
@@ -72,10 +88,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	for _, machine := range pool {
 
-		if len(c.maintenanceKeyPub) == 0 {
-			panic("no maintenance key")
-		}
-		if err := machine.WriteFile(c.desired.Spec.RemotePublicKeyPath, bytes.NewReader(c.maintenanceKeyPub), 600); err != nil {
+		if err := machine.WriteFile(fmt.Sprintf("/home/orbiter/.ssh/authorized_keys"), bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
 			return nil, err
 		}
 
@@ -109,16 +122,35 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		return cache, nil
 	}
 
+	keys := privateKeys(c.desired.Spec)
+
 	newCache := make([]*machine, 0)
+
+	initializeMachine := func(rebootRequired bool, replacementRequired bool, spec *Machine) *machine {
+		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
+			rebootRequired,
+			func() {
+				spec.RebootRequired = true
+			}, func() {
+				spec.RebootRequired = false
+			},
+			replacementRequired,
+			func() {
+				spec.ReplacementRequired = true
+			}, func() {
+				spec.ReplacementRequired = false
+			})
+	}
 	for _, spec := range specifiedMachines {
-		machine := newMachine(c.monitor, c.statusFile, c.desired.Spec.RemoteUser, &spec.ID, string(spec.IP))
-		if err := machine.UseKey(c.maintenanceKey, c.bootstrapKey); err != nil {
+
+		machine := initializeMachine(spec.RebootRequired, spec.ReplacementRequired, spec)
+		if err := machine.UseKey(keys...); err != nil {
 			return nil, err
 		}
 
 		buf := new(bytes.Buffer)
 		if err := machine.ReadFile(c.statusFile, buf); err != nil {
-			// treat as inactive
+			// if error, treat as active
 		}
 		machine.active = strings.Contains(buf.String(), "active")
 		buf.Reset()
@@ -142,4 +174,16 @@ func (c cachedMachines) Machines() infra.Machines {
 		}
 	}
 	return machines
+}
+
+func privateKeys(spec Spec) [][]byte {
+	var privateKeys [][]byte
+	toBytes := func(key *secret.Secret) {
+		if key != nil {
+			privateKeys = append(privateKeys, []byte(key.Value))
+		}
+	}
+	toBytes(spec.Keys.BootstrapKeyPrivate)
+	toBytes(spec.Keys.MaintenanceKeyPrivate)
+	return privateKeys
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/repository"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
 	"github.com/caos/orbos/internal/secret"
-	"reflect"
 )
 
 type Argocd struct {
@@ -27,6 +26,8 @@ type Argocd struct {
 	Credentials []*repository.Repository `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	//List of known_hosts as strings for argocd
 	KnownHosts []string `json:"knownHosts,omitempty" yaml:"knownHosts,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
 type Rbac struct {
@@ -58,40 +59,4 @@ type GopassStore struct {
 	Directory string `json:"directory,omitempty" yaml:"directory,omitempty"`
 	//Name of the gopass store
 	StoreName string `json:"storeName,omitempty" yaml:"storeName,omitempty"`
-}
-
-func ClearEmpty(x *Argocd) *Argocd {
-	if x == nil {
-		return nil
-	}
-
-	repos := make([]*repository.Repository, 0)
-	for _, v := range x.Repositories {
-		if p := repository.ClearEmpty(v); p != nil {
-			repos = append(repos, p)
-		}
-	}
-
-	creds := make([]*repository.Repository, 0)
-	for _, v := range x.Credentials {
-		if p := repository.ClearEmpty(v); p != nil {
-			creds = append(creds, p)
-		}
-	}
-
-	marshaled := Argocd{
-		Deploy:       x.Deploy,
-		CustomImage:  x.CustomImage,
-		Network:      x.Network,
-		Auth:         auth.ClearEmpty(x.Auth),
-		Rbac:         x.Rbac,
-		Repositories: repos,
-		Credentials:  creds,
-		KnownHosts:   x.KnownHosts,
-	}
-
-	if reflect.DeepEqual(marshaled, Argocd{}) {
-		return &Argocd{}
-	}
-	return &marshaled
 }

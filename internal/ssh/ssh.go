@@ -5,14 +5,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"strings"
+
 	"github.com/pkg/errors"
 	sshlib "golang.org/x/crypto/ssh"
-	"strings"
 )
 
 type pair struct {
 	private []byte
-	public  sshlib.AuthMethod
+	signer  sshlib.Signer
 }
 
 var (
@@ -43,23 +44,23 @@ func Generate() (private string, public string, err error) {
 	return strings.TrimSpace(string(enc)), string(sshlib.MarshalAuthorizedKey(publicKey)), nil
 }
 
-func PrivateKeyToPublicKey(privKey []byte) (sshlib.AuthMethod, error) {
-	cached := false
-	var pubKey sshlib.AuthMethod
-	for _, cachedKey := range cachedKeys {
-		if string(cachedKey.private) == string(privKey) {
-			pubKey = cachedKey.public
-			cached = true
+func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error) {
+
+	var signers []sshlib.Signer
+	for _, key := range privKey {
+		for _, cachedKey := range cachedKeys {
+			if string(cachedKey.private) == string(key) {
+				signers = append(signers, cachedKey.signer)
+				break
+			}
 		}
-	}
-	if !cached {
-		signer, err := sshlib.ParsePrivateKey(privKey)
+		signer, err := sshlib.ParsePrivateKey(key)
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing private key failed")
 		}
-		pubKey = sshlib.PublicKeys(signer)
-		cachedKeys = append(cachedKeys, pair{privKey, pubKey})
+		cachedKeys = append(cachedKeys, pair{key, signer})
+		signers = append(signers, signer)
 	}
 
-	return pubKey, nil
+	return sshlib.PublicKeys(signers...), nil
 }

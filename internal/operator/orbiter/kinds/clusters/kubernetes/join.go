@@ -2,9 +2,12 @@ package kubernetes
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"strings"
 	"time"
+
+	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/pkg/errors"
 
@@ -23,7 +26,8 @@ func join(
 	kubeAPI *infra.Address,
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
-	certKey string) (*string, error) {
+	certKey string,
+	client *Client) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
@@ -35,7 +39,7 @@ func join(
 	case "cilium":
 		applyNetworkCommand = "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml"
 	case "calico":
-		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
+		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.16/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
 	default:
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
@@ -144,7 +148,7 @@ nodeRegistration:
 	}).Debug("Written file")
 
 	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
-	resetStdout, err := joining.infra.Execute(nil, nil, cmd)
+	resetStdout, err := joining.infra.Execute(nil, cmd)
 	if err != nil {
 		return nil, errors.Wrapf(err, "executing %s failed", cmd)
 	}
@@ -154,16 +158,32 @@ nodeRegistration:
 
 	if joinAt != nil {
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.BackendPort, joinAt.IP(), kubeAPI.FrontendPort, kubeadmCfgPath)
-		joinStdout, err := joining.infra.Execute(nil, nil, cmd)
+		joinStdout, err := joining.infra.Execute(nil, cmd)
 		if err != nil {
 			return nil, errors.Wrapf(err, "executing %s failed", cmd)
 		}
+
 		monitor.WithFields(map[string]interface{}{
 			"stdout": string(joinStdout),
 		}).Debug("Executed kubeadm join")
+
+		if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {
+			return nil, err
+		}
+
 		joining.currentMachine.Joined = true
 		monitor.Changed("Node joined")
-		return nil, joining.pool.infra.EnsureMember(joining.infra)
+
+		dnsPods, err := client.set.CoreV1().Pods("kube-system").List(context.Background(), mach.ListOptions{LabelSelector: "k8s-app=kube-dns"})
+		if err != nil {
+			return nil, err
+		}
+
+		if len(dnsPods.Items) > 1 {
+			err = client.set.CoreV1().Pods("kube-system").Delete(context.Background(), dnsPods.Items[0].Name, mach.DeleteOptions{})
+		}
+
+		return nil, err
 	}
 
 	if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {
@@ -171,7 +191,7 @@ nodeRegistration:
 	}
 
 	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && %s", kubeAPI.BackendPort, kubeadmCfgPath, applyNetworkCommand)
-	initStdout, err := joining.infra.Execute(nil, nil, initCmd)
+	initStdout, err := joining.infra.Execute(nil, initCmd)
 	if err != nil {
 		return nil, err
 	}

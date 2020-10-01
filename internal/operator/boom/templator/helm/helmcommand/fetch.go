@@ -1,8 +1,9 @@
 package helmcommand
 
 import (
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
+
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 type FetchConfig struct {
@@ -22,7 +23,7 @@ func FetchChart(conf *FetchConfig) error {
 	versionParam := strings.Join([]string{"--version=", conf.ChartVersion}, "")
 	untardirParam := strings.Join([]string{"--untardir=", chartHomeAbs}, "")
 	chartStr := strings.Join([]string{conf.IndexName, conf.ChartName}, "/")
-	command := strings.Join([]string{"fetch --untar", versionParam, untardirParam, chartStr, ">& /dev/null"}, " ")
+	command := strings.Join([]string{"fetch --untar", versionParam, untardirParam, chartStr}, " ")
 
 	return doHelmCommand(conf.TempFolderPath, command)
 }
@@ -36,11 +37,11 @@ type IndexConfig struct {
 func AddIndex(conf *IndexConfig) error {
 
 	url := strings.Join([]string{"https://", conf.IndexURL}, "")
-	command := strings.Join([]string{"repo add", conf.IndexName, url, ">& /dev/null"}, " ")
+	command := strings.Join([]string{"repo add", conf.IndexName, url}, " ")
 
 	return doHelmCommand(conf.TempFolderPath, command)
 }
 
 func RepoUpdate(basePath string) error {
-	return doHelmCommand(basePath, "repo update >& /dev/null")
+	return doHelmCommand(basePath, "repo update")
 }

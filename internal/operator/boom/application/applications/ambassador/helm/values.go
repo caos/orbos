@@ -1,5 +1,11 @@
 package helm
 
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/ghodss/yaml"
+	corev1 "k8s.io/api/core/v1"
+)
+
 type AdminService struct {
 	Annotations map[string]string `yaml:"annotations"`
 	Create      bool              `yaml:"create"`
@@ -47,11 +53,11 @@ type LivenessProbe struct {
 	PeriodSeconds       int `yaml:"periodSeconds"`
 }
 type PrometheusExporter struct {
-	Enabled    bool     `yaml:"enabled"`
-	PullPolicy string   `yaml:"pullPolicy"`
-	Repository string   `yaml:"repository"`
-	Resources  struct{} `yaml:"resources"`
-	Tag        string   `yaml:"tag"`
+	Enabled    bool           `yaml:"enabled"`
+	PullPolicy string         `yaml:"pullPolicy"`
+	Repository string         `yaml:"repository"`
+	Resources  *k8s.Resources `yaml:"resources"`
+	Tag        string         `yaml:"tag"`
 }
 type RateLimit struct {
 	Create bool `yaml:"create"`
@@ -70,15 +76,23 @@ type RedisAnnotations struct {
 	Service    map[string]string `yaml:"service"`
 }
 type Redis struct {
-	Annotations *RedisAnnotations `yaml:"annotations"`
-	Create      bool              `yaml:"create"`
-	Resources   struct{}          `yaml:"resources"`
+	Annotations  *RedisAnnotations `yaml:"annotations"`
+	Create       bool              `yaml:"create"`
+	Resources    *k8s.Resources    `yaml:"resources"`
+	NodeSelector map[string]string `yaml:"nodeSelector"`
 }
 type Scope struct {
 	SingleNamespace bool `yaml:"singleNamespace"`
 }
-type SecurityContext struct {
+type Security struct {
+	PodSecurityContext       *PodSecurityContext       `yaml:"podSecurityContext"`
+	ContainerSecurityContext *ContainerSecurityContext `yaml:"containerSecurityContext"`
+}
+type PodSecurityContext struct {
 	RunAsUser int `yaml:"runAsUser"`
+}
+type ContainerSecurityContext struct {
+	AllowPrivilegeEscalation bool `yaml:"allowPrivilegeEscalation"`
 }
 type Port struct {
 	Name       string `yaml:"name"`
@@ -87,55 +101,87 @@ type Port struct {
 	NodePort   uint16 `yaml:"nodePort,omitempty"`
 }
 type Service struct {
-	Annotations    interface{} `yaml:"annotations,omitempty"`
-	Ports          []*Port     `yaml:"ports"`
-	Type           string      `yaml:"type"`
-	LoadBalancerIP string      `yaml:"loadBalancerIP,omitempty"`
+	Annotations    *ModuleAnnotation `yaml:"annotations,omitempty"`
+	Ports          []*Port           `yaml:"ports"`
+	Type           string            `yaml:"type"`
+	LoadBalancerIP string            `yaml:"loadBalancerIP,omitempty"`
 }
+
+type ModuleAnnotation struct {
+	Module AmbassadorModuleAnnotation `yaml:"getambassador.io/config"`
+}
+
+func (m *ModuleAnnotation) MarshalYAML() (interface{}, error) {
+	if m == nil {
+		return nil, nil
+	}
+
+	bytes, err := yaml.Marshal(m)
+	return string(bytes), err
+}
+
+type AmbassadorModuleAnnotation struct {
+	ApiVersion string                  `yaml:"apiVersion"`
+	Kind       string                  `yaml:"kind"`
+	Name       string                  `yaml:"name"`
+	Config     *AmbassadorModuleConfig `yaml:"config"`
+}
+
+type AmbassadorModuleConfig struct {
+	UseProxyProto bool `yaml:"use_proxy_proto,omitempty"`
+	EnableGRPCWeb bool `yaml:"enable_grpc_web,omitempty"`
+	Diagnostics   *AmbassadorDiagnosticst
+}
+
+type AmbassadorDiagnosticst struct {
+	Enabled bool `yaml:"enabled,omitempty"`
+}
+
 type ServiceAccount struct {
 	Create bool        `yaml:"create"`
 	Name   interface{} `yaml:"name"`
 }
 
 type Values struct {
-	AdminService          *AdminService       `yaml:"adminService"`
-	Affinity              struct{}            `yaml:"affinity"`
-	AmbassadorConfig      string              `yaml:"ambassadorConfig"`
-	AuthService           *AuthService        `yaml:"authService"`
-	Autoscaling           *Autoscaling        `yaml:"autoscaling"`
-	Crds                  *Crds               `yaml:"crds"`
-	DaemonSet             bool                `yaml:"daemonSet"`
-	DeploymentAnnotations map[string]string   `yaml:"deploymentAnnotations"`
-	DeploymentStrategy    *DeploymentStrategy `yaml:"deploymentStrategy"`
-	DNSPolicy             string              `yaml:"dnsPolicy"`
-	Env                   map[string]string   `yaml:"env"`
-	FullnameOverride      string              `yaml:"fullnameOverride"`
-	HostNetwork           bool                `yaml:"hostNetwork"`
-	Image                 *Image              `yaml:"image"`
-	ImagePullSecrets      []interface{}       `yaml:"imagePullSecrets"`
-	InitContainers        []interface{}       `yaml:"initContainers"`
-	LicenseKey            *LicenseKey         `yaml:"licenseKey"`
-	LivenessProbe         *LivenessProbe      `yaml:"livenessProbe"`
-	NameOverride          string              `yaml:"nameOverride"`
-	NodeSelector          struct{}            `yaml:"nodeSelector"`
-	PodAnnotations        map[string]string   `yaml:"podAnnotations"`
-	PodDisruptionBudget   struct{}            `yaml:"podDisruptionBudget"`
-	PodLabels             map[string]string   `yaml:"podLabels"`
-	PriorityClassName     string              `yaml:"priorityClassName"`
-	PrometheusExporter    *PrometheusExporter `yaml:"prometheusExporter"`
-	RateLimit             *RateLimit          `yaml:"rateLimit"`
-	Rbac                  *Rbac               `yaml:"rbac"`
-	ReadinessProbe        *ReadinessProbe     `yaml:"readinessProbe"`
-	Redis                 *Redis              `yaml:"redis"`
-	RedisURL              interface{}         `yaml:"redisURL"`
-	ReplicaCount          int                 `yaml:"replicaCount"`
-	Resources             struct{}            `yaml:"resources"`
-	Scope                 *Scope              `yaml:"scope"`
-	SecurityContext       *SecurityContext    `yaml:"securityContext"`
-	Service               *Service            `yaml:"service"`
-	ServiceAccount        *ServiceAccount     `yaml:"serviceAccount"`
-	SidecarContainers     []interface{}       `yaml:"sidecarContainers"`
-	Tolerations           []interface{}       `yaml:"tolerations"`
-	VolumeMounts          []interface{}       `yaml:"volumeMounts"`
-	Volumes               []interface{}       `yaml:"volumes"`
+	AdminService           *AdminService       `yaml:"adminService"`
+	Affinity               *k8s.Affinity       `yaml:"affinity"`
+	AmbassadorConfig       string              `yaml:"ambassadorConfig"`
+	AuthService            *AuthService        `yaml:"authService"`
+	Autoscaling            *Autoscaling        `yaml:"autoscaling"`
+	Crds                   *Crds               `yaml:"crds"`
+	CreateDevPortalMapping bool                `yaml:"createDevPortalMappings"`
+	DaemonSet              bool                `yaml:"daemonSet"`
+	DeploymentAnnotations  map[string]string   `yaml:"deploymentAnnotations"`
+	DeploymentStrategy     *DeploymentStrategy `yaml:"deploymentStrategy"`
+	DNSPolicy              string              `yaml:"dnsPolicy"`
+	Env                    map[string]string   `yaml:"env"`
+	FullnameOverride       string              `yaml:"fullnameOverride"`
+	HostNetwork            bool                `yaml:"hostNetwork"`
+	Image                  *Image              `yaml:"image"`
+	ImagePullSecrets       []interface{}       `yaml:"imagePullSecrets"`
+	InitContainers         []interface{}       `yaml:"initContainers"`
+	LicenseKey             *LicenseKey         `yaml:"licenseKey"`
+	LivenessProbe          *LivenessProbe      `yaml:"livenessProbe"`
+	NameOverride           string              `yaml:"nameOverride"`
+	NodeSelector           map[string]string   `yaml:"nodeSelector"`
+	PodAnnotations         map[string]string   `yaml:"podAnnotations"`
+	PodDisruptionBudget    struct{}            `yaml:"podDisruptionBudget"`
+	PodLabels              map[string]string   `yaml:"podLabels"`
+	PriorityClassName      string              `yaml:"priorityClassName"`
+	PrometheusExporter     *PrometheusExporter `yaml:"prometheusExporter"`
+	RateLimit              *RateLimit          `yaml:"rateLimit"`
+	Rbac                   *Rbac               `yaml:"rbac"`
+	ReadinessProbe         *ReadinessProbe     `yaml:"readinessProbe"`
+	Redis                  *Redis              `yaml:"redis"`
+	RedisURL               interface{}         `yaml:"redisURL"`
+	ReplicaCount           int                 `yaml:"replicaCount"`
+	Resources              *k8s.Resources      `yaml:"resources"`
+	Scope                  *Scope              `yaml:"scope"`
+	Security               *Security           `yaml:"security"`
+	Service                *Service            `yaml:"service"`
+	ServiceAccount         *ServiceAccount     `yaml:"serviceAccount"`
+	SidecarContainers      []interface{}       `yaml:"sidecarContainers"`
+	Tolerations            []corev1.Toleration `yaml:"tolerations"`
+	VolumeMounts           []interface{}       `yaml:"volumeMounts"`
+	Volumes                []interface{}       `yaml:"volumes"`
 }

@@ -40,7 +40,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, finishedChan chan bool, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
 
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -50,7 +50,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
 		}
 
 		for _, pool := range desiredKind.Spec {
@@ -77,7 +77,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 
 		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, migrate, err
+			return nil, nil, nil, migrate, err
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -192,7 +192,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
-						stdout, err := machine.Execute(nil, nil, whoami)
+						stdout, err := machine.Execute(nil, whoami)
 						if err != nil {
 							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
 						}
@@ -236,6 +236,7 @@ stream { {{ range $nat := .NATs }}
 				} else {
 
 					if err := poolMachines(svc, func(pool string, machines infra.Machines) {
+
 						if forPool == pool {
 							lbMachines = machines
 						}
@@ -321,6 +322,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
+		proxy_protocol on;
 	}
 {{ end }}{{ end }}}
 
@@ -451,11 +453,10 @@ http {
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
-
 				return done, nil
 			}
-			return nil, nil
-		}, nil, migrate, nil
+			return orbiter.NoopEnsure, nil
+		}, orbiter.NoopDestroy, orbiter.NoopConfigure, migrate, nil
 	}
 }
 

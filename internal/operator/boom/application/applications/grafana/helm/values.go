@@ -1,8 +1,9 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/grafanastandalone"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	prometheusoperatorhelm "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	corev1 "k8s.io/api/core/v1"
 )
 
 type Ingress struct {
@@ -85,28 +86,51 @@ type Ini struct {
 	AuthGeneric map[string]string      `yaml:"auth.generic_oauth,omitempty"`
 }
 
+type Datasource struct {
+	Name      string `yaml:"name"`
+	Type      string `yaml:"type"`
+	URL       string `yaml:"url"`
+	Access    string `yaml:"access"`
+	IsDefault bool   `yaml:"isDefault"`
+}
+
+type TestFramework struct {
+	Enabled         bool   `yaml:"enabled"`
+	Image           string `yaml:"image"`
+	Tag             string `yaml:"tag"`
+	SecurityContext struct {
+	} `yaml:"securityContext"`
+}
+type Image struct {
+	Repository string `yaml:"repository"`
+	Tag        string `yaml:"tag"`
+	PullPolicy string `yaml:"pullPolicy"`
+}
 type GrafanaValues struct {
-	FullnameOverride         string                           `yaml:"fullnameOverride,omitempty"`
-	Enabled                  bool                             `yaml:"enabled"`
-	DefaultDashboardsEnabled bool                             `yaml:"defaultDashboardsEnabled"`
-	AdminPassword            string                           `yaml:"adminPassword"`
-	Admin                    *Admin                           `yaml:"admin"`
-	Ingress                  *Ingress                         `yaml:"ingress"`
-	Sidecar                  *Sidecar                         `yaml:"sidecar"`
-	ExtraConfigmapMounts     []interface{}                    `yaml:"extraConfigmapMounts"`
-	AdditionalDataSources    []*grafanastandalone.Datasource  `yaml:"additionalDataSources"`
-	ServiceMonitor           *ServiceMonitor                  `yaml:"serviceMonitor"`
-	DashboardProviders       *DashboardProviders              `yaml:"dashboardProviders,omitempty"`
-	DashboardsConfigMaps     map[string]string                `yaml:"dashboardsConfigMaps,omitempty"`
-	Ini                      *Ini                             `yaml:"grafana.ini,omitempty"`
-	Persistence              *Persistence                     `yaml:"persistence,omitempty"`
-	TestFramework            *grafanastandalone.TestFramework `yaml:"testFramework,omitempty"`
-	Plugins                  []string                         `yaml:"plugins,omitempty"`
-	Image                    *grafanastandalone.Image         `yaml:"image,omitempty"`
-	Env                      map[string]string                `yaml:"env,omitempty"`
-	Service                  *Service                         `yaml:"service,omitempty"`
-	Labels                   map[string]string                `yaml:"labels,omitempty"`
-	PodLabels                map[string]string                `yaml:"podLabels,omitempty"`
+	FullnameOverride         string              `yaml:"fullnameOverride,omitempty"`
+	Enabled                  bool                `yaml:"enabled"`
+	DefaultDashboardsEnabled bool                `yaml:"defaultDashboardsEnabled"`
+	AdminPassword            string              `yaml:"adminPassword"`
+	Admin                    *Admin              `yaml:"admin"`
+	Ingress                  *Ingress            `yaml:"ingress"`
+	Sidecar                  *Sidecar            `yaml:"sidecar"`
+	ExtraConfigmapMounts     []interface{}       `yaml:"extraConfigmapMounts"`
+	AdditionalDataSources    []*Datasource       `yaml:"additionalDataSources"`
+	ServiceMonitor           *ServiceMonitor     `yaml:"serviceMonitor"`
+	DashboardProviders       *DashboardProviders `yaml:"dashboardProviders,omitempty"`
+	DashboardsConfigMaps     map[string]string   `yaml:"dashboardsConfigMaps,omitempty"`
+	Ini                      *Ini                `yaml:"grafana.ini,omitempty"`
+	Persistence              *Persistence        `yaml:"persistence,omitempty"`
+	TestFramework            *TestFramework      `yaml:"testFramework,omitempty"`
+	Plugins                  []string            `yaml:"plugins,omitempty"`
+	Image                    *Image              `yaml:"image,omitempty"`
+	Env                      map[string]string   `yaml:"env,omitempty"`
+	Service                  *Service            `yaml:"service,omitempty"`
+	Labels                   map[string]string   `yaml:"labels,omitempty"`
+	PodLabels                map[string]string   `yaml:"podLabels,omitempty"`
+	NodeSelector             map[string]string   `yaml:"nodeSelector,omitempty"`
+	Tolerations              []corev1.Toleration `yaml:"tolerations,omitempty"`
+	Resources                *k8s.Resources      `yaml:"resources,omitempty"`
 }
 
 type Rules struct {

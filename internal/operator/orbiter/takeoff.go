@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/caos/orbos/internal/push"
+	"github.com/caos/orbos/internal/api"
+	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -26,9 +27,20 @@ type EnsureResult struct {
 	Err  error
 	Done bool
 }
-type EnsureFunc func(psf push.Func) *EnsureResult
+
+type ConfigureFunc func(orb orbconfig.Orb) error
+
+func NoopConfigure(orb orbconfig.Orb) error {
+	return nil
+}
 
 type QueryFunc func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, queried map[string]interface{}) (EnsureFunc, error)
+
+type EnsureFunc func(pdf api.PushDesiredFunc) *EnsureResult
+
+func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
+	return &EnsureResult{Done: true}
+}
 
 type retQuery struct {
 	ensure EnsureFunc
@@ -68,17 +80,30 @@ func Metrics() {
 	}()
 }
 
+func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, error) {
+
+	treeDesired, err := api.ReadOrbiterYml(gitClient)
+	if err != nil {
+		return nil, nil, nil, false, nil, nil, err
+	}
+	treeCurrent := &tree.Tree{}
+
+	adaptFunc := func() (QueryFunc, DestroyFunc, ConfigureFunc, bool, error) {
+		return adapt(monitor, finished, treeDesired, treeCurrent)
+	}
+	query, destroy, configure, migrate, err := AdaptFuncGoroutine(adaptFunc)
+	return query, destroy, configure, migrate, treeDesired, treeCurrent, err
+}
+
 func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 
 	return func() {
-		trees, err := Parse(conf.GitClient, "orbiter.yml")
+
+		query, _, _, migrate, treeDesired, treeCurrent, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
 		if err != nil {
 			monitor.Error(err)
 			return
 		}
-
-		treeDesired := trees[0]
-		treeCurrent := &tree.Tree{}
 
 		desiredNodeAgents := common.NodeAgentsDesiredKind{
 			Kind:    "nodeagent.caos.ch/NodeAgents",
@@ -112,17 +137,9 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 				})
 			}, monitor.OnChange)
 		*/
-		adaptFunc := func() (QueryFunc, DestroyFunc, bool, error) {
-			return conf.Adapt(monitor, conf.FinishedChan, treeDesired, treeCurrent)
-		}
-		query, _, migrate, err := AdaptFuncGoroutine(adaptFunc)
-		if err != nil {
-			monitor.Error(err)
-			return
-		}
 
 		if migrate {
-			if err := push.YML(monitor, "Desired state migrated", conf.GitClient, treeDesired, "orbiter.yml"); err != nil {
+			if err := api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -175,8 +192,9 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		//		events = make([]*event, 0)
 
 		ensureFunc := func() *EnsureResult {
-			return ensure(push.RewriteDesiredFunc(conf.GitClient, treeDesired, "orbiter.yml"))
+			return ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
 		}
+
 		result := EnsureFuncGoroutine(ensureFunc)
 		if result.Err != nil {
 			handleAdapterError(result.Err)

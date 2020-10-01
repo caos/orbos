@@ -1,11 +1,12 @@
 package yaml
 
 import (
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
 type yamlFile struct {

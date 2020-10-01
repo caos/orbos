@@ -7,7 +7,7 @@ virt-install \
     --os-type linux \
     --os-variant rhel7 \
     --disk size=10 \
-    --location 'http://mirror.init7.net/centos/7.7.1908/os/x86_64/' \
+    --location 'http://mirror.init7.net/centos/7.8.2003/os/x86_64/' \
     --initrd-inject=/tmp/ks.cfg \
     --memory 4096 \
     --vcpus 2 \

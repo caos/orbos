@@ -1,8 +1,12 @@
 package kubernetes
 
 import (
+	"context"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -78,13 +82,172 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 	return nil
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion string) error {
+func EnsureZitadelArtifacts(
+	monitor mntr.Monitor,
+	client *Client,
+	version string,
+	nodeselector map[string]string,
+	tolerations []core.Toleration) error {
 
 	monitor.WithFields(map[string]interface{}{
-		"boom": boomversion,
+		"zitadel": version,
+	}).Debug("Ensuring zitadel artifacts")
+
+	if version == "" {
+		return nil
+	}
+
+	if err := client.ApplyServiceAccount(&core.ServiceAccount{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "zitadel",
+			Namespace: "caos-system",
+		},
+	}); err != nil {
+		return err
+	}
+
+	if err := client.ApplyClusterRole(&rbac.ClusterRole{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "zitadel-clusterrole",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":  "zitadel",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "zitadel",
+			},
+		},
+		Rules: []rbac.PolicyRule{{
+			APIGroups: []string{"*"},
+			Resources: []string{"*"},
+			Verbs:     []string{"*"},
+		}},
+	}); err != nil {
+		return err
+	}
+
+	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
+		ObjectMeta: mach.ObjectMeta{
+			Name: "zitadel-clusterrolebinding",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":  "zitadel",
+				"app.kubernetes.io/part-of":   "orbos",
+				"app.kubernetes.io/component": "zitadel",
+			},
+		},
+
+		RoleRef: rbac.RoleRef{
+			APIGroup: "rbac.authorization.k8s.io",
+			Kind:     "ClusterRole",
+			Name:     "zitadel-clusterrole",
+		},
+		Subjects: []rbac.Subject{{
+			Kind:      "ServiceAccount",
+			Name:      "zitadel",
+			Namespace: "caos-system",
+		}},
+	}); err != nil {
+		return err
+	}
+
+	if err := client.ApplyDeployment(&apps.Deployment{
+		ObjectMeta: mach.ObjectMeta{
+			Name:      "zitadel-operator",
+			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app.kubernetes.io/instance":   "zitadel",
+				"app.kubernetes.io/part-of":    "orbos",
+				"app.kubernetes.io/component":  "zitadel",
+				"app.kubernetes.io/managed-by": "zitadel.caos.ch",
+			},
+		},
+		Spec: apps.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &mach.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/instance":  "zitadel",
+					"app.kubernetes.io/part-of":   "orbos",
+					"app.kubernetes.io/component": "zitadel",
+				},
+			},
+			Template: core.PodTemplateSpec{
+				ObjectMeta: mach.ObjectMeta{
+					Labels: map[string]string{
+						"app.kubernetes.io/instance":  "zitadel",
+						"app.kubernetes.io/part-of":   "orbos",
+						"app.kubernetes.io/component": "zitadel",
+					},
+				},
+				Spec: core.PodSpec{
+					ServiceAccountName: "zitadel",
+					ImagePullSecrets: []core.LocalObjectReference{{
+						Name: "public-github-packages",
+					}},
+					Containers: []core.Container{{
+						Name:            "zitadel",
+						ImagePullPolicy: core.PullIfNotPresent,
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},
+						Args:            []string{},
+						Ports: []core.ContainerPort{{
+							Name:          "metrics",
+							ContainerPort: 2112,
+							Protocol:      "TCP",
+						}},
+						VolumeMounts: []core.VolumeMount{{
+							Name:      "orbconfig",
+							ReadOnly:  true,
+							MountPath: "/secrets",
+						}},
+						Resources: core.ResourceRequirements{
+							Limits: core.ResourceList{
+								"cpu":    resource.MustParse("500m"),
+								"memory": resource.MustParse("500Mi"),
+							},
+							Requests: core.ResourceList{
+								"cpu":    resource.MustParse("250m"),
+								"memory": resource.MustParse("250Mi"),
+							},
+						},
+					}},
+					NodeSelector: nodeselector,
+					Tolerations:  tolerations,
+					Volumes: []core.Volume{{
+						Name: "orbconfig",
+						VolumeSource: core.VolumeSource{
+							Secret: &core.SecretVolumeSource{
+								SecretName: "caos",
+							},
+						},
+					}},
+					TerminationGracePeriodSeconds: int64Ptr(10),
+				},
+			},
+		},
+	}); err != nil {
+		return err
+	}
+	monitor.WithFields(map[string]interface{}{
+		"version": version,
+	}).Debug("Zitadel Operator deployment ensured")
+
+	return nil
+}
+
+func ScaleZitadelOperator(
+	monitor mntr.Monitor,
+	client *Client,
+	replicaCount int,
+) error {
+	monitor.Debug("Scaling zitadel-operator")
+	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
+}
+
+func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations k8s.Tolerations, nodeselector map[string]string, resources *k8s.Resources) error {
+
+	monitor.WithFields(map[string]interface{}{
+		"boom": version,
 	}).Debug("Ensuring boom artifacts")
 
-	if boomversion == "" {
+	if version == "" {
 		return nil
 	}
 
@@ -175,7 +338,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", boomversion),
+						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -188,17 +351,10 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 							ReadOnly:  true,
 							MountPath: "/secrets",
 						}},
-						Resources: core.ResourceRequirements{
-							Limits: core.ResourceList{
-								"cpu":    resource.MustParse("500m"),
-								"memory": resource.MustParse("500Mi"),
-							},
-							Requests: core.ResourceList{
-								"cpu":    resource.MustParse("250m"),
-								"memory": resource.MustParse("250Mi"),
-							},
-						},
+						Resources: core.ResourceRequirements(*resources),
 					}},
+					NodeSelector: nodeselector,
+					Tolerations:  tolerations,
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{
@@ -215,7 +371,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
-		"version": boomversion,
+		"version": version,
 	}).Debug("Boom deployment ensured")
 
 	if err := client.ApplyService(&core.Service{
@@ -226,7 +382,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, boomversion strin
 				"app.kubernetes.io/instance":   "boom",
 				"app.kubernetes.io/part-of":    "orbos",
 				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				"app.kubernetes.io/managed-by": "boom.caos.ch",
 			},
 		},
 		Spec: core.ServiceSpec{
@@ -326,6 +482,8 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 						"node-role.kubernetes.io/master": "",
 					},
 					Tolerations: []core.Toleration{{
+						Key:      "node-role.kubernetes.io/master",
+						Effect:   "NoSchedule",
 						Operator: "Exists",
 					}},
 				},
@@ -366,6 +524,29 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 	}
 	monitor.Debug("Orbiter service ensured")
 
+	if _, err := client.set.AppsV1().Deployments("kube-system").Patch(context.Background(), "coredns", types.StrategicMergePatchType, []byte(`
+{
+  "spec": {
+    "template": {
+      "spec": {
+        "affinity": {
+          "podAntiAffinity": {
+            "preferredDuringSchedulingIgnoredDuringExecution": [{
+              "weight": 100,
+              "podAffinityTerm": {
+                "topologyKey": "kubernetes.io/hostname"
+              }
+            }]
+          }
+        }
+      }
+    }
+  }
+}`), mach.PatchOptions{}); err != nil {
+		return err
+	}
+
+	monitor.Debug("CoreDNS deployment patched")
 	return nil
 }
 

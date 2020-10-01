@@ -22,6 +22,7 @@ func main() {
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
+	containeronly := flag.Bool("containeronly", false, "Compile orbctl binaries only for in-container usage")
 
 	flag.Parse()
 
@@ -63,6 +64,10 @@ func main() {
 	}
 	if *dev {
 		orbctls = []executables.Buildable{orbctlBin(orbctlMain, *orbctldir, runtime.GOOS, "amd64")}
+	}
+
+	if *containeronly {
+		orbctls = []executables.Buildable{orbctlBin(orbctlMain, *orbctldir, "linux", "amd64")}
 	}
 
 	var hasErr bool

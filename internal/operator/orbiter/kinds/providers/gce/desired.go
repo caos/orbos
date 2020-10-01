@@ -53,12 +53,14 @@ type SSHKey struct {
 }
 
 type Spec struct {
-	Verbose bool
-	JSONKey *secret.Secret `yaml:",omitempty"`
-	Region  string
-	Zone    string
-	Pools   map[string]*Pool
-	SSHKey  *SSHKey
+	Verbose             bool
+	JSONKey             *secret.Secret `yaml:",omitempty"`
+	Region              string
+	Zone                string
+	Pools               map[string]*Pool
+	SSHKey              *SSHKey
+	RebootRequired      []string
+	ReplacementRequired []string
 }
 
 func (d Desired) validate() error {
@@ -81,17 +83,10 @@ func (d Desired) validate() error {
 	}
 	return nil
 }
-
-func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*Desired, error) {
+func parseDesiredV0(desiredTree *tree.Tree) (*Desired, error) {
 	desiredKind := &Desired{
 		Common: desiredTree.Common,
-		Spec: Spec{
-			JSONKey: &secret.Secret{Masterkey: masterkey},
-			SSHKey: &SSHKey{
-				Private: &secret.Secret{Masterkey: masterkey},
-				Public:  &secret.Secret{Masterkey: masterkey},
-			},
-		},
+		Spec:   Spec{},
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
@@ -99,16 +94,4 @@ func parseDesiredV0(desiredTree *tree.Tree, masterkey string) (*Desired, error) 
 	}
 
 	return desiredKind, nil
-}
-
-func initializeNecessarySecrets(desiredKind *Desired, masterkey string) {
-	if desiredKind.Spec.JSONKey == nil {
-		desiredKind.Spec.JSONKey = &secret.Secret{Masterkey: masterkey}
-	}
-	if desiredKind.Spec.SSHKey.Private == nil {
-		desiredKind.Spec.SSHKey.Private = &secret.Secret{Masterkey: masterkey}
-	}
-	if desiredKind.Spec.SSHKey.Public == nil {
-		desiredKind.Spec.SSHKey.Public = &secret.Secret{Masterkey: masterkey}
-	}
 }

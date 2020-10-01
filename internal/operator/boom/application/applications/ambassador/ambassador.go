@@ -1,7 +1,7 @@
 package ambassador
 
 import (
-	toolsetsv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
@@ -17,8 +17,8 @@ func New(monitor mntr.Monitor) *Ambassador {
 	}
 }
 
-func (a *Ambassador) Deploy(toolsetCRDSpec *toolsetsv1beta1.ToolsetSpec) bool {
-	return toolsetCRDSpec.Ambassador != nil && toolsetCRDSpec.Ambassador.Deploy
+func (a *Ambassador) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+	return toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy
 }
 
 func (a *Ambassador) GetName() name.Application {

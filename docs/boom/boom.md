@@ -73,4 +73,4 @@ orbctl -f $HOME/.orb/config takeoff
 
 ## Structure of the used boom.yml 
 
-The structure is documented [here](yml/ToolsetSpec.md), from there you can follow the file-tree to what configurations you want to make.
+The structure is documented in v1beta1 [here](yml/v1beta1/ToolsetSpec.md) and v1beta2 [here](yml/v1beta2/ToolsetSpec.md), from there you can follow the file-tree to what configurations you want to make.

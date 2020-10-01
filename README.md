@@ -23,53 +23,51 @@ In the following example we will create a `kubernetes` cluster on a `GCEProvider
 
 ### Initialize A Git Repository
 
-Generate a new Deploy Key
-```bash
-mkdir -p ~/.ssh && ssh-keygen -t rsa -b 4096 -C "ORBOS repo key" -P "" -f /tmp/myorb_repo -q
-```
-
-Create a new Git Repository
-
-Add the public part of your new SSH key pair to the git repositories trusted deploy keys with write access.
-
-```
-cat /tmp/myorb_repo.pub
-```
-
-Copy the files [orbiter.yml](examples/orbiter/gce/orbiter.yml) and [boom.yml](examples/boom/boom.yml) to the root of your Repository.
+Copy the files [orbiter.yml](examples/orbiter/gce/orbiter.yml) and [boom.yml](examples/boom/boom.yml) to the root of a new git Repository.
 
 ### Configure your local environment
 
-Download the latest orbctl
-
 ```bash
+# Install the latest orbctl
 curl -s https://api.github.com/repos/caos/orbos/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d '"' -f 4 | sudo wget -i - -O /usr/local/bin/orbctl
 sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
+
+# Create an orb file at ${HOME}/.orb/config
+orbctl configure --repourl git@github.com:me/my-orb.git --masterkey "$(openssl rand -base64 21)"
 ```
 
-Create an orb file
+### Configure a billable Google Cloud Platform project of your choice
 
 ```bash
-mkdir -p ~/.orb
-cat > ~/.orb/config << EOF
-url: git@github.com:me/my-orb.git
-masterkey: $(openssl rand -base64 21)
-repokey: |
-$(sed s/^/\ \ /g /tmp/myorb_repo)
-EOF
-```
+MY_GCE_PROJECT="$(gcloud config get-value project)"
+ORBOS_SERVICE_ACCOUNT_NAME=orbiter-system
+ORBOS_SERVICE_ACCOUNT=${ORBOS_SERVICE_ACCOUNT_NAME}@${MY_GCE_PROJECT}.iam.gserviceaccount.com
 
-### Create a service account in a billable GCP project of your choice
+# Create a service account for the ORBITER user
+gcloud iam service-accounts create ${ORBOS_SERVICE_ACCOUNT_NAME} \
+    --description="${ORBOS_SERVICE_ACCOUNT_NAME}" \
+    --display-name="${ORBOS_SERVICE_ACCOUNT_NAME}"
 
-Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
+# Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/compute.admin
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iap.tunnelResourceAccessor
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/serviceusage.serviceUsageAdmin
 
-Create a JSON key for the service account
 
-Encrypt and write the created JSON key to the orbiter.yml
+# Create a JSON key for the service account
+gcloud iam service-accounts keys create /tmp/key.json \
+  --iam-account ${ORBOS_SERVICE_ACCOUNT}
 
-```bash
-orbctl writesecret orbiter.gce.jsonkey --file ~/Downloads/<YOUR_JSON_KEY_FILE>
+# Encrypt and write the created JSON key to the orbiter.yml
+orbctl writesecret orbiter.gce.jsonkey --file /tmp/key.json
+rm -f /tmp/key.json
 ```
 
 ### Bootstrap your Kubernetes cluster on GCE
@@ -82,7 +80,7 @@ As soon as the Orbiter has deployed itself to the cluster, you can decrypt the g
 
 ```bash
 mkdir -p ~/.kube
-orbctl readsecret k8s.kubeconfig > ~/.kube/config
+orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config
 ```
 
 Wait for grafana to become running
@@ -91,7 +89,7 @@ Wait for grafana to become running
 kubectl --namespace caos-system get po -w
 ```
 
-Open your browser at localhost:8080 to show your new clusters dashboards
+Open your browser at `http://localhost:8080` to show your new clusters dashboards. Default username and password are both `admin`
 
 ```bash
 kubectl --namespace caos-system port-forward svc/grafana 8080:80
@@ -100,7 +98,22 @@ kubectl --namespace caos-system port-forward svc/grafana 8080:80
 Delete everything created by Orbiter
 
 ```bash
+# Remove all GCE compute resources
 orbctl destroy
+
+# Unassign all service account roles
+gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/compute.admin
+gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iap.tunnelResourceAccessor
+gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/serviceusage.serviceUsageAdmin
+
+# Remove service account
+gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 ```
 
 

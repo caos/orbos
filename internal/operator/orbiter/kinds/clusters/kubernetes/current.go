@@ -41,7 +41,8 @@ type Current struct {
 
 type Machine struct {
 	Joined          bool
-	Online          bool
+	Updating        bool
+	Rebooting       bool
 	Ready           bool
 	FirewallIsReady bool
 	Unknown         bool

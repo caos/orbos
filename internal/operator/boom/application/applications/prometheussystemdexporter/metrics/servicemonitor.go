@@ -35,13 +35,13 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 			"state",
 			"name",
 		},
-		Regex: `(systemd_unit_state;active;(docker\.service|firewalld\.service|keepalive\.service|kubelet\.service|nginx\.service|node-agentd\.service|sshd\.service))`,
+		Regex: `(systemd_unit_state;active;(docker\.service|firewalld\.service|keepalived\.service|kubelet\.service|nginx\.service|node-agentd\.service|sshd\.service))`,
 	}, {
 		Action:       "replace",
 		SourceLabels: []string{"__name__"},
 		TargetLabel:  "__name__",
 		Regex:        "systemd_unit_state",
-		Replacement:  "caos_systemd_unit_active",
+		Replacement:  "dist_systemd_unit_active",
 	}, {
 		Action: "labelkeep",
 		Regex:  "__.+|job|instance|name",

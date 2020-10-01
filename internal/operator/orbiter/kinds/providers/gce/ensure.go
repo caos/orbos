@@ -5,12 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/ssh"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+
+	"github.com/caos/orbos/internal/api"
 
 	"github.com/caos/orbos/internal/helpers"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
@@ -18,7 +17,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/push"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -30,17 +28,15 @@ func query(
 	current *Current,
 	lb interface{},
 	context *context,
-	currentNodeAgents *common.CurrentNodeAgents,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
-	orbiterCommit,
-	repoURL,
-	repoKey string,
-	masterkey string,
+	naFuncs core.IterateNodeAgentFuncs,
+	orbiterCommit string,
 ) (ensureFunc orbiter.EnsureFunc, err error) {
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		errors.Errorf("Unknown or unsupported load balancing of type %T", lb)
+		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
 	vips, err := lbCurrent.Current.Spec(context.machinesService)
 	if err != nil {
@@ -76,7 +72,7 @@ func query(
 		}
 	}
 
-	queryNA, installNA := core.NodeAgentFuncs(context.monitor, orbiterCommit, repoURL, repoKey, currentNodeAgents)
+	queryNA, installNA := naFuncs(nodeAgentsCurrent)
 
 	desireNodeAgent := func(pool string, machine infra.Machine) error {
 
@@ -125,7 +121,7 @@ func query(
 				}
 			}
 		}
-		running, err := queryNA(machine)
+		running, err := queryNA(machine, orbiterCommit)
 		if err != nil {
 			return err
 		}
@@ -146,21 +142,8 @@ func query(
 		}
 		panic(fmt.Errorf("external address for %v is not ensured", vip))
 	})
+	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
 
-	return func(psf push.Func) *orbiter.EnsureResult {
-
-		if (desired.SSHKey.Private == nil || desired.SSHKey.Private.Value == "") &&
-			(desired.SSHKey.Public == nil || desired.SSHKey.Public.Value == "") {
-			priv, pub, err := ssh.Generate()
-			if err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-			desired.SSHKey.Private = &secret.Secret{Masterkey: masterkey, Value: priv}
-			desired.SSHKey.Public = &secret.Secret{Masterkey: masterkey, Value: pub}
-			if err := psf(context.monitor.WithField("type", "maintenancekey")); err != nil {
-				return orbiter.ToEnsureResult(false, err)
-			}
-		}
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
 			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },

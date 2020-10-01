@@ -2,10 +2,11 @@ package prometheus
 
 import (
 	"errors"
+	"strconv"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
@@ -17,10 +18,10 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1beta1.ToolsetSpec) interface{} {
+func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1beta2.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
-		// TODO: Better error handling?
+		monitor.Error(err)
 		return nil
 	}
 
@@ -33,49 +34,58 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), toolsetCRDSpec)
 
 	values := helm.DefaultValues(p.GetImageTags())
-
-	if config.StorageSpec != nil {
-		storageSpec := &helm.StorageSpec{
-			VolumeClaimTemplate: &helm.VolumeClaimTemplate{
-				Spec: &helm.VolumeClaimTemplateSpec{
-					StorageClassName: config.StorageSpec.StorageClass,
-					AccessModes:      config.StorageSpec.AccessModes,
-					Resources: &helm.Resources{
-						Requests: &helm.Request{
-							Storage: config.StorageSpec.Storage,
+	if config != nil {
+		if config.StorageSpec != nil {
+			storageSpec := &helm.StorageSpec{
+				VolumeClaimTemplate: &helm.VolumeClaimTemplate{
+					Spec: &helm.VolumeClaimTemplateSpec{
+						StorageClassName: config.StorageSpec.StorageClass,
+						AccessModes:      config.StorageSpec.AccessModes,
+						Resources: &helm.Resources{
+							Requests: &helm.Request{
+								Storage: config.StorageSpec.Storage,
+							},
 						},
 					},
 				},
-			},
+			}
+
+			values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
 		}
 
-		values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
-	}
+		if config.MonitorLabels != nil {
+			values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{
+				MatchLabels: config.MonitorLabels,
+			}
+		}
 
-	if config.MonitorLabels != nil {
-		values.Prometheus.PrometheusSpec.ServiceMonitorSelector = &helm.MonitorSelector{
-			MatchLabels: config.MonitorLabels,
+		if config.ServiceMonitors != nil {
+			additionalServiceMonitors := make([]*servicemonitor.Values, 0)
+			for _, specServiceMonitor := range config.ServiceMonitors {
+				valuesServiceMonitor := servicemonitor.SpecToValues(specServiceMonitor)
+				additionalServiceMonitors = append(additionalServiceMonitors, valuesServiceMonitor)
+			}
+
+			values.Prometheus.AdditionalServiceMonitors = additionalServiceMonitors
+		}
+
+		if config.AdditionalScrapeConfigs != nil {
+			values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = config.AdditionalScrapeConfigs
 		}
 	}
 
-	if config.ServiceMonitors != nil {
-		additionalServiceMonitors := make([]*servicemonitor.Values, 0)
-		for _, specServiceMonitor := range config.ServiceMonitors {
-			valuesServiceMonitor := servicemonitor.SpecToValues(specServiceMonitor)
-			additionalServiceMonitors = append(additionalServiceMonitors, valuesServiceMonitor)
+	values.Prometheus.PrometheusSpec.ExternalLabels = make(map[string]string)
+	if toolsetCRDSpec.MetricsPersisting.ExternalLabels != nil {
+		for k, v := range toolsetCRDSpec.MetricsPersisting.ExternalLabels {
+			if k == "orb" {
+				monitor.Info("Label-key \"orb\" is already used internally and will be ignored")
+			} else {
+				values.Prometheus.PrometheusSpec.ExternalLabels[k] = v
+			}
 		}
-
-		values.Prometheus.AdditionalServiceMonitors = additionalServiceMonitors
-	}
-
-	if config.AdditionalScrapeConfigs != nil {
-		values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = config.AdditionalScrapeConfigs
 	}
 
 	if getSecretErr == nil && !ingestionSecretAbsent {
-		if values.Prometheus.PrometheusSpec.ExternalLabels == nil {
-			values.Prometheus.PrometheusSpec.ExternalLabels = make(map[string]string)
-		}
 		values.Prometheus.PrometheusSpec.ExternalLabels["orb"] = p.orb
 		values.Prometheus.PrometheusSpec.RemoteWrite = append(values.Prometheus.PrometheusSpec.RemoteWrite, &helm.RemoteWrite{
 			URL: "https://prometheus-us-central1.grafana.net/api/prom/push",
@@ -100,20 +110,51 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		})
 	}
 
-	if toolsetCRDSpec.Prometheus.RemoteWrite != nil {
+	if toolsetCRDSpec.MetricsPersisting != nil && toolsetCRDSpec.MetricsPersisting.RemoteWrite != nil {
+		writeRelabelConfigs := make([]*helm.ValuesRelabelConfig, 0)
+		if toolsetCRDSpec.MetricsPersisting.RemoteWrite.RelabelConfigs != nil && len(toolsetCRDSpec.MetricsPersisting.RemoteWrite.RelabelConfigs) > 0 {
+			for _, relabelConfig := range toolsetCRDSpec.MetricsPersisting.RemoteWrite.RelabelConfigs {
+				mod := 0
+				if relabelConfig.Modulus != "" {
+					internalMod, err := strconv.Atoi(relabelConfig.Modulus)
+					if err != nil {
+						return err
+					}
+					mod = internalMod
+				}
+
+				writeRelabelConfigs = append(writeRelabelConfigs, &helm.ValuesRelabelConfig{
+					Action:       relabelConfig.Action,
+					SourceLabels: relabelConfig.SourceLabels,
+					Separator:    relabelConfig.Separator,
+					TargetLabel:  relabelConfig.TargetLabel,
+					Regex:        relabelConfig.Regex,
+					Modulus:      uint64(mod),
+					Replacement:  relabelConfig.Replacement,
+				})
+			}
+		}
+
 		values.Prometheus.PrometheusSpec.RemoteWrite = append(values.Prometheus.PrometheusSpec.RemoteWrite, &helm.RemoteWrite{
-			URL: toolsetCRDSpec.Prometheus.RemoteWrite.URL,
+			URL: toolsetCRDSpec.MetricsPersisting.RemoteWrite.URL,
 			BasicAuth: &helm.BasicAuth{
 				Username: &helm.SecretKeySelector{
-					Name: toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Username.Name,
-					Key:  toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Username.Key,
+					Name: toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Username.Name,
+					Key:  toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Username.Key,
 				},
 				Password: &helm.SecretKeySelector{
-					Name: toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Password.Name,
-					Key:  toolsetCRDSpec.Prometheus.RemoteWrite.BasicAuth.Password.Key,
+					Name: toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Password.Name,
+					Key:  toolsetCRDSpec.MetricsPersisting.RemoteWrite.BasicAuth.Password.Key,
 				},
 			},
+			WriteRelabelConfigs: writeRelabelConfigs,
 		})
+	}
+
+	if toolsetCRDSpec.MetricsPersisting.Tolerations != nil {
+		for _, tol := range toolsetCRDSpec.MetricsPersisting.Tolerations {
+			values.Prometheus.PrometheusSpec.Tolerations = append(values.Prometheus.PrometheusSpec.Tolerations, tol)
+		}
 	}
 
 	ruleLabels := labels.GetRuleLabels(info.GetInstanceName())
@@ -125,6 +166,16 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
 
 	values.FullnameOverride = info.GetInstanceName()
+
+	if toolsetCRDSpec.MetricsPersisting.NodeSelector != nil {
+		for k, v := range toolsetCRDSpec.MetricsPersisting.NodeSelector {
+			values.Prometheus.PrometheusSpec.NodeSelector[k] = v
+		}
+	}
+
+	if toolsetCRDSpec.MetricsPersisting.Resources != nil {
+		values.Prometheus.PrometheusSpec.Resources = toolsetCRDSpec.MetricsPersisting.Resources
+	}
 
 	return values
 }

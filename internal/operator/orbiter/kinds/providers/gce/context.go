@@ -60,7 +60,9 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 		networkName: networkName,
 		networkURL:  networkURL,
 	}
+	h.Reset()
 
-	newContext.machinesService = newMachinesService(newContext, oneoff, []byte(desired.SSHKey.Private.Value), []byte(desired.SSHKey.Public.Value))
+	newContext.machinesService = newMachinesService(newContext, oneoff)
+
 	return newContext, nil
 }
