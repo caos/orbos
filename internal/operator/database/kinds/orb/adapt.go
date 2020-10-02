@@ -52,6 +52,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 			return nil, nil, err
 		}
 		queriers := []core.QueryFunc{
+			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
 			queryDB,
 		}
 

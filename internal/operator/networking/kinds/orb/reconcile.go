@@ -1,7 +1,6 @@
 package orb
 
 import (
-	"fmt"
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -9,7 +8,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree, version string) core.EnsureFunc {
+func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree) core.EnsureFunc {
 	return func(k8sClient *kubernetes.Client) (err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -23,19 +22,20 @@ func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree, version string) cor
 
 		recMonitor := monitor.WithField("version", desiredKind.Spec.Version)
 
-		networkingVersion := version
-		if desiredKind.Spec.Version != "" {
-			networkingVersion = desiredKind.Spec.Version
-		} else {
-			monitor.Info(fmt.Sprintf("No version set in zitadel.yml, so default version %s will get applied", version))
-		}
-
-		if err := kubernetes.EnsureNetworkingArtifacts(monitor, k8sClient, networkingVersion, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
-			recMonitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
+		if desiredKind.Spec.Version == "" {
+			err := errors.New("No version set in networking.yml")
+			monitor.Error(err)
 			return err
 		}
 
-		recMonitor.Info("Applied zitadel-operator")
+		if desiredKind.Spec.SelfReconciling {
+			if err := kubernetes.EnsureNetworkingArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+				recMonitor.Error(errors.Wrap(err, "Failed to deploy networking-operator into k8s-cluster"))
+				return err
+			}
+
+			recMonitor.Info("Applied networking-operator")
+		}
 		return nil
 
 	}

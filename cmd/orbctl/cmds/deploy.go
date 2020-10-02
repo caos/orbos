@@ -38,7 +38,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 	return nil
 }
 
-func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
+func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
 	found, err := api.ExistsDatabaseYml(gitClient)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *str
 				return err
 			}
 
-			if err := orbdb.Reconcile(monitor, tree, version)(k8sClient); err != nil {
+			if err := orbdb.Reconcile(monitor, tree)(k8sClient); err != nil {
 				return err
 			}
 		} else {
@@ -62,7 +62,7 @@ func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *str
 	return nil
 }
 
-func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
+func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
 	found, err := api.ExistsNetworkingYml(gitClient)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *s
 				return err
 			}
 
-			if err := orbnw.Reconcile(monitor, tree, version)(k8sClient); err != nil {
+			if err := orbnw.Reconcile(monitor, tree)(k8sClient); err != nil {
 				return err
 			}
 		} else {

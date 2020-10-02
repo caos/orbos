@@ -42,6 +42,7 @@ func AdaptFunc() core.AdaptFunc {
 		}
 
 		queriers := []core.QueryFunc{
+			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
 			queryNW,
 		}
 
