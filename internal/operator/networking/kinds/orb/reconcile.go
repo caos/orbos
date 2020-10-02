@@ -28,14 +28,13 @@ func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree) core.EnsureFunc {
 			return err
 		}
 
-		if desiredKind.Spec.SelfReconciling {
-			if err := kubernetes.EnsureNetworkingArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
-				recMonitor.Error(errors.Wrap(err, "Failed to deploy networking-operator into k8s-cluster"))
-				return err
-			}
-
-			recMonitor.Info("Applied networking-operator")
+		if err := kubernetes.EnsureNetworkingArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+			recMonitor.Error(errors.Wrap(err, "Failed to deploy networking-operator into k8s-cluster"))
+			return err
 		}
+
+		recMonitor.Info("Applied networking-operator")
+
 		return nil
 
 	}

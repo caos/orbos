@@ -89,14 +89,14 @@ func Takeoff(
 			monitor.Info("Failed to connect to k8s")
 		}
 
-		if err := deployBoom(monitor, gitClient, &kubeconfig, version); err != nil {
+		if err := deployBoom(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}
 
-		if err := deployDatabase(monitor, gitClient, &kubeconfig, version); err != nil {
+		if err := deployDatabase(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}
-		if err := deployNetworking(monitor, gitClient, &kubeconfig, version); err != nil {
+		if err := deployNetworking(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}
 	}

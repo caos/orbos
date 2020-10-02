@@ -28,14 +28,13 @@ func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree) core.EnsureFunc {
 			return err
 		}
 
-		if desiredKind.Spec.SelfReconciling {
-			if err := kubernetes.EnsureDatabaseArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
-				recMonitor.Error(errors.Wrap(err, "Failed to deploy database-operator into k8s-cluster"))
-				return err
-			}
-
-			recMonitor.Info("Applied database-operator")
+		if err := kubernetes.EnsureDatabaseArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+			recMonitor.Error(errors.Wrap(err, "Failed to deploy database-operator into k8s-cluster"))
+			return err
 		}
+
+		recMonitor.Info("Applied database-operator")
+
 		return nil
 
 	}

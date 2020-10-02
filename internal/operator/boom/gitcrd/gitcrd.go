@@ -154,7 +154,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			return
 		}
 
-		if err := cmd.Reconcile(monitor, k8sClient, "", boomSpec); err != nil {
+		if err := cmd.Reconcile(monitor, k8sClient, boomSpec); err != nil {
 			c.status = err
 			return
 		}

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -11,14 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion string, boomSpec *v1beta2.Boom) error {
-
-	var (
-		tolerations  k8s.Tolerations
-		nodeselector map[string]string
-		boomVersion  string
-	)
-
+func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, boomSpec *v1beta2.Boom) error {
 	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:    resource.MustParse("250m"),
@@ -29,30 +21,29 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion
 			corev1.ResourceMemory: resource.MustParse("256Mi"),
 		},
 	})
+
 	if boomSpec != nil {
-		boomVersion = boomSpec.Version
-		tolerations = boomSpec.Tolerations
-		nodeselector = boomSpec.NodeSelector
+		if boomSpec.Version == "" {
+			err := errors.New("No version set in boom.yml")
+			monitor.Error(err)
+			return err
+		}
+
 		if boomSpec.Resources != nil {
 			resources = *boomSpec.Resources
 		}
-	}
-	if boomVersion == "" {
-		boomVersion = binaryVersion
-		monitor.Info(fmt.Sprintf("No version set in boom.yml, so default version %s will get applied", binaryVersion))
-	}
 
-	recMonitor := monitor.WithField("version", boomVersion)
+		recMonitor := monitor.WithField("version", boomSpec.Version)
 
-	if k8sClient.Available() {
-		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomVersion, tolerations, nodeselector, &resources); err != nil {
-			recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
-			return err
+		if k8sClient.Available() {
+			if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomSpec.Version, boomSpec.Tolerations, boomSpec.NodeSelector, &resources); err != nil {
+				recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
+				return err
+			}
+			recMonitor.Info("Applied boom")
+		} else {
+			recMonitor.Info("Failed to connect to k8s")
 		}
-		recMonitor.Info("Applied boom")
-	} else {
-		recMonitor.Info("Failed to connect to k8s")
 	}
-
 	return nil
 }

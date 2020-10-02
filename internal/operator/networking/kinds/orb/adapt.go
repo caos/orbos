@@ -42,8 +42,12 @@ func AdaptFunc() core.AdaptFunc {
 		}
 
 		queriers := []core.QueryFunc{
-			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
 			queryNW,
+		}
+		if desiredKind.Spec.SelfReconciling {
+			queriers = append(queriers,
+				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
+			)
 		}
 
 		destroyers := []core.DestroyFunc{

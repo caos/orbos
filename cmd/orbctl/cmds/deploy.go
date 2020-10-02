@@ -11,7 +11,7 @@ import (
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
 	foundBoom, err := api.ExistsBoomYml(gitClient)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 
 	k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
 
-	if err := cmdboom.Reconcile(monitor, k8sClient, version, desiredKind.Spec.Boom); err != nil {
+	if err := cmdboom.Reconcile(monitor, k8sClient, desiredKind.Spec.Boom); err != nil {
 		return err
 	}
 	return nil
