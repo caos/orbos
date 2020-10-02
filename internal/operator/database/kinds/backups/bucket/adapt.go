@@ -127,7 +127,7 @@ func AdaptFunc(
 
 				databases, err := currentDB.GetListDatabasesFunc()(k8sClient)
 				if err != nil {
-					return nil, err
+					databases = []string{}
 				}
 
 				queryB, _, err := backup.AdaptFunc(
@@ -188,23 +188,25 @@ func AdaptFunc(
 				}
 
 				queriers := make([]core.QueryFunc, 0)
-				for _, feature := range features {
-					switch feature {
-					case "backup", "instantbackup":
-						queriers = append(queriers,
-							core.ResourceQueryToZitadelQuery(queryS),
-							queryB,
-						)
-					case "clear":
-						queriers = append(queriers,
-							queryC,
-							core.EnsureFuncToQueryFunc(checkAndCleanupC),
-						)
-					case "restore":
-						queriers = append(queriers,
-							queryR,
-							core.EnsureFuncToQueryFunc(checkAndCleanupR),
-						)
+				if databases != nil && len(databases) != 0 {
+					for _, feature := range features {
+						switch feature {
+						case "backup", "instantbackup":
+							queriers = append(queriers,
+								core.ResourceQueryToZitadelQuery(queryS),
+								queryB,
+							)
+						case "clear":
+							queriers = append(queriers,
+								queryC,
+								core.EnsureFuncToQueryFunc(checkAndCleanupC),
+							)
+						case "restore":
+							queriers = append(queriers,
+								queryR,
+								core.EnsureFuncToQueryFunc(checkAndCleanupR),
+							)
+						}
 					}
 				}
 
