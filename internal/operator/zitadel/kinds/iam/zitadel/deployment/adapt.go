@@ -19,6 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	//zitadelImage can be found in github.com/caos/zitadel repo
+	zitadelImage = "ghcr.io/caos/zitadel:0.89.1"
+)
+
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
@@ -235,7 +240,7 @@ func AdaptFunc(
 							RunAsNonRoot: &runAsNonRoot,
 						},
 						Name:            containerName,
-						Image:           "ghcr.io/caos/zitadel:0.85.2",
+						Image:           zitadelImage,
 						ImagePullPolicy: "IfNotPresent",
 						Ports: []corev1.ContainerPort{
 							{Name: "grpc", ContainerPort: 50001},
