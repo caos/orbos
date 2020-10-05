@@ -9,6 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.31.12
 	github.com/caos/oidc v0.6.2
 	github.com/cloudflare/cloudflare-go v0.12.1
+	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.4.2

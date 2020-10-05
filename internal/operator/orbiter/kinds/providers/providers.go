@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/cs"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -56,6 +58,19 @@ func GetQueryAndDestroyFuncs(
 			providerTree,
 			providerCurrent,
 		)
+	case "orbiter.caos.ch/CloudScaleProvider":
+		return cs.AdaptFunc(
+			provID,
+			orbID(repoURL),
+			wlFunc,
+			orbiterCommit, repoURL, repoKey,
+			oneoff,
+		)(
+			monitor,
+			finishedChan,
+			providerTree,
+			providerCurrent,
+		)
 	case "orbiter.caos.ch/StaticProvider":
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
 			return static.AdaptFunc(
@@ -87,6 +102,11 @@ func GetSecrets(
 			monitor,
 			providerTree,
 		)
+	case "orbiter.caos.ch/CloudScaleProvider":
+		return cs.SecretsFunc()(
+			monitor,
+			providerTree,
+		)
 	case "orbiter.caos.ch/StaticProvider":
 		return static.SecretsFunc()(
 			monitor,
@@ -110,6 +130,13 @@ func ListMachines(
 	switch providerTree.Common.Kind {
 	case "orbiter.caos.ch/GCEProvider":
 		return gce.ListMachines(
+			monitor,
+			providerTree,
+			orbID(repoURL),
+			provID,
+		)
+	case "orbiter.caos.ch/CloudScaleProvider":
+		return cs.ListMachines(
 			monitor,
 			providerTree,
 			orbID(repoURL),
