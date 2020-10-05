@@ -4,6 +4,9 @@ kind: Kustomization
 namespace: caos-system
 
 configMapGenerator:
+- name: grafana-dashboard-zitadel-health
+  files:
+   - json/health.json
 - name: grafana-dashboard-zitadel-cockroachdb-replicas
   files:
   - json/replicas.json
