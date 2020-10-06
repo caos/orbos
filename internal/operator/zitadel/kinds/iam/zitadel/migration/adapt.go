@@ -4,6 +4,8 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/configmap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/job"
@@ -15,7 +17,6 @@ import (
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 )
 
 func AdaptFunc(
@@ -114,7 +115,7 @@ func AdaptFunc(
 								},
 								{
 									Name:  "create-flyway-user",
-									Image: "cockroachdb/cockroach:v20.1.4",
+									Image: "cockroachdb/cockroach:v20.1.5",
 									Env:   baseEnvVars(envMigrationUser, envMigrationPW, migrationUser, secretPasswordName),
 									VolumeMounts: []corev1.VolumeMount{{
 										Name:      rootUserInternal,
@@ -157,7 +158,7 @@ func AdaptFunc(
 							Containers: []corev1.Container{
 								{
 									Name:    "delete-flyway-user",
-									Image:   "cockroachdb/cockroach:v20.1.4",
+									Image:   "cockroachdb/cockroach:v20.1.5",
 									Command: []string{"/bin/bash", "-c", "--"},
 									Args: []string{
 										strings.Join([]string{

@@ -787,16 +787,24 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	api, apiErr := c.nodeApi()
 	apiErr = errors.Wrap(apiErr, "getting node api failed")
 
-	// Cordon node
-	if apiErr == nil {
-		nodeStruct, err := api.Get(context.Background(), name, mach.GetOptions{})
-		if err != nil {
-			return errors.Wrapf(err, "getting node %s from kube api failed", name)
-		}
+	drain := func() error {
+		// Cordon node
+		if apiErr == nil {
+			nodeStruct, err := api.Get(context.Background(), name, mach.GetOptions{})
+			if err != nil {
+				if macherrs.IsNotFound(err) {
+					return nil
+				}
+				return errors.Wrapf(err, "getting node %s from kube api failed", name)
+			}
 
-		if err = c.Drain(machine, nodeStruct, deleting); err != nil {
-			return err
+			return c.Drain(machine, nodeStruct, deleting)
 		}
+		return nil
+	}
+
+	if err := drain(); err != nil {
+		return err
 	}
 
 	monitor.Info("Resetting kubeadm")
@@ -811,7 +819,9 @@ func (c *Client) EnsureDeleted(name string, machine *Machine, node NodeWithKubea
 	}
 	monitor.Info("Deleting node")
 	if err := api.Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
-		return err
+		if !macherrs.IsNotFound(err) {
+			return err
+		}
 	}
 	if !machine.Updating || machine.Joined {
 		machine.Updating = true
