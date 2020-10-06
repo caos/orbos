@@ -6,10 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func RebootCommand(rv RootValues) *cobra.Command {
+func ReplaceCommand(rv RootValues) *cobra.Command {
 	return &cobra.Command{
-		Use:   "reboot",
-		Short: "Gracefully reboot machines",
+		Use:   "replace",
+		Short: "Replace a node with a new machine available in the same pool",
 		Long:  "Pass machine ids as arguments, omit arguments for selecting machines interactively",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			_, monitor, orbConfig, gitClient, errFunc := rv()
@@ -18,7 +18,7 @@ func RebootCommand(rv RootValues) *cobra.Command {
 			}
 
 			return requireMachines(monitor, gitClient, orbConfig, args, func(machine infra.Machine) (required bool, require func(), unrequire func()) {
-				return machine.RebootRequired()
+				return machine.ReplacementRequired()
 			})
 		},
 	}

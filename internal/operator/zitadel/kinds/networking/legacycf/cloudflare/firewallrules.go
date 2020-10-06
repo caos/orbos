@@ -53,7 +53,12 @@ func (c *Cloudflare) DeleteFirewallRules(domain string, ruleIDs []string) error 
 		return err
 	}
 
-	return c.api.DeleteFirewallRules(id, ruleIDs)
+	for _, ruleID := range ruleIDs {
+		if err := c.api.DeleteFirewallRule(id, ruleID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Cloudflare) GetFirewallRules(domain string) ([]*FirewallRule, error) {

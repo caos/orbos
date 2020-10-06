@@ -38,7 +38,11 @@ func query(
 	if !ok {
 		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
-	normalized, firewalls := normalize(context, lbCurrent.Current.Spec)
+	vips, err := lbCurrent.Current.Spec(context.machinesService)
+	if err != nil {
+		return nil, err
+	}
+	normalized, firewalls := normalize(context, vips)
 
 	var (
 		ensureLB             func() error

@@ -15,7 +15,7 @@ func (a *App) EnsureFilters(domain string, filters []*cloudflare.Filter) ([]*clo
 	}
 
 	createFilters, updateFilters := getFilterToCreateAndUpdate(currentFilters, filters)
-	if len(createFilters) > 0 {
+	if createFilters != nil && len(createFilters) > 0 {
 		created, err := a.cloudflare.CreateFilters(domain, createFilters)
 		if err != nil {
 			return nil, nil, err
@@ -24,7 +24,7 @@ func (a *App) EnsureFilters(domain string, filters []*cloudflare.Filter) ([]*clo
 		result = append(result, created...)
 	}
 
-	if len(updateFilters) > 0 {
+	if updateFilters != nil && len(updateFilters) > 0 {
 		updated, err := a.cloudflare.UpdateFilters(domain, updateFilters)
 		if err != nil {
 			return nil, nil, err
@@ -33,54 +33,65 @@ func (a *App) EnsureFilters(domain string, filters []*cloudflare.Filter) ([]*clo
 		result = append(result, updated...)
 	}
 
-	deleteFilters := getFilterToDelete(currentFilters, filters)
-	if len(deleteFilters) > 0 {
+	deleteFilters, restFilters := getFilterToDelete(currentFilters, filters)
+	if deleteFilters != nil && len(deleteFilters) > 0 {
 		del = func() error {
 			return a.cloudflare.DeleteFilters(domain, deleteFilters)
 		}
+	} else {
+		del = func() error { return nil }
 	}
+	result = append(result, restFilters...)
 
 	return result, del, nil
 }
 
-func getFilterToDelete(currentFilters []*cloudflare.Filter, filters []*cloudflare.Filter) []string {
+func getFilterToDelete(currentFilters []*cloudflare.Filter, filters []*cloudflare.Filter) ([]string, []*cloudflare.Filter) {
 	deleteFilters := make([]string, 0)
+	restFilters := make([]*cloudflare.Filter, 0)
 
-	for _, currentFilter := range currentFilters {
-		desc := currentFilter.Description
-		found := false
-		for _, filter := range filters {
-			if desc == filter.Description {
-				found = true
+	if filters != nil {
+		for _, currentFilter := range currentFilters {
+			desc := currentFilter.Description
+			found := false
+			for _, filter := range filters {
+				if desc == filter.Description {
+					restFilters = append(restFilters, filter)
+					found = true
+				}
 			}
-		}
 
-		if found == false {
-			deleteFilters = append(deleteFilters, currentFilter.ID)
+			if found == false {
+				deleteFilters = append(deleteFilters, currentFilter.ID)
+			}
 		}
 	}
 
-	return deleteFilters
+	return deleteFilters, restFilters
 }
 
 func getFilterToCreateAndUpdate(currentFilters []*cloudflare.Filter, filters []*cloudflare.Filter) ([]*cloudflare.Filter, []*cloudflare.Filter) {
 	createFilters := make([]*cloudflare.Filter, 0)
 	updateFilters := make([]*cloudflare.Filter, 0)
 
-	for _, filter := range filters {
-		found := false
-		for _, currentFilter := range currentFilters {
-			if currentFilter.Description == filter.Description ||
-				currentFilter.Expression == filter.Expression {
+	if filters != nil {
+		for _, filter := range filters {
+			found := false
+			for _, currentFilter := range currentFilters {
+				if currentFilter.Description == filter.Description {
 
-				filter.ID = currentFilter.ID
-				updateFilters = append(updateFilters, filter)
-				found = true
-				break
+					filter.ID = currentFilter.ID
+					if currentFilter.Expression != filter.Expression {
+						updateFilters = append(updateFilters, filter)
+					}
+
+					found = true
+					break
+				}
 			}
-		}
-		if found == false {
-			createFilters = append(createFilters, filter)
+			if found == false {
+				createFilters = append(createFilters, filter)
+			}
 		}
 	}
 

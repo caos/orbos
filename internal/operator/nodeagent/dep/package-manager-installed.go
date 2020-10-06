@@ -27,17 +27,13 @@ func (p *PackageManager) debbasedInstalled() error {
 }
 
 func (p *PackageManager) rembasedInstalled() error {
-	return p.listAndParse(exec.Command("yum", "list", "installed"), "Installed Packages", func(line string) (string, string, error) {
+	return p.listAndParse(exec.Command("rpm", "-qa", "--queryformat", "%{NAME} %{VERSION}-%{RELEASE}\n"), "", func(line string) (string, string, error) {
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
 			return "", "", errors.Errorf(`Splitting line "%s" empty characters failed`, line)
 		}
-		packageParts := strings.Split(parts[0], ".")
-		if len(packageParts) < 1 {
-			return "", "", errors.Errorf(`Splitting "%s" (the part before the first empty characters) by a dot failed`, parts[0])
-		}
 
-		return packageParts[0], parts[1], nil
+		return parts[0], parts[1], nil
 	})
 }
 
@@ -59,7 +55,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		return errors.Wrap(err, "listing packages failed")
 	}
 
-	doParse := false
+	doParse := afterLineContaining == ""
 	for err == nil {
 		var line string
 		line, err = bufferedReader.ReadString('\n')
@@ -67,7 +63,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 			fmt.Println(line)
 		}
 
-		if strings.Contains(line, afterLineContaining) {
+		if !doParse && strings.Contains(line, afterLineContaining) {
 			doParse = true
 			continue
 		}

@@ -21,10 +21,3 @@ sandbox*
 *.out
 
 /local
-
-cmd/application/*
-cmd/backup/*
-cmd/cockroach/*
-cmd/local/*
-cmd/restore/*
-cmd/secret/*

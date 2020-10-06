@@ -1,9 +1,10 @@
 package zitadel
 
 import (
-	core "k8s.io/api/core/v1"
 	"sort"
 	"strconv"
+
+	core "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/namespace"
@@ -31,6 +32,7 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 		zitadel.DestroyFunc,
 		error,
 	) {
+
 		internalMonitor := monitor.WithField("kind", "iam")
 
 		desiredKind, err := parseDesiredV0(desired)
@@ -181,9 +183,14 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 		}
 
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
-		if err != nil {
-			return nil, nil, err
+
+		queryNW := zitadel.NoopQueryFunc
+		destroyNW := zitadel.NoopDestroyFunc
+		if desiredKind.Networking != nil {
+			queryNW, destroyNW, err = networking.GetQueryAndDestroyFuncs(internalMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		queryAmbassador, destroyAmbassador, err := ambassador.AdaptFunc(

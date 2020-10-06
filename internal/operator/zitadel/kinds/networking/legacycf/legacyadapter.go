@@ -28,8 +28,10 @@ func adaptFunc(
 				internalLabels["app.kubernetes.io/component"] = "networking"
 
 				groups := make(map[string][]string, 0)
-				for _, group := range cfg.Groups {
-					groups[group.Name] = group.List
+				if cfg.Groups != nil {
+					for _, group := range cfg.Groups {
+						groups[group.Name] = group.List
+					}
 				}
 
 				apps, err := app.New(cfg.Credentials.User.Value, cfg.Credentials.APIKey.Value, cfg.Credentials.UserServiceKey.Value, groups, cfg.Prefix)

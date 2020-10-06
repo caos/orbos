@@ -382,7 +382,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 				"app.kubernetes.io/instance":   "boom",
 				"app.kubernetes.io/part-of":    "orbos",
 				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+				"app.kubernetes.io/managed-by": "boom.caos.ch",
 			},
 		},
 		Spec: core.ServiceSpec{

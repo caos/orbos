@@ -9,6 +9,7 @@ type Configuration struct {
 	Notifications *Notifications `yaml:"notifications,omitempty"`
 	Passwords     *Passwords     `yaml:"passwords,omitempty"`
 	DebugMode     bool           `yaml:"debugMode"`
+	LogLevel      string         `yaml:"logLevel"`
 }
 
 type Passwords struct {
@@ -42,6 +43,7 @@ type Tracing struct {
 	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
 	ProjectID          string         `yaml:"projectID,omitempty"`
 	Fraction           string         `yaml:"fraction,omitempty"`
+	Type               string         `yaml:"type,omitempty"`
 }
 
 type Twilio struct {

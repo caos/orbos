@@ -42,6 +42,7 @@ type Machine interface {
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
 	RebootRequired() (required bool, require func(), unrequire func())
+	ReplacementRequired() (required bool, require func(), unrequire func())
 }
 
 type Machines []Machine

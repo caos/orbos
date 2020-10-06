@@ -50,6 +50,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			migrate = true
 		}
 
+		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
+		if err != nil {
+			return nil, nil, nil, migrate, err
+		}
+
 		current := &Current{
 			Common: &tree.Common{
 				Kind:    "orbiter.caos.ch/GCEProvider",
@@ -63,23 +68,19 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
+				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+					return nil, err
+				}
+
 				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
 					return nil, err
 				}
 
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-				if err != nil {
-					return nil, err
-				}
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func() error {
 				if err := lbDestroy(); err != nil {
-					return err
-				}
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-				if err != nil {
 					return err
 				}
 
@@ -107,9 +108,8 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil
 				}
 
-				ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, true)
-				if err != nil {
-					return err
+				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+					panic(err)
 				}
 
 				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)

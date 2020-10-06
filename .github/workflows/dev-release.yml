@@ -21,7 +21,7 @@ jobs:
           GO111MODULE: on
           CGO_ENABLED: 0
         run: |
-          export VERSION=${GITHUB_REF##*/}
+          export VERSION=${GITHUB_REF##*/}-dev
 
           export IMAGE=docker.pkg.github.com/caos/orbos/orbos
           export TAG_VERSION=${IMAGE}:${VERSION}
@@ -43,7 +43,7 @@ jobs:
           docker push ${CRBACKUP_TAG_VERSION}
 
           echo "##[set-output name=relbranch;]$(echo ${VERSION})"
-          curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/$VERSION | jq .id))
+          curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/${VERSION} | jq .id))
       - name: Dev Release Create
         id: dev-release-create
         uses: actions/create-release@v1
