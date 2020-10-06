@@ -176,22 +176,25 @@ groups:
    - record: cr_runtime_instance_flapping
      expr: resets(sys_uptime{job="cockroachdb"}[10m])
    - record: cr_runtime_instance_flapping_ryg
-     expr: clamp_min(2 - cr_runtime_version_mismatches, 0)
-   - record: cr_runtime_version_mismatches
-     expr: count by(cluster) (count_values by(tag, cluster) ("version", build_timestamp{job="cockroachdb"}))
-   - record: cr_runtime_version_mismatches_ryg
      expr: clamp_min(1 - cr_runtime_instance_flapping, 0)
    - record: cr_runtime_high_open_fd_count
      expr: sys_fd_open{job="cockroachdb"} / sys_fd_softlimit{job="cockroachdb"}
    - record: cr_runtime_high_open_fd_count_ryg
      expr: (1 - (clamp_max(clamp_min(floor(cr_runtime_high_open_fd_count * 100), 20), 30) - 20) / 10)
-   - record: caos_cr_runtime_ryg
+   - record: caos_cr_runtime_instances_ryg
      expr: |-
-       caos_ready_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"}
-       * caos_scheduled_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"}
-       * cr_runtime_instance_flapping_ryg
-       * cr_runtime_version_mismatches_ryg
+       cr_runtime_instance_flapping_ryg
        * cr_runtime_high_open_fd_count_ryg
+
+   - record: cr_runtime_version_mismatches
+     expr: count by(cluster) (count_values by(tag, cluster) ("version", build_timestamp{job="cockroachdb"}))
+   - record: cr_runtime_version_mismatches_ryg
+     expr: clamp_min(2 - cr_runtime_version_mismatches, 0)
+   - record: caos_cr_runtime_cluster_ryg
+     expr: |-
+       min(caos_ready_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"})
+       * min(caos_scheduled_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"})
+       * cr_runtime_version_mismatches
 
 # ZITADEL CockroachDB Capacity
    - record: node:capacity
@@ -225,16 +228,18 @@ groups:
      expr: (clamp_max(clamp_min(security_certificate_expiration_node{job="cockroachdb"}- time(), 86400 * 180), 86400 * 366) - 86400 * 180) / (86400 * 186)
 #   - record: cr_node_client_certificate_expires_soon_ryg
 #     expr: (clamp_max(clamp_min(cr_node_client_certificate_expires_soon{job="cockroachdb"}- time(), 86400 * 180), 86400 * 366) - 86400 * 180) / (86400 * 186)
-   - record: caos_cr_replicas_ryg
+   - record: caos_cr_replicas_nodes_ryg
      expr: |-
        cr_replicas_clock_offset_near_max_ryg
        * cr_ca_certificate_expires_soon_ryg
        * cr_node_certificate_expires_soon_ryg
-       * requests_slow_latch{job="cockroachdb"}
-       * requests_slow_lease{job="cockroachdb"}
-       * requests_slow_raft{job="cockroachdb"}
 #       * cr_client_ca_certificate_expires_soon_ryg
 #       * cr_node_client_certificate_expires_soon_ryg
+   - record: caos_cr_replicas_stores_ryg
+     expr: |-
+       clamp_min(1 - requests_slow_latch{job="cockroachdb"}, 0)
+       * clamp_min(1 - requests_slow_lease{job="cockroachdb"}, 0)
+       * clamp_min(1 - requests_slow_raft{job="cockroachdb"}, 0)
 `
 
 	struc := &AdditionalPrometheusRules{
