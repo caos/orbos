@@ -173,17 +173,17 @@ groups:
      record: caos_orb_ryg
 
 # ZITADEL CockroachDB Runtime
-   - record: cr_runtime_instance_flapping
+   - record: cr_runtime_pod_flapping
      expr: resets(sys_uptime{job="cockroachdb"}[10m])
-   - record: cr_runtime_instance_flapping_ryg
-     expr: clamp_min(1 - cr_runtime_instance_flapping, 0)
+   - record: cr_runtime_pod_flapping_ryg
+     expr: clamp_min(1 - cr_runtime_pod_flapping, 0)
    - record: cr_runtime_high_open_fd_count
      expr: sys_fd_open{job="cockroachdb"} / sys_fd_softlimit{job="cockroachdb"}
    - record: cr_runtime_high_open_fd_count_ryg
      expr: (1 - (clamp_max(clamp_min(floor(cr_runtime_high_open_fd_count * 100), 20), 30) - 20) / 10)
-   - record: caos_cr_runtime_instances_ryg
+   - record: caos_cr_runtime_pods_ryg
      expr: |-
-       cr_runtime_instance_flapping_ryg
+       cr_runtime_pod_flapping_ryg
        * cr_runtime_high_open_fd_count_ryg
 
    - record: cr_runtime_version_mismatches

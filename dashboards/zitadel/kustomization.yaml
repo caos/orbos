@@ -7,6 +7,9 @@ configMapGenerator:
 - name: grafana-dashboard-zitadel-health
   files:
    - json/health.json
+- name: grafana-dashboard-zitadel-health-details
+  files:
+    - json/health-details.json
 - name: grafana-dashboard-zitadel-cockroachdb-replicas
   files:
   - json/replicas.json

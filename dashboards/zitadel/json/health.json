@@ -155,10 +155,10 @@
           "to": "null"
         }
       ],
-      "repeat": "instance",
+      "repeat": "pod",
       "repeatDirection": "h",
       "scopedVars": {
-        "instance": {
+        "pod": {
           "selected": false,
           "text": "orbos-bl5gb4",
           "value": "orbos-bl5gb4"
@@ -175,14 +175,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "min(caos_cr_runtime_instances_ryg{instance=\"$instance\"})",
+          "expr": "min(caos_cr_runtime_pods_ryg{pod=\"$pod\"})",
           "refId": "A"
         }
       ],
       "thresholds": "0.001,1",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CockroadDB Runtime Instance $instance",
+      "title": "CockroadDB Runtime Pod $pod",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -252,7 +252,7 @@
       "repeatIteration": 1601981508194,
       "repeatPanelId": 17,
       "scopedVars": {
-        "instance": {
+        "pod": {
           "selected": false,
           "text": "orbos-w3snzt",
           "value": "orbos-w3snzt"
@@ -269,14 +269,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "min(caos_cr_runtime_instances_ryg{instance=\"$instance\"})",
+          "expr": "min(caos_cr_runtime_pods_ryg{pod=\"$pod\"})",
           "refId": "A"
         }
       ],
       "thresholds": "0.001,1",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CockroadDB Runtime Instance $instance",
+      "title": "CockroadDB Runtime Pod $pod",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -346,7 +346,7 @@
       "repeatIteration": 1601981508194,
       "repeatPanelId": 17,
       "scopedVars": {
-        "instance": {
+        "pod": {
           "selected": false,
           "text": "orbos-z9dqhd",
           "value": "orbos-z9dqhd"
@@ -363,14 +363,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "min(caos_cr_runtime_instances_ryg{instance=\"$instance\"})",
+          "expr": "min(caos_cr_runtime_pods_ryg{pod=\"$pod\"})",
           "refId": "A"
         }
       ],
       "thresholds": "0.001,1",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CockroadDB Runtime Instance $instance",
+      "title": "CockroadDB Runtime Pod $pod",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -435,10 +435,10 @@
           "to": "null"
         }
       ],
-      "repeat": "instance",
+      "repeat": "pod",
       "repeatDirection": "h",
       "scopedVars": {
-        "instance": {
+        "pod": {
           "selected": false,
           "text": "orbos-bl5gb4",
           "value": "orbos-bl5gb4"
@@ -455,14 +455,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "min(caos_cr_replicas_nodes_ryg{instance=\"$instance\"})",
+          "expr": "min(caos_cr_replicas_nodes_ryg{pod=\"$pod\"})",
           "refId": "A"
         }
       ],
       "thresholds": "0.001,1",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CockroadDB Replicas Instance $instance",
+      "title": "CockroadDB Replicas Pod $pod",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -532,7 +532,7 @@
       "repeatIteration": 1601981508194,
       "repeatPanelId": 10,
       "scopedVars": {
-        "instance": {
+        "pod": {
           "selected": false,
           "text": "orbos-w3snzt",
           "value": "orbos-w3snzt"
@@ -549,14 +549,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "min(caos_cr_replicas_nodes_ryg{instance=\"$instance\"})",
+          "expr": "min(caos_cr_replicas_nodes_ryg{pod=\"$pod\"})",
           "refId": "A"
         }
       ],
       "thresholds": "0.001,1",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CockroadDB Replicas Instance $instance",
+      "title": "CockroadDB Replicas Pod $pod",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -626,7 +626,7 @@
       "repeatIteration": 1601981508194,
       "repeatPanelId": 10,
       "scopedVars": {
-        "instance": {
+        "pod": {
           "selected": false,
           "text": "orbos-z9dqhd",
           "value": "orbos-z9dqhd"
@@ -643,14 +643,14 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "min(caos_cr_replicas_nodes_ryg{instance=\"$instance\"})",
+          "expr": "min(caos_cr_replicas_nodes_ryg{pod=\"$pod\"})",
           "refId": "A"
         }
       ],
       "thresholds": "0.001,1",
       "timeFrom": null,
       "timeShift": null,
-      "title": "CockroadDB Replicas Instance $instance",
+      "title": "CockroadDB Replicas Pod $pod",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1365,14 +1365,14 @@
           ]
         },
         "datasource": "$datasource",
-        "definition": "label_values(caos_cr_replicas_nodes_ryg, instance)",
+        "definition": "label_values(caos_cr_replicas_nodes_ryg, pod)",
         "hide": 2,
         "includeAll": true,
         "label": null,
         "multi": true,
-        "name": "instance",
+        "name": "pod",
         "options": [],
-        "query": "label_values(caos_cr_replicas_nodes_ryg, instance)",
+        "query": "label_values(caos_cr_replicas_nodes_ryg, pod)",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
