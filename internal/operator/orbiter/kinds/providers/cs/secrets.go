@@ -52,7 +52,7 @@ func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
 	}
 
 	return map[string]*secret.Secret{
-		"jsonkey":       desiredKind.Spec.APIToken,
+		"apitoken":      desiredKind.Spec.APIToken,
 		"sshkeyprivate": desiredKind.Spec.SSHKey.Private,
 		"sshkeypublic":  desiredKind.Spec.SSHKey.Public,
 	}

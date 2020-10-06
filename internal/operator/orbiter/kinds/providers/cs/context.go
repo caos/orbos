@@ -2,7 +2,6 @@ package cs
 
 import (
 	ctxpkg "context"
-	"fmt"
 	"hash/fnv"
 	"net/http"
 	"time"
@@ -31,19 +30,17 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 		Timeout: 1 * time.Second,
 	})
 
-	client.AuthToken = "jcuatmwfsnfk44mplqqcqbfdcarugbat"
+	client.AuthToken = desired.APIToken.Value
 
 	h := fnv.New32()
 	h.Write([]byte(orbID))
-	networkName := fmt.Sprintf("orbos-network-%d", h.Sum32())
 	newContext := &context{
-		monitor:     monitor,
-		orbID:       orbID,
-		providerID:  providerID,
-		desired:     desired,
-		client:      client,
-		ctx:         ctx,
-		networkName: networkName,
+		monitor:    monitor,
+		orbID:      orbID,
+		providerID: providerID,
+		desired:    desired,
+		client:     client,
+		ctx:        ctx,
 	}
 	h.Reset()
 

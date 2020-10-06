@@ -15,8 +15,9 @@ type Desired struct {
 }
 
 type Pool struct {
-	Flavor string
-	Zone   string
+	Flavor       string
+	Zone         string
+	VolumeSizeGB int
 }
 
 func (p Pool) validate() error {
