@@ -2,6 +2,9 @@ package cs
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/mntr"
 	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -17,6 +20,23 @@ import (
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 )
+
+func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerID string) (map[string]infra.Machine, error) {
+	desired, err := parseDesired(desiredTree)
+	if err != nil {
+		return nil, errors.Wrap(err, "parsing desired state failed")
+	}
+	desiredTree.Parsed = desired
+
+	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	if err != nil {
+		return nil, err
+	}
+
+	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
+
+	return core.ListMachines(ctx.machinesService)
+}
 
 var _ core.MachinesService = (*machinesService)(nil)
 
