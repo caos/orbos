@@ -88,7 +88,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return err
 				}
 
-				return destroy(ctx.machinesService)
+				return destroy(ctx, current)
 			}, func(orb orb.Orb) error {
 				if err := lbConfigure(orb); err != nil {
 					return err
