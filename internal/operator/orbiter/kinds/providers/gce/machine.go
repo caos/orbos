@@ -33,25 +33,46 @@ type instance struct {
 	context *context
 	start   bool
 	machine
-	rebootRequired  bool
-	requireReboot   func()
-	unrequireReboot func()
+	rebootRequired       bool
+	requireReboot        func()
+	unrequireReboot      func()
+	replacementRequired  bool
+	requireReplacement   func()
+	unrequireReplacement func()
 }
 
-func newMachine(context *context, monitor mntr.Monitor, id, ip, url, pool string, remove func() error, start bool, machine machine, rebootRequired bool, requireReboot func(), unrequireReboot func()) *instance {
+func newMachine(
+	context *context,
+	monitor mntr.Monitor,
+	id,
+	ip,
+	url,
+	pool string,
+	remove func() error,
+	start bool,
+	machine machine,
+	rebootRequired bool,
+	requireReboot func(),
+	unrequireReboot func(),
+	replacementRequired bool,
+	requireReplacement func(),
+	unrequireReplacement func()) *instance {
 	return &instance{
-		Monitor:         monitor,
-		id:              id,
-		ip:              ip,
-		url:             url,
-		pool:            pool,
-		remove:          remove,
-		context:         context,
-		start:           start,
-		machine:         machine,
-		rebootRequired:  rebootRequired,
-		requireReboot:   requireReboot,
-		unrequireReboot: unrequireReboot,
+		Monitor:              monitor,
+		id:                   id,
+		ip:                   ip,
+		url:                  url,
+		pool:                 pool,
+		remove:               remove,
+		context:              context,
+		start:                start,
+		machine:              machine,
+		rebootRequired:       rebootRequired,
+		requireReboot:        requireReboot,
+		unrequireReboot:      unrequireReboot,
+		replacementRequired:  replacementRequired,
+		requireReplacement:   requireReplacement,
+		unrequireReplacement: unrequireReplacement,
 	}
 }
 
@@ -65,6 +86,10 @@ func (c *instance) IP() string {
 
 func (c *instance) RebootRequired() (bool, func(), func()) {
 	return c.rebootRequired, c.requireReboot, c.unrequireReboot
+}
+
+func (c *instance) ReplacementRequired() (bool, func(), func()) {
+	return c.replacementRequired, c.requireReplacement, c.unrequireReplacement
 }
 
 func (c *instance) Remove() error {

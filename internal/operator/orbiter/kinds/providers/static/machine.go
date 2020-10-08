@@ -16,26 +16,44 @@ import (
 var _ infra.Machine = (*machine)(nil)
 
 type machine struct {
-	active          bool
-	poolFile        string
-	id              *string
-	ip              string
-	rebootRequired  bool
-	requireReboot   func()
-	unrequireReboot func()
+	active               bool
+	poolFile             string
+	id                   *string
+	ip                   string
+	rebootRequired       bool
+	requireReboot        func()
+	unrequireReboot      func()
+	replacementRequired  bool
+	requireReplacement   func()
+	unrequireReplacement func()
 	*ssh.Machine
 }
 
-func newMachine(monitor mntr.Monitor, poolFile string, remoteUser string, id *string, ip string, rebootRequired bool, requireReboot func(), unrequireReboot func()) *machine {
+func newMachine(
+	monitor mntr.Monitor,
+	poolFile string,
+	remoteUser string,
+	id *string,
+	ip string,
+	rebootRequired bool,
+	requireReboot func(),
+	unrequireReboot func(),
+	replacementRequired bool,
+	requireReplacement func(),
+	unrequireReplacement func(),
+) *machine {
 	return &machine{
-		active:          false,
-		poolFile:        poolFile,
-		id:              id,
-		ip:              ip,
-		Machine:         ssh.NewMachine(monitor, remoteUser, ip),
-		rebootRequired:  rebootRequired,
-		requireReboot:   requireReboot,
-		unrequireReboot: unrequireReboot,
+		active:               false,
+		poolFile:             poolFile,
+		id:                   id,
+		ip:                   ip,
+		Machine:              ssh.NewMachine(monitor, remoteUser, ip),
+		rebootRequired:       rebootRequired,
+		requireReboot:        requireReboot,
+		unrequireReboot:      unrequireReboot,
+		replacementRequired:  replacementRequired,
+		requireReplacement:   requireReplacement,
+		unrequireReplacement: unrequireReplacement,
 	}
 }
 
@@ -61,6 +79,10 @@ func (c *machine) Remove() error {
 
 func (c *machine) RebootRequired() (bool, func(), func()) {
 	return c.rebootRequired, c.requireReboot, c.unrequireReboot
+}
+
+func (c *machine) ReplacementRequired() (bool, func(), func()) {
+	return c.replacementRequired, c.requireReplacement, c.unrequireReplacement
 }
 
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID string) (map[string]infra.Machine, error) {

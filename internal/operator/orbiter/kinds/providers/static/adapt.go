@@ -28,16 +28,6 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 		secrets = make(map[string]*secret.Secret, 0)
 		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
 
-		for _, pool := range desiredKind.Spec.Pools {
-			for _, machine := range pool {
-				if machine.RebootRequired == nil {
-					req := false
-					machine.RebootRequired = &req
-					migrate = true
-				}
-			}
-		}
-
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
 		}

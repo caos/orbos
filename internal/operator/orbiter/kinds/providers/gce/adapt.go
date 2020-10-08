@@ -71,6 +71,10 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
+				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+					return nil, err
+				}
+
 				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
 					return nil, err
 				}
@@ -105,6 +109,10 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				if desiredKind.Spec.JSONKey == nil {
 					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
 					return nil
+				}
+
+				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+					panic(err)
 				}
 
 				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)

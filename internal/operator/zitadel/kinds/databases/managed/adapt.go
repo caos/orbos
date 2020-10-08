@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/pdb"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -67,7 +69,7 @@ func AdaptFunc(
 		publicServiceName := sfsName + "-public"
 		cockroachPort := int32(26257)
 		cockroachHTTPPort := int32(8080)
-		image := "cockroachdb/cockroach:v20.1.4"
+		image := "cockroachdb/cockroach:v20.1.5"
 
 		userList := []string{"root"}
 		userList = append(userList, users...)

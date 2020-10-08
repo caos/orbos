@@ -151,7 +151,9 @@ type Transport struct {
 	BackendPort  Port
 	BackendPools []string
 	Whitelist    []*orbiter.CIDR
-	HealthChecks HealthChecks
+	//	DownstreamProxies []*orbiter.IPAddress
+	HealthChecks  HealthChecks
+	ProxyProtocol *bool
 }
 
 type Port uint16

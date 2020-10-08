@@ -126,18 +126,24 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	newCache := make([]*machine, 0)
 
-	initializeMachine := func(rebootRequired bool, spec *Machine) *machine {
-		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP), rebootRequired, func() {
-			t := true
-			spec.RebootRequired = &t
-		}, func() {
-			f := false
-			spec.RebootRequired = &f
-		})
+	initializeMachine := func(rebootRequired bool, replacementRequired bool, spec *Machine) *machine {
+		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
+			rebootRequired,
+			func() {
+				spec.RebootRequired = true
+			}, func() {
+				spec.RebootRequired = false
+			},
+			replacementRequired,
+			func() {
+				spec.ReplacementRequired = true
+			}, func() {
+				spec.ReplacementRequired = false
+			})
 	}
 	for _, spec := range specifiedMachines {
 
-		machine := initializeMachine(*spec.RebootRequired, spec)
+		machine := initializeMachine(spec.RebootRequired, spec.ReplacementRequired, spec)
 		if err := machine.UseKey(keys...); err != nil {
 			return nil, err
 		}
