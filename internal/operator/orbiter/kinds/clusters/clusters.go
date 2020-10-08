@@ -24,12 +24,13 @@ func GetQueryAndDestroyFuncs(
 	orbiter.DestroyFunc,
 	orbiter.ConfigureFunc,
 	bool,
+	map[string]*secret.Secret,
 	error,
 ) {
 
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
 			return kubernetes.AdaptFunc(
 				clusterID,
 				oneoff,
@@ -53,25 +54,6 @@ func GetQueryAndDestroyFuncs(
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 		//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 	default:
-		return nil, nil, nil, false, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
-	}
-}
-
-func GetSecrets(
-	monitor mntr.Monitor,
-	clusterTree *tree.Tree,
-) (
-	map[string]*secret.Secret,
-	error,
-) {
-
-	switch clusterTree.Common.Kind {
-	case "orbiter.caos.ch/KubernetesCluster":
-		return kubernetes.SecretFunc()(
-			monitor,
-			clusterTree,
-		)
-	default:
-		return nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+		return nil, nil, nil, false, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 	}
 }

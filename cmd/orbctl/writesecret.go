@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/caos/orbos/internal/secret/operators"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/secretfuncs"
 	"github.com/caos/orbos/internal/secret"
 
 	"github.com/pkg/errors"
@@ -65,9 +65,10 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		if err := secret.Write(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(),
 			path,
-			s); err != nil {
+			s,
+			operators.GetAllSecretsFunc(orbConfig),
+			operators.PushFunc()); err != nil {
 			panic(err)
 		}
 		return nil

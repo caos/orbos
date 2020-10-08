@@ -3,26 +3,7 @@ package legacycf
 import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/legacycf/config"
 	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
-	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
-
-func SecretsFunc() secret.Func {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree) (secrets map[string]*secret.Secret, err error) {
-		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
-		}()
-
-		desiredKind, err := parseDesired(desiredTree)
-		if err != nil {
-			return nil, errors.Wrap(err, "parsing desired state failed")
-		}
-		desiredTree.Parsed = desiredKind
-
-		return getSecretsMap(desiredKind), nil
-	}
-}
 
 func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {
 	secrets := map[string]*secret.Secret{}

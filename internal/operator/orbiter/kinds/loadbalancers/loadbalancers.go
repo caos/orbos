@@ -20,26 +20,6 @@ func GetQueryAndDestroyFunc(
 	orbiter.DestroyFunc,
 	orbiter.ConfigureFunc,
 	bool,
-	error,
-) {
-
-	switch loadBalancingTree.Common.Kind {
-	//		case "orbiter.caos.ch/ExternalLoadBalancer":
-	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
-	case "orbiter.caos.ch/DynamicLoadBalancer":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
-			return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
-		}
-		return orbiter.AdaptFuncGoroutine(adaptFunc)
-	default:
-		return nil, nil, nil, false, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
-	}
-}
-
-func GetSecrets(
-	monitor mntr.Monitor,
-	loadBalancingTree *tree.Tree,
-) (
 	map[string]*secret.Secret,
 	error,
 ) {
@@ -48,8 +28,11 @@ func GetSecrets(
 	//		case "orbiter.caos.ch/ExternalLoadBalancer":
 	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 	case "orbiter.caos.ch/DynamicLoadBalancer":
-		return dynamic.SecretsFunc()(monitor, loadBalancingTree)
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
+			return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
+		}
+		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
-		return nil, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
+		return nil, nil, nil, false, nil, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
 	}
 }
