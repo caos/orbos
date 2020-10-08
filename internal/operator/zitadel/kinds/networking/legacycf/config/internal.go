@@ -20,6 +20,15 @@ type Credentials struct {
 	UserServiceKey *secret.Secret
 }
 
+func (c *Credentials) IsZero() bool {
+	if (c.User == nil || c.User.IsZero()) &&
+		(c.APIKey == nil || c.APIKey.IsZero()) &&
+		(c.UserServiceKey == nil || c.UserServiceKey.IsZero()) {
+		return true
+	}
+	return false
+}
+
 type Group struct {
 	Name string   `yaml:"name"`
 	List []string `yaml:"list"`
