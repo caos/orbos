@@ -151,7 +151,8 @@ func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Moni
 func createdIPs(interfaces []cloudscale.Interface, oneoff bool) (string, string) {
 	var internalIP string
 	var sshIP string
-	for _, interf := range interfaces {
+	for idx := range interfaces {
+		interf := interfaces[idx]
 		if interf.Type == "private" && len(interf.Addresses) > 0 {
 			internalIP = interf.Addresses[0].Address
 			if !oneoff {
@@ -169,7 +170,7 @@ func createdIPs(interfaces []cloudscale.Interface, oneoff bool) (string, string)
 
 func (m *machinesService) ListPools() ([]string, error) {
 
-	pools, err := m.instances()
+	pools, err := m.machines()
 	if err != nil {
 		return nil, err
 	}
@@ -182,21 +183,22 @@ func (m *machinesService) ListPools() ([]string, error) {
 }
 
 func (m *machinesService) List(poolName string) (infra.Machines, error) {
-	pools, err := m.instances()
+	pools, err := m.machines()
 	if err != nil {
 		return nil, err
 	}
 
 	pool := pools[poolName]
 	machines := make([]infra.Machine, len(pool))
-	for idx, machine := range pool {
+	for idx := range pool {
+		machine := pool[idx]
 		machines[idx] = machine
 	}
 
 	return machines, nil
 }
 
-func (m *machinesService) instances() (map[string][]*machine, error) {
+func (m *machinesService) machines() (map[string][]*machine, error) {
 	if m.cache.instances != nil {
 		return m.cache.instances, nil
 	}
@@ -211,7 +213,8 @@ func (m *machinesService) instances() (map[string][]*machine, error) {
 	}
 
 	m.cache.instances = make(map[string][]*machine)
-	for _, server := range servers {
+	for idx := range servers {
+		server := servers[idx]
 		pool := server.Tags["pool"]
 		machine, err := m.toMachine(&server, machineMonitor(m.context.monitor, server.Name, pool))
 		if err != nil {
@@ -224,11 +227,12 @@ func (m *machinesService) instances() (map[string][]*machine, error) {
 }
 
 func (m *machinesService) removeMachineFunc(pool, uuid string) func() error {
-	return func() error {
 
+	return func() error {
 		m.cache.Lock()
 		cleanMachines := make([]*machine, 0)
-		for _, cachedMachine := range m.cache.instances[pool] {
+		for idx := range m.cache.instances[pool] {
+			cachedMachine := m.cache.instances[pool][idx]
 			if cachedMachine.server.UUID != uuid {
 				cleanMachines = append(cleanMachines, cachedMachine)
 			}

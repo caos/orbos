@@ -16,7 +16,8 @@ func addPools(current *Current, spec *Spec, machinesSvc core.MachinesService) er
 	if err != nil {
 		return nil
 	}
-	for _, unconfiguredPool := range unconfiguredPools {
+	for idx := range unconfiguredPools {
+		unconfiguredPool := unconfiguredPools[idx]
 		if _, ok := current.Current.pools[unconfiguredPool]; !ok {
 			current.Current.pools[unconfiguredPool] = newInfraPool(unconfiguredPool, machinesSvc)
 		}

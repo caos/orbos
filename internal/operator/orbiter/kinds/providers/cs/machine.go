@@ -73,7 +73,9 @@ func (m *machine) initAction(a *action, getSlice func() []string, setSlice func(
 		},
 	}
 
-	for _, req := range getSlice() {
+	s := getSlice()
+	for sIdx := range s {
+		req := s[sIdx]
 		if req == m.ID() {
 			newAction.required = true
 			break
@@ -83,9 +85,10 @@ func (m *machine) initAction(a *action, getSlice func() []string, setSlice func(
 	if newAction.required {
 		newAction.unrequire = func() {
 			s := getSlice()
-			for idx, req := range s {
+			for sIdx := range s {
+				req := s[sIdx]
 				if req == m.ID() {
-					s = append(s[0:idx], s[idx+1:]...)
+					s = append(s[0:sIdx], s[sIdx+1:]...)
 				}
 			}
 			setSlice(s)

@@ -27,7 +27,7 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 	ctx := ctxpkg.Background()
 
 	client := cloudscale.NewClient(&http.Client{
-		Timeout: 1 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	client.AuthToken = desired.APIToken.Value

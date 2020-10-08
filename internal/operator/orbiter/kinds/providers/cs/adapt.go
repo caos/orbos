@@ -84,6 +84,10 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return err
 				}
 
+				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+					return err
+				}
+
 				return destroy(ctx.machinesService)
 			}, func(orb orb.Orb) error {
 				if err := lbConfigure(orb); err != nil {
