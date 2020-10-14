@@ -39,7 +39,7 @@ func join(
 	case "cilium":
 		applyNetworkCommand = "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml"
 	case "calico":
-		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.16/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
+		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.16/manifests/calico.yaml | sed -e "s?192.168.0.0/16?%s?g" https://docs.projectcalico.org/v3.16/manifests/calico.yaml | sed 's/CALICO_IPV4POOL_IPIP/CALICO_IPV4POOL_tmp_VXLAN/g' | sed 's/CALICO_IPV4POOL_VXLAN/CALICO_IPV4POOL_IPIP/g' | sed 's/CALICO_IPV4POOL_tmp_VXLAN/CALICO_IPV4POOL_VXLAN/g' | sed s/calico_backend\:\ \"bird\"/calico_backend:\ \"vxlan\"/g | sed 's/-\ -bird-ready/#\ -\ -bird-ready/' | sed 's/-\ -bird-live/#\ -\ -bird-live/' | kubectl apply -f -`, desired.Spec.Networking.PodCidr)
 	default:
 		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
 	}
