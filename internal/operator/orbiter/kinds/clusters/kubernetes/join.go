@@ -61,6 +61,8 @@ localAPIEndpoint:
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
   name: %s
+  kubeletExtraArgs:
+    node-ip: %s
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
@@ -98,6 +100,7 @@ scheduler: {}
 		joining.infra.IP(),
 		kubeAPI.BackendPort,
 		joining.infra.ID(),
+		joining.infra.IP(),
 		kubeAPI.Location,
 		clusterID,
 		kubeAPI,
