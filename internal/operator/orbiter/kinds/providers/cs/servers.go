@@ -6,7 +6,7 @@ import (
 	"github.com/cloudscale-ch/cloudscale-go-sdk"
 )
 
-func queryServers(context *context, loadbalancing map[string][]*dynamic.VIP, ensureNodeAgent func(m infra.Machine) error) ([]func() error, error) {
+func queryServers(context *context, current *Current, loadbalancing map[string][]*dynamic.VIP, ensureNodeAgent func(m infra.Machine) error) ([]func() error, error) {
 
 	pools, err := context.machinesService.machines()
 	if err != nil {
@@ -19,7 +19,7 @@ func queryServers(context *context, loadbalancing map[string][]*dynamic.VIP, ens
 			mach := machines[idx]
 			ensureServers = append(ensureServers, func(poolName string, m *machine) func() error {
 				return func() error {
-					return ensureServer(context, loadbalancing, poolName, m, ensureNodeAgent)
+					return ensureServer(context, current, loadbalancing, poolName, m, ensureNodeAgent)
 				}
 			}(poolName, mach))
 		}
@@ -27,12 +27,19 @@ func queryServers(context *context, loadbalancing map[string][]*dynamic.VIP, ens
 	return ensureServers, nil
 }
 
-func ensureServer(context *context, loadbalancing map[string][]*dynamic.VIP, poolName string, machine *machine, ensureNodeAgent func(m infra.Machine) error) (err error) {
+func ensureServer(context *context, current *Current, loadbalancing map[string][]*dynamic.VIP, poolName string, machine *machine, ensureNodeAgent func(m infra.Machine) error) (err error) {
 	defer func() {
 		if err == nil {
 			err = ensureNodeAgent(machine)
 		}
 	}()
+
+	// TODO: Move this capabilities to where they belong
+	if _, err = machine.Execute(nil, "ifconfig -a | grep dummy"); err != nil {
+		cmd := addDummyIPCommand(hostedVIPs(loadbalancing, machine, current)) + " && firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"
+		context.monitor.WithField("cmd", cmd).Info("Executing")
+
+	}
 
 	_, isExternal := loadbalancing[poolName]
 	if context.machinesService.oneoff {
