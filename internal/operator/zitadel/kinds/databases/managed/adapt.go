@@ -1,10 +1,11 @@
 package managed
 
 import (
-	"github.com/caos/orbos/internal/secret"
-	corev1 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
+
+	"github.com/caos/orbos/internal/secret"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/pdb"
@@ -67,7 +68,7 @@ func AdaptFunc(
 		publicServiceName := sfsName + "-public"
 		cockroachPort := int32(26257)
 		cockroachHTTPPort := int32(8080)
-		image := "cockroachdb/cockroach:v20.1.5"
+		image := "cockroachdb/cockroach:v20.1.7"
 
 		userList := []string{"root"}
 		userList = append(userList, users...)
