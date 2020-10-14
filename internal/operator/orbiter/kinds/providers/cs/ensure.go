@@ -86,6 +86,9 @@ func addDummyIPCommand(ips []string) string {
 	cmd := "ip link add dummy1 type dummy"
 	for idx := range ips {
 		ip := ips[idx]
+		if ip == "" {
+			return "true"
+		}
 		cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
 	}
 
