@@ -208,6 +208,7 @@ func (m *machinesService) machines() (map[string][]*machine, error) {
 		return m.cache.instances, nil
 	}
 
+	// TODO: Doesn't work, all machines get destroyed that belong to the token
 	servers, err := m.context.client.Servers.List(m.context.ctx /**/, func(r *http.Request) {
 		params := r.URL.Query()
 		params["tag:orb"] = []string{m.context.orbID}

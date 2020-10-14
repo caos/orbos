@@ -2,6 +2,7 @@ package cs
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -60,8 +61,13 @@ func query(
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
 
-		if _, err := m.Execute(nil, addDummyIPCommand(hostedVIPs(hostPools, m, current))+" && firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"); err != nil {
-			return err
+		// TODO: Move this capabilities to where they belong
+		var execErr error
+		if err := helpers.Retry(time.NewTimer(2*time.Minute), 5*time.Second, func() (retry bool) {
+			_, execErr = m.Execute(nil, addDummyIPCommand(hostedVIPs(hostPools, m, current))+" && firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT")
+			return execErr != nil
+		}); err != nil {
+			return fmt.Errorf("%w: %s", err, execErr.Error())
 		}
 
 		return ensureServer(context, hostPools, pool, m.(*machine), ensureNodeAgent)
