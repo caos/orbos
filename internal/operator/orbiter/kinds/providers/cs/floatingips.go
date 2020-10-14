@@ -47,27 +47,28 @@ createLoop:
 					continue createLoop
 				}
 			}
-			ensure = append(ensure, func() error {
-				newIP, err := context.client.FloatingIPs.Create(context.ctx, &cloudscale.FloatingIPCreateRequest{
-					RegionalResourceRequest: cloudscale.RegionalResourceRequest{},
-					TaggedResourceRequest: cloudscale.TaggedResourceRequest{Tags: map[string]string{
-						"orb":      context.orbID,
-						"provider": context.providerID,
-						"pool":     hostPool,
-						"idx":      strconv.Itoa(vipIdx),
-					}},
-					IPVersion:      4,
-					Server:         "",
-					Type:           "regional",
-					PrefixLength:   0,
-					ReversePointer: "",
-				})
-				if err != nil {
-					return err
+			ensure = append(ensure, func(hostPool string, vipIdx int) func() error {
+				return func() error {
+					_, err := context.client.FloatingIPs.Create(context.ctx, &cloudscale.FloatingIPCreateRequest{
+						RegionalResourceRequest: cloudscale.RegionalResourceRequest{},
+						TaggedResourceRequest: cloudscale.TaggedResourceRequest{Tags: map[string]string{
+							"orb":      context.orbID,
+							"provider": context.providerID,
+							"pool":     hostPool,
+							"idx":      strconv.Itoa(vipIdx),
+						}},
+						IPVersion:      4,
+						Server:         "",
+						Type:           "regional",
+						PrefixLength:   0,
+						ReversePointer: "",
+					})
+					if err != nil {
+						return err
+					}
+					return nil
 				}
-				floatingIPs = append(floatingIPs, *newIP)
-				return nil
-			})
+			}(hostPool, vipIdx))
 		}
 	}
 
@@ -83,9 +84,11 @@ removeLoop:
 				}
 			}
 		}
-		remove = append(remove, func() error {
-			return context.client.FloatingIPs.Delete(context.ctx, floatingIP.IP())
-		})
+		remove = append(remove, func(ip string) func() error {
+			return func() error {
+				return context.client.FloatingIPs.Delete(context.ctx, ip)
+			}
+		}(floatingIP.IP()))
 	}
 	return ensure, remove, nil
 }

@@ -16,10 +16,12 @@ func queryServers(context *context, loadbalancing map[string][]*dynamic.VIP, ens
 	var ensureServers []func() error
 	for poolName, machines := range pools {
 		for idx := range machines {
-			machine := machines[idx]
-			ensureServers = append(ensureServers, func() error {
-				return ensureServer(context, loadbalancing, poolName, machine, ensureNodeAgent)
-			})
+			mach := machines[idx]
+			ensureServers = append(ensureServers, func(poolName string, m *machine) func() error {
+				return func() error {
+					return ensureServer(context, loadbalancing, poolName, m, ensureNodeAgent)
+				}
+			}(poolName, mach))
 		}
 	}
 	return ensureServers, nil
@@ -27,7 +29,7 @@ func queryServers(context *context, loadbalancing map[string][]*dynamic.VIP, ens
 
 func ensureServer(context *context, loadbalancing map[string][]*dynamic.VIP, poolName string, machine *machine, ensureNodeAgent func(m infra.Machine) error) (err error) {
 	defer func() {
-		if err != nil {
+		if err == nil {
 			err = ensureNodeAgent(machine)
 		}
 	}()

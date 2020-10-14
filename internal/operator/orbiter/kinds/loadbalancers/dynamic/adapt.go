@@ -120,7 +120,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl)
 
 			current.Current.Spec = enrichedVIPs
-			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
+			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrpInterface string, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
 
 				var lbMachines []infra.Machine
 
@@ -219,7 +219,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				var nginxNATTemplate *template.Template
 				var vips []*VIP
 
-				if !balanceLoad {
+				if vrrpInterface == "" {
 					for _, desiredVIPs := range desiredKind.Spec {
 						vips = append(vips, desiredVIPs...)
 					}
@@ -268,6 +268,7 @@ stream { {{ range $nat := .NATs }}
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
 							CustomMasterNotifyer: notifyMaster != nil,
+							Interface:            vrrpInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -298,7 +299,7 @@ vrrp_instance VI_{{ $idx }} {
 	unicast_peer {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
-	interface eth0
+	interface {{ $root.Interface }}
 	virtual_router_id {{ add 55 $idx }}
 	advert_int 1
 	authentication {
@@ -350,7 +351,7 @@ http {
 						ngxBuf := new(bytes.Buffer)
 						//noinspection GoDeferInLoop
 						defer ngxBuf.Reset()
-						if balanceLoad {
+						if vrrpInterface != "" {
 							kaBuf := new(bytes.Buffer)
 							defer kaBuf.Reset()
 
@@ -395,7 +396,7 @@ http {
 							}
 
 							var natVIPProbed bool
-							if balanceLoad {
+							if vrrpInterface != "" {
 								for _, machine := range lbMachines {
 									desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
 								}
@@ -418,7 +419,7 @@ http {
 								for _, machine := range destMachines {
 									desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
-									if !balanceLoad && forPool == dest {
+									if vrrpInterface == "" && forPool == dest {
 										if !natVIPProbed {
 											probeVIP()
 											natVIPProbed = true
@@ -530,6 +531,7 @@ type LB struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
+	Interface            string
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {

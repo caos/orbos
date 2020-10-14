@@ -1,8 +1,6 @@
 package cs
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/api"
@@ -10,7 +8,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -62,18 +59,7 @@ func query(
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
 		return ensureServer(context, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, true, func(machine infra.Machine, peers infra.Machines, vips []*dynamiclbmodel.VIP) string {
-		return ""
-	}, func(vip *dynamic.VIP) string {
-		for idx := range vip.Transport {
-			transport := vip.Transport[idx]
-			address, ok := current.Current.Ingresses[transport.Name]
-			if ok {
-				return address.Location
-			}
-		}
-		panic(fmt.Errorf("external address for %v is not ensured", vip))
-	})
+	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, "eth1", notifyMaster(hostPools, current, context), desiredToCurrentVIP(current))
 	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{

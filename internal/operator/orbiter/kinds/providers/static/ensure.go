@@ -72,7 +72,7 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, true, nil, mapVIP)
+		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, "eth0", nil, mapVIP)
 		externalMachinesService = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())

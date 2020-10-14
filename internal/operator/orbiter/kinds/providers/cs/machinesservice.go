@@ -153,6 +153,11 @@ func createdIPs(interfaces []cloudscale.Interface, oneoff bool) (string, string)
 	var sshIP string
 	for idx := range interfaces {
 		interf := interfaces[idx]
+
+		if internalIP != "" && sshIP != "" {
+			break
+		}
+
 		if interf.Type == "private" && len(interf.Addresses) > 0 {
 			internalIP = interf.Addresses[0].Address
 			if !oneoff {
@@ -162,7 +167,7 @@ func createdIPs(interfaces []cloudscale.Interface, oneoff bool) (string, string)
 		}
 		if oneoff && interf.Type == "public" && len(interf.Addresses) > 0 {
 			sshIP = interf.Addresses[0].Address
-			break
+			continue
 		}
 	}
 	return internalIP, sshIP
