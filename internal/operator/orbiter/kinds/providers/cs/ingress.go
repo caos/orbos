@@ -25,28 +25,6 @@ func desiredToCurrentVIP(current *Current) func(vip *dynamiclbmodel.VIP) string 
 func notifyMaster(hostPools map[string][]*dynamiclbmodel.VIP, current *Current, context *context) func(m infra.Machine, peers infra.Machines, vips []*dynamiclbmodel.VIP) string {
 	return func(m infra.Machine, peers infra.Machines, vips []*dynamiclbmodel.VIP) string {
 
-		seen := make(map[string]bool)
-		var hostedVIPs []string
-		for hostPool, vips := range hostPools {
-			if m.(*machine).server.Tags["pool"] != hostPool {
-				continue
-			}
-			for vipIdx := range vips {
-				vip := vips[vipIdx]
-				for transpIdx := range vip.Transport {
-					transp := vip.Transport[transpIdx]
-					addr, ok := current.Current.Ingresses[transp.Name]
-					if !ok || addr == nil {
-						continue
-					}
-					if _, ok := seen[addr.Location]; !ok {
-						seen[addr.Location] = true
-						hostedVIPs = append(hostedVIPs, addr.Location)
-					}
-				}
-			}
-		}
-
 		return fmt.Sprintf(`#!/bin/sh
 
 set -e
@@ -73,6 +51,31 @@ set_master() {
 for VIP in "$floating_ipv4"; do
 		set_master $VIP
 done
-`, context.desired.APIToken.Value, strings.Join(hostedVIPs, " "), m.(*machine).server.UUID)
+`, context.desired.APIToken.Value, strings.Join(hostedVIPs(hostPools, m, current), " "), m.(*machine).server.UUID)
 	}
+}
+
+func hostedVIPs(hostPools map[string][]*dynamiclbmodel.VIP, m infra.Machine, current *Current) []string {
+	seen := make(map[string]bool)
+	var locations []string
+	for hostPool, vips := range hostPools {
+		if m.(*machine).server.Tags["pool"] != hostPool {
+			continue
+		}
+		for vipIdx := range vips {
+			vip := vips[vipIdx]
+			for transpIdx := range vip.Transport {
+				transp := vip.Transport[transpIdx]
+				addr, ok := current.Current.Ingresses[transp.Name]
+				if !ok || addr == nil {
+					continue
+				}
+				if _, ok := seen[addr.Location]; !ok {
+					seen[addr.Location] = true
+					locations = append(locations, addr.Location)
+				}
+			}
+		}
+	}
+	return locations
 }

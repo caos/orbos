@@ -97,7 +97,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		BulkVolumeSizeGB:  0,
 		SSHKeys:           []string{m.context.desired.SSHKey.Public.Value},
 		Password:          "",
-		UsePublicNetwork:  boolPtr(m.oneoff),
+		UsePublicNetwork:  boolPtr(m.oneoff || true), // Always use public Network
 		UsePrivateNetwork: boolPtr(true),
 		UseIPV6:           boolPtr(false),
 		AntiAffinityWith:  "",
@@ -131,7 +131,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 }
 
 func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Monitor) (*machine, error) {
-	internalIP, sshIP := createdIPs(server.Interfaces, m.oneoff)
+	internalIP, sshIP := createdIPs(server.Interfaces, m.oneoff || true /* always use public ip */)
 
 	sshMachine := ssh.NewMachine(monitor, "root", sshIP)
 	if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {

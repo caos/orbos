@@ -38,6 +38,8 @@ func ensureServer(context *context, loadbalancing map[string][]*dynamic.VIP, poo
 	if context.machinesService.oneoff {
 		isExternal = true
 	}
+	// Always use external ips
+	isExternal = true
 	hasPublicInterface := false
 	var privateInterfaces []cloudscale.Interface
 	for idx := range machine.server.Interfaces {

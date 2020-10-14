@@ -1,6 +1,8 @@
 package cs
 
 import (
+	"fmt"
+
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/api"
@@ -57,6 +59,11 @@ func query(
 	}
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
+
+		if _, err := m.Execute(nil, addDummyIPCommand(hostedVIPs(hostPools, m, current))+" && firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"); err != nil {
+			return err
+		}
+
 		return ensureServer(context, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, "eth1", notifyMaster(hostPools, current, context), desiredToCurrentVIP(current))
@@ -73,4 +80,19 @@ func query(
 			},
 		})())
 	}, addPools(current, desired, wrappedMachines)
+}
+
+func addDummyIPCommand(ips []string) string {
+
+	if len(ips) == 0 {
+		return "true"
+	}
+
+	cmd := "ip link add dummy1 type dummy"
+	for idx := range ips {
+		ip := ips[idx]
+		cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
+	}
+
+	return cmd
 }
