@@ -61,6 +61,8 @@ func query(
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
 
+		time.Sleep(15 * time.Second)
+
 		// TODO: Move this capabilities to where they belong
 		var execErr error
 		if err := helpers.Retry(time.NewTimer(2*time.Minute), 5*time.Second, func() (retry bool) {
