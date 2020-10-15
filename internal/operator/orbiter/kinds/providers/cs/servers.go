@@ -91,15 +91,11 @@ func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP
 			return err
 		}
 	}
-	zones, err := machine.Execute(nil, "firewall-cmd --get-active-zone")
-	if err != nil {
-		return err
-	}
-
-	if len(zones) == 0 {
-		cmd := "firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"
+	masq, _ := machine.Execute(nil, "firewall-cmd --list-all | grep 'masquerade: yes'")
+	if len(masq) == 0 {
+		cmd := "firewall-cmd --add-masquerade --permanent && firewall-cmd --reload"
 		context.monitor.WithField("cmd", cmd).Info("Executing")
-		if _, err = machine.Execute(nil, cmd); err != nil {
+		if _, err := machine.Execute(nil, cmd); err != nil {
 			return err
 		}
 	}
