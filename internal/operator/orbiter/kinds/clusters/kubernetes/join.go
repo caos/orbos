@@ -121,12 +121,15 @@ discovery:
     unsafeSkipCAVerification: true
   timeout: 5m0s
 nodeRegistration:
+  kubeletExtraArgs:
+    node-ip: %s
   name: %s
 `,
 			joinAt.IP(),
 			kubeAPI.BackendPort,
 			joinToken,
-			joining.infra.ID())
+			joining.infra.ID(),
+			joining.infra.IP())
 
 		if joining.pool.tier == Controlplane {
 			kubeadmCfg += fmt.Sprintf(`controlPlane:
