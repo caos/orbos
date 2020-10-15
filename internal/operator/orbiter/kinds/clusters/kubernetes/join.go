@@ -128,8 +128,8 @@ nodeRegistration:
 			joinAt.IP(),
 			kubeAPI.BackendPort,
 			joinToken,
-			joining.infra.ID(),
-			joining.infra.IP())
+			joining.infra.IP(),
+			joining.infra.ID())
 
 		if joining.pool.tier == Controlplane {
 			kubeadmCfg += fmt.Sprintf(`controlPlane:
