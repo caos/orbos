@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/cloudscale-ch/cloudscale-go-sdk"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+
+	"github.com/cloudscale-ch/cloudscale-go-sdk"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
@@ -30,6 +30,8 @@ createLoop:
 			alreadyExists := false
 			for transportIdx := range vip.Transport {
 				transport := vip.Transport[transportIdx]
+				initCurrent(writeTo, transport)
+
 				for floatingIPIdx := range floatingIPs {
 					floatingIP := floatingIPs[floatingIPIdx]
 					alreadyExists = ensureCurrentIngress(floatingIP, hostPool, vipIdx, writeTo, transport) || alreadyExists
@@ -74,6 +76,7 @@ removeLoop:
 				vip := vips[vipIdx]
 				for transpIdx := range vip.Transport {
 					transport := vip.Transport[transpIdx]
+					initCurrent(writeTo, transport)
 					matches = ensureCurrentIngress(floatingIP, hostPool, vipIdx, writeTo, transport) || matches
 				}
 			}
@@ -90,17 +93,19 @@ removeLoop:
 	return ensure, remove, nil
 }
 
+func initCurrent(writeTo *Current, transport *dynamic.Transport) {
+	if writeTo.Current.Ingresses == nil {
+		writeTo.Current.Ingresses = make(map[string]*infra.Address)
+	}
+	if writeTo.Current.Ingresses[transport.Name] == nil {
+		writeTo.Current.Ingresses[transport.Name] = &infra.Address{}
+	}
+}
+
 func ensureCurrentIngress(floatingIP cloudscale.FloatingIP, hostPool string, vipIdx int, writeTo *Current, transport *dynamic.Transport) bool {
 	matches := false
 	if floatingIP.Tags["pool"] == hostPool && floatingIP.Tags["idx"] == strconv.Itoa(vipIdx) {
 		matches = true
-		if writeTo.Current.Ingresses == nil {
-			writeTo.Current.Ingresses = make(map[string]*infra.Address)
-		}
-		if writeTo.Current.Ingresses[transport.Name] == nil {
-			writeTo.Current.Ingresses[transport.Name] = &infra.Address{}
-		}
-
 		writeTo.Current.Ingresses[transport.Name].Location = floatingIP.IP()
 		writeTo.Current.Ingresses[transport.Name].FrontendPort = uint16(transport.FrontendPort)
 		writeTo.Current.Ingresses[transport.Name].BackendPort = uint16(transport.BackendPort)
