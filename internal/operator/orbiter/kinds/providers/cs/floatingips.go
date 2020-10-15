@@ -27,25 +27,16 @@ createLoop:
 	for hostPool, vips := range loadbalancing {
 		for vipIdx := range vips {
 			vip := vips[vipIdx]
+			alreadyExists := false
 			for transportIdx := range vip.Transport {
 				transport := vip.Transport[transportIdx]
-				if writeTo.Current.Ingresses == nil {
-					writeTo.Current.Ingresses = make(map[string]*infra.Address)
-				}
-				writeTo.Current.Ingresses[transport.Name] = &infra.Address{}
-				alreadyExists := false
 				for floatingIPIdx := range floatingIPs {
 					floatingIP := floatingIPs[floatingIPIdx]
-					if floatingIP.Tags["pool"] == hostPool && floatingIP.Tags["idx"] == strconv.Itoa(vipIdx) {
-						writeTo.Current.Ingresses[transport.Name].Location = floatingIP.IP()
-						writeTo.Current.Ingresses[transport.Name].FrontendPort = uint16(transport.FrontendPort)
-						writeTo.Current.Ingresses[transport.Name].BackendPort = uint16(transport.BackendPort)
-						alreadyExists = true
-					}
+					alreadyExists = ensureCurrentIngress(floatingIP, hostPool, vipIdx, writeTo, transport) || alreadyExists
 				}
-				if alreadyExists {
-					continue createLoop
-				}
+			}
+			if alreadyExists {
+				continue createLoop
 			}
 			ensure = append(ensure, func(hostPool string, vipIdx int) func() error {
 				return func() error {
@@ -77,12 +68,18 @@ createLoop:
 removeLoop:
 	for floatingIPIdx := range floatingIPs {
 		floatingIP := floatingIPs[floatingIPIdx]
+		matches := false
 		for hostPool, vips := range loadbalancing {
 			for vipIdx := range vips {
-				if floatingIP.Tags["pool"] == hostPool && floatingIP.Tags["idx"] == strconv.Itoa(vipIdx) {
-					continue removeLoop
+				vip := vips[vipIdx]
+				for transpIdx := range vip.Transport {
+					transport := vip.Transport[transpIdx]
+					matches = ensureCurrentIngress(floatingIP, hostPool, vipIdx, writeTo, transport) || matches
 				}
 			}
+		}
+		if matches {
+			continue removeLoop
 		}
 		remove = append(remove, func(ip string) func() error {
 			return func() error {
@@ -91,4 +88,22 @@ removeLoop:
 		}(floatingIP.IP()))
 	}
 	return ensure, remove, nil
+}
+
+func ensureCurrentIngress(floatingIP cloudscale.FloatingIP, hostPool string, vipIdx int, writeTo *Current, transport *dynamic.Transport) bool {
+	matches := false
+	if floatingIP.Tags["pool"] == hostPool && floatingIP.Tags["idx"] == strconv.Itoa(vipIdx) {
+		matches = true
+		if writeTo.Current.Ingresses == nil {
+			writeTo.Current.Ingresses = make(map[string]*infra.Address)
+		}
+		if writeTo.Current.Ingresses[transport.Name] == nil {
+			writeTo.Current.Ingresses[transport.Name] = &infra.Address{}
+		}
+
+		writeTo.Current.Ingresses[transport.Name].Location = floatingIP.IP()
+		writeTo.Current.Ingresses[transport.Name].FrontendPort = uint16(transport.FrontendPort)
+		writeTo.Current.Ingresses[transport.Name].BackendPort = uint16(transport.BackendPort)
+	}
+	return matches
 }

@@ -1,6 +1,7 @@
 package cs
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -33,7 +34,7 @@ func queryServers(context *context, current *Current, loadbalancing map[string][
 func ensureServer(context *context, current *Current, loadbalancing map[string][]*dynamic.VIP, poolName string, machine *machine, ensureNodeAgent func(m infra.Machine) error) (err error) {
 	defer func() {
 		if err == nil {
-			err = ensureOS(ensureNodeAgent, machine, loadbalancing, current, context, poolName)
+			err = ensureOS(ensureNodeAgent, machine, loadbalancing, current, context)
 		}
 	}()
 
@@ -70,36 +71,28 @@ func ensureServer(context *context, current *Current, loadbalancing map[string][
 
 }
 
-func ensureOS(ensureNodeAgent func(m infra.Machine) error, machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context, poolName string) error {
+func ensureOS(ensureNodeAgent func(m infra.Machine) error, machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context) error {
 	if err := ensureNodeAgent(machine); err != nil {
 		return err
 	}
 
-	return configureFirewall(machine, loadbalancing, current, context, poolName)
+	if err := configureFirewall(machine, loadbalancing, current, context); err != nil {
+		context.monitor.WithField("server", machine.ID()).Info(fmt.Errorf("Could not yet configure Firewall: %w", err).Error())
+	}
+	return nil
 }
 
 // TODO: Move this capabilities to where they belong
-func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context, poolName string) error {
-	if _, err := machine.Execute(nil, "ifconfig -a | grep dummy"); err != nil {
-		cmd, err := addDummyIPCommand(hostedVIPs(loadbalancing, machine, current))
-		if err != nil {
-			return err
-		}
-
-		context.monitor.WithField("cmd", cmd).Info("Executing")
-		if _, err = machine.Execute(nil, cmd); err != nil {
-			return err
-		}
-	}
-	zones, err := machine.Execute(nil, "firewall-cmd --get-active-zone")
-	if err != nil {
+func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context) error {
+	if err := ensureDummyInterface(context, machine, loadbalancing, current); err != nil {
 		return err
 	}
 
-	if len(zones) == 0 {
-		cmd := "firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"
+	masq, _ := machine.Execute(nil, "firewall-cmd --list-all | grep 'masquerade: yes'")
+	if len(masq) == 0 {
+		cmd := "firewall-cmd --add-masquerade --permanent && firewall-cmd --reload"
 		context.monitor.WithField("cmd", cmd).Info("Executing")
-		if _, err = machine.Execute(nil, cmd); err != nil {
+		if _, err := machine.Execute(nil, cmd); err != nil {
 			return err
 		}
 	}
@@ -146,20 +139,58 @@ func (a addresses) toRequest() []cloudscale.AddressRequest {
 	return requests
 }
 
-func addDummyIPCommand(ips []string) (string, error) {
+func ensureDummyInterface(context *context, machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current) error {
 
-	if len(ips) == 0 {
-		return "true", errors.New("No ips")
+	cmd := "true"
+	dummy1, err := machine.Execute(nil, `INNEROUT="$(set -o pipefail && ip address show dummy1 | grep dummy1 | tail -n +2 | awk '{print $2}' | cut -d "/" -f 1)" && echo $INNEROUT`)
+	if err != nil {
+		cmd += " && ip link add dummy1 type dummy"
 	}
 
-	cmd := "ip link add dummy1 type dummy"
+	addedVIPs := bytes.Split(dummy1, []byte("\n"))
+
+	ips := hostedVIPs(loadbalancing, machine, current)
+
+addLoop:
 	for idx := range ips {
 		ip := ips[idx]
 		if ip == "" {
-			return "true", errors.New("void ip")
+			return errors.New("void ip")
 		}
-		cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
+		for idx := range addedVIPs {
+			already := addedVIPs[idx]
+			if string(already) == ip {
+				continue addLoop
+			}
+		}
+		if !bytes.Contains(dummy1, []byte(ip)) {
+			cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
+		}
 	}
 
-	return cmd, nil
+deleteLoop:
+	for idx := range addedVIPs {
+		added := string(addedVIPs[idx])
+		if added == "" {
+			continue
+		}
+		for idx := range ips {
+			ip := ips[idx]
+			if added == ip {
+				continue deleteLoop
+			}
+		}
+		cmd += fmt.Sprintf(" && ip addr delete %s/32 dev dummy1", added)
+	}
+
+	if cmd == "true" {
+		return nil
+	}
+
+	context.monitor.WithFields(map[string]interface{}{
+		"cmd":    cmd,
+		"server": machine.ID(),
+	}).Info("Executing")
+	_, err = machine.Execute(nil, cmd)
+	return err
 }
