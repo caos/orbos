@@ -27,13 +27,13 @@ createLoop:
 	for hostPool, vips := range loadbalancing {
 		for vipIdx := range vips {
 			vip := vips[vipIdx]
+			alreadyExists := false
 			for transportIdx := range vip.Transport {
 				transport := vip.Transport[transportIdx]
 				if writeTo.Current.Ingresses == nil {
 					writeTo.Current.Ingresses = make(map[string]*infra.Address)
 				}
 				writeTo.Current.Ingresses[transport.Name] = &infra.Address{}
-				alreadyExists := false
 				for floatingIPIdx := range floatingIPs {
 					floatingIP := floatingIPs[floatingIPIdx]
 					if floatingIP.Tags["pool"] == hostPool && floatingIP.Tags["idx"] == strconv.Itoa(vipIdx) {
@@ -43,9 +43,9 @@ createLoop:
 						alreadyExists = true
 					}
 				}
-				if alreadyExists {
-					continue createLoop
-				}
+			}
+			if alreadyExists {
+				continue createLoop
 			}
 			ensure = append(ensure, func(hostPool string, vipIdx int) func() error {
 				return func() error {
