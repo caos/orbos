@@ -1,9 +1,12 @@
 package cs
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/cloudscale-ch/cloudscale-go-sdk"
+	"github.com/pkg/errors"
 )
 
 func queryServers(context *context, current *Current, loadbalancing map[string][]*dynamic.VIP, ensureNodeAgent func(m infra.Machine) error) ([]func() error, error) {
@@ -30,16 +33,9 @@ func queryServers(context *context, current *Current, loadbalancing map[string][
 func ensureServer(context *context, current *Current, loadbalancing map[string][]*dynamic.VIP, poolName string, machine *machine, ensureNodeAgent func(m infra.Machine) error) (err error) {
 	defer func() {
 		if err == nil {
-			err = ensureNodeAgent(machine)
+			err = ensureOS(ensureNodeAgent, machine, loadbalancing, current, context, poolName)
 		}
 	}()
-
-	// TODO: Move this capabilities to where they belong
-	if _, err = machine.Execute(nil, "ifconfig -a | grep dummy"); err != nil {
-		cmd := addDummyIPCommand(hostedVIPs(loadbalancing, machine, current)) + " && firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"
-		context.monitor.WithField("cmd", cmd).Info("Executing")
-
-	}
 
 	_, isExternal := loadbalancing[poolName]
 	if context.machinesService.oneoff {
@@ -72,6 +68,43 @@ func ensureServer(context *context, current *Current, loadbalancing map[string][
 	}
 	return updateServer(context, machine.server, &updateInterfaces)
 
+}
+
+func ensureOS(ensureNodeAgent func(m infra.Machine) error, machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context, poolName string) error {
+	if err := ensureNodeAgent(machine); err != nil {
+		return err
+	}
+
+	return configureFirewall(machine, loadbalancing, current, context, poolName)
+}
+
+// TODO: Move this capabilities to where they belong
+func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context, poolName string) error {
+	if _, err := machine.Execute(nil, "ifconfig -a | grep dummy"); err != nil {
+		cmd, err := addDummyIPCommand(hostedVIPs(loadbalancing, machine, current))
+		if err != nil {
+			return err
+		}
+
+		context.monitor.WithField("cmd", cmd).Info("Executing")
+		if _, err = machine.Execute(nil, cmd); err != nil {
+			return err
+		}
+	}
+	zones, err := machine.Execute(nil, "firewall-cmd --get-active-zone")
+	if err != nil {
+		return err
+	}
+
+	if len(zones) == 0 {
+		cmd := "firewall-cmd --zone=external --change-interface=eth0 && firewall-cmd --zone=internal --change-interface=eth1 && firewall-cmd --zone=internal --add-masquerade --permanent && firewall-cmd --reload && firewall-cmd --direct --add-rule ipv4 nat POSTROUTING 0 -o eth0 -j MASQUERADE && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth1 -o eth0 -j ACCEPT && firewall-cmd --direct --add-rule ipv4 filter FORWARD 0 -i eth0 -o eth1 -m state --state RELATED,ESTABLISHED -j ACCEPT"
+		context.monitor.WithField("cmd", cmd).Info("Executing")
+		if _, err = machine.Execute(nil, cmd); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func updateServer(context *context, server *cloudscale.Server, interfaces *[]cloudscale.InterfaceRequest) error {
@@ -111,4 +144,22 @@ func (a addresses) toRequest() []cloudscale.AddressRequest {
 		})
 	}
 	return requests
+}
+
+func addDummyIPCommand(ips []string) (string, error) {
+
+	if len(ips) == 0 {
+		return "true", errors.New("No ips")
+	}
+
+	cmd := "ip link add dummy1 type dummy"
+	for idx := range ips {
+		ip := ips[idx]
+		if ip == "" {
+			return "true", errors.New("void ip")
+		}
+		cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
+	}
+
+	return cmd, nil
 }

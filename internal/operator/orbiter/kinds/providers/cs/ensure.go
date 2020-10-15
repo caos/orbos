@@ -1,8 +1,6 @@
 package cs
 
 import (
-	"fmt"
-
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/api"
@@ -75,22 +73,4 @@ func query(
 			},
 		})())
 	}, addPools(current, desired, wrappedMachines)
-}
-
-func addDummyIPCommand(ips []string) string {
-
-	if len(ips) == 0 {
-		return "true"
-	}
-
-	cmd := "ip link add dummy1 type dummy"
-	for idx := range ips {
-		ip := ips[idx]
-		if ip == "" {
-			return "true"
-		}
-		cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
-	}
-
-	return cmd
 }
