@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -20,13 +21,14 @@ func AdaptFunc(
 	) (
 		zitadel.QueryFunc,
 		zitadel.DestroyFunc,
+		map[string]*secret.Secret,
 		error,
 	) {
 		internalMonitor := monitor.WithField("kind", "legacycf")
 
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -35,11 +37,11 @@ func AdaptFunc(
 		}
 
 		if desiredKind.Spec == nil {
-			return nil, nil, errors.New("No specs found")
+			return nil, nil, nil, errors.New("No specs found")
 		}
 
 		if err := desiredKind.Spec.Validate(); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		internalSpec, current := desiredKind.Spec.Internal(namespace, labels)
@@ -59,6 +61,7 @@ func AdaptFunc(
 				return zitadel.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 			},
 			zitadel.DestroyersToDestroyFunc(internalMonitor, []zitadel.DestroyFunc{legacyDestroyer}),
+			getSecretsMap(desiredKind),
 			nil
 	}
 }

@@ -43,6 +43,35 @@ type Reconciling struct {
 	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
 }
 
+func (r *Reconciling) InitSecrets() {
+	if r.Auth == nil {
+		r.Auth = &auth.Auth{}
+	}
+	r.Auth.InitSecrets()
+}
+
+func (r *Reconciling) IsZero() bool {
+	if !r.Deploy &&
+		r.CustomImage == nil &&
+		r.Network == nil &&
+		(r.Auth == nil || r.Auth.IsZero()) &&
+		r.Rbac == nil &&
+		r.Repositories == nil &&
+		r.Credentials == nil &&
+		r.KnownHosts == nil &&
+		r.NodeSelector == nil &&
+		r.Tolerations == nil &&
+		r.Dex == nil &&
+		r.RepoServer == nil &&
+		r.Redis == nil &&
+		r.Controller == nil &&
+		r.Server == nil {
+		return true
+	}
+
+	return false
+}
+
 type CommonComponent struct {
 	//Resource requirements
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`

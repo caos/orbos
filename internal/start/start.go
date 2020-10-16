@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/secret/operators"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -17,7 +18,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/operator/secretfuncs"
 	orbzitadel "github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret"
@@ -38,7 +38,7 @@ type OrbiterConfig struct {
 	IngestionAddress string
 }
 
-func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) ([]string, error) {
+func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
 
 	go checks(monitor, orbctlGit)
 
@@ -63,7 +63,7 @@ loop:
 		}
 	}
 
-	return GetKubeconfigs(monitor, orbctlGit)
+	return GetKubeconfigs(monitor, orbctlGit, orbConfig)
 }
 
 func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
@@ -177,7 +177,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}()
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)
@@ -196,8 +196,8 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client) ([]string, erro
 		value, err := secret.Read(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(),
-			path)
+			path,
+			operators.GetAllSecretsFunc(orbConfig))
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")
 		}
