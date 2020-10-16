@@ -96,7 +96,11 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	}
 	if string(authCheck) != "" {
 		pkg.Config["authcheck.sh"] = string(authCheck)
-		pkg.Config["authcheckexitcode"] = strconv.Itoa(exec.Command("/etc/keepalived/authcheck.sh").Run().(*exec.ExitError).ExitCode())
+		var exitCode int
+		if err := exec.Command("/etc/keepalived/authcheck.sh").Run(); err != nil {
+			exitCode = err.(*exec.ExitError).ExitCode()
+		}
+		pkg.Config["authcheckexitcode"] = strconv.Itoa(exitCode)
 	}
 
 	return pkg, err
