@@ -104,7 +104,7 @@ func ensureTokens(monitor mntr.Monitor, token []byte, authCheckResult []dynamicl
 
 func ensureToken(monitor mntr.Monitor, token []byte, authCheckResult dynamiclbmodel.AuthCheckResult) error {
 	if authCheckResult.ExitCode != 0 {
-		if err := authCheckResult.Machine.WriteFile("/var/orbiter/cstoken", bytes.NewReader(token), 0600); err != nil {
+		if err := authCheckResult.Machine.WriteFile("/var/orbiter/cstoken", bytes.NewReader(token), 600); err != nil {
 			return err
 		}
 		monitor.WithField("machine", authCheckResult.Machine.ID()).Info("API token written")
