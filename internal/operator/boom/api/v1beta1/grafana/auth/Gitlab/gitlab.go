@@ -14,3 +14,15 @@ type Auth struct {
 	//Groups of gitlab allowed to login
 	AllowedGroups []string `json:"allowedGroups,omitempty" yaml:"allowedGroups,omitempty"`
 }
+
+func (a *Auth) IsZero() bool {
+	if (a.ClientID == nil || a.ClientID.IsZero()) &&
+		(a.ClientSecret == nil || a.ClientSecret.IsZero()) &&
+		a.ExistingClientIDSecret == nil &&
+		a.ExistingClientSecretSecret == nil &&
+		a.AllowedGroups == nil {
+		return true
+	}
+
+	return false
+}

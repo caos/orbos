@@ -43,7 +43,7 @@ func BackupCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 		if found {
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err != nil {
 				return err
 			}

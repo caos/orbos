@@ -25,6 +25,19 @@ type Spec struct {
 	Resources     *k8s.Resources               `yaml:"resources,omitempty"`
 }
 
+func (s *Spec) IsZero() bool {
+	if (s.Configuration == nil || s.Configuration.IsZero()) &&
+		!s.Verbose &&
+		s.ReplicaCount == 0 &&
+		s.NodeSelector == nil &&
+		s.Tolerations == nil &&
+		s.Affinity == nil &&
+		s.Resources == nil {
+		return true
+	}
+	return false
+}
+
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{
 		Common: desiredTree.Common,

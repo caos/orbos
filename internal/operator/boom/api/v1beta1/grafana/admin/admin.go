@@ -11,3 +11,21 @@ type Admin struct {
 	//Existing Secret containing username and password
 	ExistingSecret *secret.ExistingIDSecret `json:"existingSecret,omitempty" yaml:"existingSecret,omitempty"`
 }
+
+func (a *Admin) IsZero() bool {
+	if (a.Username == nil || a.Username.IsZero()) &&
+		(a.Username == nil || a.Username.IsZero()) &&
+		a.ExistingSecret == nil {
+		return true
+	}
+	return false
+}
+
+func (a *Admin) InitSecrets() {
+	if a.Username == nil {
+		a.Username = &secret.Secret{}
+	}
+	if a.Password == nil {
+		a.Password = &secret.Secret{}
+	}
+}

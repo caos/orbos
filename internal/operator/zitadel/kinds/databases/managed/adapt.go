@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/internal/secret"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -38,13 +39,16 @@ func AdaptFunc(
 	) (
 		zitadel.QueryFunc,
 		zitadel.DestroyFunc,
+		map[string]*secret.Secret,
 		error,
 	) {
+
+		secrets := make(map[string]*secret.Secret)
 		internalMonitor := monitor.WithField("kind", "managedDatabase")
 
 		desiredKind, err := parseDesiredV0(desired)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
 
@@ -64,14 +68,14 @@ func AdaptFunc(
 		publicServiceName := sfsName + "-public"
 		cockroachPort := int32(26257)
 		cockroachHTTPPort := int32(8080)
-		image := "cockroachdb/cockroach:v20.1.5"
+		image := "cockroachdb/cockroach:v20.1.7"
 
 		userList := []string{"root"}
 		userList = append(userList, users...)
 
 		queryCert, destroyCert, err := certificate.AdaptFunc(internalMonitor, namespace, userList, interalLabels, desiredKind.Spec.ClusterDns)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, interalLabels)
@@ -93,7 +97,7 @@ func AdaptFunc(
 			desiredKind.Spec.Resources,
 		)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queryS, destroyS, err := services.AdaptFunc(internalMonitor, namespace, publicServiceName, sfsName, interalLabels, cockroachPort, cockroachHTTPPort)
@@ -106,12 +110,12 @@ func AdaptFunc(
 
 		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, pdbName, interalLabels, "1")
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		destroyPDB, err := pdb.AdaptFuncToDestroy(namespace, pdbName)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		currentDB := &Current{
@@ -169,7 +173,7 @@ func AdaptFunc(
 			for backupName, desiredBackup := range desiredKind.Spec.Backups {
 				currentBackup := &tree.Tree{}
 				if timestamp == "" || !oneBackup || (timestamp != "" && strings.HasPrefix(timestamp, backupName)) {
-					queryB, destroyB, err := backups.GetQueryAndDestroyFuncs(
+					queryB, destroyB, backupSecrets, err := backups.GetQueryAndDestroyFuncs(
 						internalMonitor,
 						desiredBackup,
 						currentBackup,
@@ -187,11 +191,12 @@ func AdaptFunc(
 						features,
 					)
 					if err != nil {
-						return nil, nil, err
+						return nil, nil, nil, err
 					}
 
 					destroyers = append(destroyers, destroyB)
 					queriers = append(queriers, queryB)
+					secret.AppendSecrets(backupName, secrets, backupSecrets)
 				}
 			}
 		}
@@ -209,6 +214,7 @@ func AdaptFunc(
 				return ensure, err
 			},
 			zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
+			secrets,
 			nil
 	}
 }
