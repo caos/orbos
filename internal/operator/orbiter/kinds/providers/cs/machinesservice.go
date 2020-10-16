@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 
@@ -32,8 +31,6 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	if err != nil {
 		return nil, err
 	}
-
-	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
 
 	return core.ListMachines(ctx.machinesService)
 }
