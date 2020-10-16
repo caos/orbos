@@ -19,18 +19,20 @@ type machine struct {
 	ip     string
 	*ssh.Machine
 	remove      func() error
-	spec        *Spec
+	context     *context
 	reboot      *action
 	replacement *action
+	pool        *Pool
 }
 
-func newMachine(server *cloudscale.Server, ip string, sshMachine *ssh.Machine, remove func() error, spec *Spec) *machine {
+func newMachine(server *cloudscale.Server, ip string, sshMachine *ssh.Machine, remove func() error, context *context, pool *Pool) *machine {
 	return &machine{
 		server:  server,
 		ip:      ip,
 		Machine: sshMachine,
 		remove:  remove,
-		spec:    spec,
+		context: context,
+		pool:    pool,
 	}
 }
 
@@ -42,8 +44,8 @@ func (m *machine) RebootRequired() (required bool, require func(), unrequire fun
 
 	m.reboot = m.initAction(
 		m.reboot,
-		func() []string { return m.spec.RebootRequired },
-		func(machines []string) { m.spec.RebootRequired = machines })
+		func() []string { return m.context.desired.RebootRequired },
+		func(machines []string) { m.context.desired.RebootRequired = machines })
 
 	return m.reboot.required, m.reboot.require, m.reboot.unrequire
 }
@@ -52,8 +54,8 @@ func (m *machine) ReplacementRequired() (required bool, require func(), unrequir
 
 	m.replacement = m.initAction(
 		m.replacement,
-		func() []string { return m.spec.ReplacementRequired },
-		func(machines []string) { m.spec.ReplacementRequired = machines })
+		func() []string { return m.context.desired.ReplacementRequired },
+		func(machines []string) { m.context.desired.ReplacementRequired = machines })
 
 	return m.replacement.required, m.replacement.require, m.replacement.unrequire
 }

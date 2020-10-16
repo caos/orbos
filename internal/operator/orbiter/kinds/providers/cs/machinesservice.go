@@ -110,7 +110,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	monitor.Info("Instance created")
 
-	infraMachine, err := m.toMachine(newServer, monitor)
+	infraMachine, err := m.toMachine(newServer, monitor, desired)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +130,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	return infraMachine, nil
 }
 
-func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Monitor) (*machine, error) {
+func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Monitor, pool *Pool) (*machine, error) {
 	internalIP, sshIP := createdIPs(server.Interfaces, m.oneoff || true /* always use public ip */)
 
 	sshMachine := ssh.NewMachine(monitor, "root", sshIP)
@@ -143,7 +143,8 @@ func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Moni
 		internalIP,
 		sshMachine,
 		m.removeMachineFunc(server.Tags["pool"], server.UUID),
-		m.context.desired,
+		m.context,
+		pool,
 	)
 	return infraMachine, nil
 }
@@ -222,7 +223,7 @@ func (m *machinesService) machines() (map[string][]*machine, error) {
 	for idx := range servers {
 		server := servers[idx]
 		pool := server.Tags["pool"]
-		machine, err := m.toMachine(&server, machineMonitor(m.context.monitor, server.Name, pool))
+		machine, err := m.toMachine(&server, machineMonitor(m.context.monitor, server.Name, pool), m.context.desired.Pools[pool])
 		if err != nil {
 			return nil, err
 		}

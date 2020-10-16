@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -75,9 +77,28 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")
 	if os.IsNotExist(err) {
-		return pkg, nil
+		err = nil
 	}
-	pkg.Config["notifymaster.sh"] = string(notifymaster)
+	if err != nil {
+		return pkg, err
+	}
+
+	if string(notifymaster) != "" {
+		pkg.Config["notifymaster.sh"] = string(notifymaster)
+	}
+
+	authCheck, err := ioutil.ReadFile("/etc/keepalived/authcheck.sh")
+	if os.IsNotExist(err) {
+		err = nil
+	}
+	if err != nil {
+		return pkg, err
+	}
+	if string(authCheck) != "" {
+		pkg.Config["authcheck.sh"] = string(authCheck)
+		pkg.Config["authcheckexitcode"] = strconv.Itoa(exec.Command("/etc/keepalived/authcheck.sh").Run().(*exec.ExitError).ExitCode())
+	}
+
 	return pkg, err
 }
 

@@ -38,6 +38,12 @@ func init() {
 
 type WhiteListFunc func() []*orbiter.CIDR
 
+type VRRP struct {
+	VRRPInterface string
+	NotifyMaster  func(machine infra.Machine) string
+	AuthCheck     func(machine infra.Machine) (string, int)
+}
+
 func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
@@ -117,10 +123,10 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			}
 
 			poolMachines := curryPoolMachines()
-			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl)
+			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl, nodeAgentsCurrent)
 
 			current.Current.Spec = enrichedVIPs
-			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrpInterface string, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
+			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
 
 				var lbMachines []infra.Machine
 
@@ -219,7 +225,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				var nginxNATTemplate *template.Template
 				var vips []*VIP
 
-				if vrrpInterface == "" {
+				if vrrp == nil {
 					for _, desiredVIPs := range desiredKind.Spec {
 						vips = append(vips, desiredVIPs...)
 					}
@@ -253,7 +259,7 @@ stream { {{ range $nat := .NATs }}
 						return false, err
 					}
 
-					spec, err := enrichedVIPs(svc)
+					spec, _, err := enrichedVIPs(svc)
 					if err != nil {
 						return false, err
 					}
@@ -267,8 +273,8 @@ stream { {{ range $nat := .NATs }}
 								return cmp.ID() != machine.ID()
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
-							CustomMasterNotifyer: notifyMaster != nil,
-							Interface:            vrrpInterface,
+							CustomMasterNotifyer: vrrp.NotifyMaster != nil,
+							Interface:            vrrp.VRRPInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -351,34 +357,40 @@ http {
 						ngxBuf := new(bytes.Buffer)
 						//noinspection GoDeferInLoop
 						defer ngxBuf.Reset()
-						if vrrpInterface != "" {
-							kaBuf := new(bytes.Buffer)
-							defer kaBuf.Reset()
+						kaBuf := new(bytes.Buffer)
+						defer kaBuf.Reset()
 
-							if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
-								return false, err
-							}
-
-							kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
-							kaBuf.Reset()
-
-							if d.CustomMasterNotifyer {
-								kaPkg.Config["notifymaster.sh"] = notifyMaster(d.Self, d.Peers, d.VIPs)
-							}
-
-							if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
-								return false, err
-							}
-							ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
-							ngxBuf.Reset()
-
-							desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
+						if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
+							return false, err
 						}
+
+						kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaBuf.Reset()
+
+						if d.CustomMasterNotifyer {
+							kaPkg.Config["notifymaster.sh"] = vrrp.NotifyMaster(d.Self)
+						}
+
+						if vrrp.AuthCheck != nil {
+							authCheck, expectedExitCode := vrrp.AuthCheck(d.Self)
+							if authCheck != "" {
+								kaPkg.Config["authcheck.sh"] = authCheck
+								kaPkg.Config["authcheckexitcode"] = strconv.Itoa(expectedExitCode)
+							}
+						}
+
+						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
+							return false, err
+						}
+						ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxBuf.Reset()
+
+						desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
 					}
 				}
 
 				nodesNats := make(map[string]*NATDesires)
-				spec, err := enrichedVIPs(svc)
+				spec, _, err := enrichedVIPs(svc)
 				if err != nil {
 					return false, err
 				}
@@ -396,7 +408,7 @@ http {
 							}
 
 							var natVIPProbed bool
-							if vrrpInterface != "" {
+							if vrrp != nil {
 								for _, machine := range lbMachines {
 									desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
 								}
@@ -419,7 +431,7 @@ http {
 								for _, machine := range destMachines {
 									desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
-									if vrrpInterface == "" && forPool == dest {
+									if vrrp == nil && forPool == dest {
 										if !natVIPProbed {
 											probeVIP()
 											natVIPProbed = true
@@ -582,26 +594,44 @@ func curryPoolMachines() poolMachinesFunc {
 	}
 }
 
-func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelist []*orbiter.CIDR) func(svc core.MachinesService) (map[string][]*VIP, error) {
+func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelist []*orbiter.CIDR, nodeAgents *common.CurrentNodeAgents) func(svc core.MachinesService) (map[string][]*VIP, []AuthCheckResult, error) {
 	var enrichVIPsCache map[string][]*VIP
-	return func(svc core.MachinesService) (map[string][]*VIP, error) {
-		if enrichVIPsCache != nil {
-			return enrichVIPsCache, nil
+	var authCheckResultsCache []AuthCheckResult
+	return func(svc core.MachinesService) (map[string][]*VIP, []AuthCheckResult, error) {
+		if enrichVIPsCache != nil && authCheckResultsCache != nil {
+			return enrichVIPsCache, authCheckResultsCache, nil
 		}
 		enrichVIPsCache = make(map[string][]*VIP)
+		authCheckResultsCache = make([]AuthCheckResult, 0)
 
 		addedCIDRs := append([]*orbiter.CIDR(nil), adaptWhitelist...)
 		if err := machines(svc, func(_ string, machines infra.Machines) {
 			for _, machine := range machines {
+				na, found := nodeAgents.Get(machine.ID())
+				if found {
+					cfg := na.Software.KeepaliveD.Config
+					if cfg != nil {
+						authCheckExitCode, ok := cfg["authcheckexitcode"]
+						if ok {
+							authCheckExitCodeInt, err := strconv.Atoi(authCheckExitCode)
+							if err == nil {
+								authCheckResultsCache = append(authCheckResultsCache, AuthCheckResult{
+									Machine:  machine,
+									ExitCode: authCheckExitCodeInt,
+								})
+							}
+						}
+					}
+				}
 				cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
 				addedCIDRs = append(addedCIDRs, &cidr)
 			}
 		}); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		for deployPool, vips := range desired.Spec {
 			enrichVIPsCache[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
 		}
-		return enrichVIPsCache, nil
+		return enrichVIPsCache, authCheckResultsCache, nil
 	}
 }

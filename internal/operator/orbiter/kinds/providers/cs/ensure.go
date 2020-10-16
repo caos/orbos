@@ -29,7 +29,7 @@ func query(
 		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
 
-	hostPools, err := lbCurrent.Current.Spec(context.machinesService)
+	hostPools, authChecks, err := lbCurrent.Current.Spec(context.machinesService)
 	if err != nil {
 		return nil, err
 	}
@@ -59,10 +59,17 @@ func query(
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
 		return ensureServer(context, current, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, "eth1", notifyMaster(hostPools, current, context), desiredToCurrentVIP(current))
+	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
+		VRRPInterface: "eth1",
+		NotifyMaster:  notifyMaster(hostPools, current),
+		AuthCheck:     checkAuth,
+	}, desiredToCurrentVIP(current))
 	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
+			func() error {
+				return helpers.Fanout(ensureTokens(context.monitor, []byte(desired.APIToken.Value), authChecks))()
+			},
 			func() error { return helpers.Fanout(ensureFIPs)() },
 			func() error { return helpers.Fanout(removeFIPs)() },
 			func() error { return helpers.Fanout(ensureServers)() },
