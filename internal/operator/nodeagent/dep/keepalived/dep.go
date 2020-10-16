@@ -137,6 +137,12 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 		}
 	}
 
+	if authCheck, ok := ensure.Config["authcheck.sh"]; ok {
+		if err := ioutil.WriteFile("/etc/keepalived/authcheck.sh", []byte(authCheck), 0777); err != nil {
+			return err
+		}
+	}
+
 	if err := s.systemd.Enable("keepalived"); err != nil {
 		return err
 	}
