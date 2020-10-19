@@ -4,7 +4,7 @@ import "github.com/caos/orbos/internal/helpers"
 
 func destroy(context *context, current *Current) error {
 
-	_, delFuncs, err := queryFloatingIPs(context, nil, current)
+	_, delFuncs, _, err := queryFloatingIPs(context, nil, current)
 
 	pools, err := context.machinesService.ListPools()
 	if err != nil {

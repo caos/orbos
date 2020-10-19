@@ -34,7 +34,7 @@ func query(
 		return nil, err
 	}
 
-	ensureFIPs, removeFIPs, err := queryFloatingIPs(context, hostPools, current)
+	ensureFIPs, removeFIPs, poolsWithUnassignedVIPs, err := queryFloatingIPs(context, hostPools, current)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func query(
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
 		VRRPInterface: "eth1",
-		NotifyMaster:  notifyMaster(hostPools, current),
+		NotifyMaster:  notifyMaster(hostPools, current, poolsWithUnassignedVIPs),
 		AuthCheck:     checkAuth,
 	}, desiredToCurrentVIP(current))
 	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
