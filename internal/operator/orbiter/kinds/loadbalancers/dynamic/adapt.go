@@ -3,11 +3,12 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
-	"github.com/caos/orbos/internal/secret"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/caos/orbos/internal/secret"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
@@ -316,7 +317,7 @@ vrrp_instance VI_{{ $idx }} {
 		chk_{{ vip $vip }}
 	}
 
-{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ vip $vip }}"
+{{ if $root.CustomMasterNotifyer }}	notify_master /etc/keepalived/notifymaster.sh
 {{ else }}	virtual_ipaddress {
 		{{ vip $vip }}
 	}
