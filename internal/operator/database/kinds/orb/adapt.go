@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases"
 	"github.com/caos/orbos/mntr"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
@@ -16,7 +17,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		"app.kubernetes.io/part-of":    "database",
 	}
 
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -25,7 +26,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -35,7 +36,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		}
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, err := databases.GetQueryAndDestroyFuncs(
+		queryDB, destroyDB, secrets, err := databases.GetQueryAndDestroyFuncs(
 			orbMonitor,
 			desiredKind.Database,
 			databaseCurrent,
@@ -49,7 +50,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		)
 
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		queriers := []core.QueryFunc{
 			queryDB,
@@ -83,6 +84,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 				monitor.WithField("destroyers", len(queriers)).Info("Destroy")
 				return core.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
 			},
+			secrets,
 			nil
 	}
 }

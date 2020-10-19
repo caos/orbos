@@ -25,7 +25,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		return err
 	}
 
-	desiredKind, _, err := boomapi.ParseToolset(desiredTree)
+	desiredKind, _, _, err := boomapi.ParseToolset(desiredTree)
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
@@ -15,6 +16,7 @@ func AdaptFunc() func(
 ) (
 	core.QueryFunc,
 	core.DestroyFunc,
+	map[string]*secret.Secret,
 	error,
 ) {
 	return func(
@@ -24,11 +26,12 @@ func AdaptFunc() func(
 	) (
 		core.QueryFunc,
 		core.DestroyFunc,
+		map[string]*secret.Secret,
 		error,
 	) {
 		desiredKind, err := parseDesiredV0(desired)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
 
@@ -50,6 +53,7 @@ func AdaptFunc() func(
 			}, func(k8sClient *kubernetes.Client) error {
 				return nil
 			},
+			map[string]*secret.Secret{},
 			nil
 	}
 }

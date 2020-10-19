@@ -21,6 +21,20 @@ type OIDC struct {
 	RequestedIDTokenClaims map[string]Claim `json:"requestedIDTokenClaims,omitempty" yaml:"requestedIDTokenClaims,omitempty"`
 }
 
+func (c *OIDC) IsZero() bool {
+	if (c.ClientID == nil || c.ClientID.IsZero()) &&
+		(c.ClientSecret == nil || c.ClientSecret.IsZero()) &&
+		c.ExistingClientIDSecret == nil &&
+		c.ExistingClientSecretSecret == nil &&
+		c.Name == "" &&
+		c.Issuer == "" &&
+		c.RequestedScopes == nil &&
+		c.RequestedIDTokenClaims == nil {
+		return true
+	}
+	return false
+}
+
 type Claim struct {
 	//Define if the claim is required, otherwise the login will fail
 	Essential bool `json:"essential,omitempty" yaml:"essential,omitempty"`

@@ -88,8 +88,8 @@ func PushNetworkingYml(monitor mntr.Monitor, msg string, gitClient *git.Client, 
 
 func PushNetworkingDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
 	return func(monitor mntr.Monitor) error {
-		monitor.Info("Writing zitadel desired state")
-		return PushNetworkingYml(monitor, "Zitadel desired state written", gitClient, desired)
+		monitor.Info("Writing networking desired state")
+		return PushNetworkingYml(monitor, "Networking desired state written", gitClient, desired)
 	}
 }
 

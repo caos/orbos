@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	core "k8s.io/api/core/v1"
 
@@ -21,7 +22,19 @@ func AdaptFunc(
 	destroyProviders func() (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+	return func(
+		monitor mntr.Monitor,
+		finishedChan chan struct{},
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (
+		queryFunc orbiter.QueryFunc,
+		destroyFunc orbiter.DestroyFunc,
+		configureFunc orbiter.ConfigureFunc,
+		migrate bool,
+		secrets map[string]*secret.Secret,
+		err error,
+	) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -32,7 +45,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -54,7 +67,7 @@ func AdaptFunc(
 		}
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
@@ -137,6 +150,10 @@ func AdaptFunc(
 				}
 
 				return orbiter.DestroyFuncGoroutine(destroyFunc)
-			}, orbiter.NoopConfigure, migrate, nil
+			},
+			orbiter.NoopConfigure,
+			migrate,
+			getSecretsMap(desiredKind),
+			nil
 	}
 }

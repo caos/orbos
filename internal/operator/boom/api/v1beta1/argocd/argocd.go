@@ -30,6 +30,29 @@ type Argocd struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
+func (r *Argocd) InitSecrets() {
+	if r.Auth == nil {
+		r.Auth = &auth.Auth{}
+	}
+	r.Auth.InitSecrets()
+}
+
+func (r *Argocd) IsZero() bool {
+	if !r.Deploy &&
+		r.CustomImage == nil &&
+		r.Network == nil &&
+		(r.Auth == nil || r.Auth.IsZero()) &&
+		r.Rbac == nil &&
+		r.Repositories == nil &&
+		r.Credentials == nil &&
+		r.KnownHosts == nil &&
+		r.NodeSelector == nil {
+		return true
+	}
+
+	return false
+}
+
 type Rbac struct {
 	//Attribute policy.csv which goes into configmap argocd-rbac-cm
 	Csv string `json:"policy.csv,omitempty" yaml:"policy.csv,omitempty"`

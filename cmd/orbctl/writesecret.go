@@ -1,11 +1,12 @@
 package main
 
 import (
-	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/internal/secret/operators"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/secretfuncs"
+	"github.com/caos/orbos/pkg/secret"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -61,12 +62,13 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			path = args[0]
 		}
 
-		if err := secret2.Write(
+		if err := secret.Write(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(),
 			path,
-			s); err != nil {
+			s,
+			operators.GetAllSecretsFunc(orbConfig),
+			operators.PushFunc()); err != nil {
 			panic(err)
 		}
 		return nil

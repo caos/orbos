@@ -15,14 +15,14 @@ import (
 func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
 
 	ret := make([]interface{}, 0)
-	if toolsetCRDSpec.Reconciling.Network != nil {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.Network != nil {
 		host := crds.GetHostFromConfig(argocdnet.GetHostConfig(toolsetCRDSpec.Reconciling.Network))
 		ret = append(ret, host)
 		mapping := crds.GetMappingFromConfig(argocdnet.GetMappingConfig(toolsetCRDSpec.Reconciling.Network))
 		ret = append(ret, mapping)
 	}
 
-	if toolsetCRDSpec.Monitoring.Network != nil {
+	if toolsetCRDSpec.Monitoring != nil && toolsetCRDSpec.Monitoring.Network != nil {
 		host := crds.GetHostFromConfig(grafananet.GetHostConfig(toolsetCRDSpec.Monitoring.Network))
 		ret = append(ret, host)
 		mapping := crds.GetMappingFromConfig(grafananet.GetMappingConfig(toolsetCRDSpec.Monitoring.Network))
@@ -42,10 +42,16 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1
 }
 
 func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.APIGateway
 	imageTags := helm.GetImageTags()
 
 	values := helm.DefaultValues(imageTags)
+
+	spec := toolsetCRDSpec.APIGateway
+
+	if spec == nil {
+		return values
+	}
+
 	if spec.ReplicaCount != 0 {
 		values.ReplicaCount = spec.ReplicaCount
 	}
@@ -84,10 +90,17 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
-	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
+	values.CreateDevPortalMapping = spec.ActivateDevPortal
 
-	if spec.Resources == nil {
+	if spec.Resources != nil {
 		values.Resources = spec.Resources
+	}
+
+	// default is false
+	values.Service.Annotations.Module.Config.EnableGRPCWeb = spec.GRPCWeb
+	// default is true
+	if spec.ProxyProtocol {
+		values.Service.Annotations.Module.Config.UseProxyProto = spec.ProxyProtocol
 	}
 
 	if spec.Caching == nil {

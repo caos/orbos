@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking"
 	"github.com/caos/orbos/mntr"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
@@ -17,7 +18,7 @@ func AdaptFunc() core.AdaptFunc {
 		"app.kubernetes.io/part-of":    "networking",
 	}
 
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -26,7 +27,7 @@ func AdaptFunc() core.AdaptFunc {
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -36,9 +37,9 @@ func AdaptFunc() core.AdaptFunc {
 		}
 
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, err := networking.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
+		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queriers := []core.QueryFunc{
@@ -71,6 +72,7 @@ func AdaptFunc() core.AdaptFunc {
 				monitor.WithField("destroyers", len(queriers)).Info("Destroy")
 				return core.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
 			},
+			secrets,
 			nil
 	}
 }

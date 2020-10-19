@@ -1,10 +1,11 @@
 package legacycf
 
 import (
-	core2 "github.com/caos/orbos/internal/operator/core"
+	opcore "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
@@ -12,21 +13,22 @@ import (
 func AdaptFunc(
 	namespace string,
 	labels map[string]string,
-) core2.AdaptFunc {
+) opcore.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		desiredTree *tree.Tree,
 		currentTree *tree.Tree,
 	) (
-		core2.QueryFunc,
-		core2.DestroyFunc,
+		opcore.QueryFunc,
+		opcore.DestroyFunc,
+		map[string]*secret.Secret,
 		error,
 	) {
 		internalMonitor := monitor.WithField("kind", "legacycf")
 
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -35,11 +37,11 @@ func AdaptFunc(
 		}
 
 		if desiredKind.Spec == nil {
-			return nil, nil, errors.New("No specs found")
+			return nil, nil, nil, errors.New("No specs found")
 		}
 
 		if err := desiredKind.Spec.Validate(); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		internalSpec, current := desiredKind.Spec.Internal(namespace, labels)
@@ -47,18 +49,19 @@ func AdaptFunc(
 		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
 		current.ReadyCertificate = readyCertificate
 
-		queriers := []core2.QueryFunc{
+		queriers := []opcore.QueryFunc{
 			legacyQuerier,
 		}
 		currentTree.Parsed = current
 
-		return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
+		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (opcore.EnsureFunc, error) {
 				core.SetQueriedForNetworking(queried, currentTree)
 				internalMonitor.Info("set current state legacycf")
 
-				return core2.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
+				return opcore.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 			},
-			core2.DestroyersToDestroyFunc(internalMonitor, []core2.DestroyFunc{legacyDestroyer}),
+			opcore.DestroyersToDestroyFunc(internalMonitor, []opcore.DestroyFunc{legacyDestroyer}),
+			getSecretsMap(desiredKind),
 			nil
 	}
 }

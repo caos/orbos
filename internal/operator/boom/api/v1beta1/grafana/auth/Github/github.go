@@ -16,3 +16,16 @@ type Auth struct {
 	// TeamIDs where the user is required to have at least one membership
 	TeamIDs []string `json:"teamIDs,omitempty" yaml:"teamIDs,omitempty"`
 }
+
+func (a *Auth) IsZero() bool {
+	if (a.ClientID == nil || a.ClientID.IsZero()) &&
+		(a.ClientSecret == nil || a.ClientSecret.IsZero()) &&
+		a.ExistingClientIDSecret == nil &&
+		a.ExistingClientSecretSecret == nil &&
+		a.AllowedOrganizations == nil &&
+		a.TeamIDs == nil {
+		return true
+	}
+
+	return false
+}

@@ -9,6 +9,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
+	secretpkg "github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -25,7 +26,7 @@ func AdaptFunc(
 	version string,
 	features []string,
 ) core.AdaptFunc {
-	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, err error) {
+	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secretpkg.Secret, err error) {
 		secretName := "backup-serviceaccountjson"
 		secretKey := "serviceaccountjson"
 
@@ -33,7 +34,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesiredV0(desired)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
 
@@ -45,12 +46,12 @@ func AdaptFunc(
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		_, destroyB, err := backup.AdaptFunc(
@@ -213,6 +214,7 @@ func AdaptFunc(
 				return core.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 			},
 			core.DestroyersToDestroyFunc(internalMonitor, destroyers),
+			getSecretsMap(desiredKind),
 			nil
 	}
 }

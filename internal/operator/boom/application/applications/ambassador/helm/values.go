@@ -2,6 +2,7 @@ package helm
 
 import (
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -100,11 +101,44 @@ type Port struct {
 	NodePort   uint16 `yaml:"nodePort,omitempty"`
 }
 type Service struct {
-	Annotations    interface{} `yaml:"annotations,omitempty"`
-	Ports          []*Port     `yaml:"ports"`
-	Type           string      `yaml:"type"`
-	LoadBalancerIP string      `yaml:"loadBalancerIP,omitempty"`
+	Annotations    *ModuleAnnotation `yaml:"annotations,omitempty"`
+	Ports          []*Port           `yaml:"ports"`
+	Type           string            `yaml:"type"`
+	LoadBalancerIP string            `yaml:"loadBalancerIP,omitempty"`
 }
+
+type ModuleAnnotation struct {
+	Module *AmbassadorModuleAnnotation `yaml:"getambassador.io/config"`
+}
+
+type AmbassadorModuleAnnotation struct {
+	ApiVersion string                  `yaml:"apiVersion"`
+	Kind       string                  `yaml:"kind"`
+	Name       string                  `yaml:"name"`
+	Config     *AmbassadorModuleConfig `yaml:"config"`
+}
+
+func (m *AmbassadorModuleAnnotation) MarshalYAML() (interface{}, error) {
+	if m == nil {
+		return nil, nil
+	}
+
+	i := *m
+	bytes, err := yaml.Marshal(i)
+
+	return string(bytes), err
+}
+
+type AmbassadorModuleConfig struct {
+	UseProxyProto bool `yaml:"use_proxy_proto"`
+	EnableGRPCWeb bool `yaml:"enable_grpc_web"`
+	Diagnostics   *AmbassadorDiagnosticst
+}
+
+type AmbassadorDiagnosticst struct {
+	Enabled bool `yaml:"enabled"`
+}
+
 type ServiceAccount struct {
 	Create bool        `yaml:"create"`
 	Name   interface{} `yaml:"name"`

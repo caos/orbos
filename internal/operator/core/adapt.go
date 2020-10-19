@@ -5,30 +5,19 @@ import (
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, error)
+type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, map[string]*secret.Secret, error)
 
 type EnsureFunc func(k8sClient *kubernetes.Client) error
 
-func NoopEnsureFunc(*kubernetes.Client) error {
-	return nil
-}
-
 type DestroyFunc func(k8sClient *kubernetes.Client) error
 
-func NoopDestroyFunc(*kubernetes.Client) error {
-	return nil
-}
-
 type QueryFunc func(k8sClient *kubernetes.Client, queried map[string]interface{}) (EnsureFunc, error)
-
-func NoopQueryFunc(k8sClient *kubernetes.Client, queried map[string]interface{}) (EnsureFunc, error) {
-	return NoopEnsureFunc, nil
-}
 
 func Parse(gitClient *git.Client, file string) (*tree.Tree, error) {
 	if err := gitClient.Clone(); err != nil {

@@ -121,6 +121,20 @@ func DefaultValues(imageTags map[string]string) *Values {
 				NodePort:   30443,
 			},
 			},
+			Annotations: &ModuleAnnotation{
+				Module: &AmbassadorModuleAnnotation{
+					ApiVersion: "ambassador/v2",
+					Kind:       "Module",
+					Name:       "ambassador",
+					Config: &AmbassadorModuleConfig{
+						UseProxyProto: true,
+						EnableGRPCWeb: false,
+						Diagnostics: &AmbassadorDiagnosticst{
+							Enabled: false,
+						},
+					},
+				},
+			},
 		},
 		ServiceAccount: &ServiceAccount{
 			Create: true,

@@ -19,6 +19,20 @@ type ExternalConfig struct {
 	AdditionalDNS []*Subdomain `yaml:"additionalSubdomains,omitempty"`
 }
 
+func (i *ExternalConfig) IsZero() bool {
+	if (i.Credentials == nil || i.Credentials.IsZero()) &&
+		!i.Verbose &&
+		i.Domain == "" &&
+		i.IP == "" &&
+		i.Groups == nil &&
+		i.Prefix == "" &&
+		i.Rules == nil &&
+		i.AdditionalDNS == nil {
+		return true
+	}
+	return false
+}
+
 func (e *ExternalConfig) Internal(namespace string, labels map[string]string) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{

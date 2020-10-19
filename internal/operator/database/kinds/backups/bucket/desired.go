@@ -18,6 +18,16 @@ type Spec struct {
 	ServiceAccountJSON *secret2.Secret `yaml:"serviceAccountJSON,omitempty"`
 }
 
+func (s *Spec) IsZero() bool {
+	if (s.ServiceAccountJSON == nil || s.ServiceAccountJSON.IsZero()) &&
+		!s.Verbose &&
+		s.Cron == "" &&
+		s.Bucket == "" {
+		return true
+	}
+	return false
+}
+
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{
 		Common: desiredTree.Common,

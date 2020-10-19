@@ -1,7 +1,6 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/mntr"
@@ -25,10 +24,6 @@ func ListMachines() MachinesFunc {
 
 		machines = make(map[string]infra.Machine, 0)
 		machineIDs = make([]string, 0)
-
-		for _, clusterTree := range desiredKind.Clusters {
-			clusters.GetSecrets(monitor, clusterTree)
-		}
 
 		for provID, providerTree := range desiredKind.Providers {
 			providerMachines, err := providers.ListMachines(

@@ -140,7 +140,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 
 		if foundOrbiter {
 
-			_, _, configure, _, desired, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
 				orbConfig,
 				gitCommit,
 				true,
@@ -157,15 +157,14 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err := secret2.Rewrite(
 				monitor,
 				gitClient,
-				"orbiter",
 				rewriteKey,
 				desired,
-			); err != nil {
+				api.PushOrbiterDesiredFunc); err != nil {
 				panic(err)
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}
@@ -194,7 +193,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, err := boomapi.ParseToolset(tree)
+			toolset, _, _, err := boomapi.ParseToolset(tree)
 			if err != nil {
 				return err
 			}
@@ -203,9 +202,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err := secret2.Rewrite(
 				monitor,
 				gitClient,
-				"boom",
 				rewriteKey,
-				tree); err != nil {
+				tree,
+				api.PushBoomDesiredFunc); err != nil {
 				return err
 			}
 		}

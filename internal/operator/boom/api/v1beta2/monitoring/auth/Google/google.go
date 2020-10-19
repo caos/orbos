@@ -14,3 +14,15 @@ type Auth struct {
 	//Domains allowed to login
 	AllowedDomains []string `json:"allowedDomains,omitempty" yaml:"allowedDomains,omitempty"`
 }
+
+func (a *Auth) IsZero() bool {
+	if (a.ClientID == nil || a.ClientID.IsZero()) &&
+		(a.ClientSecret == nil || a.ClientSecret.IsZero()) &&
+		a.ExistingClientIDSecret == nil &&
+		a.ExistingClientSecretSecret == nil &&
+		a.AllowedDomains == nil {
+		return true
+	}
+
+	return false
+}
