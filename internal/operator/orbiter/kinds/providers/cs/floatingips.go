@@ -13,7 +13,7 @@ import (
 
 func queryFloatingIPs(context *context, loadbalancing map[string][]*dynamic.VIP, writeTo *Current) ([]func() error, []func() error, map[string]bool, error) {
 
-	var haveUnassignedVIPs map[string]bool
+	haveUnassignedVIPs := make(map[string]bool)
 	floatingIPs, err := context.client.FloatingIPs.List(context.ctx, func(r *http.Request) {
 		params := r.URL.Query()
 		params["orb"] = []string{context.orbID}
