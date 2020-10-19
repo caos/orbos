@@ -24,6 +24,7 @@ func ApplyFunc(
 	secretName string,
 	secretKey string,
 	version string,
+	imagePullSecretName string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -106,7 +107,7 @@ func ApplyFunc(
 						},
 					}},
 					ImagePullSecrets: []corev1.LocalObjectReference{{
-						Name: "public-github-packages",
+						Name: imagePullSecretName,
 					}},
 				},
 			},

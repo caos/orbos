@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases"
 	"github.com/caos/orbos/mntr"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes/resources/namespace"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -35,6 +36,15 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 			orbMonitor = orbMonitor.Verbose()
 		}
 
+		queryNS, err := namespace.AdaptFuncToEnsure(namespaceStr)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		destroyNS, err := namespace.AdaptFuncToDestroy(namespaceStr)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
 		databaseCurrent := &tree.Tree{}
 		queryDB, destroyDB, secrets, err := databases.GetQueryAndDestroyFuncs(
 			orbMonitor,
@@ -53,6 +63,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 			return nil, nil, nil, err
 		}
 		queriers := []core.QueryFunc{
+			core.ResourceQueryToZitadelQuery(queryNS),
 			queryDB,
 		}
 		if desiredKind.Spec.SelfReconciling {
@@ -62,6 +73,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		}
 
 		destroyers := []core.DestroyFunc{
+			core.ResourceDestroyToZitadelDestroy(destroyNS),
 			destroyDB,
 		}
 

@@ -30,6 +30,7 @@ func AdaptFunc(
 	tolerations []corev1.Toleration,
 	features []string,
 	version string,
+	imagePullSecretName string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -103,7 +104,7 @@ func AdaptFunc(
 					},
 				}},
 				ImagePullSecrets: []corev1.LocalObjectReference{{
-					Name: "public-github-packages",
+					Name: imagePullSecretName,
 				}},
 			},
 		},

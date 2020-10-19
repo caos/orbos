@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/backup"
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/clean"
+	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/imagepullsecret"
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/restore"
 	coreDB "github.com/caos/orbos/internal/operator/database/kinds/databases/core"
 	"github.com/caos/orbos/mntr"
@@ -29,6 +30,7 @@ func AdaptFunc(
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secretpkg.Secret, err error) {
 		secretName := "backup-serviceaccountjson"
 		secretKey := "serviceaccountjson"
+		imagePullSecretName := "public-github-packages"
 
 		internalMonitor := monitor.WithField("component", "backup")
 
@@ -41,6 +43,8 @@ func AdaptFunc(
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
 		}
+
+		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(internalMonitor, namespace, imagePullSecretName, labels)
 
 		//queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users, nodeselector, tolerations)
 
@@ -70,6 +74,7 @@ func AdaptFunc(
 			tolerations,
 			features,
 			version,
+			imagePullSecretName,
 		)
 
 		_, destroyR, _, err := restore.ApplyFunc(
@@ -86,6 +91,7 @@ func AdaptFunc(
 			secretName,
 			secretKey,
 			version,
+			imagePullSecretName,
 		)
 
 		_, destroyC, _, err := clean.ApplyFunc(
@@ -100,6 +106,7 @@ func AdaptFunc(
 			secretName,
 			secretKey,
 			version,
+			imagePullSecretName,
 		)
 		destroyers := make([]core.DestroyFunc, 0)
 		for _, feature := range features {
@@ -108,14 +115,17 @@ func AdaptFunc(
 				destroyers = append(destroyers,
 					core.ResourceDestroyToZitadelDestroy(destroyS),
 					destroyB,
+					core.ResourceDestroyToZitadelDestroy(destroyIPS),
 				)
 			case "clear":
 				destroyers = append(destroyers,
 					destroyC,
+					core.ResourceDestroyToZitadelDestroy(destroyIPS),
 				)
 			case "restore":
 				destroyers = append(destroyers,
 					destroyR,
+					core.ResourceDestroyToZitadelDestroy(destroyIPS),
 				)
 			}
 		}
@@ -147,6 +157,7 @@ func AdaptFunc(
 					tolerations,
 					features,
 					version,
+					imagePullSecretName,
 				)
 				if err != nil {
 					return nil, err
@@ -166,6 +177,7 @@ func AdaptFunc(
 					secretName,
 					secretKey,
 					version,
+					imagePullSecretName,
 				)
 				if err != nil {
 					return nil, err
@@ -183,6 +195,7 @@ func AdaptFunc(
 					secretName,
 					secretKey,
 					version,
+					imagePullSecretName,
 				)
 				if err != nil {
 					return nil, err
@@ -194,16 +207,19 @@ func AdaptFunc(
 						switch feature {
 						case "backup", "instantbackup":
 							queriers = append(queriers,
+								core.ResourceQueryToZitadelQuery(queryIPS),
 								core.ResourceQueryToZitadelQuery(queryS),
 								queryB,
 							)
 						case "clear":
 							queriers = append(queriers,
+								core.ResourceQueryToZitadelQuery(queryIPS),
 								queryC,
 								core.EnsureFuncToQueryFunc(checkAndCleanupC),
 							)
 						case "restore":
 							queriers = append(queriers,
+								core.ResourceQueryToZitadelQuery(queryIPS),
 								queryR,
 								core.EnsureFuncToQueryFunc(checkAndCleanupR),
 							)
