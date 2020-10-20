@@ -4,13 +4,14 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 )
 
 func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, err error) {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -19,7 +20,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -37,7 +38,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 		})
 
 		iamCurrent := &tree.Tree{}
-		queryIAM, destroyIAM, err := iam.GetQueryAndDestroyFuncs(
+		queryIAM, destroyIAM, secrets, err := iam.GetQueryAndDestroyFuncs(
 			orbMonitor,
 			desiredKind.IAM,
 			iamCurrent,
@@ -46,7 +47,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 			timestamp,
 			features...)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queriers := []zitadel.QueryFunc{
@@ -75,6 +76,7 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 				monitor.WithField("destroyers", len(queriers)).Info("Destroy")
 				return zitadel.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
 			},
+			secrets,
 			nil
 	}
 }

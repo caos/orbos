@@ -34,6 +34,36 @@ type Monitoring struct {
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }
 
+func (m *Monitoring) InitSecrets() {
+	if m.Admin == nil {
+		m.Admin = &admin.Admin{}
+	}
+	m.Admin.InitSecrets()
+
+	if m.Auth == nil {
+		m.Auth = &auth.Auth{}
+	}
+	m.Auth.InitSecrets()
+}
+
+func (m *Monitoring) IsZero() bool {
+	if !m.Deploy &&
+		(m.Admin == nil || m.Admin.IsZero()) &&
+		(m.Auth == nil || m.Auth.IsZero()) &&
+		m.Datasources == nil &&
+		m.DashboardProviders == nil &&
+		m.Storage == nil &&
+		m.Network == nil &&
+		m.Plugins == nil &&
+		m.NodeSelector == nil &&
+		m.Tolerations == nil &&
+		m.Resources == nil {
+		return true
+	}
+
+	return false
+}
+
 type Datasource struct {
 	//Name of the datasource
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`

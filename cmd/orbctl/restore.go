@@ -67,7 +67,7 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 				backup = result
 			}
 
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err != nil {
 				return err
 			}

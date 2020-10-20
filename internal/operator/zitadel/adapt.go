@@ -4,13 +4,14 @@ import (
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
-type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, error)
+type AdaptFunc func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, DestroyFunc, map[string]*secret.Secret, error)
 
 type EnsureFunc func(k8sClient *kubernetes.Client) error
 

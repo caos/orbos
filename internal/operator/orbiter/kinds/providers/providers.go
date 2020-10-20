@@ -31,6 +31,7 @@ func GetQueryAndDestroyFuncs(
 	orbiter.DestroyFunc,
 	orbiter.ConfigureFunc,
 	bool,
+	map[string]*secret.Secret,
 	error,
 ) {
 
@@ -57,7 +58,7 @@ func GetQueryAndDestroyFuncs(
 			providerCurrent,
 		)
 	case "orbiter.caos.ch/StaticProvider":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
+		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
 			return static.AdaptFunc(
 				provID,
 				wlFunc,
@@ -70,30 +71,7 @@ func GetQueryAndDestroyFuncs(
 		}
 		return orbiter.AdaptFuncGoroutine(adaptFunc)
 	default:
-		return nil, nil, nil, false, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
-	}
-}
-
-func GetSecrets(
-	monitor mntr.Monitor,
-	providerTree *tree.Tree,
-) (
-	map[string]*secret.Secret,
-	error,
-) {
-	switch providerTree.Common.Kind {
-	case "orbiter.caos.ch/GCEProvider":
-		return gce.SecretsFunc()(
-			monitor,
-			providerTree,
-		)
-	case "orbiter.caos.ch/StaticProvider":
-		return static.SecretsFunc()(
-			monitor,
-			providerTree,
-		)
-	default:
-		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
 }
 

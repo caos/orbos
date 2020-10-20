@@ -14,5 +14,13 @@ func GetAll() map[string]string {
 		"V1.9__token.sql":                    V19Token,
 		"V1.10__user_machine_keys.sql":       V110UserMachineKeys,
 		"V1.11__usermembership.sql":          V111UserMembership,
+		"V1.12__machine_keys.sql":            V112MachineKeys,
+		"V1.13__machine_keys_public.sql":     V113MachineKeysPublic,
+		"V1.14__auth_loginpolicy.sql":        V114AuthLoginPolicy,
+		"V1.15__idp_providers.sql":           V115IdpProviders,
+		"V1.16__user_session.sql":            V116UserSession,
+		"V1.17__policies.sql":                V117Policies,
+		"V1.18__scope_projectroles.sql":      V118ScopeProjetRoles,
+		"V1.19__idp_configs.sql":             V119IDPConfigs,
 	}
 }
