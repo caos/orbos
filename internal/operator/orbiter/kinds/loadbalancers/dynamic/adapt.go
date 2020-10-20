@@ -3,11 +3,12 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
-	"github.com/caos/orbos/internal/secret"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/caos/orbos/internal/secret"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
@@ -390,8 +391,9 @@ http {
 									Protocol: "tcp",
 								},
 							}
+							ip := mapVIP(vip)
 							probeVIP := func() {
-								probe("VIP", vip.IP, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
+								probe("VIP", ip, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
 							}
 
 							var natVIPProbed bool
@@ -434,7 +436,7 @@ http {
 											Whitelist: transport.Whitelist,
 											Name:      transport.Name,
 											From: []string{
-												fmt.Sprintf("%s:%d", mapVIP(vip), transport.FrontendPort),  // VIP
+												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
 											},
 											To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
