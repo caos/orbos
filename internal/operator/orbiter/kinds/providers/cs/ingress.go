@@ -34,9 +34,10 @@ curl -f -H "Authorization: Bearer $(cat /var/orbiter/cstoken)" "https://api.clou
 `, 0
 }
 
-func notifyMaster(hostPools map[string][]*dynamiclbmodel.VIP, current *Current) func(m infra.Machine) string {
-	return func(m infra.Machine) string {
+func notifyMaster(hostPools map[string][]*dynamiclbmodel.VIP, current *Current, poolsWithUnassignedVIPs map[string]bool) func(m infra.Machine) (string, bool) {
+	return func(m infra.Machine) (string, bool) {
 
+		machine := m.(*machine)
 		return fmt.Sprintf(`#!/bin/sh
 
 set -e
@@ -63,7 +64,7 @@ set_master() {
 for VIP in "$floating_ipv4"; do
 		set_master $VIP
 done
-`, strings.Join(hostedVIPs(hostPools, m, current), " "), m.(*machine).server.UUID)
+`, strings.Join(hostedVIPs(hostPools, m, current), " "), machine.server.UUID), poolsWithUnassignedVIPs[machine.poolName]
 	}
 }
 

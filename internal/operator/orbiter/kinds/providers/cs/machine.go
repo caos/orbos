@@ -23,16 +23,18 @@ type machine struct {
 	reboot      *action
 	replacement *action
 	pool        *Pool
+	poolName    string
 }
 
-func newMachine(server *cloudscale.Server, ip string, sshMachine *ssh.Machine, remove func() error, context *context, pool *Pool) *machine {
+func newMachine(server *cloudscale.Server, ip string, sshMachine *ssh.Machine, remove func() error, context *context, pool *Pool, poolName string) *machine {
 	return &machine{
-		server:  server,
-		ip:      ip,
-		Machine: sshMachine,
-		remove:  remove,
-		context: context,
-		pool:    pool,
+		server:   server,
+		ip:       ip,
+		Machine:  sshMachine,
+		remove:   remove,
+		context:  context,
+		pool:     pool,
+		poolName: poolName,
 	}
 }
 
