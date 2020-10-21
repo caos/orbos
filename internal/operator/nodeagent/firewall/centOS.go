@@ -15,79 +15,105 @@ import (
 )
 
 func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.Allowed, func() error, error) {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.ZoneDesc, func() error, error) {
+		ensurers := make([]func() error, 0)
+		current := make([]*common.ZoneDesc, 0)
 
-		outBuf := new(bytes.Buffer)
-		defer outBuf.Reset()
-		errBuf := new(bytes.Buffer)
-		defer errBuf.Reset()
+		for name, _ := range desired.Zones {
+			outBuf := new(bytes.Buffer)
+			defer outBuf.Reset()
+			errBuf := new(bytes.Buffer)
+			defer errBuf.Reset()
 
-		cmd := exec.Command("firewall-cmd", "--list-ports", "--zone", "public")
-		cmd.Stderr = errBuf
-		cmd.Stdout = outBuf
+			cmd := exec.Command("firewall-cmd", "--list-ports", "--zone", name)
+			cmd.Stderr = errBuf
+			cmd.Stdout = outBuf
 
-		if err := cmd.Run(); err != nil {
-			return nil, nil, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
-		}
-
-		stdout := outBuf.String()
-		if monitor.IsVerbose() {
-			fmt.Println(strings.Join(cmd.Args, " "))
-			fmt.Println(stdout)
-		}
-
-		alreadyOpen := strings.Fields(stdout)
-		addPorts := make([]string, 0)
-		removePorts := make([]string, 0)
-
-		ensureOpen := append(desired.Ports(), ignoredPorts(ignore)...)
-	openloop:
-		for _, des := range ensureOpen {
-			desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
-			for _, already := range alreadyOpen {
-				if desStr == already {
-					continue openloop
-				}
+			if err := cmd.Run(); err != nil {
+				return nil, nil, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
 			}
-			addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
-		}
 
-		current := make([]*common.Allowed, len(alreadyOpen))
-	closeloop:
-		for idx, already := range alreadyOpen {
-			fields := strings.Split(already, "/")
-			port := fields[0]
-			protocol := fields[1]
-			current[idx] = &common.Allowed{Port: port, Protocol: protocol}
+			stdout := outBuf.String()
+			if monitor.IsVerbose() {
+				fmt.Println(strings.Join(cmd.Args, " "))
+				fmt.Println(stdout)
+			}
+
+			alreadyOpen := strings.Fields(stdout)
+			addPorts := make([]string, 0)
+			removePorts := make([]string, 0)
+
+			ensureOpen := append(desired.Ports(name), ignoredPorts(ignore)...)
+		openloop:
 			for _, des := range ensureOpen {
-				if des.Port == port && des.Protocol == protocol {
-					continue closeloop
+				desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
+				for _, already := range alreadyOpen {
+					if desStr == already {
+						continue openloop
+					}
 				}
+				addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
 			}
-			removePorts = append(removePorts, fmt.Sprintf("--remove-port=%s", already))
-		}
 
-		cmd = exec.Command("systemctl", "is-active", "firewalld")
-		if monitor.IsVerbose() {
-			fmt.Println(strings.Join(cmd.Args, " "))
-			cmd.Stdout = os.Stdout
-		}
+			current := make([]*common.ZoneDesc, len(alreadyOpen))
+		closeloop:
+			for _, already := range alreadyOpen {
+				fields := strings.Split(already, "/")
+				port := fields[0]
+				protocol := fields[1]
 
-		monitor.WithFields(map[string]interface{}{
-			"open":  strings.Join(addPorts, ";"),
-			"close": strings.Join(removePorts, ";"),
-		}).Debug("firewall changes determined")
+				found := false
+				for _, readZone := range current {
+					if name == readZone.Name {
+						found = true
+						readZone.FW = append(readZone.FW, &common.Allowed{Port: port, Protocol: protocol})
+					}
+				}
+				if !found {
+					current = append(current, &common.ZoneDesc{
+						FW: []*common.Allowed{{Port: port, Protocol: protocol}},
+					})
+				}
 
-		if cmd.Run() != nil || len(addPorts) == 0 && len(removePorts) == 0 {
-			monitor.Debug("Not changing firewall")
-			return current, nil, nil
+				for _, des := range ensureOpen {
+					if des.Port == port && des.Protocol == protocol {
+						continue closeloop
+					}
+				}
+				removePorts = append(removePorts, fmt.Sprintf("--remove-port=%s", already))
+			}
+
+			cmd = exec.Command("systemctl", "is-active", "firewalld")
+			if monitor.IsVerbose() {
+				fmt.Println(strings.Join(cmd.Args, " "))
+				cmd.Stdout = os.Stdout
+			}
+
+			monitor.WithFields(map[string]interface{}{
+				"open":  strings.Join(addPorts, ";"),
+				"close": strings.Join(removePorts, ";"),
+			}).Debug("firewall changes determined")
+
+			if cmd.Run() != nil || len(addPorts) == 0 && len(removePorts) == 0 {
+				monitor.Debug("Not changing firewall")
+				return current, nil, nil
+			}
+
+			ensurers = append(ensurers, func() error {
+				if err := ensure(monitor, addPorts, name); err != nil {
+					return err
+				}
+				return ensure(monitor, removePorts, name)
+			})
 		}
 
 		return current, func() error {
-			if err := ensure(monitor, addPorts); err != nil {
-				return err
+			for _, ensurer := range ensurers {
+				if err := ensurer(); err != nil {
+					return err
+				}
 			}
-			return ensure(monitor, removePorts)
+			return nil
 		}, nil
 	})
 }
@@ -103,7 +129,7 @@ func ignoredPorts(ports []string) []*common.Allowed {
 	return allowed
 }
 
-func ensure(monitor mntr.Monitor, changes []string) error {
+func ensure(monitor mntr.Monitor, changes []string, zone string) error {
 
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
@@ -135,10 +161,10 @@ func ensure(monitor mntr.Monitor, changes []string) error {
 		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
 	}
 
-	return changeFirewall(monitor, changes)
+	return changeFirewall(monitor, changes, zone)
 }
 
-func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
+func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err error) {
 
 	changesMonitor := monitor.WithField("changes", strings.Join(changes, ";"))
 	changesMonitor.Debug("Changing firewall")
@@ -158,7 +184,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string) (err error) {
 	}
 
 	errBuf.Reset()
-	cmd := exec.Command("firewall-cmd", append([]string{"--permanent", "--zone", "public"}, changes...)...)
+	cmd := exec.Command("firewall-cmd", append([]string{"--permanent", "--zone", zone}, changes...)...)
 	cmd.Stderr = errBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")

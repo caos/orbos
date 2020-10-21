@@ -108,7 +108,7 @@ func query(
 							"checks": value,
 						}).Changed("Healthcheck desired")
 					}
-					fw := common.ToFirewall(map[string]*common.Allowed{
+					fw := common.ToFirewall("external", map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
 							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
 							Protocol: "tcp",
@@ -116,7 +116,7 @@ func query(
 					})
 					if !na.Firewall.Contains(fw) {
 						na.Firewall.Merge(fw)
-						machineMonitor.WithField("ports", fw.Ports()).Changed("Firewall desired")
+						machineMonitor.WithField("ports", fw.AllZones()).Changed("Firewall desired")
 					}
 				}
 			}

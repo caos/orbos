@@ -21,7 +21,7 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        []*Allowed
+	Open        []*ZoneDesc
 	Commit      string
 	Booted      time.Time
 }
@@ -131,31 +131,92 @@ func PackageEquals(this, that Package) bool {
 }
 
 type Firewall struct {
-	mux sync.Mutex          `yaml:"-"`
-	FW  map[string]*Allowed `yaml:",inline"`
+	mux   sync.Mutex       `yaml:"-"`
+	Zones map[string]*Zone `yaml:",inline"`
 }
 
-func ToFirewall(fw map[string]*Allowed) Firewall {
-	return Firewall{FW: fw}
+type Zone struct {
+	Interfaces []string
+	FW         map[string]*Allowed
+	Services   map[string]*Service
+}
+
+type Service struct {
+	Description string
+	Ports       []*Allowed
+}
+
+func ToFirewall(zone string, fw map[string]*Allowed) Firewall {
+	return Firewall{Zones: map[string]*Zone{zone: {Interfaces: []string{}, FW: fw, Services: map[string]*Service{}}}}
 }
 
 func (f *Firewall) Merge(fw Firewall) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
-	if len(fw.FW) > 0 && f.FW == nil {
-		f.FW = make(map[string]*Allowed)
+	if f.Zones == nil {
+		f.Zones = make(map[string]*Zone, 0)
 	}
-	for key, value := range fw.FW {
-		f.FW[key] = value
+	for name, zone := range fw.Zones {
+		current, ok := f.Zones[name]
+		if len(zone.FW) > 0 && !ok {
+			current = &Zone{
+				FW: make(map[string]*Allowed),
+			}
+		}
+
+		for key, value := range zone.FW {
+			current.FW[key] = value
+		}
+		for _, i := range zone.Interfaces {
+			found := false
+			for _, i2 := range current.Interfaces {
+				if i == i2 {
+					found = true
+				}
+			}
+			if !found {
+				current.Interfaces = append(current.Interfaces, i)
+			}
+		}
+		for key, value := range zone.Services {
+			current.Services[key] = value
+		}
+
+		f.Zones[name] = current
 	}
 }
 
-func (f *Firewall) Ports() Ports {
+func (f *Firewall) AllZones() []*ZoneDesc {
+	zones := make([]*ZoneDesc, 0)
+
+	for name, zone := range f.Zones {
+		zones = append(zones, &ZoneDesc{
+			Name:       name,
+			Interfaces: zone.Interfaces,
+			Services:   []*Service{},
+			FW:         f.Ports(name),
+		})
+	}
+	return zones
+}
+
+func (f *Firewall) Ports(zoneName string) Ports {
 	ports := make([]*Allowed, 0)
-	for _, value := range f.FW {
-		ports = append(ports, value)
+	for name, zone := range f.Zones {
+		if name == zoneName {
+			for _, value := range zone.FW {
+				ports = append(ports, value)
+			}
+		}
 	}
 	return ports
+}
+
+type ZoneDesc struct {
+	Name       string
+	Interfaces []string
+	FW         []*Allowed
+	Services   []*Service
 }
 
 type Ports []*Allowed
@@ -174,27 +235,42 @@ type Allowed struct {
 }
 
 func (f Firewall) Contains(other Firewall) bool {
-	for name, port := range other.FW {
-		found, ok := f.FW[name]
+	for name, zone := range other.Zones {
+		current, ok := f.Zones[name]
 		if !ok {
 			return false
 		}
-		if !deriveEqualPort(*port, *found) {
-			return false
+
+		for name, port := range zone.FW {
+			found, ok := current.FW[name]
+			if !ok {
+				return false
+			}
+			if !deriveEqualPort(*port, *found) {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-func (f Firewall) IsContainedIn(ports []*Allowed) bool {
-checks:
-	for _, fwPort := range f.FW {
-		for _, port := range ports {
-			if deriveEqualPort(*port, *fwPort) {
-				continue checks
+func (f Firewall) IsContainedIn(zones []*ZoneDesc) bool {
+	for _, currentZone := range zones {
+		found := false
+		for name, zone := range f.Zones {
+			if currentZone.Name == name {
+				for _, currentPort := range currentZone.FW {
+					for _, fwPort := range zone.FW {
+						if deriveEqualPort(*currentPort, *fwPort) {
+							found = true
+						}
+					}
+				}
 			}
 		}
-		return false
+		if !found {
+			return false
+		}
 	}
 	return true
 }
@@ -231,7 +307,7 @@ func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentCurrent{
-			Open: make([]*Allowed, 0),
+			Open: make([]*ZoneDesc, 0),
 		}
 		n.NA[id] = na
 	}
@@ -269,7 +345,7 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 		na = &NodeAgentSpec{
 			Software: &Software{},
 			Firewall: &Firewall{
-				FW: make(map[string]*Allowed),
+				Zones: map[string]*Zone{},
 			},
 		}
 		n.NA[id] = na

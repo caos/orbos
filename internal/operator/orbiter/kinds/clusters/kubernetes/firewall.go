@@ -42,7 +42,7 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0) (desire func(machine 
 			}
 		}
 
-		firewall := common.ToFirewall(fw)
+		firewall := common.ToFirewall("internal", fw)
 		if firewall.IsContainedIn(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Contains(firewall) {
 			machine.currentMachine.FirewallIsReady = true
 			monitor.Debug("firewall is ready")

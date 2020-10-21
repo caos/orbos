@@ -6,7 +6,7 @@ import (
 )
 
 func noopEnsurer() nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.Allowed, func() error, error) {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.ZoneDesc, func() error, error) {
 		return nil, nil, nil
 	})
 }

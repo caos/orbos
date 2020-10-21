@@ -142,10 +142,10 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						machineMonitor.Changed("Loadbalancing firewall desired")
 					}
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						machineMonitor.WithField("ports", deepNa.Firewall.Ports()).Info("Awaiting firewalld config")
+						machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
 						done = false
 					}
-					for _, port := range fw.Ports() {
+					for _, port := range fw.Ports("external") {
 						if portInt, parseErr := strconv.ParseInt(port.Port, 10, 16); parseErr == nil && portInt == 22 {
 
 							if deepNa.Software.SSHD.Config == nil || deepNa.Software.SSHD.Config["listenaddress"] != machine.IP() {
@@ -386,7 +386,7 @@ http {
 						ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 						ngxBuf.Reset()
 
-						desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
+						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
 					}
 				}
 
@@ -411,7 +411,7 @@ http {
 							var natVIPProbed bool
 							if vrrp != nil {
 								for _, machine := range lbMachines {
-									desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
+									desireNodeAgent(machine, common.ToFirewall("external", srcFW), common.Package{}, common.Package{})
 								}
 								probeVIP()
 							}
@@ -430,7 +430,7 @@ http {
 								}
 
 								for _, machine := range destMachines {
-									desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
+									desireNodeAgent(machine, common.ToFirewall("internal", destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
 									if vrrp == nil && forPool == dest {
 										if !natVIPProbed {
@@ -442,7 +442,7 @@ http {
 										if !ok {
 											nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
 										}
-										nodeNatDesires.Firewall = common.ToFirewall(srcFW)
+										nodeNatDesires.Firewall = common.ToFirewall("external", srcFW)
 										nodeNatDesires.Machine = machine
 										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
 											Whitelist: transport.Whitelist,
