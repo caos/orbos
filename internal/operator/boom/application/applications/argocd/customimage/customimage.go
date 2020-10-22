@@ -181,15 +181,6 @@ func getVolMount(internal, foldername string) *VolumeMount {
 	}
 }
 
-func AddImagePullSecretFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
-	addContent := strings.Join([]string{
-		tab, tab, tab, "imagePullSecrets:", nl,
-		tab, tab, tab, "- name: ", spec.CustomImage.ImagePullSecret, nl,
-	}, "")
-
-	return helper.AddStringBeforePointForKindAndName(resultFilePath, "Deployment", "argocd-repo-server", "volumes:", addContent)
-}
-
 type stores struct {
 	Stores []*store `json:"stores"`
 }

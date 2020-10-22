@@ -190,7 +190,7 @@ type Config struct {
 type Server struct {
 	Name                   string              `yaml:"name"`
 	Image                  *Image              `yaml:"image"`
-	ExtraArgs              map[string]string   `yaml:"extraArgs"`
+	ExtraArgs              []string            `yaml:"extraArgs"`
 	Env                    []interface{}       `yaml:"env"`
 	LogLevel               string              `yaml:"logLevel"`
 	PodAnnotations         map[string]string   `yaml:"podAnnotations"`
@@ -225,7 +225,7 @@ type RbacConfig struct {
 type RepoServer struct {
 	Name              string              `yaml:"name"`
 	Image             *Image              `yaml:"image"`
-	ExtraArgs         struct{}            `yaml:"extraArgs"`
+	ExtraArgs         []string            `yaml:"extraArgs"`
 	Env               []interface{}       `yaml:"env"`
 	LogLevel          string              `yaml:"logLevel"`
 	PodAnnotations    map[string]string   `yaml:"podAnnotations"`
@@ -263,6 +263,40 @@ type Configs struct {
 	Secret     *Secret `yaml:"secret"`
 }
 
+type RedisHAConfig struct {
+	Save string
+}
+
+type RedisHAC struct {
+	MasterGroupName string
+	Config          *RedisHAConfig
+}
+
+type HAProxyMetrics struct {
+	Enabled bool
+}
+
+type HAProxy struct {
+	Enabled bool
+	Metrics *HAProxyMetrics
+}
+
+type Exporter struct {
+	Enabled bool
+}
+
+type RedisHA struct {
+	Enabled           bool
+	Exporter          *Exporter
+	PersistenteVolume *PV
+	Redis             *RedisHAC
+	HAProxy           *HAProxy
+}
+
+type PV struct {
+	Enabled bool
+}
+
 type Values struct {
 	NameOverride     string      `yaml:"nameOverride,omitempty"`
 	FullnameOverride string      `yaml:"fullnameOverride,omitempty"`
@@ -271,6 +305,7 @@ type Values struct {
 	Controller       *Controller `yaml:"controller"`
 	Dex              *Dex        `yaml:"dex"`
 	Redis            *Redis      `yaml:"redis"`
+	RedisHA          *RedisHA    `yaml:"redis-ha"`
 	Server           *Server     `yaml:"server"`
 	RepoServer       *RepoServer `yaml:"repoServer"`
 	Configs          *Configs    `yaml:"configs"`
