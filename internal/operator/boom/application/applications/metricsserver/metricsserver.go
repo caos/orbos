@@ -24,7 +24,7 @@ func (po *MetricsServer) GetName() name.Application {
 }
 
 func (po *MetricsServer) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
-	return toolsetCRDSpec.MetricsServer.Deploy
+	return toolsetCRDSpec.MetricsServer != nil && toolsetCRDSpec.MetricsServer.Deploy
 }
 
 func (po *MetricsServer) GetNamespace() string {
