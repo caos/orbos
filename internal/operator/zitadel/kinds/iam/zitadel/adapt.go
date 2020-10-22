@@ -1,9 +1,10 @@
 package zitadel
 
 import (
-	"github.com/caos/orbos/internal/secret"
 	"sort"
 	"strconv"
+
+	"github.com/caos/orbos/internal/secret"
 
 	core "k8s.io/api/core/v1"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/ambassador"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/deployment"
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/imagepullsecret"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/migration"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/services"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking"
@@ -67,7 +67,6 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 		consoleCMName := "console-config"
 		secretVarsName := "zitadel-secrets-vars"
 		secretPasswordName := "zitadel-passwords"
-		imagePullSecretName := "public-github-packages"
 		//paths which are used in the configuration and also are used for mounting the used files
 		certPath := "/home/zitadel/dbsecrets-zitadel"
 		secretPath := "/secret"
@@ -133,11 +132,6 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 			return nil, nil, nil, err
 		}
 
-		queryIPS, destroyIPS, err := imagepullsecret.AdaptFunc(internalMonitor, namespaceStr, imagePullSecretName, internalLabels)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
 		queryC, destroyC, configurationDone, getConfigurationHashes, err := configuration.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
@@ -168,7 +162,6 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 			internalLabels,
 			desiredKind.Spec.ReplicaCount,
 			desiredKind.Spec.Affinity,
-			imagePullSecretName,
 			cmName,
 			certPath,
 			secretName,
@@ -234,7 +227,6 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 					queryM,
 					//services
 					queryS,
-					zitadel.ResourceQueryToZitadelQuery(queryIPS),
 					queryD,
 					zitadel.EnsureFuncToQueryFunc(ensureInit),
 					zitadel.EnsureFuncToQueryFunc(deploymentReady),
@@ -264,7 +256,6 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 				destroyers = append(destroyers, //namespace
 					destroyS,
 					destroyM,
-					zitadel.ResourceDestroyToZitadelDestroy(destroyIPS),
 					destroyD,
 					destroyDB,
 					destroyC,
