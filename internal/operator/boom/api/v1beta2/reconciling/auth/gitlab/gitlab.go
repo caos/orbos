@@ -13,6 +13,16 @@ type Connector struct {
 	Config *Config `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
+func (c *Connector) IsZero() bool {
+	if c.ID == "" &&
+		c.Name == "" &&
+		(c.Config == nil || c.Config.IsZero()) {
+		return true
+	}
+
+	return false
+}
+
 type Config struct {
 	ClientID *secret.Secret `yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
@@ -26,4 +36,17 @@ type Config struct {
 	Groups []string `json:"groups,omitempty" yaml:"groups,omitempty"`
 	//Flag which will switch from using the internal GitLab id to the users handle (@mention) as the user id
 	UseLoginAsID bool `json:"useLoginAsID,omitempty" yaml:"useLoginAsID,omitempty"`
+}
+
+func (c *Config) IsZero() bool {
+	if (c.ClientID == nil || c.ClientID.IsZero()) &&
+		(c.ClientSecret == nil || c.ClientSecret.IsZero()) &&
+		c.ExistingClientIDSecret == nil &&
+		c.ExistingClientSecretSecret == nil &&
+		c.BaseURL == "" &&
+		c.Groups == nil &&
+		!c.UseLoginAsID {
+		return true
+	}
+	return false
 }

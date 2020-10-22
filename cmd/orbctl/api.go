@@ -41,7 +41,7 @@ func APICommand(rv RootValues) *cobra.Command {
 		}
 
 		if foundOrbiter {
-			_, _, _, migrate, desired, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
 				orbConfig,
 				gitCommit,
 				true,
@@ -68,7 +68,7 @@ func APICommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, migrate, err := boomapi.ParseToolset(desired)
+			toolset, migrate, _, err := boomapi.ParseToolset(desired)
 			if migrate {
 				desired.Parsed = toolset
 				if err := api.PushBoomYml(monitor, "Update boom.yml", gitClient, desired); err != nil {

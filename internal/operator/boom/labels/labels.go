@@ -58,13 +58,23 @@ func GetMonitorLabels(instanceName string, appName name.Application) map[string]
 }
 
 func GetMonitorSelectorLabels(instanceName string) map[string]string {
-	labels := GetGlobalLabels()
+	labels := make(map[string]string, 0)
 	labels["boom.caos.ch/prometheus"] = instanceName
 	return labels
 }
 
-func GetRuleLabels(instanceName string) map[string]string {
-	labels := GetGlobalLabels()
+func GetRuleLabels(instanceName string, appName name.Application) map[string]string {
+	labels := GetApplicationLabels(appName)
+	addLabels := GetRuleSelectorLabels(instanceName)
+
+	for k, v := range addLabels {
+		labels[k] = v
+	}
+	return labels
+}
+
+func GetRuleSelectorLabels(instanceName string) map[string]string {
+	labels := make(map[string]string, 0)
 	labels["boom.caos.ch/prometheus"] = instanceName
 	return labels
 }

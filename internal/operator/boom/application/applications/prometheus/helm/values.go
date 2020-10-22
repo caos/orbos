@@ -315,7 +315,7 @@ type Values struct {
 	DefaultRules              *DefaultRules                                `yaml:"defaultRules,omitempty"`
 	AdditionalPrometheusRules []*AdditionalPrometheusRules                 `yaml:"additionalPrometheusRules,omitempty"`
 	Global                    *Global                                      `yaml:"global,omitempty"`
-	Alertmanager              *DisabledTool                                `yaml:"alertmanager,omitempty"`
+	Alertmanager              *DisabledToolServicePerReplica               `yaml:"alertmanager,omitempty"`
 	Grafana                   *DisabledTool                                `yaml:"grafana,omitempty"`
 	KubeAPIServer             *DisabledTool                                `yaml:"kubeApiServer,omitempty"`
 	Kubelet                   *DisabledTool                                `yaml:"kubelet,omitempty"`
@@ -331,4 +331,10 @@ type Values struct {
 	PrometheusNodeExporter    *DisabledTool                                `yaml:"prometheus-node-exporter,omitempty"`
 	PrometheusOperator        *prometheusoperator.PrometheusOperatorValues `yaml:"prometheusOperator,omitempty"`
 	Prometheus                *PrometheusValues                            `yaml:"prometheus,omitempty"`
+}
+
+type DisabledToolServicePerReplica struct {
+	Enabled           bool
+	ServicePerReplica *DisabledTool `yaml:"servicePerReplica"`
+	IngressPerReplica *DisabledTool `yaml:"ingressPerReplica"`
 }

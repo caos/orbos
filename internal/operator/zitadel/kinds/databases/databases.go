@@ -27,6 +27,7 @@ func GetQueryAndDestroyFuncs(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
+	map[string]*secret.Secret,
 	error,
 ) {
 	switch desiredTree.Common.Kind {
@@ -35,25 +36,7 @@ func GetQueryAndDestroyFuncs(
 	case "zitadel.caos.ch/ProvidedDatabse":
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:
-		return nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
-	}
-}
-
-func GetSecrets(
-	monitor mntr.Monitor,
-	desiredTree *tree.Tree,
-) (
-	map[string]*secret.Secret,
-	error,
-) {
-
-	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/ManagedDatabase":
-		return managed.SecretsFunc()(monitor, desiredTree)
-	case "zitadel.caos.ch/ProvidedDatabse":
-		return provided.SecretsFunc()(monitor, desiredTree)
-	default:
-		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
+		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
 }
 

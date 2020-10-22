@@ -38,10 +38,14 @@ type Logs struct {
 	PrometheusNodeExporter bool `json:"prometheus-node-exporter"  yaml:"prometheus-node-exporter"`
 	//Bool if logs will get persisted for prometheus-operator
 	PrometheusOperator bool `json:"prometheus-operator" yaml:"prometheus-operator"`
+	//Bool if logs will get persisted for prometheus-systemd-exporter
+	PrometheusSystemdExporter bool `json:"prometheus-systemd-exporter"  yaml:"prometheus-systemd-exporter"`
 	//Bool if logs will get persisted for logging-operator
 	LoggingOperator bool `json:"logging-operator" yaml:"logging-operator"`
 	//Bool if logs will get persisted for loki
 	Loki bool `json:"loki"`
 	//Bool if logs will get persisted for prometheus
 	Prometheus bool `json:"prometheus"`
+	//Bool if logs will get persisted for metrics-server
+	MetricsServer bool `json:"metrics-server"`
 }

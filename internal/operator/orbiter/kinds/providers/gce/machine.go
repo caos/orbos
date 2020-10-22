@@ -1,10 +1,9 @@
 package gce
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"io"
 	"sort"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -131,12 +130,15 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	}
 	desiredTree.Parsed = desired
 
-	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	_, _, _, _, _, err = loadbalancers.GetQueryAndDestroyFunc(monitor, nil, desired.Loadbalancing, &tree.Tree{}, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
+	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	if err != nil {
+		return nil, err
+	}
 
 	return core.ListMachines(ctx.machinesService)
 }
