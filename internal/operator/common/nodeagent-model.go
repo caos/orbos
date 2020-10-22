@@ -156,9 +156,18 @@ func (f *Firewall) Merge(fw Firewall) {
 	if f.Zones == nil {
 		f.Zones = make(map[string]*Zone, 0)
 	}
+
+	if fw.Zones == nil {
+		return
+	}
+
 	for name, zone := range fw.Zones {
+		if zone == nil || zone.FW == nil || len(zone.FW) == 0 {
+			continue
+		}
+
 		current, ok := f.Zones[name]
-		if len(zone.FW) > 0 && !ok {
+		if len(zone.FW) > 0 && (!ok || current == nil) {
 			current = &Zone{
 				FW: make(map[string]*Allowed),
 			}
@@ -167,19 +176,31 @@ func (f *Firewall) Merge(fw Firewall) {
 		for key, value := range zone.FW {
 			current.FW[key] = value
 		}
-		for _, i := range zone.Interfaces {
-			found := false
-			for _, i2 := range current.Interfaces {
-				if i == i2 {
-					found = true
+		if zone.Interfaces != nil {
+			if current.Interfaces == nil {
+				current.Interfaces = []string{}
+			}
+			for _, i := range zone.Interfaces {
+				found := false
+				for _, i2 := range current.Interfaces {
+					if i == i2 {
+						found = true
+					}
+				}
+				if !found {
+					current.Interfaces = append(current.Interfaces, i)
 				}
 			}
-			if !found {
-				current.Interfaces = append(current.Interfaces, i)
-			}
+
 		}
-		for key, value := range zone.Services {
-			current.Services[key] = value
+		if zone.Services != nil {
+			if current.Services == nil {
+				current.Services = make(map[string]*Service, 0)
+			}
+
+			for key, value := range zone.Services {
+				current.Services[key] = value
+			}
 		}
 
 		f.Zones[name] = current
@@ -188,22 +209,30 @@ func (f *Firewall) Merge(fw Firewall) {
 
 func (f *Firewall) AllZones() []*ZoneDesc {
 	zones := make([]*ZoneDesc, 0)
+	if f.Zones == nil {
+		return zones
+	}
 
 	for name, zone := range f.Zones {
-		zones = append(zones, &ZoneDesc{
-			Name:       name,
-			Interfaces: zone.Interfaces,
-			Services:   []*Service{},
-			FW:         f.Ports(name),
-		})
+		if zone != nil {
+			zones = append(zones, &ZoneDesc{
+				Name:       name,
+				Interfaces: zone.Interfaces,
+				Services:   []*Service{},
+				FW:         f.Ports(name),
+			})
+		}
 	}
 	return zones
 }
 
 func (f *Firewall) Ports(zoneName string) Ports {
 	ports := make([]*Allowed, 0)
+	if f.Zones == nil {
+		return ports
+	}
 	for name, zone := range f.Zones {
-		if name == zoneName {
+		if name == zoneName && zone != nil && zone.FW != nil {
 			for _, value := range zone.FW {
 				ports = append(ports, value)
 			}
@@ -235,13 +264,21 @@ type Allowed struct {
 }
 
 func (f Firewall) Contains(other Firewall) bool {
+	if other.Zones == nil {
+		return true
+	}
+
 	for name, zone := range other.Zones {
 		current, ok := f.Zones[name]
-		if !ok {
+		if !ok || current == nil {
 			return false
 		}
 
+		if current.FW == nil {
+			return false
+		}
 		for name, port := range zone.FW {
+
 			found, ok := current.FW[name]
 			if !ok {
 				return false
@@ -255,10 +292,21 @@ func (f Firewall) Contains(other Firewall) bool {
 }
 
 func (f Firewall) IsContainedIn(zones []*ZoneDesc) bool {
+	if zones == nil {
+		return false
+	}
+	if f.Zones == nil {
+		return true
+	}
+
 	for _, currentZone := range zones {
 		found := false
+
 		for name, zone := range f.Zones {
 			if currentZone.Name == name {
+				if (currentZone.FW == nil || len(currentZone.FW) == 0) && (zone.FW != nil || len(zone.FW) > 0) {
+					continue
+				}
 				for _, currentPort := range currentZone.FW {
 					for _, fwPort := range zone.FW {
 						if deriveEqualPort(*currentPort, *fwPort) {
@@ -345,7 +393,17 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 		na = &NodeAgentSpec{
 			Software: &Software{},
 			Firewall: &Firewall{
-				Zones: map[string]*Zone{},
+				Zones: map[string]*Zone{
+					"internal": {
+						Interfaces: []string{},
+						FW:         map[string]*Allowed{},
+						Services:   map[string]*Service{},
+					}, "external": {
+						Interfaces: []string{},
+						FW:         map[string]*Allowed{},
+						Services:   map[string]*Service{},
+					},
+				},
 			},
 		}
 		n.NA[id] = na

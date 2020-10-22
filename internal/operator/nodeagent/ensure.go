@@ -54,14 +54,14 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 
 		defer persistReadyness(curr.NodeIsReady)
 
-		who, err := exec.Command("who", "-b").CombinedOutput()
+		dateTime, err := exec.Command("uptime", "-s").CombinedOutput()
 		if err != nil {
 			return noop, err
 		}
 
-		dateTime := strings.Fields(string(who))[2:]
-		str := strings.Join(dateTime, " ") + ":00"
-		t, err := time.Parse("2006-01-02 15:04:05", str)
+		//dateTime := strings.Fields(string(who))[2:]
+		//str := strings.Join(dateTime, " ") + ":00"
+		t, err := time.Parse("2006-01-02 15:04:05", strings.TrimSuffix(string(dateTime), "\n"))
 		if err != nil {
 			return noop, err
 		}
