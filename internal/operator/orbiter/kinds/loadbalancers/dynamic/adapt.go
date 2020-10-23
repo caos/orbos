@@ -42,7 +42,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 type VRRP struct {
 	VRRPInterface string
-	NotifyMaster  func(machine infra.Machine) string
+	NotifyMaster  func(machine infra.Machine) (string, bool)
 	AuthCheck     func(machine infra.Machine) (string, int)
 }
 
@@ -369,7 +369,11 @@ http {
 						kaBuf.Reset()
 
 						if d.CustomMasterNotifyer {
-							kaPkg.Config["notifymaster.sh"] = vrrp.NotifyMaster(d.Self)
+							var enforceEnsuring bool
+							kaPkg.Config["notifymaster.sh"], enforceEnsuring = vrrp.NotifyMaster(d.Self)
+							if enforceEnsuring {
+								kaPkg.Config["reensure"] = "true"
+							}
 						}
 
 						if vrrp.AuthCheck != nil {

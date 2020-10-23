@@ -11,15 +11,16 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
 
-func queryFloatingIPs(context *context, loadbalancing map[string][]*dynamic.VIP, writeTo *Current) ([]func() error, []func() error, error) {
+func queryFloatingIPs(context *context, loadbalancing map[string][]*dynamic.VIP, writeTo *Current) ([]func() error, []func() error, map[string]bool, error) {
 
+	haveUnassignedVIPs := make(map[string]bool)
 	floatingIPs, err := context.client.FloatingIPs.List(context.ctx, func(r *http.Request) {
 		params := r.URL.Query()
 		params["orb"] = []string{context.orbID}
 		params["provider"] = []string{context.providerID}
 	})
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	var ensure []func() error
@@ -34,7 +35,12 @@ createLoop:
 
 				for floatingIPIdx := range floatingIPs {
 					floatingIP := floatingIPs[floatingIPIdx]
-					alreadyExists = ensureCurrentIngress(floatingIP, hostPool, vipIdx, writeTo, transport) || alreadyExists
+					if ensureCurrentIngress(floatingIP, hostPool, vipIdx, writeTo, transport) {
+						alreadyExists = true
+						if floatingIP.Server == nil || floatingIP.Server.UUID == "" {
+							haveUnassignedVIPs[hostPool] = true
+						}
+					}
 				}
 			}
 			if alreadyExists {
@@ -90,7 +96,7 @@ removeLoop:
 			}
 		}(floatingIP.IP()))
 	}
-	return ensure, remove, nil
+	return ensure, remove, haveUnassignedVIPs, nil
 }
 
 func initCurrent(writeTo *Current, transport *dynamic.Transport) {
