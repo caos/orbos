@@ -103,12 +103,12 @@ func Build(resources *k8s.Resources) interface{} {
 		"kind":       "Service",
 		"apiVersion": "v1",
 		"metadata": map[string]interface{}{
-			"name": "systemd-exporter",
+			"name":      "systemd-exporter",
+			"namespace": "caos-system",
 			"labels": map[string]string{
 				"app.kubernetes.io/managed-by": "boom.caos.ch",
 				"boom.caos.ch/instance":        "boom",
 				"boom.caos.ch/part-of":         "boom",
-				"boom.caos.ch/prometheus":      "caos",
 			},
 		},
 		"spec": map[string]interface{}{

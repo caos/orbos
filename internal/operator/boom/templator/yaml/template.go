@@ -35,5 +35,5 @@ func (y *YAML) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, res
 		return err
 	}
 
-	return resultFunc(resultAbsFilePath, "")
+	return resultFunc(resultAbsFilePath, "caos-system")
 }
