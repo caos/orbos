@@ -32,6 +32,19 @@ func PackableBuilds(builds <-chan BuiltTuple) <-chan PackableTuple {
 	return deriveFmapPackableFromBuild(packableBuild, builds)
 }
 
+func PackableFiles(paths <-chan string) <-chan PackableTuple {
+	return deriveFmapPackableFromFile(packableFile, paths)
+}
+
+func packableFile(path string) PackableTuple {
+
+	file, err := os.Open(path)
+	return deriveTuplePackable(&packable{
+		key:  filepath.Base(path),
+		data: file,
+	}, err)
+}
+
 func packableBuild(built BuiltTuple) PackableTuple {
 	bin, err := built()
 

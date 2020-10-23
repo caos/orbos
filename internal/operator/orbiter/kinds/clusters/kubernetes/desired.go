@@ -36,7 +36,10 @@ type Spec struct {
 		Kubernetes string
 		Orbiter    string
 	}
-	Workers []*Pool
+	// Use this registry to pull all kubernetes and ORBITER container images from
+	//@default: ghcr.io
+	CustomImageRegistry string
+	Workers             []*Pool
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

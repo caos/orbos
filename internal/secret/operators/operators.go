@@ -2,6 +2,8 @@ package operators
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
@@ -11,7 +13,6 @@ import (
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
-	"strings"
 )
 
 const (
@@ -56,7 +57,13 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees["orbiter"] = orbiterYML
 
-			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(orb, "", true, false)(monitor, make(chan struct{}), orbiterYML, &tree.Tree{})
+			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(
+				orb,
+				"",
+				true,
+				false,
+				gitClient,
+			)(monitor, make(chan struct{}), orbiterYML, &tree.Tree{})
 			if err != nil {
 				return nil, nil, err
 			}

@@ -58,6 +58,9 @@ type Boom struct {
 	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+	//Use this registry to pull the BOOM image from
+	//@default: ghcr.io
+	CustomImageRegistry string
 }
 
 type Toolset struct {

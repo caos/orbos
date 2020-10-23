@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
@@ -31,7 +32,12 @@ func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree, version string) zit
 			monitor.Info(fmt.Sprintf("No version set in zitadel.yml, so default version %s will get applied", version))
 		}
 
-		if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, zitadelVersion, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+		imageRegistry := desiredKind.Spec.CustomImageRegistry
+		if imageRegistry == "" {
+			imageRegistry = "ghcr.io"
+		}
+
+		if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, zitadelVersion, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations, imageRegistry); err != nil {
 			recMonitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
 			return err
 		}
