@@ -84,7 +84,9 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		}
 
 		var ensureFirewall func() error
+		fmt.Println(desired.Firewall.AllZones())
 		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
+		fmt.Println(curr.Open)
 		if err != nil {
 			return noop, err
 		}

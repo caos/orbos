@@ -19,7 +19,13 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 		ensurers := make([]func() error, 0)
 		current := make([]*common.ZoneDesc, 0)
 
+		if desired.Zones == nil {
+			desired.Zones = make(map[string]*common.Zone, 0)
+		}
+		fmt.Println(desired.Zones)
+
 		for name, _ := range desired.Zones {
+			fmt.Println(name)
 			outBuf := new(bytes.Buffer)
 			defer outBuf.Reset()
 			errBuf := new(bytes.Buffer)
@@ -44,6 +50,7 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			removePorts := make([]string, 0)
 
 			ensureOpen := append(desired.Ports(name), ignoredPorts(ignore)...)
+			fmt.Println(ensureOpen)
 		openloop:
 			for _, des := range ensureOpen {
 				desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
@@ -56,6 +63,8 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			}
 
 			current := make([]*common.ZoneDesc, len(alreadyOpen))
+			fmt.Println(current)
+			fmt.Println(alreadyOpen)
 		closeloop:
 			for _, already := range alreadyOpen {
 				fields := strings.Split(already, "/")
@@ -64,6 +73,10 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 
 				found := false
 				for _, readZone := range current {
+					if readZone.FW == nil {
+						readZone.FW = make([]*common.Allowed, 0)
+					}
+
 					if name == readZone.Name {
 						found = true
 						readZone.FW = append(readZone.FW, &common.Allowed{Port: port, Protocol: protocol})
@@ -71,7 +84,8 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 				}
 				if !found {
 					current = append(current, &common.ZoneDesc{
-						FW: []*common.Allowed{{Port: port, Protocol: protocol}},
+						Name: name,
+						FW:   []*common.Allowed{{Port: port, Protocol: protocol}},
 					})
 				}
 
@@ -130,6 +144,9 @@ func ignoredPorts(ports []string) []*common.Allowed {
 }
 
 func ensure(monitor mntr.Monitor, changes []string, zone string) error {
+	if changes == nil || len(changes) == 0 {
+		return nil
+	}
 
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()

@@ -162,20 +162,25 @@ func (f *Firewall) Merge(fw Firewall) {
 	}
 
 	for name, zone := range fw.Zones {
-		if zone == nil || zone.FW == nil || len(zone.FW) == 0 {
+		if zone == nil {
 			continue
 		}
 
 		current, ok := f.Zones[name]
-		if len(zone.FW) > 0 && (!ok || current == nil) {
-			current = &Zone{
-				FW: make(map[string]*Allowed),
+		if !ok || current == nil {
+			current = &Zone{}
+		}
+
+		if zone.FW != nil {
+			if current.FW == nil {
+				current.FW = make(map[string]*Allowed)
+			}
+
+			for key, value := range zone.FW {
+				current.FW[key] = value
 			}
 		}
 
-		for key, value := range zone.FW {
-			current.FW[key] = value
-		}
 		if zone.Interfaces != nil {
 			if current.Interfaces == nil {
 				current.Interfaces = []string{}
