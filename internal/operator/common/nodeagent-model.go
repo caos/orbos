@@ -297,31 +297,50 @@ func (f Firewall) Contains(other Firewall) bool {
 }
 
 func (f Firewall) IsContainedIn(zones []*ZoneDesc) bool {
-	if zones == nil {
-		return false
-	}
-	if f.Zones == nil {
+	if f.Zones == nil || len(f.Zones) == 0 {
 		return true
 	}
+	if zones == nil || len(zones) == 0 {
+		return false
+	}
 
-	for _, currentZone := range zones {
-		found := false
+	for name, zone := range f.Zones {
+		if zone.FW == nil || len(zone.FW) == 0 {
+			continue
+		}
 
-		for name, zone := range f.Zones {
+		foundZone := false
+		for _, currentZone := range zones {
+			if foundZone {
+				break
+			}
+
 			if currentZone.Name == name {
-				if (currentZone.FW == nil || len(currentZone.FW) == 0) && (zone.FW != nil || len(zone.FW) > 0) {
-					continue
+				foundZone = true
+
+				if currentZone.FW == nil || len(currentZone.FW) == 0 {
+					return false
 				}
-				for _, currentPort := range currentZone.FW {
-					for _, fwPort := range zone.FW {
-						if deriveEqualPort(*currentPort, *fwPort) {
-							found = true
+
+				for _, fwPort := range zone.FW {
+					foundPort := false
+
+					for _, currentPort := range currentZone.FW {
+						if foundPort {
+							break
 						}
+						if deriveEqualPort(*currentPort, *fwPort) {
+							foundPort = true
+						}
+					}
+
+					if !foundPort {
+						return false
 					}
 				}
 			}
 		}
-		if !found {
+		if !foundZone {
 			return false
 		}
 	}

@@ -142,7 +142,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						machineMonitor.Changed("Loadbalancing firewall desired")
 					}
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
+						allPorts := ""
+						for _, zone := range deepNa.Firewall.AllZones() {
+							ports := ""
+							for _, port := range zone.FW {
+								ports = ports + port.Port + "/" + port.Protocol + " "
+							}
+							allPorts = allPorts + zone.Name + ": " + ports
+						}
+						machineMonitor.WithField("ports", allPorts).Info("Awaiting firewalld config")
 						done = false
 					}
 					for _, port := range fw.Ports("external") {
