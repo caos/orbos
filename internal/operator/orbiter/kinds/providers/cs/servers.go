@@ -88,15 +88,25 @@ func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP
 		return err
 	}
 
-	masq, _ := machine.Execute(nil, "firewall-cmd --list-all | grep 'masquerade: yes'")
+	if err := addMasqueradeForZone(machine, context, "internal"); err != nil {
+		return err
+	}
+
+	if err := addMasqueradeForZone(machine, context, "external"); err != nil {
+		return err
+	}
+
+	return nil
+}
+func addMasqueradeForZone(machine *machine, context *context, zoneName string) error {
+	masq, _ := machine.Execute(nil, "firewall-cmd --list-all --zone "+zoneName+"| grep 'masquerade: yes'")
 	if len(masq) == 0 {
-		cmd := "firewall-cmd --add-masquerade --permanent && firewall-cmd --reload"
+		cmd := "firewall-cmd --add-masquerade --permanent --zone " + zoneName + " && firewall-cmd --reload"
 		context.monitor.WithField("cmd", cmd).Info("Executing")
 		if _, err := machine.Execute(nil, cmd); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 

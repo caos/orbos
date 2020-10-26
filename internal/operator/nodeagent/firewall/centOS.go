@@ -65,7 +65,6 @@ func ensureZone(monitor mntr.Monitor, name string, desired common.Firewall, igno
 		FW:         []*common.Allowed{},
 	}
 
-	fmt.Println(name)
 	outBuf := new(bytes.Buffer)
 	defer outBuf.Reset()
 	errBuf := new(bytes.Buffer)
@@ -90,7 +89,6 @@ func ensureZone(monitor mntr.Monitor, name string, desired common.Firewall, igno
 	removePorts := make([]string, 0)
 
 	ensureOpen := append(desired.Ports(name), ignoredPorts(ignore)...)
-	fmt.Println(ensureOpen)
 openloop:
 	for _, des := range ensureOpen {
 		desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
@@ -101,9 +99,6 @@ openloop:
 		}
 		addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
 	}
-
-	fmt.Println(current)
-	fmt.Println(alreadyOpen)
 closeloop:
 	for _, already := range alreadyOpen {
 		fields := strings.Split(already, "/")
