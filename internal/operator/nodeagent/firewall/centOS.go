@@ -15,9 +15,9 @@ import (
 )
 
 func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) ([]*common.ZoneDesc, func() error, error) {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.Current, func() error, error) {
 		ensurers := make([]func() error, 0)
-		current := make([]*common.ZoneDesc, 0)
+		current := make(common.Current, 0)
 
 		if desired.Zones == nil {
 			desired.Zones = make(map[string]*common.Zone, 0)
@@ -45,6 +45,8 @@ func centosEnsurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsu
 			return current, nil, nil
 		}
 
+		current.Sort()
+
 		return current, func() error {
 			monitor.Debug("Ensuring firewall")
 			for _, ensurer := range ensurers {
@@ -65,26 +67,23 @@ func ensureZone(monitor mntr.Monitor, name string, desired common.Firewall, igno
 		FW:         []*common.Allowed{},
 	}
 
-	outBuf := new(bytes.Buffer)
-	defer outBuf.Reset()
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
+	ifaces, err := getInterfaces(monitor, name)
+	if err != nil {
+		return current, nil, err
+	}
+	current.Interfaces = ifaces
 
-	cmd := exec.Command("firewall-cmd", "--list-ports", "--zone", name)
-	cmd.Stderr = errBuf
-	cmd.Stdout = outBuf
+	sources, err := getSources(monitor, name)
+	if err != nil {
+		return current, nil, err
+	}
+	current.Sources = sources
 
-	if err := cmd.Run(); err != nil {
-		return current, nil, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
+	alreadyOpen, err := getPorts(monitor, name)
+	if err != nil {
+		return current, nil, err
 	}
 
-	stdout := outBuf.String()
-	if monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		fmt.Println(stdout)
-	}
-
-	alreadyOpen := strings.Fields(stdout)
 	addPorts := make([]string, 0)
 	removePorts := make([]string, 0)
 
@@ -123,12 +122,82 @@ closeloop:
 		"close": strings.Join(removePorts, ";"),
 	}).Debug("firewall changes determined")
 
-	if (addPorts == nil || len(addPorts) == 0) && (removePorts == nil || len(removePorts) == 0) {
+	ensureIfaces := make([]string, 0)
+	zone := desired.Zones[name]
+	if zone.Interfaces != nil && len(zone.Interfaces) > 0 {
+		for _, iface := range zone.Interfaces {
+			foundIface := false
+			if current.Interfaces != nil && len(current.Interfaces) > 0 {
+				for _, currentIface := range current.Interfaces {
+					if currentIface == iface {
+						foundIface = true
+					}
+				}
+			}
+			if !foundIface {
+				ensureIfaces = append(ensureIfaces, fmt.Sprintf("--change-interface=%s", iface))
+			}
+		}
+	}
+
+	addSources := make([]string, 0)
+	removeSources := make([]string, 0)
+	if zone.Sources != nil && len(zone.Sources) > 0 {
+		for _, source := range zone.Sources {
+			foundSource := false
+			if current.Sources != nil && len(current.Sources) > 0 {
+				for _, currentSource := range current.Sources {
+					if currentSource == source {
+						foundSource = true
+					}
+				}
+			}
+			if !foundSource {
+				addSources = append(addSources, fmt.Sprintf("--add-source=%s", source))
+			}
+		}
+	}
+	if current.Sources != nil && len(current.Sources) > 0 {
+		for _, currentSource := range current.Sources {
+			foundSource := false
+			if zone.Sources != nil && len(zone.Sources) > 0 {
+				for _, source := range zone.Sources {
+					if source == currentSource {
+						foundSource = true
+					}
+				}
+			}
+			if !foundSource {
+				removeSources = append(removeSources, fmt.Sprintf("--remove-source=%s", currentSource))
+			}
+		}
+	}
+
+	if (addPorts == nil || len(addPorts) == 0) &&
+		(removePorts == nil || len(removePorts) == 0) &&
+		(addSources == nil || len(addSources) == 0) &&
+		(removeSources == nil || len(removeSources) == 0) &&
+		(ensureIfaces == nil || len(ensureIfaces) == 0) {
 		return current, nil, nil
 	}
 
 	zoneName := name
 	return current, func() error {
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneName))
+		if err := ensure(monitor, ensureIfaces, zoneName); err != nil {
+			return err
+		}
+
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneName))
+		if err := ensure(monitor, addSources, zoneName); err != nil {
+			return err
+		}
+
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeSources, zoneName))
+		if err := ensure(monitor, removeSources, zoneName); err != nil {
+			return err
+		}
+
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneName))
 		if err := ensure(monitor, addPorts, zoneName); err != nil {
 			return err
@@ -137,6 +206,75 @@ closeloop:
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removePorts, zoneName))
 		return ensure(monitor, removePorts, zoneName)
 	}, nil
+}
+
+func getInterfaces(monitor mntr.Monitor, zone string) ([]string, error) {
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
+	cmd := exec.Command("firewall-cmd", "--list-interfaces", "--zone", zone)
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
+
+	if err := cmd.Run(); err != nil {
+		return nil, errors.Wrapf(err, "running firewall-cmd --list-interfaces in order to get connected interfaces failed with stderr %s", errBuf.String())
+	}
+
+	stdout := outBuf.String()
+	if monitor.IsVerbose() {
+		fmt.Println(strings.Join(cmd.Args, " "))
+		fmt.Println(stdout)
+	}
+
+	return strings.Fields(stdout), nil
+}
+
+func getSources(monitor mntr.Monitor, zone string) ([]string, error) {
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
+	cmd := exec.Command("firewall-cmd", "--list-sources", "--zone", zone)
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
+
+	if err := cmd.Run(); err != nil {
+		return nil, errors.Wrapf(err, "running firewall-cmd --list-sources in order to get the already defined firewall sources failed with stderr %s", errBuf.String())
+	}
+
+	stdout := outBuf.String()
+	if monitor.IsVerbose() {
+		fmt.Println(strings.Join(cmd.Args, " "))
+		fmt.Println(stdout)
+	}
+
+	return strings.Fields(stdout), nil
+}
+
+func getPorts(monitor mntr.Monitor, zone string) ([]string, error) {
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+
+	cmd := exec.Command("firewall-cmd", "--list-ports", "--zone", zone)
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
+
+	if err := cmd.Run(); err != nil {
+		return nil, errors.Wrapf(err, "running firewall-cmd --list-ports in order to get the already open firewalld ports failed with stderr %s", errBuf.String())
+	}
+
+	stdout := outBuf.String()
+	if monitor.IsVerbose() {
+		fmt.Println(strings.Join(cmd.Args, " "))
+		fmt.Println(stdout)
+	}
+
+	return strings.Fields(stdout), nil
 }
 
 func ignoredPorts(ports []string) []*common.Allowed {
@@ -218,6 +356,23 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err er
 	}
 
 	if err := errors.Wrapf(cmd.Run(), "running %s failed with stderr %s", fullCmd, errBuf.String()); err != nil {
+		return err
+	}
+
+	return reloadFirewall(monitor)
+}
+
+func changeInterface(monitor mntr.Monitor, zone string, iface string) error {
+	errBuf := new(bytes.Buffer)
+	errBuf.Reset()
+	cmd := exec.Command("firewall-cmd", "--permanent", "--zone="+zone, "--change-interface="+iface)
+	cmd.Stderr = errBuf
+	if monitor.IsVerbose() {
+		fmt.Println(strings.Join(cmd.Args, " "))
+		cmd.Stdout = os.Stdout
+	}
+
+	if err := errors.Wrapf(cmd.Run(), "running firewall-cmd --change-interface failed with stderr %s", errBuf.String()); err != nil {
 		return err
 	}
 

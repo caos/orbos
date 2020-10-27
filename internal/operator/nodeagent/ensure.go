@@ -13,12 +13,12 @@ import (
 )
 
 type FirewallEnsurer interface {
-	Query(desired common.Firewall) (current []*common.ZoneDesc, ensure func() error, err error)
+	Query(desired common.Firewall) (current common.Current, ensure func() error, err error)
 }
 
-type FirewallEnsurerFunc func(desired common.Firewall) (current []*common.ZoneDesc, ensure func() error, err error)
+type FirewallEnsurerFunc func(desired common.Firewall) (current common.Current, ensure func() error, err error)
 
-func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current []*common.ZoneDesc, ensure func() error, err error) {
+func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current common.Current, ensure func() error, err error) {
 	return f(desired)
 }
 
@@ -88,6 +88,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		if err != nil {
 			return noop, err
 		}
+		curr.Open.Sort()
 
 		installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
 		if err != nil {
@@ -123,6 +124,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 				}
 				curr.Open = desired.Firewall.AllZones()
 				monitor.Changed("firewall changed")
+				curr.Open.Sort()
 			}
 
 			if len(divergentSw) > 0 {

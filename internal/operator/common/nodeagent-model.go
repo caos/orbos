@@ -5,6 +5,7 @@ package common
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +22,7 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        []*ZoneDesc
+	Open        Current
 	Commit      string
 	Booted      time.Time
 }
@@ -137,6 +138,7 @@ type Firewall struct {
 
 type Zone struct {
 	Interfaces []string
+	Sources    []string
 	FW         map[string]*Allowed
 	Services   map[string]*Service
 }
@@ -212,8 +214,8 @@ func (f *Firewall) Merge(fw Firewall) {
 	}
 }
 
-func (f *Firewall) AllZones() []*ZoneDesc {
-	zones := make([]*ZoneDesc, 0)
+func (f *Firewall) AllZones() Current {
+	zones := make(Current, 0)
 	if f.Zones == nil {
 		return zones
 	}
@@ -228,6 +230,7 @@ func (f *Firewall) AllZones() []*ZoneDesc {
 			})
 		}
 	}
+	zones.Sort()
 	return zones
 }
 
@@ -249,8 +252,41 @@ func (f *Firewall) Ports(zoneName string) Ports {
 type ZoneDesc struct {
 	Name       string
 	Interfaces []string
+	Sources    []string
 	FW         []*Allowed
 	Services   []*Service
+}
+
+type Current []*ZoneDesc
+
+func (c Current) Sort() {
+	sort.Slice(c, func(i, j int) bool {
+		return c[i].Name < c[j].Name
+	})
+
+	for _, currentEntry := range c {
+		sort.Slice(currentEntry.Interfaces, func(i, j int) bool {
+			return currentEntry.Interfaces[i] < currentEntry.Interfaces[j]
+		})
+
+		sort.Slice(currentEntry.FW, func(i, j int) bool {
+			iEntry := currentEntry.FW[i].Port + "/" + currentEntry.FW[i].Protocol
+			jEntry := currentEntry.FW[j].Port + "/" + currentEntry.FW[j].Protocol
+			return iEntry < jEntry
+		})
+
+		sort.Slice(currentEntry.Services, func(i, j int) bool {
+			return currentEntry.Services[i].Description < currentEntry.Services[j].Description
+		})
+
+		for _, svc := range currentEntry.Services {
+			sort.Slice(svc.Ports, func(i, j int) bool {
+				iEntry := svc.Ports[i].Port + "/" + svc.Ports[i].Protocol
+				jEntry := svc.Ports[j].Port + "/" + svc.Ports[j].Protocol
+				return iEntry < jEntry
+			})
+		}
+	}
 }
 
 type Ports []*Allowed
@@ -296,7 +332,7 @@ func (f Firewall) Contains(other Firewall) bool {
 	return true
 }
 
-func (f Firewall) IsContainedIn(zones []*ZoneDesc) bool {
+func (f Firewall) IsContainedIn(zones Current) bool {
 	if f.Zones == nil || len(f.Zones) == 0 {
 		return true
 	}
@@ -379,7 +415,7 @@ func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentCurrent{
-			Open: make([]*ZoneDesc, 0),
+			Open: make(Current, 0),
 		}
 		n.NA[id] = na
 	}

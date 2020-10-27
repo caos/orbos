@@ -71,6 +71,31 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
+				if nodeAgentsDesired.NA != nil {
+					listMachines, err := ctx.machinesService.machines()
+					if err != nil {
+						return nil, err
+					}
+					machineIPList := []string{}
+					for _, machines := range listMachines {
+						for _, machine := range machines {
+							machineIPList = append(machineIPList, machine.ip)
+						}
+					}
+					for _, nodeagent := range nodeAgentsDesired.NA {
+						if nodeagent.Firewall.Zones != nil {
+							internal, ok := nodeagent.Firewall.Zones["internal"]
+							if ok {
+								internal.Sources = machineIPList
+							}
+							external, ok := nodeagent.Firewall.Zones["external"]
+							if ok {
+								external.Interfaces = []string{"eth0"}
+							}
+						}
+					}
+				}
+
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
 					return nil, err
 				}
