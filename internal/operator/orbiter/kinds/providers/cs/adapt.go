@@ -1,6 +1,9 @@
 package cs
 
 import (
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -8,11 +11,8 @@ import (
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/internal/tree"
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/mntr"
+	"github.com/pkg/errors"
 )
 
 func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string, oneoff bool) orbiter.AdaptFunc {
@@ -71,28 +71,27 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if nodeAgentsDesired.NA != nil {
-					listMachines, err := ctx.machinesService.machines()
-					if err != nil {
-						return nil, err
+				done := true
+				desireNodeAgent := func(machine infra.Machine, fw common.Firewall) {
+					machineMonitor := monitor.WithField("machine", machine.ID())
+					deepNa, _ := nodeAgentsDesired.Get(machine.ID())
+					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
+
+					if !deepNa.Firewall.Contains(fw) {
+						deepNa.Firewall.Merge(fw)
+						machineMonitor.Changed("Loadbalancing firewall desired")
 					}
-					machineIPList := []string{}
-					for _, machines := range listMachines {
-						for _, machine := range machines {
-							machineIPList = append(machineIPList, machine.ip)
-						}
-					}
-					for _, nodeagent := range nodeAgentsDesired.NA {
-						if nodeagent.Firewall.Zones != nil {
-							internal, ok := nodeagent.Firewall.Zones["internal"]
-							if ok {
-								internal.Sources = machineIPList
+					if !fw.IsContainedIn(deepNaCurr.Open) {
+						allPorts := ""
+						for _, zone := range deepNa.Firewall.AllZones() {
+							ports := ""
+							for _, port := range zone.FW {
+								ports = ports + port.Port + "/" + port.Protocol + " "
 							}
-							external, ok := nodeagent.Firewall.Zones["external"]
-							if ok {
-								external.Interfaces = []string{"eth0"}
-							}
+							allPorts = allPorts + zone.Name + ": " + ports
 						}
+						machineMonitor.WithField("ports", allPorts).Info("Awaiting firewalld config")
+						done = false
 					}
 				}
 
@@ -105,6 +104,28 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+
+				if nodeAgentsDesired.NA != nil {
+					listMachines, err := ctx.machinesService.machines()
+					if err != nil {
+						return nil, err
+					}
+					machineIPList := []string{}
+					for _, machines := range listMachines {
+						for _, machine := range machines {
+							machineIPList = append(machineIPList, machine.IP()+"/32")
+						}
+					}
+					for _, machines := range listMachines {
+						for _, machine := range machines {
+							desireNodeAgent(machine, common.Firewall{
+								Zones: map[string]*common.Zone{
+									"internal": {Sources: machineIPList},
+									"external": {Interfaces: []string{"eth0"}},
+								}})
+						}
+					}
+				}
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func() error {

@@ -200,6 +200,22 @@ func (f *Firewall) Merge(fw Firewall) {
 			}
 
 		}
+		if zone.Sources != nil {
+			if current.Sources == nil {
+				current.Sources = make([]string, 0)
+			}
+			for _, i := range zone.Sources {
+				found := false
+				for _, i2 := range current.Sources {
+					if i == i2 {
+						found = true
+					}
+				}
+				if !found {
+					current.Sources = append(current.Sources, i)
+				}
+			}
+		}
 		if zone.Services != nil {
 			if current.Services == nil {
 				current.Services = make(map[string]*Service, 0)
@@ -315,17 +331,37 @@ func (f Firewall) Contains(other Firewall) bool {
 			return false
 		}
 
-		if current.FW == nil {
-			return false
-		}
-		for name, port := range zone.FW {
-
-			found, ok := current.FW[name]
-			if !ok {
+		if zone.FW != nil && len(zone.FW) > 0 {
+			if current.FW == nil || len(current.FW) == 0 {
 				return false
 			}
-			if !deriveEqualPort(*port, *found) {
+
+			for name, port := range zone.FW {
+				found, ok := current.FW[name]
+				if !ok {
+					return false
+				}
+				if !deriveEqualPort(*port, *found) {
+					return false
+				}
+			}
+		}
+
+		if zone.Sources != nil && len(zone.Sources) > 0 {
+			if current.Sources == nil || len(current.Sources) == 0 {
 				return false
+			}
+			for _, source := range zone.Sources {
+				found := false
+				for _, currentSource := range current.Sources {
+					if currentSource == source {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return false
+				}
 			}
 		}
 	}
@@ -341,12 +377,17 @@ func (f Firewall) IsContainedIn(zones Current) bool {
 	}
 
 	for name, zone := range f.Zones {
-		if zone.FW == nil || len(zone.FW) == 0 {
+		if (zone.FW == nil || len(zone.FW) == 0) &&
+			(zone.Sources == nil || len(zone.Sources) == 0) {
 			continue
 		}
 
 		foundZone := false
 		for _, currentZone := range zones {
+			if currentZone == nil {
+				continue
+			}
+
 			if foundZone {
 				break
 			}
@@ -354,24 +395,43 @@ func (f Firewall) IsContainedIn(zones Current) bool {
 			if currentZone.Name == name {
 				foundZone = true
 
-				if currentZone.FW == nil || len(currentZone.FW) == 0 {
+				if (currentZone.FW == nil || len(currentZone.FW) == 0) &&
+					(currentZone.FW == nil || len(currentZone.FW) == 0) {
 					return false
 				}
 
-				for _, fwPort := range zone.FW {
-					foundPort := false
-
-					for _, currentPort := range currentZone.FW {
-						if foundPort {
-							break
+				if zone.FW != nil {
+					for _, fwPort := range zone.FW {
+						foundPort := false
+						if currentZone.FW != nil {
+							for _, currentPort := range currentZone.FW {
+								if deriveEqualPort(*currentPort, *fwPort) {
+									foundPort = true
+									break
+								}
+							}
 						}
-						if deriveEqualPort(*currentPort, *fwPort) {
-							foundPort = true
+
+						if !foundPort {
+							return false
 						}
 					}
+				}
 
-					if !foundPort {
-						return false
+				if zone.Sources != nil {
+					for _, source := range zone.Sources {
+						foundSource := false
+						if currentZone.Sources != nil {
+							for _, currentSource := range currentZone.Sources {
+								if source == currentSource {
+									foundSource = true
+									break
+								}
+							}
+						}
+						if !foundSource {
+							return false
+						}
 					}
 				}
 			}
