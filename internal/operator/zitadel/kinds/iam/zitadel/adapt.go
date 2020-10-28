@@ -156,7 +156,7 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 			return nil, nil, nil, err
 		}
 
-		queryD, destroyD, deploymentReady, scaleDeployment, ensureInit, err := deployment.AdaptFunc(
+		queryD, destroyD, scaleDeployment, ensureInit, err := deployment.AdaptFunc(
 			internalMonitor,
 			namespaceStr,
 			internalLabels,
@@ -229,7 +229,7 @@ func AdaptFunc(timestamp string, nodeselector map[string]string, tolerations []c
 					queryS,
 					queryD,
 					zitadel.EnsureFuncToQueryFunc(ensureInit),
-					zitadel.EnsureFuncToQueryFunc(deploymentReady),
+					zitadel.EnsureFuncToQueryFunc(deployment.ReadyFunc(monitor, namespaceStr)),
 				)
 			case "restore":
 				queriers = append(queriers,

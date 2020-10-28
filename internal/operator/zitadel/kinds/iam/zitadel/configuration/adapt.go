@@ -37,7 +37,7 @@ func AdaptFunc(
 	secretVarsName string,
 	secretPasswordName string,
 	users map[string]string,
-	getClientID func() string,
+	getClientID func(k8sClient *kubernetes.Client) string,
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
@@ -107,7 +107,7 @@ func AdaptFunc(
 				return nil, err
 			}
 
-			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM(getClientID(), currentNW, k8sClient, namespace, consoleCMName))
+			queryCCM, err := configmap.AdaptFuncToEnsure(namespace, consoleCMName, labels, literalsConsoleCM(getClientID(k8sClient), currentNW, k8sClient, namespace, consoleCMName))
 			if err != nil {
 				return nil, err
 			}
@@ -158,7 +158,7 @@ func AdaptFunc(
 				secretVarsName:     getHash(literalsSecretVars),
 				secretPasswordName: getHash(users),
 				cmName:             getHash(literalsConfigMap(desired, users, certPath, secretPath, googleServiceAccountJSONPath, zitadelKeysPath, currentNW, currentDB)),
-				consoleCMName:      getHash(literalsConsoleCM(getClientID(), currentNW, k8sClient, namespace, consoleCMName)),
+				consoleCMName:      getHash(literalsConsoleCM(getClientID(k8sClient), currentNW, k8sClient, namespace, consoleCMName)),
 			}
 		},
 		nil

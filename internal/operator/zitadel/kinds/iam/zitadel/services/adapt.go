@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/service"
 	"github.com/caos/orbos/internal/operator/zitadel"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/deployment"
 	"github.com/caos/orbos/mntr"
 	"io/ioutil"
 	"net/http"
@@ -24,7 +25,7 @@ func AdaptFunc(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
-	func() string,
+	func(client *kubernetes.Client) string,
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "services")
@@ -84,7 +85,12 @@ func AdaptFunc(
 			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
-		func() string {
+		func(k8sClient *kubernetes.Client) string {
+			ensure := deployment.ReadyFunc(monitor, namespace)
+			if err := ensure(k8sClient); err != nil {
+				return ""
+			}
+
 			resp, err := http.Get("http://" + httpServiceName + "." + namespace + ":" + strconv.Itoa(httpPort) + "/clientID")
 			if err != nil {
 				return ""

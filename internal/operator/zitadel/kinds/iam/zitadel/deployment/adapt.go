@@ -22,6 +22,7 @@ import (
 const (
 	//zitadelImage can be found in github.com/caos/zitadel repo
 	zitadelImage = "ghcr.io/caos/zitadel:0.100.0"
+	deployName   = "zitadel"
 )
 
 func AdaptFunc(
@@ -47,7 +48,6 @@ func AdaptFunc(
 ) (
 	zitadel.QueryFunc,
 	zitadel.DestroyFunc,
-	zitadel.EnsureFunc,
 	func(replicaCount int) zitadel.EnsureFunc,
 	zitadel.EnsureFunc,
 	error,
@@ -173,7 +173,6 @@ func AdaptFunc(
 		})
 	}
 
-	deployName := "zitadel"
 	maxUnavailable := intstr.FromInt(1)
 	maxSurge := intstr.FromInt(1)
 
@@ -252,7 +251,7 @@ func AdaptFunc(
 								LocalObjectReference: corev1.LocalObjectReference{Name: cmName},
 							}}},
 						VolumeMounts: volMounts,
-						LivenessProbe: &corev1.Probe{
+						/*LivenessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
 								HTTPGet: &corev1.HTTPGetAction{
 									Path:   "/healthz",
@@ -262,7 +261,7 @@ func AdaptFunc(
 							},
 							PeriodSeconds:    5,
 							FailureThreshold: 2,
-						},
+						},*/
 						ReadinessProbe: &corev1.Probe{
 							Handler: corev1.Handler{
 								HTTPGet: &corev1.HTTPGetAction{
@@ -283,7 +282,7 @@ func AdaptFunc(
 
 	destroy, err := deployment.AdaptFuncToDestroy(namespace, deployName)
 	if err != nil {
-		return nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroy),
@@ -343,15 +342,6 @@ func AdaptFunc(
 			return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
-		func(k8sClient *kubernetes.Client) error {
-			internalMonitor.Info("waiting for deployment to be ready")
-			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, true, 60); err != nil {
-				internalMonitor.Error(errors.Wrap(err, "error while waiting for deployment to be ready"))
-				return err
-			}
-			internalMonitor.Info("deployment is ready")
-			return nil
-		},
 		func(replicaCount int) zitadel.EnsureFunc {
 			return func(k8sClient *kubernetes.Client) error {
 				internalMonitor.Info("Scaling deployment")
