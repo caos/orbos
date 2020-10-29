@@ -3,7 +3,6 @@ package logging
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Storage struct {
@@ -18,7 +17,7 @@ type Config struct {
 	ControlNamespace string
 	Replicas         int
 	NodeSelector     map[string]string
-	Tolerations      []corev1.Toleration
+	Tolerations      k8s.Tolerations
 	Fluentd          *latest.Fluentd
 	FluentbitPVC     *Storage
 }
@@ -44,14 +43,14 @@ type Scaling struct {
 	Replicas int `yaml:"replicas"`
 }
 type Fluentd struct {
-	Metrics             *Metrics            `yaml:"metrics,omitempty"`
-	BufferStorageVolume *KubernetesStorage  `yaml:"bufferStorageVolume,omitempty"`
-	LogLevel            string              `yaml:"logLevel,omitempty"`
-	DisablePvc          bool                `yaml:"disablePvc"`
-	Scaling             *Scaling            `yaml:"scaling,omitempty"`
-	NodeSelector        map[string]string   `yaml:"nodeSelector,omitempty"`
-	Tolerations         []corev1.Toleration `yaml:"tolerations,omitempty"`
-	Resources           *k8s.Resources      `yaml:"resources,omitempty"`
+	Metrics             *Metrics           `yaml:"metrics,omitempty"`
+	BufferStorageVolume *KubernetesStorage `yaml:"bufferStorageVolume,omitempty"`
+	LogLevel            string             `yaml:"logLevel,omitempty"`
+	DisablePvc          bool               `yaml:"disablePvc"`
+	Scaling             *Scaling           `yaml:"scaling,omitempty"`
+	NodeSelector        map[string]string  `yaml:"nodeSelector,omitempty"`
+	Tolerations         k8s.Tolerations    `yaml:"tolerations,omitempty"`
+	Resources           *k8s.Resources     `yaml:"resources,omitempty"`
 }
 
 type Metrics struct {
@@ -68,13 +67,13 @@ type FilterKubernetes struct {
 }
 
 type Fluentbit struct {
-	Metrics             *Metrics            `yaml:"metrics,omitempty"`
-	FilterKubernetes    *FilterKubernetes   `yaml:"filterKubernetes,omitempty"`
-	Image               *Image              `yaml:"image,omitempty"`
-	BufferStorageVolume *KubernetesStorage  `yaml:"bufferStorageVolume,omitempty"`
-	NodeSelector        map[string]string   `yaml:"nodeSelector,omitempty"`
-	Tolerations         []corev1.Toleration `yaml:"tolerations,omitempty"`
-	Resources           *k8s.Resources      `yaml:"resources,omitempty"`
+	Metrics             *Metrics           `yaml:"metrics,omitempty"`
+	FilterKubernetes    *FilterKubernetes  `yaml:"filterKubernetes,omitempty"`
+	Image               *Image             `yaml:"image,omitempty"`
+	BufferStorageVolume *KubernetesStorage `yaml:"bufferStorageVolume,omitempty"`
+	NodeSelector        map[string]string  `yaml:"nodeSelector,omitempty"`
+	Tolerations         k8s.Tolerations    `yaml:"tolerations,omitempty"`
+	Resources           *k8s.Resources     `yaml:"resources,omitempty"`
 }
 type Spec struct {
 	Fluentd                                      *Fluentd   `yaml:"fluentd"`
@@ -111,7 +110,7 @@ func New(spec *latest.LogCollection) *Logging {
 					Port: 8080,
 				},
 				DisablePvc:   true,
-				Tolerations:  []corev1.Toleration{},
+				Tolerations:  k8s.Tolerations{},
 				NodeSelector: map[string]string{},
 			},
 			Fluentbit: &Fluentbit{
@@ -123,7 +122,7 @@ func New(spec *latest.LogCollection) *Logging {
 					Tag:        "1.3.6",
 					PullPolicy: "IfNotPresent",
 				},
-				Tolerations:  []corev1.Toleration{},
+				Tolerations:  k8s.Tolerations{},
 				NodeSelector: map[string]string{},
 			},
 		},

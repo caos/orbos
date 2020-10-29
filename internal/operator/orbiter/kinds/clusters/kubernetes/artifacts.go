@@ -325,7 +325,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 						Resources: core.ResourceRequirements(*resources),
 					}},
 					NodeSelector: nodeselector,
-					Tolerations:  tolerations,
+					Tolerations:  tolerations.K8s(),
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{

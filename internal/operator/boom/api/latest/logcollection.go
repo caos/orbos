@@ -10,11 +10,11 @@ type LogCollection struct {
 	//@default: false
 	Deploy bool `json:"deploy" yaml:"deploy"`
 	// Fluentd Specs
-	Fluentd *Fluentd `json:"fluentd" yaml:"fluentd"`
+	Fluentd *Fluentd `json:"fluentd,omitempty" yaml:"fluentd,omitempty"`
 	// Fluentbit Specs
-	Fluentbit *Component `json:"fluentbit" yaml:"fluentbit"`
+	Fluentbit *Component `json:"fluentbit,omitempty" yaml:"fluentbit,omitempty"`
 	// Logging operator Specs
-	Operator *Component `json:"operator" yaml:"operator"`
+	Operator *Component `json:"operator,omitempty" yaml:"operator,omitempty"`
 }
 
 type Component struct {

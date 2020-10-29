@@ -34,7 +34,7 @@ func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*se
 		}
 		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
 
-		return v1Toolset, false, secrets, nil
+		return v1Toolset, true, secrets, nil
 	case "boom.caos.ch/v1":
 		desiredKind, secrets, err := latest.ParseToolset(desiredTree)
 		if err != nil {

@@ -22,11 +22,13 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) (*v1beta2.Toolset, map[string
 	if oldToolset.Spec != nil {
 		oldSpec := oldToolset.Spec
 		newSpec := &v1beta2.ToolsetSpec{
-			Boom: &latest.Boom{
-				Version: oldSpec.BoomVersion,
-			},
 			CurrentStateFolder: oldSpec.CurrentStateFolder,
 			ForceApply:         oldSpec.ForceApply,
+		}
+		if oldSpec.BoomVersion != "" {
+			newSpec.Boom = &latest.Boom{
+				Version: oldSpec.BoomVersion,
+			}
 		}
 
 		if oldSpec.PreApply != nil {

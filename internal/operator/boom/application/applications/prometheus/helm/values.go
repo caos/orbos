@@ -4,7 +4,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Service struct {
@@ -158,7 +157,7 @@ type PrometheusSpec struct {
 	ListenLocal                             bool                      `yaml:"listenLocal,omitempty"`
 	EnableAdminAPI                          bool                      `yaml:"enableAdminAPI,omitempty"`
 	Image                                   *Image                    `yaml:"image,omitempty"`
-	Tolerations                             []corev1.Toleration       `yaml:"tolerations,omitempty"`
+	Tolerations                             k8s.Tolerations           `yaml:"tolerations,omitempty"`
 	AlertingEndpoints                       []interface{}             `yaml:"alertingEndpoints,omitempty"`
 	ExternalLabels                          map[string]string         `yaml:"externalLabels,omitempty"`
 	ReplicaExternalLabelName                string                    `yaml:"replicaExternalLabelName,omitempty"`

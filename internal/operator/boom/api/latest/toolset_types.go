@@ -60,7 +60,7 @@ type Boom struct {
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 	//Use this registry to pull the BOOM image from
 	//@default: ghcr.io
-	CustomImageRegistry string
+	CustomImageRegistry string `json:"customImageRegistry,omitempty" yaml:"customImageRegistry,omitempty"`
 }
 
 type Toolset struct {
