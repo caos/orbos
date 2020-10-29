@@ -233,6 +233,14 @@ stream { {{ range $nat := .NATs }}
 		server {{ $nat.To }};
 	}
 
+	server {
+		listen {{ $nat.StatusPort }}
+		proxy_protocol: true
+		
+		location {{ $nat.StatusPath }}
+		proxy_pass {{ $nat.Upstream }}
+    }
+
 {{ range $from := $nat.From }}	server {
 		listen {{ $from }};
 
@@ -433,8 +441,11 @@ http {
 										nodeNatDesires.Firewall = common.ToFirewall(srcFW)
 										nodeNatDesires.Machine = machine
 										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
-											Whitelist: transport.Whitelist,
-											Name:      transport.Name,
+											Whitelist:  transport.Whitelist,
+											Name:       transport.Name,
+											StatusPort: "12345",
+											StatusPath: fmt.Sprintf("/%s_status", transport.Name),
+											Upstream:   fmt.Sprintf("%s://%s:%d%s", transport.HealthChecks.Protocol, "localhost", transport.BackendPort, transport.HealthChecks.Path),
 											From: []string{
 												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
@@ -519,10 +530,13 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name      string
-	Whitelist []*orbiter.CIDR
-	From      []string
-	To        string
+	Name       string
+	Whitelist  []*orbiter.CIDR
+	From       []string
+	To         string
+	StatusPort string
+	StatusPath string
+	Upstream   string
 }
 
 type LB struct {
