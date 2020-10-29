@@ -78,6 +78,7 @@ type Fluentbit struct {
 type Spec struct {
 	Fluentd                                      *Fluentd   `yaml:"fluentd"`
 	Fluentbit                                    *Fluentbit `yaml:"fluentbit"`
+	WatchNamespaces                                    []string `yaml:"watchNamespaces"`
 	ControlNamespace                             string     `yaml:"controlNamespace"`
 	EnableRecreateWorkloadOnImmutableFieldChange bool       `yaml:"enableRecreateWorkloadOnImmutableFieldChange"`
 	FlowConfigCheckDisabled                      bool       `yaml:"flowConfigCheckDisabled"`
@@ -105,6 +106,7 @@ func New(spec *latest.LogCollection) *Logging {
 			FlowConfigCheckDisabled:                      true,
 			EnableRecreateWorkloadOnImmutableFieldChange: true,
 			ControlNamespace:                             "caos-system",
+			WatchNamespaces: []string,
 			Fluentd: &Fluentd{
 				Metrics: &Metrics{
 					Port: 8080,
@@ -131,6 +133,8 @@ func New(spec *latest.LogCollection) *Logging {
 	if spec == nil {
 		return values
 	}
+
+	values.Spec.WatchNamespaces = spec.WatchNamespaces
 
 	if spec.Fluentd != nil {
 		values.Spec.Fluentd.Scaling = &Scaling{

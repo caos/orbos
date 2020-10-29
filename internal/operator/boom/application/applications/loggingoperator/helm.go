@@ -21,7 +21,7 @@ func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolse
 	// }
 
 	spec := toolset.LogCollection
-	if spec == nil {
+	if spec == nil || spec.Operator == nil {
 		return values
 	}
 

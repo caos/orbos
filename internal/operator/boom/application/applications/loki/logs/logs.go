@@ -27,17 +27,25 @@ func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {
 	}
 
 	ret := []interface{}{logging.New(toolsetCRDSpec.LogCollection)}
+
+	outputNames := toolsetCRDSpec.LogCollection.Outputs
+	clusterOutputNames := toolsetCRDSpec.LogCollection.ClusterOutputs
+	var outputs []*logging.Output
 	// output to loki
 	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy {
-		outputNames, clusterOutputNames, outputs := getLokiOutput(toolsetCRDSpec.LogsPersisting.ClusterOutput)
+		lokiOutputNames, lokiClusterOutputNames, lokiOutputs := getLokiOutput(toolsetCRDSpec.LogsPersisting.ClusterOutput)
+		outputNames = append(outputNames, lokiOutputNames...)
+		clusterOutputNames = append(clusterOutputNames, lokiClusterOutputNames...)
+		outputs = append(outputs, lokiOutputs...)
+	}
 
-		// add flows for each application
+	for _, output := range outputs {
+		ret = append(ret, output)
+	}
+
+	// add flows for each application
+	if len(outputNames) > 0 || len(clusterOutputNames) > 0 {
 		flows := getAllFlows(toolsetCRDSpec, outputNames, clusterOutputNames)
-
-		for _, output := range outputs {
-			ret = append(ret, output)
-		}
-
 		for _, flow := range flows {
 			ret = append(ret, flow)
 		}

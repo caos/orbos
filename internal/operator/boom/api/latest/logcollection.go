@@ -9,12 +9,18 @@ type LogCollection struct {
 	//Flag if tool should be deployed
 	//@default: false
 	Deploy bool `json:"deploy" yaml:"deploy"`
-	// Fluentd Specs
+	//Fluentd Specs
 	Fluentd *Fluentd `json:"fluentd,omitempty" yaml:"fluentd,omitempty"`
-	// Fluentbit Specs
+	//Fluentbit Specs
 	Fluentbit *Component `json:"fluentbit,omitempty" yaml:"fluentbit,omitempty"`
-	// Logging operator Specs
+	//Logging operator Specs
 	Operator *Component `json:"operator,omitempty" yaml:"operator,omitempty"`
+	//ClusterOutputs used by BOOM managed flows. BOOM managed Loki doesn't need to be specified
+	ClusterOutputs []string `json:"clusterOutputs,omitempty" yaml:"clusterOutputs,omitempty"`
+	//Outputs used by BOOM managed flows. BOOM managed Loki doesn't need to be specified
+	Outputs []string `json:"outputs,omitempty" yaml:"outputs,omitempty"`
+	//Watch namespaces other than caos-system
+	WatchNamespaces []string
 }
 
 type Component struct {
