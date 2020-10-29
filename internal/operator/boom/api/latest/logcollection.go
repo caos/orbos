@@ -19,7 +19,7 @@ type LogCollection struct {
 	ClusterOutputs []string `json:"clusterOutputs,omitempty" yaml:"clusterOutputs,omitempty"`
 	//Outputs used by BOOM managed flows. BOOM managed Loki doesn't need to be specified
 	Outputs []string `json:"outputs,omitempty" yaml:"outputs,omitempty"`
-	//Watch namespaces other than caos-system
+	//Watch these namespaces
 	WatchNamespaces []string
 }
 

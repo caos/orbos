@@ -46,11 +46,17 @@ func V1beta2Tov1(oldToolset *v1beta2.Toolset) (newToolset *latest.Toolset, secre
 		Deploy: oldToolset.Spec.LogCollection.Deploy,
 	}
 
-	if oldToolset.Spec.LogCollection.FluentdPVC != nil {
+	if oldToolset.Spec.LogCollection.Deploy {
 		newToolset.Spec.LogCollection.Fluentd = &latest.Fluentd{
 			Replicas: 1,
-			PVC:      oldToolset.Spec.LogCollection.FluentdPVC,
 		}
+	}
+
+	if oldToolset.Spec.LogCollection.FluentdPVC != nil {
+		if newToolset.Spec.LogCollection.Fluentd == nil {
+			newToolset.Spec.LogCollection.Fluentd = &latest.Fluentd{}
+		}
+		newToolset.Spec.LogCollection.Fluentd.PVC = oldToolset.Spec.LogCollection.FluentdPVC
 	}
 
 	if oldToolset.Spec.LogCollection.Resources == nil &&
