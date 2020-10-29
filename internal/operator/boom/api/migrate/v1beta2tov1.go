@@ -48,7 +48,8 @@ func V1beta2Tov1(oldToolset *v1beta2.Toolset) (newToolset *latest.Toolset, secre
 
 	if oldToolset.Spec.LogCollection.FluentdPVC != nil {
 		newToolset.Spec.LogCollection.Fluentd = &latest.Fluentd{
-			PVC: oldToolset.Spec.LogCollection.FluentdPVC,
+			Replicas: 1,
+			PVC:      oldToolset.Spec.LogCollection.FluentdPVC,
 		}
 	}
 
@@ -63,5 +64,6 @@ func V1beta2Tov1(oldToolset *v1beta2.Toolset) (newToolset *latest.Toolset, secre
 		Tolerations:  oldToolset.Spec.LogCollection.Tolerations,
 		Resources:    oldToolset.Spec.LogCollection.Resources,
 	}
+
 	return newToolset, nil
 }

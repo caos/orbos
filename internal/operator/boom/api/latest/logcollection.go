@@ -30,4 +30,6 @@ type Fluentd struct {
 	*Component `json:",inline" yaml:",inline"`
 	//Spec to define how the persistence should be handled
 	PVC *storage.Spec `json:"pvc,omitempty" yaml:"pvc,omitempty"`
+	//Replicas number of fluentd instances
+	Replicas int
 }

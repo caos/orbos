@@ -134,6 +134,9 @@ func New(spec *latest.LogCollection) *Logging {
 	}
 
 	if spec.Fluentd != nil {
+		values.Spec.Fluentd.Scaling = &Scaling{
+			Replicas: spec.Fluentd.Replicas,
+		}
 		if spec.Fluentd.NodeSelector != nil {
 			for k, v := range spec.Fluentd.NodeSelector {
 				values.Spec.Fluentd.NodeSelector[k] = v
@@ -167,12 +170,6 @@ func New(spec *latest.LogCollection) *Logging {
 			}
 			if spec.Fluentd.PVC.AccessModes != nil {
 				values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = spec.Fluentd.PVC.AccessModes
-			}
-		}
-
-		if spec.Fluentd.Replicas != 0 {
-			values.Spec.Fluentd.Scaling = &Scaling{
-				Replicas: spec.Fluentd.Replicas,
 			}
 		}
 	}

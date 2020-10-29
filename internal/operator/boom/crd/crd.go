@@ -2,7 +2,8 @@ package crd
 
 import (
 	"errors"
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/crd/config"
@@ -13,7 +14,7 @@ import (
 )
 
 const (
-	version name.Version = "v1beta2"
+	version name.Version = "latest"
 )
 
 type Crd struct {
@@ -71,7 +72,7 @@ func (c *Crd) GetBundle() *bundle.Bundle {
 	return c.bundle
 }
 
-func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetsv1beta2.Toolset) {
+func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetslatest.Toolset) {
 	if c.GetStatus() != nil {
 		return
 	}
