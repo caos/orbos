@@ -22,10 +22,14 @@ import (
 
 func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {
 
-	ret := make([]interface{}, 0)
+	if toolsetCRDSpec.LogCollection != nil || !toolsetCRDSpec.LogCollection.Deploy {
+		return nil
+	}
+
+	ret := []interface{}{logging.New(toolsetCRDSpec.LogCollection)}
 	// output to loki
-	if toolsetCRDSpec.LogsPersisting != nil {
-		outputNames, clusterOutputNames, outputs := getOutputs(toolsetCRDSpec.LogsPersisting.ClusterOutput)
+	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy {
+		outputNames, clusterOutputNames, outputs := getLokiOutput(toolsetCRDSpec.LogsPersisting.ClusterOutput)
 
 		// add flows for each application
 		flows := getAllFlows(toolsetCRDSpec, outputNames, clusterOutputNames)
@@ -37,11 +41,6 @@ func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {
 		for _, flow := range flows {
 			ret = append(ret, flow)
 		}
-	}
-
-	if len(ret) > 0 {
-		//logging resource so that fluentd and fluentbit are deployed
-		ret = append(ret, logging.New(toolsetCRDSpec.LogCollection))
 	}
 
 	return ret
@@ -120,7 +119,7 @@ func getLokiFlow(outputs []string, clusterOutputs []string) *logging.FlowConfig 
 	}
 }
 
-func getOutputs(clusterOutput bool) ([]string, []string, []*logging.Output) {
+func getLokiOutput(clusterOutput bool) ([]string, []string, []*logging.Output) {
 	outputURL := strings.Join([]string{"http://", info.GetName().String(), ".", info.GetNamespace(), ":3100"}, "")
 
 	conf := &logging.ConfigOutput{

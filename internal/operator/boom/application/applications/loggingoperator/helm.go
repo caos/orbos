@@ -3,9 +3,14 @@ package loggingoperator
 import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/helm"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/logs"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
 )
+
+func (l *LoggingOperator) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
+	return logs.GetAllResources(toolsetCRDSpec), nil
+}
 
 func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.LoggingOperator
