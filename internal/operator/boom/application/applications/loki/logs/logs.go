@@ -22,7 +22,7 @@ import (
 
 func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {
 
-	if toolsetCRDSpec.LogCollection != nil || !toolsetCRDSpec.LogCollection.Deploy {
+	if toolsetCRDSpec.LogCollection == nil || !toolsetCRDSpec.LogCollection.Deploy {
 		return nil
 	}
 
