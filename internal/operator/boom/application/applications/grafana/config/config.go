@@ -1,8 +1,9 @@
 package config
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"strings"
+
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 
 	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
 	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
@@ -32,7 +33,7 @@ type Config struct {
 	Ini                map[string]interface{}
 }
 
-func New(spec *toolsetsv1beta2.ToolsetSpec) *Config {
+func New(spec *toolsetslatest.ToolsetSpec) *Config {
 	dashboardProviders := make([]*Provider, 0)
 	if spec.Monitoring != nil && spec.Monitoring.DashboardProviders != nil {
 		for _, provider := range spec.Monitoring.DashboardProviders {

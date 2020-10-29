@@ -1,13 +1,14 @@
 package admin
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/admin"
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"strings"
 )
 
 func getSecretName() string {

@@ -1,9 +1,10 @@
 package auth
 
 import (
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Gitlab"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
+
+	gitlab "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func GetGitlabAuthConfig(spec *gitlab.Auth) (map[string]string, error) {

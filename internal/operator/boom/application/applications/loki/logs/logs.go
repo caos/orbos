@@ -3,7 +3,7 @@ package logs
 import (
 	"strings"
 
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/logs"
 
 	aglogs "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/logs"
@@ -20,7 +20,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func GetAllResources(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) []interface{} {
+func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {
 
 	ret := make([]interface{}, 0)
 	// output to loki
@@ -47,7 +47,7 @@ func GetAllResources(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) []interface{} 
 	return ret
 }
 
-func getAllFlows(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, outputNames []string, clusterOutputs []string) []*logging.Flow {
+func getAllFlows(toolsetCRDSpec *toolsetslatest.ToolsetSpec, outputNames []string, clusterOutputs []string) []*logging.Flow {
 
 	flows := make([]*logging.Flow, 0)
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&

@@ -1,13 +1,13 @@
 package loggingoperator
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/helm"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
 )
 
-func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
+func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.LoggingOperator
 	values := helm.DefaultValues(l.GetImageTags())
 
@@ -20,20 +20,20 @@ func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolse
 		return values
 	}
 
-	if spec.NodeSelector != nil {
-		for k, v := range spec.NodeSelector {
+	if spec.Operator.NodeSelector != nil {
+		for k, v := range spec.Operator.NodeSelector {
 			values.NodeSelector[k] = v
 		}
 	}
 
-	if spec.Tolerations != nil {
-		for _, tol := range spec.Tolerations {
+	if spec.Operator.Tolerations != nil {
+		for _, tol := range spec.Operator.Tolerations {
 			values.Tolerations = append(values.Tolerations, tol)
 		}
 	}
 
-	if spec.Resources != nil {
-		values.Resources = spec.Resources
+	if spec.Operator.Resources != nil {
+		values.Resources = spec.Operator.Resources
 	}
 
 	return values

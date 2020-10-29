@@ -1,7 +1,7 @@
 package prometheussystemdexporter
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 )
@@ -16,7 +16,7 @@ func (*prometheusSystemdExporter) GetName() name.Application {
 	return info.GetName()
 }
 
-func (*prometheusSystemdExporter) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+func (*prometheusSystemdExporter) Deploy(toolsetCRDSpec *toolsetslatest.ToolsetSpec) bool {
 	return toolsetCRDSpec.SystemdMetricsExporter != nil && toolsetCRDSpec.SystemdMetricsExporter.Deploy
 }
 

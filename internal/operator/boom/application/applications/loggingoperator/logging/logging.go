@@ -1,7 +1,8 @@
 package logging
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -18,7 +19,7 @@ type Config struct {
 	Replicas         int
 	NodeSelector     map[string]string
 	Tolerations      []corev1.Toleration
-	Fluentd          *v1beta2.Fluentd
+	Fluentd          *latest.Fluentd
 	FluentbitPVC     *Storage
 }
 
@@ -50,7 +51,9 @@ type Fluentd struct {
 	Scaling             *Scaling            `yaml:"scaling,omitempty"`
 	NodeSelector        map[string]string   `yaml:"nodeSelector,omitempty"`
 	Tolerations         []corev1.Toleration `yaml:"tolerations,omitempty"`
+	Resources           *k8s.Resources      `yaml:"resources,omitempty"`
 }
+
 type Metrics struct {
 	Port int `yaml:"port"`
 }
@@ -69,7 +72,9 @@ type Fluentbit struct {
 	FilterKubernetes    *FilterKubernetes   `yaml:"filterKubernetes,omitempty"`
 	Image               *Image              `yaml:"image,omitempty"`
 	BufferStorageVolume *KubernetesStorage  `yaml:"bufferStorageVolume,omitempty"`
+	NodeSelector        map[string]string   `yaml:"nodeSelector,omitempty"`
 	Tolerations         []corev1.Toleration `yaml:"tolerations,omitempty"`
+	Resources           *k8s.Resources      `yaml:"resources,omitempty"`
 }
 type Spec struct {
 	Fluentd                                      *Fluentd   `yaml:"fluentd"`
@@ -89,7 +94,7 @@ type Logging struct {
 	Spec       *Spec     `yaml:"spec"`
 }
 
-func New(spec *v1beta2.LogCollection) *Logging {
+func New(spec *latest.LogCollection) *Logging {
 	values := &Logging{
 		APIVersion: "logging.banzaicloud.io/v1beta1",
 		Kind:       "Logging",
@@ -105,8 +110,8 @@ func New(spec *v1beta2.LogCollection) *Logging {
 				Metrics: &Metrics{
 					Port: 8080,
 				},
-				Tolerations:  []corev1.Toleration{},
 				DisablePvc:   true,
+				Tolerations:  []corev1.Toleration{},
 				NodeSelector: map[string]string{},
 			},
 			Fluentbit: &Fluentbit{
@@ -118,7 +123,8 @@ func New(spec *v1beta2.LogCollection) *Logging {
 					Tag:        "1.3.6",
 					PullPolicy: "IfNotPresent",
 				},
-				Tolerations: []corev1.Toleration{},
+				Tolerations:  []corev1.Toleration{},
+				NodeSelector: map[string]string{},
 			},
 		},
 	}
@@ -127,65 +133,69 @@ func New(spec *v1beta2.LogCollection) *Logging {
 		return values
 	}
 
-	if spec.NodeSelector != nil {
-		for k, v := range spec.NodeSelector {
-			conf.NodeSelector[k] = v
+	if spec.Fluentd != nil {
+		if spec.Fluentd.NodeSelector != nil {
+			for k, v := range spec.Fluentd.NodeSelector {
+				values.Spec.Fluentd.NodeSelector[k] = v
+			}
 		}
-	}
 
-	if toolsetCRDSpec.LogCollection.Tolerations != nil {
-		for _, tol := range toolsetCRDSpec.LogCollection.Tolerations {
-			conf.Tolerations = append(conf.Tolerations, tol)
+		if spec.Fluentd.Tolerations != nil {
+			for _, tol := range spec.Fluentd.Tolerations {
+				values.Spec.Fluentd.Tolerations = append(spec.Fluentd.Tolerations, tol)
+			}
 		}
-	}
 
-	if toolsetCRDSpec.LogCollection.FluentdPVC != nil {
-		conf.FluentdPVC = &logging.Storage{
-			StorageClassName: toolsetCRDSpec.LogCollection.FluentdPVC.StorageClass,
-			Storage:          toolsetCRDSpec.LogCollection.FluentdPVC.Size,
+		if spec.Fluentd.Resources != nil {
+			values.Spec.Fluentd.Resources = spec.Fluentd.Resources
 		}
-		if toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes != nil {
-			conf.FluentdPVC.AccessModes = toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes
-		}
-	}
 
-	if conf.FluentdPVC != nil {
-		values.Spec.Fluentd.BufferStorageVolume = &KubernetesStorage{
-			Pvc: &Pvc{
-				PvcSpec: &PvcSpec{
-					StorageClassName: conf.FluentdPVC.StorageClassName,
-					Resources: &Resources{
-						Requests: &Requests{
-							Storage: conf.FluentdPVC.Storage,
+		if spec.Fluentd.PVC != nil {
+			values.Spec.Fluentd.DisablePvc = false
+			values.Spec.Fluentd.BufferStorageVolume = &KubernetesStorage{
+				Pvc: &Pvc{
+					PvcSpec: &PvcSpec{
+						StorageClassName: spec.Fluentd.PVC.StorageClass,
+						Resources: &Resources{
+							Requests: &Requests{
+								Storage: spec.Fluentd.PVC.Size,
+							},
 						},
+						AccessModes: []string{"ReadWriteOnce"},
 					},
 				},
-			},
+			}
+			if spec.Fluentd.PVC.AccessModes != nil {
+				values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = spec.Fluentd.PVC.AccessModes
+			}
 		}
-		values.Spec.Fluentd.DisablePvc = false
 
-		if conf.FluentdPVC.AccessModes != nil {
-			values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = conf.FluentdPVC.AccessModes
-		} else {
-			values.Spec.Fluentd.BufferStorageVolume.Pvc.PvcSpec.AccessModes = []string{"ReadWriteOnce"}
-		}
-	}
-
-	if conf.NodeSelector != nil {
-		for k, v := range conf.NodeSelector {
-			values.Spec.Fluentd.NodeSelector[k] = v
+		if spec.Fluentd.Replicas != 0 {
+			values.Spec.Fluentd.Scaling = &Scaling{
+				Replicas: spec.Fluentd.Replicas,
+			}
 		}
 	}
 
-	if conf.Tolerations != nil {
-		values.Spec.Fluentbit.Tolerations = append(values.Spec.Fluentbit.Tolerations, conf.Tolerations...)
-		values.Spec.Fluentd.Tolerations = append(values.Spec.Fluentd.Tolerations, conf.Tolerations...)
+	if spec.Fluentbit == nil {
+		return values
 	}
 
-	if conf.Replicas != 0 {
-		values.Spec.Fluentd.Scaling = &Scaling{
-			Replicas: conf.Replicas,
+	if spec.Fluentbit.Resources != nil {
+		values.Spec.Fluentbit.Resources = spec.Fluentbit.Resources
+	}
+
+	if spec.Fluentbit.NodeSelector != nil {
+		for k, v := range spec.Fluentbit.NodeSelector {
+			values.Spec.Fluentbit.NodeSelector[k] = v
 		}
 	}
+
+	if spec.Fluentbit.Tolerations != nil {
+		for _, tol := range spec.Fluentbit.Tolerations {
+			values.Spec.Fluentbit.Tolerations = append(spec.Fluentbit.Tolerations, tol)
+		}
+	}
+
 	return values
 }

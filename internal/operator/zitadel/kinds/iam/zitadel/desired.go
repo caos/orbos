@@ -1,7 +1,7 @@
 package zitadel
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"

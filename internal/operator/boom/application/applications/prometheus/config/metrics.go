@@ -1,7 +1,7 @@
 package config
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	ambassadormetrics "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/metrics"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/apiserver"
 	argocdmetrics "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/metrics"
@@ -18,7 +18,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *Config {
+func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetslatest.ToolsetSpec) *Config {
 	servicemonitors := make([]*servicemonitor.Config, 0)
 
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&

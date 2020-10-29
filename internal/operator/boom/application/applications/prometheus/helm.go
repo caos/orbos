@@ -6,7 +6,7 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
@@ -18,7 +18,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1beta2.ToolsetSpec) interface{} {
+func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *latest.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
 		monitor.Error(err)

@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion string, boomSpec *v1beta2.Boom) error {
+func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion string, boomSpec *latest.Boom) error {
 
 	var (
 		tolerations  k8s.Tolerations
