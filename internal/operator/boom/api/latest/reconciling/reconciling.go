@@ -1,10 +1,10 @@
 package reconciling
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/network"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/repository"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/network"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/repository"
 	"github.com/caos/orbos/internal/secret"
 )
 

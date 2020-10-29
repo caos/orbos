@@ -1,4 +1,4 @@
-package v1beta2
+package latest
 
 //Apply: When the folder contains a kustomization.yaml-file the subfolders will be ignored. Otherwise all files inclusive the files contained by the subfolder will be applied if deploy=true, with deploy=false all will be deleted.
 type Apply struct {

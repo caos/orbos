@@ -1,4 +1,4 @@
-package v1beta2
+package latest
 
 type MetricsServer struct {
 	//Flag if tool should be deployed

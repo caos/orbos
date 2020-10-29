@@ -1,6 +1,6 @@
-package v1beta2
+package latest
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+import "github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 
 type SystemdMetricsExporter struct {
 	//Flag if tool should be deployed

@@ -3,10 +3,8 @@ package logs
 import (
 	"strings"
 
-	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/logs"
-	corev1 "k8s.io/api/core/v1"
-
 	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/logs"
 
 	aglogs "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/logs"
 	glogs "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/logs"
@@ -43,44 +41,10 @@ func GetAllResources(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) []interface{} 
 
 	if len(ret) > 0 {
 		//logging resource so that fluentd and fluentbit are deployed
-		ret = append(ret, getLogging(toolsetCRDSpec))
+		ret = append(ret, logging.New(toolsetCRDSpec.LogCollection))
 	}
 
 	return ret
-}
-
-func getLogging(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *logging.Logging {
-	conf := &logging.Config{
-		Name:             "logging",
-		Namespace:        "caos-system",
-		ControlNamespace: "caos-system",
-		NodeSelector:     map[string]string{},
-		Tolerations:      []corev1.Toleration{},
-	}
-
-	if toolsetCRDSpec.LogCollection.NodeSelector != nil {
-		for k, v := range toolsetCRDSpec.LogCollection.NodeSelector {
-			conf.NodeSelector[k] = v
-		}
-	}
-
-	if toolsetCRDSpec.LogCollection.FluentdPVC != nil {
-		conf.FluentdPVC = &logging.Storage{
-			StorageClassName: toolsetCRDSpec.LogCollection.FluentdPVC.StorageClass,
-			Storage:          toolsetCRDSpec.LogCollection.FluentdPVC.Size,
-		}
-		if toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes != nil {
-			conf.FluentdPVC.AccessModes = toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes
-		}
-	}
-
-	if toolsetCRDSpec.LogCollection.Tolerations != nil {
-		for _, tol := range toolsetCRDSpec.LogCollection.Tolerations {
-			conf.Tolerations = append(conf.Tolerations, tol)
-		}
-	}
-
-	return logging.New(conf)
 }
 
 func getAllFlows(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, outputNames []string, clusterOutputs []string) []*logging.Flow {

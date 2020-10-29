@@ -2,6 +2,7 @@ package api
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/common"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
@@ -10,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ParseToolset(desiredTree *tree.Tree) (*v1beta2.Toolset, bool, map[string]*secret.Secret, error) {
+func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*secret.Secret, error) {
 	desiredKindCommon := common.New()
 	if err := desiredTree.Original.Decode(desiredKindCommon); err != nil {
 		return nil, false, nil, errors.Wrap(err, "parsing desired state failed")
@@ -22,10 +23,20 @@ func ParseToolset(desiredTree *tree.Tree) (*v1beta2.Toolset, bool, map[string]*s
 		if err != nil {
 			return nil, false, nil, err
 		}
-		new, secrets := migrate.V1beta1Tov1beta2(old)
-		return new, true, secrets, err
+		v1beta2Toolset, _ := migrate.V1beta1Tov1beta2(old)
+		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
+
+		return v1Toolset, true, secrets, err
 	case "boom.caos.ch/v1beta2":
-		desiredKind, secrets, err := v1beta2.ParseToolset(desiredTree)
+		v1beta2Toolset, _, err := v1beta2.ParseToolset(desiredTree)
+		if err != nil {
+			return nil, false, nil, err
+		}
+		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
+
+		return v1Toolset, false, secrets, nil
+	case "boom.caos.ch/v1":
+		desiredKind, secrets, err := latest.ParseToolset(desiredTree)
 		if err != nil {
 			return nil, false, nil, err
 		}

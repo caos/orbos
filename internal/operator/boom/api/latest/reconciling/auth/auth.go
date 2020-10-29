@@ -1,10 +1,10 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/github"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/gitlab"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/google"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/oidc"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/github"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/gitlab"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/oidc"
 	"github.com/caos/orbos/internal/secret"
 )
 

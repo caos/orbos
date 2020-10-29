@@ -1,6 +1,9 @@
 package logging
 
-import corev1 "k8s.io/api/core/v1"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	corev1 "k8s.io/api/core/v1"
+)
 
 type Storage struct {
 	StorageClassName string
@@ -15,7 +18,7 @@ type Config struct {
 	Replicas         int
 	NodeSelector     map[string]string
 	Tolerations      []corev1.Toleration
-	FluentdPVC       *Storage
+	Fluentd          *v1beta2.Fluentd
 	FluentbitPVC     *Storage
 }
 
@@ -86,18 +89,18 @@ type Logging struct {
 	Spec       *Spec     `yaml:"spec"`
 }
 
-func New(conf *Config) *Logging {
+func New(spec *v1beta2.LogCollection) *Logging {
 	values := &Logging{
 		APIVersion: "logging.banzaicloud.io/v1beta1",
 		Kind:       "Logging",
 		Metadata: &Metadata{
-			Name:      conf.Name,
-			Namespace: conf.Namespace,
+			Name:      "logging",
+			Namespace: "caos-system",
 		},
 		Spec: &Spec{
 			FlowConfigCheckDisabled:                      true,
 			EnableRecreateWorkloadOnImmutableFieldChange: true,
-			ControlNamespace:                             conf.ControlNamespace,
+			ControlNamespace:                             "caos-system",
 			Fluentd: &Fluentd{
 				Metrics: &Metrics{
 					Port: 8080,
@@ -119,6 +122,33 @@ func New(conf *Config) *Logging {
 			},
 		},
 	}
+
+	if spec == nil {
+		return values
+	}
+
+	if spec.NodeSelector != nil {
+		for k, v := range spec.NodeSelector {
+			conf.NodeSelector[k] = v
+		}
+	}
+
+	if toolsetCRDSpec.LogCollection.Tolerations != nil {
+		for _, tol := range toolsetCRDSpec.LogCollection.Tolerations {
+			conf.Tolerations = append(conf.Tolerations, tol)
+		}
+	}
+
+	if toolsetCRDSpec.LogCollection.FluentdPVC != nil {
+		conf.FluentdPVC = &logging.Storage{
+			StorageClassName: toolsetCRDSpec.LogCollection.FluentdPVC.StorageClass,
+			Storage:          toolsetCRDSpec.LogCollection.FluentdPVC.Size,
+		}
+		if toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes != nil {
+			conf.FluentdPVC.AccessModes = toolsetCRDSpec.LogCollection.FluentdPVC.AccessModes
+		}
+	}
+
 	if conf.FluentdPVC != nil {
 		values.Spec.Fluentd.BufferStorageVolume = &KubernetesStorage{
 			Pvc: &Pvc{

@@ -1,10 +1,10 @@
 package auth
 
 import (
-	generic "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Generic"
-	github "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Github"
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Gitlab"
-	google "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Google"
+	generic "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Generic"
+	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
+	gitlab "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
+	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
 	"github.com/caos/orbos/internal/secret"
 )
 
