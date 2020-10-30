@@ -227,25 +227,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
 	worker_connections  4096;  ## Default: 1024
 }
-
-http { {{ range $nat := .NATs }}
-    upstream {{ $nat.Name }} {
-        server {{ $nat.To }};
-    }
-
-    server {
-		server_name {{ $nat.StatusPath }};
-		listen {{ $nat.StatusPort }} proxy_protocol;
-		
-		location /{{ $nat.StatusPath }} {
-			proxy_pass {{ $nat.Upstream }};
-		}
-	}
-{{ end }}}
-
 stream { {{ range $nat := .NATs }}
 	upstream {{ $nat.Name }} {
 		server {{ $nat.To }};
+	}
+
+	server {
+		listen {{ $nat.StatusPort }};
+		proxy_protocol on;
+		proxy_pass {{ $nat.Name }};
 	}
 
 {{ range $from := $nat.From }}	server {
@@ -447,12 +437,17 @@ http {
 										}
 										nodeNatDesires.Firewall = common.ToFirewall(srcFW)
 										nodeNatDesires.Machine = machine
+
+										//only to get a 5 digits port
+										proxyPort := fmt.Sprintf("40%d", transport.FrontendPort)
+										if transport.FrontendPort > 100 {
+											proxyPort = fmt.Sprintf("400%d", transport.FrontendPort)
+										}
+
 										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
-											Whitelist:  transport.Whitelist,
-											Name:       transport.Name,
-											StatusPort: "12345",
-											StatusPath: fmt.Sprintf("%s_status", transport.Name),
-											Upstream:   fmt.Sprintf("%s://%s:%d%s", transport.HealthChecks.Protocol, "localhost", transport.BackendPort, transport.HealthChecks.Path),
+											Whitelist: transport.Whitelist,
+											Name:      transport.Name,
+											ProxyPort: proxyPort,
 											From: []string{
 												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
@@ -537,13 +532,11 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name       string
-	Whitelist  []*orbiter.CIDR
-	From       []string
-	To         string
-	StatusPort string
-	StatusPath string
-	Upstream   string
+	Name      string
+	Whitelist []*orbiter.CIDR
+	From      []string
+	To        string
+	ProxyPort string
 }
 
 type LB struct {
