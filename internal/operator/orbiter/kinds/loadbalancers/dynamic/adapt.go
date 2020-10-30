@@ -235,7 +235,7 @@ stream { {{ range $nat := .NATs }}
 	}
 
 	server {
-		listen {{ $nat.StatusPort }};
+		listen {{ $nat.ProxyPort }};
 		proxy_protocol on;
 		proxy_pass {{ $nat.Name }};
 	}
@@ -442,7 +442,7 @@ http {
 
 										//only to get a 5 digits port
 										proxyPort := fmt.Sprintf("40%d", transport.FrontendPort)
-										if transport.FrontendPort > 100 {
+										if transport.FrontendPort < 100 {
 											proxyPort = fmt.Sprintf("400%d", transport.FrontendPort)
 										}
 
