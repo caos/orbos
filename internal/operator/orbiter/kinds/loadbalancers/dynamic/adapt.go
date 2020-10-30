@@ -441,9 +441,12 @@ http {
 										nodeNatDesires.Machine = machine
 
 										//only to get a 5 digits port
-										proxyPort := fmt.Sprintf("40%d", transport.FrontendPort)
-										if transport.FrontendPort < 100 {
-											proxyPort = fmt.Sprintf("400%d", transport.FrontendPort)
+										proxyPort := fmt.Sprintf("4%d", transport.FrontendPort)
+										if transport.FrontendPort < 1000 {
+											proxyPort = fmt.Sprintf("40%d", transport.FrontendPort)
+											if transport.FrontendPort < 100 {
+												proxyPort = fmt.Sprintf("400%d", transport.FrontendPort)
+											}
 										}
 
 										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
