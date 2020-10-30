@@ -228,18 +228,25 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 	worker_connections  4096;  ## Default: 1024
 }
 
+http { {{ range $nat := .NATs }}
+    upstream {{ $nat.Name }} {
+        server {{ $nat.To }};
+    }
+
+    server {
+		server_name {{ $nat.StatusPath }};
+		listen {{ $nat.StatusPort }} proxy_protocol;
+		
+		location /{{ $nat.StatusPath }} {
+			proxy_pass {{ $nat.Upstream }};
+		}
+	}
+{{ end }}}
+
 stream { {{ range $nat := .NATs }}
 	upstream {{ $nat.Name }} {
 		server {{ $nat.To }};
 	}
-
-	server {
-		listen {{ $nat.StatusPort }}
-		proxy_protocol: true
-		
-		location {{ $nat.StatusPath }}
-		proxy_pass {{ $nat.Upstream }}
-    }
 
 {{ range $from := $nat.From }}	server {
 		listen {{ $from }};
@@ -444,7 +451,7 @@ http {
 											Whitelist:  transport.Whitelist,
 											Name:       transport.Name,
 											StatusPort: "12345",
-											StatusPath: fmt.Sprintf("/%s_status", transport.Name),
+											StatusPath: fmt.Sprintf("%s_status", transport.Name),
 											Upstream:   fmt.Sprintf("%s://%s:%d%s", transport.HealthChecks.Protocol, "localhost", transport.BackendPort, transport.HealthChecks.Path),
 											From: []string{
 												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
