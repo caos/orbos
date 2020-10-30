@@ -8,6 +8,8 @@ import (
 type Config struct {
 	Prefix                  string
 	Namespace               string
+	MonitorLabels           map[string]string
+	RuleLabels              map[string]string
 	ServiceMonitors         []*servicemonitor.Config
 	ReplicaCount            int
 	StorageSpec             *StorageSpec

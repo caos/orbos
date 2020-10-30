@@ -3,8 +3,6 @@ package static
 import (
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/tree"
@@ -101,8 +99,6 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID strin
 	if err := machinesSvc.updateKeys(); err != nil {
 		return nil, err
 	}
-
-	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
 
 	return core.ListMachines(machinesSvc)
 }

@@ -44,6 +44,8 @@ type ToolsetSpec struct {
 	Prometheus *Prometheus `json:"prometheus,omitempty" yaml:"prometheus,omitempty"`
 	//Spec for the Loki instance
 	Loki *Loki `json:"loki,omitempty" yaml:"loki,omitempty"`
+	//Spec for Metrics-Server
+	MetricsServer *MetricsServer `json:"metrics-server,omitempty" yaml:"metrics-server,omitempty"`
 }
 
 type Toolset struct {

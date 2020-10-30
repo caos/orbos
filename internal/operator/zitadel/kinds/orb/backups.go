@@ -1,7 +1,7 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel"
+	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -19,6 +19,6 @@ func BackupListFunc() func(monitor mntr.Monitor, desiredTree *tree.Tree) (string
 			monitor = monitor.Verbose()
 		}
 
-		return zitadel.BackupListFunc()(monitor, desiredKind.IAM)
+		return iam.GetBackupList(monitor, desiredKind.IAM)
 	}
 }

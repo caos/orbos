@@ -29,6 +29,33 @@ type Grafana struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
+func (g *Grafana) InitSecrets() {
+	if g.Admin == nil {
+		g.Admin = &admin.Admin{}
+	}
+	g.Admin.InitSecrets()
+	if g.Auth == nil {
+		g.Auth = &auth.Auth{}
+	}
+	g.Auth.InitSecrets()
+}
+
+func (m *Grafana) IsZero() bool {
+	if !m.Deploy &&
+		(m.Admin == nil || m.Admin.IsZero()) &&
+		(m.Auth == nil || m.Auth.IsZero()) &&
+		m.Datasources == nil &&
+		m.DashboardProviders == nil &&
+		m.Storage == nil &&
+		m.Network == nil &&
+		m.Plugins == nil &&
+		m.NodeSelector == nil {
+		return true
+	}
+
+	return false
+}
+
 type Datasource struct {
 	//Name of the datasource
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`

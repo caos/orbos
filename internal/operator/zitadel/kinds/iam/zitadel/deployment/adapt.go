@@ -21,7 +21,7 @@ import (
 
 const (
 	//zitadelImage can be found in github.com/caos/zitadel repo
-	zitadelImage = "ghcr.io/caos/zitadel:0.89.1"
+	zitadelImage = "ghcr.io/caos/zitadel:0.100.3"
 )
 
 func AdaptFunc(
@@ -30,7 +30,6 @@ func AdaptFunc(
 	labels map[string]string,
 	replicaCount int,
 	affinity *k8s.Affinity,
-	imagePullSecret string,
 	cmName string,
 	certPath string,
 	secretName string,

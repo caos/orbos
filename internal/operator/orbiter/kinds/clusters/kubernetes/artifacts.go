@@ -26,37 +26,14 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 
 	monitor.Debug("Ensuring common artifacts")
 
-	if err := client.ApplyNamespace(&core.Namespace{
+	return client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
 				"name": "caos-system",
 			},
 		},
-	}); err != nil {
-		return err
-	}
-
-	if err := client.ApplySecret(&core.Secret{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "public-github-packages",
-			Namespace: "caos-system",
-		},
-		Type: core.SecretTypeDockerConfigJson,
-		StringData: map[string]string{
-			core.DockerConfigJsonKey: `{
-		"auths": {
-				"docker.pkg.github.com": {
-						"auth": "aW1ncHVsbGVyOmU2NTAxMWI3NDk1OGMzOGIzMzcwYzM5Zjg5MDlkNDE5OGEzODBkMmM="
-				}
-		}
-}`,
-		},
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
@@ -178,13 +155,10 @@ func EnsureZitadelArtifacts(
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "zitadel",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "zitadel",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -332,13 +306,10 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "boom",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -441,13 +412,10 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 					},
 				},
 				Spec: core.PodSpec{
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           "docker.pkg.github.com/caos/orbos/orbos:" + orbiterversion,
+						Image:           "ghcr.io/caos/orbos:" + orbiterversion,
 						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",

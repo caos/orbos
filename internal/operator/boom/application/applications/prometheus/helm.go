@@ -25,13 +25,13 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 		return nil
 	}
 
-	_, getSecretErr := clientgo.GetSecret("grafana-cloud", "caos-system")
+	_, getSecretErr := clientgo.GetSecret("grafana-cloud", info.GetNamespace())
 	ingestionSecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
 	if getSecretErr != nil && !ingestionSecretAbsent {
 		monitor.Info("Not sending telemetry data to MISSION as secret grafana-cloud is missing in namespace caos-system")
 	}
 
-	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), toolsetCRDSpec)
+	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), info.GetNamespace(), toolsetCRDSpec)
 
 	values := helm.DefaultValues(p.GetImageTags())
 	if config != nil {
@@ -153,16 +153,17 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *v1be
 
 	promSelectorLabels := labels.GetPromSelector(info.GetInstanceName())
 	promSelector := &helm.Selector{MatchLabels: promSelectorLabels}
+	resourceLabels := labels.GetRuleLabels(info.GetInstanceName(), info.GetName())
 
 	values.Prometheus.PrometheusSpec.RuleSelector = promSelector
 	values.Prometheus.PrometheusSpec.PodMonitorSelector = promSelector
 	values.Prometheus.PrometheusSpec.ServiceMonitorSelector = promSelector
 
-	rules, err := helm.GetDefaultRules(promSelectorLabels)
+	rules, err := helm.GetDefaultRules(resourceLabels)
 	if err != nil {
 		panic(err)
 	}
-	values.DefaultRules.Labels = promSelectorLabels
+	values.DefaultRules.Labels = resourceLabels
 	values.KubeTargetVersionOverride = version
 	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
 

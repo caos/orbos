@@ -63,12 +63,12 @@ func DefaultValues(imageTags map[string]string) *Values {
 			RemoteWrite: nil,
 			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
-					corev1.ResourceCPU:    resource.MustParse("1"),
-					corev1.ResourceMemory: resource.MustParse("1Gi"),
+					corev1.ResourceCPU:    resource.MustParse("600m"),
+					corev1.ResourceMemory: resource.MustParse("4Gi"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("300m"),
-					corev1.ResourceMemory: resource.MustParse("300Mi"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
 				},
 			},
 		},
@@ -105,8 +105,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 				PspEnabled: true,
 			},
 		},
-		Alertmanager: &DisabledTool{
-			Enabled: false,
+		Alertmanager: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 		Grafana: &DisabledTool{
 			Enabled: false,

@@ -43,6 +43,35 @@ type Reconciling struct {
 	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
 }
 
+func (r *Reconciling) InitSecrets() {
+	if r.Auth == nil {
+		r.Auth = &auth.Auth{}
+	}
+	r.Auth.InitSecrets()
+}
+
+func (r *Reconciling) IsZero() bool {
+	if !r.Deploy &&
+		r.CustomImage == nil &&
+		r.Network == nil &&
+		(r.Auth == nil || r.Auth.IsZero()) &&
+		r.Rbac == nil &&
+		r.Repositories == nil &&
+		r.Credentials == nil &&
+		r.KnownHosts == nil &&
+		r.NodeSelector == nil &&
+		r.Tolerations == nil &&
+		r.Dex == nil &&
+		r.RepoServer == nil &&
+		r.Redis == nil &&
+		r.Controller == nil &&
+		r.Server == nil {
+		return true
+	}
+
+	return false
+}
+
 type CommonComponent struct {
 	//Resource requirements
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
@@ -68,8 +97,6 @@ type Rbac struct {
 type CustomImage struct {
 	//Flag if custom argocd-image should get used with gopass
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	//Name of used imagePullSecret to pull customImage
-	ImagePullSecret string `json:"imagePullSecret,omitempty" yaml:"imagePullSecret,omitempty"`
 	//List of gopass stores which should get cloned by argocd on startup
 	GopassStores []*GopassStore `json:"gopassStores,omitempty" yaml:"gopassStores,omitempty"`
 }
