@@ -9,8 +9,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/caos/orbos)](https://goreportcard.com/report/github.com/caos/orbos)
 [![codecov](https://codecov.io/gh/caos/orbos/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/orbos)
 
-> This project is in alpha state. The API will continue breaking until version 1.0.0 is released
-
 ## [ORBOS explained](docs/explained.md)
 
 ### [ORBITER](docs/orbiter/orbiter.md)
