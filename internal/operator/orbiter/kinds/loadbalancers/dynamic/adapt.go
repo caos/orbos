@@ -234,12 +234,6 @@ stream { {{ range $nat := .NATs }}
 		server {{ $nat.To }};
 	}
 
-	server {
-		listen {{ $nat.ProxyPort }};
-		proxy_protocol on;
-		proxy_pass {{ $nat.Name }};
-	}
-
 {{ range $from := $nat.From }}	server {
 		listen {{ $from }};
 
@@ -440,19 +434,9 @@ http {
 										nodeNatDesires.Firewall = common.ToFirewall(srcFW)
 										nodeNatDesires.Machine = machine
 
-										//only to get a 5 digits port
-										proxyPort := fmt.Sprintf("4%d", transport.FrontendPort)
-										if transport.FrontendPort < 1000 {
-											proxyPort = fmt.Sprintf("40%d", transport.FrontendPort)
-											if transport.FrontendPort < 100 {
-												proxyPort = fmt.Sprintf("400%d", transport.FrontendPort)
-											}
-										}
-
 										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
 											Whitelist: transport.Whitelist,
 											Name:      transport.Name,
-											ProxyPort: proxyPort,
 											From: []string{
 												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
@@ -564,7 +548,6 @@ type NAT struct {
 	Whitelist []*orbiter.CIDR
 	From      []string
 	To        string
-	ProxyPort string
 }
 
 type LB struct {
