@@ -35,8 +35,7 @@ func V1beta1Tov1beta2(old *argocd.Argocd) *reconciling.Reconciling {
 	}
 	if old.CustomImage != nil {
 		new.CustomImage = &reconciling.CustomImage{
-			Enabled:         old.CustomImage.Enabled,
-			ImagePullSecret: old.CustomImage.ImagePullSecret,
+			Enabled: old.CustomImage.Enabled,
 		}
 		if old.CustomImage.GopassStores != nil {
 			stores := make([]*reconciling.GopassStore, 0)

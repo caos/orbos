@@ -18,7 +18,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func ScrapeMetricsCrdsConfig(instanceName string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *Config {
+func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *Config {
 	servicemonitors := make([]*servicemonitor.Config, 0)
 
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
@@ -78,8 +78,9 @@ func ScrapeMetricsCrdsConfig(instanceName string, toolsetCRDSpec *toolsetsv1beta
 
 		prom := &Config{
 			Prefix:                  "",
-			Namespace:               "caos-system",
+			Namespace:               namespace,
 			MonitorLabels:           labels.GetMonitorSelectorLabels(instanceName),
+			RuleLabels:              labels.GetRuleSelectorLabels(instanceName),
 			ServiceMonitors:         servicemonitors,
 			AdditionalScrapeConfigs: getScrapeConfigs(),
 		}

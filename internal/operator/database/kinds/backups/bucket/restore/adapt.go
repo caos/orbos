@@ -26,7 +26,6 @@ func ApplyFunc(
 	secretName string,
 	secretKey string,
 	version string,
-	imagePullSecretName string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -67,7 +66,7 @@ func ApplyFunc(
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
 						Name:  jobName,
-						Image: "docker.pkg.github.com/caos/orbos/crbackup:" + version,
+						Image: "ghcr.io/caos/crbackup:" + version,
 						Command: []string{
 							"/bin/bash",
 							"-c",
@@ -98,9 +97,6 @@ func ApplyFunc(
 								SecretName: secretName,
 							},
 						},
-					}},
-					ImagePullSecrets: []corev1.LocalObjectReference{{
-						Name: imagePullSecretName,
 					}},
 				},
 			},

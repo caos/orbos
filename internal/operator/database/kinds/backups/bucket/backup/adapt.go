@@ -30,7 +30,6 @@ func AdaptFunc(
 	tolerations []corev1.Toleration,
 	features []string,
 	version string,
-	imagePullSecretName string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -71,7 +70,7 @@ func AdaptFunc(
 				Tolerations:   tolerations,
 				Containers: []corev1.Container{{
 					Name:  name,
-					Image: "docker.pkg.github.com/caos/orbos/crbackup:" + version,
+					Image: "ghcr.io/caos/crbackup:" + version,
 					Command: []string{
 						"/bin/bash",
 						"-c",
@@ -102,9 +101,6 @@ func AdaptFunc(
 							SecretName: secretName,
 						},
 					},
-				}},
-				ImagePullSecrets: []corev1.LocalObjectReference{{
-					Name: imagePullSecretName,
 				}},
 			},
 		},

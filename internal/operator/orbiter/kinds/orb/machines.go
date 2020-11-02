@@ -1,6 +1,7 @@
 package orb
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/mntr"
@@ -25,7 +26,26 @@ func ListMachines() MachinesFunc {
 		machines = make(map[string]infra.Machine, 0)
 		machineIDs = make([]string, 0)
 
+		for clusterID, clusterTree := range desiredKind.Clusters {
+			clusterCurrent := &tree.Tree{}
+			_, _, _, _, _, err := clusters.GetQueryAndDestroyFuncs(
+				monitor,
+				clusterID,
+				clusterTree,
+				true,
+				false,
+				clusterCurrent,
+				nil,
+				nil,
+				nil,
+			)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
 		for provID, providerTree := range desiredKind.Providers {
+
 			providerMachines, err := providers.ListMachines(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				providerTree,
@@ -42,6 +62,7 @@ func ListMachines() MachinesFunc {
 				machines[machineID] = providerMachine
 			}
 		}
+
 		return machineIDs, machines, nil
 	}
 }

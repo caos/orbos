@@ -22,37 +22,14 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 
 	monitor.Debug("Ensuring common artifacts")
 
-	if err := client.ApplyNamespace(&core.Namespace{
+	return client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
 				"name": "caos-system",
 			},
 		},
-	}); err != nil {
-		return err
-	}
-
-	if err := client.ApplySecret(&core.Secret{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "public-github-packages",
-			Namespace: "caos-system",
-		},
-		Type: core.SecretTypeDockerConfigJson,
-		StringData: map[string]string{
-			core.DockerConfigJsonKey: `{
-		"auths": {
-				"docker.pkg.github.com": {
-						"auth": "aW1ncHVsbGVyOmU2NTAxMWI3NDk1OGMzOGIzMzcwYzM5Zjg5MDlkNDE5OGEzODBkMmM="
-				}
-		}
-}`,
-		},
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
@@ -174,13 +151,10 @@ func EnsureDatabaseArtifacts(
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "database-operator",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "database",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "database", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -324,13 +298,10 @@ func EnsureNetworkingArtifacts(
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "networking-operator",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "networking",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "networking", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{

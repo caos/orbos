@@ -45,6 +45,8 @@ type ToolsetSpec struct {
 	MetricsPersisting *MetricsPersisting `json:"metricsPersisting,omitempty" yaml:"metricsPersisting,omitempty"`
 	//Spec for the Loki instance
 	LogsPersisting *LogsPersisting `json:"logsPersisting,omitempty" yaml:"logsPersisting,omitempty"`
+	//Spec for Metrics-Server
+	MetricsServer *MetricsServer `json:"metricsServer,omitempty" yaml:"metricsServer,omitempty"`
 }
 
 type Boom struct {

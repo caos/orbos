@@ -168,7 +168,7 @@ type Values struct {
 	NameOverride              string                                           `yaml:"nameOverride,omitempty"`
 	FullnameOverride          string                                           `yaml:"fullnameOverride,omitempty"`
 	CommonLabels              map[string]string                                `yaml:"commonLabels,omitempty"`
-	Alertmanager              *DisabledTool                                    `yaml:"alertmanager,omitempty"`
+	Alertmanager              *DisabledToolServicePerReplica                   `yaml:"alertmanager,omitempty"`
 	Grafana                   *GrafanaValues                                   `yaml:"grafana,omitempty"`
 	KubeAPIServer             *DisabledTool                                    `yaml:"kubeApiServer,omitempty"`
 	Kubelet                   *DisabledTool                                    `yaml:"kubelet,omitempty"`
@@ -183,7 +183,7 @@ type Values struct {
 	NodeExporter              *DisabledTool                                    `yaml:"nodeExporter,omitempty"`
 	PrometheusNodeExporter    *DisabledTool                                    `yaml:"prometheus-node-exporter,omitempty"`
 	PrometheusOperator        *prometheusoperatorhelm.PrometheusOperatorValues `yaml:"prometheusOperator,omitempty"`
-	Prometheus                *DisabledTool                                    `yaml:"prometheus,omitempty"`
+	Prometheus                *DisabledToolServicePerReplica                   `yaml:"prometheus,omitempty"`
 }
 
 type Global struct {
@@ -198,4 +198,10 @@ type Rbac struct {
 
 type DisabledTool struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+type DisabledToolServicePerReplica struct {
+	Enabled           bool
+	ServicePerReplica *DisabledTool `yaml:"servicePerReplica"`
+	IngressPerReplica *DisabledTool `yaml:"ingressPerReplica"`
 }
