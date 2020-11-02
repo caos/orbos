@@ -10,9 +10,9 @@ import (
 type ToolsetSpec struct {
 	//Boom self reconciling specs
 	Boom *latest.Boom `json:"boom,omitempty" yaml:"boom,omitempty"`
-	//Relative folder path where the currentstate is written to
-	ForceApply bool `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
 	//Flag if --force should be used by apply of resources
+	ForceApply bool `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
+	//Relative folder path where the currentstate is written to
 	CurrentStateFolder string `json:"currentStatePath,omitempty" yaml:"currentStatePath,omitempty"`
 	//Spec for the yaml-files applied before the applications, for example used secrets
 	PreApply *latest.Apply `json:"preApply,omitempty" yaml:"preApply,omitempty"`
