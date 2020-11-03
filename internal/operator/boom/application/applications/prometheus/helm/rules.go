@@ -171,6 +171,75 @@ groups:
      record: caos_ready_pods
    - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"}) * min(caos_scheduled_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"})
      record: caos_orb_ryg
+
+# ZITADEL CockroachDB Runtime
+   - record: cr_runtime_pod_flapping
+     expr: resets(sys_uptime{job="cockroachdb"}[10m])
+   - record: cr_runtime_pod_flapping_ryg
+     expr: clamp_min(1 - cr_runtime_pod_flapping, 0)
+   - record: cr_runtime_high_open_fd_count
+     expr: sys_fd_open{job="cockroachdb"} / sys_fd_softlimit{job="cockroachdb"}
+   - record: cr_runtime_high_open_fd_count_ryg
+     expr: (1 - (clamp_max(clamp_min(floor(cr_runtime_high_open_fd_count * 100), 20), 30) - 20) / 10)
+   - record: caos_cr_runtime_pods_ryg
+     expr: |-
+       cr_runtime_pod_flapping_ryg
+       * cr_runtime_high_open_fd_count_ryg
+
+   - record: cr_runtime_version_mismatches
+     expr: count by(cluster) (count_values by(tag, cluster) ("version", build_timestamp{job="cockroachdb"}))
+   - record: cr_runtime_version_mismatches_ryg
+     expr: clamp_min(2 - cr_runtime_version_mismatches, 0)
+   - record: caos_cr_runtime_cluster_ryg
+     expr: |-
+       min(caos_ready_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"})
+       * min(caos_scheduled_pods_ryg{controller="cockroachdb",namespace="caos-zitadel"})
+       * cr_runtime_version_mismatches
+
+# ZITADEL CockroachDB Capacity
+   - record: node:capacity
+     expr: sum without(store) (capacity{job="cockroachdb"})
+   - record: cluster:capacity
+     expr: sum without(instance) (node:capacity{job="cockroachdb"})
+   - record: node:capacity_available
+     expr: sum without(store) (capacity_available{job="cockroachdb"})
+   - record: cluster:capacity_available
+     expr: sum without(instance) (node:capacity_available{job="cockroachdb"})
+   - record: capacity_available:ratio
+     expr: capacity_available{job="cockroachdb"} / capacity{job="cockroachdb"}
+   - record: node:capacity_available:ratio
+     expr: node:capacity_available{job="cockroachdb"} / node:capacity{job="cockroachdb"}
+   - record: cluster:capacity_available:ratio
+     expr: cluster:capacity_available{job="cockroachdb"} / cluster:capacity{job="cockroachdb"}
+
+   - record: caos_cr_capacity_store_ryg
+     expr: (clamp_max(clamp_min(100 * capacity_available:ratio{job="cockroachdb"}, 15), 30)-15) /15
+   - record: caos_cr_capacity_cluster_ryg
+     expr: (clamp_max(clamp_min(100 * cluster:capacity_available:ratio{job="cockroachdb"}, 20), 30) - 20) /10
+
+# ZITADEL CockroachDB Replicas
+   - record: cr_replicas_clock_offset_near_max_ryg
+     expr: 1 - (clamp_max(clamp_min(abs(clock_offset_meannanos), 200 * 1000 * 1000), 300 * 1000 * 1000) - 200 * 1000 * 1000) / (100 * 1000 * 1000)
+   - record: cr_ca_certificate_expires_soon_ryg
+     expr: (clamp_max(clamp_min(security_certificate_expiration_ca{job="cockroachdb"}- time(), 86400 * 180), 86400 * 366) - 86400 * 180) / (86400 * 186)
+#   - record: cr_client_ca_certificate_expires_soon_ryg
+#     expr: (clamp_max(clamp_min(security_certificate_expiration_client_ca{job="cockroachdb"}- time(), 86400 * 180), 86400 * 366) - 86400 * 180) / (86400 * 186)
+   - record: cr_node_certificate_expires_soon_ryg
+     expr: (clamp_max(clamp_min(security_certificate_expiration_node{job="cockroachdb"}- time(), 86400 * 180), 86400 * 366) - 86400 * 180) / (86400 * 186)
+#   - record: cr_node_client_certificate_expires_soon_ryg
+#     expr: (clamp_max(clamp_min(cr_node_client_certificate_expires_soon{job="cockroachdb"}- time(), 86400 * 180), 86400 * 366) - 86400 * 180) / (86400 * 186)
+   - record: caos_cr_replicas_nodes_ryg
+     expr: |-
+       cr_replicas_clock_offset_near_max_ryg
+       * cr_ca_certificate_expires_soon_ryg
+       * cr_node_certificate_expires_soon_ryg
+#       * cr_client_ca_certificate_expires_soon_ryg
+#       * cr_node_client_certificate_expires_soon_ryg
+   - record: caos_cr_replicas_stores_ryg
+     expr: |-
+       clamp_min(1 - requests_slow_latch{job="cockroachdb"}, 0)
+       * clamp_min(1 - requests_slow_lease{job="cockroachdb"}, 0)
+       * clamp_min(1 - requests_slow_raft{job="cockroachdb"}, 0)
 `
 
 	struc := &AdditionalPrometheusRules{
