@@ -23,7 +23,7 @@ func Clear(
 	}
 	current := &tree.Tree{}
 
-	query, _, err := orbdb.AdaptFunc("", "clear")(monitor, desired, current)
+	query, _, _, err := orbdb.AdaptFunc("", "clear")(monitor, desired, current)
 	if err != nil {
 		monitor.Error(err)
 		return err
