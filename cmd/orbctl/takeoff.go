@@ -150,7 +150,11 @@ func StartDatabase(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
+		k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
+		if err != nil {
+			return err
+		}
+
 		if k8sClient.Available() {
 			return start.Database(monitor, orbConfig.Path, k8sClient)
 		}
@@ -177,7 +181,11 @@ func StartNetworking(rv RootValues) *cobra.Command {
 			return errFunc(cmd)
 		}
 
-		k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
+		k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
+		if err != nil {
+			return err
+		}
+
 		if k8sClient.Available() {
 			return start.Networking(monitor, orbConfig.Path, k8sClient)
 		}

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 	"io"
+	"io/ioutil"
 	"reflect"
 	"strconv"
 	"strings"
@@ -69,6 +70,20 @@ type Client struct {
 	apixv1beta1client *apixv1beta1client.ApiextensionsV1beta1Client
 	mapper            *restmapper.DeferredDiscoveryRESTMapper
 	restConfig        *rest.Config
+}
+
+func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
+	kubeconfigStr := ""
+	if kubeconfigPath != "" {
+		value, err := ioutil.ReadFile(kubeconfigPath)
+		if err != nil {
+			monitor.Error(err)
+			return nil, err
+		}
+		kubeconfigStr = string(value)
+	}
+
+	return NewK8sClient(monitor, &kubeconfigStr), nil
 }
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
