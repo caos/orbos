@@ -75,6 +75,21 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	monitor.Debug("Creating instance")
 
+	userData, err := NewCloudinit().AddGroupWithoutUsers(
+		"orbiter",
+	).AddUser(
+		"orbiter",
+		true,
+		"",
+		[]string{"orbiter", "wheel"},
+		"orbiter",
+		[]string{m.context.desired.SSHKey.Public.Value},
+		"ALL=(ALL) NOPASSWD:ALL",
+	).ToYamlString()
+	if err != nil {
+		return nil, err
+	}
+
 	newServer, err := m.context.client.Servers.Create(m.context.ctx, &cloudscale.ServerRequest{
 		ZonalResourceRequest: cloudscale.ZonalResourceRequest{},
 		TaggedResourceRequest: cloudscale.TaggedResourceRequest{
@@ -99,7 +114,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		UseIPV6:           boolPtr(false),
 		AntiAffinityWith:  "",
 		ServerGroups:      nil,
-		UserData:          "",
+		UserData:          userData,
 	})
 	if err != nil {
 		return nil, err
@@ -130,7 +145,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Monitor, pool *Pool, poolName string) (*machine, error) {
 	internalIP, sshIP := createdIPs(server.Interfaces, m.oneoff || true /* always use public ip */)
 
-	sshMachine := ssh.NewMachine(monitor, "root", sshIP)
+	sshMachine := ssh.NewMachine(monitor, "orbiter", sshIP)
 	if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
 		return nil, err
 	}
