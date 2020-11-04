@@ -107,7 +107,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Volumes:           nil,
 		Interfaces:        nil,
 		BulkVolumeSizeGB:  0,
-		SSHKeys:           []string{m.context.desired.SSHKey.Public.Value},
+		SSHKeys:           []string{m.context.desired.RootSSHKey.Public.Value},
 		Password:          "",
 		UsePublicNetwork:  boolPtr(m.oneoff || true), // Always use public Network
 		UsePrivateNetwork: boolPtr(true),
