@@ -110,19 +110,6 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					}
 				}
 
-				if desiredKind.Spec.RootSSHKey == nil ||
-					desiredKind.Spec.RootSSHKey.Private == nil || desiredKind.Spec.RootSSHKey.Private.Value == "" ||
-					desiredKind.Spec.RootSSHKey.Public == nil || desiredKind.Spec.RootSSHKey.Public.Value == "" {
-					priv, pub, err := ssh.Generate()
-					if err != nil {
-						return err
-					}
-					desiredKind.Spec.RootSSHKey = &SSHKey{
-						Private: &secret.Secret{Value: priv},
-						Public:  &secret.Secret{Value: pub},
-					}
-				}
-
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
 					panic(err)
 				}

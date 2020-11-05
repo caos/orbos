@@ -29,7 +29,6 @@ type Spec struct {
 	APIToken            *secret.Secret `yaml:",omitempty"`
 	Pools               map[string]*Pool
 	SSHKey              *SSHKey
-	RootSSHKey          *SSHKey
 	RebootRequired      []string
 	ReplacementRequired []string
 }

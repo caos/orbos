@@ -13,6 +13,7 @@ import (
 	"github.com/cloudscale-ch/cloudscale-go-sdk"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	sshgen "github.com/caos/orbos/internal/ssh"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -90,6 +91,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		return nil, err
 	}
 
+	_, pub, err := sshgen.Generate()
+	if err != nil {
+		return nil, err
+	}
+
 	newServer, err := m.context.client.Servers.Create(m.context.ctx, &cloudscale.ServerRequest{
 		ZonalResourceRequest: cloudscale.ZonalResourceRequest{},
 		TaggedResourceRequest: cloudscale.TaggedResourceRequest{
@@ -107,7 +113,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Volumes:           nil,
 		Interfaces:        nil,
 		BulkVolumeSizeGB:  0,
-		SSHKeys:           []string{m.context.desired.RootSSHKey.Public.Value},
+		SSHKeys:           []string{pub},
 		Password:          "",
 		UsePublicNetwork:  boolPtr(m.oneoff || true), // Always use public Network
 		UsePrivateNetwork: boolPtr(true),
