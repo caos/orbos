@@ -86,6 +86,10 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		"orbiter",
 		[]string{m.context.desired.SSHKey.Public.Value},
 		"ALL=(ALL) NOPASSWD:ALL",
+	).AddCmd(
+		"sudo echo \"\n\nPermitRootLogin no\n\" >> /etc/ssh/sshd_config",
+	).AddCmd(
+		"sudo service sshd restart",
 	).ToYamlString()
 	if err != nil {
 		return nil, err
