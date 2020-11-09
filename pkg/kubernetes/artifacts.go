@@ -440,13 +440,10 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "boom",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
 						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -549,13 +546,10 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 					},
 				},
 				Spec: core.PodSpec{
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           "docker.pkg.github.com/caos/orbos/orbos:" + orbiterversion,
+						Image:           "ghcr.io/caos/orbos:" + orbiterversion,
 						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",
