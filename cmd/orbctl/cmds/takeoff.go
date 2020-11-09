@@ -71,6 +71,11 @@ func Takeoff(
 		allKubeconfigs = append(allKubeconfigs, string(value))
 	}
 
+	if !deploy {
+		monitor.Info("Skipping operator deployments")
+		return nil
+	}
+
 	for _, kubeconfig := range allKubeconfigs {
 		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {
@@ -96,6 +101,7 @@ func Takeoff(
 		if err := deployDatabase(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}
+
 		if err := deployNetworking(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}

@@ -140,7 +140,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 	}
 
 	boomSpec := toolsetCRD.Spec.Boom
-	if boomSpec != nil && boomSpec.Version != "" {
+	if boomSpec != nil && boomSpec.SelfReconciling && boomSpec.Version != "" {
 		conf, err := clientgo.GetClusterConfig()
 		if err != nil {
 			c.status = err

@@ -46,11 +46,12 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
 	values := helm.DefaultValues(imageTags)
-	if toolsetCRDSpec.Reconciling == nil {
+
+	spec := toolsetCRDSpec.Reconciling
+	if spec == nil {
 		return values
 	}
 
-	spec := toolsetCRDSpec.Reconciling
 	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		conf := customimage.FromSpec(spec, imageTags)
 		values.RepoServer.Image = &helm.Image{

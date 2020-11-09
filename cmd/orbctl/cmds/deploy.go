@@ -8,7 +8,7 @@ import (
 	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
@@ -30,7 +30,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		return err
 	}
 
-	k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
+	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
 	if err := cmdboom.Reconcile(monitor, k8sClient, desiredKind.Spec.Boom); err != nil {
 		return err
@@ -44,7 +44,7 @@ func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *str
 		return err
 	}
 	if found {
-		k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
 		if k8sClient.Available() {
 			tree, err := api.ReadDatabaseYml(gitClient)
@@ -68,7 +68,7 @@ func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *s
 		return err
 	}
 	if found {
-		k8sClient := kubernetes2.NewK8sClient(monitor, kubeconfig)
+		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
 		if k8sClient.Available() {
 			tree, err := api.ReadNetworkinglYml(gitClient)

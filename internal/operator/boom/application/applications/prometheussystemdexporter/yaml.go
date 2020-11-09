@@ -25,6 +25,10 @@ func (*prometheusSystemdExporter) GetYaml(_ mntr.Monitor, toolset *v1beta2.Tools
 	}
 
 	spec := toolset.SystemdMetricsExporter
+	if spec == nil {
+		return yaml.Build(resources)
+	}
+
 	if spec.Resources != nil {
 		resources = spec.Resources
 	}
