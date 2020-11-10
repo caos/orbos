@@ -42,11 +42,9 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		}
 	}
 
-	if err := c.manager.Add(&dep.Repository{
+	c.manager.Add(&dep.Repository{
 		Repository: "https://download.docker.com/linux/centos/docker-ce.repo",
-	}); err != nil {
-		return errors.Wrap(err, "adding docker repository failed")
-	}
+	})
 
 	if err := c.manager.Install(&dep.Software{
 		Package: "containerd.io",
