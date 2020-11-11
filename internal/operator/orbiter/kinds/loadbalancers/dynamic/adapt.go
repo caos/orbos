@@ -395,7 +395,7 @@ http {
 							}
 							ip := mapVIP(vip)
 							probeVIP := func() {
-								probe("VIP", ip, uint16(transport.FrontendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
+								probe("VIP", ip, uint16(transport.FrontendPort), false, transport.HealthChecks, *transport)
 							}
 
 							var natVIPProbed bool
