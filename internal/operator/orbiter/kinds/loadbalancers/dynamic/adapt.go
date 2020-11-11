@@ -442,7 +442,8 @@ http {
 												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
 											},
-											To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+											To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+											ProxyProtocol: *transport.ProxyProtocol,
 										})
 										nodesNats[machine.IP()] = nodeNatDesires
 									}
@@ -545,10 +546,11 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name      string
-	Whitelist []*orbiter.CIDR
-	From      []string
-	To        string
+	Name          string
+	Whitelist     []*orbiter.CIDR
+	From          []string
+	To            string
+	ProxyProtocol bool
 }
 
 type LB struct {
