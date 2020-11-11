@@ -117,7 +117,7 @@ gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 
 ## License
 
-The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using Orbiter for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
+The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using ORBOS for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
 
 See the exact licensing terms [here](./LICENSE)
 
