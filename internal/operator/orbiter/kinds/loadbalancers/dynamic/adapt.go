@@ -241,6 +241,7 @@ stream { {{ range $nat := .NATs }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $nat.Name }};
+		proxy_protocol {{ if derefBool $nat.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}`))
 
@@ -394,7 +395,7 @@ http {
 							}
 							ip := mapVIP(vip)
 							probeVIP := func() {
-								probe("VIP", ip, uint16(transport.FrontendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
+								probe("VIP", ip, uint16(transport.FrontendPort), false, transport.HealthChecks, *transport)
 							}
 
 							var natVIPProbed bool
@@ -441,7 +442,8 @@ http {
 												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
 											},
-											To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+											To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+											ProxyProtocol: *transport.ProxyProtocol,
 										})
 										nodesNats[machine.IP()] = nodeNatDesires
 									}
@@ -544,10 +546,11 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name      string
-	Whitelist []*orbiter.CIDR
-	From      []string
-	To        string
+	Name          string
+	Whitelist     []*orbiter.CIDR
+	From          []string
+	To            string
+	ProxyProtocol bool
 }
 
 type LB struct {
