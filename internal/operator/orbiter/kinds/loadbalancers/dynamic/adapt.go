@@ -241,6 +241,7 @@ stream { {{ range $nat := .NATs }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $nat.Name }};
+		proxy_protocol {{ if derefBool $nat.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}`))
 
