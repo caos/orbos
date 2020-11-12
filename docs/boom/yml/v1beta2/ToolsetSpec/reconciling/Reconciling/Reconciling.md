@@ -15,7 +15,7 @@
 | credentials  | Credentials used by argocd , [here](repository/Repository/Repository.md)                     |         | X          |      |
 | knownHosts   | List of known_hosts as strings for argocd                                                    |         | X          |      |
 | nodeSelector | NodeSelector for deployment                                                                  |         |            | X    |
-| tolerations  | Tolerations to run argocd on nodes , [here](k8s/Tolerations/Tolerations.md)                  |         |            |      |
+| tolerations  | Tolerations to run argocd on nodes , [here](k8s/Tolerations/Tolerations.md)                  |         | X          |      |
 | dex          | Dex options , [here](CommonComponent/CommonComponent.md)                                     |         |            |      |
 | repoServer   | RepoServer options , [here](CommonComponent/CommonComponent.md)                              |         |            |      |
 | redis        | Redis options , [here](CommonComponent/CommonComponent.md)                                   |         |            |      |

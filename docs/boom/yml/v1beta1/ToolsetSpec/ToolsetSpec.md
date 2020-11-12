@@ -10,8 +10,8 @@
 | Attribute                   | Description                                                                                                                       | Default | Collection | Map  |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------- | ---  |
 | boomVersion                 | Version of BOOM which should be reconciled                                                                                        |         |            |      |
-| forceApply                  | Flag if --force should be used by apply of resources                                                                              |         |            |      |
-| currentStatePath            | Relative folder path where the currentstate is written to                                                                         |         |            |      |
+| forceApply                  | Relative folder path where the currentstate is written to                                                                         |         |            |      |
+| currentStatePath            | Flag if --force should be used by apply of resources                                                                              |         |            |      |
 | preApply                    | Spec for the yaml-files applied before the applications, for example used secrets , [here](Apply/Apply.md)                        |         |            |      |
 | postApply                   | Spec for the yaml-files applied after the applications, for example additional crds for the applications , [here](Apply/Apply.md) |         |            |      |
 | prometheus-operator         | Spec for the Prometheus-Operator , [here](PrometheusOperator/PrometheusOperator.md)                                               |         |            |      |
