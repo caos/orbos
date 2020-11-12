@@ -75,7 +75,7 @@ type NamespaceSelector struct {
 	MatchNames []string `yaml:"matchNames,omitempty"`
 }
 
-type MonitorSelector struct {
+type Selector struct {
 	MatchLabels map[string]string `yaml:"matchLabels,omitempty"`
 }
 
@@ -92,8 +92,7 @@ type StorageSpec struct {
 	VolumeClaimTemplate *VolumeClaimTemplate `yaml:"volumeClaimTemplate,omitempty"`
 }
 type VolumeClaimTemplate struct {
-	Spec     *VolumeClaimTemplateSpec `yaml:"spec,omitempty"`
-	selector struct{}                 `yaml:"selector,omitempty"`
+	Spec *VolumeClaimTemplateSpec `yaml:"spec,omitempty"`
 }
 type VolumeClaimTemplateSpec struct {
 	StorageClassName string     `yaml:"storageClassName,omitempty"`
@@ -171,12 +170,12 @@ type PrometheusSpec struct {
 	Query                                   *Query                    `yaml:"query,omitempty"`
 	RuleNamespaceSelector                   *NamespaceSelector        `yaml:"ruleNamespaceSelector,omitempty"`
 	RuleSelectorNilUsesHelmValues           bool                      `yaml:"ruleSelectorNilUsesHelmValues,omitempty"`
-	RuleSelector                            *RuleSelector             `yaml:"ruleSelector,omitempty"`
+	RuleSelector                            *Selector                 `yaml:"ruleSelector,omitempty"`
 	ServiceMonitorSelectorNilUsesHelmValues bool                      `yaml:"serviceMonitorSelectorNilUsesHelmValues,omitempty"`
-	ServiceMonitorSelector                  *MonitorSelector          `yaml:"serviceMonitorSelector,omitempty"`
+	ServiceMonitorSelector                  *Selector                 `yaml:"serviceMonitorSelector,omitempty"`
 	ServiceMonitorNamespaceSelector         *NamespaceSelector        `yaml:"serviceMonitorNamespaceSelector,omitempty"`
 	PodMonitorSelectorNilUsesHelmValues     bool                      `yaml:"podMonitorSelectorNilUsesHelmValues,omitempty"`
-	PodMonitorSelector                      *MonitorSelector          `yaml:"podMonitorSelector,omitempty"`
+	PodMonitorSelector                      *Selector                 `yaml:"podMonitorSelector,omitempty"`
 	PodMonitorNamespaceSelector             *NamespaceSelector        `yaml:"podMonitorNamespaceSelector,omitempty"`
 	Retention                               string                    `yaml:"retention,omitempty"`
 	RetentionSize                           string                    `yaml:"retentionSize,omitempty"`
@@ -224,9 +223,6 @@ type SecretKeySelector struct {
 type ServiceAccount struct {
 	Create bool   `yaml:"create,omitempty"`
 	Name   string `yaml:"name,omitempty"`
-}
-type RuleSelector struct {
-	MatchLabels map[string]string `yaml:"matchLabels"`
 }
 type PrometheusValues struct {
 	Enabled                   bool                     `yaml:"enabled,omitempty"`

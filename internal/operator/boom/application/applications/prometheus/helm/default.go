@@ -64,11 +64,11 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("600m"),
-					corev1.ResourceMemory: resource.MustParse("600Mi"),
+					corev1.ResourceMemory: resource.MustParse("4Gi"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("300m"),
-					corev1.ResourceMemory: resource.MustParse("300Mi"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
 				},
 			},
 		},

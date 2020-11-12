@@ -51,22 +51,23 @@ func Takeoff(monitor mntr.Monitor, toolsDirectoryPath string, localMode bool, or
 	return task(
 			monitor,
 			orbpath,
-			gitConf(gitcrdMonitor.WithField("task", "ensure"), ensureClient, toolsDirectoryPath),
+			gitConf(gitcrdMonitor.WithField("task", "ensure"), ensureClient, toolsDirectoryPath, !localMode),
 			appStruct.ReadSpecs,
 			appStruct.Reconcile),
 		task(
 			monitor,
 			orbpath,
-			gitConf(gitcrdMonitor.WithField("task", "query"), queryClient, toolsDirectoryPath),
+			gitConf(gitcrdMonitor.WithField("task", "query"), queryClient, toolsDirectoryPath, !localMode),
 			currentStruct.ReadSpecs,
 			currentStruct.WriteBackCurrentState)
 }
 
-func gitConf(monitor mntr.Monitor, client *git.Client, toolsDirectoryPath string) gitcrdconfig.Config {
+func gitConf(monitor mntr.Monitor, client *git.Client, toolsDirectoryPath string, deploy bool) gitcrdconfig.Config {
 	return gitcrdconfig.Config{
 		Monitor:          monitor,
 		CrdDirectoryPath: filepath.Join(toolsDirectoryPath, "crd"),
 		Git:              client,
+		Deploy:           deploy,
 	}
 }
 

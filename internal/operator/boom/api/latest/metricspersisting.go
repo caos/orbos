@@ -51,6 +51,8 @@ type Metrics struct {
 	Boom bool `json:"boom" yaml:"boom"`
 	//Bool if metrics should get scraped from orbiter
 	Orbiter bool `json:"orbiter" yaml:"orbiter"`
+	//Bool if metrics should get scraped from zitadel
+	Zitadel bool `json:"zitadel" yaml:"zitadel"`
 }
 
 type RemoteWrite struct {

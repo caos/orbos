@@ -80,6 +80,21 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetslates
 		providers = append(providers, provider)
 	}
 
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Zitadel) {
+		provider := &Provider{
+			ConfigMaps: []string{
+				"grafana-dashboard-zitadel-cockroachdb-replicas",
+				"grafana-dashboard-zitadel-cockroachdb-runtime",
+				"grafana-dashboard-zitadel-cockroachdb-sql",
+				"grafana-dashboard-zitadel-cockroachdb-storage",
+				"grafana-dashboard-zitadel-health",
+				"grafana-dashboard-zitadel-health-details",
+			},
+			Folder: filepath.Join(dashboardsfolder, "zitadel"),
+		}
+		providers = append(providers, provider)
+	}
+
 	systemdExporterDeployed := toolsetCRDSpec.SystemdMetricsExporter != nil && toolsetCRDSpec.SystemdMetricsExporter.Deploy &&
 		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.PrometheusSystemdExporter)
 	if systemdExporterDeployed && kubeStateMetricsDeployed && nodeExporterDeployed {

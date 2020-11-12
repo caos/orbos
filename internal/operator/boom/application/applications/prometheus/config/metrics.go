@@ -15,6 +15,7 @@ import (
 	pnemetrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/metrics"
 	pometrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/metrics"
 	psemetrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/metrics"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/zitadel"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
@@ -71,6 +72,10 @@ func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSp
 
 	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Orbiter) {
 		servicemonitors = append(servicemonitors, orbiter.GetServicemonitor(instanceName))
+	}
+
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Zitadel) {
+		servicemonitors = append(servicemonitors, zitadel.GetServicemonitor(instanceName))
 	}
 
 	if len(servicemonitors) > 0 {

@@ -99,8 +99,8 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 	// default is false
 	values.Service.Annotations.Module.Config.EnableGRPCWeb = spec.GRPCWeb
 	// default is true
-	if spec.ProxyProtocol {
-		values.Service.Annotations.Module.Config.UseProxyProto = spec.ProxyProtocol
+	if spec.ProxyProtocol != nil {
+		values.Service.Annotations.Module.Config.UseProxyProto = *spec.ProxyProtocol
 	}
 
 	if spec.Caching == nil {
