@@ -34,6 +34,7 @@ type GitCrd struct {
 	crdDirectoryPath string
 	status           error
 	monitor          mntr.Monitor
+	deploy           bool
 }
 
 func New(conf *config.Config) *GitCrd {
@@ -48,6 +49,7 @@ func New(conf *config.Config) *GitCrd {
 		crdDirectoryPath: conf.CrdDirectoryPath,
 		git:              conf.Git,
 		monitor:          monitor,
+		deploy:           conf.Deploy,
 	}
 
 	crdConf := &crdconfig.Config{
@@ -155,7 +157,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			return
 		}
 
-		if err := cmd.Reconcile(monitor, k8sClient, "", boomSpec); err != nil {
+		if err := cmd.Reconcile(monitor, k8sClient, "", c.deploy, boomSpec); err != nil {
 			c.status = err
 			return
 		}

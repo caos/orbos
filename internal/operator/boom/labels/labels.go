@@ -6,55 +6,43 @@ var (
 	instanceName = "boom"
 )
 
-func GetGlobalLabels() map[string]string {
-	labels := make(map[string]string, 0)
-	labels["app.kubernetes.io/managed-by"] = "boom.caos.ch"
-	labels["boom.caos.ch/part-of"] = "boom"
-	labels["boom.caos.ch/instance"] = instanceName
-
-	return labels
-}
-
-func GetAllApplicationLabels(appName name.Application) map[string]string {
-	labels := GetGlobalLabels()
-	addLabels := GetApplicationLabels(appName)
-
-	for k, v := range addLabels {
-		labels[k] = v
+func GetGlobalLabels() Labels {
+	return map[string]string{
+		"app.kubernetes.io/managed-by": "boom.caos.ch",
+		"boom.caos.ch/part-of":         "boom",
+		"boom.caos.ch/instance":        instanceName,
 	}
-	return labels
 }
 
-func GetApplicationLabels(appName name.Application) map[string]string {
-	labels := make(map[string]string, 0)
-	labels["boom.caos.ch/application"] = appName.String()
-	return labels
+func GetAllApplicationLabels(appName name.Application) Labels {
+	return GetGlobalLabels().
+		Append(GetApplicationLabels(appName))
 }
 
-func GetAllForApplicationLabels(appName name.Application) map[string]string {
-	labels := GetGlobalLabels()
-	addLabels := GetForApplicationLabels(appName)
-
-	for k, v := range addLabels {
-		labels[k] = v
+func GetApplicationLabels(appName name.Application) Labels {
+	return map[string]string{
+		"boom.caos.ch/application": appName.String(),
 	}
-	return labels
 }
 
-func GetForApplicationLabels(appName name.Application) map[string]string {
-	labels := make(map[string]string, 0)
-	labels["boom.caos.ch/for-application"] = appName.String()
-	return labels
+func GetPromSelector(instanceName string) Labels {
+	return map[string]string{
+		"boom.caos.ch/prometheus": instanceName,
+	}
 }
 
 func GetMonitorLabels(instanceName string, appName name.Application) map[string]string {
-	labels := GetApplicationLabels(appName)
-	addLabels := GetMonitorSelectorLabels(instanceName)
+	return GetApplicationLabels(appName).
+		Append(GetPromSelector(instanceName))
+}
 
-	for k, v := range addLabels {
-		labels[k] = v
+type Labels map[string]string
+
+func (l Labels) Append(labels map[string]string) Labels {
+	for k, v := range labels {
+		l[k] = v
 	}
-	return labels
+	return l
 }
 
 func GetMonitorSelectorLabels(instanceName string) map[string]string {
