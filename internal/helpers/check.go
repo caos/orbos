@@ -1,8 +1,11 @@
 package helpers
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/pires/go-proxyproto"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -10,6 +13,46 @@ import (
 	"github.com/AppsFlyer/go-sundheit/checks"
 	"github.com/pkg/errors"
 )
+
+func CheckProxy(url string, status int, header *proxyproto.Header) (string, error) {
+	target, err := net.ResolveTCPAddr("tcp", header.DestinationAddr.String())
+	if err != nil {
+		return "", err
+	}
+
+	dialContextFunc := func(ctx context.Context, network, addr string) (net.Conn, error) {
+		conn, err := net.DialTCP("tcp", nil, target)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = header.WriteTo(conn)
+		if err != nil {
+			return nil, err
+		}
+		return conn, nil
+	}
+
+	return check(checks.NewHTTPCheck(checks.HTTPCheckConfig{
+		CheckName:      "http",
+		Timeout:        1 * time.Second,
+		URL:            url,
+		ExpectedStatus: status,
+		Options: []checks.RequestOption{func(r *http.Request) {
+			r.Close = true
+		}},
+		Client: &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					// Insecure health checks are ok
+					InsecureSkipVerify: true,
+				},
+				DisableKeepAlives: true,
+				DialContext:       dialContextFunc,
+			},
+		},
+	}))
+}
 
 func Check(url string, status int) (string, error) {
 
