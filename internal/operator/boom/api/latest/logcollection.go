@@ -20,7 +20,7 @@ type LogCollection struct {
 	//Outputs used by BOOM managed flows. BOOM managed Loki doesn't need to be specified
 	Outputs []string `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 	//Watch these namespaces
-	WatchNamespaces []string
+	WatchNamespaces []string `json:"watchNamespaces,omitempty" yaml:"watchNamespaces,omitempty"`
 }
 
 type Component struct {
