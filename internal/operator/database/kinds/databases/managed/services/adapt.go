@@ -1,11 +1,12 @@
 package services
 
 import (
+	"strconv"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/service"
-	"strconv"
 )
 
 func AdaptFunc(
@@ -76,7 +77,7 @@ func AdaptFunc(
 		core.ResourceQueryToZitadelQuery(queryS),
 	}
 
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
 
 			return core.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},

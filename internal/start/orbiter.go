@@ -3,6 +3,10 @@ package start
 import (
 	"context"
 	"errors"
+	"runtime/debug"
+	"strings"
+	"time"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/ingestion"
@@ -16,9 +20,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
-	"runtime/debug"
-	"strings"
-	"time"
 )
 
 type OrbiterConfig struct {
@@ -146,7 +147,9 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		orbFile,
 		conf.GitCommit,
 		!conf.Recur,
-		conf.Deploy)
+		conf.Deploy,
+		gitClient,
+	)
 
 	takeoffConf := &orbiter.Config{
 		OrbiterCommit: conf.GitCommit,

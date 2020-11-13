@@ -1,7 +1,7 @@
 package application
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador"
 	ambassadorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd"
@@ -30,7 +30,7 @@ import (
 )
 
 type Application interface {
-	Deploy(*v1beta2.ToolsetSpec) bool
+	Deploy(*latest.ToolsetSpec) bool
 	GetName() name.Application
 }
 
@@ -39,12 +39,12 @@ type HelmApplication interface {
 	GetNamespace() string
 	GetChartInfo() *chart.Chart
 	GetImageTags() map[string]string
-	SpecToHelmValues(mntr.Monitor, *v1beta2.ToolsetSpec) interface{}
+	SpecToHelmValues(mntr.Monitor, *latest.ToolsetSpec) interface{}
 }
 
 type YAMLApplication interface {
 	Application
-	GetYaml(mntr.Monitor, *v1beta2.ToolsetSpec) interface{}
+	GetYaml(mntr.Monitor, *latest.ToolsetSpec) interface{}
 }
 
 func New(monitor mntr.Monitor, appName name.Application, orb string) Application {

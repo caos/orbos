@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/client"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/node"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func AdaptFunc(
@@ -18,7 +18,7 @@ func AdaptFunc(
 	core.DestroyFunc,
 	func(user string) (core.QueryFunc, error),
 	func(user string) (core.DestroyFunc, error),
-	func(k8sClient *kubernetes2.Client) ([]string, error),
+	func(k8sClient *kubernetes.Client) ([]string, error),
 	error,
 ) {
 	cMonitor := monitor.WithField("component", "certificates")
@@ -41,7 +41,7 @@ func AdaptFunc(
 		destroyNode,
 	}
 
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(cMonitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(cMonitor, destroyers),
@@ -56,7 +56,7 @@ func AdaptFunc(
 			}
 			queryClient := query(user)
 
-			return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+			return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
 				_, err := queryNode(k8sClient, queried)
 				if err != nil {
 					return nil, err
@@ -77,7 +77,7 @@ func AdaptFunc(
 
 			return destroy(user), nil
 		},
-		func(k8sClient *kubernetes2.Client) ([]string, error) {
+		func(k8sClient *kubernetes.Client) ([]string, error) {
 			return client.QueryCertificates(namespace, labels, k8sClient)
 		},
 		nil

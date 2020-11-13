@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 
@@ -60,7 +61,8 @@ func EnsureDatabaseArtifacts(
 	client *Client,
 	version string,
 	nodeselector map[string]string,
-	tolerations []core.Toleration) error {
+	tolerations []core.Toleration,
+	imageRegistry string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"database": version,
@@ -154,7 +156,7 @@ func EnsureDatabaseArtifacts(
 					Containers: []core.Container{{
 						Name:            "database",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
 						Command:         []string{"/orbctl", "takeoff", "database", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -207,7 +209,8 @@ func EnsureNetworkingArtifacts(
 	client *Client,
 	version string,
 	nodeselector map[string]string,
-	tolerations []core.Toleration) error {
+	tolerations []core.Toleration,
+	imageRegistry string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"networking": version,
@@ -301,7 +304,7 @@ func EnsureNetworkingArtifacts(
 					Containers: []core.Container{{
 						Name:            "networking",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
 						Command:         []string{"/orbctl", "takeoff", "networking", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -349,7 +352,14 @@ func EnsureNetworkingArtifacts(
 	return nil
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations k8s.Tolerations, nodeselector map[string]string, resources *k8s.Resources) error {
+func EnsureBoomArtifacts(
+	monitor mntr.Monitor,
+	client *Client,
+	version string,
+	tolerations k8s.Tolerations,
+	nodeselector map[string]string,
+	resources *k8s.Resources,
+	imageRegistry string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,
@@ -443,7 +453,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("ghcr.io/caos/orbos:%s", version),
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
 						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -459,7 +469,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 						Resources: core.ResourceRequirements(*resources),
 					}},
 					NodeSelector: nodeselector,
-					Tolerations:  tolerations,
+					Tolerations:  tolerations.K8s(),
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{
@@ -512,7 +522,12 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 	return nil
 }
 
-func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion string) error {
+func EnsureOrbiterArtifacts(
+	monitor mntr.Monitor,
+	client *Client,
+	orbiterversion string,
+	imageRegistry string) error {
+
 	monitor.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,
 	}).Debug("Ensuring orbiter artifacts")
@@ -549,7 +564,7 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 					Containers: []core.Container{{
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           "ghcr.io/caos/orbos:" + orbiterversion,
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, orbiterversion),
 						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",

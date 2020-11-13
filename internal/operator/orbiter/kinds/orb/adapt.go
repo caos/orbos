@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -18,7 +19,9 @@ func AdaptFunc(
 	orbConfig *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
-	deployOrbiter bool) orbiter.AdaptFunc {
+	deployOrbiter bool,
+	gitClient *git.Client,
+) orbiter.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
 		finishedChan chan struct{},
@@ -131,6 +134,7 @@ func AdaptFunc(
 				destroyProviders,
 				whitelistChan,
 				finishedChan,
+				gitClient,
 			)
 			if err != nil {
 				return nil, nil, nil, migrate, nil, err

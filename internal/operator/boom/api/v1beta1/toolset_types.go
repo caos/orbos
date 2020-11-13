@@ -16,9 +16,9 @@ type Metadata struct {
 type ToolsetSpec struct {
 	//Version of BOOM which should be reconciled
 	BoomVersion string `json:"boomVersion,omitempty" yaml:"boomVersion,omitempty"`
-	//Relative folder path where the currentstate is written to
-	ForceApply bool `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
 	//Flag if --force should be used by apply of resources
+	ForceApply bool `json:"forceApply,omitempty" yaml:"forceApply,omitempty"`
+	//Relative folder path where the currentstate is written to
 	CurrentStateFolder string `json:"currentStatePath,omitempty" yaml:"currentStatePath,omitempty"`
 	//Spec for the yaml-files applied before the applications, for example used secrets
 	PreApply *Apply `json:"preApply,omitempty" yaml:"preApply,omitempty"`

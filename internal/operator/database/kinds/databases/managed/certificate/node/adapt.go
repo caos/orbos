@@ -2,14 +2,15 @@ package node
 
 import (
 	"crypto/rsa"
+	"reflect"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/certificates"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/pem"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
-	"reflect"
 )
 
 func AdaptFunc(
@@ -44,7 +45,7 @@ func AdaptFunc(
 	nodeCertKey := "node.crt"
 	nodePrivKeyKey := "node.key"
 
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
 			queriers := make([]core2.QueryFunc, 0)
 
 			currentDB, err := core.ParseQueriedForDatabase(queried)
@@ -131,7 +132,7 @@ func AdaptFunc(
 			currentDB.SetCertificateKey(caPrivKey)
 
 			return core2.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
-		}, func(k8sClient *kubernetes2.Client) error {
+		}, func(k8sClient *kubernetes.Client) error {
 			allClientSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
 			if err != nil {
 				return err

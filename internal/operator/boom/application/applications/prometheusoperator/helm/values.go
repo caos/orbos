@@ -2,7 +2,6 @@ package helm
 
 import (
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Rules struct {
@@ -109,30 +108,30 @@ type SecurityContext struct {
 }
 
 type PrometheusOperatorValues struct {
-	Enabled                       bool                `yaml:"enabled"`
-	TLSProxy                      *TLSProxy           `yaml:"tlsProxy"`
-	AdmissionWebhooks             *AdmissionWebhooks  `yaml:"admissionWebhooks"`
-	DenyNamespaces                []string            `yaml:"denyNamespaces"`
-	ServiceAccount                *ServiceAccount     `yaml:"serviceAccount"`
-	Service                       *Service            `yaml:"service"`
-	CreateCustomResource          bool                `yaml:"createCustomResource"`
-	CrdAPIGroup                   string              `yaml:"crdApiGroup"`
-	CleanupCustomResource         bool                `yaml:"cleanupCustomResource"`
-	PodLabels                     map[string]string   `yaml:"podLabels"`
-	PodAnnotations                map[string]string   `yaml:"podAnnotations"`
-	KubeletService                *KubeletService     `yaml:"kubeletService"`
-	ServiceMonitor                *ServiceMonitor     `yaml:"serviceMonitor"`
-	NodeSelector                  map[string]string   `yaml:"nodeSelector"`
-	Tolerations                   []corev1.Toleration `yaml:"tolerations"`
-	Affinity                      struct{}            `yaml:"affinity"`
-	SecurityContext               *SecurityContext    `yaml:"securityContext"`
-	Image                         *Image              `yaml:"image"`
-	ConfigmapReloadImage          *Image              `yaml:"configmapReloadImage"`
-	PrometheusConfigReloaderImage *Image              `yaml:"prometheusConfigReloaderImage"`
-	ConfigReloaderCPU             string              `yaml:"configReloaderCpu"`
-	ConfigReloaderMemory          string              `yaml:"configReloaderMemory"`
-	HyperkubeImage                *Image              `yaml:"hyperkubeImage"`
-	Resources                     *k8s.Resources      `yaml:"resources"`
+	Enabled                       bool               `yaml:"enabled"`
+	TLSProxy                      *TLSProxy          `yaml:"tlsProxy"`
+	AdmissionWebhooks             *AdmissionWebhooks `yaml:"admissionWebhooks"`
+	DenyNamespaces                []string           `yaml:"denyNamespaces"`
+	ServiceAccount                *ServiceAccount    `yaml:"serviceAccount"`
+	Service                       *Service           `yaml:"service"`
+	CreateCustomResource          bool               `yaml:"createCustomResource"`
+	CrdAPIGroup                   string             `yaml:"crdApiGroup"`
+	CleanupCustomResource         bool               `yaml:"cleanupCustomResource"`
+	PodLabels                     map[string]string  `yaml:"podLabels"`
+	PodAnnotations                map[string]string  `yaml:"podAnnotations"`
+	KubeletService                *KubeletService    `yaml:"kubeletService"`
+	ServiceMonitor                *ServiceMonitor    `yaml:"serviceMonitor"`
+	NodeSelector                  map[string]string  `yaml:"nodeSelector"`
+	Tolerations                   k8s.Tolerations    `yaml:"tolerations"`
+	Affinity                      struct{}           `yaml:"affinity"`
+	SecurityContext               *SecurityContext   `yaml:"securityContext"`
+	Image                         *Image             `yaml:"image"`
+	ConfigmapReloadImage          *Image             `yaml:"configmapReloadImage"`
+	PrometheusConfigReloaderImage *Image             `yaml:"prometheusConfigReloaderImage"`
+	ConfigReloaderCPU             string             `yaml:"configReloaderCpu"`
+	ConfigReloaderMemory          string             `yaml:"configReloaderMemory"`
+	HyperkubeImage                *Image             `yaml:"hyperkubeImage"`
+	Resources                     *k8s.Resources     `yaml:"resources"`
 }
 
 type DisabledToolServicePerReplica struct {

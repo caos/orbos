@@ -2,9 +2,11 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/caos/orbos/pkg/kubernetes"
-	secret2 "github.com/caos/orbos/pkg/secret"
 	"sync"
+
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
@@ -25,7 +27,9 @@ func ensureUpScale(
 	k8sVersion KubernetesVersion,
 	k8sClient *kubernetes.Client,
 	oneoff bool,
-	initializeMachine func(infra.Machine, *initializedPool) initializedMachine) (changed bool, err error) {
+	initializeMachine func(infra.Machine, *initializedPool) initializedMachine,
+	gitClient *git.Client,
+) (changed bool, err error) {
 
 	wCount := 0
 	for _, w := range workerPools {
@@ -165,6 +169,10 @@ nodes:
 
 	var certKey []byte
 	doKubeadmInit := certsCP == nil
+	imageRepository := desired.Spec.CustomImageRegistry
+	if imageRepository == "" {
+		imageRepository = "k8s.gcr.io"
+	}
 
 	if joinCP != nil {
 
@@ -192,7 +200,9 @@ nodes:
 			jointoken,
 			k8sVersion,
 			string(certKey),
-			k8sClient)
+			k8sClient,
+			imageRepository,
+			gitClient)
 
 		if err != nil {
 			return false, err
@@ -201,7 +211,7 @@ nodes:
 		if joinKubeconfig == nil || err != nil {
 			return false, err
 		}
-		desired.Spec.Kubeconfig = &secret2.Secret{Value: *joinKubeconfig}
+		desired.Spec.Kubeconfig = &secret.Secret{Value: *joinKubeconfig}
 		return false, psf(monitor.WithFields(map[string]interface{}{
 			"type": "kubeconfig",
 		}))
@@ -223,7 +233,9 @@ nodes:
 			jointoken,
 			k8sVersion,
 			"",
-			k8sClient); err != nil {
+			k8sClient,
+			imageRepository,
+			gitClient); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}

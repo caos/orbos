@@ -3,12 +3,12 @@ package config
 import (
 	"path/filepath"
 
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 )
 
 var orgID = 0
 
-func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) []*Provider {
+func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetslatest.ToolsetSpec) []*Provider {
 	providers := make([]*Provider, 0)
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
 		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Ambassador) {

@@ -38,13 +38,11 @@ func (c *Common) Ensure(remove common.Package, install common.Package) error {
 
 	switch c.os {
 	case dep.Ubuntu:
-		if err := c.manager.Add(&dep.Repository{
+		c.manager.Add(&dep.Repository{
 			KeyURL:         "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
 			KeyFingerprint: "",
 			Repository:     "deb https://apt.kubernetes.io/ kubernetes-xenial main",
-		}); err != nil {
-			return errors.Wrap(err, "adding before installing kubeadm failed")
-		}
+		})
 	case dep.CentOS:
 		ioutil.WriteFile("/etc/yum.repos.d/kubernetes.repo", []byte(`[kubernetes]
 name=Kubernetes

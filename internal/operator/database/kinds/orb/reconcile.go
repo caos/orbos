@@ -28,7 +28,12 @@ func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree) core.EnsureFunc {
 			return err
 		}
 
-		if err := kubernetes.EnsureDatabaseArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+		imageRegistry := desiredKind.Spec.CustomImageRegistry
+		if imageRegistry == "" {
+			imageRegistry = "ghcr.io"
+		}
+
+		if err := kubernetes.EnsureDatabaseArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations, imageRegistry); err != nil {
 			recMonitor.Error(errors.Wrap(err, "Failed to deploy database-operator into k8s-cluster"))
 			return err
 		}

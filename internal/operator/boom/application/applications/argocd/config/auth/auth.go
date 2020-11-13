@@ -1,8 +1,9 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"

@@ -1,20 +1,15 @@
 package loki
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/logs"
 	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 )
 
-func (l *Loki) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
-	return logs.GetAllResources(toolsetCRDSpec), nil
-}
-
-func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
+func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 
 	values := helm.DefaultValues(l.GetImageTags())
 

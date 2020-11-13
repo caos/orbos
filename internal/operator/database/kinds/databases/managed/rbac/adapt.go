@@ -3,7 +3,7 @@ package rbac
 import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/clusterrole"
 	"github.com/caos/orbos/pkg/kubernetes/resources/clusterrolebinding"
 	"github.com/caos/orbos/pkg/kubernetes/resources/role"
@@ -97,7 +97,7 @@ func AdaptFunc(
 		core.ResourceQueryToZitadelQuery(queryRB),
 		core.ResourceQueryToZitadelQuery(queryCRB),
 	}
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(internalMonitor, destroyers),

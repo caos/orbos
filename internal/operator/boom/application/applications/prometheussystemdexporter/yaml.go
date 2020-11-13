@@ -1,7 +1,7 @@
 package prometheussystemdexporter
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/yaml"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
@@ -11,7 +11,7 @@ import (
 
 // var _ application.YAMLApplication = (*prometheusSystemdExporter)(nil)
 
-func (*prometheusSystemdExporter) GetYaml(_ mntr.Monitor, toolset *v1beta2.ToolsetSpec) interface{} {
+func (*prometheusSystemdExporter) GetYaml(_ mntr.Monitor, toolset *latest.ToolsetSpec) interface{} {
 
 	resources := &k8s.Resources{
 		Limits: corev1.ResourceList{

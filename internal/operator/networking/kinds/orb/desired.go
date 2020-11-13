@@ -14,6 +14,9 @@ type DesiredV0 struct {
 		Tolerations     []corev1.Toleration `yaml:"tolerations,omitempty"`
 		Version         string              `yaml:"version,omitempty"`
 		SelfReconciling bool                `yaml:"selfReconciling"`
+		//Use this registry to pull the BOOM image from
+		//@default: ghcr.io
+		CustomImageRegistry string `json:"customImageRegistry,omitempty" yaml:"customImageRegistry,omitempty"`
 	}
 	Networking *tree.Tree
 }

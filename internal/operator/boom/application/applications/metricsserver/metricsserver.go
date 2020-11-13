@@ -1,7 +1,7 @@
 package metricsserver
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
@@ -23,7 +23,7 @@ func (po *MetricsServer) GetName() name.Application {
 	return info.GetName()
 }
 
-func (po *MetricsServer) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+func (po *MetricsServer) Deploy(toolsetCRDSpec *toolsetslatest.ToolsetSpec) bool {
 	return toolsetCRDSpec.MetricsServer != nil && toolsetCRDSpec.MetricsServer.Deploy
 }
 
