@@ -1,9 +1,10 @@
 package auth
 
 import (
-	google "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Google"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
+
+	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func GetGoogleAuthConfig(spec *google.Auth) (map[string]string, error) {

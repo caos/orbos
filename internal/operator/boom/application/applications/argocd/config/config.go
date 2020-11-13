@@ -1,7 +1,7 @@
 package config
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/auth"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/plugin"

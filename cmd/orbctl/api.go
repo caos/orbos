@@ -71,6 +71,9 @@ func APICommand(rv RootValues) *cobra.Command {
 			}
 
 			toolset, migrate, _, err := boomapi.ParseToolset(desired)
+			if err != nil {
+				return err
+			}
 			if migrate {
 				desired.Parsed = toolset
 				if err := api.PushBoomYml(monitor, "Update boom.yml", gitClient, desired); err != nil {

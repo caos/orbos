@@ -6,7 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -333,7 +333,7 @@ func EnsureBoomArtifacts(
 						Resources: core.ResourceRequirements(*resources),
 					}},
 					NodeSelector: nodeselector,
-					Tolerations:  tolerations,
+					Tolerations:  tolerations.K8s(),
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{

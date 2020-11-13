@@ -3,7 +3,7 @@ package argocd
 import (
 	"strings"
 
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
+func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
 	secrets := make([]interface{}, 0)
 	if toolsetCRDSpec.Reconciling == nil {
 		return secrets, nil
@@ -29,7 +29,7 @@ func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolset
 	return secrets, nil
 }
 
-func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
+func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec, resultFilePath string) error {
 	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled {
 		spec := toolsetCRDSpec.Reconciling
 
@@ -43,7 +43,7 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 	return nil
 }
 
-func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
+func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
 	values := helm.DefaultValues(imageTags)
 
