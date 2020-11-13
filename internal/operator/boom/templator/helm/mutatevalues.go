@@ -1,17 +1,17 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/mntr"
 )
 
 type TemplatorMutateValues interface {
 	templator.HelmApplication
-	HelmMutateValues(mntr.Monitor, *v1beta2.ToolsetSpec, string) error
+	HelmMutateValues(mntr.Monitor, *latest.ToolsetSpec, string) error
 }
 
-func (h *Helm) mutateValue(app interface{}, spec *v1beta2.ToolsetSpec, valuesAbsFilePath string) error {
+func (h *Helm) mutateValue(app interface{}, spec *latest.ToolsetSpec, valuesAbsFilePath string) error {
 	mutate, ok := app.(TemplatorMutateValues)
 	if ok {
 

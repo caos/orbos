@@ -1,12 +1,13 @@
 package v1beta2
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 func ParseToolset(desiredTree *tree.Tree) (*Toolset, map[string]*secret.Secret, error) {

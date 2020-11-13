@@ -1,7 +1,7 @@
 package kubestatemetrics
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/kubestatemetrics/info"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
@@ -23,7 +23,7 @@ func (k *KubeStateMetrics) GetName() name.Application {
 	return info.GetName()
 }
 
-func (k *KubeStateMetrics) Deploy(toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) bool {
+func (k *KubeStateMetrics) Deploy(toolsetCRDSpec *toolsetslatest.ToolsetSpec) bool {
 	return toolsetCRDSpec.KubeMetricsExporter != nil && toolsetCRDSpec.KubeMetricsExporter.Deploy
 }
 

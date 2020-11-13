@@ -1,9 +1,10 @@
 package auth
 
 import (
-	generic "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Generic"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
+
+	generic "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Generic"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func GetGenericOAuthConfig(spec *generic.Auth) (map[string]string, error) {

@@ -1,11 +1,12 @@
 package crd
 
 import (
+	"os"
+	"testing"
+
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
-	"os"
-	"testing"
 
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	application "github.com/caos/orbos/internal/operator/boom/application/mock"
@@ -165,7 +166,7 @@ func TestCrd_Reconcile_initial(t *testing.T) {
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(fullToolset))
 	err := crd.GetStatus()
 	assert.NoError(t, err)
 }
@@ -183,13 +184,13 @@ func TestCrd_Reconcile_changed(t *testing.T) {
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(fullToolset))
 	err := crd.GetStatus()
 	assert.NoError(t, err)
 
 	//changed crd
 	app.SetDeploy(changedToolset.Spec, true).SetGetYaml(changedToolset.Spec, "test2")
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(changedToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(changedToolset))
 	err = crd.GetStatus()
 	assert.NoError(t, err)
 }
@@ -207,13 +208,13 @@ func TestCrd_Reconcile_changedDelete(t *testing.T) {
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(fullToolset))
 	err := crd.GetStatus()
 	assert.NoError(t, err)
 
 	//changed crd
 	app.SetDeploy(changedToolset.Spec, false).SetGetYaml(changedToolset.Spec, "test2")
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(changedToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(changedToolset))
 	err = crd.GetStatus()
 	assert.NoError(t, err)
 }
@@ -231,13 +232,13 @@ func TestCrd_Reconcile_initialNotDeployed(t *testing.T) {
 
 	// when crd is nil
 	resources := []*clientgo.Resource{testClientgoResource}
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(fullToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(fullToolset))
 	err := crd.GetStatus()
 	assert.NoError(t, err)
 
 	//changed crd
 	app.SetDeploy(changedToolset.Spec, false).SetGetYaml(changedToolset.Spec, "test2")
-	crd.Reconcile(resources, migrate.V1beta1Tov1beta2(changedToolset))
+	crd.Reconcile(resources, migrate.V1beta1Tolatest(changedToolset))
 	err = crd.GetStatus()
 	assert.NoError(t, err)
 }

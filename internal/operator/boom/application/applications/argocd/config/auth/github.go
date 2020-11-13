@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling/auth/github"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/github"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 

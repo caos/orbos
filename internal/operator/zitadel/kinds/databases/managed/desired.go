@@ -1,7 +1,7 @@
 package managed
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
