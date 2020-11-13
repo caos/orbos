@@ -99,12 +99,17 @@ func (p *PackageManager) Install(installVersion *Software, more ...*Software) er
 	return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
 }
 
-func (p *PackageManager) Add(repo *Repository) error {
+func (p *PackageManager) Add(repo *Repository) {
+	var err error
 	switch p.os.Packages {
 	case DebianBased:
-		return p.debbasedAdd(repo)
+		err = p.debbasedAdd(repo)
 	case REMBased:
-		return p.rembasedAdd(repo)
+		err = p.rembasedAdd(repo)
+	default:
+		err = errors.Errorf("Package manager %s is not implemented", p.os.Packages)
 	}
-	return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
+	if err != nil {
+		p.monitor.Info(errors.Wrap(err, "Adding repo failed").Error())
+	}
 }
