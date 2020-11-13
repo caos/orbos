@@ -37,5 +37,6 @@ type Fluentd struct {
 	//Spec to define how the persistence should be handled
 	PVC *storage.Spec `json:"pvc,omitempty" yaml:"pvc,omitempty"`
 	//Replicas number of fluentd instances
-	Replicas int
+	//@default: 1
+	Replicas *int `json:"replicas,omitempty" yaml:"replicas,omitempty"`
 }

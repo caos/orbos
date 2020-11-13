@@ -113,6 +113,9 @@ func New(spec *latest.LogCollection) *Logging {
 				DisablePvc:   true,
 				Tolerations:  k8s.Tolerations{},
 				NodeSelector: map[string]string{},
+				Scaling: &Scaling{
+					Replicas: 1,
+				},
 			},
 			Fluentbit: &Fluentbit{
 				Metrics: &Metrics{
@@ -133,11 +136,13 @@ func New(spec *latest.LogCollection) *Logging {
 		return values
 	}
 
-	values.Spec.WatchNamespaces = spec.WatchNamespaces
+	if spec.WatchNamespaces != nil {
+		values.Spec.WatchNamespaces = spec.WatchNamespaces
+	}
 
 	if spec.Fluentd != nil {
-		values.Spec.Fluentd.Scaling = &Scaling{
-			Replicas: spec.Fluentd.Replicas,
+		if spec.Fluentd.Replicas != nil {
+			values.Spec.Fluentd.Scaling.Replicas = *spec.Fluentd.Replicas
 		}
 		if spec.Fluentd.NodeSelector != nil {
 			for k, v := range spec.Fluentd.NodeSelector {
