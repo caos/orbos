@@ -45,6 +45,11 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion
 
 	recMonitor := monitor.WithField("version", boomVersion)
 
+	imageRegistry := boomSpec.CustomImageRegistry
+	if imageRegistry == "" {
+		imageRegistry = "ghcr.io"
+	}
+
 	if !deployBoom {
 		recMonitor.Info("Skipping boom deployment")
 		return nil
@@ -55,7 +60,7 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion
 		return nil
 	}
 
-	if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomVersion, tolerations, nodeselector, &resources); err != nil {
+	if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomVersion, tolerations, nodeselector, &resources, imageRegistry); err != nil {
 		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
 		return err
 	}

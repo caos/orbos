@@ -30,7 +30,12 @@ func AdaptFunc(timestamp string, features ...string) zitadel.AdaptFunc {
 		}
 
 		query := zitadel.EnsureFuncToQueryFunc(func(k8sClient *kubernetes.Client) error {
-			if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations); err != nil {
+			imageRegistry := desiredKind.Spec.CustomImageRegistry
+			if imageRegistry == "" {
+				imageRegistry = "ghcr.io"
+			}
+
+			if err := kubernetes.EnsureZitadelArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations, imageRegistry); err != nil {
 				monitor.Error(errors.Wrap(err, "Failed to deploy zitadel-operator into k8s-cluster"))
 				return err
 			}

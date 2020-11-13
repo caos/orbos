@@ -145,7 +145,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				orbConfig,
 				gitCommit,
 				true,
-				false))
+				false,
+				gitClient,
+			))
 			if err != nil {
 				return err
 			}

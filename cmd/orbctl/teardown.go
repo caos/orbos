@@ -87,7 +87,9 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 					orbConfig,
 					gitCommit,
 					true,
-					false),
+					false,
+					gitClient,
+				),
 				finishedChan,
 			)
 		}
