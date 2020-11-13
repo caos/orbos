@@ -5,7 +5,7 @@ on:
       - master
 jobs:
   dev-release:
-    name: Dev-Release Orbos
+    name: Dev-Release ORBOS
     runs-on: ubuntu-18.04
     steps:
       - name: Source Checkout Dev
@@ -20,12 +20,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GO111MODULE: on
           CGO_ENABLED: 0
+          CR_PAT: ${{ secrets.CR_PAT }}
+          REGISTRY: ghcr.io
         run: |
           export VERSION=${GITHUB_REF##*/}-dev
 
-          export IMAGE=docker.pkg.github.com/caos/orbos/orbos
+          export IMAGE=$REGISTRY/$GITHUB_REPOSITORY
           export TAG_VERSION=${IMAGE}:${VERSION}
-          export CRBACKUPIMAGE=docker.pkg.github.com/caos/orbos/crbackup
+          export CRBACKUPIMAGE=$REGISTRY/caos/crbackup
           export CRBACKUP_TAG_VERSION=${CRBACKUPIMAGE}:${VERSION}
 
           go mod download
@@ -34,8 +36,8 @@ jobs:
 
           CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/gen-charts/*.go
 
-          echo "Publishing Orbos dev-version $VERSION"
-          docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
+          echo "Publishing ORBOS dev-version $VERSION"
+          docker login $REGISTRY -u $GITHUB_ACTOR -p $CR_PAT
           docker build --tag ${TAG_VERSION} --file ./build/orbos/Dockerfile .
           docker push ${TAG_VERSION}
 

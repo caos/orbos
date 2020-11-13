@@ -40,4 +40,3 @@ All accepted and mitigated vulnerabilitys will be published on the [Github Secur
 ### Timing
 
 We think it is crucial to publish advisories `ASAP` as mitigations are ready. But due to the unknown nature of the discloures the time frame can range from 7 to 90 days.
-

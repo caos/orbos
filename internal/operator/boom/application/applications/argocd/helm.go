@@ -30,11 +30,8 @@ func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolset
 }
 
 func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
-	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled && toolsetCRDSpec.Reconciling.CustomImage.ImagePullSecret != "" {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled {
 		spec := toolsetCRDSpec.Reconciling
-		if err := customimage.AddImagePullSecretFromSpec(spec, resultFilePath); err != nil {
-			return err
-		}
 
 		if spec.CustomImage.GopassStores != nil && len(spec.CustomImage.GopassStores) > 0 {
 			if err := customimage.AddPostStartFromSpec(spec, resultFilePath); err != nil {
@@ -49,11 +46,12 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
 	values := helm.DefaultValues(imageTags)
-	if toolsetCRDSpec.Reconciling == nil {
+
+	spec := toolsetCRDSpec.Reconciling
+	if spec == nil {
 		return values
 	}
 
-	spec := toolsetCRDSpec.Reconciling
 	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		conf := customimage.FromSpec(spec, imageTags)
 		values.RepoServer.Image = &helm.Image{

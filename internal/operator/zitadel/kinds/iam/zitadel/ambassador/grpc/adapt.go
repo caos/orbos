@@ -3,7 +3,6 @@ package grpc
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/mapping"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/ambassador/module"
 	"github.com/caos/orbos/internal/operator/zitadel"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
@@ -24,7 +23,6 @@ func AdaptFunc(
 	adminMName := "admin-grpc-v1"
 	authMName := "auth-grpc-v1"
 	mgmtMName := "mgmt-grpc-v1"
-	moduleName := "ambassador"
 
 	destroyAdminG, err := mapping.AdaptFuncToDestroy(namespace, adminMName)
 	if err != nil {
@@ -38,16 +36,11 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyModule, err := module.AdaptFuncToDestroy("caos-system", moduleName)
-	if err != nil {
-		return nil, nil, err
-	}
 
 	destroyers := []zitadel.DestroyFunc{
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAdminG),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyAuthG),
 		zitadel.ResourceDestroyToZitadelDestroy(destroyMgmtGRPC),
-		zitadel.ResourceDestroyToZitadelDestroy(destroyModule),
 	}
 
 	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {
@@ -69,8 +62,6 @@ func AdaptFunc(
 			apiDomain := currentNW.GetAPISubDomain() + "." + currentNW.GetDomain()
 			consoleDomain := currentNW.GetConsoleSubDomain() + "." + currentNW.GetDomain()
 			_ = consoleDomain
-
-			queryModule, err := module.AdaptFuncToEnsure("caos-system", moduleName, labels, &module.Config{EnableGrpcWeb: true})
 
 			cors := &mapping.CORS{
 				Origins:        "*",
@@ -133,7 +124,6 @@ func AdaptFunc(
 			}
 
 			queriers := []zitadel.QueryFunc{
-				zitadel.ResourceQueryToZitadelQuery(queryModule),
 				zitadel.ResourceQueryToZitadelQuery(queryAdminG),
 				zitadel.ResourceQueryToZitadelQuery(queryAuthG),
 				zitadel.ResourceQueryToZitadelQuery(queryMgmtGRPC),

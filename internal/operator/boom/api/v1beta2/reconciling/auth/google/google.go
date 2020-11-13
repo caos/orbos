@@ -13,6 +13,16 @@ type Connector struct {
 	Config *Config `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
+func (c *Connector) IsZero() bool {
+	if c.ID == "" &&
+		c.Name == "" &&
+		(c.Config == nil || c.Config.IsZero()) {
+		return true
+	}
+
+	return false
+}
+
 type Config struct {
 	ClientID *secret.Secret `yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
@@ -31,4 +41,20 @@ type Config struct {
 	ServiceAccountFilePath string `json:"serviceAccountFilePath,omitempty" yaml:"serviceAccountFilePath,omitempty"`
 	//Email of a G Suite admin to impersonate
 	AdminEmail string `json:"adminEmail,omitempty" yaml:"adminEmail,omitempty"`
+}
+
+func (c *Config) IsZero() bool {
+	if (c.ClientID == nil || c.ClientID.IsZero()) &&
+		(c.ClientSecret == nil || c.ClientSecret.IsZero()) &&
+		(c.ServiceAccountJSON == nil || c.ServiceAccountJSON.IsZero()) &&
+		c.ExistingClientIDSecret == nil &&
+		c.ExistingClientSecretSecret == nil &&
+		c.ExistingServiceAccountJSONSecret == nil &&
+		c.HostedDomains == nil &&
+		c.Groups == nil &&
+		c.ServiceAccountFilePath == "" &&
+		c.AdminEmail == "" {
+		return true
+	}
+	return false
 }

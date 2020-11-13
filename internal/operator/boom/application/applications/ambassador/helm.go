@@ -42,10 +42,16 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1
 }
 
 func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.APIGateway
 	imageTags := helm.GetImageTags()
 
 	values := helm.DefaultValues(imageTags)
+
+	spec := toolsetCRDSpec.APIGateway
+
+	if spec == nil {
+		return values
+	}
+
 	if spec.ReplicaCount != 0 {
 		values.ReplicaCount = spec.ReplicaCount
 	}
@@ -84,10 +90,17 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
-	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
+	values.CreateDevPortalMapping = spec.ActivateDevPortal
 
-	if spec.Resources == nil {
+	if spec.Resources != nil {
 		values.Resources = spec.Resources
+	}
+
+	// default is false
+	values.Service.Annotations.Module.Config.EnableGRPCWeb = spec.GRPCWeb
+	// default is true
+	if spec.ProxyProtocol != nil {
+		values.Service.Annotations.Module.Config.UseProxyProto = *spec.ProxyProtocol
 	}
 
 	if spec.Caching == nil {

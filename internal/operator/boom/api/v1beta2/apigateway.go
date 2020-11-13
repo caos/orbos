@@ -23,6 +23,12 @@ type APIGateway struct {
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 	//Caching options
 	Caching *Caching `json:"caching,omitempty" yaml:"caching,omitempty"`
+	//Enable gRPC Web
+	//@default: false
+	GRPCWeb bool `json:"grpcWeb,omitempty" yaml:"grpcWeb,omitempty"`
+	//Enable proxy protocol
+	//@default: true
+	ProxyProtocol *bool `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 }
 
 type Caching struct {

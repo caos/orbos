@@ -14,8 +14,9 @@ type ConfigEndpoint struct {
 }
 
 type ConfigTLSConfig struct {
-	CaFile     string
-	ServerName string
+	CaFile             string
+	ServerName         string
+	InsecureSkipVerify bool
 }
 
 type ConfigRelabeling struct {
@@ -74,8 +75,9 @@ func SpecToValues(config *Config) *Values {
 		}
 		if endpoint.TLSConfig != nil {
 			t := &TLSConfig{
-				CaFile:     endpoint.TLSConfig.CaFile,
-				ServerName: endpoint.TLSConfig.ServerName,
+				CaFile:             endpoint.TLSConfig.CaFile,
+				ServerName:         endpoint.TLSConfig.ServerName,
+				InsecureSkipVerify: endpoint.TLSConfig.InsecureSkipVerify,
 			}
 			valueEndpoint.TLSConfig = t
 		}

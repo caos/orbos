@@ -24,14 +24,14 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		return err
 	}
 
-	desiredKind, _, err := boomapi.ParseToolset(desiredTree)
+	desiredKind, _, _, err := boomapi.ParseToolset(desiredTree)
 	if err != nil {
 		return err
 	}
 
 	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-	if err := cmdboom.Reconcile(monitor, k8sClient, version, desiredKind.Spec.Boom); err != nil {
+	if err := cmdboom.Reconcile(monitor, k8sClient, version, true, desiredKind.Spec.Boom); err != nil {
 		return err
 	}
 	return nil

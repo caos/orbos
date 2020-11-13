@@ -8,6 +8,7 @@ import (
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket/clean"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/backups/bucket/restore"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/migration"
+	orbossecret "github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -28,7 +29,7 @@ func AdaptFunc(
 	tolerations []corev1.Toleration,
 	features []string,
 ) zitadel.AdaptFunc {
-	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, err error) {
+	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc zitadel.QueryFunc, destroyFunc zitadel.DestroyFunc, secrets map[string]*orbossecret.Secret, err error) {
 		secretName := "backup-serviceaccountjson"
 		secretKey := "serviceaccountjson"
 
@@ -36,7 +37,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesiredV0(desired)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desired.Parsed = desiredKind
 
@@ -89,12 +90,12 @@ func AdaptFunc(
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		queriers := make([]zitadel.QueryFunc, 0)
@@ -132,6 +133,7 @@ func AdaptFunc(
 				return zitadel.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 			},
 			zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
+			getSecretsMap(desiredKind),
 			nil
 	}
 }

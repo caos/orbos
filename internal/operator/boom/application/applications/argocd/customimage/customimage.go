@@ -109,7 +109,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 }
 
 func FromSpec(spec *reconciling.Reconciling, imageTags map[string]string) *CustomImage {
-	imageRepository := "docker.pkg.github.com/caos/argocd-secrets/argocd"
+	imageRepository := "ghcr.io/caos/argocd-secrets"
 
 	vols := make([]*SecretVolume, 0)
 	volMounts := make([]*VolumeMount, 0)
@@ -179,15 +179,6 @@ func getVolMount(internal, foldername string) *VolumeMount {
 		SubPath:   internal,
 		ReadOnly:  false,
 	}
-}
-
-func AddImagePullSecretFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
-	addContent := strings.Join([]string{
-		tab, tab, tab, "imagePullSecrets:", nl,
-		tab, tab, tab, "- name: ", spec.CustomImage.ImagePullSecret, nl,
-	}, "")
-
-	return helper.AddStringBeforePointForKindAndName(resultFilePath, "Deployment", "argocd-repo-server", "volumes:", addContent)
 }
 
 type stores struct {

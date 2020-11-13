@@ -3,13 +3,14 @@ package cmds
 import (
 	"context"
 	"errors"
+	"io/ioutil"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
-	"io/ioutil"
 )
 
 func Takeoff(
@@ -55,7 +56,7 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
+		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig)
 		if err != nil {
 			return err
 		}
@@ -69,6 +70,11 @@ func Takeoff(
 			return err
 		}
 		allKubeconfigs = append(allKubeconfigs, string(value))
+	}
+
+	if !deploy {
+		monitor.Info("Skipping operator deployments")
+		return nil
 	}
 
 	for _, kubeconfig := range allKubeconfigs {

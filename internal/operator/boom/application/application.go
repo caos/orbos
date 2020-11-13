@@ -14,6 +14,8 @@ import (
 	loggingoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki"
 	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver"
+	metricsserverinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus"
 	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter"
@@ -67,6 +69,8 @@ func New(monitor mntr.Monitor, appName name.Application, orb string) Application
 		return prometheus.New(monitor, orb)
 	case lokiinfo.GetName():
 		return loki.New(monitor)
+	case metricsserverinfo.GetName():
+		return metricsserver.New(monitor)
 	}
 
 	return nil

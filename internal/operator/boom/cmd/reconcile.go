@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion string, boomSpec *v1beta2.Boom) error {
+func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion string, deployBoom bool, boomSpec *v1beta2.Boom) error {
 
 	var (
 		tolerations  k8s.Tolerations
@@ -45,15 +45,21 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion
 
 	recMonitor := monitor.WithField("version", boomVersion)
 
-	if k8sClient.Available() {
-		if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomVersion, tolerations, nodeselector, &resources); err != nil {
-			recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
-			return err
-		}
-		recMonitor.Info("Applied boom")
-	} else {
-		recMonitor.Info("Failed to connect to k8s")
+	if !deployBoom {
+		recMonitor.Info("Skipping boom deployment")
+		return nil
 	}
+
+	if !k8sClient.Available() {
+		recMonitor.Info("Failed to connect to k8s")
+		return nil
+	}
+
+	if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomVersion, tolerations, nodeselector, &resources); err != nil {
+		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
+		return err
+	}
+	recMonitor.Info("Applied boom")
 
 	return nil
 }

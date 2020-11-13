@@ -10,4 +10,5 @@ type Config struct {
 	CrdPath          string
 	Git              *git.Client
 	Monitor          mntr.Monitor
+	Deploy           bool
 }
