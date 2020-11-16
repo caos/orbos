@@ -227,7 +227,7 @@ func AdaptFunc(
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		func(k8sClient *kubernetes.Client) error {
 			internalMonitor.Info("waiting for migration to be completed")
-			if err := k8sClient.WaitUntilJobCompleted(namespace, jobName, 60); err != nil {
+			if err := k8sClient.WaitUntilJobCompleted(namespace, jobName, 300); err != nil {
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for migration to be completed"))
 				return err
 			}
