@@ -21,7 +21,7 @@ import (
 
 const (
 	//zitadelImage can be found in github.com/caos/zitadel repo
-	zitadelImage = "ghcr.io/caos/zitadel:0.102.1"
+	zitadelImage = "ghcr.io/caos/zitadel:0.103.1"
 )
 
 func AdaptFunc(
@@ -345,7 +345,7 @@ func AdaptFunc(
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		func(k8sClient *kubernetes.Client) error {
 			internalMonitor.Info("waiting for deployment to be ready")
-			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, true, 60); err != nil {
+			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, true, 300); err != nil {
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for deployment to be ready"))
 				return err
 			}
