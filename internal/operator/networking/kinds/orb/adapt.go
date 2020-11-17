@@ -57,7 +57,7 @@ func AdaptFunc() core.AdaptFunc {
 
 		currentTree.Parsed = &DesiredV0{
 			Common: &tree.Common{
-				Kind:    "networking.caos.ch/Orb",
+				Kind:    "zitadel.caos.ch/Orb",
 				Version: "v0",
 			},
 			Networking: networkingCurrent,

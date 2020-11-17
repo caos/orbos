@@ -1,13 +1,12 @@
 package managed
 
 import (
-	"strconv"
-	"strings"
-
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/secret"
+	"strconv"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -132,7 +131,7 @@ func AdaptFunc(
 
 		currentDB := &Current{
 			Common: &tree.Common{
-				Kind:    "databases.caos.ch/CockroachDB",
+				Kind:    "zitadel.caos.ch/ManagedDatabase",
 				Version: "v0",
 			},
 			Current: &CurrentDB{

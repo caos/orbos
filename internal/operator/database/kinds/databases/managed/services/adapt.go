@@ -46,13 +46,13 @@ func AdaptFunc(
 	for k, v := range labels {
 		publicLabels[k] = v
 	}
-	publicLabels["databases.caos.ch/servicetype"] = "public"
+	publicLabels["zitadel.caos.ch/servicetype"] = "public"
 
 	internalLabels := map[string]string{}
 	for k, v := range labels {
 		internalLabels[k] = v
 	}
-	internalLabels["databases.caos.ch/servicetype"] = "internal"
+	internalLabels["zitadel.caos.ch/servicetype"] = "internal"
 
 	ports := []service.Port{
 		{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},

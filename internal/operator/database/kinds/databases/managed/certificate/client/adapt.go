@@ -1,8 +1,6 @@
 package client
 
 import (
-	"strings"
-
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/certificates"
@@ -10,6 +8,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
+	"strings"
 )
 
 func AdaptFunc(
@@ -25,7 +24,7 @@ func AdaptFunc(
 	for k, v := range labels {
 		clientLabels[k] = v
 	}
-	clientLabels["databases.caos.ch/secret-type"] = "client"
+	clientLabels["zitadel.caos.ch/secret-type"] = "client"
 
 	clientSecretPrefix := "cockroachdb.client."
 

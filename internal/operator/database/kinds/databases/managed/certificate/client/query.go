@@ -1,9 +1,8 @@
 package client
 
 import (
-	"strings"
-
 	"github.com/caos/orbos/pkg/kubernetes"
+	"strings"
 )
 
 func QueryCertificates(
@@ -19,7 +18,7 @@ func QueryCertificates(
 	for k, v := range labels {
 		clientLabels[k] = v
 	}
-	clientLabels["databases.caos.ch/secret-type"] = "client"
+	clientLabels["zitadel.caos.ch/secret-type"] = "client"
 
 	list, err := k8sClient.ListSecrets(namespace, clientLabels)
 	if err != nil {
