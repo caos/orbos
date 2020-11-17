@@ -132,7 +132,7 @@ func AdaptFunc(
 
 		currentDB := &Current{
 			Common: &tree.Common{
-				Kind:    "databases.caos.ch/ManagedDatabase",
+				Kind:    "databases.caos.ch/CockroachDB",
 				Version: "v0",
 			},
 			Current: &CurrentDB{
