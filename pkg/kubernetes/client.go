@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 	"io"
 	"io/ioutil"
 	"reflect"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
@@ -1096,6 +1097,14 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	}
 
 	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
+	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
+	if err != nil && !macherrs.IsNotFound(err) {
+		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+	}
+	if err == nil {
+		crd.SetResourceVersion(existing.GetResourceVersion())
+	}
+	err = nil
 
 	return c.apply("crd", name, func() error {
 		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
