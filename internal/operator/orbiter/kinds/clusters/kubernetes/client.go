@@ -1073,10 +1073,11 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	}
 
 	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
-
-	meta := crd.Object["metadata"].(map[string]interface{})
-	if _, ok := meta["resourceVersion"]; ok {
-		delete(meta, "resourceVersion")
+	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
+	if err != nil && !macherrs.IsNotFound(err) {
+		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+	} else {
+		crd.SetResourceVersion(existing.GetResourceVersion())
 	}
 
 	return c.apply("crd", name, func() error {
