@@ -79,7 +79,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 
 		currentTree.Parsed = &DesiredV0{
 			Common: &tree.Common{
-				Kind:    "zitadel.caos.ch/Orb",
+				Kind:    "databases.caos.ch/Orb",
 				Version: "v0",
 			},
 			Database: databaseCurrent,

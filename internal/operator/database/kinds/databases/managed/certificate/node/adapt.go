@@ -27,7 +27,7 @@ func AdaptFunc(
 	for k, v := range labels {
 		nodeLabels[k] = v
 	}
-	nodeLabels["zitadel.caos.ch/secret-type"] = "node"
+	nodeLabels["databases.caos.ch/secret-type"] = "node"
 
 	desiredNode := make([]*certificates.SecretInternal, 0)
 
