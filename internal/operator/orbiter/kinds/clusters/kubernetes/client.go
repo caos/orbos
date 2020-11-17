@@ -1072,19 +1072,22 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 		return err
 	}
 
+	immutable := crd.DeepCopy()
 	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
 	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
 	if err != nil && !macherrs.IsNotFound(err) {
 		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
-	} else {
-		crd.SetResourceVersion(existing.GetResourceVersion())
 	}
+	if err == nil {
+		immutable.SetResourceVersion(existing.GetResourceVersion())
+	}
+	err = nil
 
 	return c.apply("crd", name, func() error {
-		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
+		_, err := resources.Create(context.Background(), immutable, mach.CreateOptions{})
 		return err
 	}, func() error {
-		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+		_, err := resources.Update(context.Background(), immutable, mach.UpdateOptions{})
 		return err
 	})
 }
