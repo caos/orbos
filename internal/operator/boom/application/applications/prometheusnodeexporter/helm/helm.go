@@ -5,7 +5,7 @@ import "github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 func GetChartInfo() *chart.Chart {
 	return &chart.Chart{
 		Name:    "prometheus-node-exporter",
-		Version: "1.11.2",
+		Version: "1.11.1",
 	}
 }
 
