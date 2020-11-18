@@ -21,5 +21,8 @@ func GetAll() map[string]string {
 		"V1.16__user_session.sql":            V116UserSession,
 		"V1.17__policies.sql":                V117Policies,
 		"V1.18__scope_projectroles.sql":      V118ScopeProjetRoles,
+		"V1.19__idp_configs.sql":             V119IDPConfigs,
+		"V1.20__label_policies.sql":          V120LabelPolicies,
+		"V1.21__mfa_policy.sql":              V121MfaPolicy,
 	}
 }

@@ -6,7 +6,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/orb"
 
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -26,37 +26,14 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 
 	monitor.Debug("Ensuring common artifacts")
 
-	if err := client.ApplyNamespace(&core.Namespace{
+	return client.ApplyNamespace(&core.Namespace{
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
 				"name": "caos-system",
 			},
 		},
-	}); err != nil {
-		return err
-	}
-
-	if err := client.ApplySecret(&core.Secret{
-		ObjectMeta: mach.ObjectMeta{
-			Name:      "public-github-packages",
-			Namespace: "caos-system",
-		},
-		Type: core.SecretTypeDockerConfigJson,
-		StringData: map[string]string{
-			core.DockerConfigJsonKey: `{
-		"auths": {
-				"docker.pkg.github.com": {
-						"auth": "aW1ncHVsbGVyOmU2NTAxMWI3NDk1OGMzOGIzMzcwYzM5Zjg5MDlkNDE5OGEzODBkMmM="
-				}
-		}
-}`,
-		},
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
@@ -87,7 +64,8 @@ func EnsureZitadelArtifacts(
 	client *Client,
 	version string,
 	nodeselector map[string]string,
-	tolerations []core.Toleration) error {
+	tolerations []core.Toleration,
+	imageRegistry string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"zitadel": version,
@@ -178,13 +156,10 @@ func EnsureZitadelArtifacts(
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "zitadel",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "zitadel",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
 						Command:         []string{"/orbctl", "takeoff", "zitadel", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -241,7 +216,14 @@ func ScaleZitadelOperator(
 	return client.ScaleDeployment("caos-system", "zitadel-operator", replicaCount)
 }
 
-func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, tolerations k8s.Tolerations, nodeselector map[string]string, resources *k8s.Resources) error {
+func EnsureBoomArtifacts(
+	monitor mntr.Monitor,
+	client *Client,
+	version string,
+	tolerations k8s.Tolerations,
+	nodeselector map[string]string,
+	resources *k8s.Resources,
+	imageRegistry string) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,
@@ -332,13 +314,10 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "boom",
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           fmt.Sprintf("docker.pkg.github.com/caos/orbos/orbos:%s", version),
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
 						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
@@ -354,7 +333,7 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 						Resources: core.ResourceRequirements(*resources),
 					}},
 					NodeSelector: nodeselector,
-					Tolerations:  tolerations,
+					Tolerations:  tolerations.K8s(),
 					Volumes: []core.Volume{{
 						Name: "orbconfig",
 						VolumeSource: core.VolumeSource{
@@ -407,7 +386,12 @@ func EnsureBoomArtifacts(monitor mntr.Monitor, client *Client, version string, t
 	return nil
 }
 
-func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion string) error {
+func EnsureOrbiterArtifacts(
+	monitor mntr.Monitor,
+	client *Client,
+	orbiterversion string,
+	imageRegistry string) error {
+
 	monitor.WithFields(map[string]interface{}{
 		"orbiter": orbiterversion,
 	}).Debug("Ensuring orbiter artifacts")
@@ -441,13 +425,10 @@ func EnsureOrbiterArtifacts(monitor mntr.Monitor, client *Client, orbiterversion
 					},
 				},
 				Spec: core.PodSpec{
-					ImagePullSecrets: []core.LocalObjectReference{{
-						Name: "public-github-packages",
-					}},
 					Containers: []core.Container{{
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
-						Image:           "docker.pkg.github.com/caos/orbos/orbos:" + orbiterversion,
+						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, orbiterversion),
 						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",

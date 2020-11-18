@@ -102,7 +102,7 @@ func prepareAdditionalFiles(resultFilePath, namespace string, appName name.Appli
 	}
 
 	kustomizeFile := kustomize.File{
-		Namespace:    "caos-system",
+		Namespace:    namespace,
 		Resources:    []string{filepath.Base(resultFilePath)},
 		Transformers: []string{filepath.Base(resultFileTransformerPath)},
 	}

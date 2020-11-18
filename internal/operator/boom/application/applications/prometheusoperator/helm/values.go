@@ -1,8 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 )
 
 type Rules struct {
@@ -109,53 +108,59 @@ type SecurityContext struct {
 }
 
 type PrometheusOperatorValues struct {
-	Enabled                       bool                `yaml:"enabled"`
-	TLSProxy                      *TLSProxy           `yaml:"tlsProxy"`
-	AdmissionWebhooks             *AdmissionWebhooks  `yaml:"admissionWebhooks"`
-	DenyNamespaces                []string            `yaml:"denyNamespaces"`
-	ServiceAccount                *ServiceAccount     `yaml:"serviceAccount"`
-	Service                       *Service            `yaml:"service"`
-	CreateCustomResource          bool                `yaml:"createCustomResource"`
-	CrdAPIGroup                   string              `yaml:"crdApiGroup"`
-	CleanupCustomResource         bool                `yaml:"cleanupCustomResource"`
-	PodLabels                     map[string]string   `yaml:"podLabels"`
-	PodAnnotations                map[string]string   `yaml:"podAnnotations"`
-	KubeletService                *KubeletService     `yaml:"kubeletService"`
-	ServiceMonitor                *ServiceMonitor     `yaml:"serviceMonitor"`
-	NodeSelector                  map[string]string   `yaml:"nodeSelector"`
-	Tolerations                   []corev1.Toleration `yaml:"tolerations"`
-	Affinity                      struct{}            `yaml:"affinity"`
-	SecurityContext               *SecurityContext    `yaml:"securityContext"`
-	Image                         *Image              `yaml:"image"`
-	ConfigmapReloadImage          *Image              `yaml:"configmapReloadImage"`
-	PrometheusConfigReloaderImage *Image              `yaml:"prometheusConfigReloaderImage"`
-	ConfigReloaderCPU             string              `yaml:"configReloaderCpu"`
-	ConfigReloaderMemory          string              `yaml:"configReloaderMemory"`
-	HyperkubeImage                *Image              `yaml:"hyperkubeImage"`
-	Resources                     *k8s.Resources      `yaml:"resources"`
+	Enabled                       bool               `yaml:"enabled"`
+	TLSProxy                      *TLSProxy          `yaml:"tlsProxy"`
+	AdmissionWebhooks             *AdmissionWebhooks `yaml:"admissionWebhooks"`
+	DenyNamespaces                []string           `yaml:"denyNamespaces"`
+	ServiceAccount                *ServiceAccount    `yaml:"serviceAccount"`
+	Service                       *Service           `yaml:"service"`
+	CreateCustomResource          bool               `yaml:"createCustomResource"`
+	CrdAPIGroup                   string             `yaml:"crdApiGroup"`
+	CleanupCustomResource         bool               `yaml:"cleanupCustomResource"`
+	PodLabels                     map[string]string  `yaml:"podLabels"`
+	PodAnnotations                map[string]string  `yaml:"podAnnotations"`
+	KubeletService                *KubeletService    `yaml:"kubeletService"`
+	ServiceMonitor                *ServiceMonitor    `yaml:"serviceMonitor"`
+	NodeSelector                  map[string]string  `yaml:"nodeSelector"`
+	Tolerations                   k8s.Tolerations    `yaml:"tolerations"`
+	Affinity                      struct{}           `yaml:"affinity"`
+	SecurityContext               *SecurityContext   `yaml:"securityContext"`
+	Image                         *Image             `yaml:"image"`
+	ConfigmapReloadImage          *Image             `yaml:"configmapReloadImage"`
+	PrometheusConfigReloaderImage *Image             `yaml:"prometheusConfigReloaderImage"`
+	ConfigReloaderCPU             string             `yaml:"configReloaderCpu"`
+	ConfigReloaderMemory          string             `yaml:"configReloaderMemory"`
+	HyperkubeImage                *Image             `yaml:"hyperkubeImage"`
+	Resources                     *k8s.Resources     `yaml:"resources"`
+}
+
+type DisabledToolServicePerReplica struct {
+	Enabled           bool
+	ServicePerReplica *DisabledTool `yaml:"servicePerReplica"`
+	IngressPerReplica *DisabledTool `yaml:"ingressPerReplica"`
 }
 
 type Values struct {
-	NameOverride              string                    `yaml:"nameOverride,omitempty"`
-	FullnameOverride          string                    `yaml:"fullnameOverride,omitempty"`
-	CommonLabels              map[string]string         `yaml:"commonLabels"`
-	DefaultRules              *DefaultRules             `yaml:"defaultRules"`
-	AdditionalPrometheusRules []interface{}             `yaml:"additionalPrometheusRules"`
-	Global                    *Global                   `yaml:"global"`
-	Alertmanager              *DisabledTool             `yaml:"alertmanager"`
-	Grafana                   *DisabledTool             `yaml:"grafana"`
-	KubeAPIServer             *DisabledTool             `yaml:"kubeApiServer"`
-	Kubelet                   *DisabledTool             `yaml:"kubelet"`
-	KubeControllerManager     *DisabledTool             `yaml:"kubeControllerManager"`
-	CoreDNS                   *DisabledTool             `yaml:"coreDns"`
-	KubeDNS                   *DisabledTool             `yaml:"kubeDns"`
-	KubeEtcd                  *DisabledTool             `yaml:"kubeEtcd"`
-	KubeScheduler             *DisabledTool             `yaml:"kubeScheduler"`
-	KubeProxy                 *DisabledTool             `yaml:"kubeProxy"`
-	KubeStateMetricsScrap     *DisabledTool             `yaml:"kubeStateMetrics"`
-	KubeStateMetrics          *DisabledTool             `yaml:"kube-state-metrics"`
-	NodeExporter              *DisabledTool             `yaml:"nodeExporter"`
-	PrometheusNodeExporter    *DisabledTool             `yaml:"prometheus-node-exporter"`
-	PrometheusOperator        *PrometheusOperatorValues `yaml:"prometheusOperator"`
-	Prometheus                *DisabledTool             `yaml:"prometheus"`
+	NameOverride              string                         `yaml:"nameOverride,omitempty"`
+	FullnameOverride          string                         `yaml:"fullnameOverride,omitempty"`
+	CommonLabels              map[string]string              `yaml:"commonLabels"`
+	DefaultRules              *DefaultRules                  `yaml:"defaultRules"`
+	AdditionalPrometheusRules []interface{}                  `yaml:"additionalPrometheusRules"`
+	Global                    *Global                        `yaml:"global"`
+	Alertmanager              *DisabledToolServicePerReplica `yaml:"alertmanager"`
+	Grafana                   *DisabledTool                  `yaml:"grafana"`
+	KubeAPIServer             *DisabledTool                  `yaml:"kubeApiServer"`
+	Kubelet                   *DisabledTool                  `yaml:"kubelet"`
+	KubeControllerManager     *DisabledTool                  `yaml:"kubeControllerManager"`
+	CoreDNS                   *DisabledTool                  `yaml:"coreDns"`
+	KubeDNS                   *DisabledTool                  `yaml:"kubeDns"`
+	KubeEtcd                  *DisabledTool                  `yaml:"kubeEtcd"`
+	KubeScheduler             *DisabledTool                  `yaml:"kubeScheduler"`
+	KubeProxy                 *DisabledTool                  `yaml:"kubeProxy"`
+	KubeStateMetricsScrap     *DisabledTool                  `yaml:"kubeStateMetrics"`
+	KubeStateMetrics          *DisabledTool                  `yaml:"kube-state-metrics"`
+	NodeExporter              *DisabledTool                  `yaml:"nodeExporter"`
+	PrometheusNodeExporter    *DisabledTool                  `yaml:"prometheus-node-exporter"`
+	PrometheusOperator        *PrometheusOperatorValues      `yaml:"prometheusOperator"`
+	Prometheus                *DisabledToolServicePerReplica `yaml:"prometheus"`
 }

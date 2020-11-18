@@ -1,8 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 )
 
 type Image struct {
@@ -77,23 +76,33 @@ type Collectors struct {
 	Verticalpodautoscalers     bool `yaml:"verticalpodautoscalers"`
 }
 
+type Selector struct {
+	MatchLabels map[string]string `yaml:"matchLabels,omitempty"`
+}
+
+type PodDisruptionBudget struct {
+	MaxUnavailable int       `yaml:"maxUnavailable,omitempty"`
+	Selector       *Selector `yaml:"selector,omitempty"`
+}
+
 type Values struct {
-	FullnameOverride  string              `yaml:"fullnameOverride,omitempty"`
-	PrometheusScrape  bool                `yaml:"prometheusScrape"`
-	Image             *Image              `yaml:"image"`
-	Replicas          int                 `yaml:"replicas"`
-	Service           *Service            `yaml:"service"`
-	CustomLabels      map[string]string   `yaml:"customLabels"`
-	HostNetwork       bool                `yaml:"hostNetwork"`
-	Rbac              *Rbac               `yaml:"rbac"`
-	ServiceAccount    *ServiceAccount     `yaml:"serviceAccount"`
-	Prometheus        *Prometheus         `yaml:"prometheus"`
-	PodSecurityPolicy *PodSecurityPolicy  `yaml:"podSecurityPolicy"`
-	SecurityContext   *SecurityContext    `yaml:"securityContext"`
-	NodeSelector      map[string]string   `yaml:"nodeSelector"`
-	Affinity          *k8s.Affinity       `yaml:"affinity"`
-	Tolerations       []corev1.Toleration `yaml:"tolerations"`
-	PodAnnotations    map[string]string   `yaml:"podAnnotations"`
-	Collectors        *Collectors         `yaml:"collectors"`
-	Resources         *k8s.Resources      `yaml:"resources"`
+	FullnameOverride    string               `yaml:"fullnameOverride,omitempty"`
+	PrometheusScrape    bool                 `yaml:"prometheusScrape"`
+	Image               *Image               `yaml:"image"`
+	Replicas            int                  `yaml:"replicas"`
+	Service             *Service             `yaml:"service"`
+	CustomLabels        map[string]string    `yaml:"customLabels"`
+	HostNetwork         bool                 `yaml:"hostNetwork"`
+	Rbac                *Rbac                `yaml:"rbac"`
+	ServiceAccount      *ServiceAccount      `yaml:"serviceAccount"`
+	Prometheus          *Prometheus          `yaml:"prometheus"`
+	PodSecurityPolicy   *PodSecurityPolicy   `yaml:"podSecurityPolicy"`
+	SecurityContext     *SecurityContext     `yaml:"securityContext"`
+	NodeSelector        map[string]string    `yaml:"nodeSelector"`
+	Affinity            *k8s.Affinity        `yaml:"affinity"`
+	Tolerations         k8s.Tolerations      `yaml:"tolerations"`
+	PodAnnotations      map[string]string    `yaml:"podAnnotations"`
+	Collectors          *Collectors          `yaml:"collectors"`
+	PodDisruptionBudget *PodDisruptionBudget `yaml:"podDisruptionBudget"`
+	Resources           *k8s.Resources       `yaml:"resources"`
 }

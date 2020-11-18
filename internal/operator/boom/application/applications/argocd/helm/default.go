@@ -3,7 +3,7 @@ package helm
 import (
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -33,11 +33,11 @@ func DefaultDexValues(imageTags map[string]string) *Dex {
 				EmptyDir: struct{}{},
 			},
 		},
+		NodeSelector:      map[string]string{},
 		ContainerPortHTTP: 5556,
 		ServicePortHTTP:   5556,
 		ContainerPortGrpc: 5557,
 		ServicePortGrpc:   5557,
-		NodeSelector:      map[string]string{},
 	}
 }
 
@@ -133,7 +133,11 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 		},
 		Dex: &Dex{
-			Enabled:      false,
+			Enabled: false,
+			ServiceAccount: &ServiceAccount{
+				Create: false,
+				Name:   "argocd-dex-server",
+			},
 			NodeSelector: map[string]string{},
 			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
@@ -166,6 +170,19 @@ func DefaultValues(imageTags map[string]string) *Values {
 					corev1.ResourceCPU:    resource.MustParse("50m"),
 					corev1.ResourceMemory: resource.MustParse("128Mi"),
 				},
+			},
+		},
+		RedisHA: &RedisHA{
+			Enabled:           false,
+			Exporter:          &Exporter{Enabled: false},
+			PersistenteVolume: &PV{Enabled: false},
+			Redis: &RedisHAC{
+				MasterGroupName: "argocd",
+				Config:          &RedisHAConfig{Save: "\"\\\"\\\"\""},
+			},
+			HAProxy: &HAProxy{
+				Enabled: false,
+				Metrics: &HAProxyMetrics{Enabled: false},
 			},
 		},
 		Server: &Server{

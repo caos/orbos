@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -64,11 +64,11 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Resources: &k8s.Resources{
 				Limits: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("600m"),
-					corev1.ResourceMemory: resource.MustParse("600Mi"),
+					corev1.ResourceMemory: resource.MustParse("4Gi"),
 				},
 				Requests: corev1.ResourceList{
 					corev1.ResourceCPU:    resource.MustParse("300m"),
-					corev1.ResourceMemory: resource.MustParse("300Mi"),
+					corev1.ResourceMemory: resource.MustParse("2Gi"),
 				},
 			},
 		},
@@ -105,8 +105,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 				PspEnabled: true,
 			},
 		},
-		Alertmanager: &DisabledTool{
-			Enabled: false,
+		Alertmanager: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 		Grafana: &DisabledTool{
 			Enabled: false,

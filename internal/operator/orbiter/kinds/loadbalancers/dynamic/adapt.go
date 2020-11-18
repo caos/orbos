@@ -3,10 +3,13 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/pires/go-proxyproto"
 
 	"github.com/caos/orbos/internal/secret"
 
@@ -233,7 +236,6 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
 	worker_connections  4096;  ## Default: 1024
 }
-
 stream { {{ range $nat := .NATs }}
 	upstream {{ $nat.Name }} {
 		server {{ $nat.To }};
@@ -246,6 +248,7 @@ stream { {{ range $nat := .NATs }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $nat.Name }};
+		proxy_protocol {{ if derefBool $nat.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}`))
 
@@ -408,8 +411,9 @@ http {
 									Protocol: "tcp",
 								},
 							}
+							ip := mapVIP(vip)
 							probeVIP := func() {
-								probe("VIP", vip.IP, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
+								probe("VIP", ip, uint16(transport.FrontendPort), false, transport.HealthChecks, *transport)
 							}
 
 							var natVIPProbed bool
@@ -435,7 +439,7 @@ http {
 
 								for _, machine := range destMachines {
 									desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
-									probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
+									probe("Upstream", machine.IP(), uint16(transport.BackendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
 									if vrrp == nil && forPool == dest {
 										if !natVIPProbed {
 											probeVIP()
@@ -448,14 +452,16 @@ http {
 										}
 										nodeNatDesires.Firewall = common.ToFirewall(srcFW)
 										nodeNatDesires.Machine = machine
+
 										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
 											Whitelist: transport.Whitelist,
 											Name:      transport.Name,
 											From: []string{
-												fmt.Sprintf("%s:%d", mapVIP(vip), transport.FrontendPort),  // VIP
+												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
 											},
-											To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+											To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+											ProxyProtocol: *transport.ProxyProtocol,
 										})
 										nodesNats[machine.IP()] = nodeNatDesires
 									}
@@ -514,13 +520,36 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 	return newVIPs
 }
 
-func probe(probeType, ip string, port uint16, hc HealthChecks, source Transport) {
+func probe(probeType, ip string, port uint16, proxyProtocol bool, hc HealthChecks, source Transport) {
 	vipProbe := fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path)
-	_, err := helpers.Check(vipProbe, int(hc.Code))
+
 	var success float64
-	if err == nil {
-		success = 1
+	if proxyProtocol {
+		header := &proxyproto.Header{
+			Version:           1,
+			Command:           proxyproto.PROXY,
+			TransportProtocol: proxyproto.TCPv4,
+			SourceAddr: &net.TCPAddr{
+				IP:   net.ParseIP("10.1.1.1"),
+				Port: 1000,
+			},
+			DestinationAddr: &net.TCPAddr{
+				IP:   net.ParseIP(ip),
+				Port: int(port),
+			},
+		}
+
+		_, err := helpers.CheckProxy(vipProbe, int(hc.Code), header)
+		if err == nil {
+			success = 1
+		}
+	} else {
+		_, err := helpers.Check(vipProbe, int(hc.Code))
+		if err == nil {
+			success = 1
+		}
 	}
+
 	probes.With(prometheus.Labels{
 		"name":   source.Name,
 		"type":   probeType,
@@ -535,10 +564,11 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name      string
-	Whitelist []*orbiter.CIDR
-	From      []string
-	To        string
+	Name          string
+	Whitelist     []*orbiter.CIDR
+	From          []string
+	To            string
+	ProxyProtocol bool
 }
 
 type LB struct {

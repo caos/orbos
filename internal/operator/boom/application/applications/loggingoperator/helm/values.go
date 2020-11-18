@@ -1,21 +1,20 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
-	corev1 "k8s.io/api/core/v1"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 )
 
 type Values struct {
-	ReplicaCount     int                 `yaml:"replicaCount"`
-	Image            Image               `yaml:"image"`
-	ImagePullSecrets []string            `yaml:"imagePullSecrets"`
-	NameOverride     string              `yaml:"nameOverride"`
-	FullnameOverride string              `yaml:"fullnameOverride"`
-	Resources        *k8s.Resources      `yaml:"resources"`
-	NodeSelector     map[string]string   `yaml:"nodeSelector"`
-	Tolerations      []corev1.Toleration `yaml:"tolerations"`
-	HTTP             HTTP                `yaml:"http"`
-	RBAC             RBAC                `yaml:"rbac"`
+	ReplicaCount     int               `yaml:"replicaCount"`
+	Image            Image             `yaml:"image"`
+	ImagePullSecrets []string          `yaml:"imagePullSecrets"`
+	NameOverride     string            `yaml:"nameOverride"`
+	FullnameOverride string            `yaml:"fullnameOverride"`
+	Resources        *k8s.Resources    `yaml:"resources"`
+	NodeSelector     map[string]string `yaml:"nodeSelector"`
+	Tolerations      k8s.Tolerations   `yaml:"tolerations"`
+	HTTP             HTTP              `yaml:"http"`
+	RBAC             RBAC              `yaml:"rbac"`
 }
 
 type Image struct {

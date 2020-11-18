@@ -1,11 +1,12 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/yaml"
 	"os"
 	"path/filepath"
+
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/internal/utils/yaml"
 
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/helmcommand"
@@ -13,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *Helm) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
+func (h *Helm) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
 	app, err := checkTemplatorInterface(appInterface)
 	if err != nil {
 		return err
@@ -81,7 +82,7 @@ func (h *Helm) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, res
 	return resultFunc(resultAbsFilePath, app.GetNamespace())
 }
 
-func (h *Helm) prepareHelmTemplate(overlay string, app templator.HelmApplication, spec *v1beta2.ToolsetSpec, valuesAbsFilePath string) error {
+func (h *Helm) prepareHelmTemplate(overlay string, app templator.HelmApplication, spec *latest.ToolsetSpec, valuesAbsFilePath string) error {
 
 	logFields := map[string]interface{}{
 		"application": app.GetName().String(),
