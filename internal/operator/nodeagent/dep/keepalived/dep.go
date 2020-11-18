@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"io/ioutil"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -75,9 +77,32 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")
 	if os.IsNotExist(err) {
-		return pkg, nil
+		err = nil
 	}
-	pkg.Config["notifymaster.sh"] = string(notifymaster)
+	if err != nil {
+		return pkg, err
+	}
+
+	if string(notifymaster) != "" {
+		pkg.Config["notifymaster.sh"] = string(notifymaster)
+	}
+
+	authCheck, err := ioutil.ReadFile("/etc/keepalived/authcheck.sh")
+	if os.IsNotExist(err) {
+		err = nil
+	}
+	if err != nil {
+		return pkg, err
+	}
+	if string(authCheck) != "" {
+		pkg.Config["authcheck.sh"] = string(authCheck)
+		var exitCode int
+		if err := exec.Command("/etc/keepalived/authcheck.sh").Run(); err != nil {
+			exitCode = err.(*exec.ExitError).ExitCode()
+		}
+		pkg.Config["authcheckexitcode"] = strconv.Itoa(exitCode)
+	}
+
 	return pkg, err
 }
 
@@ -112,6 +137,12 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 
 	if notifyMaster, ok := ensure.Config["notifymaster.sh"]; ok {
 		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0777); err != nil {
+			return err
+		}
+	}
+
+	if authCheck, ok := ensure.Config["authcheck.sh"]; ok {
+		if err := ioutil.WriteFile("/etc/keepalived/authcheck.sh", []byte(authCheck), 0777); err != nil {
 			return err
 		}
 	}
