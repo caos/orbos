@@ -357,15 +357,36 @@ func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error 
 
 func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
-	return c.apply("statefulset", rsc.GetName(), func() error {
+	create := func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
-	}, func() error {
-		ss, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+	}
+	return c.apply("statefulset", rsc.GetName(), create, func() error {
+		sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
-		if ss.GetName() == rsc.GetName() && ss.GetNamespace() == rsc.GetNamespace() {
+
+		recreate := func() error {
+			if err := c.DeleteStatefulset(rsc.GetNamespace(), rsc.GetName()); err != nil {
+				return err
+			}
+			return create()
+		}
+
+		stsSelector := sts.Spec.Selector.MatchLabels
+		rscSelector := rsc.Spec.Selector.MatchLabels
+		if len(stsSelector) != len(rscSelector) {
+			return recreate()
+		}
+
+		for rscKey, rscValue := range rscSelector {
+			if stsValue, ok := stsSelector[rscKey]; !ok || stsValue != rscValue {
+				return recreate()
+			}
+		}
+
+		if sts.GetName() == rsc.GetName() && sts.GetNamespace() == rsc.GetNamespace() {
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}

@@ -45,7 +45,7 @@ func AdaptFunc(
 	for k, v := range labels {
 		internalLabels[k] = v
 	}
-	internalLabels["app.kubernetes.io/component"] = "iam-database"
+	internalLabels["app.kubernetes.io/component"] = "cockroachdb"
 
 	sfsName := "cockroachdb"
 	pdbName := sfsName + "-budget"

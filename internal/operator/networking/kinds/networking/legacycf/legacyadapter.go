@@ -25,7 +25,7 @@ func adaptFunc(
 				for k, v := range cfg.Labels {
 					internalLabels[k] = v
 				}
-				internalLabels["app.kubernetes.io/component"] = "networking"
+				internalLabels["app.kubernetes.io/component"] = "legacycloudflare"
 
 				groups := make(map[string][]string, 0)
 				if cfg.Groups != nil {

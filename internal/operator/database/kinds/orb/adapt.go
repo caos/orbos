@@ -15,7 +15,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 	namespaceStr := "caos-zitadel"
 	labels := map[string]string{
 		"app.kubernetes.io/managed-by": "database.caos.ch",
-		"app.kubernetes.io/part-of":    "database",
+		"app.kubernetes.io/part-of":    "orbos",
 	}
 
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
