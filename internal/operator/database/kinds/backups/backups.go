@@ -30,7 +30,7 @@ func GetQueryAndDestroyFuncs(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/BucketBackup":
+	case "databases.caos.ch/BucketBackup":
 		return bucket.AdaptFunc(name, namespace, labels, checkDBReady, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
@@ -46,7 +46,7 @@ func GetBackupList(
 	error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "zitadel.caos.ch/BucketBackup":
+	case "databases.caos.ch/BucketBackup":
 		return bucket.BackupList()(monitor, name, desiredTree)
 	default:
 		return nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)

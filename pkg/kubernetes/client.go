@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 	"io"
 	"io/ioutil"
 	"reflect"
@@ -15,6 +14,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
@@ -416,15 +417,36 @@ func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error 
 
 func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
-	return c.apply("statefulset", rsc.GetName(), func() error {
+	create := func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
-	}, func() error {
-		ss, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+	}
+	return c.apply("statefulset", rsc.GetName(), create, func() error {
+		sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
-		if ss.GetName() == rsc.GetName() && ss.GetNamespace() == rsc.GetNamespace() {
+
+		recreate := func() error {
+			if err := c.DeleteStatefulset(rsc.GetNamespace(), rsc.GetName()); err != nil {
+				return err
+			}
+			return create()
+		}
+
+		stsSelector := sts.Spec.Selector.MatchLabels
+		rscSelector := rsc.Spec.Selector.MatchLabels
+		if len(stsSelector) != len(rscSelector) {
+			return recreate()
+		}
+
+		for rscKey, rscValue := range rscSelector {
+			if stsValue, ok := stsSelector[rscKey]; !ok || stsValue != rscValue {
+				return recreate()
+			}
+		}
+
+		if sts.GetName() == rsc.GetName() && sts.GetNamespace() == rsc.GetNamespace() {
 			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 			return err
 		}
@@ -1154,6 +1176,14 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	}
 
 	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
+	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
+	if err != nil && !macherrs.IsNotFound(err) {
+		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+	}
+	if err == nil {
+		crd.SetResourceVersion(existing.GetResourceVersion())
+	}
+	err = nil
 
 	return c.apply("crd", name, func() error {
 		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})

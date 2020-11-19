@@ -15,7 +15,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 	namespaceStr := "caos-zitadel"
 	labels := map[string]string{
 		"app.kubernetes.io/managed-by": "database.caos.ch",
-		"app.kubernetes.io/part-of":    "database",
+		"app.kubernetes.io/part-of":    "orbos",
 	}
 
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
@@ -79,7 +79,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 
 		currentTree.Parsed = &DesiredV0{
 			Common: &tree.Common{
-				Kind:    "zitadel.caos.ch/Orb",
+				Kind:    "databases.caos.ch/Orb",
 				Version: "v0",
 			},
 			Database: databaseCurrent,

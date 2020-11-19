@@ -3,7 +3,6 @@ package host
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -55,21 +54,6 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
-		res, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
-		if err != nil && !macherrs.IsNotFound(err) {
-			return nil, err
-		}
-		resourceVersion := ""
-		if res != nil {
-			meta := res.Object["metadata"].(map[string]interface{})
-			resourceVersion = meta["resourceVersion"].(string)
-		}
-
-		if resourceVersion != "" {
-			meta := crd.Object["metadata"].(map[string]interface{})
-			meta["resourceVersion"] = resourceVersion
-		}
-
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil

@@ -1,11 +1,12 @@
 package managed
 
 import (
+	"strconv"
+	"strings"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/pkg/secret"
-	"strconv"
-	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -44,7 +45,7 @@ func AdaptFunc(
 	for k, v := range labels {
 		internalLabels[k] = v
 	}
-	internalLabels["app.kubernetes.io/component"] = "iam-database"
+	internalLabels["app.kubernetes.io/component"] = "cockroachdb"
 
 	sfsName := "cockroachdb"
 	pdbName := sfsName + "-budget"
@@ -131,7 +132,7 @@ func AdaptFunc(
 
 		currentDB := &Current{
 			Common: &tree.Common{
-				Kind:    "zitadel.caos.ch/ManagedDatabase",
+				Kind:    "databases.caos.ch/CockroachDB",
 				Version: "v0",
 			},
 			Current: &CurrentDB{

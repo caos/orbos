@@ -37,7 +37,7 @@ func AdaptFunc() func(
 
 		currentDB := &Current{
 			Common: &tree.Common{
-				Kind:    "zitadel.caos.ch/ProvidedDatabase",
+				Kind:    "databases.caos.ch/ProvidedDatabase",
 				Version: "v0",
 			},
 		}

@@ -1,11 +1,11 @@
 package mapping
 
 import (
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/kubernetes/resources"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"strconv"
+
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 type CORS struct {
@@ -80,30 +80,15 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bo
 			"spec": spec,
 		}}
 
-	return func(k8sClient kubernetes2.ClientInt) (resources.EnsureFunc, error) {
-		res, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
-		if err != nil && !macherrs.IsNotFound(err) {
-			return nil, err
-		}
-		resourceVersion := ""
-		if res != nil {
-			meta := res.Object["metadata"].(map[string]interface{})
-			resourceVersion = meta["resourceVersion"].(string)
-		}
-
-		if resourceVersion != "" {
-			meta := crd.Object["metadata"].(map[string]interface{})
-			meta["resourceVersion"] = resourceVersion
-		}
-
-		return func(k8sClient kubernetes2.ClientInt) error {
+	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client kubernetes2.ClientInt) error {
+	return func(client kubernetes.ClientInt) error {
 		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }
