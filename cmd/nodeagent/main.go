@@ -44,7 +44,7 @@ func main() {
 	}
 
 	if *nodeAgentID == "" {
-		panic("flags --repourl and --id are required")
+		panic("flag --id is required")
 	}
 	monitor := mntr.Monitor{
 		OnInfo:   mntr.LogMessage,
