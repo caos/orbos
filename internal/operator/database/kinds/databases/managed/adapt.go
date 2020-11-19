@@ -3,7 +3,6 @@ package managed
 import (
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/secret"
 	"strconv"
 	"strings"
@@ -16,6 +15,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/services"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/statefulset"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/pdb"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -209,7 +209,7 @@ func AdaptFunc(
 			}
 		}
 
-		return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 				if !featureRestore {
 					currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
 					currentDB.Current.URL = publicServiceName

@@ -12,7 +12,7 @@ import (
 
 func Restore(
 	monitor mntr.Monitor,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	gitClient *git.Client,
 	name string,
 	databases []string,

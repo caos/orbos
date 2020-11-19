@@ -58,7 +58,7 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 
 func EnsureDatabaseArtifacts(
 	monitor mntr.Monitor,
-	client *Client,
+	client ClientInt,
 	version string,
 	nodeselector map[string]string,
 	tolerations []core.Toleration,
@@ -206,7 +206,7 @@ func EnsureDatabaseArtifacts(
 
 func EnsureNetworkingArtifacts(
 	monitor mntr.Monitor,
-	client *Client,
+	client ClientInt,
 	version string,
 	nodeselector map[string]string,
 	tolerations []core.Toleration,

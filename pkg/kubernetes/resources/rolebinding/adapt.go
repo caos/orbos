@@ -1,7 +1,7 @@
 package rolebinding
 
 import (
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,15 +36,15 @@ func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, 
 			APIGroup: "rbac.authorization.k8s.io",
 		},
 	}
-	return func(_ *kubernetes2.Client) (resources.EnsureFunc, error) {
-		return func(k8sClient *kubernetes2.Client) error {
+	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyRoleBinding(rolebinding)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client kubernetes.ClientInt) error {
 		return client.DeleteRoleBinding(namespace, name)
 	}, nil
 }

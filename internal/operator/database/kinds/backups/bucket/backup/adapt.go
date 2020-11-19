@@ -153,7 +153,7 @@ func AdaptFunc(
 		return nil, nil, err
 	}
 
-	cleanupJ := func(k8sClient *kubernetes.Client) error {
+	cleanupJ := func(k8sClient kubernetes.ClientInt) error {
 		monitor.Info("waiting for backup to be completed")
 		if err := k8sClient.WaitUntilJobCompleted(namespace, cronjobName, 60); err != nil {
 			monitor.Error(errors.Wrap(err, "error while waiting for backup to be completed"))
@@ -190,7 +190,7 @@ func AdaptFunc(
 		}
 	}
 
-	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(monitor, destroyers),

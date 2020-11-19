@@ -8,7 +8,7 @@ import (
 func QueryCertificates(
 	namespace string,
 	labels map[string]string,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 ) (
 	[]string,
 	error,

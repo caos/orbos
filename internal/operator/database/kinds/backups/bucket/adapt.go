@@ -120,7 +120,7 @@ func AdaptFunc(
 			}
 		}
 
-		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 				currentDB, err := coreDB.ParseQueriedForDatabase(queried)
 				if err != nil {
 					return nil, err

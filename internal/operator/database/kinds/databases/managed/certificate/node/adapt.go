@@ -45,7 +45,7 @@ func AdaptFunc(
 	nodeCertKey := "node.crt"
 	nodePrivKeyKey := "node.key"
 
-	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 			queriers := make([]core2.QueryFunc, 0)
 
 			currentDB, err := core.ParseQueriedForDatabase(queried)
@@ -132,7 +132,7 @@ func AdaptFunc(
 			currentDB.SetCertificateKey(caPrivKey)
 
 			return core2.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
-		}, func(k8sClient *kubernetes.Client) error {
+		}, func(k8sClient kubernetes.ClientInt) error {
 			allClientSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
 			if err != nil {
 				return err

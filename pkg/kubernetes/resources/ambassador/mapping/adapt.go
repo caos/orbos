@@ -80,7 +80,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bo
 			"spec": spec,
 		}}
 
-	return func(k8sClient *kubernetes2.Client) (resources.EnsureFunc, error) {
+	return func(k8sClient kubernetes2.ClientInt) (resources.EnsureFunc, error) {
 		res, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
 		if err != nil && !macherrs.IsNotFound(err) {
 			return nil, err
@@ -96,14 +96,14 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bo
 			meta["resourceVersion"] = resourceVersion
 		}
 
-		return func(k8sClient *kubernetes2.Client) error {
+		return func(k8sClient kubernetes2.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client kubernetes2.ClientInt) error {
 		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }

@@ -43,14 +43,14 @@ func AdaptFunc() func(
 		}
 		current.Parsed = currentDB
 
-		return func(k8sClient *kubernetes.Client, _ map[string]interface{}) (core.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt, _ map[string]interface{}) (core.EnsureFunc, error) {
 				currentDB.Current.URL = desiredKind.Spec.URL
 				currentDB.Current.Port = desiredKind.Spec.Port
 
-				return func(k8sClient *kubernetes.Client) error {
+				return func(k8sClient kubernetes.ClientInt) error {
 					return nil
 				}, nil
-			}, func(k8sClient *kubernetes.Client) error {
+			}, func(k8sClient kubernetes.ClientInt) error {
 				return nil
 			},
 			map[string]*secret.Secret{},

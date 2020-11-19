@@ -50,7 +50,7 @@ func AdaptFunc(
 	resources.DestroyFunc,
 	core.EnsureFunc,
 	core.EnsureFunc,
-	func(k8sClient *kubernetes.Client) ([]string, error),
+	func(k8sClient kubernetes.ClientInt) ([]string, error),
 	error,
 ) {
 	internalMonitor := monitor.WithField("component", "statefulset")
@@ -253,7 +253,7 @@ func AdaptFunc(
 	}
 
 	wrapedQuery, wrapedDestroy, err := resources.WrapFuncs(internalMonitor, query, destroy)
-	checkDBRunning := func(k8sClient *kubernetes.Client) error {
+	checkDBRunning := func(k8sClient kubernetes.ClientInt) error {
 		internalMonitor.Info("waiting for statefulset to be running")
 		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, false, 60); err != nil {
 			internalMonitor.Error(errors.Wrap(err, "error while waiting for statefulset to be running"))
@@ -263,7 +263,7 @@ func AdaptFunc(
 		return nil
 	}
 
-	checkDBNotReady := func(k8sClient *kubernetes.Client) error {
+	checkDBNotReady := func(k8sClient kubernetes.ClientInt) error {
 		internalMonitor.Info("checking for statefulset to not be ready")
 		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, true, 1); err != nil {
 			internalMonitor.Info("statefulset is not ready")
@@ -273,7 +273,7 @@ func AdaptFunc(
 		return errors.New("statefulset is ready")
 	}
 
-	ensureInit := func(k8sClient *kubernetes.Client) error {
+	ensureInit := func(k8sClient kubernetes.ClientInt) error {
 		if err := checkDBRunning(k8sClient); err != nil {
 			return err
 		}
@@ -290,7 +290,7 @@ func AdaptFunc(
 		return nil
 	}
 
-	checkDBReady := func(k8sClient *kubernetes.Client) error {
+	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		internalMonitor.Info("waiting for statefulset to be ready")
 		if err := k8sClient.WaitUntilStatefulsetIsReady(namespace, name, true, true, 60); err != nil {
 			internalMonitor.Error(errors.Wrap(err, "error while waiting for statefulset to be ready"))
@@ -300,7 +300,7 @@ func AdaptFunc(
 		return nil
 	}
 
-	getAllDBs := func(k8sClient *kubernetes.Client) ([]string, error) {
+	getAllDBs := func(k8sClient kubernetes.ClientInt) ([]string, error) {
 		if err := checkDBRunning(k8sClient); err != nil {
 			return nil, err
 		}

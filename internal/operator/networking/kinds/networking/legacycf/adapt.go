@@ -54,7 +54,7 @@ func AdaptFunc(
 		}
 		currentTree.Parsed = current
 
-		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (opcore.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (opcore.EnsureFunc, error) {
 				core.SetQueriedForNetworking(queried, currentTree)
 				internalMonitor.Info("set current state legacycf")
 

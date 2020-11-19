@@ -3,7 +3,7 @@ package restore
 import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/job"
 	"github.com/pkg/errors"
 	batchv1 "k8s.io/api/batch/v1"
@@ -122,11 +122,11 @@ func ApplyFunc(
 		core.ResourceQueryToZitadelQuery(queryJ),
 	}
 
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(monitor, destroyers),
-		func(k8sClient *kubernetes2.Client) error {
+		func(k8sClient kubernetes.ClientInt) error {
 			monitor.Info("waiting for restore to be completed")
 			if err := k8sClient.WaitUntilJobCompleted(namespace, jobName, 60); err != nil {
 				monitor.Error(errors.Wrap(err, "error while waiting for restore to be completed"))

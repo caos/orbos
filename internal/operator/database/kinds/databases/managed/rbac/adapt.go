@@ -97,7 +97,7 @@ func AdaptFunc(
 		core.ResourceQueryToZitadelQuery(queryRB),
 		core.ResourceQueryToZitadelQuery(queryCRB),
 	}
-	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(internalMonitor, destroyers),
