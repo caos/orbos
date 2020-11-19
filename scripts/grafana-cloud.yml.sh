@@ -6,8 +6,8 @@ set -e
 cat <<EOL
 apiVersion: v1
 data:
-  username: $(gopass caos-secrets/technical/boom/grafana-cloud/user | $ENCODE)
-  password: $(gopass caos-secrets/technical/boom/grafana-cloud/apikey | $ENCODE)
+  username: $(echo "${1}" | $ENCODE)
+  password: $(echo "${2}" | $ENCODE)
 kind: Secret
 metadata:
   name: grafana-cloud
