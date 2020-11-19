@@ -6,8 +6,8 @@ set -e
 cat <<EOL
 apiVersion: v1
 data:
-  username: $(echo "${1}" | $ENCODE)
-  password: $(echo "${2}" | $ENCODE)
+  username: $(echo -n "${1}" | $ENCODE)
+  password: $(echo -n "${2}" | $ENCODE)
 kind: Secret
 metadata:
   name: grafana-cloud
