@@ -3,8 +3,8 @@ package cs
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 

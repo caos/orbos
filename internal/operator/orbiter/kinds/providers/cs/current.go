@@ -3,7 +3,7 @@ package cs
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 func addPools(current *Current, spec *Spec, machinesSvc core.MachinesService) error {
