@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -65,7 +65,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 		},
 		Env: map[string]string{
-			"GF_SERVER_ROOT_URL": "%(protocol)s://%(domain)s/",
+			"GF_SERVER_ROOT_URL": "https://%(domain)s/",
 		},
 		NodeSelector: map[string]string{},
 		Resources: &k8s.Resources{
@@ -111,8 +111,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 		},
 		FullnameOverride: "grafana",
-		Alertmanager: &DisabledTool{
-			Enabled: false,
+		Alertmanager: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 		Grafana: grafana,
 		KubeAPIServer: &DisabledTool{
@@ -186,8 +188,10 @@ func DefaultValues(imageTags map[string]string) *Values {
 				Enabled: false,
 			},
 		},
-		Prometheus: &DisabledTool{
-			Enabled: false,
+		Prometheus: &DisabledToolServicePerReplica{
+			Enabled:           false,
+			ServicePerReplica: &DisabledTool{Enabled: false},
+			IngressPerReplica: &DisabledTool{Enabled: false},
 		},
 	}
 }

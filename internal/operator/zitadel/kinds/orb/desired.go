@@ -13,6 +13,9 @@ type DesiredV0 struct {
 		NodeSelector map[string]string   `yaml:"nodeSelector,omitempty"`
 		Tolerations  []corev1.Toleration `yaml:"tolerations,omitempty"`
 		Version      string              `yaml:"version,omitempty"`
+		//Use this registry to pull the ZITADEL operator image from
+		//@default: ghcr.io
+		CustomImageRegistry string
 	}
 	IAM *tree.Tree
 }

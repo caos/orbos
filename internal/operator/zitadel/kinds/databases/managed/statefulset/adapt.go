@@ -2,9 +2,10 @@ package statefulset
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
 	"sort"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources"

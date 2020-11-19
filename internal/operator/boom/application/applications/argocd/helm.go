@@ -3,7 +3,7 @@ package argocd
 import (
 	"strings"
 
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/credential"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/config/repository"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
+func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
 	secrets := make([]interface{}, 0)
 	if toolsetCRDSpec.Reconciling == nil {
 		return secrets, nil
@@ -29,12 +29,9 @@ func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolset
 	return secrets, nil
 }
 
-func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
-	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled && toolsetCRDSpec.Reconciling.CustomImage.ImagePullSecret != "" {
+func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec, resultFilePath string) error {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.CustomImage != nil && toolsetCRDSpec.Reconciling.CustomImage.Enabled {
 		spec := toolsetCRDSpec.Reconciling
-		if err := customimage.AddImagePullSecretFromSpec(spec, resultFilePath); err != nil {
-			return err
-		}
 
 		if spec.CustomImage.GopassStores != nil && len(spec.CustomImage.GopassStores) > 0 {
 			if err := customimage.AddPostStartFromSpec(spec, resultFilePath); err != nil {
@@ -46,14 +43,15 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta
 	return nil
 }
 
-func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
+func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
 	values := helm.DefaultValues(imageTags)
-	if toolsetCRDSpec.Reconciling == nil {
+
+	spec := toolsetCRDSpec.Reconciling
+	if spec == nil {
 		return values
 	}
 
-	spec := toolsetCRDSpec.Reconciling
 	if spec.CustomImage != nil && spec.CustomImage.Enabled {
 		conf := customimage.FromSpec(spec, imageTags)
 		values.RepoServer.Image = &helm.Image{

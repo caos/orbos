@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: caos-system
+
+configMapGenerator:
+- name: grafana-dashboard-zitadel-health
+  files:
+   - json/health.json
+- name: grafana-dashboard-zitadel-health-details
+  files:
+    - json/health-details.json
+- name: grafana-dashboard-zitadel-cockroachdb-replicas
+  files:
+  - json/replicas.json
+- name: grafana-dashboard-zitadel-cockroachdb-runtime
+  files:
+  - json/runtime.json
+- name: grafana-dashboard-zitadel-cockroachdb-sql
+  files:
+    - json/sql.json
+- name: grafana-dashboard-zitadel-cockroachdb-storage
+  files:
+    - json/storage.json
+
+generatorOptions:
+ disableNameSuffixHash: true

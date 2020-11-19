@@ -36,7 +36,10 @@ type Spec struct {
 		Kubernetes string
 		Orbiter    string
 	}
-	Workers []*Pool
+	// Use this registry to pull all kubernetes and ORBITER container images from
+	//@default: ghcr.io
+	CustomImageRegistry string
+	Workers             []*Pool
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
@@ -59,10 +62,6 @@ func (d *DesiredV0) validate() error {
 
 	if ParseString(d.Spec.Versions.Kubernetes) == Unknown {
 		return errors.Errorf("Unknown kubernetes version %s", d.Spec.Versions.Kubernetes)
-	}
-
-	if d.Spec.Networking.Network != "cilium" && d.Spec.Networking.Network != "calico" {
-		return errors.Errorf("Network must eighter be calico or cilium, but got %s", d.Spec.Networking.Network)
 	}
 
 	if err := d.Spec.Networking.ServiceCidr.Validate(); err != nil {

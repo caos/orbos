@@ -1,13 +1,14 @@
 package config
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"path/filepath"
+
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 )
 
 var orgID = 0
 
-func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) []*Provider {
+func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetslatest.ToolsetSpec) []*Provider {
 	providers := make([]*Provider, 0)
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
 		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Ambassador) {
@@ -75,6 +76,21 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetsv1bet
 				"grafana-dashboard-boom",
 			},
 			Folder: filepath.Join(dashboardsfolder, "boom"),
+		}
+		providers = append(providers, provider)
+	}
+
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Zitadel) {
+		provider := &Provider{
+			ConfigMaps: []string{
+				"grafana-dashboard-zitadel-cockroachdb-replicas",
+				"grafana-dashboard-zitadel-cockroachdb-runtime",
+				"grafana-dashboard-zitadel-cockroachdb-sql",
+				"grafana-dashboard-zitadel-cockroachdb-storage",
+				"grafana-dashboard-zitadel-health",
+				"grafana-dashboard-zitadel-health-details",
+			},
+			Folder: filepath.Join(dashboardsfolder, "zitadel"),
 		}
 		providers = append(providers, provider)
 	}

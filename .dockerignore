@@ -1,5 +1,6 @@
 *
 !artifacts/orbctl-Linux-x86_64
 !artifacts/gen-charts
+!artifacts/nodeagent
 !dashboards/
 !build/

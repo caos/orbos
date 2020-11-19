@@ -1,9 +1,8 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperatorhelm "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type Ingress struct {
@@ -129,7 +128,7 @@ type GrafanaValues struct {
 	Labels                   map[string]string   `yaml:"labels,omitempty"`
 	PodLabels                map[string]string   `yaml:"podLabels,omitempty"`
 	NodeSelector             map[string]string   `yaml:"nodeSelector,omitempty"`
-	Tolerations              []corev1.Toleration `yaml:"tolerations,omitempty"`
+	Tolerations              k8s.Tolerations     `yaml:"tolerations,omitempty"`
 	Resources                *k8s.Resources      `yaml:"resources,omitempty"`
 }
 
@@ -168,7 +167,7 @@ type Values struct {
 	NameOverride              string                                           `yaml:"nameOverride,omitempty"`
 	FullnameOverride          string                                           `yaml:"fullnameOverride,omitempty"`
 	CommonLabels              map[string]string                                `yaml:"commonLabels,omitempty"`
-	Alertmanager              *DisabledTool                                    `yaml:"alertmanager,omitempty"`
+	Alertmanager              *DisabledToolServicePerReplica                   `yaml:"alertmanager,omitempty"`
 	Grafana                   *GrafanaValues                                   `yaml:"grafana,omitempty"`
 	KubeAPIServer             *DisabledTool                                    `yaml:"kubeApiServer,omitempty"`
 	Kubelet                   *DisabledTool                                    `yaml:"kubelet,omitempty"`
@@ -183,7 +182,7 @@ type Values struct {
 	NodeExporter              *DisabledTool                                    `yaml:"nodeExporter,omitempty"`
 	PrometheusNodeExporter    *DisabledTool                                    `yaml:"prometheus-node-exporter,omitempty"`
 	PrometheusOperator        *prometheusoperatorhelm.PrometheusOperatorValues `yaml:"prometheusOperator,omitempty"`
-	Prometheus                *DisabledTool                                    `yaml:"prometheus,omitempty"`
+	Prometheus                *DisabledToolServicePerReplica                   `yaml:"prometheus,omitempty"`
 }
 
 type Global struct {
@@ -198,4 +197,10 @@ type Rbac struct {
 
 type DisabledTool struct {
 	Enabled bool `yaml:"enabled"`
+}
+
+type DisabledToolServicePerReplica struct {
+	Enabled           bool
+	ServicePerReplica *DisabledTool `yaml:"servicePerReplica"`
+	IngressPerReplica *DisabledTool `yaml:"ingressPerReplica"`
 }

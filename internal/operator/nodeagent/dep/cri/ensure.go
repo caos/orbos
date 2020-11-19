@@ -42,11 +42,9 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		}
 	}
 
-	if err := c.manager.Add(&dep.Repository{
+	c.manager.Add(&dep.Repository{
 		Repository: "https://download.docker.com/linux/centos/docker-ce.repo",
-	}); err != nil {
-		return errors.Wrap(err, "adding docker repository failed")
-	}
+	})
 
 	if err := c.manager.Install(&dep.Software{
 		Package: "containerd.io",
@@ -69,13 +67,11 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 
 func (c *criDep) ensureUbuntu(runtime string, version string) error {
 
-	if err := c.manager.Add(&dep.Repository{
+	c.manager.Add(&dep.Repository{
 		Repository:     fmt.Sprintf("deb [arch=amd64] https://download.docker.com/linux/ubuntu %s stable", c.os.Version),
 		KeyURL:         "https://download.docker.com/linux/ubuntu/gpg",
 		KeyFingerprint: "0EBFCD88",
-	}); err != nil {
-		return errors.Wrap(err, "updating repository indices before installing docker-ce failed")
-	}
+	})
 
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
