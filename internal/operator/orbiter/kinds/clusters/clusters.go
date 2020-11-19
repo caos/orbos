@@ -1,6 +1,7 @@
 package clusters
 
 import (
+	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/secret"
@@ -19,6 +20,7 @@ func GetQueryAndDestroyFuncs(
 	destroyProviders func() (map[string]interface{}, error),
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan struct{},
+	gitClient *git.Client,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -44,6 +46,7 @@ func GetQueryAndDestroyFuncs(
 					}()
 					monitor.Debug("Whitelist sent")
 				},
+				gitClient,
 			)(
 				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
 				finishedChan,

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/git"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -19,7 +20,9 @@ func query(
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	k8sClient *Client,
-	oneoff bool) (orbiter.EnsureFunc, error) {
+	oneoff bool,
+	gitClient *git.Client,
+) (orbiter.EnsureFunc, error) {
 
 	cloudPools, kubeAPIAddress, err := GetProviderInfos(desired, providerCurrents)
 	if err != nil {
@@ -62,7 +65,9 @@ func query(
 			workers,
 			workerMachines,
 			initializeMachine,
-			uninitializeMachine))
+			uninitializeMachine,
+			gitClient,
+		))
 	}, err
 }
 

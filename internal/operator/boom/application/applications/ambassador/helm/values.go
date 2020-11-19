@@ -1,9 +1,8 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"gopkg.in/yaml.v3"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type AdminService struct {
@@ -183,7 +182,7 @@ type Values struct {
 	Service                *Service            `yaml:"service"`
 	ServiceAccount         *ServiceAccount     `yaml:"serviceAccount"`
 	SidecarContainers      []interface{}       `yaml:"sidecarContainers"`
-	Tolerations            []corev1.Toleration `yaml:"tolerations"`
+	Tolerations            k8s.Tolerations     `yaml:"tolerations"`
 	VolumeMounts           []interface{}       `yaml:"volumeMounts"`
 	Volumes                []interface{}       `yaml:"volumes"`
 }

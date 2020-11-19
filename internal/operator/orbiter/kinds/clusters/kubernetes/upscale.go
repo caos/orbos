@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/caos/orbos/internal/git"
+
 	"github.com/caos/orbos/internal/secret"
 
 	"github.com/caos/orbos/internal/api"
@@ -25,7 +27,9 @@ func ensureUpScale(
 	k8sVersion KubernetesVersion,
 	k8sClient *Client,
 	oneoff bool,
-	initializeMachine func(infra.Machine, *initializedPool) initializedMachine) (changed bool, err error) {
+	initializeMachine func(infra.Machine, *initializedPool) initializedMachine,
+	gitClient *git.Client,
+) (changed bool, err error) {
 
 	wCount := 0
 	for _, w := range workerPools {
@@ -165,6 +169,10 @@ nodes:
 
 	var certKey []byte
 	doKubeadmInit := certsCP == nil
+	imageRepository := desired.Spec.CustomImageRegistry
+	if imageRepository == "" {
+		imageRepository = "k8s.gcr.io"
+	}
 
 	if joinCP != nil {
 
@@ -192,7 +200,9 @@ nodes:
 			jointoken,
 			k8sVersion,
 			string(certKey),
-			k8sClient)
+			k8sClient,
+			imageRepository,
+			gitClient)
 
 		if err != nil {
 			return false, err
@@ -223,7 +233,9 @@ nodes:
 			jointoken,
 			k8sVersion,
 			"",
-			k8sClient); err != nil {
+			k8sClient,
+			imageRepository,
+			gitClient); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}

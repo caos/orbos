@@ -38,7 +38,7 @@ func query(
 	if !ok {
 		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
-	vips, err := lbCurrent.Current.Spec(context.machinesService)
+	vips, _, err := lbCurrent.Current.Spec(context.machinesService)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func query(
 	}
 
 	context.machinesService.onCreate = desireNodeAgent
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, false, nil, func(vip *dynamic.VIP) string {
+	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, nil, func(vip *dynamic.VIP) string {
 		for _, transport := range vip.Transport {
 			address, ok := current.Current.Ingresses[transport.Name]
 			if ok {
