@@ -169,8 +169,6 @@ groups:
    - expr: |-
        sum(dist_kube_deployment_status_replicas_available) + sum(dist_kube_statefulset_status_replicas_ready) + sum(dist_kube_daemonset_status_number_available)
      record: caos_ready_pods
-   - expr: min(caos_node_cpu_ryg) * min(caos_systemd_ryg) * min(caos_vip_probe_ryg) * min(caos_upstream_probe_ryg) * min(caos_node_memory_ryg) * min(caos_k8s_node_ryg) * avg(caos_etcd_ryg) * min(caos_ready_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"}) * min(caos_scheduled_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"})
-     record: caos_orb_ryg
 
 # ZITADEL CockroachDB Runtime
    - record: cr_runtime_pod_flapping
@@ -240,6 +238,27 @@ groups:
        clamp_min(1 - requests_slow_latch{job="cockroachdb"}, 0)
        * clamp_min(1 - requests_slow_lease{job="cockroachdb"}, 0)
        * clamp_min(1 - requests_slow_raft{job="cockroachdb"}, 0)
+
+# Cluster RYG
+   - record: caos_orb_ryg
+     expr: |-
+       # Platform Monitoring
+       min(caos_node_cpu_ryg)
+       * min(caos_systemd_ryg)
+       * min(caos_vip_probe_ryg)
+       * min(caos_upstream_probe_ryg)
+       * min(caos_node_memory_ryg)
+       * min(caos_k8s_node_ryg)
+       * avg(caos_etcd_ryg)
+       * min(caos_ready_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"})
+       * min(caos_scheduled_pods_ryg{namespace=~"(kube-system|caos-system|caos-zitadel)"})
+       # ZITADEL Monitoring
+       * min(caos_cr_runtime_cluster_ryg) or on() 1 - (up{endpoint="http",instance="orbos-n6st1n",job="cockroachdb",namespace="caos-zitadel",pod="cockroachdb-0",service="cockroachdb"} or on() vector(0)) 
+       * min(caos_cr_runtime_pods_ryg) or on() 1 - (up{endpoint="http",instance="orbos-n6st1n",job="cockroachdb",namespace="caos-zitadel",pod="cockroachdb-0",service="cockroachdb"} or on() vector(0))
+       * min(caos_cr_replicas_nodes_ryg) or on() 1 - (up{endpoint="http",instance="orbos-n6st1n",job="cockroachdb",namespace="caos-zitadel",pod="cockroachdb-0",service="cockroachdb"} or on() vector(0))
+       * min(caos_cr_replicas_stores_ryg) or on() 1 - (up{endpoint="http",instance="orbos-n6st1n",job="cockroachdb",namespace="caos-zitadel",pod="cockroachdb-0",service="cockroachdb"} or on() vector(0))
+       * min(caos_cr_capacity_cluster_ryg) or on() 1 - (up{endpoint="http",instance="orbos-n6st1n",job="cockroachdb",namespace="caos-zitadel",pod="cockroachdb-0",service="cockroachdb"} or on() vector(0))
+       * min(caos_cr_capacity_store_ryg) or on() 1 - (up{endpoint="http",instance="orbos-n6st1n",job="cockroachdb",namespace="caos-zitadel",pod="cockroachdb-0",service="cockroachdb"} or on() vector(0))
 `
 
 	struc := &AdditionalPrometheusRules{
