@@ -1,9 +1,10 @@
 package auth
 
 import (
-	github "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Github"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"strings"
+
+	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func GetGithubAuthConfig(spec *github.Auth) (map[string]string, error) {

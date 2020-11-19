@@ -1,7 +1,7 @@
 package application
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador"
 	ambassadorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd"
@@ -14,6 +14,8 @@ import (
 	loggingoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki"
 	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver"
+	metricsserverinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus"
 	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter"
@@ -28,7 +30,7 @@ import (
 )
 
 type Application interface {
-	Deploy(*v1beta2.ToolsetSpec) bool
+	Deploy(*latest.ToolsetSpec) bool
 	GetName() name.Application
 }
 
@@ -37,12 +39,12 @@ type HelmApplication interface {
 	GetNamespace() string
 	GetChartInfo() *chart.Chart
 	GetImageTags() map[string]string
-	SpecToHelmValues(mntr.Monitor, *v1beta2.ToolsetSpec) interface{}
+	SpecToHelmValues(mntr.Monitor, *latest.ToolsetSpec) interface{}
 }
 
 type YAMLApplication interface {
 	Application
-	GetYaml(mntr.Monitor, *v1beta2.ToolsetSpec) interface{}
+	GetYaml(mntr.Monitor, *latest.ToolsetSpec) interface{}
 }
 
 func New(monitor mntr.Monitor, appName name.Application, orb string) Application {
@@ -67,6 +69,8 @@ func New(monitor mntr.Monitor, appName name.Application, orb string) Application
 		return prometheus.New(monitor, orb)
 	case lokiinfo.GetName():
 		return loki.New(monitor)
+	case metricsserverinfo.GetName():
+		return metricsserver.New(monitor)
 	}
 
 	return nil

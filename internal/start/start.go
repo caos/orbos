@@ -3,11 +3,12 @@ package start
 import (
 	"context"
 	"errors"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/secret/operators"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/secret/operators"
 
 	"github.com/caos/orbos/internal/operator/zitadel"
 
@@ -152,7 +153,9 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		orbFile,
 		conf.GitCommit,
 		!conf.Recur,
-		conf.Deploy)
+		conf.Deploy,
+		gitClient,
+	)
 
 	takeoffConf := &orbiter.Config{
 		OrbiterCommit: conf.GitCommit,

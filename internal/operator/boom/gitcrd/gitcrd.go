@@ -11,7 +11,7 @@ import (
 	orbosapi "github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/boom/crd"
@@ -34,6 +34,7 @@ type GitCrd struct {
 	crdDirectoryPath string
 	status           error
 	monitor          mntr.Monitor
+	deploy           bool
 }
 
 func New(conf *config.Config) *GitCrd {
@@ -48,6 +49,7 @@ func New(conf *config.Config) *GitCrd {
 		crdDirectoryPath: conf.CrdDirectoryPath,
 		git:              conf.Git,
 		monitor:          monitor,
+		deploy:           conf.Deploy,
 	}
 
 	crdConf := &crdconfig.Config{
@@ -155,7 +157,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			return
 		}
 
-		if err := cmd.Reconcile(monitor, k8sClient, "", boomSpec); err != nil {
+		if err := cmd.Reconcile(monitor, k8sClient, "", c.deploy, boomSpec); err != nil {
 			c.status = err
 			return
 		}
@@ -191,8 +193,8 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 	}
 }
 
-func (c *GitCrd) getCrdMetadata() (*toolsetsv1beta2.ToolsetMetadata, error) {
-	toolsetCRD := &toolsetsv1beta2.ToolsetMetadata{}
+func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
+	toolsetCRD := &toolsetslatest.ToolsetMetadata{}
 	err := c.git.ReadYamlIntoStruct("boom.yml", toolsetCRD)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error while unmarshaling boom.yml to struct")
@@ -202,7 +204,7 @@ func (c *GitCrd) getCrdMetadata() (*toolsetsv1beta2.ToolsetMetadata, error) {
 
 }
 
-func (c *GitCrd) getCrdContent() (*toolsetsv1beta2.Toolset, error) {
+func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
 	desiredTree, err := orbosapi.ReadBoomYml(c.git)
 	if err != nil {
 		return nil, err
@@ -247,7 +249,7 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 	c.status = c.git.UpdateRemote("current state changed", file)
 }
 
-func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply, force bool) error {
+func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetslatest.Apply, force bool) error {
 	if apply.Folder == "" {
 		monitor.Info("No folder provided")
 		return nil

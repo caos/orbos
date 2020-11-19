@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/reconciling"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
@@ -179,15 +179,6 @@ func getVolMount(internal, foldername string) *VolumeMount {
 		SubPath:   internal,
 		ReadOnly:  false,
 	}
-}
-
-func AddImagePullSecretFromSpec(spec *reconciling.Reconciling, resultFilePath string) error {
-	addContent := strings.Join([]string{
-		tab, tab, tab, "imagePullSecrets:", nl,
-		tab, tab, tab, "- name: ", spec.CustomImage.ImagePullSecret, nl,
-	}, "")
-
-	return helper.AddStringBeforePointForKindAndName(resultFilePath, "Deployment", "argocd-repo-server", "volumes:", addContent)
 }
 
 type stores struct {

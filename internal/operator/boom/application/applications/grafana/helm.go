@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/admin"
 
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/auth"
@@ -17,7 +17,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
+func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec, resultFilePath string) error {
 	if toolsetCRDSpec.KubeMetricsExporter != nil && toolsetCRDSpec.KubeMetricsExporter.Deploy &&
 		toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.KubeStateMetrics) {
 
@@ -29,7 +29,7 @@ func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1bet
 	return nil
 }
 
-func (g *Grafana) HelmPreApplySteps(monitor mntr.Monitor, spec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
+func (g *Grafana) HelmPreApplySteps(monitor mntr.Monitor, spec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
 	config := config.New(spec)
 
 	folders := make([]string, 0)
@@ -65,7 +65,7 @@ func (a AlphaSorter) Len() int           { return len(a) }
 func (a AlphaSorter) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a AlphaSorter) Less(i, j int) bool { return a[i] < a[j] }
 
-func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetsv1beta2.ToolsetSpec) interface{} {
+func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
 		return nil

@@ -3,7 +3,7 @@ package yaml
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"gopkg.in/yaml.v3"
 )
 
@@ -103,12 +103,12 @@ func Build(resources *k8s.Resources) interface{} {
 		"kind":       "Service",
 		"apiVersion": "v1",
 		"metadata": map[string]interface{}{
-			"name": "systemd-exporter",
+			"name":      "systemd-exporter",
+			"namespace": "caos-system",
 			"labels": map[string]string{
 				"app.kubernetes.io/managed-by": "boom.caos.ch",
 				"boom.caos.ch/instance":        "boom",
 				"boom.caos.ch/part-of":         "boom",
-				"boom.caos.ch/prometheus":      "caos",
 			},
 		},
 		"spec": map[string]interface{}{

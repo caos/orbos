@@ -42,11 +42,18 @@ func main() {
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
-	if err := executables.PreBuild(executables.PackableBuilds(executables.Build(
+	packableExecutables := executables.PackableBuilds(executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
 		executables.Buildable{OutDir: filepath.Join(*orbctldir, "nodeagent"), MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
 		executables.Buildable{OutDir: filepath.Join(*orbctldir, "health"), MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
-	))); err != nil {
+	))
+
+	packableFiles := executables.PackableFiles(toChan([]string{
+		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/calico.yaml"),
+		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/cilium.yaml"),
+	}))
+
+	if err := executables.PreBuild(deriveJoinPackables(packableExecutables, packableFiles)); err != nil {
 		panic(err)
 	}
 
@@ -108,4 +115,15 @@ func curryJoinPath(cmdPath string) func(dir string) string {
 	return func(dir string) string {
 		return filepath.Join(cmdPath, dir)
 	}
+}
+
+func toChan(args []string) <-chan string {
+	ch := make(chan string)
+	go func() {
+		for _, arg := range args {
+			ch <- arg
+		}
+		close(ch)
+	}()
+	return ch
 }

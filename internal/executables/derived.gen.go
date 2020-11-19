@@ -97,6 +97,19 @@ func deriveFmapPackableFromBuild(f func(BuiltTuple) PackableTuple, in <-chan Bui
 	return out
 }
 
+// deriveFmapPackableFromFile returns an output channel where the items are the result of the input function being applied to the items on the input channel.
+func deriveFmapPackableFromFile(f func(string) PackableTuple, in <-chan string) <-chan PackableTuple {
+	out := make(chan PackableTuple, cap(in))
+	go func() {
+		for a := range in {
+			b := f(a)
+			out <- b
+		}
+		close(out)
+	}()
+	return out
+}
+
 // deriveFmapDownload returns an output channel where the items are the result of the input function being applied to the items on the input channel.
 func deriveFmapDownload(f func(Downloadable) PackableTuple, in <-chan Downloadable) <-chan PackableTuple {
 	out := make(chan PackableTuple, cap(in))

@@ -178,12 +178,8 @@ WantedBy=multi-user.target
 							return nil
 						},
 						func() error {
-							nodeagent, err := executables.PreBuilt("nodeagent")
-							if err != nil {
-								return err
-							}
 							if err := infra.Try(machineMonitor, time.NewTimer(20*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-								return errors.Wrapf(cmp.WriteFile(nodeAgentPath, bytes.NewReader(nodeagent), 700), "creating remote file %s failed", nodeAgentPath)
+								return errors.Wrapf(cmp.WriteFile(nodeAgentPath, bytes.NewReader(executables.PreBuilt("nodeagent")), 700), "creating remote file %s failed", nodeAgentPath)
 							}); err != nil {
 								return errors.Wrap(err, "remotely installing Node Agent failed")
 							}
@@ -193,12 +189,8 @@ WantedBy=multi-user.target
 							return nil
 						},
 						func() error {
-							health, err := executables.PreBuilt("health")
-							if err != nil {
-								return err
-							}
 							if err := infra.Try(machineMonitor, time.NewTimer(20*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-								return errors.Wrapf(cmp.WriteFile(healthPath, bytes.NewReader(health), 711), "creating remote file %s failed", healthPath)
+								return errors.Wrapf(cmp.WriteFile(healthPath, bytes.NewReader(executables.PreBuilt("health")), 711), "creating remote file %s failed", healthPath)
 							}); err != nil {
 								return errors.Wrap(err, "remotely installing health executable failed")
 							}

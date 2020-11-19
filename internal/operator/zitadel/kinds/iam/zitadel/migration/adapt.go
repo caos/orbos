@@ -115,7 +115,7 @@ func AdaptFunc(
 								},
 								{
 									Name:  "create-flyway-user",
-									Image: "cockroachdb/cockroach:v20.1.7",
+									Image: "cockroachdb/cockroach:v20.1.8",
 									Env:   baseEnvVars(envMigrationUser, envMigrationPW, migrationUser, secretPasswordName),
 									VolumeMounts: []corev1.VolumeMount{{
 										Name:      rootUserInternal,
@@ -158,7 +158,7 @@ func AdaptFunc(
 							Containers: []corev1.Container{
 								{
 									Name:    "delete-flyway-user",
-									Image:   "cockroachdb/cockroach:v20.1.7",
+									Image:   "cockroachdb/cockroach:v20.1.8",
 									Command: []string{"/bin/bash", "-c", "--"},
 									Args: []string{
 										strings.Join([]string{
@@ -227,7 +227,7 @@ func AdaptFunc(
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		func(k8sClient *kubernetes.Client) error {
 			internalMonitor.Info("waiting for migration to be completed")
-			if err := k8sClient.WaitUntilJobCompleted(namespace, jobName, 60); err != nil {
+			if err := k8sClient.WaitUntilJobCompleted(namespace, jobName, 300); err != nil {
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for migration to be completed"))
 				return err
 			}
