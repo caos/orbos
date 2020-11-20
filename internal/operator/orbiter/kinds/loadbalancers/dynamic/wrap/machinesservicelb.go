@@ -1,7 +1,6 @@
 package wrap
 
 import (
-	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -11,10 +10,9 @@ var _ core.MachinesService = (*CmpSvcLB)(nil)
 
 type CmpSvcLB struct {
 	core.MachinesService
-	dynamic    dynamic.Current
-	nodeagents *common.DesiredNodeAgents
-	vrrp       *dynamic.VRRP
-	vip        func(*dynamic.VIP) string
+	dynamic dynamic.Current
+	vrrp    *dynamic.VRRP
+	vip     func(*dynamic.VIP) string
 }
 
 func MachinesService(svc core.MachinesService, curr dynamic.Current, vrrp *dynamic.VRRP, vip func(*dynamic.VIP) string) *CmpSvcLB {

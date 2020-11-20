@@ -263,7 +263,7 @@ stream { {{ range $nat := .NATs }}
 				} else {
 
 					if err := poolMachines(svc, func(pool string, machines infra.Machines) {
-
+						lbMachines = nil
 						if forPool == pool {
 							lbMachines = machines
 						}
@@ -410,7 +410,7 @@ http {
 				if err != nil {
 					return false, err
 				}
-				for _, vips := range spec {
+				for srcPool, vips := range spec {
 					for _, vip := range vips {
 						for _, transport := range vip.Transport {
 							srcFW := map[string]*common.Allowed{
@@ -425,7 +425,7 @@ http {
 							}
 
 							var natVIPProbed bool
-							if vrrp != nil {
+							if vrrp != nil && forPool == srcPool {
 								for _, machine := range lbMachines {
 									desireNodeAgent(machine, common.ToFirewall("external", srcFW), common.Package{}, common.Package{})
 								}
@@ -448,31 +448,32 @@ http {
 								for _, machine := range destMachines {
 									desireNodeAgent(machine, common.ToFirewall("internal", destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
-									if vrrp == nil && forPool == dest {
-										if !natVIPProbed {
-											probeVIP()
-											natVIPProbed = true
-										}
-
-										nodeNatDesires, ok := nodesNats[machine.IP()]
-										if !ok {
-											nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
-										}
-										nodeNatDesires.Firewall = common.ToFirewall("external", srcFW)
-										nodeNatDesires.Machine = machine
-
-										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
-											Whitelist: transport.Whitelist,
-											Name:      transport.Name,
-											From: []string{
-												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
-												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
-											},
-											To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
-											ProxyProtocol: *transport.ProxyProtocol,
-										})
-										nodesNats[machine.IP()] = nodeNatDesires
+									if vrrp != nil || forPool != dest {
+										continue
 									}
+									if !natVIPProbed {
+										probeVIP()
+										natVIPProbed = true
+									}
+
+									nodeNatDesires, ok := nodesNats[machine.IP()]
+									if !ok {
+										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
+									}
+									nodeNatDesires.Firewall = common.ToFirewall("external", srcFW)
+									nodeNatDesires.Machine = machine
+
+									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
+										Whitelist: transport.Whitelist,
+										Name:      transport.Name,
+										From: []string{
+											fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
+											fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
+										},
+										To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+										ProxyProtocol: *transport.ProxyProtocol,
+									})
+									nodesNats[machine.IP()] = nodeNatDesires
 								}
 							}
 						}
