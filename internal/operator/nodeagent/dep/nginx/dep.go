@@ -1,15 +1,15 @@
 package nginx
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
-
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -72,8 +72,6 @@ func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
 	}
 
 	if _, ok := remove.Config["nginx.conf"]; !ok {
-
-		
 
 		if err := s.manager.Install(&dep.Software{
 			Package: "nginx",
