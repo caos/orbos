@@ -130,7 +130,24 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl, nodeAgentsCurrent)
 
 			current.Current.Spec = enrichedVIPs
+			doReset := true
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
+
+				if doReset {
+					// Reset LB Software and whole Firewalls
+					for _, id := range nodeagents.List() {
+						na, found := nodeagents.Get(id)
+						if !found {
+							continue
+						}
+						na.Firewall = &common.Firewall{}
+						if na.Software != nil {
+							na.Software.KeepaliveD = common.Package{}
+							na.Software.Nginx = common.Package{}
+						}
+					}
+				}
+				doReset = false
 
 				var lbMachines []infra.Machine
 
@@ -141,19 +158,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
-						deepNa.Firewall.Merge(fw)
-						machineMonitor.Changed("Loadbalancing firewall desired")
+						machineMonitor.WithField("open", fw.AllZones()).Debug("Loadbalancing firewall desired")
 					}
+					deepNa.Firewall.Merge(fw)
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						allPorts := ""
-						for _, zone := range deepNa.Firewall.AllZones() {
-							ports := ""
-							for _, port := range zone.FW {
-								ports = ports + port.Port + "/" + port.Protocol + " "
-							}
-							allPorts = allPorts + zone.Name + ": " + ports
-						}
-						machineMonitor.WithField("ports", allPorts).Info("Awaiting firewalld config")
+						machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
 						done = false
 					}
 					for _, port := range fw.Ports("external") {
@@ -176,9 +185,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 					if !nginx.Equals(common.Package{}) {
 						if !deepNa.Software.Nginx.Equals(nginx) {
-							deepNa.Software.Nginx = nginx
-							machineMonitor.Changed("NGINX desired")
+							machineMonitor.WithField("pkg", nginx).Debug("NGINX desired")
 						}
+						deepNa.Software.Nginx = nginx
 						if !deepNa.Software.Nginx.Equals(deepNaCurr.Software.Nginx) {
 							machineMonitor.Info("Awaiting NGINX")
 							done = false
@@ -189,10 +198,10 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 								string(sysctl.NonLocalBind): "1",
 							},
 						}) {
-							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
-							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
 							machineMonitor.Changed("sysctl desired")
 						}
+						sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
+						sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
 							done = false
@@ -201,8 +210,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 					if !keepalived.Equals(common.Package{}) {
 						if !deepNa.Software.KeepaliveD.Equals(keepalived) {
-							deepNa.Software.KeepaliveD = keepalived
-							machineMonitor.Changed("Keepalived desired")
+							machineMonitor.WithField("pkg", keepalived).Debug("Keepalived desired")
 						}
 						deepNa.Software.KeepaliveD = keepalived
 						if !deepNa.Software.KeepaliveD.Equals(deepNaCurr.Software.KeepaliveD) {

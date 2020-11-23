@@ -1,6 +1,7 @@
 package cs
 
 import (
+	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/api"
@@ -57,6 +58,12 @@ func query(
 	}
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
+
+		_, err := desireNodeAgents(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService)
+		if err != nil {
+			return err
+		}
+
 		return ensureServer(context, current, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
@@ -74,10 +81,59 @@ func query(
 			func() error { return helpers.Fanout(removeFIPs)() },
 			func() error { return helpers.Fanout(ensureServers)() },
 			func() error {
-				var err error
-				done, err = wrappedMachines.InitializeDesiredNodeAgents()
-				return err
+				lbDone, err := wrappedMachines.InitializeDesiredNodeAgents()
+				if err != nil {
+					return err
+				}
+
+				csDone, err := desireNodeAgents(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService)
+				if err != nil {
+					return err
+				}
+				done = lbDone && csDone
+				return nil
 			},
 		})())
 	}, addPools(current, desired, wrappedMachines)
+}
+
+func desireNodeAgents(monitor mntr.Monitor, nodeAgentsDesired *common.DesiredNodeAgents, nodeAgentsCurrent *common.CurrentNodeAgents, service core.MachinesService) (bool, error) {
+	done := true
+	desireNodeAgent := func(machine infra.Machine, fw common.Firewall) {
+		machineMonitor := monitor.WithField("machine", machine.ID())
+		deepNa, _ := nodeAgentsDesired.Get(machine.ID())
+		deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
+
+		deepNa.Firewall.Merge(fw)
+		machineMonitor.WithField("ports", fw.AllZones()).Debug("Desired Cloudscale Firewall")
+		if !fw.IsContainedIn(deepNaCurr.Open) {
+			machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
+			done = false
+		}
+	}
+
+	pools, err := service.ListPools()
+	if err != nil {
+		return false, err
+	}
+	var machines infra.Machines
+	var ips []string
+	for _, pool := range pools {
+		poolMachines, err := service.List(pool)
+		if err != nil {
+			return false, err
+		}
+		for _, machine := range poolMachines {
+			machines = append(machines, machine)
+			ips = append(ips, machine.IP()+"/32")
+		}
+	}
+	for _, machine := range machines {
+		desireNodeAgent(machine, common.Firewall{
+			Zones: map[string]*common.Zone{
+				"internal": {Sources: ips},
+				"external": {Interfaces: []string{"eth0"}},
+			}})
+	}
+	return done, nil
 }

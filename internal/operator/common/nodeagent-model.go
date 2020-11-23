@@ -136,13 +136,6 @@ type Firewall struct {
 	Zones map[string]*Zone `yaml:",inline"`
 }
 
-type Zone struct {
-	Interfaces []string
-	Sources    []string
-	FW         map[string]*Allowed
-	Services   map[string]*Service
-}
-
 type Service struct {
 	Description string
 	Ports       []*Allowed
@@ -241,6 +234,7 @@ func (f *Firewall) AllZones() Current {
 			zones = append(zones, &ZoneDesc{
 				Name:       name,
 				Interfaces: zone.Interfaces,
+				Sources:    zone.Sources,
 				Services:   []*Service{},
 				FW:         f.Ports(name),
 			})
@@ -267,13 +261,53 @@ func (f *Firewall) Ports(zoneName string) Ports {
 
 type ZoneDesc struct {
 	Name       string
-	Interfaces []string
-	Sources    []string
+	Interfaces MarshallableSlice
+	Sources    MarshallableSlice
 	FW         []*Allowed
 	Services   []*Service
 }
 
+type Zone struct {
+	Interfaces MarshallableSlice
+	Sources    MarshallableSlice
+	FW         map[string]*Allowed
+	Services   map[string]*Service
+}
+
+type MarshallableSlice []string
+
+func (m MarshallableSlice) MarshalYAML() (interface{}, error) {
+	sort.Strings(m)
+	type s []string
+	return s(m), nil
+}
+
+var _ fmt.Stringer = (*Current)(nil)
+
 type Current []*ZoneDesc
+
+func (c Current) String() string {
+	fw := ""
+	for _, zone := range c {
+
+		interfaces := ""
+		for idx := range zone.Interfaces {
+			interfaces = interfaces + zone.Interfaces[idx] + " "
+		}
+
+		sources := ""
+		for idx := range zone.Sources {
+			sources = sources + zone.Sources[idx] + " "
+		}
+
+		ports := ""
+		for _, port := range zone.FW {
+			ports = ports + port.Port + "/" + port.Protocol + " "
+		}
+		fw = fw + zone.Name + "(" + strings.TrimSpace(strings.TrimSpace(strings.TrimSpace(interfaces)+" "+sources)+" "+ports) + ") "
+	}
+	return strings.TrimSpace(fw)
+}
 
 func (c Current) Sort() {
 	sort.Slice(c, func(i, j int) bool {
@@ -281,6 +315,7 @@ func (c Current) Sort() {
 	})
 
 	for _, currentEntry := range c {
+
 		sort.Slice(currentEntry.Interfaces, func(i, j int) bool {
 			return currentEntry.Interfaces[i] < currentEntry.Interfaces[j]
 		})
@@ -302,6 +337,10 @@ func (c Current) Sort() {
 				return iEntry < jEntry
 			})
 		}
+
+		sort.Slice(currentEntry.Sources, func(i, j int) bool {
+			return currentEntry.Sources[i] < currentEntry.Sources[j]
+		})
 	}
 }
 
@@ -498,6 +537,16 @@ func (n *DesiredNodeAgents) Delete(id string) {
 	n.mux.Lock()
 	defer n.mux.Unlock()
 	delete(n.NA, id)
+}
+
+func (n *DesiredNodeAgents) List() []string {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	var ids []string
+	for id := range n.NA {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {

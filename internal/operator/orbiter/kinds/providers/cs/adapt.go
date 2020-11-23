@@ -3,7 +3,6 @@ package cs
 import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -71,30 +70,6 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
-				done := true
-				desireNodeAgent := func(machine infra.Machine, fw common.Firewall) {
-					machineMonitor := monitor.WithField("machine", machine.ID())
-					deepNa, _ := nodeAgentsDesired.Get(machine.ID())
-					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
-
-					if !deepNa.Firewall.Contains(fw) {
-						deepNa.Firewall.Merge(fw)
-						machineMonitor.Changed("Loadbalancing firewall desired")
-					}
-					if !fw.IsContainedIn(deepNaCurr.Open) {
-						allPorts := ""
-						for _, zone := range deepNa.Firewall.AllZones() {
-							ports := ""
-							for _, port := range zone.FW {
-								ports = ports + port.Port + "/" + port.Protocol + " "
-							}
-							allPorts = allPorts + zone.Name + ": " + ports
-						}
-						machineMonitor.WithField("ports", allPorts).Info("Awaiting firewalld config")
-						done = false
-					}
-				}
-
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
 					return nil, err
 				}
@@ -104,28 +79,6 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
-
-				if nodeAgentsDesired.NA != nil {
-					listMachines, err := ctx.machinesService.machines()
-					if err != nil {
-						return nil, err
-					}
-					machineIPList := []string{}
-					for _, machines := range listMachines {
-						for _, machine := range machines {
-							machineIPList = append(machineIPList, machine.IP()+"/32")
-						}
-					}
-					for _, machines := range listMachines {
-						for _, machine := range machines {
-							desireNodeAgent(machine, common.Firewall{
-								Zones: map[string]*common.Zone{
-									"internal": {Sources: machineIPList},
-									"external": {Interfaces: []string{"eth0"}},
-								}})
-						}
-					}
-				}
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func() error {

@@ -53,14 +53,14 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0) (desire func(machine 
 		}
 		firewall.Merge(firewallSources)
 
-		if firewall.IsContainedIn(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Contains(firewall) {
+		machine.desiredNodeagent.Firewall.Merge(firewall)
+		if firewall.IsContainedIn(machine.currentNodeagent.Open) {
 			machine.currentMachine.FirewallIsReady = true
 			monitor.Debug("firewall is ready")
 			return
 		}
 
 		machine.currentMachine.FirewallIsReady = false
-		machine.desiredNodeagent.Firewall.Merge(firewall)
-		monitor.Info("firewall desired")
+		monitor.WithField("open", firewall.AllZones()).Info("firewall desired")
 	}
 }
