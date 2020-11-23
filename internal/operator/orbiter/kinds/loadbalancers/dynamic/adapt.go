@@ -29,6 +29,11 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+const (
+	nginxVersion      = "v1.18.1"
+	keepalivedVersion = "v1.3.5"
+)
+
 var probes = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Name: "probe",
@@ -368,7 +373,7 @@ http {
 							return false, err
 						}
 
-						kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaPkg := common.Package{Version: keepalivedVersion, Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 						kaBuf.Reset()
 
 						if d.CustomMasterNotifyer {
@@ -390,7 +395,7 @@ http {
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return false, err
 						}
-						ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 						ngxBuf.Reset()
 
 						desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
@@ -482,7 +487,7 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}

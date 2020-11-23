@@ -1,9 +1,11 @@
 package nginx
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
+	"regexp"
+
+	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -18,14 +20,15 @@ type Installer interface {
 	nodeagent.Installer
 }
 type nginxDep struct {
-	manager *dep.PackageManager
-	systemd *dep.SystemD
-	monitor mntr.Monitor
-	os      dep.OperatingSystem
+	manager    *dep.PackageManager
+	systemd    *dep.SystemD
+	monitor    mntr.Monitor
+	os         dep.OperatingSystem
+	normalizer *regexp.Regexp
 }
 
 func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem) Installer {
-	return &nginxDep{manager, systemd, monitor, os}
+	return &nginxDep{manager, systemd, monitor, os, regexp.MustCompile(`\d+\.\d+\.\d+`)}
 }
 
 func (nginxDep) isNgninx() {}
@@ -46,9 +49,22 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 	if !s.systemd.Active("nginx") {
 		return pkg, err
 	}
-	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
-	if os.IsNotExist(err) {
+
+	installed, err := s.manager.CurrentVersions("nginx")
+	if err != nil {
+		return pkg, errors.Wrapf(err, "getting current nginx version failed")
+	}
+	if len(installed) == 0 {
 		return pkg, nil
+	}
+	pkg.Version = "v" + s.normalizer.FindString(installed[0].Version)
+
+	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return pkg, nil
+		}
+		return pkg, err
 	}
 
 	pkg.Config = map[string]string{
