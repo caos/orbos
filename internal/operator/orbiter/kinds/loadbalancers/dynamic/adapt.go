@@ -262,8 +262,8 @@ stream { {{ range $nat := .NATs }}
 
 				} else {
 
+					lbMachines = nil
 					if err := poolMachines(svc, func(pool string, machines infra.Machines) {
-						lbMachines = nil
 						if forPool == pool {
 							lbMachines = machines
 						}
@@ -365,6 +365,10 @@ http {
 }`))
 
 					for _, d := range lbData {
+
+						if len(d.VIPs) == 0 {
+							continue
+						}
 
 						ngxBuf := new(bytes.Buffer)
 						//noinspection GoDeferInLoop
