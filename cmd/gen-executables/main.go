@@ -23,6 +23,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
 	containeronly := flag.Bool("containeronly", false, "Compile orbctl binaries only for in-container usage")
+	hostBinsOnly := flag.Bool("host-bins-only", false, "Build only this binary")
 
 	flag.Parse()
 
@@ -42,11 +43,17 @@ func main() {
 	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
 	path := curryJoinPath(cmdPath)
 
-	packableExecutables := executables.PackableBuilds(executables.Build(
+	builtExecutables := executables.Build(
 		*debug, *commit, *version, *githubClientID, *githubClientSecret,
 		executables.Buildable{OutDir: filepath.Join(*orbctldir, "nodeagent"), MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
 		executables.Buildable{OutDir: filepath.Join(*orbctldir, "health"), MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
-	))
+	)
+
+	if *hostBinsOnly {
+		return
+	}
+
+	packableExecutables := executables.PackableBuilds(builtExecutables)
 
 	packableFiles := executables.PackableFiles(toChan([]string{
 		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/calico.yaml"),

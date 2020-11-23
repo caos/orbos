@@ -21,6 +21,9 @@ type GetFuncs func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*Sec
 
 func Read(monitor mntr.Monitor, gitClient *git.Client, path string, getFunc GetFuncs) (string, error) {
 	allSecrets, _, err := getFunc(monitor, gitClient)
+	if err != nil {
+		return "", err
+	}
 
 	secret, err := findSecret(allSecrets, &path, false)
 	if err != nil {

@@ -72,12 +72,16 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, true, nil, mapVIP)
+		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, &dynamiclbmodel.VRRP{
+			VRRPInterface: "eth0",
+			NotifyMaster:  nil,
+			AuthCheck:     nil,
+		}, mapVIP)
 		externalMachinesService = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
 		}
-		deployPools, err := lbCurrent.Current.Spec(internalMachinesService)
+		deployPools, _, err := lbCurrent.Current.Spec(internalMachinesService)
 		if err != nil {
 			return nil, err
 		}
