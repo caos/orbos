@@ -420,11 +420,15 @@ http {
 								},
 							}
 							ip := mapVIP(vip)
+							var vipProbed bool
 							probeVIP := func() {
+								if vipProbed {
+									return
+								}
 								probe("VIP", ip, uint16(transport.FrontendPort), false, transport.HealthChecks, *transport)
+								vipProbed = true
 							}
 
-							var natVIPProbed bool
 							if vrrp != nil && forPool == srcPool {
 								for _, machine := range lbMachines {
 									desireNodeAgent(machine, common.ToFirewall("external", srcFW), common.Package{}, common.Package{})
@@ -451,10 +455,7 @@ http {
 									if vrrp != nil || forPool != dest {
 										continue
 									}
-									if !natVIPProbed {
-										probeVIP()
-										natVIPProbed = true
-									}
+									probeVIP()
 
 									nodeNatDesires, ok := nodesNats[machine.IP()]
 									if !ok {
