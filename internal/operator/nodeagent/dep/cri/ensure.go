@@ -32,32 +32,28 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		return errors.Wrapf(err, "removing older docker versions failed with stderr %s", errBuf.String())
 	}
 
-	for _, pkg := range []*dep.Software{{
-		Package: "device-mapper-persistent-data",
-	}, {
-		Package: "lvm2",
-	}} {
-		if err := c.manager.Install(pkg); err != nil {
-			return errors.Wrap(err, "installing docker dependency failed")
+	for _, pkg := range []string{"device-mapper-persistent-data", "lvm2"} {
+		if err := c.manager.Install(&dep.Software{Package: pkg}); err != nil {
+			c.monitor.Error(errors.Wrap(err, "installing docker dependency failed"))
 		}
 	}
-
-	c.manager.Add(&dep.Repository{
-		Repository: "https://download.docker.com/linux/centos/docker-ce.repo",
-	})
 
 	if err := c.manager.Install(&dep.Software{
 		Package: "containerd.io",
 	}); err != nil {
-		return err
+		c.monitor.Error(err)
 	}
 
 	if err := c.manager.Install(&dep.Software{
 		Package: runtime,
 		Version: version,
 	}); err != nil {
-		return errors.Wrap(err, "installing container runtime failed")
+		c.monitor.Error(errors.Wrap(err, "installing container runtime failed"))
 	}
+
+	c.manager.Add(&dep.Repository{
+		Repository: "https://download.docker.com/linux/centos/docker-ce.repo",
+	})
 
 	if err := c.systemd.Enable("docker"); err != nil {
 		return err
@@ -66,12 +62,6 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 }
 
 func (c *criDep) ensureUbuntu(runtime string, version string) error {
-
-	c.manager.Add(&dep.Repository{
-		Repository:     fmt.Sprintf("deb [arch=amd64] https://download.docker.com/linux/ubuntu %s stable", c.os.Version),
-		KeyURL:         "https://download.docker.com/linux/ubuntu/gpg",
-		KeyFingerprint: "0EBFCD88",
-	})
 
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
@@ -115,8 +105,14 @@ func (c *criDep) ensureUbuntu(runtime string, version string) error {
 		Package: runtime,
 		Version: strings.TrimSpace(strings.Split(versionLine, "|")[1]),
 	}); err != nil {
-		return errors.Wrap(err, "installing container runtime failed")
+		c.monitor.Error(errors.Wrap(err, "installing container runtime failed"))
 	}
+
+	c.manager.Add(&dep.Repository{
+		Repository:     fmt.Sprintf("deb [arch=amd64] https://download.docker.com/linux/ubuntu %s stable", c.os.Version),
+		KeyURL:         "https://download.docker.com/linux/ubuntu/gpg",
+		KeyFingerprint: "0EBFCD88",
+	})
 
 	if err := c.systemd.Enable("docker"); err != nil {
 		return err
