@@ -2,8 +2,9 @@ package orbiter
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/secret"
 	"net/http"
+
+	"github.com/caos/orbos/internal/secret"
 
 	"github.com/caos/orbos/internal/api"
 	orbconfig "github.com/caos/orbos/internal/orb"
@@ -177,7 +178,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 
 		reconciledCurrentStateMsg := "Current state reconciled"
-		currentReconciled, err := conf.GitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()...)
+		currentReconciled, err := conf.GitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()[0])
 		if err != nil {
 			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 			return

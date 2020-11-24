@@ -32,6 +32,11 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 			monitor = monitor.Verbose()
 		}
 
+		if desiredKind.Spec.ExternalInterfaces == nil {
+			desiredKind.Spec.ExternalInterfaces = make([]string, 0)
+			migrate = true
+		}
+
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, nil, migrate, nil, err
 		}
