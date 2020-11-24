@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/pkg/errors"
 )
 
@@ -55,17 +57,33 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		errBuf.Reset()
 	}
 
-	if len(installPkgs) <= 0 {
-		return nil
+	for _, pkg := range installPkgs {
+		if err := rembasedInstallPkg(p.monitor, pkg); err != nil {
+			return err
+		}
 	}
+	return nil
+}
 
-	cmd := exec.Command("yum", append([]string{"install", "-y"}, installPkgs...)...)
+func rembasedInstallPkg(monitor mntr.Monitor, pkg string) error {
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	cmd := exec.Command("yum", "install", "-y", pkg)
 	cmd.Stderr = errBuf
-	if p.monitor.IsVerbose() {
+	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
 	}
-	return errors.Wrapf(cmd.Run(), "installing yum packages %s failed with stderr %s", strings.Join(installPkgs, " and "), errBuf.String())
+	var errStr string
+	err := cmd.Run()
+	if err != nil {
+		errStr = errBuf.String()
+		if strings.Contains(errStr, "is already installed") {
+			err = nil
+		}
+	}
+
+	return errors.Wrapf(err, "installing yum package %s failed with stderr %s", pkg, errStr)
 }
 
 // TODO: Use lower level apt instead of apt-get?
