@@ -125,7 +125,14 @@ func query(
 		if err != nil {
 			return orbiter.ToEnsureResult(false, err)
 		}
+		result := ensureLBFunc()
 
-		return ensureLBFunc()
+		if result.Err != nil {
+			fwDone, err := core.DesireInternalOSFirewall(monitor, nodeAgentsDesired, nodeAgentsCurrent, externalMachinesService, nil)
+			result.Err = err
+			result.Done = result.Done && fwDone
+		}
+
+		return result
 	}, addPools(current, desired, externalMachinesService)
 }

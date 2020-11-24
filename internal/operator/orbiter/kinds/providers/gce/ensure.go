@@ -174,7 +174,17 @@ func query(
 			},
 			func() error {
 				var err error
-				done, err = wrappedMachines.InitializeDesiredNodeAgents()
+				lbDone, err := wrappedMachines.InitializeDesiredNodeAgents()
+				if err != nil {
+					return err
+				}
+
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				if err != nil {
+					return err
+				}
+				done = lbDone && fwDone
+
 				return err
 			},
 		})())
