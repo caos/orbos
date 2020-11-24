@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/caos/orbos/internal/secret"
+
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 
@@ -31,6 +33,16 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := ctx.machinesService.use(desired.Spec.SSHKey); err != nil {
+		invalidKey := &secret.Secret{Value: "invalid"}
+		if err := ctx.machinesService.use(&SSHKey{
+			Private: invalidKey,
+			Public:  invalidKey,
+		}); err != nil {
+			panic(err)
+		}
 	}
 
 	return core.ListMachines(ctx.machinesService)
