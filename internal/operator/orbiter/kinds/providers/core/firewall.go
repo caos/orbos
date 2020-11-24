@@ -40,6 +40,7 @@ func DesireInternalOSFirewall(monitor mntr.Monitor, nodeAgentsDesired *common.De
 	for _, machine := range machines {
 		desireNodeAgent(machine, common.Firewall{
 			Zones: map[string]*common.Zone{
+				"public":   {},
 				"internal": {Sources: ips},
 				"external": {Interfaces: openInterfaces},
 			}})
