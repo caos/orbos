@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	nginxVersion      = "v1.18.1"
+	nginxVersion      = "v1.18.0"
 	keepalivedVersion = "v1.3.5"
 )
 
