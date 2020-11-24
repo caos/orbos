@@ -68,17 +68,20 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 func rembasedInstallPkg(monitor mntr.Monitor, pkg string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
 	cmd := exec.Command("yum", "install", "-y", pkg)
 	cmd.Stderr = errBuf
-	if monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	var errStr string
+	cmd.Stdout = outBuf
 	err := cmd.Run()
+	errStr := errBuf.String()
+	outStr := outBuf.String()
+	monitor.WithFields(map[string]interface{}{
+		"stdout": outStr,
+		"stderr": errStr,
+	}).Debug("Executed yum install")
 	if err != nil {
-		errStr = errBuf.String()
-		if strings.Contains(errStr, "is already installed") {
+		if strings.Contains(errStr+outStr, "is already installed") {
 			err = nil
 		}
 	}
