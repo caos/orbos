@@ -1,15 +1,15 @@
 package nginx
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
-
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -73,21 +73,20 @@ func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	if _, ok := remove.Config["nginx.conf"]; !ok {
 
-		if err := ioutil.WriteFile("/etc/yum.repos.d/nginx.repo", []byte(`[nginx-stable]
+		if err := s.manager.Install(&dep.Software{
+			Package: "nginx",
+			Version: ensure.Version,
+		}); err != nil {
+			if err := ioutil.WriteFile("/etc/yum.repos.d/nginx.repo", []byte(`[nginx-stable]
 name=nginx stable repo
 baseurl=http://nginx.org/packages/centos/$releasever/$basearch/
 gpgcheck=1
 enabled=1
 gpgkey=https://nginx.org/keys/nginx_signing.key
 module_hotfixes=true`), 0600); err != nil {
-			return err
-		}
-
-		if err := s.manager.Install(&dep.Software{
-			Package: "nginx",
-			Version: ensure.Version,
-		}); err != nil {
-			return err
+				return err
+			}
+			return errors.New("nginx not installed, repo added")
 		}
 
 		if err := os.MkdirAll("/etc/nginx", 0700); err != nil {
