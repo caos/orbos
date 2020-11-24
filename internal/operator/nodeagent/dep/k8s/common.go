@@ -39,17 +39,19 @@ func (c *Common) Ensure(remove common.Package, install common.Package) error {
 	if c.os == dep.Ubuntu {
 		pkgVersion += "0"
 	}
-	if err := c.manager.Install(&dep.Software{Package: c.pkg, Version: pkgVersion}); err != nil {
-		
-		switch c.os {
-		case dep.Ubuntu:
-			c.manager.Add(&dep.Repository{
-				KeyURL:         "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
-				KeyFingerprint: "",
-				Repository:     "deb https://apt.kubernetes.io/ kubernetes-xenial main",
-			})
-		case dep.CentOS:
-			ioutil.WriteFile("/etc/yum.repos.d/kubernetes.repo", []byte(`[kubernetes]
+	err := c.manager.Install(&dep.Software{Package: c.pkg, Version: pkgVersion})
+	if err == nil {
+		return nil
+	}
+	switch c.os {
+	case dep.Ubuntu:
+		c.manager.Add(&dep.Repository{
+			KeyURL:         "https://packages.cloud.google.com/apt/doc/apt-key.gpg",
+			KeyFingerprint: "",
+			Repository:     "deb https://apt.kubernetes.io/ kubernetes-xenial main",
+		})
+	case dep.CentOS:
+		err = ioutil.WriteFile("/etc/yum.repos.d/kubernetes.repo", []byte(`[kubernetes]
 name=Kubernetes
 baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
 enabled=1
@@ -70,10 +72,6 @@ gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cl
 		//			return errors.Wrapf(err, "unholding installed package failed with stderr %s", errBuf.String())
 		//		}
 
-		}
-
-		
-		return errors.Wrapf(err, "installing %s failed", c.pkg)
 	}
-	return err
+	return errors.Wrapf(err, "installing %s failed", c.pkg)
 }
