@@ -140,7 +140,7 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 
 	if err := s.manager.Install(&dep.Software{
 		Package: "keepalived",
-		Version: ensure.Version,
+		Version: strings.TrimLeft(ensure.Version, "v"),
 	}); err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -91,7 +92,7 @@ func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
 
 		if err := s.manager.Install(&dep.Software{
 			Package: "nginx",
-			Version: ensure.Version,
+			Version: strings.TrimLeft(ensure.Version, "v"),
 		}); err != nil {
 			if err := ioutil.WriteFile("/etc/yum.repos.d/nginx.repo", []byte(`[nginx-stable]
 name=nginx stable repo

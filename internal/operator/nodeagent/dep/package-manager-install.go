@@ -23,9 +23,8 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 			continue
 		}
 
-		installPkgs = append(installPkgs, sw.Package)
-
 		if sw.Version == "" {
+			installPkgs = append(installPkgs, sw.Package)
 			continue
 		}
 

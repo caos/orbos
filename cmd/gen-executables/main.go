@@ -50,6 +50,8 @@ func main() {
 	)
 
 	if *hostBinsOnly {
+		for range builtExecutables {
+		}
 		return
 	}
 
