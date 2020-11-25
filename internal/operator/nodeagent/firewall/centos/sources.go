@@ -6,7 +6,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func getAddAndRemoveSources(monitor mntr.Monitor, zoneName string, current *common.ZoneDesc, desired common.Firewall) ([]string, []string, error) {
+func getAddAndRemoveSources(zoneName string, current *common.ZoneDesc, desired common.Firewall) ([]string, []string, error) {
 
 	addSources := make([]string, 0)
 	removeSources := make([]string, 0)

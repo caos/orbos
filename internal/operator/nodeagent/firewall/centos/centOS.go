@@ -67,6 +67,12 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		FW:         []*common.Allowed{},
 	}
 
+	ifaces, err := getInterfaces(monitor, zoneName)
+	if err != nil {
+		return current, nil, err
+	}
+	current.Interfaces = ifaces
+
 	sources, err := getSources(monitor, zoneName)
 	if err != nil {
 		return current, nil, err
@@ -75,9 +81,9 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 
 	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), ignore)
 
-	ensureIfaces, err := getEnsureInterfaces(monitor, zoneName, current, desired)
+	ensureIfaces, removeIfaces, err := getEnsureAndRemoveInterfaces(zoneName, current, desired)
 
-	addSources, removeSources, err := getAddAndRemoveSources(monitor, zoneName, current, desired)
+	addSources, removeSources, err := getAddAndRemoveSources(zoneName, current, desired)
 
 	monitor.WithFields(map[string]interface{}{
 		"open":  strings.Join(addPorts, ";"),
@@ -88,19 +94,20 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		(removePorts == nil || len(removePorts) == 0) &&
 		(addSources == nil || len(addSources) == 0) &&
 		(removeSources == nil || len(removeSources) == 0) &&
-		(ensureIfaces == nil || len(ensureIfaces) == 0) {
+		(ensureIfaces == nil || len(ensureIfaces) == 0) &&
+		(removeIfaces == nil || len(removeIfaces) == 0) {
 		return current, nil, nil
 	}
 
 	zoneNameCopy := zoneName
 	return current, func() error {
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneName))
-		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeIfaces, zoneName))
+		if err := ensure(monitor, removeIfaces, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneName))
-		if err := ensure(monitor, addSources, zoneNameCopy); err != nil {
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneName))
+		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
 			return err
 		}
 
@@ -109,13 +116,18 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneName))
-		if err := ensure(monitor, addPorts, zoneNameCopy); err != nil {
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneName))
+		if err := ensure(monitor, addSources, zoneNameCopy); err != nil {
 			return err
 		}
 
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removePorts, zoneName))
-		return ensure(monitor, removePorts, zoneNameCopy)
+		if err := ensure(monitor, removePorts, zoneNameCopy); err != nil {
+			return err
+		}
+
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneName))
+		return ensure(monitor, addPorts, zoneNameCopy)
 	}, nil
 }
 
