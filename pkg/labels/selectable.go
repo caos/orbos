@@ -24,7 +24,7 @@ func AsSelectable(l *Name) *Selectable {
 	}}
 }
 
-func (l *Selectable) Equal(r Comparable) bool {
+func (l *Selectable) Equal(r comparable) bool {
 	if right, ok := r.(*Selectable); ok {
 		return l.model == right.model
 	}

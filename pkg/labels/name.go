@@ -27,7 +27,7 @@ func ForName(l *Component, name string) (*Name, error) {
 	}}, nil
 }
 
-func (l *Name) Equal(r Comparable) bool {
+func (l *Name) Equal(r comparable) bool {
 	if right, ok := r.(*Name); ok {
 		return l.model == right.model
 	}

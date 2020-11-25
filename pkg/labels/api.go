@@ -26,7 +26,7 @@ func ForAPI(l *Operator, kind, version string) (*API, error) {
 	}}, nil
 }
 
-func (l *API) Equal(r Comparable) bool {
+func (l *API) Equal(r comparable) bool {
 	if right, ok := r.(*API); ok {
 		return l.model == right.model
 	}

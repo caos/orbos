@@ -31,7 +31,7 @@ func DeriveSelector(l *Name, open bool) *Selector {
 	return selector
 }
 
-func (l *Selector) Equal(r Comparable) bool {
+func (l *Selector) Equal(r comparable) bool {
 	if right, ok := r.(*Selector); ok {
 		return l.model == right.model
 	}

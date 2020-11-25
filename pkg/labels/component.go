@@ -27,7 +27,7 @@ func ForComponent(l *API, component string) (*Component, error) {
 	}}, nil
 }
 
-func (l *Component) Equal(r Comparable) bool {
+func (l *Component) Equal(r comparable) bool {
 	if right, ok := r.(*Component); ok {
 		return l.model == right.model
 	}

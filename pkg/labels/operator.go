@@ -35,7 +35,7 @@ func ForOperator(operator, version string) (*Operator, error) {
 	}}, nil
 }
 
-func (l *Operator) Equal(r Comparable) bool {
+func (l *Operator) Equal(r comparable) bool {
 	if right, ok := r.(*Operator); ok {
 		return l.model == right.model
 	}
