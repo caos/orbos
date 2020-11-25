@@ -22,10 +22,10 @@ type machine struct {
 	reboot       *action
 	replacement  *action
 	pool         *Pool
+	poolName     string
 	X_ID         string `header:"id"`
 	X_internalIP string `header:"internal ip"`
 	X_externalIP string `header:"external ip"`
-	X_Pool       string `header:"pool"`
 }
 
 func newMachine(server *cloudscale.Server, internalIP, externalIP string, sshMachine *ssh.Machine, remove func() error, context *context, pool *Pool, poolName string) *machine {
@@ -38,7 +38,7 @@ func newMachine(server *cloudscale.Server, internalIP, externalIP string, sshMac
 		remove:       remove,
 		context:      context,
 		pool:         pool,
-		X_Pool:       poolName,
+		poolName:     poolName,
 	}
 }
 

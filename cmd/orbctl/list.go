@@ -64,6 +64,7 @@ func ListCommand(rv RootValues) *cobra.Command {
 								return fmt.Errorf("unknown column: %s", column)
 							}
 						}
+						headers = append([]string{"context"}, headers...)
 						tail = true
 					}
 
@@ -73,7 +74,7 @@ func ListCommand(rv RootValues) *cobra.Command {
 						fmt.Println(cells[cellIdx])
 						continue
 					}
-					rows = append(rows, cells)
+					rows = append(rows, append([]string{ctx}, cells...))
 				}
 			}
 
