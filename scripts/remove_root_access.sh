@@ -2,6 +2,6 @@
 
 set -ex
 
-echo "PermitRootLogin no" >> /etc/ssh/sshd_config
-service sshd restart
-rm -rf /root/.ssh
+echo "PermitRootLogin no" | sudo tee -a /etc/ssh/sshd_config
+sudo service sshd restart
+sudo rm -rf /root/.ssh
