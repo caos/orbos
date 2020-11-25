@@ -16,6 +16,8 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
+	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23 // indirect
+	github.com/landoop/tableprinter v0.0.0-20201125135848-89e81fc956e7 // indirect
 	github.com/manifoldco/promptui v0.7.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect

@@ -1,0 +1,27 @@
+package labels_test
+
+import (
+	"testing"
+
+	"github.com/caos/orbos/pkg/labels"
+
+	"gopkg.in/yaml.v3"
+)
+
+func expectNotMarshallable(t *testing.T, labels interface{}) {
+	_, err := yaml.Marshal(labels)
+	if err == nil {
+		t.Error("expected full set of labels")
+	}
+}
+
+func expectValueEquality(t *testing.T, one labels.Comparable, oneTick labels.Comparable, two labels.Comparable) {
+
+	if one.Equal(two) {
+		t.Error("Expected unequal")
+	}
+
+	if !one.Equal(oneTick) {
+		t.Error("Expected value equality")
+	}
+}
