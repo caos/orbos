@@ -64,7 +64,7 @@ set_master() {
 for VIP in "$floating_ipv4"; do
 		set_master $VIP
 done
-`, strings.Join(hostedVIPs(hostPools, m, current), " "), machine.server.UUID), poolsWithUnassignedVIPs[machine.poolName]
+`, strings.Join(hostedVIPs(hostPools, m, current), " "), machine.server.UUID), poolsWithUnassignedVIPs[machine.X_Pool]
 	}
 }
 

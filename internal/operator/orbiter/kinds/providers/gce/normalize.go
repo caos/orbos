@@ -168,7 +168,7 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 						log: func(msg string, debug bool, insts []*instance) func() {
 							localMonitor := destMonitor
 							if len(insts) > 0 {
-								localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.id }))
+								localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.X_ID }))
 							}
 							if tp.Name != "" {
 								localMonitor = localMonitor.WithField("id", tp.Name)

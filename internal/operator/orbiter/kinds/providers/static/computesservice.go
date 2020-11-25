@@ -92,7 +92,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 			return nil, err
 		}
 
-		if !machine.active {
+		if !machine.X_active {
 
 			if err := machine.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
 				return nil, err
@@ -102,7 +102,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 				return nil, err
 			}
 
-			machine.active = true
+			machine.X_active = true
 			return machine, nil
 		}
 	}
@@ -152,7 +152,7 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		if err := machine.ReadFile(c.statusFile, buf); err != nil {
 			// if error, treat as active
 		}
-		machine.active = strings.Contains(buf.String(), "active")
+		machine.X_active = strings.Contains(buf.String(), "active")
 		buf.Reset()
 		newCache = append(newCache, machine)
 	}
@@ -169,7 +169,7 @@ type cachedMachines []*machine
 func (c cachedMachines) Machines() infra.Machines {
 	machines := make([]infra.Machine, 0)
 	for _, machine := range c {
-		if machine.active {
+		if machine.X_active {
 			machines = append(machines, machine)
 		}
 	}

@@ -175,6 +175,7 @@ func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Moni
 	infraMachine := newMachine(
 		server,
 		internalIP,
+		sshIP,
 		sshMachine,
 		m.removeMachineFunc(server.Tags["pool"], server.UUID),
 		m.context,

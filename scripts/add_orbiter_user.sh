@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 adduser orbiter
 usermod -aG wheel orbiter
 echo "%wheel	ALL=(ALL)	NOPASSWD: ALL" >> /etc/sudoers

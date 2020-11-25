@@ -1,9 +1,9 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/kataras/tablewriter"
@@ -13,12 +13,6 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/tree"
 )
-
-type machine struct {
-	Context string `header:"context"`
-	ID      string `header:"identifier"`
-	IP      string `header:"ip address"`
-}
 
 func ListCommand(rv RootValues) *cobra.Command {
 	var (
@@ -42,57 +36,51 @@ func ListCommand(rv RootValues) *cobra.Command {
 		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
+
 			printer := tableprinter.New(os.Stdout)
+			printer.BorderTop, printer.BorderBottom = true, true
+			printer.HeaderFgColor = tablewriter.FgYellowColor
 
-			var m []machine
-
-			var eachLine func(_ string, mach infra.Machine)
-			printTable := false
-
-			switch strings.ToLower(column) {
-			case "id":
-				fallthrough
-			case "identifier":
-				eachLine = func(_ string, mach infra.Machine) { fmt.Println(mach.ID()) }
-			case "ip":
-				fallthrough
-			case "addr":
-				fallthrough
-			case "address":
-				fallthrough
-			case "ip address":
-				eachLine = func(_ string, mach infra.Machine) { fmt.Println(mach.IP()) }
-			case "":
-				eachLine = func(ctx string, mach infra.Machine) {
-					m = append(m, machine{
-						Context: ctx,
-						ID:      mach.ID(),
-						IP:      mach.IP(),
-					})
-				}
-				printTable = true
-			default:
-				return fmt.Errorf("unknown column: %s", column)
-			}
+			var (
+				tail    bool
+				headers []string
+				rows    [][]string
+				cellIdx = -1
+			)
 
 			for path, mach := range machines {
 				ctx := path[:strings.LastIndex(path, ".")]
 				if context == "" || context == ctx {
-					eachLine(ctx, mach)
+					v := reflect.ValueOf(mach).Elem()
+					if !tail {
+						headers = tableprinter.StructParser.ParseHeaders(v)
+						if column != "" {
+							for idx, h := range headers {
+								if strings.Contains(h, column) {
+									cellIdx = idx
+								}
+							}
+							if cellIdx == -1 {
+								return fmt.Errorf("unknown column: %s", column)
+							}
+						}
+						tail = true
+					}
+
+					cells, _ := tableprinter.StructParser.ParseRow(v)
+
+					if cellIdx > -1 {
+						fmt.Println(cells[cellIdx])
+						continue
+					}
+					rows = append(rows, cells)
 				}
 			}
 
-			if !printTable {
-				return nil
+			if cellIdx == -1 {
+				printer.Render(headers, rows, nil, false)
 			}
 
-			if len(m) == 0 {
-				return errors.New("no machines found")
-			}
-
-			printer.BorderTop, printer.BorderBottom = true, true
-			printer.HeaderFgColor = tablewriter.FgYellowColor
-			printer.Print(m)
 			return nil
 		})
 	}
