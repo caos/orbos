@@ -2,7 +2,7 @@ package labels
 
 import "errors"
 
-var _ Comparable = (*API)(nil)
+var _ Labels = (*API)(nil)
 
 type API struct {
 	model InternalAPI
@@ -15,6 +15,10 @@ type InternalAPI struct {
 }
 
 func ForAPI(l *Operator, kind, version string) (*API, error) {
+	if kind == "" || version == "" {
+		return nil, errors.New("kind and version must not be nil")
+	}
+
 	return &API{model: InternalAPI{
 		Kind:             kind,
 		ApiVersion:       version,

@@ -1,19 +1,28 @@
 package labels
 
-var _ Comparable = (*Name)(nil)
+import "errors"
+
+var _ Labels = (*Name)(nil)
 
 type Name struct {
 	model InternalName
 }
 
+type InternalNameProp struct {
+	Name string `yaml:"app.kubernetes.io/name,omitempty"`
+}
+
 type InternalName struct {
-	Name              string `yaml:"app.kubernetes.io/name"`
+	InternalNameProp  `yaml:",inline"`
 	InternalComponent `yaml:",inline"`
 }
 
 func ForName(l *Component, name string) (*Name, error) {
+	if name == "" {
+		return nil, errors.New("name must not be nil")
+	}
 	return &Name{model: InternalName{
-		Name:              name,
+		InternalNameProp:  InternalNameProp{Name: name},
 		InternalComponent: l.model,
 	}}, nil
 }

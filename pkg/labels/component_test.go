@@ -23,7 +23,7 @@ func TestComponentLabels_Equal(t *testing.T) {
 		t,
 		validComponentLabels(t),
 		validComponentLabels(t),
-		expectValidComponentLabels(t, "testSuite"))
+		expectValidComponentLabels(t, "somethingElse"))
 }
 
 func TestComponentLabels_MarshalYAML(t *testing.T) {

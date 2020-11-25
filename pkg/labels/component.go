@@ -2,21 +2,28 @@ package labels
 
 import "errors"
 
-var _ Comparable = (*Component)(nil)
+var _ Labels = (*Component)(nil)
 
 type Component struct {
 	model InternalComponent
 }
 
+type InternalComponentProp struct {
+	Component string `yaml:"app.kubernetes.io/component"`
+}
+
 type InternalComponent struct {
-	Component   string `yaml:"app.kubernetes.io/component"`
-	InternalAPI `yaml:",inline"`
+	InternalComponentProp `yaml:",inline"`
+	InternalAPI           `yaml:",inline"`
 }
 
 func ForComponent(l *API, component string) (*Component, error) {
+	if component == "" {
+		return nil, errors.New("component must not be nil")
+	}
 	return &Component{model: InternalComponent{
-		Component:   component,
-		InternalAPI: l.model,
+		InternalComponentProp: InternalComponentProp{Component: component},
+		InternalAPI:           l.model,
 	}}, nil
 }
 
