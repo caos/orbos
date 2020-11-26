@@ -2,6 +2,8 @@
 
 - Google Compute Engine ([get started](../../README.md))
   - orbiter manages clusters as well as the whole underlying infrastructure
+- Cloudscale provider
+  - orbiter manages clusters as well as the whole underlying infrastructure
 - Static provider ([get started](./static.md))
   - orbiter manages clusters, loadbalancing and machines software
   - the machines creation and deletion is managed manually

@@ -42,15 +42,25 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0) (desire func(machine 
 			}
 		}
 
-		firewall := common.ToFirewall(fw)
-		if firewall.IsContainedIn(machine.currentNodeagent.Open) && machine.desiredNodeagent.Firewall.Contains(firewall) {
+		firewall := common.ToFirewall("internal", fw)
+		firewallSources := common.Firewall{
+			Zones: map[string]*common.Zone{
+				"internal": {Sources: []string{
+					string(desired.Spec.Networking.PodCidr),
+					string(desired.Spec.Networking.ServiceCidr),
+				}},
+			},
+		}
+		firewall.Merge(firewallSources)
+
+		machine.desiredNodeagent.Firewall.Merge(firewall)
+		if firewall.IsContainedIn(machine.currentNodeagent.Open) {
 			machine.currentMachine.FirewallIsReady = true
 			monitor.Debug("firewall is ready")
 			return
 		}
 
 		machine.currentMachine.FirewallIsReady = false
-		machine.desiredNodeagent.Firewall.Merge(firewall)
-		monitor.Info("firewall desired")
+		monitor.WithField("open", firewall.AllZones()).Info("firewall desired")
 	}
 }

@@ -43,6 +43,7 @@ func main() {
 		ReplaceCommand(rootValues),
 		RebootCommand(rootValues),
 		ExecCommand(rootValues),
+		ListCommand(rootValues),
 	)
 
 	rootCmd.AddCommand(
