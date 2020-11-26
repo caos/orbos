@@ -7,17 +7,17 @@ import (
 )
 
 type Service struct {
-	Annotations              map[string]string `yaml:"annotations,omitempty"`
-	Labels                   map[string]string `yaml:"labels,omitempty"`
-	ClusterIP                string            `yaml:"clusterIP,omitempty"`
-	Port                     int               `yaml:"port,omitempty"`
-	TargetPort               int               `yaml:"targetPort,omitempty"`
-	ExternalIPs              []interface{}     `yaml:"externalIPs,omitempty"`
-	NodePort                 int               `yaml:"nodePort,omitempty"`
-	LoadBalancerIP           string            `yaml:"loadBalancerIP,omitempty"`
-	LoadBalancerSourceRanges []interface{}     `yaml:"loadBalancerSourceRanges,omitempty"`
-	Type                     string            `yaml:"type,omitempty"`
-	SessionAffinity          string            `yaml:"sessionAffinity,omitempty"`
+	Annotations              map[string]string      `yaml:"annotations,omitempty"`
+	Labels                   map[string]interface{} `yaml:"labels,omitempty"`
+	ClusterIP                string                 `yaml:"clusterIP,omitempty"`
+	Port                     int                    `yaml:"port,omitempty"`
+	TargetPort               int                    `yaml:"targetPort,omitempty"`
+	ExternalIPs              []interface{}          `yaml:"externalIPs,omitempty"`
+	NodePort                 int                    `yaml:"nodePort,omitempty"`
+	LoadBalancerIP           string                 `yaml:"loadBalancerIP,omitempty"`
+	LoadBalancerSourceRanges []interface{}          `yaml:"loadBalancerSourceRanges,omitempty"`
+	Type                     string                 `yaml:"type,omitempty"`
+	SessionAffinity          string                 `yaml:"sessionAffinity,omitempty"`
 }
 
 type ServicePerReplica struct {
@@ -36,21 +36,21 @@ type PodDisruptionBudget struct {
 }
 
 type Ingress struct {
-	Enabled     bool              `yaml:"enabled,omitempty"`
-	Annotations map[string]string `yaml:"annotations,omitempty"`
-	Labels      map[string]string `yaml:"labels,omitempty"`
-	Hosts       []interface{}     `yaml:"hosts,omitempty"`
-	Paths       []interface{}     `yaml:"paths,omitempty"`
-	TLS         []interface{}     `yaml:"tls,omitempty"`
+	Enabled     bool                   `yaml:"enabled,omitempty"`
+	Annotations map[string]string      `yaml:"annotations,omitempty"`
+	Labels      map[string]interface{} `yaml:"labels,omitempty"`
+	Hosts       []interface{}          `yaml:"hosts,omitempty"`
+	Paths       []interface{}          `yaml:"paths,omitempty"`
+	TLS         []interface{}          `yaml:"tls,omitempty"`
 }
 type IngressPerReplica struct {
-	Enabled       bool              `yaml:"enabled,omitempty"`
-	Annotations   map[string]string `yaml:"annotations,omitempty"`
-	Labels        map[string]string `yaml:"labels,omitempty"`
-	HostPrefix    string            `yaml:"hostPrefix,omitempty"`
-	HostDomain    string            `yaml:"hostDomain,omitempty"`
-	Paths         []interface{}     `yaml:"paths,omitempty"`
-	TLSSecretName string            `yaml:"tlsSecretName,omitempty"`
+	Enabled       bool                   `yaml:"enabled,omitempty"`
+	Annotations   map[string]string      `yaml:"annotations,omitempty"`
+	Labels        map[string]interface{} `yaml:"labels,omitempty"`
+	HostPrefix    string                 `yaml:"hostPrefix,omitempty"`
+	HostDomain    string                 `yaml:"hostDomain,omitempty"`
+	Paths         []interface{}          `yaml:"paths,omitempty"`
+	TLSSecretName string                 `yaml:"tlsSecretName,omitempty"`
 }
 
 type PodSecurityPolicy struct {
@@ -76,7 +76,7 @@ type NamespaceSelector struct {
 }
 
 type Selector struct {
-	MatchLabels map[string]string `yaml:"matchLabels,omitempty"`
+	MatchLabels map[string]interface{} `yaml:"matchLabels,omitempty"`
 }
 
 type Query struct {
@@ -86,7 +86,7 @@ type Query struct {
 	Timeout        string `yaml:"timeout,omitempty"`
 }
 type PodMetadata struct {
-	Labels map[string]string `yaml:"labels,omitempty"`
+	Labels map[string]interface{} `yaml:"labels,omitempty"`
 }
 type StorageSpec struct {
 	VolumeClaimTemplate *VolumeClaimTemplate `yaml:"volumeClaimTemplate,omitempty"`
@@ -262,10 +262,10 @@ type Rules struct {
 }
 
 type DefaultRules struct {
-	Create      bool              `yaml:"create"`
-	Rules       *Rules            `yaml:"rules,omitempty"`
-	Labels      map[string]string `yaml:"labels,omitempty"`
-	Annotations map[string]string `yaml:"annotations,omitempty"`
+	Create      bool                   `yaml:"create"`
+	Rules       *Rules                 `yaml:"rules,omitempty"`
+	Labels      map[string]interface{} `yaml:"labels,omitempty"`
+	Annotations map[string]string      `yaml:"annotations,omitempty"`
 }
 
 type Global struct {
@@ -283,9 +283,9 @@ type DisabledTool struct {
 }
 
 type AdditionalPrometheusRules struct {
-	Name             string            `yaml:"name,omitempty"`
-	Groups           []*Group          `yaml:"groups,omitempty"`
-	AdditionalLabels map[string]string `yaml:"additionalLabels,omitempty"`
+	Name             string                 `yaml:"name,omitempty"`
+	Groups           []*Group               `yaml:"groups,omitempty"`
+	AdditionalLabels map[string]interface{} `yaml:"additionalLabels,omitempty"`
 }
 
 type Group struct {
@@ -294,19 +294,19 @@ type Group struct {
 }
 
 type Rule struct {
-	Expr        string            `yaml:"expr,omitempty"`
-	Labels      map[string]string `yaml:"labels,omitempty"`
-	Annotations map[string]string `yaml:"annotations,omitempty"`
-	Record      string            `yaml:"record,omitempty"`
-	Alert       string            `yaml:"alert,omitempty"`
-	For         string            `yaml:"for,omitempty"`
+	Expr        string                 `yaml:"expr,omitempty"`
+	Labels      map[string]interface{} `yaml:"labels,omitempty"`
+	Annotations map[string]string      `yaml:"annotations,omitempty"`
+	Record      string                 `yaml:"record,omitempty"`
+	Alert       string                 `yaml:"alert,omitempty"`
+	For         string                 `yaml:"for,omitempty"`
 }
 
 type Values struct {
 	KubeTargetVersionOverride string                                       `yaml:"kubeTargetVersionOverride,omitempty"`
 	NameOverride              string                                       `yaml:"nameOverride,omitempty"`
 	FullnameOverride          string                                       `yaml:"fullnameOverride,omitempty"`
-	CommonLabels              map[string]string                            `yaml:"commonLabels,omitempty"`
+	CommonLabels              map[string]interface{}                       `yaml:"commonLabels,omitempty"`
 	DefaultRules              *DefaultRules                                `yaml:"defaultRules,omitempty"`
 	AdditionalPrometheusRules []*AdditionalPrometheusRules                 `yaml:"additionalPrometheusRules,omitempty"`
 	Global                    *Global                                      `yaml:"global,omitempty"`

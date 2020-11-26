@@ -8,41 +8,44 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
 	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/pkg/errors"
 )
 
-func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*secret.Secret, error) {
+func ParseToolset(desiredTree *tree.Tree, l *labels.Operator) (*labels.API, *latest.Toolset, bool, map[string]*secret.Secret, error) {
 	desiredKindCommon := common.New()
 	if err := desiredTree.Original.Decode(desiredKindCommon); err != nil {
-		return nil, false, nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, nil, false, nil, errors.Wrap(err, "parsing desired state failed")
 	}
+
+	kind := "Toolset"
 
 	switch desiredKindCommon.APIVersion {
 	case "boom.caos.ch/v1beta1":
 		old, _, err := v1beta1.ParseToolset(desiredTree)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, nil, false, nil, err
 		}
 		v1beta2Toolset, _ := migrate.V1beta1Tov1beta2(old)
 		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
 
-		return v1Toolset, true, secrets, err
+		return labels.MustForAPI(l, kind, "v1beta1"), v1Toolset, true, secrets, err
 	case "boom.caos.ch/v1beta2":
 		v1beta2Toolset, _, err := v1beta2.ParseToolset(desiredTree)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, nil, false, nil, err
 		}
 		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
 
-		return v1Toolset, true, secrets, nil
+		return labels.MustForAPI(l, kind, "v1beta2"), v1Toolset, true, secrets, nil
 	case "boom.caos.ch/v1":
 		desiredKind, secrets, err := latest.ParseToolset(desiredTree)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, nil, false, nil, err
 		}
-		return desiredKind, false, secrets, nil
+		return labels.MustForAPI(l, kind, "v1"), desiredKind, false, secrets, nil
 	default:
-		return nil, false, nil, errors.New("APIVersion unknown")
+		return nil, nil, false, nil, errors.New("APIVersion unknown")
 	}
 }
 

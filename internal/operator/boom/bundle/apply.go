@@ -3,13 +3,13 @@ package bundle
 import (
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/operator/boom/application"
+	"github.com/caos/orbos/internal/operator/boom/application/types"
 	"github.com/caos/orbos/internal/operator/boom/desired"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 )
 
-func applyWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo.Resource, app application.Application, force bool) func(resultFilePath, namespace string) error {
+func applyWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo.Resource, app types.Application, force bool) func(resultFilePath, namespace string) error {
 
 	logFields := map[string]interface{}{
 		"command": "apply",
@@ -74,7 +74,7 @@ func applyWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo
 	return resultFunc
 }
 
-func apply(monitor mntr.Monitor, app application.Application, force bool) func(resultFilePath, namespace string) error {
+func apply(monitor mntr.Monitor, app types.Application, force bool) func(resultFilePath, namespace string) error {
 
 	logFields := map[string]interface{}{
 		"command": "apply",

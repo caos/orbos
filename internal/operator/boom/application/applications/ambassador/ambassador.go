@@ -3,9 +3,12 @@ package ambassador
 import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/info"
+	"github.com/caos/orbos/internal/operator/boom/application/types"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
 )
+
+var _ types.HelmApplication = (*Ambassador)(nil)
 
 type Ambassador struct {
 	monitor mntr.Monitor

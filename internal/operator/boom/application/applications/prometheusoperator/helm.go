@@ -5,11 +5,12 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/labels"
 )
 
-func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
+func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, l *labels.API, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.PrometheusNodeExporter
-	values := helm.DefaultValues(p.GetImageTags())
+	values := helm.DefaultValues(p.GetImageTags(), labels.MustForComponent(l, "metricCollection"))
 
 	// if spec.ReplicaCount != 0 {
 	// 	values.ReplicaCount = spec.ReplicaCount

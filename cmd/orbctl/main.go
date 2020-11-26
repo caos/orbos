@@ -10,8 +10,8 @@ import (
 
 var (
 	// Build arguments
-	gitCommit          = "none"
-	version            = "none"
+	gitCommit          = "unknown"
+	version            = "unknown"
 	githubClientID     = "none"
 	githubClientSecret = "none"
 )

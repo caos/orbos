@@ -5,10 +5,11 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 type Templator interface {
-	Template(interface{}, *latest.ToolsetSpec, func(string, string) error) error
+	Template(*labels.API, interface{}, *latest.ToolsetSpec, func(string, string) error) error
 	GetResultsFilePath(name.Application, string, string) string
 	CleanUp() error
 }
@@ -19,12 +20,12 @@ type BaseApplication interface {
 
 type YamlApplication interface {
 	BaseApplication
-	GetYaml(mntr.Monitor, *latest.ToolsetSpec) interface{}
+	GetYaml(mntr.Monitor, *labels.API, *latest.ToolsetSpec) interface{}
 }
 
 type HelmApplication interface {
 	BaseApplication
 	GetNamespace() string
-	SpecToHelmValues(mntr.Monitor, *latest.ToolsetSpec) interface{}
+	SpecToHelmValues(mntr.Monitor, *labels.API, *latest.ToolsetSpec) interface{}
 	GetChartInfo() *chart.Chart
 }

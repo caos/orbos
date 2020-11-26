@@ -2,12 +2,15 @@ package helm
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, l *labels.Component) *Values {
+	operatorK8sLabels := labels.MustK8sMap(labels.MustForName(l, "prometheus-operator"))
 	return &Values{
+		CommonLabels:     operatorK8sLabels,
 		FullnameOverride: "prometheus",
 		DefaultRules: &DefaultRules{
 			Create: false,
@@ -83,7 +86,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Enabled: false,
 		},
 		PrometheusOperator: &PrometheusOperatorValues{
-			Enabled: true,
+			PodLabels: operatorK8sLabels,
+			Enabled:   true,
 			TLSProxy: &TLSProxy{
 				Enabled: false,
 				Image: &Image{
@@ -110,6 +114,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 				Create: true,
 			},
 			Service: &Service{
+				Labels:      operatorK8sLabels,
 				NodePort:    30080,
 				NodePortTLS: 30443,
 				Type:        "ClusterIP",

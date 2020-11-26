@@ -4,9 +4,12 @@ import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator"
+	"github.com/caos/orbos/internal/operator/boom/application/types"
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/mntr"
 )
+
+var _ types.Application = (*Prometheus)(nil)
 
 type Prometheus struct {
 	monitor mntr.Monitor

@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 
 	orbosapi "github.com/caos/orbos/internal/api"
@@ -127,7 +129,7 @@ func (c *GitCrd) GetRepoURL() string {
 	return c.git.GetURL()
 }
 
-func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
+func (c *GitCrd) Reconcile(operatorLabels *labels.Operator, currentResourceList []*clientgo.Resource) {
 	if c.status != nil {
 		return
 	}
@@ -136,7 +138,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		"action": "reconiling",
 	})
 
-	toolsetCRD, err := c.getCrdContent()
+	apiLabels, toolsetCRD, err := c.getCrdContent(operatorLabels)
 	if err != nil {
 		c.status = err
 		return
@@ -174,7 +176,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		preapplymonitor.Info("Done")
 	}
 
-	c.crd.Reconcile(currentResourceList, toolsetCRD)
+	c.crd.Reconcile(apiLabels, currentResourceList, toolsetCRD)
 	err = c.crd.GetStatus()
 	if err != nil {
 		c.status = err
@@ -204,22 +206,22 @@ func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
 
 }
 
-func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
+func (c *GitCrd) getCrdContent(l *labels.Operator) (*labels.API, *toolsetslatest.Toolset, error) {
 	desiredTree, err := orbosapi.ReadBoomYml(c.git)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	desiredKind, _, _, err := api.ParseToolset(desiredTree)
+	apiLabels, desiredKind, _, _, err := api.ParseToolset(desiredTree, l)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desiredKind
 
-	return desiredKind, nil
+	return apiLabels, desiredKind, nil
 }
 
-func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource) {
+func (c *GitCrd) WriteBackCurrentState(l *labels.Operator, currentResourceList []*clientgo.Resource) {
 	if c.status != nil {
 		return
 	}
@@ -230,7 +232,7 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 		return
 	}
 
-	toolsetCRD, err := c.getCrdContent()
+	_, toolsetCRD, err := c.getCrdContent(l)
 	if err != nil {
 		c.status = err
 		return

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/git"
 
 	"github.com/caos/orbos/internal/orb"
@@ -36,7 +38,7 @@ func Metrics(monitor mntr.Monitor) {
 	}()
 }
 
-func Takeoff(monitor mntr.Monitor, toolsDirectoryPath string, localMode bool, orbpath string, ensureClient, queryClient *git.Client) (func(), func()) {
+func Takeoff(operatorLabels *labels.Operator, monitor mntr.Monitor, toolsDirectoryPath string, localMode bool, orbpath string, ensureClient, queryClient *git.Client) (func(), func()) {
 	gitcrdMonitor := monitor.WithField("type", "gitcrd")
 
 	if localMode {
@@ -50,12 +52,14 @@ func Takeoff(monitor mntr.Monitor, toolsDirectoryPath string, localMode bool, or
 
 	return task(
 			monitor,
+			operatorLabels,
 			orbpath,
 			gitConf(gitcrdMonitor.WithField("task", "ensure"), ensureClient, toolsDirectoryPath, !localMode),
 			appStruct.ReadSpecs,
 			appStruct.Reconcile),
 		task(
 			monitor,
+			operatorLabels,
 			orbpath,
 			gitConf(gitcrdMonitor.WithField("task", "query"), queryClient, toolsDirectoryPath, !localMode),
 			currentStruct.ReadSpecs,
@@ -71,7 +75,7 @@ func gitConf(monitor mntr.Monitor, client *git.Client, toolsDirectoryPath string
 	}
 }
 
-func task(monitor mntr.Monitor, orbpath string, gitcrdConf gitcrdconfig.Config, readSpecs func(gitCrdConf *gitcrdconfig.Config, repoURL string, repoKey []byte) error, do func() error) func() {
+func task(monitor mntr.Monitor, l *labels.Operator, orbpath string, gitcrdConf gitcrdconfig.Config, readSpecs func(gitCrdConf *gitcrdconfig.Config, repoURL string, repoKey []byte) error, do func(*labels.Operator) error) func() {
 	return func() {
 		// TODO: use a function scoped error variable
 		started := time.Now()
@@ -86,7 +90,7 @@ func task(monitor mntr.Monitor, orbpath string, gitcrdConf gitcrdconfig.Config, 
 			monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
 		}
 
-		goErr = do()
+		goErr = do(l)
 		recMonitor := monitor.WithFields(map[string]interface{}{
 			"took": time.Since(started),
 		})

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/secret/operators"
 
@@ -64,7 +66,7 @@ loop:
 		}
 	}
 
-	return GetKubeconfigs(monitor, orbctlGit, orbConfig)
+	return GetKubeconfigs(monitor, labels.MustForOperator("orbiter.caos.ch", conf.Version), orbctlGit, orbConfig)
 }
 
 func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
@@ -180,7 +182,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}()
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, l *labels.Operator, gitClient *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)
@@ -200,7 +202,7 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbc
 			monitor,
 			gitClient,
 			path,
-			operators.GetAllSecretsFunc(orbConfig))
+			operators.GetAllSecretsFunc(orbConfig, l))
 		if err != nil || value == "" {
 			return nil, errors.New("Failed to get kubeconfig")
 		}
@@ -233,6 +235,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 		queryChan := make(chan struct{})
 
 		ensure, query := boom.Takeoff(
+			labels.MustForOperator("boom.caos.ch", version),
 			monitor,
 			"/boom",
 			localmode,

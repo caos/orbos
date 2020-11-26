@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 
 	"github.com/caos/orbos/internal/start"
@@ -167,7 +169,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, labels.MustForOperator("orbctl.caos.ch", version), gitClient, orbConfig)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}
@@ -196,7 +198,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, _, err := boomapi.ParseToolset(tree)
+			_, toolset, _, _, err := boomapi.ParseToolset(tree, labels.MustForOperator("orbctl.caos.ch", version))
 			if err != nil {
 				return err
 			}

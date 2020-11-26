@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	"github.com/caos/orbos/internal/start"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
 )
@@ -67,7 +68,7 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 				backup = result
 			}
 
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, labels.MustForOperator("orbctl.caos.ch", version), gitClient, orbConfig)
 			if err != nil {
 				return err
 			}

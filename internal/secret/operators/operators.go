@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
@@ -21,7 +23,7 @@ const (
 	zitadel string = "zitadel"
 )
 
-func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
+func GetAllSecretsFunc(orb *orb.Orb, l *labels.Operator) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 		allSecrets := make(map[string]*secret.Secret, 0)
 		allTrees := make(map[string]*tree.Tree, 0)
@@ -36,7 +38,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 				return nil, nil, err
 			}
 			allTrees["boom"] = boomYML
-			_, _, boomSecrets, err := boomapi.ParseToolset(boomYML)
+			_, _, _, boomSecrets, err := boomapi.ParseToolset(boomYML, l)
 			if err != nil {
 				return nil, nil, err
 			}

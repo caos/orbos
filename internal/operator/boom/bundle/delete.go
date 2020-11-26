@@ -1,7 +1,7 @@
 package bundle
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application"
+	"github.com/caos/orbos/internal/operator/boom/application/types"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kubectl"
@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func deleteWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo.Resource, app application.Application) func(resultFilePath, namespace string) error {
+func deleteWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo.Resource, app types.Application) func(resultFilePath, namespace string) error {
 	logFields := map[string]interface{}{
 		"application": app.GetName().String,
 		"command":     "delete",
