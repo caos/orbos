@@ -15,6 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	secretName = "backup-serviceaccountjson"
+	secretKey  = "serviceaccountjson"
+)
+
 func AdaptFunc(
 	name string,
 	namespace string,
@@ -27,8 +32,6 @@ func AdaptFunc(
 	features []string,
 ) core.AdaptFunc {
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secretpkg.Secret, err error) {
-		secretName := "backup-serviceaccountjson"
-		secretKey := "serviceaccountjson"
 
 		internalMonitor := monitor.WithField("component", "backup")
 
@@ -41,8 +44,6 @@ func AdaptFunc(
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
 		}
-
-		//queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users, nodeselector, tolerations)
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
@@ -72,7 +73,7 @@ func AdaptFunc(
 			version,
 		)
 
-		_, destroyR, _, err := restore.ApplyFunc(
+		_, destroyR, err := restore.AdaptFunc(
 			monitor,
 			name,
 			namespace,
@@ -88,7 +89,7 @@ func AdaptFunc(
 			version,
 		)
 
-		_, destroyC, _, err := clean.ApplyFunc(
+		_, destroyC, err := clean.AdaptFunc(
 			monitor,
 			name,
 			namespace,
@@ -152,7 +153,7 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				queryR, _, checkAndCleanupR, err := restore.ApplyFunc(
+				queryR, _, err := restore.AdaptFunc(
 					monitor,
 					name,
 					namespace,
@@ -171,7 +172,7 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				queryC, _, checkAndCleanupC, err := clean.ApplyFunc(
+				queryC, _, err := clean.AdaptFunc(
 					monitor,
 					name,
 					namespace,
@@ -200,12 +201,10 @@ func AdaptFunc(
 						case "clear":
 							queriers = append(queriers,
 								queryC,
-								core.EnsureFuncToQueryFunc(checkAndCleanupC),
 							)
 						case "restore":
 							queriers = append(queriers,
 								queryR,
-								core.EnsureFuncToQueryFunc(checkAndCleanupR),
 							)
 						}
 					}
