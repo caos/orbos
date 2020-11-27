@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/caos/orbos/internal/git"
@@ -47,13 +48,48 @@ func join(
 	case "cilium":
 		ciliumPath := "/var/orbiter/cilium.yaml"
 		prepareKubeadmInit = func() error {
+			buf := new(bytes.Buffer)
+			defer buf.Reset()
+
+			istioReg := desired.Spec.CustomImageRegistry
+			if istioReg != "" {
+				istioReg += "/"
+			}
+
+			ciliumReg := desired.Spec.CustomImageRegistry
+			if ciliumReg == "" {
+				ciliumReg = "docker.io"
+			}
+
+			template.Must(template.New("").Parse(string(executables.PreBuilt("cilium.yaml")))).Execute(buf, struct {
+				IstioProxyImageRegistry string
+				CiliumImageRegistry     string
+			}{
+				IstioProxyImageRegistry: istioReg,
+				CiliumImageRegistry:     ciliumReg,
+			})
+
 			return joining.infra.WriteFile(ciliumPath, bytes.NewReader(executables.PreBuilt("cilium.yaml")), 600)
 		}
 		applyNetworkCommand = fmt.Sprintf("kubectl create -f %s", ciliumPath)
 	case "calico":
 		calicoPath := "/var/orbiter/calico.yaml"
 		prepareKubeadmInit = func() error {
-			return joining.infra.WriteFile(calicoPath, bytes.NewReader(bytes.ReplaceAll(executables.PreBuilt("calico.yaml"), []byte("192.168.0.0/16"), []byte(desired.Spec.Networking.PodCidr))), 600)
+
+			reg := desired.Spec.CustomImageRegistry
+			if reg != "" {
+				reg += "/"
+			}
+
+			buf := new(bytes.Buffer)
+			defer buf.Reset()
+			template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
+				ImageRegistry string
+			}{
+				ImageRegistry: reg,
+			})
+
+			return joining.infra.WriteFile(calicoPath, buf, 600)
 		}
 		applyNetworkCommand = fmt.Sprintf(`kubectl create -f %s`, calicoPath)
 	case "":
