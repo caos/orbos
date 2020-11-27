@@ -25,5 +25,6 @@ func GetAll() map[string]string {
 		"V1.20__label_policies.sql":          V120LabelPolicies,
 		"V1.21__mfa_policy.sql":              V121MfaPolicy,
 		"V1.22__user_grant_owners.sql":       V122UserGrantOwners,
+		"V1.23__application_view.sql":        V123ApplicationView,
 	}
 }
