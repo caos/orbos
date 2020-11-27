@@ -6,7 +6,6 @@ import (
 	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/crds"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/helm"
@@ -42,10 +41,10 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsla
 	return nil
 }
 
-func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, l *labels.API, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
+func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := helm.GetImageTags()
 
-	values := helm.DefaultValues(imageTags, labels.MustForComponent(l, "apiGateway"))
+	values := helm.DefaultValues(imageTags)
 
 	spec := toolsetCRDSpec.APIGateway
 
@@ -88,7 +87,6 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, l *labels.API, tools
 	if spec.Tolerations != nil {
 		for _, tol := range spec.Tolerations {
 			values.Tolerations = append(values.Tolerations, tol)
-			values.Redis.Tolerations = append(values.Redis.Tolerations, tol)
 		}
 	}
 

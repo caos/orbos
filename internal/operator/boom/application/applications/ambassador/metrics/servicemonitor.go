@@ -3,11 +3,10 @@ package metrics
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
-	"github.com/caos/orbos/pkg/labels"
-	//	"github.com/caos/orbos/internal/operator/boom/labels"
+	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func GetServicemonitor(instanceName string, l labels.Component) *servicemonitor.Config {
+func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	appName := info.GetName()
 	monitorlabels := labels.GetMonitorLabels(instanceName, appName)
 	ls := labels.GetApplicationLabels(appName)

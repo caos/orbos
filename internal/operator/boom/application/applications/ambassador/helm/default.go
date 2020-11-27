@@ -2,16 +2,14 @@ package helm
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
-	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string, l *labels.Component) *Values {
+func DefaultValues(imageTags map[string]string) *Values {
 	adminAnnotations := map[string]string{"app.kubernetes.io/use": "admin-service"}
 
 	return &Values{
-		PodLabels:        labels.MustK8sMap(labels.MustForName(l, "ambassador")),
 		NodeSelector:     map[string]string{},
 		FullnameOverride: "ambassador",
 		AdminService: &AdminService{

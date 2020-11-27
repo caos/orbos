@@ -3,20 +3,18 @@ package yaml
 import (
 	"path/filepath"
 
-	"github.com/caos/orbos/pkg/labels"
-
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/yaml"
 )
 
-func (y *YAML) Template(l *labels.API, appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(string, string) error) error {
+func (y *YAML) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(string, string) error) error {
 	app, err := checkTemplatorInterface(appInterface)
 	if err != nil {
 		return err
 	}
 
-	yamlInterface := app.GetYaml(y.monitor, l, spec)
+	yamlInterface := app.GetYaml(y.monitor, spec)
 	resultfilepath := y.GetResultsFilePath(app.GetName(), y.overlay, y.templatorDirectoryPath)
 	resultfiledirectory := y.getResultsFileDirectory(app.GetName(), y.overlay, y.templatorDirectoryPath)
 

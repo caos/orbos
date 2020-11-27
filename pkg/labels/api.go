@@ -26,14 +26,6 @@ func ForAPI(l *Operator, kind, version string) (*API, error) {
 	}}, nil
 }
 
-func MustForAPI(l *Operator, kind, version string) *API {
-	a, err := ForAPI(l, kind, version)
-	if err != nil {
-		panic(err)
-	}
-	return a
-}
-
 func (l *API) Equal(r comparable) bool {
 	if right, ok := r.(*API); ok {
 		return l.model == right.model

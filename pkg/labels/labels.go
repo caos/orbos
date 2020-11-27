@@ -16,21 +16,6 @@ func K8sMap(l Labels) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	mapOfStrings := make(map[string]string)
 	k8sMap := make(map[string]interface{})
-	if err := yaml.Unmarshal(lBytes, mapOfStrings); err != nil {
-		return nil, err
-	}
-	for k, v := range mapOfStrings {
-		k8sMap[k] = v
-	}
-	return k8sMap, nil
-}
-
-func MustK8sMap(l Labels) map[string]interface{} {
-	m, err := K8sMap(l)
-	if err != nil {
-		panic(err)
-	}
-	return m
+	return k8sMap, yaml.Unmarshal(lBytes, k8sMap)
 }

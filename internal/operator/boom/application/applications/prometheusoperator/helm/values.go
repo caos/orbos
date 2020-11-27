@@ -78,16 +78,16 @@ type ServiceAccount struct {
 }
 
 type Service struct {
-	Annotations              map[string]string      `yaml:"annotations"`
-	Labels                   map[string]interface{} `yaml:"labels"`
-	ClusterIP                string                 `yaml:"clusterIP"`
-	NodePort                 int                    `yaml:"nodePort"`
-	NodePortTLS              int                    `yaml:"nodePortTls"`
-	AdditionalPorts          []interface{}          `yaml:"additionalPorts"`
-	LoadBalancerIP           string                 `yaml:"loadBalancerIP"`
-	LoadBalancerSourceRanges []interface{}          `yaml:"loadBalancerSourceRanges"`
-	Type                     string                 `yaml:"type"`
-	ExternalIPs              []interface{}          `yaml:"externalIPs"`
+	Annotations              map[string]string `yaml:"annotations"`
+	Labels                   map[string]string `yaml:"labels"`
+	ClusterIP                string            `yaml:"clusterIP"`
+	NodePort                 int               `yaml:"nodePort"`
+	NodePortTLS              int               `yaml:"nodePortTls"`
+	AdditionalPorts          []interface{}     `yaml:"additionalPorts"`
+	LoadBalancerIP           string            `yaml:"loadBalancerIP"`
+	LoadBalancerSourceRanges []interface{}     `yaml:"loadBalancerSourceRanges"`
+	Type                     string            `yaml:"type"`
+	ExternalIPs              []interface{}     `yaml:"externalIPs"`
 }
 
 type KubeletService struct {
@@ -108,30 +108,30 @@ type SecurityContext struct {
 }
 
 type PrometheusOperatorValues struct {
-	Enabled                       bool                   `yaml:"enabled"`
-	TLSProxy                      *TLSProxy              `yaml:"tlsProxy"`
-	AdmissionWebhooks             *AdmissionWebhooks     `yaml:"admissionWebhooks"`
-	DenyNamespaces                []string               `yaml:"denyNamespaces"`
-	ServiceAccount                *ServiceAccount        `yaml:"serviceAccount"`
-	Service                       *Service               `yaml:"service"`
-	CreateCustomResource          bool                   `yaml:"createCustomResource"`
-	CrdAPIGroup                   string                 `yaml:"crdApiGroup"`
-	CleanupCustomResource         bool                   `yaml:"cleanupCustomResource"`
-	PodLabels                     map[string]interface{} `yaml:"podLabels"`
-	PodAnnotations                map[string]string      `yaml:"podAnnotations"`
-	KubeletService                *KubeletService        `yaml:"kubeletService"`
-	ServiceMonitor                *ServiceMonitor        `yaml:"serviceMonitor"`
-	NodeSelector                  map[string]string      `yaml:"nodeSelector"`
-	Tolerations                   k8s.Tolerations        `yaml:"tolerations"`
-	Affinity                      struct{}               `yaml:"affinity"`
-	SecurityContext               *SecurityContext       `yaml:"securityContext"`
-	Image                         *Image                 `yaml:"image"`
-	ConfigmapReloadImage          *Image                 `yaml:"configmapReloadImage"`
-	PrometheusConfigReloaderImage *Image                 `yaml:"prometheusConfigReloaderImage"`
-	ConfigReloaderCPU             string                 `yaml:"configReloaderCpu"`
-	ConfigReloaderMemory          string                 `yaml:"configReloaderMemory"`
-	HyperkubeImage                *Image                 `yaml:"hyperkubeImage"`
-	Resources                     *k8s.Resources         `yaml:"resources"`
+	Enabled                       bool               `yaml:"enabled"`
+	TLSProxy                      *TLSProxy          `yaml:"tlsProxy"`
+	AdmissionWebhooks             *AdmissionWebhooks `yaml:"admissionWebhooks"`
+	DenyNamespaces                []string           `yaml:"denyNamespaces"`
+	ServiceAccount                *ServiceAccount    `yaml:"serviceAccount"`
+	Service                       *Service           `yaml:"service"`
+	CreateCustomResource          bool               `yaml:"createCustomResource"`
+	CrdAPIGroup                   string             `yaml:"crdApiGroup"`
+	CleanupCustomResource         bool               `yaml:"cleanupCustomResource"`
+	PodLabels                     map[string]string  `yaml:"podLabels"`
+	PodAnnotations                map[string]string  `yaml:"podAnnotations"`
+	KubeletService                *KubeletService    `yaml:"kubeletService"`
+	ServiceMonitor                *ServiceMonitor    `yaml:"serviceMonitor"`
+	NodeSelector                  map[string]string  `yaml:"nodeSelector"`
+	Tolerations                   k8s.Tolerations    `yaml:"tolerations"`
+	Affinity                      struct{}           `yaml:"affinity"`
+	SecurityContext               *SecurityContext   `yaml:"securityContext"`
+	Image                         *Image             `yaml:"image"`
+	ConfigmapReloadImage          *Image             `yaml:"configmapReloadImage"`
+	PrometheusConfigReloaderImage *Image             `yaml:"prometheusConfigReloaderImage"`
+	ConfigReloaderCPU             string             `yaml:"configReloaderCpu"`
+	ConfigReloaderMemory          string             `yaml:"configReloaderMemory"`
+	HyperkubeImage                *Image             `yaml:"hyperkubeImage"`
+	Resources                     *k8s.Resources     `yaml:"resources"`
 }
 
 type DisabledToolServicePerReplica struct {
@@ -143,7 +143,7 @@ type DisabledToolServicePerReplica struct {
 type Values struct {
 	NameOverride              string                         `yaml:"nameOverride,omitempty"`
 	FullnameOverride          string                         `yaml:"fullnameOverride,omitempty"`
-	CommonLabels              map[string]interface{}         `yaml:"commonLabels"`
+	CommonLabels              map[string]string              `yaml:"commonLabels"`
 	DefaultRules              *DefaultRules                  `yaml:"defaultRules"`
 	AdditionalPrometheusRules []interface{}                  `yaml:"additionalPrometheusRules"`
 	Global                    *Global                        `yaml:"global"`

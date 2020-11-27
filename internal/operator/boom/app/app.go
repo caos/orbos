@@ -3,8 +3,6 @@ package app
 import (
 	"strings"
 
-	"github.com/caos/orbos/pkg/labels"
-
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/crd"
 	"github.com/caos/orbos/internal/operator/boom/current"
@@ -94,7 +92,7 @@ func (a *App) getCurrent(monitor mntr.Monitor) ([]*clientgo.Resource, error) {
 	return current.Get(a.monitor, resourceInfoList), nil
 }
 
-func (a *App) Reconcile(l *labels.Operator) error {
+func (a *App) Reconcile() error {
 	monitor := a.monitor.WithFields(map[string]interface{}{
 		"action": "reconciling",
 	})
@@ -107,14 +105,14 @@ func (a *App) Reconcile(l *labels.Operator) error {
 		return err
 	}
 
-	a.GitCrd.Reconcile(l, currentResourceList)
+	a.GitCrd.Reconcile(currentResourceList)
 	if err := a.GitCrd.GetStatus(); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (a *App) WriteBackCurrentState(l *labels.Operator) error {
+func (a *App) WriteBackCurrentState() error {
 
 	monitor := a.monitor.WithFields(map[string]interface{}{
 		"action": "current",
@@ -128,7 +126,7 @@ func (a *App) WriteBackCurrentState(l *labels.Operator) error {
 		return err
 	}
 
-	a.GitCrd.WriteBackCurrentState(l, currentResourceList)
+	a.GitCrd.WriteBackCurrentState(currentResourceList)
 	if err := a.GitCrd.GetStatus(); err != nil {
 		metrics.FailedWritingCurrentState(a.GitCrd.GetRepoURL())
 		return err

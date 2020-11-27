@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/caos/orbos/pkg/labels"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
@@ -13,13 +11,14 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
+	"github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/mntr"
 )
 
-func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, l *labels.API, toolsetCRDSpec *latest.ToolsetSpec) interface{} {
+func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *latest.ToolsetSpec) interface{} {
 	version, err := kubectl.NewVersion().GetKubeVersion(monitor)
 	if err != nil {
 		monitor.Error(err)
@@ -34,10 +33,7 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, l *labels.API, tools
 
 	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), info.GetNamespace(), toolsetCRDSpec)
 
-	componentLabels := labels.MustForComponent(l, "metricsPersisting")
-	nameLabels := labels.MustForName(componentLabels, "prometheus")
-
-	values := helm.DefaultValues(p.GetImageTags(), componentLabels, nameLabels)
+	values := helm.DefaultValues(p.GetImageTags())
 	if config != nil {
 		if config.StorageSpec != nil {
 			storageSpec := &helm.StorageSpec{
@@ -159,23 +155,22 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, l *labels.API, tools
 			values.Prometheus.PrometheusSpec.Tolerations = append(values.Prometheus.PrometheusSpec.Tolerations, tol)
 		}
 	}
-	/*
-			promSelectorLabels := labels.GetPromSelector(info.GetInstanceName())
-			promSelector := &helm.Selector{MatchLabels: promSelectorLabels}
-			resourceLabels := labels.GetRuleLabels(info.GetInstanceName(), info.GetName())
 
-			values.Prometheus.PrometheusSpec.RuleSelector = promSelector
-			values.Prometheus.PrometheusSpec.PodMonitorSelector = promSelector
-			values.Prometheus.PrometheusSpec.ServiceMonitorSelector = promSelector
+	promSelectorLabels := labels.GetPromSelector(info.GetInstanceName())
+	promSelector := &helm.Selector{MatchLabels: promSelectorLabels}
+	resourceLabels := labels.GetRuleLabels(info.GetInstanceName(), info.GetName())
 
-		rules, err := helm.GetDefaultRules(resourceLabels)
-		if err != nil {
-			panic(err)
-		}
-		values.DefaultRules.Labels = resourceLabels
-	*/
+	values.Prometheus.PrometheusSpec.RuleSelector = promSelector
+	values.Prometheus.PrometheusSpec.PodMonitorSelector = promSelector
+	values.Prometheus.PrometheusSpec.ServiceMonitorSelector = promSelector
+
+	rules, err := helm.GetDefaultRules(resourceLabels)
+	if err != nil {
+		panic(err)
+	}
+	values.DefaultRules.Labels = resourceLabels
 	values.KubeTargetVersionOverride = version
-	//	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
+	values.AdditionalPrometheusRules = []*helm.AdditionalPrometheusRules{rules}
 
 	values.FullnameOverride = info.GetInstanceName()
 

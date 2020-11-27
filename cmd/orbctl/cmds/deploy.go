@@ -8,7 +8,6 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
 	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/labels"
 )
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
@@ -25,7 +24,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		return err
 	}
 
-	_, desiredKind, _, _, err := boomapi.ParseToolset(desiredTree, labels.MustForOperator("boom.caos.ch", version))
+	desiredKind, _, _, err := boomapi.ParseToolset(desiredTree)
 	if err != nil {
 		return err
 	}

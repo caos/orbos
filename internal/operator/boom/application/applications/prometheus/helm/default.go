@@ -3,23 +3,17 @@ package helm
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
-	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string, componentLabels *labels.Component, promLabels *labels.Name) *Values {
-
-	promK8sLabels := labels.MustK8sMap(promLabels)
-	promSelectableK8sLabels := labels.MustK8sMap(labels.AsSelectable(promLabels))
-	promSelector := &Selector{MatchLabels: labels.MustK8sMap(labels.DeriveSelector(promLabels, true))}
+func DefaultValues(imageTags map[string]string) *Values {
 	promValues := &PrometheusValues{
 		Enabled: true,
 		ServiceAccount: &ServiceAccount{
 			Create: true,
 		},
 		Service: &Service{
-			Labels:     promK8sLabels,
 			Port:       9090,
 			TargetPort: 9090,
 			NodePort:   30090,
@@ -46,9 +40,6 @@ func DefaultValues(imageTags map[string]string, componentLabels *labels.Componen
 			SelfMonitor: false,
 		},
 		PrometheusSpec: &PrometheusSpec{
-			PodMetadata: &PodMetadata{
-				Labels: promK8sLabels,
-			},
 			Tolerations:  nil,
 			NodeSelector: map[string]string{},
 			Image: &Image{
@@ -80,24 +71,13 @@ func DefaultValues(imageTags map[string]string, componentLabels *labels.Componen
 					corev1.ResourceMemory: resource.MustParse("2Gi"),
 				},
 			},
-			ServiceMonitorSelector: promSelector,
-			PodMonitorSelector:     promSelector,
-			RuleSelector:           promSelector,
 		},
 	}
 
-	rules, err := GetDefaultRules(promSelectableK8sLabels)
-	if err != nil {
-		panic(err)
-	}
-
 	return &Values{
-		FullnameOverride:          "operated",
-		CommonLabels:              promK8sLabels,
-		AdditionalPrometheusRules: []*AdditionalPrometheusRules{rules},
+		FullnameOverride: "operated",
 		DefaultRules: &DefaultRules{
 			Create: true,
-			Labels: promSelectableK8sLabels,
 			Rules: &Rules{
 				Alertmanager:                true,
 				Etcd:                        true,
@@ -170,8 +150,7 @@ func DefaultValues(imageTags map[string]string, componentLabels *labels.Componen
 			Enabled: false,
 		},
 		PrometheusOperator: &prometheusoperator.PrometheusOperatorValues{
-			Enabled:   false,
-			PodLabels: labels.MustK8sMap(labels.MustForName(componentLabels, "prometheus-operator")),
+			Enabled: false,
 			TLSProxy: &prometheusoperator.TLSProxy{
 				Enabled: false,
 				Image: &prometheusoperator.Image{

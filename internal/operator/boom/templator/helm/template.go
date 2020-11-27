@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/pkg/labels"
-
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/yaml"
@@ -16,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (h *Helm) Template(l *labels.API, appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
+func (h *Helm) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
 	app, err := checkTemplatorInterface(appInterface)
 	if err != nil {
 		return err
@@ -49,7 +47,7 @@ func (h *Helm) Template(l *labels.API, appInterface interface{}, spec *latest.To
 		return err
 	}
 
-	if err := h.prepareHelmTemplate(l, h.overlay, app, spec, valuesAbsFilePath); err != nil {
+	if err := h.prepareHelmTemplate(h.overlay, app, spec, valuesAbsFilePath); err != nil {
 		monitor.Error(err)
 		return err
 	}
@@ -84,7 +82,7 @@ func (h *Helm) Template(l *labels.API, appInterface interface{}, spec *latest.To
 	return resultFunc(resultAbsFilePath, app.GetNamespace())
 }
 
-func (h *Helm) prepareHelmTemplate(l *labels.API, overlay string, app templator.HelmApplication, spec *latest.ToolsetSpec, valuesAbsFilePath string) error {
+func (h *Helm) prepareHelmTemplate(overlay string, app templator.HelmApplication, spec *latest.ToolsetSpec, valuesAbsFilePath string) error {
 
 	logFields := map[string]interface{}{
 		"application": app.GetName().String(),
@@ -94,7 +92,7 @@ func (h *Helm) prepareHelmTemplate(l *labels.API, overlay string, app templator.
 	monitor := h.monitor.WithFields(logFields)
 
 	monitor.Debug("Generate values with toolsetSpec")
-	values := app.SpecToHelmValues(monitor, l, spec)
+	values := app.SpecToHelmValues(monitor, spec)
 
 	if helper2.FileExists(valuesAbsFilePath) {
 		if err := os.Remove(valuesAbsFilePath); err != nil {

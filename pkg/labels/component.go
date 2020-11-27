@@ -27,14 +27,6 @@ func ForComponent(l *API, component string) (*Component, error) {
 	}}, nil
 }
 
-func MustForComponent(l *API, component string) *Component {
-	c, err := ForComponent(l, component)
-	if err != nil {
-		panic(err)
-	}
-	return c
-}
-
 func (l *Component) Equal(r comparable) bool {
 	if right, ok := r.(*Component); ok {
 		return l.model == right.model

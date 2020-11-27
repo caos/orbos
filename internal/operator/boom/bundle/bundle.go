@@ -5,10 +5,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/caos/orbos/internal/operator/boom/application/types"
-
-	"github.com/caos/orbos/pkg/labels"
-
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 
 	"github.com/caos/orbos/internal/operator/boom/metrics"
@@ -35,14 +31,14 @@ type Bundle struct {
 	crdName           string
 	predefinedBundle  name.Bundle
 	orb               string
-	Applications      map[name.Application]types.Application
+	Applications      map[name.Application]application.Application
 	HelmTemplator     templator.Templator
 	YamlTemplator     templator.Templator
 	monitor           mntr.Monitor
 }
 
 func New(conf *config.Config) *Bundle {
-	apps := make(map[name.Application]types.Application, 0)
+	apps := make(map[name.Application]application.Application, 0)
 	helmTemplator := helperTemp.NewTemplator(conf.Monitor, conf.CrdName, conf.BaseDirectoryPath, helm.GetName())
 	yamlTemplator := helperTemp.NewTemplator(conf.Monitor, conf.CrdName, conf.BaseDirectoryPath, yaml.GetName())
 
@@ -72,7 +68,7 @@ func (b *Bundle) CleanUp() error {
 	return b.YamlTemplator.CleanUp()
 }
 
-func (b *Bundle) GetApplications() map[name.Application]types.Application {
+func (b *Bundle) GetApplications() map[name.Application]application.Application {
 	return b.Applications
 }
 
@@ -98,7 +94,7 @@ func (b *Bundle) AddApplicationByName(appName name.Application) error {
 	return b.AddApplication(app)
 }
 
-func (b *Bundle) AddApplication(app types.Application) error {
+func (b *Bundle) AddApplication(app application.Application) error {
 
 	if _, found := b.Applications[app.GetName()]; found {
 		return errors.New("Application already in bundle")
@@ -108,7 +104,7 @@ func (b *Bundle) AddApplication(app types.Application) error {
 	return nil
 }
 
-func (b *Bundle) Reconcile(l *labels.API, currentResourceList []*clientgo.Resource, spec *latest.ToolsetSpec) error {
+func (b *Bundle) Reconcile(currentResourceList []*clientgo.Resource, spec *latest.ToolsetSpec) error {
 
 	applicationCount := 0
 	// go through list of application until every application is reconciled
@@ -121,7 +117,7 @@ func (b *Bundle) Reconcile(l *labels.API, currentResourceList []*clientgo.Resour
 			if application.GetOrderNumber(appName) == orderNumber {
 				wg.Add(1)
 				errChan := make(chan error)
-				go b.ReconcileApplication(l, currentResourceList, appName, spec, &wg, errChan)
+				go b.ReconcileApplication(currentResourceList, appName, spec, &wg, errChan)
 				applicationCount++
 				errList[appName] = errChan
 			}
@@ -137,7 +133,7 @@ func (b *Bundle) Reconcile(l *labels.API, currentResourceList []*clientgo.Resour
 	return nil
 }
 
-func (b *Bundle) ReconcileApplication(l *labels.API, currentResourceList []*clientgo.Resource, appName name.Application, spec *latest.ToolsetSpec, wg *sync.WaitGroup, errChan chan error) {
+func (b *Bundle) ReconcileApplication(currentResourceList []*clientgo.Resource, appName name.Application, spec *latest.ToolsetSpec, wg *sync.WaitGroup, errChan chan error) {
 	defer wg.Done()
 
 	logFields := map[string]interface{}{
@@ -171,28 +167,27 @@ func (b *Bundle) ReconcileApplication(l *labels.API, currentResourceList []*clie
 		}
 	}
 
-	name := appName.String()
-	_, usedHelm := app.(types.HelmApplication)
+	_, usedHelm := app.(application.HelmApplication)
 	if usedHelm {
 		templatorName := helm.GetName()
-		err := b.HelmTemplator.Template(l, app, spec, resultFunc)
+		err := b.HelmTemplator.Template(app, spec, resultFunc)
 		if err != nil {
-			metrics.FailureReconcilingApplication(name, templatorName.String(), deploy)
+			metrics.FailureReconcilingApplication(appName.String(), templatorName.String(), deploy)
 			errChan <- err
 			return
 		}
-		metrics.SuccessfulReconcilingApplication(name, templatorName.String(), deploy)
+		metrics.SuccessfulReconcilingApplication(appName.String(), templatorName.String(), deploy)
 	}
-	_, usedYaml := app.(types.YAMLApplication)
+	_, usedYaml := app.(application.YAMLApplication)
 	if usedYaml {
 		templatorName := yaml.GetName()
-		err := b.YamlTemplator.Template(l, app, spec, resultFunc)
+		err := b.YamlTemplator.Template(app, spec, resultFunc)
 		if err != nil {
-			metrics.FailureReconcilingApplication(name, templatorName.String(), deploy)
+			metrics.FailureReconcilingApplication(appName.String(), templatorName.String(), deploy)
 			errChan <- err
 			return
 		}
-		metrics.SuccessfulReconcilingApplication(name, templatorName.String(), deploy)
+		metrics.SuccessfulReconcilingApplication(appName.String(), templatorName.String(), deploy)
 	}
 
 	monitor.Info("Done")

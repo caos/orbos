@@ -4,8 +4,6 @@ import (
 	"context"
 	"flag"
 
-	"github.com/caos/orbos/pkg/labels"
-
 	"github.com/caos/orbos/internal/git"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -38,7 +36,6 @@ func main() {
 	query.Clone()
 
 	takeoff, _ := boom.Takeoff(
-		labels.MustForOperator("boom.caos.ch", "dev"),
 		monitor,
 		"./artifacts",
 		true,

@@ -5,7 +5,6 @@ import (
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/pkg/labels"
 	"github.com/spf13/cobra"
 )
 
@@ -71,7 +70,7 @@ func APICommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			_, toolset, migrate, _, err := boomapi.ParseToolset(desired, labels.MustForOperator("orbctl.caos.ch", version))
+			toolset, migrate, _, err := boomapi.ParseToolset(desired)
 			if err != nil {
 				return err
 			}

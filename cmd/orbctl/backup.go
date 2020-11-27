@@ -4,7 +4,6 @@ import (
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
-	"github.com/caos/orbos/pkg/labels"
 	"github.com/spf13/cobra"
 )
 
@@ -43,9 +42,8 @@ func BackupCommand(rv RootValues) *cobra.Command {
 		if err != nil {
 			return err
 		}
-
 		if found {
-			kubeconfigs, err := start.GetKubeconfigs(monitor, labels.MustForOperator("orbctl.caos.ch", version), gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err != nil {
 				return err
 			}

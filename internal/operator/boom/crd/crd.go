@@ -3,8 +3,6 @@ package crd
 import (
 	"errors"
 
-	"github.com/caos/orbos/pkg/labels"
-
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
@@ -74,7 +72,7 @@ func (c *Crd) GetBundle() *bundle.Bundle {
 	return c.bundle
 }
 
-func (c *Crd) Reconcile(l *labels.API, currentResourceList []*clientgo.Resource, toolsetCRD *toolsetslatest.Toolset) {
+func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetslatest.Toolset) {
 	if c.GetStatus() != nil {
 		return
 	}
@@ -97,7 +95,7 @@ func (c *Crd) Reconcile(l *labels.API, currentResourceList []*clientgo.Resource,
 		return
 	}
 
-	c.status = c.bundle.Reconcile(l, currentResourceList, toolsetCRD.Spec)
+	c.status = c.bundle.Reconcile(currentResourceList, toolsetCRD.Spec)
 	if c.status != nil {
 		metrics.FailureReconcilingBundle(c.bundle.GetPredefinedBundle())
 		return

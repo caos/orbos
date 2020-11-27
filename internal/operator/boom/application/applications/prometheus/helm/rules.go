@@ -2,7 +2,7 @@ package helm
 
 import "gopkg.in/yaml.v3"
 
-func GetDefaultRules(labels map[string]interface{}) (*AdditionalPrometheusRules, error) {
+func GetDefaultRules(labels map[string]string) (*AdditionalPrometheusRules, error) {
 	rulesStr := `name: node-exporter.rules
 groups:
 - name: node-exporter.rules

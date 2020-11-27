@@ -1,6 +1,7 @@
 package application
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador"
 	ambassadorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd"
@@ -23,12 +24,30 @@ import (
 	prometheusoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter"
 	prometheussystemdexporterinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/info"
-	"github.com/caos/orbos/internal/operator/boom/application/types"
 	"github.com/caos/orbos/internal/operator/boom/name"
+	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/mntr"
 )
 
-func New(monitor mntr.Monitor, appName name.Application, orb string) types.Application {
+type Application interface {
+	Deploy(*latest.ToolsetSpec) bool
+	GetName() name.Application
+}
+
+type HelmApplication interface {
+	Application
+	GetNamespace() string
+	GetChartInfo() *chart.Chart
+	GetImageTags() map[string]string
+	SpecToHelmValues(mntr.Monitor, *latest.ToolsetSpec) interface{}
+}
+
+type YAMLApplication interface {
+	Application
+	GetYaml(mntr.Monitor, *latest.ToolsetSpec) interface{}
+}
+
+func New(monitor mntr.Monitor, appName name.Application, orb string) Application {
 	switch appName {
 	case ambassadorinfo.GetName():
 		return ambassador.New(monitor)

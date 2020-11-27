@@ -27,14 +27,6 @@ func ForName(l *Component, name string) (*Name, error) {
 	}}, nil
 }
 
-func MustForName(l *Component, name string) *Name {
-	n, err := ForName(l, name)
-	if err != nil {
-		panic(err)
-	}
-	return n
-}
-
 func (l *Name) Equal(r comparable) bool {
 	if right, ok := r.(*Name); ok {
 		return l.model == right.model
