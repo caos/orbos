@@ -4,8 +4,8 @@ import (
 	"github.com/caos/orbos/mntr"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
 	"github.com/golang/mock/gomock"
-	"github.com/golangplus/testing/assert"
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 

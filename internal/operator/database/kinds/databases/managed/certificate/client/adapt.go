@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"strings"
 
 	core2 "github.com/caos/orbos/internal/operator/core"
@@ -10,6 +11,15 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
+)
+
+const (
+	clientSecretPrefix     = "cockroachdb.client."
+	caCertKey              = "ca.crt"
+	clientCertKeyPrefix    = "client."
+	clientCertKeySuffix    = ".crt"
+	clientPrivKeyKeyPrefix = "client."
+	clientPrivKeyKeySuffix = ".key"
 )
 
 func AdaptFunc(
@@ -27,16 +37,11 @@ func AdaptFunc(
 	}
 	clientLabels["database.caos.ch/secret-type"] = "client"
 
-	clientSecretPrefix := "cockroachdb.client."
-
 	return func(client string) core2.QueryFunc {
 			clientSecret := clientSecretPrefix + client
-			desiredClient := &certificates.SecretInternal{
-				Client:    client,
-				Name:      strings.ReplaceAll(clientSecret, "_", "-"),
-				Namespace: namespace,
-				Labels:    clientLabels,
-			}
+			name := strings.ReplaceAll(clientSecret, "_", "-")
+			clientCertKey := clientCertKeyPrefix + client + clientCertKeySuffix
+			clientPrivKeyKey := clientPrivKeyKeyPrefix + client + clientPrivKeyKeySuffix
 
 			return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 				queriers := make([]core2.QueryFunc, 0)
@@ -46,7 +51,13 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				clientPrivKey, clientCert, err := certificates.NewClient(currentDB.GetCertificateKey(), currentDB.GetCertificate(), desiredClient.Client)
+				caCert := currentDB.GetCertificate()
+				caKey := currentDB.GetCertificateKey()
+				if caKey == nil || caCert == nil || len(caCert) == 0 {
+					return nil, errors.New("no ca-certificate found")
+				}
+
+				clientPrivKey, clientCert, err := certificates.NewClient(caKey, caCert, client)
 				if err != nil {
 					return nil, err
 				}
@@ -61,14 +72,10 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				pemCaCert, err := pem.EncodeCertificate(currentDB.GetCertificate())
+				pemCaCert, err := pem.EncodeCertificate(caCert)
 				if err != nil {
 					return nil, err
 				}
-
-				caCertKey := "ca.crt"
-				clientCertKey := "client." + desiredClient.Client + ".crt"
-				clientPrivKeyKey := "client." + desiredClient.Client + ".key"
 
 				clientSecretData := map[string]string{
 					caCertKey:        string(pemCaCert),
@@ -76,7 +83,7 @@ func AdaptFunc(
 					clientCertKey:    string(pemClientCert),
 				}
 
-				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, desiredClient.Name, clientLabels, clientSecretData)
+				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, name, clientLabels, clientSecretData)
 				if err != nil {
 					return nil, err
 				}

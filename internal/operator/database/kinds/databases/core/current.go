@@ -55,8 +55,10 @@ func SetQueriedForDatabaseDBList(queried map[string]interface{}, databases []str
 			Databases: databases,
 		},
 	}
+
 	currentDB := &tree.Tree{
 		Parsed: currentDBList,
 	}
-	queried[queriedName] = currentDB
+
+	SetQueriedForDatabase(queried, currentDB)
 }

@@ -10,6 +10,7 @@ import (
 )
 
 const (
+	Instant                          = "clean"
 	defaultMode                      = int32(256)
 	certPath                         = "/cockroach/cockroach-certs"
 	secretPath                       = "/secrets/sa.json"

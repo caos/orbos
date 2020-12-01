@@ -72,6 +72,9 @@ func AdaptFunc(
 			features,
 			version,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
 		_, destroyR, err := restore.AdaptFunc(
 			monitor,
@@ -88,6 +91,9 @@ func AdaptFunc(
 			secretKey,
 			version,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
 		_, destroyC, err := clean.AdaptFunc(
 			monitor,
@@ -102,19 +108,23 @@ func AdaptFunc(
 			secretKey,
 			version,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
 		destroyers := make([]core.DestroyFunc, 0)
 		for _, feature := range features {
 			switch feature {
-			case "backup", "instantbackup":
+			case backup.Normal, backup.Instant:
 				destroyers = append(destroyers,
 					core.ResourceDestroyToZitadelDestroy(destroyS),
 					destroyB,
 				)
-			case "clear":
+			case clean.Instant:
 				destroyers = append(destroyers,
 					destroyC,
 				)
-			case "restore":
+			case restore.Instant:
 				destroyers = append(destroyers,
 					destroyR,
 				)
@@ -193,16 +203,16 @@ func AdaptFunc(
 				if databases != nil && len(databases) != 0 {
 					for _, feature := range features {
 						switch feature {
-						case "backup", "instantbackup":
+						case backup.Normal, backup.Instant:
 							queriers = append(queriers,
 								core.ResourceQueryToZitadelQuery(queryS),
 								queryB,
 							)
-						case "clear":
+						case clean.Instant:
 							queriers = append(queriers,
 								queryC,
 							)
-						case "restore":
+						case restore.Instant:
 							queriers = append(queriers,
 								queryR,
 							)

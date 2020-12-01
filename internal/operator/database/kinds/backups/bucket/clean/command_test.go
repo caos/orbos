@@ -1,7 +1,7 @@
 package clean
 
 import (
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -9,7 +9,7 @@ func TestClean_Command1(t *testing.T) {
 	databases := []string{}
 
 	cmd := getCommand(databases)
-	equals := ""
+	equals := "/scripts/clean-migration.sh " + certPath
 
 	assert.Equal(t, equals, cmd)
 }
