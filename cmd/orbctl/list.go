@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 func ListCommand(rv RootValues) *cobra.Command {
