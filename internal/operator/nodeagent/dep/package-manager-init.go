@@ -34,7 +34,6 @@ func (p *PackageManager) remSpecificUpdatePackages() error {
 
 	if err := ioutil.WriteFile("/etc/cron.daily/yumupdate.sh", []byte(`#!/bin/bash
 YUM=/usr/bin/yum
-$YUM -y -R 120 -d 3 -e 3 update yum
 $YUM -y -R 10 -e 3 -d 3 update
 `), 0777); err != nil {
 		return err

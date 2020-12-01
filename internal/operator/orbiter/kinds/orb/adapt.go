@@ -195,17 +195,22 @@ func AdaptFunc(
 						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 					}()
 
+					done := true
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
 						ensureFunc := func() *orbiter.EnsureResult {
 							return ensurer(psf)
 						}
 
-						if result := orbiter.EnsureFuncGoroutine(ensureFunc); result.Err != nil || !result.Done {
+						result := orbiter.EnsureFuncGoroutine(ensureFunc)
+						if result.Err != nil {
 							return result
+						}
+						if !result.Done {
+							done = false
 						}
 					}
 
-					return orbiter.ToEnsureResult(true, nil)
+					return orbiter.ToEnsureResult(done, nil)
 				}, nil
 			}, func() error {
 				defer func() {

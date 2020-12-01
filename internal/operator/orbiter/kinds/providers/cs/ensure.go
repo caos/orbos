@@ -57,6 +57,12 @@ func query(
 	}
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
+
+		_, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+		if err != nil {
+			return err
+		}
+
 		return ensureServer(context, current, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
@@ -74,9 +80,17 @@ func query(
 			func() error { return helpers.Fanout(removeFIPs)() },
 			func() error { return helpers.Fanout(ensureServers)() },
 			func() error {
-				var err error
-				done, err = wrappedMachines.InitializeDesiredNodeAgents()
-				return err
+				lbDone, err := wrappedMachines.InitializeDesiredNodeAgents()
+				if err != nil {
+					return err
+				}
+
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				if err != nil {
+					return err
+				}
+				done = lbDone && fwDone
+				return nil
 			},
 		})())
 	}, addPools(current, desired, wrappedMachines)

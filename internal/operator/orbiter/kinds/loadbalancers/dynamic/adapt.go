@@ -28,6 +28,11 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+const (
+	nginxVersion      = "v1.18.0"
+	keepalivedVersion = "v1.3.5"
+)
+
 var probes = prometheus.NewGaugeVec(
 	prometheus.GaugeOpts{
 		Name: "probe",
@@ -129,7 +134,24 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl, nodeAgentsCurrent)
 
 			current.Current.Spec = enrichedVIPs
+			doReset := true
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
+
+				if doReset {
+					// Reset LB Software and whole Firewalls
+					for _, id := range nodeagents.List() {
+						na, found := nodeagents.Get(id)
+						if !found {
+							continue
+						}
+						na.Firewall = &common.Firewall{}
+						if na.Software != nil {
+							na.Software.KeepaliveD = common.Package{}
+							na.Software.Nginx = common.Package{}
+						}
+					}
+				}
+				doReset = false
 
 				var lbMachines []infra.Machine
 
@@ -140,14 +162,14 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
-						deepNa.Firewall.Merge(fw)
-						machineMonitor.Changed("Loadbalancing firewall desired")
+						machineMonitor.WithField("open", fw.AllZones()).Debug("Loadbalancing firewall desired")
 					}
+					deepNa.Firewall.Merge(fw)
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						machineMonitor.WithField("ports", deepNa.Firewall.Ports()).Info("Awaiting firewalld config")
+						machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
 						done = false
 					}
-					for _, port := range fw.Ports() {
+					for _, port := range fw.Ports("external") {
 						if portInt, parseErr := strconv.ParseInt(port.Port, 10, 16); parseErr == nil && portInt == 22 {
 
 							if deepNa.Software.SSHD.Config == nil || deepNa.Software.SSHD.Config["listenaddress"] != machine.IP() {
@@ -167,9 +189,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 					if !nginx.Equals(common.Package{}) {
 						if !deepNa.Software.Nginx.Equals(nginx) {
-							deepNa.Software.Nginx = nginx
-							machineMonitor.Changed("NGINX desired")
+							machineMonitor.WithField("pkg", nginx).Debug("NGINX desired")
 						}
+						deepNa.Software.Nginx = nginx
 						if !deepNa.Software.Nginx.Equals(deepNaCurr.Software.Nginx) {
 							machineMonitor.Info("Awaiting NGINX")
 							done = false
@@ -180,10 +202,10 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 								string(sysctl.NonLocalBind): "1",
 							},
 						}) {
-							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
-							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
 							machineMonitor.Changed("sysctl desired")
 						}
+						sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
+						sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
 							done = false
@@ -192,8 +214,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 					if !keepalived.Equals(common.Package{}) {
 						if !deepNa.Software.KeepaliveD.Equals(keepalived) {
-							deepNa.Software.KeepaliveD = keepalived
-							machineMonitor.Changed("Keepalived desired")
+							machineMonitor.WithField("pkg", keepalived).Debug("Keepalived desired")
 						}
 						deepNa.Software.KeepaliveD = keepalived
 						if !deepNa.Software.KeepaliveD.Equals(deepNaCurr.Software.KeepaliveD) {
@@ -253,8 +274,8 @@ stream { {{ range $nat := .NATs }}
 
 				} else {
 
+					lbMachines = nil
 					if err := poolMachines(svc, func(pool string, machines infra.Machines) {
-
 						if forPool == pool {
 							lbMachines = machines
 						}
@@ -357,6 +378,10 @@ http {
 
 					for _, d := range lbData {
 
+						if len(d.VIPs) == 0 {
+							continue
+						}
+
 						ngxBuf := new(bytes.Buffer)
 						//noinspection GoDeferInLoop
 						defer ngxBuf.Reset()
@@ -367,7 +392,7 @@ http {
 							return false, err
 						}
 
-						kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaPkg := common.Package{Version: keepalivedVersion, Config: map[string]string{"keepalived.conf": kaBuf.String()}}
 						kaBuf.Reset()
 
 						if d.CustomMasterNotifyer {
@@ -389,10 +414,10 @@ http {
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return false, err
 						}
-						ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 						ngxBuf.Reset()
 
-						desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
+						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
 					}
 				}
 
@@ -401,7 +426,7 @@ http {
 				if err != nil {
 					return false, err
 				}
-				for _, vips := range spec {
+				for srcPool, vips := range spec {
 					for _, vip := range vips {
 						for _, transport := range vip.Transport {
 							srcFW := map[string]*common.Allowed{
@@ -411,14 +436,18 @@ http {
 								},
 							}
 							ip := mapVIP(vip)
+							var vipProbed bool
 							probeVIP := func() {
+								if vipProbed {
+									return
+								}
 								probe("VIP", ip, uint16(transport.FrontendPort), false, transport.HealthChecks, *transport)
+								vipProbed = true
 							}
 
-							var natVIPProbed bool
-							if vrrp != nil {
+							if vrrp != nil && forPool == srcPool {
 								for _, machine := range lbMachines {
-									desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
+									desireNodeAgent(machine, common.ToFirewall("external", srcFW), common.Package{}, common.Package{})
 								}
 								probeVIP()
 							}
@@ -437,33 +466,31 @@ http {
 								}
 
 								for _, machine := range destMachines {
-									desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
+									desireNodeAgent(machine, common.ToFirewall("internal", destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
-									if vrrp == nil && forPool == dest {
-										if !natVIPProbed {
-											probeVIP()
-											natVIPProbed = true
-										}
-
-										nodeNatDesires, ok := nodesNats[machine.IP()]
-										if !ok {
-											nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
-										}
-										nodeNatDesires.Firewall = common.ToFirewall(srcFW)
-										nodeNatDesires.Machine = machine
-
-										nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
-											Whitelist: transport.Whitelist,
-											Name:      transport.Name,
-											From: []string{
-												fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
-												fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
-											},
-											To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
-											ProxyProtocol: *transport.ProxyProtocol,
-										})
-										nodesNats[machine.IP()] = nodeNatDesires
+									if vrrp != nil || forPool != dest {
+										continue
 									}
+									probeVIP()
+
+									nodeNatDesires, ok := nodesNats[machine.IP()]
+									if !ok {
+										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
+									}
+									nodeNatDesires.Firewall = common.ToFirewall("external", srcFW)
+									nodeNatDesires.Machine = machine
+
+									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
+										Whitelist: transport.Whitelist,
+										Name:      transport.Name,
+										From: []string{
+											fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
+											fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
+										},
+										To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+										ProxyProtocol: *transport.ProxyProtocol,
+									})
+									nodesNats[machine.IP()] = nodeNatDesires
 								}
 							}
 						}
@@ -481,7 +508,7 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}

@@ -5,6 +5,7 @@ package common
 import (
 	"fmt"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -21,7 +22,7 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        []*Allowed
+	Open        Current
 	Commit      string
 	Booted      time.Time
 }
@@ -131,31 +132,216 @@ func PackageEquals(this, that Package) bool {
 }
 
 type Firewall struct {
-	mux sync.Mutex          `yaml:"-"`
-	FW  map[string]*Allowed `yaml:",inline"`
+	mux   sync.Mutex       `yaml:"-"`
+	Zones map[string]*Zone `yaml:",inline"`
 }
 
-func ToFirewall(fw map[string]*Allowed) Firewall {
-	return Firewall{FW: fw}
+type Service struct {
+	Description string
+	Ports       []*Allowed
+}
+
+func ToFirewall(zone string, fw map[string]*Allowed) Firewall {
+	return Firewall{Zones: map[string]*Zone{zone: {Interfaces: []string{}, FW: fw, Services: map[string]*Service{}}}}
 }
 
 func (f *Firewall) Merge(fw Firewall) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
-	if len(fw.FW) > 0 && f.FW == nil {
-		f.FW = make(map[string]*Allowed)
+	if f.Zones == nil {
+		f.Zones = make(map[string]*Zone, 0)
 	}
-	for key, value := range fw.FW {
-		f.FW[key] = value
+
+	if fw.Zones == nil {
+		return
+	}
+
+	for name, zone := range fw.Zones {
+		if zone == nil {
+			continue
+		}
+
+		current, ok := f.Zones[name]
+		if !ok || current == nil {
+			current = &Zone{}
+		}
+
+		if zone.FW != nil {
+			if current.FW == nil {
+				current.FW = make(map[string]*Allowed)
+			}
+
+			for key, value := range zone.FW {
+				current.FW[key] = value
+			}
+		}
+
+		if zone.Interfaces != nil {
+			if current.Interfaces == nil {
+				current.Interfaces = []string{}
+			}
+			for _, i := range zone.Interfaces {
+				found := false
+				for _, i2 := range current.Interfaces {
+					if i == i2 {
+						found = true
+					}
+				}
+				if !found {
+					current.Interfaces = append(current.Interfaces, i)
+				}
+			}
+
+		}
+		if zone.Sources != nil {
+			if current.Sources == nil {
+				current.Sources = make([]string, 0)
+			}
+			for _, i := range zone.Sources {
+				found := false
+				for _, i2 := range current.Sources {
+					if i == i2 {
+						found = true
+					}
+				}
+				if !found {
+					current.Sources = append(current.Sources, i)
+				}
+			}
+		}
+		if zone.Services != nil {
+			if current.Services == nil {
+				current.Services = make(map[string]*Service, 0)
+			}
+
+			for key, value := range zone.Services {
+				current.Services[key] = value
+			}
+		}
+
+		f.Zones[name] = current
 	}
 }
 
-func (f *Firewall) Ports() Ports {
+func (f *Firewall) AllZones() Current {
+	zones := make(Current, 0)
+	if f.Zones == nil {
+		return zones
+	}
+
+	for name, zone := range f.Zones {
+		if zone != nil {
+			zones = append(zones, &ZoneDesc{
+				Name:       name,
+				Interfaces: zone.Interfaces,
+				Sources:    zone.Sources,
+				Services:   []*Service{},
+				FW:         f.Ports(name),
+			})
+		}
+	}
+	zones.Sort()
+	return zones
+}
+
+func (f *Firewall) Ports(zoneName string) Ports {
 	ports := make([]*Allowed, 0)
-	for _, value := range f.FW {
-		ports = append(ports, value)
+	if f.Zones == nil {
+		return ports
+	}
+	for name, zone := range f.Zones {
+		if name == zoneName && zone != nil && zone.FW != nil {
+			for _, value := range zone.FW {
+				ports = append(ports, value)
+			}
+		}
 	}
 	return ports
+}
+
+type ZoneDesc struct {
+	Name       string
+	Interfaces MarshallableSlice
+	Sources    MarshallableSlice
+	FW         []*Allowed
+	Services   []*Service
+}
+
+type Zone struct {
+	Interfaces MarshallableSlice
+	Sources    MarshallableSlice
+	FW         map[string]*Allowed
+	Services   map[string]*Service
+}
+
+type MarshallableSlice []string
+
+func (m MarshallableSlice) MarshalYAML() (interface{}, error) {
+	sort.Strings(m)
+	type s []string
+	return s(m), nil
+}
+
+var _ fmt.Stringer = (*Current)(nil)
+
+type Current []*ZoneDesc
+
+func (c Current) String() string {
+	fw := ""
+	for _, zone := range c {
+
+		interfaces := ""
+		for idx := range zone.Interfaces {
+			interfaces = interfaces + zone.Interfaces[idx] + " "
+		}
+
+		sources := ""
+		for idx := range zone.Sources {
+			sources = sources + zone.Sources[idx] + " "
+		}
+
+		ports := ""
+		for _, port := range zone.FW {
+			ports = ports + port.Port + "/" + port.Protocol + " "
+		}
+		fw = fw + zone.Name + "(" + strings.TrimSpace(strings.TrimSpace(strings.TrimSpace(interfaces)+" "+sources)+" "+ports) + ") "
+	}
+	return strings.TrimSpace(fw)
+}
+
+func (c Current) Sort() {
+	sort.Slice(c, func(i, j int) bool {
+		return c[i].Name < c[j].Name
+	})
+
+	for _, currentEntry := range c {
+
+		sort.Slice(currentEntry.Interfaces, func(i, j int) bool {
+			return currentEntry.Interfaces[i] < currentEntry.Interfaces[j]
+		})
+
+		sort.Slice(currentEntry.FW, func(i, j int) bool {
+			iEntry := currentEntry.FW[i].Port + "/" + currentEntry.FW[i].Protocol
+			jEntry := currentEntry.FW[j].Port + "/" + currentEntry.FW[j].Protocol
+			return iEntry < jEntry
+		})
+
+		sort.Slice(currentEntry.Services, func(i, j int) bool {
+			return currentEntry.Services[i].Description < currentEntry.Services[j].Description
+		})
+
+		for _, svc := range currentEntry.Services {
+			sort.Slice(svc.Ports, func(i, j int) bool {
+				iEntry := svc.Ports[i].Port + "/" + svc.Ports[i].Protocol
+				jEntry := svc.Ports[j].Port + "/" + svc.Ports[j].Protocol
+				return iEntry < jEntry
+			})
+		}
+
+		sort.Slice(currentEntry.Sources, func(i, j int) bool {
+			return currentEntry.Sources[i] < currentEntry.Sources[j]
+		})
+	}
 }
 
 type Ports []*Allowed
@@ -174,27 +360,124 @@ type Allowed struct {
 }
 
 func (f Firewall) Contains(other Firewall) bool {
-	for name, port := range other.FW {
-		found, ok := f.FW[name]
-		if !ok {
+	if other.Zones == nil {
+		return true
+	}
+
+	for name, zone := range other.Zones {
+		current, ok := f.Zones[name]
+		if !ok || current == nil {
 			return false
 		}
-		if !deriveEqualPort(*port, *found) {
-			return false
+
+		if zone.FW != nil && len(zone.FW) > 0 {
+			if current.FW == nil || len(current.FW) == 0 {
+				return false
+			}
+
+			for name, port := range zone.FW {
+				found, ok := current.FW[name]
+				if !ok {
+					return false
+				}
+				if !deriveEqualPort(*port, *found) {
+					return false
+				}
+			}
+		}
+
+		if zone.Sources != nil && len(zone.Sources) > 0 {
+			if current.Sources == nil || len(current.Sources) == 0 {
+				return false
+			}
+			for _, source := range zone.Sources {
+				found := false
+				for _, currentSource := range current.Sources {
+					if currentSource == source {
+						found = true
+						break
+					}
+				}
+				if !found {
+					return false
+				}
+			}
 		}
 	}
 	return true
 }
 
-func (f Firewall) IsContainedIn(ports []*Allowed) bool {
-checks:
-	for _, fwPort := range f.FW {
-		for _, port := range ports {
-			if deriveEqualPort(*port, *fwPort) {
-				continue checks
+func (f Firewall) IsContainedIn(zones Current) bool {
+	if f.Zones == nil || len(f.Zones) == 0 {
+		return true
+	}
+	if zones == nil || len(zones) == 0 {
+		return false
+	}
+
+	for name, zone := range f.Zones {
+		if (zone.FW == nil || len(zone.FW) == 0) &&
+			(zone.Sources == nil || len(zone.Sources) == 0) {
+			continue
+		}
+
+		foundZone := false
+		for _, currentZone := range zones {
+			if currentZone == nil {
+				continue
+			}
+
+			if foundZone {
+				break
+			}
+
+			if currentZone.Name == name {
+				foundZone = true
+
+				if (currentZone.FW == nil || len(currentZone.FW) == 0) &&
+					(currentZone.FW == nil || len(currentZone.FW) == 0) {
+					return false
+				}
+
+				if zone.FW != nil {
+					for _, fwPort := range zone.FW {
+						foundPort := false
+						if currentZone.FW != nil {
+							for _, currentPort := range currentZone.FW {
+								if deriveEqualPort(*currentPort, *fwPort) {
+									foundPort = true
+									break
+								}
+							}
+						}
+
+						if !foundPort {
+							return false
+						}
+					}
+				}
+
+				if zone.Sources != nil {
+					for _, source := range zone.Sources {
+						foundSource := false
+						if currentZone.Sources != nil {
+							for _, currentSource := range currentZone.Sources {
+								if source == currentSource {
+									foundSource = true
+									break
+								}
+							}
+						}
+						if !foundSource {
+							return false
+						}
+					}
+				}
 			}
 		}
-		return false
+		if !foundZone {
+			return false
+		}
 	}
 	return true
 }
@@ -231,7 +514,7 @@ func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentCurrent{
-			Open: make([]*Allowed, 0),
+			Open: make(Current, 0),
 		}
 		n.NA[id] = na
 	}
@@ -256,6 +539,16 @@ func (n *DesiredNodeAgents) Delete(id string) {
 	delete(n.NA, id)
 }
 
+func (n *DesiredNodeAgents) List() []string {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	var ids []string
+	for id := range n.NA {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
 func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 	n.mux.Lock()
 	defer n.mux.Unlock()
@@ -269,7 +562,17 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 		na = &NodeAgentSpec{
 			Software: &Software{},
 			Firewall: &Firewall{
-				FW: make(map[string]*Allowed),
+				Zones: map[string]*Zone{
+					"internal": {
+						Interfaces: []string{},
+						FW:         map[string]*Allowed{},
+						Services:   map[string]*Service{},
+					}, "external": {
+						Interfaces: []string{},
+						FW:         map[string]*Allowed{},
+						Services:   map[string]*Service{},
+					},
+				},
 			},
 		}
 		n.NA[id] = na
