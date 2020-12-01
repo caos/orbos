@@ -2,6 +2,8 @@ package statefulset
 
 import (
 	"fmt"
+	"github.com/caos/orbos/internal/utils/helper"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sort"
 	"strings"
 
@@ -16,7 +18,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+)
+
+const (
+	certPath            = "/cockroach/cockroach-certs"
+	clientCertPath      = "/cockroach/cockroach-client-certs"
+	datadirPath         = "/cockroach/cockroach-data"
+	datadirInternal     = "datadir"
+	certsInternal       = "certs"
+	clientCertsInternal = "client-certs"
+	defaultMode         = int32(256)
+	nodeSecret          = "cockroachdb.node"
+	rootSecret          = "cockroachdb.client.root"
 )
 
 type Affinity struct {
@@ -55,58 +68,9 @@ func AdaptFunc(
 ) {
 	internalMonitor := monitor.WithField("component", "statefulset")
 
-	defaultMode := int32(256)
 	quantity, err := resource.ParseQuantity(storageCapacity)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
-	}
-
-	replicaCountParsed := int32(replicaCount)
-	joinList := make([]string, 0)
-	for i := int32(0); i < replicaCountParsed; i++ {
-		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s:%d", name, i, name, namespace, dbPort))
-	}
-	joinListStr := strings.Join(joinList, ",")
-
-	locality := "zone=" + namespace
-	certPath := "/cockroach/cockroach-certs"
-	clientCertPath := "/cockroach/cockroach-client-certs"
-	datadirPath := "/cockroach/cockroach-data"
-	joinExec := "exec /cockroach/cockroach start --logtostderr --certs-dir " + certPath + " --advertise-host $(hostname -f) --http-addr 0.0.0.0 --join " + joinListStr + " --locality " + locality + " --cache 25% --max-sql-memory 25%"
-	datadirInternal := "datadir"
-	certsInternal := "certs"
-	clientCertsInternal := "client-certs"
-
-	affinity := Affinitys{}
-	for k, v := range labels {
-		affinity = append(affinity, metav1.LabelSelectorRequirement{
-			Key:      k,
-			Operator: metav1.LabelSelectorOpIn,
-			Values: []string{
-				v,
-			}})
-	}
-	sort.Sort(affinity)
-
-	internalResources := corev1.ResourceRequirements{
-		Requests: corev1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("512Mi"),
-		},
-		Limits: corev1.ResourceList{
-			"cpu":    resource.MustParse("100m"),
-			"memory": resource.MustParse("512Mi"),
-		},
-	}
-
-	if resourcesSFS != nil {
-		internalResources = corev1.ResourceRequirements{}
-		if resourcesSFS.Requests != nil {
-			internalResources.Requests = resourcesSFS.Requests
-		}
-		if resourcesSFS.Limits != nil {
-			internalResources.Limits = resourcesSFS.Limits
-		}
 	}
 
 	statefulsetDef := &appsv1.StatefulSet{
@@ -117,7 +81,7 @@ func AdaptFunc(
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
-			Replicas:    &replicaCountParsed,
+			Replicas:    helper.PointerInt32(int32(replicaCount)),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -129,19 +93,7 @@ func AdaptFunc(
 					NodeSelector:       nodeSelector,
 					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
-					Affinity: &corev1.Affinity{
-						PodAntiAffinity: &corev1.PodAntiAffinity{
-							PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-								Weight: 100,
-								PodAffinityTerm: corev1.PodAffinityTerm{
-									LabelSelector: &metav1.LabelSelector{
-										MatchExpressions: affinity,
-									},
-									TopologyKey: "kubernetes.io/hostname",
-								},
-							}},
-						},
-					},
+					Affinity:           getAffinity(labels),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           image,
@@ -190,9 +142,14 @@ func AdaptFunc(
 						Command: []string{
 							"/bin/bash",
 							"-ecx",
-							joinExec,
+							getJoinExec(
+								namespace,
+								name,
+								int(dbPort),
+								replicaCount,
+							),
 						},
-						Resources: internalResources,
+						Resources: getResources(resourcesSFS),
 					}},
 					Volumes: []corev1.Volume{{
 						Name: datadirInternal,
@@ -205,16 +162,16 @@ func AdaptFunc(
 						Name: certsInternal,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName:  "cockroachdb.node",
-								DefaultMode: &defaultMode,
+								SecretName:  nodeSecret,
+								DefaultMode: helper.PointerInt32(defaultMode),
 							},
 						},
 					}, {
 						Name: clientCertsInternal,
 						VolumeSource: corev1.VolumeSource{
 							Secret: &corev1.SecretVolumeSource{
-								SecretName:  "cockroachdb.client.root",
-								DefaultMode: &defaultMode,
+								SecretName:  rootSecret,
+								DefaultMode: helper.PointerInt32(defaultMode),
 							},
 						},
 					}},
@@ -320,4 +277,67 @@ func AdaptFunc(
 	}
 
 	return wrapedQuery, wrapedDestroy, ensureInit, checkDBReady, getAllDBs, err
+}
+
+func getJoinExec(namespace string, name string, dbPort int, replicaCount int) string {
+	joinList := make([]string, 0)
+	for i := 0; i < replicaCount; i++ {
+		joinList = append(joinList, fmt.Sprintf("%s-%d.%s.%s:%d", name, i, name, namespace, dbPort))
+	}
+	joinListStr := strings.Join(joinList, ",")
+	locality := "zone=" + namespace
+
+	return "exec /cockroach/cockroach start --logtostderr --certs-dir " + certPath + " --advertise-host $(hostname -f) --http-addr 0.0.0.0 --join " + joinListStr + " --locality " + locality + " --cache 25% --max-sql-memory 25%"
+}
+
+func getResources(resourcesSFS *k8s.Resources) corev1.ResourceRequirements {
+	internalResources := corev1.ResourceRequirements{
+		Requests: corev1.ResourceList{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("512Mi"),
+		},
+		Limits: corev1.ResourceList{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("512Mi"),
+		},
+	}
+
+	if resourcesSFS != nil {
+		internalResources = corev1.ResourceRequirements{}
+		if resourcesSFS.Requests != nil {
+			internalResources.Requests = resourcesSFS.Requests
+		}
+		if resourcesSFS.Limits != nil {
+			internalResources.Limits = resourcesSFS.Limits
+		}
+	}
+
+	return internalResources
+}
+
+func getAffinity(labels map[string]string) *corev1.Affinity {
+	affinity := Affinitys{}
+	for k, v := range labels {
+		affinity = append(affinity, metav1.LabelSelectorRequirement{
+			Key:      k,
+			Operator: metav1.LabelSelectorOpIn,
+			Values: []string{
+				v,
+			}})
+	}
+	sort.Sort(affinity)
+
+	return &corev1.Affinity{
+		PodAntiAffinity: &corev1.PodAntiAffinity{
+			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
+				Weight: 100,
+				PodAffinityTerm: corev1.PodAffinityTerm{
+					LabelSelector: &metav1.LabelSelector{
+						MatchExpressions: affinity,
+					},
+					TopologyKey: "kubernetes.io/hostname",
+				},
+			}},
+		},
+	}
 }

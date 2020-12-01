@@ -26,11 +26,11 @@ func AdaptFunc(
 
 	deleteSql := fmt.Sprintf("DROP DATABASE IF EXISTS %s", userName)
 
-	ensureDatabase := func(k8sClient *kubernetes.Client) error {
+	ensureDatabase := func(k8sClient kubernetes.ClientInt) error {
 		return k8sClient.ExecInPodOfDeployment(namespace, deployName, containerName, fmt.Sprintf("%s -e '%s;'", cmdSql, createSql))
 	}
 
-	destroyDatabase := func(k8sClient *kubernetes.Client) error {
+	destroyDatabase := func(k8sClient kubernetes.ClientInt) error {
 		return k8sClient.ExecInPodOfDeployment(namespace, deployName, containerName, fmt.Sprintf("%s -e '%s;'", cmdSql, deleteSql))
 	}
 
@@ -42,7 +42,7 @@ func AdaptFunc(
 		destroyDatabase,
 	}
 
-	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(monitor, destroyers),
