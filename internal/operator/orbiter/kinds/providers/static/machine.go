@@ -16,10 +16,7 @@ import (
 var _ infra.Machine = (*machine)(nil)
 
 type machine struct {
-	active               bool
 	poolFile             string
-	id                   *string
-	ip                   string
 	rebootRequired       bool
 	requireReboot        func()
 	unrequireReboot      func()
@@ -27,6 +24,9 @@ type machine struct {
 	requireReplacement   func()
 	unrequireReplacement func()
 	*ssh.Machine
+	X_ID     *string `header:"id"`
+	X_IP     string  `header:"ip"`
+	X_active bool    `header:"active"`
 }
 
 func newMachine(
@@ -43,10 +43,10 @@ func newMachine(
 	unrequireReplacement func(),
 ) *machine {
 	return &machine{
-		active:               false,
+		X_active:             false,
 		poolFile:             poolFile,
-		id:                   id,
-		ip:                   ip,
+		X_ID:                 id,
+		X_IP:                 ip,
 		Machine:              ssh.NewMachine(monitor, remoteUser, ip),
 		rebootRequired:       rebootRequired,
 		requireReboot:        requireReboot,
@@ -58,18 +58,18 @@ func newMachine(
 }
 
 func (c *machine) ID() string {
-	return *c.id
+	return *c.X_ID
 }
 
 func (c *machine) IP() string {
-	return c.ip
+	return c.X_IP
 }
 
 func (c *machine) Remove() error {
 	if err := c.Machine.WriteFile(c.poolFile, strings.NewReader(""), 600); err != nil {
 		return err
 	}
-	c.active = false
+	c.X_active = false
 	c.Execute(nil, "sudo systemctl stop node-agentd")
 	c.Execute(nil, "sudo systemctl disable node-agentd")
 	c.Execute(nil, "sudo kubeadm reset -f")

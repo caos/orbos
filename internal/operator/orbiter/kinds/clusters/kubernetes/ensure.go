@@ -25,6 +25,11 @@ func ensure(
 	gitClient *git.Client,
 ) (done bool, err error) {
 
+	desireFW := firewallFunc(monitor, *desired)
+	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		desireFW(machine)
+	}
+
 	if err := scaleDown(append(workers, controlplane), k8sClient, uninitializeMachine, monitor, pdf); err != nil {
 		return false, err
 	}

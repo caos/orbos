@@ -356,7 +356,7 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 		m.cache.Lock()
 		cleanMachines := make([]*instance, 0)
 		for _, cachedMachine := range m.cache.instances[pool] {
-			if cachedMachine.id != id {
+			if cachedMachine.X_ID != id {
 				cleanMachines = append(cleanMachines, cachedMachine)
 			}
 		}
