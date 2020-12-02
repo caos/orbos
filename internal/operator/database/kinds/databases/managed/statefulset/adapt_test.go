@@ -269,7 +269,6 @@ func TestStatefulset_Adapt1(t *testing.T) {
 	assert.NotNil(t, ensure)
 
 	assert.NoError(t, ensure(k8sClient))
-
 }
 
 func TestStatefulset_Adapt2(t *testing.T) {

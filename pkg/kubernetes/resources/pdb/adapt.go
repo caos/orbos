@@ -14,6 +14,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, maxUnav
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: policy.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{

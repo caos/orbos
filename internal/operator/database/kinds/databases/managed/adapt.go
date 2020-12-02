@@ -22,6 +22,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	sfsName            = "cockroachdb"
+	pdbName            = sfsName + "-budget"
+	serviceAccountName = sfsName
+	publicServiceName  = sfsName + "-public"
+	cockroachPort      = int32(26257)
+	cockroachHTTPPort  = int32(8080)
+	image              = "cockroachdb/cockroach:v20.1.5"
+)
+
 func AdaptFunc(
 	labels map[string]string,
 	namespace string,
@@ -46,14 +56,6 @@ func AdaptFunc(
 		internalLabels[k] = v
 	}
 	internalLabels["app.kubernetes.io/component"] = "cockroachdb"
-
-	sfsName := "cockroachdb"
-	pdbName := sfsName + "-budget"
-	serviceAccountName := sfsName
-	publicServiceName := sfsName + "-public"
-	cockroachPort := int32(26257)
-	cockroachHTTPPort := int32(8080)
-	image := "cockroachdb/cockroach:v20.1.5"
 
 	return func(
 		monitor mntr.Monitor,
@@ -212,20 +214,23 @@ func AdaptFunc(
 
 		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 				if !featureRestore {
-					currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
-					currentDB.Current.URL = publicServiceName
-					currentDB.Current.ReadyFunc = checkDBReady
-					currentDB.Current.AddUserFunc = func(user string) (core2.QueryFunc, error) {
-						return addUser(user)
-					}
-					currentDB.Current.DeleteUserFunc = func(user string) (core2.DestroyFunc, error) {
-						return deleteUser(user)
-					}
-					currentDB.Current.ListUsersFunc = listUsers
-					currentDB.Current.ListDatabasesFunc = listDatabases
+					queriedCurrentDB, err := core.ParseQueriedForDatabase(queried)
+					if err != nil || queriedCurrentDB == nil {
+						currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
+						currentDB.Current.URL = publicServiceName
+						currentDB.Current.ReadyFunc = checkDBReady
+						currentDB.Current.AddUserFunc = func(user string) (core2.QueryFunc, error) {
+							return addUser(user)
+						}
+						currentDB.Current.DeleteUserFunc = func(user string) (core2.DestroyFunc, error) {
+							return deleteUser(user)
+						}
+						currentDB.Current.ListUsersFunc = listUsers
+						currentDB.Current.ListDatabasesFunc = listDatabases
 
-					core.SetQueriedForDatabase(queried, current)
-					internalMonitor.Info("set current state of managed database")
+						core.SetQueriedForDatabase(queried, current)
+						internalMonitor.Info("set current state of managed database")
+					}
 				}
 
 				ensure, err := core2.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)

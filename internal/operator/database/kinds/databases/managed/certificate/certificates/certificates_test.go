@@ -45,7 +45,8 @@ func TestCertificates_Chain(t *testing.T) {
 	assert.NoError(t, err)
 
 	opts := x509.VerifyOptions{
-		Roots: roots,
+		Roots:     roots,
+		KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 	}
 
 	_, err = cert.Verify(opts)
