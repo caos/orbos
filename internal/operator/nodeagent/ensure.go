@@ -13,12 +13,12 @@ import (
 )
 
 type FirewallEnsurer interface {
-	Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
+	Query(desired common.Firewall) (current common.Current, ensure func() error, err error)
 }
 
-type FirewallEnsurerFunc func(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
+type FirewallEnsurerFunc func(desired common.Firewall) (current common.Current, ensure func() error, err error)
 
-func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error) {
+func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current common.Current, ensure func() error, err error) {
 	return f(desired)
 }
 
@@ -54,14 +54,14 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 
 		defer persistReadyness(curr.NodeIsReady)
 
-		who, err := exec.Command("who", "-b").CombinedOutput()
+		dateTime, err := exec.Command("uptime", "-s").CombinedOutput()
 		if err != nil {
 			return noop, err
 		}
 
-		dateTime := strings.Fields(string(who))[2:]
-		str := strings.Join(dateTime, " ") + ":00"
-		t, err := time.Parse("2006-01-02 15:04:05", str)
+		//dateTime := strings.Fields(string(who))[2:]
+		//str := strings.Join(dateTime, " ") + ":00"
+		t, err := time.Parse("2006-01-02 15:04:05", strings.TrimSuffix(string(dateTime), "\n"))
 		if err != nil {
 			return noop, err
 		}
@@ -88,6 +88,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		if err != nil {
 			return noop, err
 		}
+		curr.Open.Sort()
 
 		installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
 		if err != nil {
@@ -121,8 +122,9 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 				if err := ensureFirewall(); err != nil {
 					return err
 				}
-				curr.Open = desired.Firewall.Ports()
+				curr.Open = desired.Firewall.AllZones()
 				monitor.Changed("firewall changed")
+				curr.Open.Sort()
 			}
 
 			if len(divergentSw) > 0 {

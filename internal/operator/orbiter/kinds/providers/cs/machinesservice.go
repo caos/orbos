@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/caos/orbos/internal/secret"
+
 	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/cloudscale-ch/cloudscale-go-sdk"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	sshgen "github.com/caos/orbos/internal/ssh"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -30,6 +33,16 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
 		return nil, err
+	}
+
+	if err := ctx.machinesService.use(desired.Spec.SSHKey); err != nil {
+		invalidKey := &secret.Secret{Value: "invalid"}
+		if err := ctx.machinesService.use(&SSHKey{
+			Private: invalidKey,
+			Public:  invalidKey,
+		}); err != nil {
+			panic(err)
+		}
 	}
 
 	return core.ListMachines(ctx.machinesService)
@@ -75,6 +88,30 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	monitor.Debug("Creating instance")
 
+	userData, err := NewCloudinit().AddGroupWithoutUsers(
+		"orbiter",
+	).AddUser(
+		"orbiter",
+		true,
+		"",
+		[]string{"orbiter", "wheel"},
+		"orbiter",
+		[]string{m.context.desired.SSHKey.Public.Value},
+		"ALL=(ALL) NOPASSWD:ALL",
+	).AddCmd(
+		"sudo echo \"\n\nPermitRootLogin no\n\" >> /etc/ssh/sshd_config",
+	).AddCmd(
+		"sudo service sshd restart",
+	).ToYamlString()
+	if err != nil {
+		return nil, err
+	}
+
+	_, pub, err := sshgen.Generate()
+	if err != nil {
+		return nil, err
+	}
+
 	newServer, err := m.context.client.Servers.Create(m.context.ctx, &cloudscale.ServerRequest{
 		ZonalResourceRequest: cloudscale.ZonalResourceRequest{},
 		TaggedResourceRequest: cloudscale.TaggedResourceRequest{
@@ -92,14 +129,14 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		Volumes:           nil,
 		Interfaces:        nil,
 		BulkVolumeSizeGB:  0,
-		SSHKeys:           []string{m.context.desired.SSHKey.Public.Value},
+		SSHKeys:           []string{pub},
 		Password:          "",
 		UsePublicNetwork:  boolPtr(m.oneoff || true), // Always use public Network
 		UsePrivateNetwork: boolPtr(true),
 		UseIPV6:           boolPtr(false),
 		AntiAffinityWith:  "",
 		ServerGroups:      nil,
-		UserData:          "",
+		UserData:          userData,
 	})
 	if err != nil {
 		return nil, err
@@ -130,7 +167,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Monitor, pool *Pool, poolName string) (*machine, error) {
 	internalIP, sshIP := createdIPs(server.Interfaces, m.oneoff || true /* always use public ip */)
 
-	sshMachine := ssh.NewMachine(monitor, "root", sshIP)
+	sshMachine := ssh.NewMachine(monitor, "orbiter", sshIP)
 	if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
 		return nil, err
 	}
@@ -138,6 +175,7 @@ func (m *machinesService) toMachine(server *cloudscale.Server, monitor mntr.Moni
 	infraMachine := newMachine(
 		server,
 		internalIP,
+		sshIP,
 		sshMachine,
 		m.removeMachineFunc(server.Tags["pool"], server.UUID),
 		m.context,
