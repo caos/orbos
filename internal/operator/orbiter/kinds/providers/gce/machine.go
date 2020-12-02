@@ -1,9 +1,10 @@
 package gce
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"io"
 	"sort"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
@@ -26,7 +27,6 @@ type machine interface {
 
 type instance struct {
 	mntr.Monitor
-	id      string
 	ip      string
 	url     string
 	pool    string
@@ -40,6 +40,10 @@ type instance struct {
 	replacementRequired  bool
 	requireReplacement   func()
 	unrequireReplacement func()
+	X_ID                 string `header:"id"`
+	X_internalIP         string `header:"internal ip"`
+	X_externalIP         string `header:"external ip"`
+	X_Pool               string `header:"pool"`
 }
 
 func newMachine(
@@ -60,7 +64,7 @@ func newMachine(
 	unrequireReplacement func()) *instance {
 	return &instance{
 		Monitor:              monitor,
-		id:                   id,
+		X_ID:                 id,
 		ip:                   ip,
 		url:                  url,
 		pool:                 pool,
@@ -78,7 +82,7 @@ func newMachine(
 }
 
 func (c *instance) ID() string {
-	return c.id
+	return c.X_ID
 }
 
 func (c *instance) IP() string {

@@ -108,16 +108,16 @@ func query(
 							"checks": value,
 						}).Changed("Healthcheck desired")
 					}
-					fw := common.ToFirewall(map[string]*common.Allowed{
+					fw := common.ToFirewall("external", map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
 							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
 							Protocol: "tcp",
 						},
 					})
 					if !na.Firewall.Contains(fw) {
-						na.Firewall.Merge(fw)
-						machineMonitor.WithField("ports", fw.Ports()).Changed("Firewall desired")
+						machineMonitor.WithField("ports", fw.AllZones()).Debug("Firewall desired")
 					}
+					na.Firewall.Merge(fw)
 				}
 			}
 		}
@@ -174,7 +174,17 @@ func query(
 			},
 			func() error {
 				var err error
-				done, err = wrappedMachines.InitializeDesiredNodeAgents()
+				lbDone, err := wrappedMachines.InitializeDesiredNodeAgents()
+				if err != nil {
+					return err
+				}
+
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				if err != nil {
+					return err
+				}
+				done = lbDone && fwDone
+
 				return err
 			},
 		})())

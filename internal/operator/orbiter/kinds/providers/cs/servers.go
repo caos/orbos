@@ -88,15 +88,25 @@ func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP
 		return err
 	}
 
-	masq, _ := machine.Execute(nil, "firewall-cmd --list-all | grep 'masquerade: yes'")
+	if err := addMasqueradeForZone(machine, context, "internal"); err != nil {
+		return err
+	}
+
+	if err := addMasqueradeForZone(machine, context, "external"); err != nil {
+		return err
+	}
+
+	return nil
+}
+func addMasqueradeForZone(machine *machine, context *context, zoneName string) error {
+	masq, _ := machine.Execute(nil, "sudo firewall-cmd --list-all --zone "+zoneName+"| grep 'masquerade: yes'")
 	if len(masq) == 0 {
-		cmd := "firewall-cmd --add-masquerade --permanent && firewall-cmd --reload"
+		cmd := "sudo firewall-cmd --add-masquerade --permanent --zone " + zoneName + " && sudo firewall-cmd --reload"
 		context.monitor.WithField("cmd", cmd).Info("Executing")
 		if _, err := machine.Execute(nil, cmd); err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -142,9 +152,9 @@ func (a addresses) toRequest() []cloudscale.AddressRequest {
 func ensureDummyInterface(context *context, machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current) error {
 
 	cmd := "true"
-	dummy1, err := machine.Execute(nil, `INNEROUT="$(set -o pipefail && ip address show dummy1 | grep dummy1 | tail -n +2 | awk '{print $2}' | cut -d "/" -f 1)" && echo $INNEROUT`)
+	dummy1, err := machine.Execute(nil, `INNEROUT="$(set -o pipefail && sudo ip address show dummy1 | grep dummy1 | tail -n +2 | awk '{print $2}' | cut -d "/" -f 1)" && echo $INNEROUT`)
 	if err != nil {
-		cmd += " && ip link add dummy1 type dummy"
+		cmd += " && sudo ip link add dummy1 type dummy"
 	}
 
 	addedVIPs := bytes.Split(dummy1, []byte("\n"))
@@ -164,7 +174,7 @@ addLoop:
 			}
 		}
 		if !bytes.Contains(dummy1, []byte(ip)) {
-			cmd += fmt.Sprintf(" && ip addr add %s/32 dev dummy1", ip)
+			cmd += fmt.Sprintf(" && sudo ip addr add %s/32 dev dummy1", ip)
 		}
 	}
 
@@ -180,7 +190,7 @@ deleteLoop:
 				continue deleteLoop
 			}
 		}
-		cmd += fmt.Sprintf(" && ip addr delete %s/32 dev dummy1", added)
+		cmd += fmt.Sprintf(" && sudo ip addr delete %s/32 dev dummy1", added)
 	}
 
 	if cmd == "true" {
