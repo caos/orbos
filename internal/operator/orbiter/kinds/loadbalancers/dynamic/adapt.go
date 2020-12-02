@@ -478,7 +478,7 @@ http {
 									if !ok {
 										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
 									}
-									nodeNatDesires.Firewall = common.ToFirewall("external", srcFW)
+									nodeNatDesires.Firewall.Merge(common.ToFirewall("external", srcFW))
 									nodeNatDesires.Machine = machine
 
 									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
