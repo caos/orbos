@@ -35,7 +35,7 @@ func AdaptFunc(
 
 		internalMonitor := monitor.WithField("component", "backup")
 
-		desiredKind, err := parseDesiredV0(desired)
+		desiredKind, err := ParseDesiredV0(desired)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}

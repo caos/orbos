@@ -14,7 +14,7 @@ import (
 
 func BackupList() core.BackupListFunc {
 	return func(monitor mntr.Monitor, name string, desired *tree.Tree) ([]string, error) {
-		desiredKind, err := parseDesiredV0(desired)
+		desiredKind, err := ParseDesiredV0(desired)
 		if err != nil {
 			return nil, errors.Wrap(err, "parsing desired state failed")
 		}

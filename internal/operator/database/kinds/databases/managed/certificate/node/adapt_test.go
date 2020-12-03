@@ -185,20 +185,24 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
 
-	caCert := "ca"
-	caPrivKey := "ca"
-
 	secretList := &corev1.SecretList{
 		Items: []corev1.Secret{{
 			ObjectMeta: metav1.ObjectMeta{},
 			Data: map[string][]byte{
-				caCertKey:    []byte(caCert),
-				caPrivKeyKey: []byte(caPrivKey),
+				caCertKey:    []byte(caPem),
+				caPrivKeyKey: []byte(caPrivPem),
 			},
 			Type: "Opaque",
 		}},
 	}
 
+	caCert, err := pem.DecodeCertificate([]byte(caPem))
+	assert.NoError(t, err)
+	caPrivKey, err := pem.DecodeKey([]byte(caPrivPem))
+	assert.NoError(t, err)
+
+	dbCurrent.EXPECT().SetCertificate(caCert).Times(1)
+	dbCurrent.EXPECT().SetCertificateKey(caPrivKey).Times(1)
 	k8sClient.EXPECT().ListSecrets(namespace, nodeLabels).Times(1).Return(secretList, nil)
 
 	queried := map[string]interface{}{}
@@ -216,7 +220,5 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 	assert.NotNil(t, ensure)
 
 	assert.NoError(t, ensure(k8sClient))
-	assert.Equal(t, caCert, dbCurrent.GetCertificate())
-	assert.Equal(t, caPrivKey, dbCurrent.GetCertificateKey())
 
 }
