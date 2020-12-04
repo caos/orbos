@@ -1,24 +1,27 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"math"
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
 )
 
 func main() {
 
-	args := os.Args[1:]
+	listen := flag.String("listen", "", "Proxy health checks at this listen address")
+	protocol := flag.String("protocol", "", "HTTP or HTTPS")
+	ip := flag.String("ip", "", "Target IP")
+	port := flag.Int("port", 0, "Target Port")
+	path := flag.String("path", "", "Target Path")
+	status := flag.Int("status", 0, "Expected response status")
+	proxy := flag.Bool("proxy", false, "Test a proxy protocol using endpoint")
 
-	location := ""
-	if args[0] == "--http" {
-		location = args[1]
-		args = args[2:]
-	}
+	flag.Parse()
 
 	defer func() {
 		err := recover()
@@ -28,63 +31,33 @@ func main() {
 		}
 	}()
 
-	if len(args) < 1 {
-		panic("No arguments")
+	if *port > math.MaxUint16 {
+		panic(fmt.Errorf("max port allowed: %d", math.MaxUint16))
 	}
 
-	if location == "" {
-		messages, err := executeChecks(args)
+	listenVal := *listen
+	if listenVal == "" {
+		msg, err := helpers.Check(*protocol, *ip, uint16(*port), *path, *status, *proxy)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf(messages)
+		fmt.Printf(msg)
 		os.Exit(0)
 	}
 
-	pathStart := strings.Index(location, "/")
-	listen := location[0:pathStart]
-	path := location[pathStart:]
-	http.HandleFunc(path, func(writer http.ResponseWriter, request *http.Request) {
-		messages, err := executeChecks(args)
+	pathStart := strings.Index(listenVal, "/")
+	serve := listenVal[0:pathStart]
+	servePath := listenVal[pathStart:]
+	http.HandleFunc(servePath, func(writer http.ResponseWriter, request *http.Request) {
+		msg, err := helpers.Check(*protocol, *ip, uint16(*port), *path, *status, *proxy)
 		if err != nil {
 			writer.WriteHeader(http.StatusServiceUnavailable)
 		}
-		writer.Write([]byte(messages))
+		writer.Write([]byte(msg))
 		request.Body.Close()
 	})
-	fmt.Printf("Serving healthchecks at %s", location)
-	if err := http.ListenAndServe(listen, nil); err != nil {
+	fmt.Printf("Serving healthchecks at %s", listenVal)
+	if err := http.ListenAndServe(serve, nil); err != nil {
 		panic(err)
 	}
-}
-
-func executeChecks(args []string) (string, error) {
-	messages := ""
-	var err error
-	var wg sync.WaitGroup
-
-	for argument := range toChan(args) {
-		wg.Add(1)
-		go func(arg string) {
-			msg, goErr := check(arg)
-			err = helpers.Concat(err, goErr)
-			messages += msg + "\n"
-			wg.Done()
-		}(argument)
-	}
-
-	wg.Wait()
-
-	return messages, err
-}
-
-func toChan(args []string) <-chan string {
-	ch := make(chan string)
-	go func() {
-		for _, arg := range args {
-			ch <- arg
-		}
-		close(ch)
-	}()
-	return ch
 }

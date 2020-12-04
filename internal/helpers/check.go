@@ -4,61 +4,66 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"github.com/pires/go-proxyproto"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/pires/go-proxyproto"
+
 	"github.com/AppsFlyer/go-sundheit/checks"
 	"github.com/pkg/errors"
 )
 
-func CheckProxy(url string, status int, header *proxyproto.Header) (string, error) {
-	target, err := net.ResolveTCPAddr("tcp", header.DestinationAddr.String())
-	if err != nil {
-		return "", err
+func Check(protocol string, ip string, port uint16, path string, status int, proxyProdocol bool) (string, error) {
+
+	ipPort := fmt.Sprintf("%s:%d", ip, port)
+	if protocol == "tcp" {
+		return check(checks.NewPingCheck("tcp", checks.NewDialPinger("tcp", ipPort), 2*time.Second))
+	}
+	if path != "" && !strings.HasPrefix(path, "/") {
+		path = "/" + path
 	}
 
-	dialContextFunc := func(ctx context.Context, network, addr string) (net.Conn, error) {
-		conn, err := net.DialTCP("tcp", nil, target)
-		if err != nil {
-			return nil, err
-		}
+	url := fmt.Sprintf("%s://%s%s", protocol, ipPort, path)
 
-		_, err = header.WriteTo(conn)
-		if err != nil {
-			return nil, err
-		}
-		return conn, nil
-	}
-
-	return check(checks.NewHTTPCheck(checks.HTTPCheckConfig{
-		CheckName:      "http",
-		Timeout:        1 * time.Second,
-		URL:            url,
-		ExpectedStatus: status,
-		Options: []checks.RequestOption{func(r *http.Request) {
-			r.Close = true
-		}},
-		Client: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					// Insecure health checks are ok
-					InsecureSkipVerify: true,
-				},
-				DisableKeepAlives: true,
-				DialContext:       dialContextFunc,
-			},
+	roundTripper := &http.Transport{
+		TLSClientConfig: &tls.Config{
+			// Insecure health checks are ok
+			InsecureSkipVerify: true,
 		},
-	}))
-}
+		DisableKeepAlives: true,
+	}
 
-func Check(url string, status int) (string, error) {
+	if proxyProdocol {
+		roundTripper.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 
-	urlParts := strings.Split(url, "://")
-	if urlParts[0] == "tcp" {
-		return check(checks.NewPingCheck("tcp", checks.NewDialPinger("tcp", urlParts[1]), 2*time.Second))
+			target := &net.TCPAddr{
+				IP:   net.ParseIP(ip),
+				Port: int(port),
+			}
+
+			conn, err := net.DialTCP("tcp", nil, target)
+			if err != nil {
+				return nil, err
+			}
+
+			header := &proxyproto.Header{
+				Version:           1,
+				Command:           proxyproto.PROXY,
+				TransportProtocol: proxyproto.TCPv4,
+				SourceAddr: &net.TCPAddr{
+					IP:   net.ParseIP("10.1.1.1"),
+					Port: 1000,
+				},
+				DestinationAddr: target,
+			}
+			if _, err := header.WriteTo(conn); err != nil {
+				return nil, err
+			}
+
+			return conn, nil
+		}
 	}
 
 	return check(checks.NewHTTPCheck(checks.HTTPCheckConfig{
@@ -70,13 +75,7 @@ func Check(url string, status int) (string, error) {
 			r.Close = true
 		}},
 		Client: &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{
-					// Insecure health checks are ok
-					InsecureSkipVerify: true,
-				},
-				DisableKeepAlives: true,
-			},
+			Transport: roundTripper,
 		},
 	}))
 }
