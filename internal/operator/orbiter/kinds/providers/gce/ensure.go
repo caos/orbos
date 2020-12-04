@@ -93,7 +93,7 @@ func query(
 						lb.healthcheck.gce.RequestPath)
 
 					value := fmt.Sprintf(
-						"--protocol %s --ip %s --port %d --path %s --status %d --proxy %t",
+						"--protocol %s --ip %s --port %d --path %s --status %d --proxy=%t",
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
 						internalPort(lb),

@@ -25,8 +25,6 @@ func Check(protocol string, ip string, port uint16, path string, status int, pro
 		path = "/" + path
 	}
 
-	url := fmt.Sprintf("%s://%s%s", protocol, ipPort, path)
-
 	roundTripper := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			// Insecure health checks are ok
@@ -69,7 +67,7 @@ func Check(protocol string, ip string, port uint16, path string, status int, pro
 	return check(checks.NewHTTPCheck(checks.HTTPCheckConfig{
 		CheckName:      "http",
 		Timeout:        1 * time.Second,
-		URL:            url,
+		URL:            fmt.Sprintf("%s://%s%s", protocol, ipPort, path),
 		ExpectedStatus: status,
 		Options: []checks.RequestOption{func(r *http.Request) {
 			r.Close = true
