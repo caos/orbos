@@ -74,6 +74,9 @@ func Check(protocol string, ip string, port uint16, path string, status int, pro
 		}},
 		Client: &http.Client{
 			Transport: roundTripper,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
 		},
 	}))
 }
