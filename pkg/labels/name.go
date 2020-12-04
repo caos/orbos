@@ -6,6 +6,7 @@ var _ Labels = (*Name)(nil)
 
 type Name struct {
 	model InternalName
+	*Component
 }
 
 type InternalNameProp struct {
@@ -21,10 +22,13 @@ func ForName(l *Component, name string) (*Name, error) {
 	if name == "" {
 		return nil, errors.New("name must not be nil")
 	}
-	return &Name{model: InternalName{
-		InternalNameProp:  InternalNameProp{Name: name},
-		InternalComponent: l.model,
-	}}, nil
+	return &Name{
+		Component: l,
+		model: InternalName{
+			InternalNameProp:  InternalNameProp{Name: name},
+			InternalComponent: l.model,
+		},
+	}, nil
 }
 
 func MustForName(l *Component, name string) *Name {

@@ -6,6 +6,7 @@ var _ Labels = (*Selectable)(nil)
 
 type Selectable struct {
 	model InternalSelectable
+	*Name
 }
 
 type InternalSelectProp struct {
@@ -18,10 +19,13 @@ type InternalSelectable struct {
 }
 
 func AsSelectable(l *Name) *Selectable {
-	return &Selectable{model: InternalSelectable{
-		InternalSelectProp: selectProperty,
-		InternalName:       l.model,
-	}}
+	return &Selectable{
+		Name: l,
+		model: InternalSelectable{
+			InternalSelectProp: selectProperty,
+			InternalName:       l.model,
+		},
+	}
 }
 
 func (l *Selectable) Equal(r comparable) bool {
@@ -33,4 +37,12 @@ func (l *Selectable) Equal(r comparable) bool {
 
 func (l *Selectable) MarshalYAML() (interface{}, error) {
 	return l.model, nil
+}
+
+func MustForNameAsSelectableK8SMap(l *Component, name string) map[string]string {
+	return MustK8sMap(AsSelectable(MustForName(l, name)))
+}
+
+func MustForNameK8SMap(l *Component, name string) map[string]string {
+	return MustK8sMap(MustForName(l, name))
 }

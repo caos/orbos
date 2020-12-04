@@ -6,25 +6,20 @@ var _ Labels = (*Component)(nil)
 
 type Component struct {
 	model InternalComponent
-}
-
-type InternalComponentProp struct {
-	Component string `yaml:"app.kubernetes.io/component"`
-}
-
-type InternalComponent struct {
-	InternalComponentProp `yaml:",inline"`
-	InternalAPI           `yaml:",inline"`
+	*API
 }
 
 func ForComponent(l *API, component string) (*Component, error) {
 	if component == "" {
 		return nil, errors.New("component must not be nil")
 	}
-	return &Component{model: InternalComponent{
-		InternalComponentProp: InternalComponentProp{Component: component},
-		InternalAPI:           l.model,
-	}}, nil
+	return &Component{
+		API: l,
+		model: InternalComponent{
+			InternalComponentProp: InternalComponentProp{Component: component},
+			InternalAPI:           l.model,
+		},
+	}, nil
 }
 
 func MustForComponent(l *API, component string) *Component {
@@ -44,4 +39,13 @@ func (l *Component) Equal(r comparable) bool {
 
 func (l *Component) MarshalYAML() (interface{}, error) {
 	return nil, errors.New("type *labels.Component is not serializable")
+}
+
+type InternalComponentProp struct {
+	Component string `yaml:"app.kubernetes.io/component"`
+}
+
+type InternalComponent struct {
+	InternalComponentProp `yaml:",inline"`
+	InternalAPI           `yaml:",inline"`
 }

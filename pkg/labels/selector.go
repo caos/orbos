@@ -4,6 +4,7 @@ var _ Labels = (*Selector)(nil)
 
 type Selector struct {
 	model InternalSelector
+	*Name
 }
 
 type InternalSelector struct {
@@ -16,6 +17,7 @@ type InternalSelector struct {
 
 func DeriveSelector(l *Name, open bool) *Selector {
 	selector := &Selector{
+		Name: l,
 		model: InternalSelector{
 			InternalSelectProp:    selectProperty,
 			InternalComponentProp: l.model.InternalComponentProp,

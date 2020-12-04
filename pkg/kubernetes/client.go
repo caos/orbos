@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -417,21 +419,27 @@ func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error 
 
 func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
-	create := func() error {
+	return c.apply("statefulset", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
-	}
-	return c.apply("statefulset", rsc.GetName(), create, func() error {
+	}, func() error {
 		sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		recreate := func() error {
+
+			stsSelector := &labels.Name{}
+			rscSelector := &labels.Name{}
+			if stsSelector.Major() <= rscSelector.Major() {
+				return errors.New("only recreating statefulset when orbos version is breaking")
+			}
+
 			if err := c.DeleteStatefulset(rsc.GetNamespace(), rsc.GetName()); err != nil {
 				return err
 			}
-			return create()
+			return &recreateErr{}
 		}
 
 		stsSelector := sts.Spec.Selector.MatchLabels
@@ -446,13 +454,11 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 			}
 		}
 
-		if sts.GetName() == rsc.GetName() && sts.GetNamespace() == rsc.GetNamespace() {
-			_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
-			return err
-		}
-		return nil
+		_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+		return err
 	})
 }
+
 func (c *Client) DeleteStatefulset(namespace, name string) error {
 	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
@@ -667,7 +673,12 @@ func (c *Client) DeleteClusterRoleBinding(name string) error {
 	return c.set.RbacV1().ClusterRoleBindings().Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
+type recreateErr struct{}
+
+func (r *recreateErr) Error() string { return "recreate" }
+
 func (c *Client) apply(object, name string, create func() error, update func() error) (err error) {
+
 	defer func() {
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
 	}()
@@ -677,8 +688,8 @@ func (c *Client) apply(object, name string, create func() error, update func() e
 	}
 
 	err = update()
-	reason := macherrs.ReasonForError(err)
-	if err == nil || (reason != "" && !macherrs.IsNotFound(err)) {
+	_, recreate := err.(*recreateErr)
+	if err == nil || (!macherrs.IsNotFound(err) && !recreate) {
 		return err
 	}
 	return create()
