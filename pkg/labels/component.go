@@ -1,12 +1,16 @@
 package labels
 
-import "errors"
+import (
+	"errors"
+
+	"gopkg.in/yaml.v3"
+)
 
 var _ Labels = (*Component)(nil)
 
 type Component struct {
 	model InternalComponent
-	*API
+	base  *API
 }
 
 func ForComponent(l *API, component string) (*Component, error) {
@@ -14,12 +18,20 @@ func ForComponent(l *API, component string) (*Component, error) {
 		return nil, errors.New("component must not be nil")
 	}
 	return &Component{
-		API: l,
+		base: l,
 		model: InternalComponent{
 			InternalComponentProp: InternalComponentProp{Component: component},
 			InternalAPI:           l.model,
 		},
 	}, nil
+}
+
+func (l *Component) UnmarshalYAML(node *yaml.Node) error {
+	if err := node.Decode(&l.model); err != nil {
+		return err
+	}
+	l.base = &API{}
+	return node.Decode(l.base)
 }
 
 func MustForComponent(l *API, component string) *Component {
@@ -28,6 +40,10 @@ func MustForComponent(l *API, component string) *Component {
 		panic(err)
 	}
 	return c
+}
+
+func (l *Component) Major() int8 {
+	return l.base.Major()
 }
 
 func (l *Component) Equal(r comparable) bool {

@@ -1,12 +1,16 @@
 package labels
 
-import "errors"
+import (
+	"errors"
+
+	"gopkg.in/yaml.v3"
+)
 
 var _ Labels = (*Name)(nil)
 
 type Name struct {
 	model InternalName
-	*Component
+	base  *Component
 }
 
 type InternalNameProp struct {
@@ -23,12 +27,21 @@ func ForName(l *Component, name string) (*Name, error) {
 		return nil, errors.New("name must not be nil")
 	}
 	return &Name{
-		Component: l,
+		base: l,
 		model: InternalName{
 			InternalNameProp:  InternalNameProp{Name: name},
 			InternalComponent: l.model,
 		},
 	}, nil
+}
+
+func NameFrom(arbitrary map[string]string) (*Name, error) {
+	intermediate, err := yaml.Marshal(arbitrary)
+	if err != nil {
+		panic(err)
+	}
+	n := &Name{}
+	return n, yaml.Unmarshal(intermediate, n)
 }
 
 func MustForName(l *Component, name string) *Name {
@@ -37,6 +50,10 @@ func MustForName(l *Component, name string) *Name {
 		panic(err)
 	}
 	return n
+}
+
+func (l *Name) Major() int8 {
+	return l.base.Major()
 }
 
 func (l *Name) Equal(r comparable) bool {
@@ -48,4 +65,12 @@ func (l *Name) Equal(r comparable) bool {
 
 func (l *Name) MarshalYAML() (interface{}, error) {
 	return l.model, nil
+}
+
+func (l *Name) UnmarshalYAML(node *yaml.Node) error {
+	if err := node.Decode(&l.model); err != nil {
+		return err
+	}
+	l.base = &Component{}
+	return node.Decode(l.base)
 }

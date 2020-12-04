@@ -1,6 +1,10 @@
 package labels
 
-import "errors"
+import (
+	"errors"
+
+	"gopkg.in/yaml.v3"
+)
 
 var (
 	_ Labels = (*API)(nil)
@@ -8,7 +12,7 @@ var (
 
 type API struct {
 	model InternalAPI
-	*Operator
+	base  *Operator
 }
 
 func ForAPI(l *Operator, kind, version string) (*API, error) {
@@ -17,7 +21,7 @@ func ForAPI(l *Operator, kind, version string) (*API, error) {
 	}
 
 	return &API{
-		Operator: l,
+		base: l,
 		model: InternalAPI{
 			Kind:             kind,
 			ApiVersion:       version,
@@ -34,6 +38,18 @@ func MustForAPI(l *Operator, kind, version string) *API {
 	return a
 }
 
+func (l *API) UnmarshalYAML(node *yaml.Node) error {
+	if err := node.Decode(&l.model); err != nil {
+		return err
+	}
+	l.base = &Operator{}
+	return node.Decode(l.base)
+}
+
+func (l *API) Major() int8 {
+	return l.base.Major()
+}
+
 func (l *API) Equal(r comparable) bool {
 	if right, ok := r.(*API); ok {
 		return l.model == right.model
@@ -46,7 +62,7 @@ func (l *API) MarshalYAML() (interface{}, error) {
 }
 
 type InternalAPI struct {
-	Kind             string `yaml:"orbos.ch/kind"`
-	ApiVersion       string `yaml:"orbos.ch/apiversion"`
+	Kind             string `yaml:"caos.ch/kind"`
+	ApiVersion       string `yaml:"caos.ch/apiversion"`
 	InternalOperator `yaml:",inline"`
 }

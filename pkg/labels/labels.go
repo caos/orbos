@@ -7,15 +7,10 @@ import (
 type Labels interface {
 	comparable
 	yaml.Marshaler
+	yaml.Unmarshaler
 	Major() int8
-	//	internalModel() internalModel
 }
 
-/*
-type internalModel interface {
-	major() int8
-}
-*/
 type comparable interface {
 	Equal(comparable) bool
 }
@@ -32,19 +27,6 @@ func MustK8sMap(l Labels) map[string]string {
 	return m
 }
 
-/*
-func MustBreak(old Labels, new Labels) {
-
-	newModel := new.internalModel()
-	oldModel := old.internalModel()
-
-	if newModel.major() <= oldModel.major() {
-		fmt.Printf("old labels: %s\n", mustToString(oldModel))
-		fmt.Printf("new labels: %s\n", mustToString(newModel))
-		panic("labels are not breaking")
-	}
-}
-*/
 func toMapOfStrings(sth interface{}) (map[string]string, error) {
 	someBytes, err := yaml.Marshal(sth)
 	if err != nil {
@@ -53,19 +35,3 @@ func toMapOfStrings(sth interface{}) (map[string]string, error) {
 	mapOfStrings := make(map[string]string)
 	return mapOfStrings, yaml.Unmarshal(someBytes, mapOfStrings)
 }
-
-/*
-func mustToString(model internalModel) string {
-
-	m, err := toMapOfStrings(model)
-	if err != nil {
-		panic(err)
-	}
-
-	var out string
-	for key, value := range m {
-		out = fmt.Sprintf("%s %s=%s", out, key, value)
-	}
-	return strings.TrimSpace(out)
-}
-*/

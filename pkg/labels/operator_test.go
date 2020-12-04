@@ -17,7 +17,7 @@ func expectValidOperatorLabels(t *testing.T, operator, version string) *labels.O
 }
 
 func validOperatorLabels(t *testing.T) *labels.Operator {
-	return expectValidOperatorLabels(t, "TEST_OPERATOR_LABELS", "testing-dev")
+	return expectValidOperatorLabels(t, "TEST_OPERATOR_LABELS", "v123.4.5")
 }
 
 func TestOperatorLabels_Equal(t *testing.T) {

@@ -1,12 +1,14 @@
 package labels
 
+import "gopkg.in/yaml.v3"
+
 var selectProperty = InternalSelectProp{Select: true}
 
 var _ Labels = (*Selectable)(nil)
 
 type Selectable struct {
 	model InternalSelectable
-	*Name
+	base  *Name
 }
 
 type InternalSelectProp struct {
@@ -20,12 +22,24 @@ type InternalSelectable struct {
 
 func AsSelectable(l *Name) *Selectable {
 	return &Selectable{
-		Name: l,
+		base: l,
 		model: InternalSelectable{
 			InternalSelectProp: selectProperty,
 			InternalName:       l.model,
 		},
 	}
+}
+
+func (l *Selectable) UnmarshalYAML(node *yaml.Node) error {
+	if err := node.Decode(&l.model); err != nil {
+		return err
+	}
+	l.base = &Name{}
+	return node.Decode(l.base)
+}
+
+func (l *Selectable) Major() int8 {
+	return l.base.Major()
 }
 
 func (l *Selectable) Equal(r comparable) bool {

@@ -5,6 +5,8 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+
+	"gopkg.in/yaml.v3"
 )
 
 var _ Labels = (*Operator)(nil)
@@ -23,7 +25,12 @@ func ForOperator(product, operator, version string) (*Operator, error) {
 		Version:               version,
 		InternalPartofProp:    InternalPartofProp{PartOf: product},
 		InternalManagedByProp: InternalManagedByProp{ManagedBy: operator},
+		Major:                 major(version),
 	}}, nil
+}
+
+func (l *Operator) UnmarshalYAML(node *yaml.Node) error {
+	return node.Decode(&l.model)
 }
 
 func MustForOperator(product, operator, version string) *Operator {
@@ -46,21 +53,7 @@ func (l *Operator) MarshalYAML() (interface{}, error) {
 }
 
 func (l *Operator) Major() int8 {
-	versionRegex := regexp.MustCompile("^v([0-9]+)\\.[0-9]+\\.[0-9]+$")
-	matches := versionRegex.FindStringSubmatch(l.model.Version)
-	if len(matches) != 2 {
-		return -1
-	}
-	m, err := strconv.Atoi(matches[1])
-	if err != nil {
-		return -1
-	}
-
-	if m > math.MaxInt8 {
-		return -1
-	}
-
-	return int8(m)
+	return l.model.Major
 }
 
 type InternalPartofProp struct {
@@ -74,5 +67,25 @@ type InternalManagedByProp struct {
 type InternalOperator struct {
 	InternalManagedByProp `yaml:",inline"`
 	Version               string `yaml:"app.kubernetes.io/version"`
+	Major                 int8   `yaml:"caos.ch/major"`
 	InternalPartofProp    `yaml:",inline"`
+}
+
+func major(version string) int8 {
+	versionRegex := regexp.MustCompile("^v([0-9]+)\\.[0-9]+\\.[0-9]+$")
+	matches := versionRegex.FindStringSubmatch(version)
+	if len(matches) != 2 {
+		return -1
+	}
+
+	m, err := strconv.Atoi(matches[1])
+	if err != nil {
+		return -1
+	}
+
+	if m > math.MaxInt8 {
+		return -1
+	}
+
+	return int8(m)
 }
