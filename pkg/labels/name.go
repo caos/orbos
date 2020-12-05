@@ -52,6 +52,10 @@ func MustForName(l *Component, name string) *Name {
 	return n
 }
 
+func (l *Name) Name() string {
+	return l.model.Name
+}
+
 func (l *Name) Major() int8 {
 	return l.base.Major()
 }

@@ -179,7 +179,7 @@ type File struct {
 
 func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 	resources := c.set.CoreV1().Namespaces()
-	return c.apply("namespace", rsc.GetName(), func() error {
+	return c.applyResource("namespace", rsc.GetName(), func() error {
 
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
@@ -221,7 +221,7 @@ func (c *Client) GetDeployment(namespace, name string) (*apps.Deployment, error)
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
-	return c.apply("deployment", rsc.GetName(), func() error {
+	return c.applyResource("deployment", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -272,7 +272,7 @@ func (c *Client) WaitUntilDeploymentReady(namespace string, name string, contain
 
 func (c *Client) ApplyService(rsc *core.Service) error {
 	resources := c.set.CoreV1().Services(rsc.GetNamespace())
-	return c.apply("service", rsc.GetName(), func() error {
+	return c.applyResource("service", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -297,7 +297,7 @@ func (c *Client) GetJob(namespace, name string) (*batch.Job, error) {
 
 func (c *Client) ApplyJob(rsc *batch.Job) error {
 	resources := c.set.BatchV1().Jobs(rsc.Namespace)
-	return c.apply("job", rsc.GetName(), func() error {
+	return c.applyResource("job", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -371,7 +371,7 @@ func (c *Client) DeleteJob(namespace string, name string) error {
 
 func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
 	resources := c.set.BatchV1beta1().CronJobs(rsc.Namespace)
-	return c.apply("cronjob", rsc.GetName(), func() error {
+	return c.applyResource("cronjob", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -397,7 +397,7 @@ func (c *Client) ListPods(namespace string, labels map[string]string) (*core.Pod
 
 func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error {
 	resources := c.set.PolicyV1beta1().PodDisruptionBudgets(rsc.Namespace)
-	return c.apply("poddisruptionbudget", rsc.GetName(), func() error {
+	return c.applyResource("poddisruptionbudget", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -419,44 +419,83 @@ func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error 
 
 func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
-	return c.apply("statefulset", rsc.GetName(), func() error {
-		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+	rscLabels, err := labels.NameFrom(rsc.Labels)
+	if err != nil {
 		return err
-	}, func() error {
-		sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
-		if err != nil {
-			return err
-		}
+	}
 
-		recreate := func() error {
+	rscSelector, err := labels.SelectorFrom(rsc.Spec.Selector.MatchLabels)
+	if err != nil {
+		return err
+	}
 
-			stsSelector := &labels.Name{}
-			rscSelector := &labels.Name{}
-			if stsSelector.Major() <= rscSelector.Major() {
-				return errors.New("only recreating statefulset when orbos version is breaking")
+	return c.applyController(
+		"statefulset",
+		rscLabels,
+		rscSelector,
+		func() (*labels.Name, *labels.Selector, error) {
+			sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+			if err != nil {
+				return nil, nil, err
 			}
 
-			if err := c.DeleteStatefulset(rsc.GetNamespace(), rsc.GetName()); err != nil {
+			stsLabels, err := labels.NameFrom(sts.Labels)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			stsSelector, err := labels.SelectorFrom(sts.Spec.Selector.MatchLabels)
+			return stsLabels, stsSelector, err
+		},
+		func() error {
+			_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+			return err
+		},
+		func() error {
+			_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		},
+		func() error {
+			return c.DeleteStatefulset(rsc.GetNamespace(), rsc.GetName())
+		},
+	)
+}
+
+// object, create func() error, update func() error
+func (c *Client) applyController(
+	resourceType string,
+	newNameLabels *labels.Name,
+	newSelector *labels.Selector,
+	getCurrentLabelsFunc func() (*labels.Name, *labels.Selector, error),
+	createResource func() error,
+	updateResource func() error,
+	deleteResource func() error) error {
+
+	return c.applyResource(
+		resourceType,
+		newNameLabels.Name(),
+		createResource,
+		func() error {
+
+			currentLabels, currentSelector, err := getCurrentLabelsFunc()
+			if err != nil {
+				return err
+			}
+
+			if newSelector.Equal(currentSelector) {
+				return updateResource()
+			}
+
+			if currentLabels.Major() <= newNameLabels.Major() {
+				return errors.New("only recreating statefulset when operator version is breaking")
+			}
+
+			if err := deleteResource(); err != nil {
 				return err
 			}
 			return &recreateErr{}
-		}
-
-		stsSelector := sts.Spec.Selector.MatchLabels
-		rscSelector := rsc.Spec.Selector.MatchLabels
-		if len(stsSelector) != len(rscSelector) {
-			return recreate()
-		}
-
-		for rscKey, rscValue := range rscSelector {
-			if stsValue, ok := stsSelector[rscKey]; !ok || stsValue != rscValue {
-				return recreate()
-			}
-		}
-
-		_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
-		return err
-	})
+		},
+	)
 }
 
 func (c *Client) DeleteStatefulset(namespace, name string) error {
@@ -498,7 +537,7 @@ func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, cont
 
 func (c *Client) ApplySecret(rsc *core.Secret) error {
 	resources := c.set.CoreV1().Secrets(rsc.GetNamespace())
-	return c.apply("secret", rsc.GetName(), func() error {
+	return c.applyResource("secret", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -542,7 +581,7 @@ func (c *Client) GetConfigMap(namespace, name string) (*core.ConfigMap, error) {
 
 func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 	resources := c.set.CoreV1().ConfigMaps(rsc.GetNamespace())
-	return c.apply("secret", rsc.GetName(), func() error {
+	return c.applyResource("secret", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -582,7 +621,7 @@ func (c *Client) WaitForConfigMap(namespace string, name string, timeoutSeconds 
 
 func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 	resources := c.set.CoreV1().ServiceAccounts(rsc.Namespace)
-	return c.apply("serviceaccount", rsc.GetName(), func() error {
+	return c.applyResource("serviceaccount", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -616,7 +655,7 @@ func (c *Client) DeleteServiceAccount(namespace, name string) error {
 
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
 	resources := c.set.RbacV1().Roles(rsc.Namespace)
-	return c.apply("role", rsc.GetName(), func() error {
+	return c.applyResource("role", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -630,7 +669,7 @@ func (c *Client) DeleteRole(namespace, name string) error {
 
 func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
 	resources := c.set.RbacV1().ClusterRoles()
-	return c.apply("clusterrole", rsc.GetName(), func() error {
+	return c.applyResource("clusterrole", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -645,7 +684,7 @@ func (c *Client) DeleteClusterRole(name string) error {
 
 func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
 	resources := c.set.RbacV1().RoleBindings(rsc.Namespace)
-	return c.apply("rolebinding", rsc.GetName(), func() error {
+	return c.applyResource("rolebinding", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -660,7 +699,7 @@ func (c *Client) DeleteRoleBinding(namespace, name string) error {
 
 func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
 	resources := c.set.RbacV1().ClusterRoleBindings()
-	return c.apply("clusterrolebinding", rsc.GetName(), func() error {
+	return c.applyResource("clusterrolebinding", rsc.GetName(), func() error {
 		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
 		return err
 	}, func() error {
@@ -677,7 +716,7 @@ type recreateErr struct{}
 
 func (r *recreateErr) Error() string { return "recreate" }
 
-func (c *Client) apply(object, name string, create func() error, update func() error) (err error) {
+func (c *Client) applyResource(object, name string, create func() error, update func() error) (err error) {
 
 	defer func() {
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
@@ -1196,7 +1235,7 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	}
 	err = nil
 
-	return c.apply("crd", name, func() error {
+	return c.applyResource("crd", name, func() error {
 		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
 		return err
 	}, func() error {

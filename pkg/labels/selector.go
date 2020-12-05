@@ -35,6 +35,15 @@ func DeriveSelector(l *Name, open bool) *Selector {
 	return selector
 }
 
+func SelectorFrom(arbitrary map[string]string) (*Selector, error) {
+	intermediate, err := yaml.Marshal(arbitrary)
+	if err != nil {
+		panic(err)
+	}
+	s := &Selector{}
+	return s, yaml.Unmarshal(intermediate, s)
+}
+
 func (l *Selector) Major() int8 {
 	return l.base.Major()
 }
