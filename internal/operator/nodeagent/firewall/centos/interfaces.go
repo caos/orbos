@@ -6,7 +6,15 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func getEnsureInterfaces(monitor mntr.Monitor, zoneName string, current *common.ZoneDesc, desired common.Firewall) ([]string, error) {
+func getEnsureInterfaces(
+	monitor mntr.Monitor,
+	zoneName string,
+	current *common.ZoneDesc,
+	desired common.Firewall,
+) (
+	[]string,
+	error,
+) {
 	ensureIfaces := make([]string, 0)
 
 	ifaces, err := getInterfaces(monitor, zoneName)

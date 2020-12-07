@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
+	"github.com/caos/orbos/internal/operator/nodeagent/networking"
 	"os"
 	"strings"
 	"time"
@@ -90,6 +91,7 @@ func main() {
 		gitCommit,
 		*nodeAgentID,
 		firewall.Ensurer(monitor, os.OperatingSystem, portsSlice),
+		networking.Ensurer(monitor, os.OperatingSystem),
 		conv,
 		conv.Init())
 

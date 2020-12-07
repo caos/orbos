@@ -15,9 +15,9 @@ import (
 )
 
 func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.Current, func() error, error) {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.FirewallCurrent, func() error, error) {
 		ensurers := make([]func() error, 0)
-		current := make(common.Current, 0)
+		current := make(common.FirewallCurrent, 0)
 
 		if desired.Zones == nil {
 			desired.Zones = make(map[string]*common.Zone, 0)

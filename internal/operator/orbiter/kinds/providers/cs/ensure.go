@@ -63,6 +63,19 @@ func query(
 			return err
 		}
 
+		hostPoolsIPs := make(map[string][]string, 0)
+		for name, vips := range hostPools {
+			hostPoolsIPs[name] = []string{}
+			for _, ip := range vips {
+				hostPoolsIPs[name] = append(hostPoolsIPs[name], ip.IP)
+			}
+		}
+
+		_, err = core.DesireOSNetworking(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, "dummy", hostPoolsIPs)
+		if err != nil {
+			return err
+		}
+
 		return ensureServer(context, current, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
@@ -89,7 +102,21 @@ func query(
 				if err != nil {
 					return err
 				}
-				done = lbDone && fwDone
+
+				hostPoolsIPs := make(map[string][]string, 0)
+				for name, vips := range hostPools {
+					hostPoolsIPs[name] = []string{}
+					for _, ip := range vips {
+						hostPoolsIPs[name] = append(hostPoolsIPs[name], ip.IP)
+					}
+				}
+
+				nwDone, err := core.DesireOSNetworking(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, "dummy", hostPoolsIPs)
+				if err != nil {
+					return err
+				}
+
+				done = lbDone && fwDone && nwDone
 				return nil
 			},
 		})())

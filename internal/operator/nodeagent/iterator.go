@@ -34,9 +34,18 @@ func RepoKey() ([]byte, error) {
 	return key, err
 }
 
-func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
+func Iterator(
+	monitor mntr.Monitor,
+	gitClient *git.Client,
+	nodeAgentCommit string,
+	id string,
+	firewallEnsurer FirewallEnsurer,
+	networkingEnsurer NetworkingEnsurer,
+	conv Converter,
+	before func() error,
+) func() {
 
-	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, conv)
+	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, networkingEnsurer, conv)
 
 	return func() {
 

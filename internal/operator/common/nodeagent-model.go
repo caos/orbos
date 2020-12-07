@@ -15,6 +15,7 @@ type NodeAgentSpec struct {
 	ChangesAllowed bool
 	//	RebootEnabled  bool
 	Software       *Software
+	Networking     *Networking
 	Firewall       *Firewall
 	RebootRequired time.Time
 }
@@ -22,7 +23,8 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        Current
+	Open        FirewallCurrent
+	Networking  NetworkingCurrent
 	Commit      string
 	Booted      time.Time
 }
@@ -131,6 +133,155 @@ func PackageEquals(this, that Package) bool {
 	return equals
 }
 
+const (
+	interfacePrefix = "dummy"
+)
+
+type Networking struct {
+	mux        sync.Mutex `yaml:"-"`
+	Interfaces map[string]*NetworkingInterface
+}
+
+type NetworkingInterface struct {
+	Type string
+	IPs  MarshallableSlice
+}
+
+type NetworkingCurrent []*NetworkingInterfaceCurrent
+
+type NetworkingInterfaceCurrent struct {
+	Name string
+	IPs  MarshallableSlice
+}
+
+func (n *Networking) Merge(nw Networking) {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	if n.Interfaces == nil {
+		n.Interfaces = make(map[string]*NetworkingInterface, 0)
+	}
+
+	if nw.Interfaces == nil {
+		return
+	}
+
+	for name, iface := range nw.Interfaces {
+		if iface == nil {
+			continue
+		}
+		current, ok := n.Interfaces[name]
+		if !ok || current == nil {
+			current = &NetworkingInterface{}
+		}
+
+		current.Type = iface.Type
+
+		if iface.IPs != nil {
+			if current.IPs == nil {
+				current.IPs = make(MarshallableSlice, 0)
+			}
+
+			for _, value := range iface.IPs {
+				found := false
+				for _, currentValue := range current.IPs {
+					if currentValue == value {
+						found = true
+					}
+				}
+				if !found {
+					current.IPs = append(current.IPs, value)
+				}
+			}
+		}
+	}
+}
+
+func (n *Networking) ToCurrent() NetworkingCurrent {
+	current := make(NetworkingCurrent, 0)
+	if n.Interfaces == nil {
+		return current
+	}
+
+	for name, iface := range n.Interfaces {
+		if iface != nil {
+			current = append(current, &NetworkingInterfaceCurrent{
+				Name: name,
+				IPs:  iface.IPs,
+			})
+		}
+	}
+	current.Sort()
+	return current
+}
+
+func (c NetworkingCurrent) Sort() {
+	sort.Slice(c, func(i, j int) bool {
+		return c[i].Name < c[j].Name
+	})
+
+	for _, currentEntry := range c {
+		sort.Slice(currentEntry.IPs, func(i, j int) bool {
+			return currentEntry.IPs[i] < currentEntry.IPs[j]
+		})
+	}
+}
+
+func (n Networking) IsContainedIn(interfaces NetworkingCurrent) bool {
+	if n.Interfaces == nil || len(n.Interfaces) == 0 {
+		return true
+	}
+	if interfaces == nil || len(interfaces) == 0 {
+		return false
+	}
+
+	for name, iface := range n.Interfaces {
+		if iface.IPs == nil || len(iface.IPs) == 0 {
+			continue
+		}
+
+		foundIface := false
+		for _, currentInterface := range interfaces {
+			if currentInterface == nil {
+				continue
+			}
+
+			if foundIface {
+				break
+			}
+
+			if currentInterface.Name == name {
+				foundIface = true
+
+				if currentInterface.IPs == nil || len(currentInterface.IPs) == 0 {
+					return false
+				}
+
+				if iface.IPs != nil {
+					for _, ip := range iface.IPs {
+						foundIP := false
+						if currentInterface.IPs != nil {
+							for _, currentIP := range currentInterface.IPs {
+								if ip == currentIP {
+									foundIP = true
+									break
+								}
+							}
+						}
+
+						if !foundIP {
+							return false
+						}
+					}
+				}
+			}
+		}
+		if !foundIface {
+			return false
+		}
+	}
+	return true
+}
+
 type Firewall struct {
 	mux   sync.Mutex       `yaml:"-"`
 	Zones map[string]*Zone `yaml:",inline"`
@@ -223,8 +374,8 @@ func (f *Firewall) Merge(fw Firewall) {
 	}
 }
 
-func (f *Firewall) AllZones() Current {
-	zones := make(Current, 0)
+func (f *Firewall) ToCurrent() FirewallCurrent {
+	zones := make(FirewallCurrent, 0)
 	if f.Zones == nil {
 		return zones
 	}
@@ -282,11 +433,11 @@ func (m MarshallableSlice) MarshalYAML() (interface{}, error) {
 	return s(m), nil
 }
 
-var _ fmt.Stringer = (*Current)(nil)
+var _ fmt.Stringer = (*FirewallCurrent)(nil)
 
-type Current []*ZoneDesc
+type FirewallCurrent []*ZoneDesc
 
-func (c Current) String() string {
+func (c FirewallCurrent) String() string {
 	fw := ""
 	for _, zone := range c {
 
@@ -309,7 +460,7 @@ func (c Current) String() string {
 	return strings.TrimSpace(fw)
 }
 
-func (c Current) Sort() {
+func (c FirewallCurrent) Sort() {
 	sort.Slice(c, func(i, j int) bool {
 		return c[i].Name < c[j].Name
 	})
@@ -407,7 +558,7 @@ func (f Firewall) Contains(other Firewall) bool {
 	return true
 }
 
-func (f Firewall) IsContainedIn(zones Current) bool {
+func (f Firewall) IsContainedIn(zones FirewallCurrent) bool {
 	if f.Zones == nil || len(f.Zones) == 0 {
 		return true
 	}
@@ -434,8 +585,7 @@ func (f Firewall) IsContainedIn(zones Current) bool {
 			if currentZone.Name == name {
 				foundZone = true
 
-				if (currentZone.FW == nil || len(currentZone.FW) == 0) &&
-					(currentZone.FW == nil || len(currentZone.FW) == 0) {
+				if currentZone.FW == nil || len(currentZone.FW) == 0 {
 					return false
 				}
 
@@ -514,7 +664,8 @@ func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentCurrent{
-			Open: make(Current, 0),
+			Open:       make(FirewallCurrent, 0),
+			Networking: make(NetworkingCurrent, 0),
 		}
 		n.NA[id] = na
 	}

@@ -115,7 +115,7 @@ func query(
 						},
 					})
 					if !na.Firewall.Contains(fw) {
-						machineMonitor.WithField("ports", fw.AllZones()).Debug("Firewall desired")
+						machineMonitor.WithField("ports", fw.ToCurrent()).Debug("Firewall desired")
 					}
 					na.Firewall.Merge(fw)
 				}

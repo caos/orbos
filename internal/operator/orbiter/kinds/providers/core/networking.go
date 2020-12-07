@@ -6,26 +6,28 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func DesireInternalOSFirewall(
+func DesireOSNetworking(
 	monitor mntr.Monitor,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	service MachinesService,
-	openInterfaces []string,
+	name string,
+	ips map[string][]string,
 ) (
 	bool,
 	error,
 ) {
 	done := true
-	desireNodeAgent := func(machine infra.Machine, fw common.Firewall) {
+	desireNodeAgent := func(machine infra.Machine, nw common.Networking) {
 		machineMonitor := monitor.WithField("machine", machine.ID())
 		deepNa, _ := nodeAgentsDesired.Get(machine.ID())
 		deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
-		deepNa.Firewall.Merge(fw)
-		machineMonitor.WithField("ports", fw.ToCurrent()).Debug("Desired Cloudscale Firewall")
-		if !fw.IsContainedIn(deepNaCurr.Open) {
-			machineMonitor.WithField("ports", deepNa.Firewall.ToCurrent()).Info("Awaiting firewalld config")
+		deepNa.Networking.Merge(nw)
+
+		machineMonitor.WithField("networking", nw.ToCurrent()).Debug("Desired Cloudscale Networking")
+		if !nw.IsContainedIn(deepNaCurr.Networking) {
+			machineMonitor.WithField("networking", deepNa.Firewall.ToCurrent()).Info("Awaiting networking config")
 			done = false
 		}
 	}
@@ -34,25 +36,25 @@ func DesireInternalOSFirewall(
 	if err != nil {
 		return false, err
 	}
-	var machines infra.Machines
-	var ips []string
+
 	for _, pool := range pools {
 		poolMachines, err := service.List(pool)
 		if err != nil {
 			return false, err
 		}
 		for _, machine := range poolMachines {
-			machines = append(machines, machine)
-			ips = append(ips, machine.IP()+"/32")
+			ips, hasFIP := ips[pool]
+			if hasFIP {
+				desireNodeAgent(machine, common.Networking{
+					Interfaces: map[string]*common.NetworkingInterface{
+						name: {
+							Type: "dummy",
+							IPs:  ips,
+						},
+					},
+				})
+			}
 		}
-	}
-	for _, machine := range machines {
-		desireNodeAgent(machine, common.Firewall{
-			Zones: map[string]*common.Zone{
-				"public":   {},
-				"internal": {Sources: ips},
-				"external": {Interfaces: openInterfaces},
-			}})
 	}
 	return done, nil
 }
