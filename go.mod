@@ -3,7 +3,7 @@ module github.com/caos/orbos
 go 1.14
 
 require (
-	cloud.google.com/go/storage v1.6.0
+	cloud.google.com/go/storage v1.10.0
 	github.com/AlecAivazis/survey/v2 v2.0.8
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.31.12
@@ -11,8 +11,8 @@ require (
 	github.com/cloudflare/cloudflare-go v0.12.1
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/golang/mock v1.4.3
-	github.com/golang/protobuf v1.4.2
+	github.com/golang/mock v1.4.4
+	github.com/golang/protobuf v1.4.3
 	github.com/google/go-github/v31 v31.0.0
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/imdario/mergo v0.3.6 // indirect
@@ -29,10 +29,10 @@ require (
 	github.com/spf13/cobra v0.0.7
 	github.com/stretchr/testify v1.6.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344
-	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
-	google.golang.org/api v0.26.0
-	google.golang.org/grpc v1.29.1
+	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102
+	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
+	google.golang.org/api v0.36.0
+	google.golang.org/grpc v1.33.2
 	gopkg.in/src-d/go-billy.v4 v4.3.2
 	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.3.0
