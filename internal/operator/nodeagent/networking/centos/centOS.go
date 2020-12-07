@@ -9,29 +9,22 @@ import (
 	"github.com/pkg/errors"
 	"os"
 	"os/exec"
+	"strings"
 )
+
+const prefix = "orbos"
 
 func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 	return nodeagent.NetworkingEnsurerFunc(func(desired common.Networking) (common.NetworkingCurrent, func() error, error) {
-		ensurers := make([]func() error, 0)
 		current := make(common.NetworkingCurrent, 0)
+		ensurers := make([]func() error, 0)
 
-		if desired.Interfaces == nil {
-			desired.Interfaces = make(map[string]*common.NetworkingInterface, 0)
+		ensurer, err := ensureInterfaces(monitor, &desired, current)
+		if err != nil {
+			return current, ensurer, err
 		}
+		ensurers = append(ensurers, ensurer)
 
-		for name, iface := range desired.Interfaces {
-			currentInterface, ensureFunc, err := ensureInterface(monitor, name, iface)
-			if err != nil {
-				return current, nil, err
-			}
-			current = append(current, currentInterface)
-			if ensureFunc != nil {
-				ensurers = append(ensurers, ensureFunc)
-			}
-		}
-
-		current.Sort()
 		return current, func() error {
 			monitor.Debug("Ensuring networking")
 			for _, ensurer := range ensurers {
@@ -44,29 +37,102 @@ func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 	})
 }
 
+func ensureInterfaces(
+	monitor mntr.Monitor,
+	desired *common.Networking,
+	current common.NetworkingCurrent,
+) (
+	func() error,
+	error,
+) {
+	ensurers := make([]func() error, 0)
+	changes := []string{}
+
+	if desired.Interfaces == nil {
+		desired.Interfaces = make(map[string]*common.NetworkingInterface, 0)
+	}
+
+	interfaces, err := queryExisting()
+	if err != nil {
+		return nil, err
+	}
+
+addLoop:
+	for ifaceName := range desired.Interfaces {
+		iface := desired.Interfaces[ifaceName]
+		if iface == nil {
+			return nil, errors.New("void interface")
+		}
+		for _, alreadyIface := range interfaces {
+			if alreadyIface == ifaceName {
+				continue addLoop
+			}
+		}
+
+		ifaceNameWithPrefix := prefix + ifaceName
+		changes = append(changes, fmt.Sprintf("link add %s type dummy", ifaceNameWithPrefix))
+
+		ensureFunc, err := ensureInterface(monitor, ifaceNameWithPrefix, iface)
+		if err != nil {
+			return nil, err
+		}
+
+		if ensureFunc != nil {
+			ensurers = append(ensurers, ensureFunc)
+		}
+	}
+
+deleteLoop:
+	for _, ifaceName := range interfaces {
+		if ifaceName == "" {
+			continue
+		}
+		ipsByte, err := queryExistingInterface(ifaceName)
+		if err != nil {
+			return nil, err
+		}
+		actualIps := bytes.Split(ipsByte, []byte("\n"))
+		ips := make(common.MarshallableSlice, 0)
+		for _, actualIp := range actualIps {
+			ips = append(ips, string(actualIp))
+		}
+		current = append(current, &common.NetworkingInterfaceCurrent{
+			Name: ifaceName,
+			IPs:  ips,
+		})
+
+		for desiredIfaceName := range desired.Interfaces {
+			if strings.TrimPrefix(ifaceName, prefix) == desiredIfaceName {
+				continue deleteLoop
+			}
+		}
+		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
+	}
+
+	current.Sort()
+	return func() error {
+		monitor.Debug(fmt.Sprintf("Ensuring part of networking"))
+		return ensureIP(monitor, changes)
+	}, nil
+}
+
 func ensureInterface(
 	monitor mntr.Monitor,
 	name string,
 	desired *common.NetworkingInterface,
 ) (
-	*common.NetworkingInterfaceCurrent,
 	func() error,
 	error,
 ) {
 
-	current := &common.NetworkingInterfaceCurrent{
-		Name: name,
-		IPs:  nil,
-	}
 	changes := []string{}
 
 	fullInterface, err := queryExistingInterface(name)
 	addedVIPs := bytes.Split(fullInterface, []byte("\n"))
 	if err != nil {
 		if addedVIPs != nil && len(addedVIPs) == 0 {
-			changes = append(changes, fmt.Sprintf("link add %s type dummy", name))
 		} else {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -74,7 +140,7 @@ addLoop:
 	for idx := range desired.IPs {
 		ip := desired.IPs[idx]
 		if ip == "" {
-			return nil, nil, errors.New("void ip")
+			return nil, errors.New("void ip")
 		}
 		for idx := range addedVIPs {
 			already := addedVIPs[idx]
@@ -94,8 +160,6 @@ deleteLoop:
 			continue
 		}
 
-		current.IPs = append(current.IPs, added)
-
 		for idx := range desired.IPs {
 			ip := desired.IPs[idx]
 			if added == ip {
@@ -105,10 +169,37 @@ deleteLoop:
 		changes = append(changes, fmt.Sprintf("addr delete %s/32 dev %s", added, name))
 	}
 
-	return current, func() error {
+	return func() error {
 		monitor.Debug(fmt.Sprintf("Ensuring part of networking with interface %s", name))
 		return ensureIP(monitor, changes)
 	}, nil
+}
+
+func queryExisting() ([]string, error) {
+	cmdStr := fmt.Sprintf("ip link show | awk 'NR % 2 == 1'")
+
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	errBuf.Reset()
+
+	cmd := exec.Command(cmdStr)
+	cmd.Stderr = errBuf
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, err
+	}
+
+	interfaceNames := []string{}
+	interfaces := strings.Split(string(output), "\n")
+	for _, iface := range interfaces {
+		parts := strings.Split(iface, ":")
+		name := parts[1]
+		if strings.HasPrefix(name, prefix) {
+			interfaceNames = append(interfaceNames, parts[1])
+		}
+	}
+	return interfaceNames, nil
 }
 
 func queryExistingInterface(interfaceName string) ([]byte, error) {

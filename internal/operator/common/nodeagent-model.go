@@ -193,6 +193,7 @@ func (n *Networking) Merge(nw Networking) {
 				}
 			}
 		}
+		n.Interfaces[name] = current
 	}
 }
 
@@ -724,6 +725,9 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 						Services:   map[string]*Service{},
 					},
 				},
+			},
+			Networking: &Networking{
+				Interfaces: map[string]*NetworkingInterface{},
 			},
 		}
 		n.NA[id] = na
