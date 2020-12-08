@@ -193,11 +193,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		func() {},
 	)
 
-	for _, name := range diskNames {
+	for idx, name := range diskNames {
 		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
 		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10*time.Second, infraMachine, func(m infra.Machine) error {
 			_, formatErr := m.Execute(nil,
-				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-%s` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, name, mountPoint),
+				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-local-ssd-%d` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, idx, mountPoint),
 			)
 			return formatErr
 		}); err != nil {
