@@ -21,7 +21,7 @@ func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 		current := make(common.NetworkingCurrent, 0)
 		ensurers := make([]func() error, 0)
 
-		ensurer, err := ensureInterfaces(monitor, &desired, current)
+		ensurer, err := ensureInterfaces(monitor, &desired, &current)
 		if err != nil {
 			return current, ensurer, err
 		}
@@ -42,7 +42,7 @@ func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 func ensureInterfaces(
 	monitor mntr.Monitor,
 	desired *common.Networking,
-	current common.NetworkingCurrent,
+	current *common.NetworkingCurrent,
 ) (
 	func() error,
 	error,
@@ -65,15 +65,8 @@ addLoop:
 		if iface == nil {
 			return nil, errors.New("void interface")
 		}
-		for _, alreadyIface := range interfaces {
-			if alreadyIface == ifaceName {
-				continue addLoop
-			}
-		}
-
+		//ensure ips for every desired interface
 		ifaceNameWithPrefix := prefix + ifaceName
-		changes = append(changes, fmt.Sprintf("link add %s type %s", ifaceNameWithPrefix, iface.Type))
-
 		ensureFunc, err := ensureInterface(monitor, ifaceNameWithPrefix, iface)
 		if err != nil {
 			return nil, err
@@ -82,6 +75,14 @@ addLoop:
 		if ensureFunc != nil {
 			ensurers = append(ensurers, ensureFunc)
 		}
+
+		for _, alreadyIface := range interfaces {
+			if alreadyIface == ifaceName {
+				continue addLoop
+			}
+		}
+
+		changes = append(changes, fmt.Sprintf("link add %s type %s", ifaceNameWithPrefix, iface.Type))
 	}
 
 deleteLoop:
@@ -89,16 +90,20 @@ deleteLoop:
 		if ifaceName == "" {
 			continue
 		}
-		ipsByte, err := queryExistingInterface(ifaceName)
+		ifaceNameWithPrefix := prefix + ifaceName
+		ipsByte, err := queryExistingInterface(ifaceNameWithPrefix)
 		if err != nil {
 			return nil, err
 		}
 		actualIps := bytes.Split(ipsByte, []byte("\n"))
 		ips := make(common.MarshallableSlice, 0)
 		for _, actualIp := range actualIps {
-			ips = append(ips, string(actualIp))
+			if string(actualIp) != "" {
+				ips = append(ips, string(actualIp))
+			}
 		}
-		current = append(current, &common.NetworkingInterfaceCurrent{
+
+		*current = append(*current, &common.NetworkingInterfaceCurrent{
 			Name: ifaceName,
 			IPs:  ips,
 		})
@@ -114,7 +119,27 @@ deleteLoop:
 	current.Sort()
 	return func() error {
 		monitor.Debug(fmt.Sprintf("Ensuring part of networking"))
-		return ensureIP(monitor, changes)
+		if err := ensureIP(monitor, changes); err != nil {
+			return err
+		}
+
+		for ifaceName := range desired.Interfaces {
+			iface := desired.Interfaces[ifaceName]
+
+			//ensure ips for every desired interface
+			ifaceNameWithPrefix := prefix + ifaceName
+			ensureFunc, err := ensureInterface(monitor, ifaceNameWithPrefix, iface)
+			if err != nil {
+				return err
+			}
+
+			if ensureFunc != nil {
+				if err := ensureFunc(); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
 	}, nil
 }
 

@@ -12,7 +12,45 @@ func DesireOSNetworking(
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	service MachinesService,
 	name string,
-	ips map[string][]string,
+	vips map[string][]string,
+) (
+	bool,
+	error,
+) {
+	done := true
+	pools, err := service.ListPools()
+	if err != nil {
+		return false, err
+	}
+
+	for _, pool := range pools {
+		poolMachines, err := service.List(pool)
+		if err != nil {
+			return false, err
+		}
+		for _, machine := range poolMachines {
+			machineVips, ok := vips[machine.ID()]
+			if ok && machineVips != nil && len(machineVips) > 0 {
+				doneMachine, err := DesireOSNetworkingForMachine(monitor, nodeAgentsDesired, nodeAgentsCurrent, machine, name, machineVips)
+				if err != nil {
+					return false, err
+				}
+				if !doneMachine {
+					done = false
+				}
+			}
+		}
+	}
+	return done, nil
+}
+
+func DesireOSNetworkingForMachine(
+	monitor mntr.Monitor,
+	nodeAgentsDesired *common.DesiredNodeAgents,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
+	machine infra.Machine,
+	name string,
+	ips []string,
 ) (
 	bool,
 	error,
@@ -31,29 +69,13 @@ func DesireOSNetworking(
 		}
 	}
 
-	pools, err := service.ListPools()
-	if err != nil {
-		return false, err
-	}
-
-	for _, pool := range pools {
-		poolMachines, err := service.List(pool)
-		if err != nil {
-			return false, err
-		}
-		for _, machine := range poolMachines {
-			ips, hasFIP := ips[pool]
-			if hasFIP {
-				desireNodeAgent(machine, common.Networking{
-					Interfaces: map[string]*common.NetworkingInterface{
-						name: {
-							Type: "dummy",
-							IPs:  ips,
-						},
-					},
-				})
-			}
-		}
-	}
+	desireNodeAgent(machine, common.Networking{
+		Interfaces: map[string]*common.NetworkingInterface{
+			name: {
+				Type: "dummy",
+				IPs:  ips,
+			},
+		},
+	})
 	return done, nil
 }

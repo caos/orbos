@@ -84,9 +84,9 @@ func ensureOS(ensureNodeAgent func(m infra.Machine) error, machine *machine, loa
 
 // TODO: Move this capabilities to where they belong
 func configureFirewall(machine *machine, loadbalancing map[string][]*dynamic.VIP, current *Current, context *context) error {
-	if err := ensureDummyInterface(context, machine, loadbalancing, current); err != nil {
-		return err
-	}
+	//if err := ensureDummyInterface(context, machine, loadbalancing, current); err != nil {
+	//	return err
+	//}
 
 	if err := addMasqueradeForZone(machine, context, "internal"); err != nil {
 		return err

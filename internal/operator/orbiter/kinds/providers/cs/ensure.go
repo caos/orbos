@@ -57,21 +57,13 @@ func query(
 	}
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
-
 		_, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
 		if err != nil {
 			return err
 		}
 
-		hostPoolsIPs := make(map[string][]string, 0)
-		for name, vips := range hostPools {
-			hostPoolsIPs[name] = []string{}
-			for _, ip := range vips {
-				hostPoolsIPs[name] = append(hostPoolsIPs[name], ip.IP)
-			}
-		}
-
-		_, err = core.DesireOSNetworking(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, "dummy", hostPoolsIPs)
+		vips := hostedVIPs(hostPools, m, current)
+		_, err = core.DesireOSNetworkingForMachine(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, m, "dummy", vips)
 		if err != nil {
 			return err
 		}
@@ -103,15 +95,11 @@ func query(
 					return err
 				}
 
-				hostPoolsIPs := make(map[string][]string, 0)
-				for name, vips := range hostPools {
-					hostPoolsIPs[name] = []string{}
-					for _, ip := range vips {
-						hostPoolsIPs[name] = append(hostPoolsIPs[name], ip.IP)
-					}
+				vips, err := allHostedVIPs(hostPools, context.machinesService, current)
+				if err != nil {
+					return err
 				}
-
-				nwDone, err := core.DesireOSNetworking(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, "dummy", hostPoolsIPs)
+				nwDone, err := core.DesireOSNetworking(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, "dummy", vips)
 				if err != nil {
 					return err
 				}

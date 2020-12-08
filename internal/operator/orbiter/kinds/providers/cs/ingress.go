@@ -3,6 +3,7 @@ package cs
 import (
 	"bytes"
 	"fmt"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"strings"
 
 	"github.com/caos/orbos/mntr"
@@ -66,6 +67,24 @@ for VIP in "$floating_ipv4"; do
 done
 `, strings.Join(hostedVIPs(hostPools, m, current), " "), machine.server.UUID), poolsWithUnassignedVIPs[machine.poolName]
 	}
+}
+
+func allHostedVIPs(hostPools map[string][]*dynamiclbmodel.VIP, service core.MachinesService, current *Current) (map[string][]string, error) {
+	vips := make(map[string][]string, 0)
+	pools, err := service.ListPools()
+	if err != nil {
+		return nil, err
+	}
+	for _, pool := range pools {
+		poolMachines, err := service.List(pool)
+		if err != nil {
+			return nil, err
+		}
+		for _, machine := range poolMachines {
+			vips[machine.ID()] = hostedVIPs(hostPools, machine, current)
+		}
+	}
+	return vips, nil
 }
 
 func hostedVIPs(hostPools map[string][]*dynamiclbmodel.VIP, m infra.Machine, current *Current) []string {
