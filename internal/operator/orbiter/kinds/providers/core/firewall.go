@@ -11,6 +11,7 @@ func DesireInternalOSFirewall(
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	service MachinesService,
+	masquerade bool,
 	openInterfaces []string,
 ) (
 	bool,
@@ -50,8 +51,8 @@ func DesireInternalOSFirewall(
 		desireNodeAgent(machine, common.Firewall{
 			Zones: map[string]*common.Zone{
 				"public":   {},
-				"internal": {Sources: ips},
-				"external": {Interfaces: openInterfaces},
+				"internal": {Masquerade: masquerade, Sources: ips},
+				"external": {Masquerade: masquerade, Interfaces: openInterfaces},
 			}})
 	}
 	return done, nil

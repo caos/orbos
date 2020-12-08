@@ -57,7 +57,7 @@ func query(
 	}
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
-		_, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+		_, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, true, []string{"eth0"})
 		if err != nil {
 			return err
 		}
@@ -90,7 +90,7 @@ func query(
 					return err
 				}
 
-				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, true, []string{"eth0"})
 				if err != nil {
 					return err
 				}

@@ -179,7 +179,7 @@ func query(
 					return err
 				}
 
-				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, false, []string{"eth0"})
 				if err != nil {
 					return err
 				}

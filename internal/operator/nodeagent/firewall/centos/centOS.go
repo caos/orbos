@@ -73,11 +73,25 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 	}
 	current.Sources = sources
 
+	ensureMasquerade, err := getEnsureMasquerade(monitor, zoneName, current, desired)
+	if err != nil {
+		return current, nil, err
+	}
+
 	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), ignore)
+	if err != nil {
+		return current, nil, err
+	}
 
 	ensureIfaces, err := getEnsureInterfaces(monitor, zoneName, current, desired)
+	if err != nil {
+		return current, nil, err
+	}
 
 	addSources, removeSources, err := getAddAndRemoveSources(monitor, zoneName, current, desired)
+	if err != nil {
+		return current, nil, err
+	}
 
 	monitor.WithFields(map[string]interface{}{
 		"open":  strings.Join(addPorts, ";"),
@@ -94,27 +108,34 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 
 	zoneNameCopy := zoneName
 	return current, func() error {
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneName))
+		if ensureMasquerade != "" {
+			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureMasquerade, zoneNameCopy))
+			if err := ensure(monitor, []string{ensureMasquerade}, zoneNameCopy); err != nil {
+				return err
+			}
+		}
+
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneNameCopy))
 		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneNameCopy))
 		if err := ensure(monitor, addSources, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeSources, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeSources, zoneNameCopy))
 		if err := ensure(monitor, removeSources, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneNameCopy))
 		if err := ensure(monitor, addPorts, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removePorts, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removePorts, zoneNameCopy))
 		return ensure(monitor, removePorts, zoneNameCopy)
 	}, nil
 }
@@ -177,7 +198,8 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err er
 	}
 
 	errBuf.Reset()
-	cmd := exec.Command("firewall-cmd", append([]string{"--permanent", "--zone", zone}, changes...)...)
+	args := strings.Join([]string{"sudo firewall-cmd --permanent --zone", zone, strings.Join(changes, " ")}, " ")
+	cmd := exec.Command("/bin/sh", append([]string{"-c"}, args)...)
 	cmd.Stderr = errBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
@@ -196,7 +218,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err er
 func reloadFirewall(monitor mntr.Monitor) error {
 	errBuf := new(bytes.Buffer)
 	errBuf.Reset()
-	cmd := exec.Command("firewall-cmd", "--reload")
+	cmd := exec.Command("/bin/sh", "-c", "sudo firewall-cmd --reload")
 	cmd.Stderr = errBuf
 	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -212,7 +234,7 @@ func listFirewall(monitor mntr.Monitor, zone string, arg string) ([]string, erro
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.Command("firewall-cmd", arg, "--zone", zone)
+	cmd := exec.Command("/bin/sh", "-c", "sudo firewall-cmd --zone "+zone+" "+arg)
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 
