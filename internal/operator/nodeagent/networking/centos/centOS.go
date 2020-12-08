@@ -12,7 +12,9 @@ import (
 	"strings"
 )
 
-const prefix = "orbos"
+const (
+	prefix string = "orbos"
+)
 
 func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 	return nodeagent.NetworkingEnsurerFunc(func(desired common.Networking) (common.NetworkingCurrent, func() error, error) {
@@ -70,7 +72,7 @@ addLoop:
 		}
 
 		ifaceNameWithPrefix := prefix + ifaceName
-		changes = append(changes, fmt.Sprintf("link add %s type dummy", ifaceNameWithPrefix))
+		changes = append(changes, fmt.Sprintf("link add %s type %s", ifaceNameWithPrefix, iface.Type))
 
 		ensureFunc, err := ensureInterface(monitor, ifaceNameWithPrefix, iface)
 		if err != nil {
@@ -128,12 +130,11 @@ func ensureInterface(
 	changes := []string{}
 
 	fullInterface, err := queryExistingInterface(name)
-	addedVIPs := bytes.Split(fullInterface, []byte("\n"))
-	if err != nil {
-		if addedVIPs != nil && len(addedVIPs) == 0 {
-		} else {
-			return nil, err
-		}
+	addedVIPs := make([][]byte, 0)
+	if err == nil {
+		addedVIPs = bytes.Split(fullInterface, []byte("\n"))
+	} else if fullInterface != nil && len(fullInterface) == 0 {
+		return nil, err
 	}
 
 addLoop:
@@ -176,14 +177,7 @@ deleteLoop:
 }
 
 func queryExisting() ([]string, error) {
-	cmdStr := fmt.Sprintf("ip link show | awk 'NR % 2 == 1'")
-
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-	errBuf.Reset()
-
-	cmd := exec.Command(cmdStr)
-	cmd.Stderr = errBuf
+	cmd := exec.Command("/bin/sh", "-c", `ip link show | awk 'NR % 2 == 1'`)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -193,10 +187,16 @@ func queryExisting() ([]string, error) {
 	interfaceNames := []string{}
 	interfaces := strings.Split(string(output), "\n")
 	for _, iface := range interfaces {
+		if iface == "" {
+			continue
+		}
+
 		parts := strings.Split(iface, ":")
-		name := parts[1]
-		if strings.HasPrefix(name, prefix) {
-			interfaceNames = append(interfaceNames, parts[1])
+		if len(parts) > 1 {
+			name := strings.TrimSpace(parts[1])
+			if strings.HasPrefix(name, prefix) {
+				interfaceNames = append(interfaceNames, strings.TrimPrefix(name, prefix))
+			}
 		}
 	}
 	return interfaceNames, nil
@@ -205,12 +205,7 @@ func queryExisting() ([]string, error) {
 func queryExistingInterface(interfaceName string) ([]byte, error) {
 	cmdStr := fmt.Sprintf(`INNEROUT="$(set -o pipefail && sudo ip address show %s | grep %s | tail -n +2 | awk '{print $2}' | cut -d "/" -f 1)" && echo $INNEROUT`, interfaceName, interfaceName)
 
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-	errBuf.Reset()
-
-	cmd := exec.Command(cmdStr)
-	cmd.Stderr = errBuf
+	cmd := exec.Command("/bin/sh", "-c", cmdStr)
 
 	return cmd.CombinedOutput()
 }
@@ -235,7 +230,7 @@ func ensureIP(monitor mntr.Monitor, changes []string) (err error) {
 	}
 
 	errBuf.Reset()
-	cmd := exec.Command(cmdStr)
+	cmd := exec.Command("/bin/bash", "-c", cmdStr)
 	cmd.Stderr = errBuf
 
 	if monitor.IsVerbose() {

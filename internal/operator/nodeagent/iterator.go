@@ -83,7 +83,7 @@ func Iterator(
 			return
 		}
 
-		if desired.Spec.Commit != nodeAgentCommit {
+		if nodeAgentCommit != "debug" && desired.Spec.Commit != nodeAgentCommit {
 			monitor.WithFields(map[string]interface{}{
 				"desired": desired.Spec.Commit,
 				"current": nodeAgentCommit,

@@ -26,7 +26,7 @@ func DesireOSNetworking(
 		deepNa.Networking.Merge(nw)
 		machineMonitor.WithField("networking", nw.ToCurrent()).Debug("Desired Cloudscale Networking")
 		if !nw.IsContainedIn(deepNaCurr.Networking) {
-			machineMonitor.WithField("networking", deepNa.Firewall.ToCurrent()).Info("Awaiting networking config")
+			machineMonitor.WithField("networking", deepNa.Networking.ToCurrent()).Info("Awaiting networking config")
 			done = false
 		}
 	}
