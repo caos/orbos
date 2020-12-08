@@ -21,7 +21,7 @@ import (
 
 const (
 	//zitadelImage can be found in github.com/caos/zitadel repo
-	zitadelImage = "ghcr.io/caos/zitadel:SHA-8a0e785"
+	zitadelImage = "ghcr.io/caos/zitadel:SHA-9800080"
 )
 
 func AdaptFunc(
