@@ -9,13 +9,13 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes/resources/role"
 	"github.com/caos/orbos/pkg/kubernetes/resources/rolebinding"
 	"github.com/caos/orbos/pkg/kubernetes/resources/serviceaccount"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
-	name string,
-	labels map[string]string,
+	nameLabels *labels.Name,
 ) (
 	core.QueryFunc,
 	core.DestroyFunc,
@@ -24,31 +24,31 @@ func AdaptFunc(
 
 	internalMonitor := monitor.WithField("component", "rbac")
 
-	serviceAccountName := name
-	roleName := name
-	clusterRoleName := name
+	serviceAccountLabels := nameLabels
+	roleLabels := nameLabels
+	clusterRoleLabels := nameLabels
 
-	destroySA, err := serviceaccount.AdaptFuncToDestroy(namespace, serviceAccountName)
+	destroySA, err := serviceaccount.AdaptFuncToDestroy(namespace, serviceAccountLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyR, err := role.AdaptFuncToDestroy(namespace, roleName)
+	destroyR, err := role.AdaptFuncToDestroy(namespace, roleLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyCR, err := clusterrole.AdaptFuncToDestroy(clusterRoleName)
+	destroyCR, err := clusterrole.AdaptFuncToDestroy(clusterRoleLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyRB, err := rolebinding.AdaptFuncToDestroy(namespace, roleName)
+	destroyRB, err := rolebinding.AdaptFuncToDestroy(namespace, roleLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	destroyCRB, err := clusterrolebinding.AdaptFuncToDestroy(roleName)
+	destroyCRB, err := clusterrolebinding.AdaptFuncToDestroy(roleLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -61,29 +61,29 @@ func AdaptFunc(
 		core.ResourceDestroyToZitadelDestroy(destroySA),
 	}
 
-	querySA, err := serviceaccount.AdaptFuncToEnsure(namespace, serviceAccountName, labels)
+	querySA, err := serviceaccount.AdaptFuncToEnsure(namespace, serviceAccountLabels)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	queryR, err := role.AdaptFuncToEnsure(namespace, roleName, labels, []string{""}, []string{"secrets"}, []string{"create", "get"})
+	queryR, err := role.AdaptFuncToEnsure(namespace, roleLabels, []string{""}, []string{"secrets"}, []string{"create", "get"})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	queryCR, err := clusterrole.AdaptFuncToEnsure(clusterRoleName, labels, []string{"certificates.k8s.io"}, []string{"certificatesigningrequests"}, []string{"create", "get", "watch"})
+	queryCR, err := clusterrole.AdaptFuncToEnsure(clusterRoleLabels, []string{"certificates.k8s.io"}, []string{"certificatesigningrequests"}, []string{"create", "get", "watch"})
 	if err != nil {
 		return nil, nil, err
 	}
 
-	subjects := []rolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountName, Namespace: namespace}}
-	queryRB, err := rolebinding.AdaptFuncToEnsure(namespace, roleName, labels, subjects, roleName)
+	subjects := []rolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountLabels.Name(), Namespace: namespace}}
+	queryRB, err := rolebinding.AdaptFuncToEnsure(namespace, roleLabels, subjects, roleLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
 
-	subjectsCRB := []clusterrolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountName, Namespace: namespace}}
-	queryCRB, err := clusterrolebinding.AdaptFuncToEnsure(roleName, labels, subjectsCRB, roleName)
+	subjectsCRB := []clusterrolebinding.Subject{{Kind: "ServiceAccount", Name: serviceAccountLabels.Name(), Namespace: namespace}}
+	queryCRB, err := clusterrolebinding.AdaptFuncToEnsure(roleLabels, subjectsCRB, roleLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}

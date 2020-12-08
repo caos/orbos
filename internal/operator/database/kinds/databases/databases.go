@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/provided"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -16,7 +17,7 @@ func GetQueryAndDestroyFuncs(
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
 	namespace string,
-	labels map[string]string,
+	operatorLabels *labels.Operator,
 	timestamp string,
 	nodeselector map[string]string,
 	tolerations []core.Toleration,
@@ -30,7 +31,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "databases.caos.ch/CockroachDB":
-		return managed.AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
+		return managed.AdaptFunc(operatorLabels, labels.MustForAPI(operatorLabels, "CockroachDB", desiredTree.Common.Version), namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
 	case "databases.caos.ch/ProvidedDatabse":
 		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:

@@ -3,6 +3,7 @@ package rolebinding
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -13,7 +14,7 @@ type Subject struct {
 	Namespace string
 }
 
-func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, subjects []Subject, role string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name, subjects []Subject, role string) (resources.QueryFunc, error) {
 	subjectsList := make([]rbac.Subject, 0)
 	for _, subject := range subjects {
 		subjectsList = append(subjectsList, rbac.Subject{
@@ -25,9 +26,9 @@ func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, 
 
 	rolebinding := &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 		Subjects: subjectsList,
 		RoleRef: rbac.RoleRef{

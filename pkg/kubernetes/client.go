@@ -221,14 +221,48 @@ func (c *Client) GetDeployment(namespace, name string) (*apps.Deployment, error)
 
 func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
-	return c.applyResource("deployment", rsc.GetName(), func() error {
-		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+	rscLabels, err := labels.NameFrom(rsc.Labels)
+	if err != nil {
 		return err
-	}, func() error {
-		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+	}
+
+	rscSelector, err := labels.SelectorFrom(rsc.Spec.Selector.MatchLabels)
+	if err != nil {
 		return err
-	})
+	}
+
+	return c.applyController(
+		"deployment",
+		rscLabels,
+		rscSelector,
+		func() (*labels.Name, *labels.Selector, error) {
+			sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+			if err != nil {
+				return nil, nil, err
+			}
+
+			stsLabels, err := labels.NameFrom(sts.Labels)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			stsSelector, err := labels.SelectorFrom(sts.Spec.Selector.MatchLabels)
+			return stsLabels, stsSelector, err
+		},
+		func() error {
+			_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+			return err
+		},
+		func() error {
+			_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+			return err
+		},
+		func() error {
+			return c.DeleteDeployment(rsc.GetNamespace(), rsc.GetName())
+		},
+	)
 }
+
 func (c *Client) DeleteDeployment(namespace, name string) error {
 	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
@@ -457,43 +491,6 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 		},
 		func() error {
 			return c.DeleteStatefulset(rsc.GetNamespace(), rsc.GetName())
-		},
-	)
-}
-
-// object, create func() error, update func() error
-func (c *Client) applyController(
-	resourceType string,
-	newNameLabels *labels.Name,
-	newSelector *labels.Selector,
-	getCurrentLabelsFunc func() (*labels.Name, *labels.Selector, error),
-	createResource func() error,
-	updateResource func() error,
-	deleteResource func() error) error {
-
-	return c.applyResource(
-		resourceType,
-		newNameLabels.Name(),
-		createResource,
-		func() error {
-
-			currentLabels, currentSelector, err := getCurrentLabelsFunc()
-			if err != nil {
-				return err
-			}
-
-			if newSelector.Equal(currentSelector) {
-				return updateResource()
-			}
-
-			if currentLabels.Major() <= newNameLabels.Major() {
-				return errors.New("only recreating statefulset when operator version is breaking")
-			}
-
-			if err := deleteResource(); err != nil {
-				return err
-			}
-			return &recreateErr{}
 		},
 	)
 }
@@ -732,6 +729,42 @@ func (c *Client) applyResource(object, name string, create func() error, update 
 		return err
 	}
 	return create()
+}
+
+func (c *Client) applyController(
+	controllerType string,
+	newNameLabels *labels.Name,
+	newSelector *labels.Selector,
+	getCurrentLabelsFunc func() (*labels.Name, *labels.Selector, error),
+	createResource func() error,
+	updateResource func() error,
+	deleteResource func() error) error {
+
+	return c.applyResource(
+		controllerType,
+		newNameLabels.Name(),
+		createResource,
+		func() error {
+
+			currentLabels, currentSelector, err := getCurrentLabelsFunc()
+			if err != nil {
+				return err
+			}
+
+			if newSelector.Equal(currentSelector) {
+				return updateResource()
+			}
+
+			if currentLabels.Major() <= newNameLabels.Major() {
+				return errors.New("only recreating statefulset when operator version is breaking")
+			}
+
+			if err := deleteResource(); err != nil {
+				return err
+			}
+			return &recreateErr{}
+		},
+	)
 }
 
 func (c *Client) Refresh(kubeconfig *string) (err error) {

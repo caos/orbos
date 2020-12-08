@@ -6,12 +6,17 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/node"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
+)
+
+var (
+	nodeSecret = "cockroachdb.node"
 )
 
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
-	labels map[string]string,
+	componentLabels *labels.Component,
 	clusterDns string,
 ) (
 	core.QueryFunc,
@@ -21,12 +26,12 @@ func AdaptFunc(
 	func(k8sClient kubernetes.ClientInt) ([]string, error),
 	error,
 ) {
-	cMonitor := monitor.WithField("component", "certificates")
+	cMonitor := monitor.WithField("type", "certificates")
 
 	queryNode, destroyNode, err := node.AdaptFunc(
 		cMonitor,
 		namespace,
-		labels,
+		labels.MustForName(componentLabels, nodeSecret),
 		clusterDns,
 	)
 	if err != nil {
@@ -49,7 +54,7 @@ func AdaptFunc(
 			query, _, err := client.AdaptFunc(
 				cMonitor,
 				namespace,
-				labels,
+				componentLabels,
 			)
 			if err != nil {
 				return nil, err
@@ -69,7 +74,7 @@ func AdaptFunc(
 			_, destroy, err := client.AdaptFunc(
 				cMonitor,
 				namespace,
-				labels,
+				componentLabels,
 			)
 			if err != nil {
 				return nil, err
@@ -78,7 +83,7 @@ func AdaptFunc(
 			return destroy(user), nil
 		},
 		func(k8sClient kubernetes.ClientInt) ([]string, error) {
-			return client.QueryCertificates(namespace, labels, k8sClient)
+			return client.QueryCertificates(namespace, componentLabels, k8sClient)
 		},
 		nil
 }

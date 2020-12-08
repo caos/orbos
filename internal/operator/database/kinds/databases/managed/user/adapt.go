@@ -2,10 +2,12 @@ package user
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func AdaptFunc(
@@ -16,7 +18,7 @@ func AdaptFunc(
 	certsDir string,
 	userName string,
 	password string,
-	labels map[string]string,
+	componentLabels *labels.Component,
 ) (
 	core.QueryFunc,
 	core.DestroyFunc,
@@ -31,7 +33,7 @@ func AdaptFunc(
 
 	deleteSql := fmt.Sprintf("DROP USER IF EXISTS %s", userName)
 
-	_, _, addUserFunc, deleteUserFunc, _, err := certificate.AdaptFunc(monitor, namespace, labels, "")
+	_, _, addUserFunc, deleteUserFunc, _, err := certificate.AdaptFunc(monitor, namespace, componentLabels, "")
 	if err != nil {
 		return nil, nil, err
 	}

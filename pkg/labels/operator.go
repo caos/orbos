@@ -2,6 +2,7 @@ package labels
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"regexp"
 	"strconv"
@@ -67,25 +68,26 @@ type InternalManagedByProp struct {
 type InternalOperator struct {
 	InternalManagedByProp `yaml:",inline"`
 	Version               string `yaml:"app.kubernetes.io/version"`
-	Major                 int8   `yaml:"caos.ch/major"`
+	Major                 string `yaml:"caos.ch/major"`
 	InternalPartofProp    `yaml:",inline"`
 }
 
-func major(version string) int8 {
+func major(version string) string {
 	versionRegex := regexp.MustCompile("^v([0-9]+)\\.[0-9]+\\.[0-9]+$")
 	matches := versionRegex.FindStringSubmatch(version)
+	unknown := "unknown"
 	if len(matches) != 2 {
-		return -1
+		return unknown
 	}
 
 	m, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return -1
+		return unknown
 	}
 
 	if m > math.MaxInt8 {
-		return -1
+		return unknown
 	}
 
-	return int8(m)
+	return fmt.Sprintf("v%d", m)
 }

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/certificates"
@@ -25,21 +27,16 @@ const (
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
-	labels map[string]string,
+	componentLabels *labels.Component,
 ) (
 	func(client string) core2.QueryFunc,
 	func(client string) core2.DestroyFunc,
 	error,
 ) {
-	clientLabels := map[string]string{}
-	for k, v := range labels {
-		clientLabels[k] = v
-	}
-	clientLabels["database.caos.ch/secret-type"] = "client"
 
 	return func(client string) core2.QueryFunc {
 			clientSecret := clientSecretPrefix + client
-			name := strings.ReplaceAll(clientSecret, "_", "-")
+			nameLabels := labels.MustForName(componentLabels, strings.ReplaceAll(clientSecret, "_", "-"))
 			clientCertKey := clientCertKeyPrefix + client + clientCertKeySuffix
 			clientPrivKeyKey := clientPrivKeyKeyPrefix + client + clientPrivKeyKeySuffix
 
@@ -83,7 +80,7 @@ func AdaptFunc(
 					clientCertKey:    string(pemClientCert),
 				}
 
-				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, name, clientLabels, clientSecretData)
+				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, nameLabels, clientSecretData)
 				if err != nil {
 					return nil, err
 				}

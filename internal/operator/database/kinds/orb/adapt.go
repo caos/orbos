@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/namespace"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -13,10 +14,6 @@ import (
 
 func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 	namespaceStr := "caos-zitadel"
-	labels := map[string]string{
-		"app.kubernetes.io/managed-by": "database.caos.ch",
-		"app.kubernetes.io/part-of":    "orbos",
-	}
 
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
@@ -51,7 +48,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 			desiredKind.Database,
 			databaseCurrent,
 			namespaceStr,
-			labels,
+			labels.MustForOperator("ORBOS", "database.caos.ch", desiredKind.Spec.Version),
 			timestamp,
 			desiredKind.Spec.NodeSelector,
 			desiredKind.Spec.Tolerations,

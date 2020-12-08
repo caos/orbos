@@ -3,16 +3,17 @@ package serviceaccount
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFuncToEnsure(namespace, name string, labels map[string]string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name) (resources.QueryFunc, error) {
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 	}
 	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {

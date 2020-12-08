@@ -3,6 +3,8 @@ package services
 import (
 	"strconv"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -12,9 +14,9 @@ import (
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
-	publicServiceName string,
-	serviceName string,
-	labels map[string]string,
+	publicServiceNameLabels *labels.Name,
+	serviceNameLabels *labels.Name,
+	cockroachLabels *labels.Name,
 	cockroachPort int32,
 	cockroachHTTPPort int32,
 ) (
@@ -22,17 +24,17 @@ func AdaptFunc(
 	core.DestroyFunc,
 	error,
 ) {
-	internalMonitor := monitor.WithField("component", "services")
+	internalMonitor := monitor.WithField("type", "services")
 
-	destroySPD, err := service.AdaptFuncToDestroy("default", publicServiceName)
+	destroySPD, err := service.AdaptFuncToDestroy("default", publicServiceNameLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
-	destroySP, err := service.AdaptFuncToDestroy(namespace, publicServiceName)
+	destroySP, err := service.AdaptFuncToDestroy(namespace, publicServiceNameLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyS, err := service.AdaptFuncToDestroy(namespace, serviceName)
+	destroyS, err := service.AdaptFuncToDestroy(namespace, serviceNameLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -42,31 +44,19 @@ func AdaptFunc(
 		core.ResourceDestroyToZitadelDestroy(destroyS),
 	}
 
-	publicLabels := map[string]string{}
-	for k, v := range labels {
-		publicLabels[k] = v
-	}
-	publicLabels["database.caos.ch/servicetype"] = "public"
-
-	internalLabels := map[string]string{}
-	for k, v := range labels {
-		internalLabels[k] = v
-	}
-	internalLabels["database.caos.ch/servicetype"] = "internal"
-
 	ports := []service.Port{
 		{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},
 		{Port: 8080, TargetPort: strconv.Itoa(int(cockroachHTTPPort)), Name: "http"},
 	}
-	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceName, publicLabels, ports, "", labels, false, "", "")
+	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceNameLabels, ports, "", cockroachLabels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceName, publicLabels, ports, "", labels, false, "", "")
+	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceNameLabels, ports, "", cockroachLabels, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	queryS, err := service.AdaptFuncToEnsure(namespace, serviceName, internalLabels, ports, "", labels, true, "None", "")
+	queryS, err := service.AdaptFuncToEnsure(namespace, serviceNameLabels, ports, "", cockroachLabels, true, "None", "")
 	if err != nil {
 		return nil, nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -16,7 +17,7 @@ func GetQueryAndDestroyFuncs(
 	currentTree *tree.Tree,
 	name string,
 	namespace string,
-	labels map[string]string,
+	operatorLabels *labels.Operator,
 	checkDBReady core.EnsureFunc,
 	timestamp string,
 	nodeselector map[string]string,
@@ -31,7 +32,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "databases.caos.ch/BucketBackup":
-		return bucket.AdaptFunc(name, namespace, labels, checkDBReady, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
+		return bucket.AdaptFunc(name, namespace, labels.MustForComponent(labels.MustForAPI(operatorLabels, "BucketBackup", desiredTree.Common.Version), "backup"), checkDBReady, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}

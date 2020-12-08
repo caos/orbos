@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/pkg/secret"
@@ -33,7 +35,8 @@ const (
 )
 
 func AdaptFunc(
-	labels map[string]string,
+	operatorLabels *labels.Operator,
+	apiLabels *labels.API,
 	namespace string,
 	timestamp string,
 	nodeselector map[string]string,
@@ -51,12 +54,6 @@ func AdaptFunc(
 	error,
 ) {
 
-	internalLabels := map[string]string{}
-	for k, v := range labels {
-		internalLabels[k] = v
-	}
-	internalLabels["app.kubernetes.io/component"] = "cockroachdb"
-
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -67,7 +64,8 @@ func AdaptFunc(
 		map[string]*secret.Secret,
 		error,
 	) {
-		internalMonitor := monitor.WithField("kind", "managedDatabase")
+		componentLabels := labels.MustForComponent(apiLabels, "cockroachdb")
+		internalMonitor := monitor.WithField("component", "cockroachdb")
 		allSecrets := map[string]*secret.Secret{}
 
 		desiredKind, err := parseDesiredV0(desired)
@@ -79,7 +77,7 @@ func AdaptFunc(
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
 		}
-		queryCert, destroyCert, addUser, deleteUser, listUsers, err := certificate.AdaptFunc(internalMonitor, namespace, internalLabels, desiredKind.Spec.ClusterDns)
+		queryCert, destroyCert, addUser, deleteUser, listUsers, err := certificate.AdaptFunc(internalMonitor, namespace, componentLabels, desiredKind.Spec.ClusterDns)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -92,14 +90,14 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, internalLabels)
+		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, labels.MustForName(componentLabels, serviceAccountName))
 
+		cockroachNameLabels := labels.MustForName(componentLabels, sfsName)
 		querySFS, destroySFS, ensureInit, checkDBReady, listDatabases, err := statefulset.AdaptFunc(
 			internalMonitor,
+			cockroachNameLabels,
 			namespace,
-			sfsName,
 			image,
-			internalLabels,
 			serviceAccountName,
 			desiredKind.Spec.ReplicaCount,
 			desiredKind.Spec.StorageCapacity,
@@ -114,7 +112,15 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		queryS, destroyS, err := services.AdaptFunc(internalMonitor, namespace, publicServiceName, sfsName, internalLabels, cockroachPort, cockroachHTTPPort)
+		queryS, destroyS, err := services.AdaptFunc(
+			internalMonitor,
+			namespace,
+			labels.MustForName(componentLabels, publicServiceName),
+			cockroachNameLabels,
+			cockroachNameLabels,
+			cockroachPort,
+			cockroachHTTPPort,
+		)
 
 		//externalName := "cockroachdb-public." + namespaceStr + ".svc.cluster.local"
 		//queryES, destroyES, err := service.AdaptFunc("cockroachdb-public", "default", labels, []service.Port{}, "ExternalName", map[string]string{}, false, "", externalName)
@@ -122,7 +128,7 @@ func AdaptFunc(
 		//	return nil, nil, err
 		//}
 
-		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, pdbName, internalLabels, "1")
+		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, labels.MustForName(componentLabels, pdbName), cockroachNameLabels, "1")
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -193,7 +199,7 @@ func AdaptFunc(
 						currentBackup,
 						backupName,
 						namespace,
-						internalLabels,
+						operatorLabels,
 						checkDBReady,
 						strings.TrimPrefix(timestamp, backupName+"."),
 						nodeselector,

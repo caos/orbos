@@ -2,6 +2,7 @@ package backup
 
 import (
 	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/pkg/labels"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
@@ -10,16 +11,15 @@ import (
 
 func getCronJob(
 	namespace string,
-	labels map[string]string,
-	cronJobName string,
+	nameLabels *labels.Name,
 	cron string,
 	jobSpecDef batchv1.JobSpec,
 ) *v1beta1.CronJob {
 	return &v1beta1.CronJob{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      cronJobName,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 		Spec: v1beta1.CronJobSpec{
 			Schedule:          cron,
@@ -33,15 +33,14 @@ func getCronJob(
 
 func getJob(
 	namespace string,
-	labels map[string]string,
-	jobName string,
+	nameLabels *labels.Name,
 	jobSpecDef batchv1.JobSpec,
 ) *batchv1.Job {
 	return &batchv1.Job{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      jobName,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 		Spec: jobSpecDef,
 	}

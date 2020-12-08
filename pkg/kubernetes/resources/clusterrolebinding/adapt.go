@@ -3,6 +3,7 @@ package clusterrolebinding
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -13,7 +14,7 @@ type Subject struct {
 	Namespace string
 }
 
-func AdaptFuncToEnsure(name string, labels map[string]string, subjects []Subject, clusterrole string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(nameLabels *labels.Name, subjects []Subject, clusterrole string) (resources.QueryFunc, error) {
 	subjectsList := make([]rbac.Subject, 0)
 	for _, subject := range subjects {
 		subjectsList = append(subjectsList, rbac.Subject{
@@ -25,8 +26,8 @@ func AdaptFuncToEnsure(name string, labels map[string]string, subjects []Subject
 
 	crb := &rbac.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   name,
-			Labels: labels,
+			Name:   nameLabels.Name(),
+			Labels: labels.MustK8sMap(nameLabels),
 		},
 		Subjects: subjectsList,
 		RoleRef: rbac.RoleRef{

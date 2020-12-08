@@ -2,10 +2,12 @@ package statefulset
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/utils/helper"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sort"
 	"strings"
+
+	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
@@ -45,10 +47,9 @@ func (a Affinitys) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 func AdaptFunc(
 	monitor mntr.Monitor,
+	nameLabels *labels.Name,
 	namespace string,
-	name string,
 	image string,
-	labels map[string]string,
 	serviceAccountName string,
 	replicaCount int,
 	storageCapacity string,
@@ -73,27 +74,29 @@ func AdaptFunc(
 		return nil, nil, nil, nil, nil, err
 	}
 
+	name := nameLabels.Name()
+	k8sNameLabels := labels.MustK8sMap(nameLabels)
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    k8sNameLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
 			Replicas:    helper.PointerInt32(int32(replicaCount)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: k8sNameLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: k8sNameLabels,
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,
 					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
-					Affinity:           getAffinity(labels),
+					Affinity:           getAffinity(k8sNameLabels),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           image,

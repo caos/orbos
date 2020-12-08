@@ -3,6 +3,7 @@ package service
 import (
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -18,11 +19,10 @@ type Port struct {
 
 func AdaptFuncToEnsure(
 	namespace string,
-	name string,
-	labels map[string]string,
+	nameLabels *labels.Name,
 	ports []Port,
 	t string,
-	selector map[string]string,
+	selector *labels.Name,
 	publishNotReadyAddresses bool,
 	clusterIP string,
 	externalName string,
@@ -43,13 +43,13 @@ func AdaptFuncToEnsure(
 		}
 		service := &corev1.Service{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
+				Name:      nameLabels.Name(),
 				Namespace: namespace,
-				Labels:    labels,
+				Labels:    labels.MustK8sMap(nameLabels),
 			},
 			Spec: corev1.ServiceSpec{
 				Ports:                    portList,
-				Selector:                 selector,
+				Selector:                 labels.MustK8sMap(selector),
 				Type:                     corev1.ServiceType(t),
 				PublishNotReadyAddresses: publishNotReadyAddresses,
 				ClusterIP:                clusterIP,

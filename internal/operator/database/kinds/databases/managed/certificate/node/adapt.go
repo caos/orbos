@@ -4,6 +4,8 @@ import (
 	"crypto/rsa"
 	"reflect"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/certificates"
@@ -14,7 +16,6 @@ import (
 )
 
 const (
-	nodeSecret     = "cockroachdb.node"
 	caCertKey      = "ca.crt"
 	caPrivKeyKey   = "ca.key"
 	nodeCertKey    = "node.crt"
@@ -24,21 +25,17 @@ const (
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
-	labels map[string]string,
+	nameLabels *labels.Name,
 	clusterDns string,
 ) (
 	core2.QueryFunc,
 	core2.DestroyFunc,
 	error,
 ) {
-	nodeLabels := map[string]string{}
-	for k, v := range labels {
-		nodeLabels[k] = v
-	}
-	nodeLabels["database.caos.ch/secret-type"] = "node"
 
 	caPrivKey := new(rsa.PrivateKey)
 	caCert := make([]byte, 0)
+	nodeLabels := labels.MustK8sMap(nameLabels)
 
 	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 			queriers := make([]core2.QueryFunc, 0)
@@ -103,7 +100,7 @@ func AdaptFunc(
 						nodePrivKeyKey: string(pemNodePrivKey),
 						nodeCertKey:    string(pemNodeCert),
 					}
-					queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, nodeSecret, nodeLabels, nodeSecretData)
+					queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, nameLabels, nodeSecretData)
 					if err != nil {
 						return nil, err
 					}
