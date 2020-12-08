@@ -228,10 +228,9 @@ func queryExisting() ([]string, error) {
 }
 
 func queryExistingInterface(interfaceName string) ([]byte, error) {
-	cmdStr := fmt.Sprintf(`INNEROUT="$(set -o pipefail && sudo ip address show %s | grep %s | tail -n +2 | awk '{print $2}' | cut -d "/" -f 1)" && echo $INNEROUT`, interfaceName, interfaceName)
+	cmdStr := fmt.Sprintf(`set -o pipefail && ip address show %s | grep %s | tail -n +2 | awk '{print $2}' | cut -d "/" -f 1`, interfaceName, interfaceName)
 
 	cmd := exec.Command("/bin/sh", "-c", cmdStr)
-
 	return cmd.CombinedOutput()
 }
 
