@@ -15,12 +15,13 @@ type Desired struct {
 }
 
 type Pool struct {
-	OSImage     string
-	MinCPUCores int
-	MinMemoryGB int
-	StorageGB   int
-	Preemptible bool
-	LocalSSDs   uint8
+	OSImage         string
+	MinCPUCores     int
+	MinMemoryGB     int
+	StorageGB       int
+	StorageDiskType string
+	Preemptible     bool
+	LocalSSDs       uint8
 }
 
 func (p Pool) validate() error {
@@ -44,6 +45,16 @@ func (p Pool) validate() error {
 	default:
 		return fmt.Errorf("OSImage \"%s\" is not supported", p.OSImage)
 	}
+
+	switch p.StorageDiskType {
+	case "pd-standard",
+		"pd-balanced",
+		"pd-ssd":
+		break
+	default:
+		return fmt.Errorf("DiskType \"%s\" is not supported", p.StorageDiskType)
+	}
+
 	return nil
 }
 
