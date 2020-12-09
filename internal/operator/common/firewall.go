@@ -318,7 +318,7 @@ func (f Firewall) IsContainedIn(zones FirewallCurrent) bool {
 			if currentZone.Name == name {
 				foundZone = true
 
-				if zone.Masquerade != currentZone.Masquerade {
+				if zone.Masquerade && !currentZone.Masquerade {
 					return false
 				}
 

@@ -198,8 +198,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err er
 	}
 
 	errBuf.Reset()
-	args := strings.Join([]string{"sudo firewall-cmd --permanent --zone", zone, strings.Join(changes, " ")}, " ")
-	cmd := exec.Command("/bin/sh", append([]string{"-c"}, args)...)
+	cmd := exec.Command("firewall-cmd", append([]string{"--permanent", "--zone", zone}, changes...)...)
 	cmd.Stderr = errBuf
 
 	fullCmd := strings.Join(cmd.Args, " ")
@@ -218,7 +217,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err er
 func reloadFirewall(monitor mntr.Monitor) error {
 	errBuf := new(bytes.Buffer)
 	errBuf.Reset()
-	cmd := exec.Command("/bin/sh", "-c", "sudo firewall-cmd --reload")
+	cmd := exec.Command("firewall-cmd", "--reload")
 	cmd.Stderr = errBuf
 	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -228,25 +227,19 @@ func reloadFirewall(monitor mntr.Monitor) error {
 	return errors.Wrapf(cmd.Run(), "running firewall-cmd --reload failed with stderr %s", errBuf.String())
 }
 
-func listFirewall(monitor mntr.Monitor, zone string, arg string) ([]string, error) {
-	outBuf := new(bytes.Buffer)
-	defer outBuf.Reset()
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
+func listFirewall(monitor mntr.Monitor, zone string, args ...string) ([]string, error) {
+	//cmd := exec.Command("/bin/sh", "-c", "sudo firewall-cmd --zone "+zone+" "+arg)
+	cmd := exec.Command("firewall-cmd", append([]string{"--zone", zone}, args...)...)
 
-	cmd := exec.Command("/bin/sh", "-c", "sudo firewall-cmd --zone "+zone+" "+arg)
-	cmd.Stderr = errBuf
-	cmd.Stdout = outBuf
-
-	if err := cmd.Run(); err != nil {
-		return nil, errors.Wrapf(err, "running firewall-cmd %s in order to list firewall failed with stderr %s", arg, errBuf.String())
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, errors.Wrapf(err, "running firewall-cmd %s in order to list firewall failed with stderr %s", strings.Join(args, ""), string(data))
 	}
 
-	stdout := outBuf.String()
 	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
-		fmt.Println(stdout)
+		fmt.Println(string(data))
 	}
 
-	return strings.Fields(stdout), nil
+	return strings.Fields(string(data)), nil
 }

@@ -38,16 +38,16 @@ func getEnsureMasquerade(
 }
 
 func queryMasquerade(monitor mntr.Monitor, zone string) (bool, error) {
-	response, err := listFirewall(monitor, zone, "--list-all | grep masquerade")
+	response, err := listFirewall(monitor, zone, "--list-all")
 
 	if err != nil {
 		return false, err
 	}
 
-	trimmed := strings.TrimSpace(strings.Join(response, ""))
-	if strings.Contains(trimmed, "yes") {
+	trimmed := strings.TrimSpace(strings.Join(response, " "))
+	if strings.Contains(trimmed, "masquerade: yes") {
 		return true, nil
-	} else if strings.Contains(trimmed, "no") {
+	} else if strings.Contains(trimmed, "masquerade: no") {
 		return false, nil
 	}
 
