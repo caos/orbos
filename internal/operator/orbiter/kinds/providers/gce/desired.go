@@ -42,8 +42,8 @@ func (p Pool) validate() error {
 		if p.StorageGB < 20 {
 			return fmt.Errorf("at least 20GB of storage is needed for image %s", p.OSImage)
 		}
-	default:
-		return fmt.Errorf("OSImage \"%s\" is not supported", p.OSImage)
+		//	default:
+		//		return fmt.Errorf("OSImage \"%s\" is not supported", p.OSImage)
 	}
 
 	switch p.StorageDiskType {
