@@ -95,6 +95,10 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		memoryPerCore = float64(memory) / float64(cores)
 	}
 
+	diskType := ""
+	if desired.StorageDiskType != "" {
+		diskType = fmt.Sprintf("zones/%s/diskTypes/%s", m.context.desired.Zone, desired.StorageDiskType)
+	}
 	disks := []*compute.AttachedDisk{{
 		Type:       "PERSISTENT",
 		AutoDelete: true,
@@ -102,6 +106,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		InitializeParams: &compute.AttachedDiskInitializeParams{
 			DiskSizeGb:  int64(desired.StorageGB),
 			SourceImage: desired.OSImage,
+			DiskType:    diskType,
 		}},
 	}
 
