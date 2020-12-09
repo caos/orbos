@@ -16,6 +16,8 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+const containerdVersion = "1.4.3"
+
 type Installer interface {
 	isCRI()
 	nodeagent.Installer
@@ -54,15 +56,30 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	installed, err := c.manager.CurrentVersions("docker-ce")
+	installed, err := c.manager.CurrentVersions("docker-ce", "containerd.io")
 	if err != nil {
 		return pkg, err
 	}
-	version := ""
-	for _, pkg := range installed {
-		version = fmt.Sprintf("%s %s %s", version, pkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(pkg.Version))
+	var (
+		dockerVersion     string
+		containerdVersion string
+	)
+	for _, installedPkg := range installed {
+		switch installedPkg.Package {
+		case "docker-ce":
+			dockerVersion = fmt.Sprintf("%s %s %s", dockerVersion, installedPkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(installedPkg.Version))
+			continue
+		case "containerd.io":
+			containerdVersion = installedPkg.Version
+			continue
+		default:
+			panic(errors.Errorf("unexpected installed package %s", installedPkg.Package))
+		}
 	}
-	pkg.Version = strings.TrimSpace(version)
+	pkg.Version = strings.TrimSpace(dockerVersion)
+	if !strings.Contains(containerdVersion, "1.4.3") {
+		pkg.Config["containerd.io"] = containerdVersion
+	}
 
 	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
 	if pkg.Config == nil {
