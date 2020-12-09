@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -79,6 +80,16 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 	pkg.Version = strings.TrimSpace(dockerVersion)
 	if !strings.Contains(containerdVersion, "1.4.3") {
 		pkg.Config["containerd.io"] = containerdVersion
+	} else {
+		// Deprecated Code: Ensure existing containerd versions get locked
+		// TODO: Remove in ORBOS v4
+		lock, err := exec.Command("yum", "versionlock", "list").Output()
+		if err != nil {
+			return pkg, err
+		}
+		if !strings.Contains(string(lock), "containerd.io-1.4.3") {
+			pkg.Config["containerd.io"] = containerdVersion
+		}
 	}
 
 	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
