@@ -47,8 +47,7 @@ func (p Pool) validate() error {
 	}
 
 	switch p.StorageDiskType {
-	case "",
-		"pd-standard",
+	case "pd-standard",
 		"pd-balanced",
 		"pd-ssd":
 		break
