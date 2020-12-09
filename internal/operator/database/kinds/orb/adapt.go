@@ -43,7 +43,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		}
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, secrets, err := databases.GetQueryAndDestroyFuncs(
+		queryDB, destroyDB, secrets, apiLabels, err := databases.GetQueryAndDestroyFuncs(
 			orbMonitor,
 			desiredKind.Database,
 			databaseCurrent,
@@ -65,7 +65,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		}
 		if desiredKind.Spec.SelfReconciling {
 			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
+				core.EnsureFuncToQueryFunc(Reconcile(monitor, apiLabels, desiredTree)),
 			)
 		}
 

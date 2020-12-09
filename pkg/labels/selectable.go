@@ -2,8 +2,6 @@ package labels
 
 import "gopkg.in/yaml.v3"
 
-var selectProperty = InternalSelectProp{Select: true}
-
 var _ Labels = (*Selectable)(nil)
 
 type Selectable struct {
@@ -12,7 +10,7 @@ type Selectable struct {
 }
 
 type InternalSelectProp struct {
-	Select bool `yaml:"orbos.ch/select"`
+	Select interface{} `yaml:"orbos.ch/selectable"`
 }
 
 type InternalSelectable struct {
@@ -24,8 +22,7 @@ func AsSelectable(l *Name) *Selectable {
 	return &Selectable{
 		base: l,
 		model: InternalSelectable{
-			InternalSelectProp: selectProperty,
-			InternalName:       l.model,
+			InternalName: l.model,
 		},
 	}
 }
@@ -40,6 +37,10 @@ func (l *Selectable) UnmarshalYAML(node *yaml.Node) error {
 
 func (l *Selectable) Major() int8 {
 	return l.base.Major()
+}
+
+func (l *Selectable) Name() string {
+	return l.base.Name()
 }
 
 func (l *Selectable) Equal(r comparable) bool {

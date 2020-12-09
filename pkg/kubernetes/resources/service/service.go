@@ -22,7 +22,7 @@ func AdaptFuncToEnsure(
 	nameLabels *labels.Name,
 	ports []Port,
 	t string,
-	selector *labels.Name,
+	selector *labels.Selector,
 	publishNotReadyAddresses bool,
 	clusterIP string,
 	externalName string,

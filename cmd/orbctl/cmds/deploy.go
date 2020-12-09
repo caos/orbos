@@ -9,6 +9,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
@@ -25,14 +26,19 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		return err
 	}
 
-	desiredKind, _, _, err := boomapi.ParseToolset(desiredTree)
+	desiredKind, _, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
 	if err != nil {
 		return err
 	}
 
 	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-	if err := cmdboom.Reconcile(monitor, k8sClient, desiredKind.Spec.Boom); err != nil {
+	if err := cmdboom.Reconcile(
+		monitor,
+		labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", desiredKind.Spec.Boom.Version), apiKind, apiVersion),
+		k8sClient,
+		desiredKind.Spec.Boom,
+	); err != nil {
 		return err
 	}
 	return nil

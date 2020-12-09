@@ -6,6 +6,7 @@ import (
 	"math"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -14,6 +15,15 @@ var _ Labels = (*Operator)(nil)
 
 type Operator struct {
 	model InternalOperator
+}
+
+func NoopOperator(product string) *Operator {
+	return &Operator{model: InternalOperator{
+		Version:               "unknown",
+		InternalPartofProp:    InternalPartofProp{PartOf: product},
+		InternalManagedByProp: InternalManagedByProp{ManagedBy: "CLI"},
+		Major:                 "unknown",
+	}}
 }
 
 func ForOperator(product, operator, version string) (*Operator, error) {
@@ -54,7 +64,23 @@ func (l *Operator) MarshalYAML() (interface{}, error) {
 }
 
 func (l *Operator) Major() int8 {
-	return l.model.Major
+
+	var unknown int8 = -1
+
+	if l.model.Major == "unknown" {
+		return unknown
+	}
+
+	m, err := strconv.Atoi(strings.TrimPrefix(l.model.Major, "v"))
+	if err != nil {
+		return unknown
+	}
+
+	if m > math.MaxInt8 {
+		return unknown
+	}
+
+	return int8(m)
 }
 
 type InternalPartofProp struct {

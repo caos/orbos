@@ -10,14 +10,14 @@ import (
 
 func QueryCertificates(
 	namespace string,
-	componentLabels *labels.Component,
+	selector *labels.Selector,
 	k8sClient kubernetes.ClientInt,
 ) (
 	[]string,
 	error,
 ) {
 
-	list, err := k8sClient.ListSecrets(namespace, labels.MustK8sMap(componentLabels))
+	list, err := k8sClient.ListSecrets(namespace, labels.MustK8sMap(selector))
 	if err != nil {
 		return nil, err
 	}

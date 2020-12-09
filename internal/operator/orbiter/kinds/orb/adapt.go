@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -16,6 +17,7 @@ import (
 )
 
 func AdaptFunc(
+	operatorLabels *labels.Operator,
 	orbConfig *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
@@ -126,6 +128,7 @@ func AdaptFunc(
 			clusterCurrents[clusterID] = clusterCurrent
 			query, destroy, configure, migrateLocal, clusterSecrets, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
+				operatorLabels,
 				clusterID,
 				clusterTree,
 				oneoff,

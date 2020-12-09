@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	dbOrb "github.com/caos/orbos/internal/operator/database/kinds/orb"
@@ -38,7 +40,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 				return nil, nil, err
 			}
 			allTrees[boom] = boomYML
-			_, _, boomSecrets, err := boomapi.ParseToolset(boomYML)
+			_, _, boomSecrets, _, _, err := boomapi.ParseToolset(boomYML)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -60,6 +62,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			allTrees[orbiter] = orbiterYML
 
 			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(
+				labels.NoopOperator("ORBOS"),
 				orb,
 				"",
 				true,

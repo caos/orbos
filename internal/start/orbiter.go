@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/ingestion"
@@ -144,6 +146,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}
 
 	adaptFunc := orb.AdaptFunc(
+		labels.MustForOperator("ORBOS", "orbiter.caos.ch", conf.Version),
 		orbFile,
 		conf.GitCommit,
 		!conf.Recur,

@@ -17,19 +17,28 @@ type InternalSelector struct {
 	InternalPartofProp    `yaml:",inline"`
 }
 
-func DeriveSelector(l *Name, open bool) *Selector {
+func DeriveComponentSelector(l *Component, open bool) *Selector {
 	selector := &Selector{
-		base: l,
+		base: newName(l, ""),
 		model: InternalSelector{
-			InternalSelectProp:    selectProperty,
 			InternalComponentProp: l.model.InternalComponentProp,
 		},
 	}
 
 	if !open {
 		selector.model.InternalPartofProp = l.model.InternalPartofProp
-		selector.model.InternalNameProp = l.model.InternalNameProp
 		selector.model.InternalManagedByProp = l.model.InternalManagedByProp
+	}
+
+	return selector
+}
+
+func DeriveNameSelector(l *Name, open bool) *Selector {
+	selector := DeriveComponentSelector(l.base, open)
+	selector.base = l
+
+	if !open {
+		selector.model.InternalNameProp = l.model.InternalNameProp
 	}
 
 	return selector

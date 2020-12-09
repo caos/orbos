@@ -1,27 +1,29 @@
 package app
 
 import (
+	"reflect"
+
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/cloudflare/cloudflare-go"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"reflect"
 )
 
-func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespace string, labels map[string]string, domain string, originCASecretName string) error {
+func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespace string, nameLabels *labels.Name, domain string) error {
 
 	certKey := "tls.crt"
 	keyKey := "tls.key"
 
-	secretList, err := k8sClient.ListSecrets(namespace, labels)
+	secretList, err := k8sClient.ListSecrets(namespace, labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false)))
 	if err != nil {
 		return err
 	}
 
 	tlsSecret := new(corev1.Secret)
 	for _, secret := range secretList.Items {
-		if secret.Name == originCASecretName {
+		if secret.Name == nameLabels.Name() {
 			tlsSecret = &secret
 		}
 	}
@@ -70,9 +72,9 @@ func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespac
 
 		if err := k8sClient.ApplySecret(&corev1.Secret{
 			ObjectMeta: v1.ObjectMeta{
-				Name:      originCASecretName,
+				Name:      nameLabels.Name(),
 				Namespace: namespace,
-				Labels:    labels,
+				Labels:    labels.MustK8sMap(nameLabels),
 			},
 			StringData: map[string]string{
 				certKey: origin.Certificate,

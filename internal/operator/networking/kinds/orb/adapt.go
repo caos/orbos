@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -13,11 +14,6 @@ import (
 func AdaptFunc() core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
-	labels := map[string]string{
-		"app.kubernetes.io/managed-by": "networking.caos.ch",
-		"app.kubernetes.io/part-of":    "orbos",
-	}
-
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -36,8 +32,10 @@ func AdaptFunc() core.AdaptFunc {
 			orbMonitor = orbMonitor.Verbose()
 		}
 
+		operatorLabels := labels.MustForOperator("ORBOS", "networking.caos.ch", desiredKind.Spec.Version)
+
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
+		queryNW, destroyNW, secrets, apiLabels, err := networking.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, operatorLabels)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -47,7 +45,7 @@ func AdaptFunc() core.AdaptFunc {
 		}
 		if desiredKind.Spec.SelfReconciling {
 			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
+				core.EnsureFuncToQueryFunc(Reconcile(monitor, apiLabels, desiredTree)),
 			)
 		}
 

@@ -47,7 +47,8 @@ func (a Affinitys) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 func AdaptFunc(
 	monitor mntr.Monitor,
-	nameLabels *labels.Name,
+	sfsSelectable *labels.Selectable,
+	podSelector *labels.Selector,
 	namespace string,
 	image string,
 	serviceAccountName string,
@@ -74,29 +75,29 @@ func AdaptFunc(
 		return nil, nil, nil, nil, nil, err
 	}
 
-	name := nameLabels.Name()
-	k8sNameLabels := labels.MustK8sMap(nameLabels)
+	name := sfsSelectable.Name()
+	k8sSelectable := labels.MustK8sMap(sfsSelectable)
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    k8sNameLabels,
+			Labels:    k8sSelectable,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
 			Replicas:    helper.PointerInt32(int32(replicaCount)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: k8sNameLabels,
+				MatchLabels: labels.MustK8sMap(podSelector),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: k8sNameLabels,
+					Labels: k8sSelectable,
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,
 					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
-					Affinity:           getAffinity(k8sNameLabels),
+					Affinity:           getAffinity(k8sSelectable),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           image,

@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
@@ -42,7 +44,7 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *cfg.Orb, d
 		return err
 	}
 
-	listMachines := orb.ListMachines()
+	listMachines := orb.ListMachines(labels.NoopOperator("ORBOS"))
 
 	machineIDs, machines, err := listMachines(
 		monitor,

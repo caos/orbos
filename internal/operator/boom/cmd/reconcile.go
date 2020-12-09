@@ -5,12 +5,13 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, boomSpec *latest.Boom) error {
+func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernetes.Client, boomSpec *latest.Boom) error {
 
 	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
@@ -54,7 +55,7 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, boomSpec *lat
 		return nil
 	}
 
-	if err := kubernetes.EnsureBoomArtifacts(monitor, k8sClient, boomSpec.Version, tolerations, nodeselector, &resources, imageRegistry); err != nil {
+	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomSpec.Version, tolerations, nodeselector, &resources, imageRegistry); err != nil {
 		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
 		return err
 	}

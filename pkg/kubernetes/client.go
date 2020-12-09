@@ -755,7 +755,7 @@ func (c *Client) applyController(
 				return updateResource()
 			}
 
-			if currentLabels.Major() <= newNameLabels.Major() {
+			if currentLabels.Major() >= newNameLabels.Major() {
 				return errors.New("only recreating statefulset when operator version is breaking")
 			}
 

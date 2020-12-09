@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name, target *labels.Name, maxUnavailable string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name, target *labels.Selector, maxUnavailable string) (resources.QueryFunc, error) {
 	maxUnavailableParsed := intstr.Parse(maxUnavailable)
 	pdb := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{

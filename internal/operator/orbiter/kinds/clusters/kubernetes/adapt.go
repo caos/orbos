@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/pkg/labels"
 	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
@@ -17,6 +18,7 @@ import (
 var deployErrors int
 
 func AdaptFunc(
+	apiLabels *labels.API,
 	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
@@ -102,7 +104,13 @@ func AdaptFunc(
 				imageRegistry = "ghcr.io"
 			}
 
-			if err := kubernetes.EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter, imageRegistry); err != nil {
+			if err := kubernetes.EnsureOrbiterArtifacts(
+				monitor,
+				apiLabels,
+				k8sClient,
+				desiredKind.Spec.Versions.Orbiter,
+				imageRegistry,
+			); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,

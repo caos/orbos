@@ -2,8 +2,10 @@ package config
 
 import (
 	"errors"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
+	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 )
@@ -33,7 +35,7 @@ func (i *ExternalConfig) IsZero() bool {
 	return false
 }
 
-func (e *ExternalConfig) Internal(namespace string, labels map[string]string) (*InternalConfig, *current) {
+func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
 		Domains:            []*InternalDomain{dom},
@@ -42,7 +44,7 @@ func (e *ExternalConfig) Internal(namespace string, labels map[string]string) (*
 		Prefix:             e.Prefix,
 		Namespace:          namespace,
 		OriginCASecretName: curr.tlsCertName,
-		Labels:             labels,
+		Labels:             apiLabels,
 	}, curr
 }
 

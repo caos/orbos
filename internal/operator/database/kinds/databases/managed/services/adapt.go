@@ -16,7 +16,7 @@ func AdaptFunc(
 	namespace string,
 	publicServiceNameLabels *labels.Name,
 	serviceNameLabels *labels.Name,
-	cockroachLabels *labels.Name,
+	cockroachSelector *labels.Selector,
 	cockroachPort int32,
 	cockroachHTTPPort int32,
 ) (
@@ -48,15 +48,15 @@ func AdaptFunc(
 		{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},
 		{Port: 8080, TargetPort: strconv.Itoa(int(cockroachHTTPPort)), Name: "http"},
 	}
-	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceNameLabels, ports, "", cockroachLabels, false, "", "")
+	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceNameLabels, ports, "", cockroachSelector, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceNameLabels, ports, "", cockroachLabels, false, "", "")
+	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceNameLabels, ports, "", cockroachSelector, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	queryS, err := service.AdaptFuncToEnsure(namespace, serviceNameLabels, ports, "", cockroachLabels, true, "None", "")
+	queryS, err := service.AdaptFuncToEnsure(namespace, serviceNameLabels, ports, "", cockroachSelector, true, "None", "")
 	if err != nil {
 		return nil, nil, err
 	}

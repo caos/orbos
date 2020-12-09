@@ -26,13 +26,17 @@ func ForName(l *Component, name string) (*Name, error) {
 	if name == "" {
 		return nil, errors.New("name must not be nil")
 	}
+	return newName(l, name), nil
+}
+
+func newName(c *Component, name string) *Name {
 	return &Name{
-		base: l,
+		base: c,
 		model: InternalName{
 			InternalNameProp:  InternalNameProp{Name: name},
-			InternalComponent: l.model,
+			InternalComponent: c.model,
 		},
-	}, nil
+	}
 }
 
 func NameFrom(arbitrary map[string]string) (*Name, error) {

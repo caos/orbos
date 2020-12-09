@@ -3,10 +3,12 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/caos/orbos/pkg/kubernetes"
-	secret2 "github.com/caos/orbos/pkg/secret"
 	"io/ioutil"
 	"path/filepath"
+
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
+	secret2 "github.com/caos/orbos/pkg/secret"
 
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 
@@ -142,6 +144,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		if foundOrbiter {
 
 			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+				labels.NoopOperator("ORBOS"),
 				orbConfig,
 				gitCommit,
 				true,
@@ -196,7 +199,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, _, err := boomapi.ParseToolset(tree)
+			toolset, _, _, _, _, err := boomapi.ParseToolset(tree)
 			if err != nil {
 				return err
 			}

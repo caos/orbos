@@ -83,7 +83,7 @@ func AdaptFunc(
 			return destroy(user), nil
 		},
 		func(k8sClient kubernetes.ClientInt) ([]string, error) {
-			return client.QueryCertificates(namespace, componentLabels, k8sClient)
+			return client.QueryCertificates(namespace, labels.DeriveComponentSelector(componentLabels, false), k8sClient)
 		},
 		nil
 }

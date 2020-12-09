@@ -93,9 +93,12 @@ func AdaptFunc(
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, labels.MustForName(componentLabels, serviceAccountName))
 
 		cockroachNameLabels := labels.MustForName(componentLabels, sfsName)
+		cockroachSelector := labels.DeriveNameSelector(cockroachNameLabels, false)
+		cockroachSelectabel := labels.AsSelectable(cockroachNameLabels)
 		querySFS, destroySFS, ensureInit, checkDBReady, listDatabases, err := statefulset.AdaptFunc(
 			internalMonitor,
-			cockroachNameLabels,
+			cockroachSelectabel,
+			cockroachSelector,
 			namespace,
 			image,
 			serviceAccountName,
@@ -117,7 +120,7 @@ func AdaptFunc(
 			namespace,
 			labels.MustForName(componentLabels, publicServiceName),
 			cockroachNameLabels,
-			cockroachNameLabels,
+			cockroachSelector,
 			cockroachPort,
 			cockroachHTTPPort,
 		)
@@ -128,7 +131,7 @@ func AdaptFunc(
 		//	return nil, nil, err
 		//}
 
-		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, labels.MustForName(componentLabels, pdbName), cockroachNameLabels, "1")
+		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, labels.MustForName(componentLabels, pdbName), cockroachSelector, "1")
 		if err != nil {
 			return nil, nil, nil, err
 		}

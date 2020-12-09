@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -12,7 +13,7 @@ import (
 
 func AdaptFunc(
 	namespace string,
-	labels map[string]string,
+	apiLabels *labels.API,
 ) opcore.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
@@ -44,7 +45,7 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		internalSpec, current := desiredKind.Spec.Internal(namespace, labels)
+		internalSpec, current := desiredKind.Spec.Internal(namespace, apiLabels)
 
 		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
 		current.ReadyCertificate = readyCertificate
