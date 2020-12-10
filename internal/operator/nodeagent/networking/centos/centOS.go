@@ -7,9 +7,11 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
+	"text/template"
 )
 
 const (
@@ -113,6 +115,10 @@ deleteLoop:
 				continue deleteLoop
 			}
 		}
+
+		if err := os.Remove(getNetworkScriptPath(ifaceNameWithPrefix)); err != nil && err != os.ErrNotExist {
+			return nil, err
+		}
 		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
 	}
 
@@ -137,6 +143,11 @@ deleteLoop:
 				if err := ensureFunc(); err != nil {
 					return err
 				}
+			}
+
+			currentIface := getNetworkScript(ifaceNameWithPrefix, iface.IPs)
+			if err := ioutil.WriteFile(getNetworkScriptPath(ifaceNameWithPrefix), []byte(currentIface), os.ModePerm); err != nil {
+				return err
 			}
 		}
 		return nil
@@ -263,4 +274,29 @@ func ensureIP(monitor mntr.Monitor, changes []string) (err error) {
 	}
 
 	return errors.Wrapf(cmd.Run(), "running %s failed with stderr %s", cmdStr, errBuf.String())
+}
+
+func getNetworkScriptPath(interfaceName string) string {
+	return "/etc/sysconfig/network-scripts/ifcfg-" + interfaceName
+}
+func getNetworkScript(name string, ips []string) string {
+	tmpBuf := new(bytes.Buffer)
+	tmpl := template.Must(template.New("").Parse(`NAME={{ $Name }}
+DEVICE={{ $Name }}
+ONBOOT=yes
+TYPE=Ethernet
+NM_CONTROLLED=no{{ range $ip := .IPs }}
+IPADDR={{ $ip }}{{ end }}`))
+	if err := tmpl.Execute(tmpBuf,
+		struct {
+			IPs  []string
+			Name string
+		}{
+			IPs:  ips,
+			Name: name,
+		},
+	); err != nil {
+		return ""
+	}
+	return tmpBuf.String()
 }
