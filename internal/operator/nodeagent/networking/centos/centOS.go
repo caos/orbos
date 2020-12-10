@@ -281,8 +281,8 @@ func getNetworkScriptPath(interfaceName string) string {
 }
 func getNetworkScript(name string, ips []string) string {
 	tmpBuf := new(bytes.Buffer)
-	tmpl := template.Must(template.New("").Parse(`NAME={{ $Name }}
-DEVICE={{ $Name }}
+	tmpl := template.Must(template.New("").Parse(`NAME={{ .Name }}
+DEVICE={{ .Name }}
 ONBOOT=yes
 TYPE=Ethernet
 NM_CONTROLLED=no{{ range $ip := .IPs }}
