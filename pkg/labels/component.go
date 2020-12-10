@@ -42,10 +42,11 @@ func MustForComponent(l *API, component string) *Component {
 	return c
 }
 
+/*
 func (l *Component) Major() int8 {
 	return l.base.Major()
 }
-
+*/
 func (l *Component) Equal(r comparable) bool {
 	if right, ok := r.(*Component); ok {
 		return l.model == right.model

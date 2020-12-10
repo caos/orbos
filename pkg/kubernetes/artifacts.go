@@ -389,7 +389,7 @@ func EnsureBoomArtifacts(
 
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "boom",
 			Namespace: "caos-system",
@@ -438,7 +438,9 @@ func EnsureBoomArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -492,7 +494,7 @@ func EnsureOrbiterArtifacts(
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "orbiter",
 			Namespace: "caos-system",
@@ -553,7 +555,9 @@ func EnsureOrbiterArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{

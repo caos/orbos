@@ -34,7 +34,6 @@ caos.ch/kind: testing.caos.ch/TestSuite
 caos.ch/apiversion: v1
 app.kubernetes.io/managed-by: TEST_OPERATOR_LABELS
 app.kubernetes.io/version: v123.4.5
-caos.ch/major: 123
 app.kubernetes.io/part-of: ORBOS
 `
 
@@ -55,9 +54,13 @@ func TestNameLabels_UnmarshalYAML(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var expected int8 = 123
-	got := name.Major()
-	if name.Major() != expected {
-		t.Errorf("expected major %d but got %d", expected, got)
+	reMarshalled, err := yaml.Marshal(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	got := string(reMarshalled)
+	if got != validLabels {
+		t.Errorf("expected %s but got %s", validLabels, got)
 	}
 }

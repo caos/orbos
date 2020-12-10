@@ -2,27 +2,31 @@ package labels
 
 import "gopkg.in/yaml.v3"
 
-var _ Labels = (*Selectable)(nil)
+var (
+	_          Labels = (*Selectable)(nil)
+	selectable        = InternalSelectableProp{Selectable: "yes"}
+)
 
 type Selectable struct {
 	model InternalSelectable
 	base  *Name
 }
 
-type InternalSelectProp struct {
-	Select interface{} `yaml:"orbos.ch/selectable"`
+type InternalSelectableProp struct {
+	Selectable string `yaml:"orbos.ch/selectable"`
 }
 
 type InternalSelectable struct {
-	InternalSelectProp `yaml:",inline"`
-	InternalName       `yaml:",inline"`
+	InternalSelectableProp `yaml:",inline"`
+	InternalName           `yaml:",inline"`
 }
 
 func AsSelectable(l *Name) *Selectable {
 	return &Selectable{
 		base: l,
 		model: InternalSelectable{
-			InternalName: l.model,
+			InternalName:           l.model,
+			InternalSelectableProp: selectable,
 		},
 	}
 }
@@ -35,9 +39,11 @@ func (l *Selectable) UnmarshalYAML(node *yaml.Node) error {
 	return node.Decode(l.base)
 }
 
+/*
 func (l *Selectable) Major() int8 {
 	return l.base.Major()
 }
+*/
 
 func (l *Selectable) Name() string {
 	return l.base.Name()

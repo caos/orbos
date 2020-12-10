@@ -219,7 +219,7 @@ func (c *Client) GetDeployment(namespace, name string) (*apps.Deployment, error)
 	return c.set.AppsV1().Deployments(namespace).Get(context.Background(), name, mach.GetOptions{})
 }
 
-func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
+func (c *Client) ApplyDeployment(rsc *apps.Deployment, force bool) error {
 	resources := c.set.AppsV1().Deployments(rsc.GetNamespace())
 	rscLabels, err := labels.NameFrom(rsc.Labels)
 	if err != nil {
@@ -233,21 +233,16 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 
 	return c.applyController(
 		"deployment",
+		force,
 		rscLabels,
 		rscSelector,
-		func() (*labels.Name, *labels.Selector, error) {
+		func() (*labels.Selector, error) {
 			sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
-			stsLabels, err := labels.NameFrom(sts.Labels)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			stsSelector, err := labels.SelectorFrom(sts.Spec.Selector.MatchLabels)
-			return stsLabels, stsSelector, err
+			return labels.SelectorFrom(sts.Spec.Selector.MatchLabels)
 		},
 		func() error {
 			_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
@@ -451,7 +446,7 @@ func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error 
 	return c.set.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
-func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
+func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error {
 	resources := c.set.AppsV1().StatefulSets(rsc.Namespace)
 	rscLabels, err := labels.NameFrom(rsc.Labels)
 	if err != nil {
@@ -465,21 +460,16 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 
 	return c.applyController(
 		"statefulset",
+		force,
 		rscLabels,
 		rscSelector,
-		func() (*labels.Name, *labels.Selector, error) {
+		func() (*labels.Selector, error) {
 			sts, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
 			if err != nil {
-				return nil, nil, err
+				return nil, err
 			}
 
-			stsLabels, err := labels.NameFrom(sts.Labels)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			stsSelector, err := labels.SelectorFrom(sts.Spec.Selector.MatchLabels)
-			return stsLabels, stsSelector, err
+			return labels.SelectorFrom(sts.Spec.Selector.MatchLabels)
 		},
 		func() error {
 			_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
@@ -733,9 +723,10 @@ func (c *Client) applyResource(object, name string, create func() error, update 
 
 func (c *Client) applyController(
 	controllerType string,
+	force bool,
 	newNameLabels *labels.Name,
 	newSelector *labels.Selector,
-	getCurrentLabelsFunc func() (*labels.Name, *labels.Selector, error),
+	getCurrentSelectorFunc func() (*labels.Selector, error),
 	createResource func() error,
 	updateResource func() error,
 	deleteResource func() error) error {
@@ -746,7 +737,7 @@ func (c *Client) applyController(
 		createResource,
 		func() error {
 
-			currentLabels, currentSelector, err := getCurrentLabelsFunc()
+			currentSelector, err := getCurrentSelectorFunc()
 			if err != nil {
 				return err
 			}
@@ -755,8 +746,8 @@ func (c *Client) applyController(
 				return updateResource()
 			}
 
-			if currentLabels.Major() >= newNameLabels.Major() {
-				return errors.New("only recreating statefulset when operator version is breaking")
+			if !force {
+				return errors.Errorf("only recreating %s when force is true", controllerType)
 			}
 
 			if err := deleteResource(); err != nil {

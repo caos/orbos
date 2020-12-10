@@ -17,7 +17,7 @@ func TestSelectableLabels_MarshalYAML(t *testing.T) {
 		t.Error(err, "expected successful mashalling")
 	}
 
-	expected := "orbos.ch/select: true\n" + validLabels
+	expected := "orbos.ch/selectable: \"yes\"\n" + validLabels
 	if string(marshalled) != expected {
 		t.Errorf("expected \n%s\n but got \n%s\n", expected, string(marshalled))
 	}

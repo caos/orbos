@@ -60,9 +60,11 @@ func (l *Name) Name() string {
 	return l.model.Name
 }
 
+/*
 func (l *Name) Major() int8 {
 	return l.base.Major()
 }
+*/
 
 func (l *Name) Equal(r comparable) bool {
 	if right, ok := r.(*Name); ok {

@@ -2,11 +2,6 @@ package labels
 
 import (
 	"errors"
-	"fmt"
-	"math"
-	"regexp"
-	"strconv"
-	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -22,7 +17,7 @@ func NoopOperator(product string) *Operator {
 		Version:               "unknown",
 		InternalPartofProp:    InternalPartofProp{PartOf: product},
 		InternalManagedByProp: InternalManagedByProp{ManagedBy: "CLI"},
-		Major:                 "unknown",
+		//		Major:                 "unknown",
 	}}
 }
 
@@ -36,7 +31,7 @@ func ForOperator(product, operator, version string) (*Operator, error) {
 		Version:               version,
 		InternalPartofProp:    InternalPartofProp{PartOf: product},
 		InternalManagedByProp: InternalManagedByProp{ManagedBy: operator},
-		Major:                 major(version),
+		//		Major:                 major(version),
 	}}, nil
 }
 
@@ -63,6 +58,7 @@ func (l *Operator) MarshalYAML() (interface{}, error) {
 	return nil, errors.New("type *labels.Operator is not serializable")
 }
 
+/*
 func (l *Operator) Major() int8 {
 
 	var unknown int8 = -1
@@ -82,6 +78,7 @@ func (l *Operator) Major() int8 {
 
 	return int8(m)
 }
+*/
 
 type InternalPartofProp struct {
 	PartOf string `yaml:"app.kubernetes.io/part-of,omitempty"`
@@ -94,10 +91,11 @@ type InternalManagedByProp struct {
 type InternalOperator struct {
 	InternalManagedByProp `yaml:",inline"`
 	Version               string `yaml:"app.kubernetes.io/version"`
-	Major                 string `yaml:"caos.ch/major"`
-	InternalPartofProp    `yaml:",inline"`
+	//	Major                 string `yaml:"caos.ch/major"`
+	InternalPartofProp `yaml:",inline"`
 }
 
+/*
 func major(version string) string {
 	versionRegex := regexp.MustCompile("^v([0-9]+)\\.[0-9]+\\.[0-9]+$")
 	matches := versionRegex.FindStringSubmatch(version)
@@ -117,3 +115,4 @@ func major(version string) string {
 
 	return fmt.Sprintf("v%d", m)
 }
+*/

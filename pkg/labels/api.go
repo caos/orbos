@@ -46,9 +46,11 @@ func (l *API) UnmarshalYAML(node *yaml.Node) error {
 	return node.Decode(l.base)
 }
 
+/*
 func (l *API) Major() int8 {
 	return l.base.Major()
 }
+*/
 
 func (l *API) Equal(r comparable) bool {
 	if right, ok := r.(*API); ok {

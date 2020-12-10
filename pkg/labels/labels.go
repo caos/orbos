@@ -8,7 +8,7 @@ type Labels interface {
 	comparable
 	yaml.Marshaler
 	yaml.Unmarshaler
-	Major() int8
+	//	Major() int8
 }
 
 type comparable interface {

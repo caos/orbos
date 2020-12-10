@@ -10,18 +10,19 @@ type Selector struct {
 }
 
 type InternalSelector struct {
-	InternalSelectProp    `yaml:",inline"`
-	InternalNameProp      `yaml:",inline"`
-	InternalComponentProp `yaml:",inline"`
-	InternalManagedByProp `yaml:",inline"`
-	InternalPartofProp    `yaml:",inline"`
+	InternalSelectableProp `yaml:",inline"`
+	InternalNameProp       `yaml:",inline"`
+	InternalComponentProp  `yaml:",inline"`
+	InternalManagedByProp  `yaml:",inline"`
+	InternalPartofProp     `yaml:",inline"`
 }
 
 func DeriveComponentSelector(l *Component, open bool) *Selector {
 	selector := &Selector{
 		base: newName(l, ""),
 		model: InternalSelector{
-			InternalComponentProp: l.model.InternalComponentProp,
+			InternalSelectableProp: selectable,
+			InternalComponentProp:  l.model.InternalComponentProp,
 		},
 	}
 
@@ -53,9 +54,11 @@ func SelectorFrom(arbitrary map[string]string) (*Selector, error) {
 	return s, yaml.Unmarshal(intermediate, s)
 }
 
+/*
 func (l *Selector) Major() int8 {
 	return l.base.Major()
 }
+*/
 
 func (l *Selector) Equal(r comparable) bool {
 	if right, ok := r.(*Selector); ok {
