@@ -123,7 +123,7 @@ func prepareQuery(
 		})
 
 		divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-		if len(divergentSw) == 0 && ensureFirewall == nil {
+		if len(divergentSw) == 0 && ensureFirewall == nil && ensureNetworking == nil {
 			curr.NodeIsReady = true
 			return noop, nil
 		}
