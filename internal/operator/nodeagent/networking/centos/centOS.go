@@ -116,8 +116,10 @@ deleteLoop:
 			}
 		}
 
-		if err := os.Remove(getNetworkScriptPath(ifaceNameWithPrefix)); err != nil && err != os.ErrNotExist {
-			return nil, err
+		for filename, _ := range getNetworkFiles(ifaceNameWithPrefix, "", []string{}) {
+			if err := os.Remove(filename); err != nil && err != os.ErrNotExist {
+				return nil, err
+			}
 		}
 		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
 	}
@@ -145,9 +147,10 @@ deleteLoop:
 				}
 			}
 
-			currentIface := getNetworkScript(ifaceNameWithPrefix, iface.IPs)
-			if err := ioutil.WriteFile(getNetworkScriptPath(ifaceNameWithPrefix), []byte(currentIface), os.ModePerm); err != nil {
-				return err
+			for filename, content := range getNetworkFiles(ifaceNameWithPrefix, iface.Type, iface.IPs) {
+				if err := ioutil.WriteFile(filename, []byte(content), os.ModePerm); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -279,7 +282,8 @@ func ensureIP(monitor mntr.Monitor, changes []string) (err error) {
 func getNetworkScriptPath(interfaceName string) string {
 	return "/etc/sysconfig/network-scripts/ifcfg-" + interfaceName
 }
-func getNetworkScript(name string, ips []string) string {
+
+func getNetworkFiles(name string, ty string, ips []string) map[string]string {
 	tmpBuf := new(bytes.Buffer)
 	tmpl := template.Must(template.New("").Parse(`NAME={{ .Name }}
 DEVICE={{ .Name }}
@@ -296,7 +300,12 @@ IPADDR={{ $ip }}{{ end }}`))
 			Name: name,
 		},
 	); err != nil {
-		return ""
+		return map[string]string{}
 	}
-	return tmpBuf.String()
+
+	return map[string]string{
+		getNetworkScriptPath(name):              tmpBuf.String(),
+		"/etc/modules-load.d/" + name + ".conf": name,
+		"/etc/modprobe.d/" + name + "conf":      "install " + name + " /sbin/modprobe --ignore-install " + name + "; /sbin/ip link add " + name + " type " + ty,
+	}
 }
