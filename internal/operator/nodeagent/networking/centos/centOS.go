@@ -27,7 +27,14 @@ func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 		if err != nil {
 			return current, ensurer, err
 		}
-		ensurers = append(ensurers, ensurer)
+		if ensurer != nil {
+			ensurers = append(ensurers, ensurer)
+		}
+
+		if ensurers == nil || len(ensurers) == 0 {
+			monitor.Debug("Not changing networking")
+			return current, nil, nil
+		}
 
 		return current, func() error {
 			monitor.Debug("Ensuring networking")
@@ -124,31 +131,23 @@ deleteLoop:
 		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
 	}
 
+	if (changes == nil || len(changes) == 0) &&
+		(ensurers == nil || len(ensurers) == 0) {
+		return nil, nil
+	}
+
 	current.Sort()
 	return func() error {
 		monitor.Debug(fmt.Sprintf("Ensuring part of networking"))
-		if err := ensureIP(monitor, changes); err != nil {
-			return err
-		}
-
-		for ifaceName := range desired.Interfaces {
-			iface := desired.Interfaces[ifaceName]
-
-			//ensure ips for every desired interface
-			ifaceNameWithPrefix := prefix + ifaceName
-			ensureFunc, err := ensureInterface(monitor, ifaceNameWithPrefix, iface)
-			if err != nil {
+		if changes != nil && len(changes) != 0 {
+			if err := ensureIP(monitor, changes); err != nil {
 				return err
 			}
+		}
 
-			if ensureFunc != nil {
+		if ensurers != nil {
+			for _, ensureFunc := range ensurers {
 				if err := ensureFunc(); err != nil {
-					return err
-				}
-			}
-
-			for filename, content := range getNetworkFiles(ifaceNameWithPrefix, iface.Type, iface.IPs) {
-				if err := ioutil.WriteFile(filename, []byte(content), os.ModePerm); err != nil {
 					return err
 				}
 			}
@@ -209,9 +208,24 @@ deleteLoop:
 		changes = append(changes, fmt.Sprintf("addr delete %s/32 dev %s", added, name))
 	}
 
+	if changes == nil || len(changes) == 0 {
+		return nil, nil
+	}
+
 	return func() error {
 		monitor.Debug(fmt.Sprintf("Ensuring part of networking with interface %s", name))
-		return ensureIP(monitor, changes)
+		if changes != nil && len(changes) != 0 {
+			if err := ensureIP(monitor, changes); err != nil {
+				return err
+			}
+
+			for filename, content := range getNetworkFiles(name, desired.Type, desired.IPs) {
+				if err := ioutil.WriteFile(filename, []byte(content), os.ModePerm); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
 	}, nil
 }
 
@@ -306,6 +320,6 @@ IPADDR={{ $ip }}{{ end }}`))
 	return map[string]string{
 		getNetworkScriptPath(name):              tmpBuf.String(),
 		"/etc/modules-load.d/" + name + ".conf": name,
-		"/etc/modprobe.d/" + name + "conf":      "install " + name + " /sbin/modprobe --ignore-install " + name + "; /sbin/ip link add " + name + " type " + ty,
+		"/etc/modprobe.d/" + name + ".conf":     "install " + name + " /sbin/modprobe --ignore-install " + name + "; /sbin/ip link add " + name + " type " + ty,
 	}
 }
