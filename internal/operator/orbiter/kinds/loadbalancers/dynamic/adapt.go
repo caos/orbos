@@ -132,25 +132,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl, nodeAgentsCurrent)
 
 			current.Current.Spec = enrichedVIPs
-			doReset := true
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
-
-				if doReset {
-					// Reset LB Software and whole Firewalls
-					for _, id := range nodeagents.List() {
-						na, found := nodeagents.Get(id)
-						if !found {
-							continue
-						}
-						na.Firewall = &common.Firewall{}
-						if na.Software != nil {
-							na.Software.KeepaliveD = common.Package{}
-							na.Software.Nginx = common.Package{}
-						}
-					}
-				}
-				doReset = false
-
 				var lbMachines []infra.Machine
 
 				done := true
