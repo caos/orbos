@@ -11,7 +11,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AdaptFunc() core.AdaptFunc {
+func AdaptFunc(binaryVersion *string) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
@@ -32,10 +32,13 @@ func AdaptFunc() core.AdaptFunc {
 			orbMonitor = orbMonitor.Verbose()
 		}
 
-		operatorLabels := labels.MustForOperator("ORBOS", "networking.caos.ch", desiredKind.Spec.Version)
+		operatorLabels := labels.NoopOperator("ORBOS")
+		if binaryVersion != nil {
+			operatorLabels = mustDatabaseOperator(*binaryVersion)
+		}
 
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, apiLabels, err := networking.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, operatorLabels)
+		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -45,7 +48,7 @@ func AdaptFunc() core.AdaptFunc {
 		}
 		if desiredKind.Spec.SelfReconciling {
 			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, apiLabels, desiredTree)),
+				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
 			)
 		}
 

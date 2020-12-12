@@ -9,24 +9,25 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/pkg/treelabels"
 	"github.com/pkg/errors"
 )
 
-func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
+func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core.AdaptFunc {
 	namespaceStr := "caos-zitadel"
 
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
+	return func(monitor mntr.Monitor, orbDesiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			err = errors.Wrapf(err, "building %s failed", orbDesiredTree.Common.Kind)
 		}()
 
 		orbMonitor := monitor.WithField("kind", "orb")
 
-		desiredKind, err := parseDesiredV0(desiredTree)
+		desiredKind, err := parseDesiredV0(orbDesiredTree)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
-		desiredTree.Parsed = desiredKind
+		orbDesiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
 
 		if desiredKind.Spec.Verbose && !orbMonitor.IsVerbose() {
@@ -43,12 +44,19 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		}
 
 		databaseCurrent := &tree.Tree{}
-		queryDB, destroyDB, secrets, apiLabels, err := databases.GetQueryAndDestroyFuncs(
+
+		operatorLabels := labels.NoopOperator("ORBOS")
+		if binaryVersion != nil {
+			operatorLabels = mustDatabaseOperator(*binaryVersion)
+		}
+
+		queryDB, destroyDB, secrets, err := databases.GetQueryAndDestroyFuncs(
 			orbMonitor,
 			desiredKind.Database,
 			databaseCurrent,
 			namespaceStr,
-			labels.MustForOperator("ORBOS", "database.caos.ch", desiredKind.Spec.Version),
+			operatorLabels,
+			treelabels.MustForAPI(desiredKind.Database, operatorLabels),
 			timestamp,
 			desiredKind.Spec.NodeSelector,
 			desiredKind.Spec.Tolerations,
@@ -65,7 +73,7 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 		}
 		if desiredKind.Spec.SelfReconciling {
 			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, apiLabels, desiredTree)),
+				core.EnsureFuncToQueryFunc(Reconcile(monitor, orbDesiredTree)),
 			)
 		}
 

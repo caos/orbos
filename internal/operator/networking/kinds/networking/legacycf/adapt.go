@@ -8,12 +8,13 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/pkg/treelabels"
 	"github.com/pkg/errors"
 )
 
 func AdaptFunc(
 	namespace string,
-	apiLabels *labels.API,
+	operatorLabels *labels.Operator,
 ) opcore.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
@@ -26,6 +27,7 @@ func AdaptFunc(
 		error,
 	) {
 		internalMonitor := monitor.WithField("kind", "legacycf")
+		apiLabels := treelabels.MustForAPI(desiredTree, operatorLabels)
 
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {

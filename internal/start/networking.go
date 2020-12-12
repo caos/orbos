@@ -2,16 +2,17 @@ package start
 
 import (
 	"context"
+	"time"
+
 	"github.com/caos/orbos/internal/operator/networking"
 	"github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
-	"time"
 )
 
-func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client) error {
+func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, binaryVersion *string) error {
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}
@@ -30,7 +31,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 			return err
 		}
 
-		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(), k8sClient)
+		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion), k8sClient)
 
 		go func() {
 			started := time.Now()

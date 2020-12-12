@@ -33,7 +33,6 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 		if err != nil {
 			return nil, nil, err
 		}
-
 		if foundBoom {
 			boomYML, err := api.ReadBoomYml(gitClient)
 			if err != nil {
@@ -89,7 +88,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[database] = dbYML
 
-			_, _, dbSecrets, err := dbOrb.AdaptFunc("", "database", "backup")(monitor, dbYML, nil)
+			_, _, dbSecrets, err := dbOrb.AdaptFunc("", nil, "database", "backup")(monitor, dbYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -109,7 +108,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[networking] = nwYML
 
-			_, _, nwSecrets, err := nwOrb.AdaptFunc()(monitor, nwYML, nil)
+			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}

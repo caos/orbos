@@ -99,6 +99,7 @@ func AdaptFunc(
 			internalMonitor,
 			cockroachSelectabel,
 			cockroachSelector,
+			desiredKind.Spec.Force,
 			namespace,
 			image,
 			serviceAccountName,

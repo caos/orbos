@@ -75,7 +75,7 @@ func EnsureDatabaseArtifacts(
 		return nil
 	}
 
-	nameLabels := toNameLabels(apiLabels, "persistence")
+	nameLabels := toNameLabels(apiLabels, "database-operator")
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
@@ -122,7 +122,7 @@ func EnsureDatabaseArtifacts(
 		return err
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "database-operator",
 			Namespace: "caos-system",
@@ -180,7 +180,9 @@ func EnsureDatabaseArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -207,12 +209,12 @@ func EnsureNetworkingArtifacts(
 		return nil
 	}
 
-	nameLabels := toNameLabels(apiLabels, "networking")
+	nameLabels := toNameLabels(apiLabels, "networking-operator")
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "networking-operator",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},
@@ -222,7 +224,7 @@ func EnsureNetworkingArtifacts(
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name:   "networking-operator-clusterrole",
+			Name:   nameLabels.Name(),
 			Labels: k8sNameLabels,
 		},
 		Rules: []rbac.PolicyRule{{
@@ -236,27 +238,27 @@ func EnsureNetworkingArtifacts(
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name:   "networking-operator-clusterrolebinding",
+			Name:   nameLabels.Name(),
 			Labels: k8sNameLabels,
 		},
 
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "networking-operator-clusterrole",
+			Name:     nameLabels.Name(),
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "networking-operator",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
 		return err
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "networking-operator",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},
@@ -270,7 +272,7 @@ func EnsureNetworkingArtifacts(
 					Labels: labels.MustK8sMap(labels.AsSelectable(nameLabels)),
 				},
 				Spec: core.PodSpec{
-					ServiceAccountName: "networking-operator",
+					ServiceAccountName: nameLabels.Name(),
 					Containers: []core.Container{{
 						Name:            "networking",
 						ImagePullPolicy: core.PullIfNotPresent,
@@ -312,7 +314,8 @@ func EnsureNetworkingArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -340,12 +343,12 @@ func EnsureBoomArtifacts(
 		return nil
 	}
 
-	nameLabels := toNameLabels(apiLabels, "tooling")
+	nameLabels := toNameLabels(apiLabels, "boom")
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},
@@ -355,7 +358,7 @@ func EnsureBoomArtifacts(
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name:   "boom-clusterrole",
+			Name:   nameLabels.Name(),
 			Labels: k8sNameLabels,
 		},
 		Rules: []rbac.PolicyRule{{
@@ -369,18 +372,18 @@ func EnsureBoomArtifacts(
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name:   "boom-clusterrolebinding",
+			Name:   nameLabels.Name(),
 			Labels: k8sNameLabels,
 		},
 
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "boom-clusterrole",
+			Name:     nameLabels.Name(),
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
@@ -391,7 +394,7 @@ func EnsureBoomArtifacts(
 
 	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},
@@ -405,7 +408,7 @@ func EnsureBoomArtifacts(
 					Labels: labels.MustK8sMap(labels.AsSelectable(nameLabels)),
 				},
 				Spec: core.PodSpec{
-					ServiceAccountName: "boom",
+					ServiceAccountName: nameLabels.Name(),
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
@@ -449,7 +452,7 @@ func EnsureBoomArtifacts(
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},
@@ -471,8 +474,8 @@ func EnsureBoomArtifacts(
 	return nil
 }
 
-func toNameLabels(apiLabels *labels.API, tier string) *labels.Name {
-	return labels.MustForName(labels.MustForComponent(apiLabels, "operator"), tier)
+func toNameLabels(apiLabels *labels.API, operatorName string) *labels.Name {
+	return labels.MustForName(labels.MustForComponent(apiLabels, "operator"), operatorName)
 }
 
 func EnsureOrbiterArtifacts(
@@ -490,13 +493,13 @@ func EnsureOrbiterArtifacts(
 		return nil
 	}
 
-	nameLabels := toNameLabels(apiLabels, "infrastructure")
+	nameLabels := toNameLabels(apiLabels, "orbiter")
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
 	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "orbiter",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},
@@ -566,7 +569,7 @@ func EnsureOrbiterArtifacts(
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "orbiter",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 			Labels:    k8sNameLabels,
 		},

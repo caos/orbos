@@ -49,6 +49,7 @@ func AdaptFunc(
 	monitor mntr.Monitor,
 	sfsSelectable *labels.Selectable,
 	podSelector *labels.Selector,
+	force bool,
 	namespace string,
 	image string,
 	serviceAccountName string,
@@ -204,7 +205,7 @@ func AdaptFunc(
 		},
 	}
 
-	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef)
+	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef, force)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}

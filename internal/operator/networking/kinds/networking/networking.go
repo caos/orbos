@@ -12,23 +12,20 @@ import (
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
+	operatorLabels *labels.Operator,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
 	namespace string,
-	operatorLabels *labels.Operator,
 ) (
 	query core.QueryFunc,
 	destroy core.DestroyFunc,
 	secrets map[string]*secret.Secret,
-	apiLabels *labels.API,
 	err error,
 ) {
 	switch desiredTree.Common.Kind {
 	case "networking.caos.ch/LegacyCloudflare":
-		apiLabels = labels.MustForAPI(operatorLabels, "LegacyCloudflare", desiredTree.Common.Version)
-		query, destroy, secrets, err = legacycf.AdaptFunc(namespace, apiLabels)(monitor, desiredTree, currentTree)
+		return legacycf.AdaptFunc(namespace, operatorLabels)(monitor, desiredTree, currentTree)
 	default:
-		err = errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
+		return nil, nil, nil, errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}
-	return query, destroy, secrets, apiLabels, err
 }

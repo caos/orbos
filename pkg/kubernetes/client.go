@@ -78,14 +78,14 @@ type ClientInt interface {
 	ApplyServiceAccount(rsc *core.ServiceAccount) error
 	DeleteServiceAccount(namespace, name string) error
 
-	ApplyStatefulSet(rsc *apps.StatefulSet) error
+	ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error
 	DeleteStatefulset(namespace, name string) error
 	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
 
 	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
 	ExecInPod(namespace, name, container, command string) error
 
-	ApplyDeployment(rsc *apps.Deployment) error
+	ApplyDeployment(rsc *apps.Deployment, force bool) error
 	DeleteDeployment(namespace, name string) error
 	PatchDeployment(namespace, name string, data string) error
 	WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error

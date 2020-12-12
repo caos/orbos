@@ -18,6 +18,7 @@ func GetQueryAndDestroyFuncs(
 	currentTree *tree.Tree,
 	namespace string,
 	operatorLabels *labels.Operator,
+	apiLabels *labels.API,
 	timestamp string,
 	nodeselector map[string]string,
 	tolerations []core.Toleration,
@@ -27,20 +28,16 @@ func GetQueryAndDestroyFuncs(
 	query core2.QueryFunc,
 	destroy core2.DestroyFunc,
 	secrets map[string]*secret.Secret,
-	apiLabels *labels.API,
 	err error,
 ) {
 	switch desiredTree.Common.Kind {
 	case "databases.caos.ch/CockroachDB":
-		apiLabels = labels.MustForAPI(operatorLabels, "CockroachDB", desiredTree.Common.Version)
-		query, destroy, secrets, err = managed.AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
+		return managed.AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
 	case "databases.caos.ch/ProvidedDatabse":
-		apiLabels = labels.MustForAPI(operatorLabels, "ProvidedDatabse", desiredTree.Common.Version)
-		query, destroy, secrets, err = provided.AdaptFunc()(monitor, desiredTree, currentTree)
+		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
 	default:
-		err = errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
+		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}
-	return query, destroy, secrets, apiLabels, err
 }
 
 func GetBackupList(

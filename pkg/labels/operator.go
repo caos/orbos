@@ -16,7 +16,7 @@ func NoopOperator(product string) *Operator {
 	return &Operator{model: InternalOperator{
 		Version:               "unknown",
 		InternalPartofProp:    InternalPartofProp{PartOf: product},
-		InternalManagedByProp: InternalManagedByProp{ManagedBy: "CLI"},
+		InternalManagedByProp: InternalManagedByProp{ManagedBy: "unknown.caos.ch"},
 		//		Major:                 "unknown",
 	}}
 }

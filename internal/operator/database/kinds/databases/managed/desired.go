@@ -14,6 +14,7 @@ type DesiredV0 struct {
 
 type Spec struct {
 	Verbose         bool
+	Force           bool                  `yaml:"force,omitempty"`
 	ReplicaCount    int                   `yaml:"replicaCount,omitempty"`
 	StorageCapacity string                `yaml:"storageCapacity,omitempty"`
 	StorageClass    string                `yaml:"storageClass,omitempty"`

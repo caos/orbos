@@ -156,7 +156,7 @@ func StartDatabase(rv RootValues) *cobra.Command {
 		}
 
 		if k8sClient.Available() {
-			return start.Database(monitor, orbConfig.Path, k8sClient)
+			return start.Database(monitor, orbConfig.Path, k8sClient, &version)
 		}
 		return nil
 	}
@@ -187,7 +187,7 @@ func StartNetworking(rv RootValues) *cobra.Command {
 		}
 
 		if k8sClient.Available() {
-			return start.Networking(monitor, orbConfig.Path, k8sClient)
+			return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
 		}
 		return nil
 	}
