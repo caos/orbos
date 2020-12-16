@@ -50,8 +50,7 @@ func BackupCommand(rv RootValues) *cobra.Command {
 			for _, kubeconfig := range kubeconfigs {
 				k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					err := start.DatabaseBackup(monitor, orbConfig.Path, k8sClient, backup)
-					if err != nil {
+					if err := start.DatabaseBackup(monitor, orbConfig.Path, k8sClient, backup, &version); err != nil {
 						return err
 					}
 				}
