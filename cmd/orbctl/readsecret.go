@@ -45,9 +45,9 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				monitor,
 				gitClient,
 				path,
-				operators.GetAllSecretsFunc(orbConfig))
+				operators.GetAllSecretsFunc(orbConfig, &version))
 			if err != nil {
-				panic(err)
+				monitor.Error(err)
 			}
 			if _, err := os.Stdout.Write([]byte(value)); err != nil {
 				panic(err)

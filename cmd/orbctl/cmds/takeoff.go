@@ -55,7 +55,7 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig)
+		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		if err != nil {
 			return err
 		}

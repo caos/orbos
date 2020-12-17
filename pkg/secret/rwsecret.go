@@ -1,6 +1,7 @@
 package secret
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -23,6 +24,9 @@ func Read(monitor mntr.Monitor, gitClient *git.Client, path string, getFunc GetF
 	allSecrets, _, err := getFunc(monitor, gitClient)
 	if err != nil {
 		return "", err
+	}
+	if allSecrets == nil || len(allSecrets) == 0 {
+		return "", errors.New("no secrets found")
 	}
 
 	secret, err := findSecret(allSecrets, &path, false)

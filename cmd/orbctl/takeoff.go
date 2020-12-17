@@ -102,7 +102,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig)
+		_, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		return err
 	}
 	return cmd

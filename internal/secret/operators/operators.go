@@ -25,7 +25,7 @@ const (
 	networking string = "networking"
 )
 
-func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
+func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 		allSecrets := make(map[string]*secret.Secret, 0)
 		allTrees := make(map[string]*tree.Tree, 0)
@@ -88,7 +88,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[database] = dbYML
 
-			_, _, dbSecrets, err := dbOrb.AdaptFunc("", nil, "database", "backup")(monitor, dbYML, nil)
+			_, _, dbSecrets, err := dbOrb.AdaptFunc("", binaryVersion, "database", "backup")(monitor, dbYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}
