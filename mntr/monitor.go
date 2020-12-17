@@ -2,6 +2,7 @@ package mntr
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -9,13 +10,15 @@ import (
 
 type OnMessage func(string, map[string]string)
 type OnError func(error, map[string]string)
+type OnRecoverPanic func(interface{}, map[string]string)
 
 type Monitor struct {
-	Fields   map[string]interface{}
-	OnInfo   OnMessage
-	OnChange OnMessage
-	OnError  OnError
-	verbose  bool
+	Fields         map[string]interface{}
+	OnInfo         OnMessage
+	OnChange       OnMessage
+	OnError        OnError
+	OnRecoverPanic OnRecoverPanic
+	verbose        bool
 }
 
 func (m Monitor) WithField(key string, value interface{}) Monitor {
@@ -71,6 +74,23 @@ func (m Monitor) Error(err error) {
 
 	m.addDebugContext()
 	m.OnError(err, normalize(m.Fields))
+}
+
+func (m Monitor) RecoverPanic() {
+	if m.OnRecoverPanic == nil {
+		return
+	}
+
+	if r := recover(); r != nil {
+		m.Fields = merge(map[string]interface{}{
+			"ts":    now(),
+			"panic": fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r),
+		}, m.Fields)
+
+		m.addDebugContext()
+		m.OnRecoverPanic(r, normalize(m.Fields))
+		os.Exit(1)
+	}
 }
 
 func (m Monitor) Debug(dbg string) {

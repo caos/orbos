@@ -20,11 +20,14 @@ func BackupCommand(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVar(&backup, "backup", "", "Name used for backup folder")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
 		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := orbConfig.IsConnectable(); err != nil {
 			return err

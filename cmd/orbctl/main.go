@@ -17,13 +17,6 @@ var (
 )
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			_, _ = os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
-			os.Exit(1)
-		}
-	}()
-
 	github.ClientID = githubClientID
 	github.ClientSecret = githubClientSecret
 	github.Key = RandStringBytes(32)
