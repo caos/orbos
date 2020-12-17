@@ -1,4 +1,4 @@
-FROM cockroachdb/cockroach:v20.2.3
+FROM cockroachdb/cockroach:v20.1.8
 
 RUN apt-get -y update && apt-get -y install curl wget
 
