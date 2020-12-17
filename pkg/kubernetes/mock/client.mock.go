@@ -194,17 +194,17 @@ func (mr *MockClientIntMockRecorder) DeleteServiceAccount(namespace, name interf
 }
 
 // ApplyStatefulSet mocks base method
-func (m *MockClientInt) ApplyStatefulSet(rsc *v1.StatefulSet) error {
+func (m *MockClientInt) ApplyStatefulSet(rsc *v1.StatefulSet, force bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyStatefulSet", rsc)
+	ret := m.ctrl.Call(m, "ApplyStatefulSet", rsc, force)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyStatefulSet indicates an expected call of ApplyStatefulSet
-func (mr *MockClientIntMockRecorder) ApplyStatefulSet(rsc interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) ApplyStatefulSet(rsc, force interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatefulSet", reflect.TypeOf((*MockClientInt)(nil).ApplyStatefulSet), rsc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStatefulSet", reflect.TypeOf((*MockClientInt)(nil).ApplyStatefulSet), rsc, force)
 }
 
 // DeleteStatefulset mocks base method
@@ -265,17 +265,17 @@ func (mr *MockClientIntMockRecorder) ExecInPod(namespace, name, container, comma
 }
 
 // ApplyDeployment mocks base method
-func (m *MockClientInt) ApplyDeployment(rsc *v1.Deployment) error {
+func (m *MockClientInt) ApplyDeployment(rsc *v1.Deployment, force bool) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyDeployment", rsc)
+	ret := m.ctrl.Call(m, "ApplyDeployment", rsc, force)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyDeployment indicates an expected call of ApplyDeployment
-func (mr *MockClientIntMockRecorder) ApplyDeployment(rsc interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) ApplyDeployment(rsc, force interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyDeployment", reflect.TypeOf((*MockClientInt)(nil).ApplyDeployment), rsc)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyDeployment", reflect.TypeOf((*MockClientInt)(nil).ApplyDeployment), rsc, force)
 }
 
 // DeleteDeployment mocks base method
