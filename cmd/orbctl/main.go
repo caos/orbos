@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"os"
+
+	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/stores/github"
 )
@@ -19,8 +22,8 @@ var (
 func main() {
 	defer func() {
 		if r := recover(); r != nil {
-			_, _ = os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
-			os.Exit(1)
+			mntr.Monitor{OnError: mntr.LogError}.Error(errors.New("an internal error occured. please file an issue containing the following trace at https://github.com/caos/orbos/issues"))
+			panic(r)
 		}
 	}()
 
