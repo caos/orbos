@@ -115,7 +115,7 @@ func AdaptFunc(
 								},
 								{
 									Name:  "create-flyway-user",
-									Image: "cockroachdb/cockroach:v20.2.3",
+									Image: "cockroachdb/cockroach:v20.1.8",
 									Env:   baseEnvVars(envMigrationUser, envMigrationPW, migrationUser, secretPasswordName),
 									VolumeMounts: []corev1.VolumeMount{{
 										Name:      rootUserInternal,
@@ -158,7 +158,7 @@ func AdaptFunc(
 							Containers: []corev1.Container{
 								{
 									Name:    "delete-flyway-user",
-									Image:   "cockroachdb/cockroach:v20.2.3",
+									Image:   "cockroachdb/cockroach:v20.1.8",
 									Command: []string{"/bin/bash", "-c", "--"},
 									Args: []string{
 										strings.Join([]string{
