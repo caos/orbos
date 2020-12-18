@@ -28,5 +28,6 @@ func GetAll() map[string]string {
 		"V1.23__application_view.sql":        V123ApplicationView,
 		"V1.24__current_sequence.sql":        V124CurrentSequence,
 		"V1.25__webauthn.sql":                V125WebAuthN,
+		"V1.26__current_sequence_table.sql":  V126CurrentSequenceTable,
 	}
 }
