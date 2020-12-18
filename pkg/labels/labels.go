@@ -11,6 +11,11 @@ type Labels interface {
 	//	Major() int8
 }
 
+type IDLabels interface {
+	Labels
+	Name() string
+}
+
 type comparable interface {
 	Equal(comparable) bool
 }

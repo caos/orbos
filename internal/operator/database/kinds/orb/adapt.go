@@ -6,7 +6,6 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/namespace"
-	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/caos/orbos/pkg/treelabels"
@@ -45,10 +44,7 @@ func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core
 
 		databaseCurrent := &tree.Tree{}
 
-		operatorLabels := labels.NoopOperator("ORBOS")
-		if binaryVersion != nil {
-			operatorLabels = mustDatabaseOperator(*binaryVersion)
-		}
+		operatorLabels := mustDatabaseOperator(binaryVersion)
 
 		queryDB, destroyDB, secrets, err := databases.GetQueryAndDestroyFuncs(
 			orbMonitor,

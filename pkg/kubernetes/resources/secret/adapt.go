@@ -8,12 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name, data map[string]string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, id labels.IDLabels, data map[string]string) (resources.QueryFunc, error) {
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      nameLabels.Name(),
+			Name:      id.Name(),
 			Namespace: namespace,
-			Labels:    labels.MustK8sMap(nameLabels),
+			Labels:    labels.MustK8sMap(id),
 		},
 		Type:       corev1.SecretTypeOpaque,
 		StringData: data,

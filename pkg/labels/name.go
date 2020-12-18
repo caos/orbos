@@ -6,7 +6,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var _ Labels = (*Name)(nil)
+var _ IDLabels = (*Name)(nil)
 
 type Name struct {
 	model InternalName

@@ -3,8 +3,8 @@ package labels
 import "gopkg.in/yaml.v3"
 
 var (
-	_          Labels = (*Selectable)(nil)
-	selectable        = InternalSelectableProp{Selectable: "yes"}
+	_          IDLabels = (*Selectable)(nil)
+	selectable          = InternalSelectableProp{Selectable: "yes"}
 )
 
 type Selectable struct {

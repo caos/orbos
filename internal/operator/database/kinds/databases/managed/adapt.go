@@ -226,15 +226,12 @@ func AdaptFunc(
 				if !featureRestore {
 					queriedCurrentDB, err := core.ParseQueriedForDatabase(queried)
 					if err != nil || queriedCurrentDB == nil {
+						// TODO: query system state
 						currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
 						currentDB.Current.URL = publicServiceName
 						currentDB.Current.ReadyFunc = checkDBReady
-						currentDB.Current.AddUserFunc = func(user string) (core2.QueryFunc, error) {
-							return addUser(user)
-						}
-						currentDB.Current.DeleteUserFunc = func(user string) (core2.DestroyFunc, error) {
-							return deleteUser(user)
-						}
+						currentDB.Current.AddUserFunc = addUser
+						currentDB.Current.DeleteUserFunc = deleteUser
 						currentDB.Current.ListUsersFunc = listUsers
 						currentDB.Current.ListDatabasesFunc = listDatabases
 

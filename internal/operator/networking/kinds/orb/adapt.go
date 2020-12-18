@@ -5,7 +5,6 @@ import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -32,11 +31,7 @@ func AdaptFunc(binaryVersion *string) core.AdaptFunc {
 			orbMonitor = orbMonitor.Verbose()
 		}
 
-		operatorLabels := labels.NoopOperator("ORBOS")
-		if binaryVersion != nil {
-			operatorLabels = mustDatabaseOperator(*binaryVersion)
-		}
-
+		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
 		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {

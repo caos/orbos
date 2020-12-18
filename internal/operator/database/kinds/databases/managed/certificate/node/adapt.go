@@ -35,7 +35,7 @@ func AdaptFunc(
 
 	caPrivKey := new(rsa.PrivateKey)
 	caCert := make([]byte, 0)
-	nodeLabels := labels.MustK8sMap(nameLabels)
+	nodeSecretSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
 	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 			queriers := make([]core2.QueryFunc, 0)
@@ -45,7 +45,7 @@ func AdaptFunc(
 				return nil, err
 			}
 
-			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
+			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeSecretSelector)
 			if err != nil {
 				return nil, err
 			}
@@ -100,7 +100,7 @@ func AdaptFunc(
 						nodePrivKeyKey: string(pemNodePrivKey),
 						nodeCertKey:    string(pemNodeCert),
 					}
-					queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, nameLabels, nodeSecretData)
+					queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, labels.AsSelectable(nameLabels), nodeSecretData)
 					if err != nil {
 						return nil, err
 					}
@@ -125,7 +125,7 @@ func AdaptFunc(
 
 			return core2.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		}, func(k8sClient kubernetes.ClientInt) error {
-			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
+			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeSecretSelector)
 			if err != nil {
 				return err
 			}

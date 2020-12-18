@@ -59,6 +59,8 @@ func (e *ExternalConfig) Validate() error {
 }
 
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
+
+	// TODO: Remove
 	subdomains := []*Subdomain{
 		subdomain("accounts", e.IP),
 		subdomain("api", e.IP),

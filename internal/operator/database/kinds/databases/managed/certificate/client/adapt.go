@@ -80,7 +80,7 @@ func AdaptFunc(
 					clientCertKey:    string(pemClientCert),
 				}
 
-				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, nameLabels, clientSecretData)
+				queryClientSecret, err := secret.AdaptFuncToEnsure(namespace, labels.AsSelectable(nameLabels), clientSecretData)
 				if err != nil {
 					return nil, err
 				}
