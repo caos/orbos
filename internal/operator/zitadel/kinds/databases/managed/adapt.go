@@ -68,7 +68,7 @@ func AdaptFunc(
 		publicServiceName := sfsName + "-public"
 		cockroachPort := int32(26257)
 		cockroachHTTPPort := int32(8080)
-		image := "cockroachdb/cockroach:v20.1.8"
+		image := "cockroachdb/cockroach:v20.2.3"
 
 		userList := []string{"root"}
 		userList = append(userList, users...)
