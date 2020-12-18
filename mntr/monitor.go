@@ -2,7 +2,6 @@ package mntr
 
 import (
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -84,12 +83,13 @@ func (m Monitor) RecoverPanic() {
 	if r := recover(); r != nil {
 		m.Fields = merge(map[string]interface{}{
 			"ts":    now(),
-			"panic": fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r),
+			"panic": r,
+			"msg":   "An internal error occured. Please file an issue at https://github.com/caos/orbos/issues containing the following stack trace",
 		}, m.Fields)
 
 		m.addDebugContext()
 		m.OnRecoverPanic(r, normalize(m.Fields))
-		os.Exit(1)
+		panic(r)
 	}
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+
 	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/internal/git"
@@ -46,13 +47,6 @@ $ orbctl -f ~/.orb/myorb [command]
 
 	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc, error) {
 
-		monitor := mntr.Monitor{
-			OnInfo:         mntr.LogMessage,
-			OnChange:       mntr.LogMessage,
-			OnError:        mntr.LogError,
-			OnRecoverPanic: mntr.LogPanic,
-		}
-
 		if verbose {
 			monitor = monitor.Verbose()
 		}
@@ -67,7 +61,6 @@ $ orbctl -f ~/.orb/myorb [command]
 		ctx := context.Background()
 
 		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch"), func(err error) error {
-			monitor.RecoverPanic()
 			if err != nil {
 				monitor.Error(err)
 			}
