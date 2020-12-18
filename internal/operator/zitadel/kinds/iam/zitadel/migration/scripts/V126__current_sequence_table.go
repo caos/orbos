@@ -1,6 +1,6 @@
 package scripts
 
-const V125CurrentSequenceTable = `
+const V126CurrentSequenceTable = `
 ALTER TABLE management.current_sequences ADD COLUMN aggregate_type STRING NOT NULL DEFAULT '';
 ALTER TABLE auth.current_sequences ADD COLUMN aggregate_type STRING NOT NULL DEFAULT '';
 ALTER TABLE authz.current_sequences ADD COLUMN aggregate_type STRING NOT NULL DEFAULT '';
