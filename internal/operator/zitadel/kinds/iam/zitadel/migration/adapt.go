@@ -49,6 +49,7 @@ func AdaptFunc(
 	createFile := "create.sql"
 	grantFile := "grant.sql"
 	deleteFile := "delete.sql"
+	cockroachImage := "cockroachdb/cockroach:v20.2.3"
 
 	destroyCM, err := configmap.AdaptFuncToDestroy(namespace, migrationConfigmap)
 	if err != nil {
@@ -115,7 +116,7 @@ func AdaptFunc(
 								},
 								{
 									Name:  "create-flyway-user",
-									Image: "cockroachdb/cockroach:v20.1.8",
+									Image: cockroachImage,
 									Env:   baseEnvVars(envMigrationUser, envMigrationPW, migrationUser, secretPasswordName),
 									VolumeMounts: []corev1.VolumeMount{{
 										Name:      rootUserInternal,
@@ -158,7 +159,7 @@ func AdaptFunc(
 							Containers: []corev1.Container{
 								{
 									Name:    "delete-flyway-user",
-									Image:   "cockroachdb/cockroach:v20.1.8",
+									Image:   cockroachImage,
 									Command: []string{"/bin/bash", "-c", "--"},
 									Args: []string{
 										strings.Join([]string{
