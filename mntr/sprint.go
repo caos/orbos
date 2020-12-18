@@ -2,10 +2,11 @@ package mntr
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/caos/orbos/internal/ingestion"
 	"github.com/golang/protobuf/ptypes"
 	structpb "github.com/golang/protobuf/ptypes/struct"
-	"strings"
 )
 
 func EventRecord(namespace, evt string, fields map[string]string) *ingestion.EventRequest {
@@ -52,11 +53,9 @@ func LogRecord(fields []*Field) string {
 	for _, field := range fields {
 		var color string
 		switch field.Key {
-		case "msg":
-			fallthrough
-		case "evt":
+		case "msg", "evt":
 			color = "1;35"
-		case "err":
+		case "err", "panic":
 			color = "1;31"
 		default:
 			color = "0;33"
