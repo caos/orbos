@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
@@ -118,7 +119,27 @@ func TestStatefulset_Adapt1(t *testing.T) {
 	namespace := "testNs"
 	name := "test"
 	image := "cockroach"
-	labels := map[string]string{"test": "test"}
+	nameLabels := labels.MustForName(labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "cockroachdb", "v0"), "testComponent"), name)
+	k8sSelectableLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       name,
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
+	}
+	k8sSelectorLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       name,
+		"app.kubernetes.io/part-of":    "testProd",
+		"orbos.ch/selectable":          "yes",
+	}
+	selector := labels.DeriveNameSelector(nameLabels, false)
+	selectable := labels.AsSelectable(nameLabels)
+
 	serviceAccountName := "testSA"
 	replicaCount := 1
 	storageCapacity := "20Gi"
@@ -136,23 +157,23 @@ func TestStatefulset_Adapt1(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    k8sSelectableLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
 			Replicas:    helper.PointerInt32(int32(replicaCount)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: k8sSelectorLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: k8sSelectableLabels,
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,
 					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
-					Affinity:           getAffinity(labels),
+					Affinity:           getAffinity(k8sSelectableLabels),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           image,
@@ -259,9 +280,25 @@ func TestStatefulset_Adapt1(t *testing.T) {
 		},
 	}
 
-	k8sClient.EXPECT().ApplyStatefulSet(sfs)
+	k8sClient.EXPECT().ApplyStatefulSet(sfs, false)
 
-	query, _, _, _, _, err := AdaptFunc(monitor, namespace, name, image, labels, serviceAccountName, replicaCount, storageCapacity, dbPort, httpPort, storageClass, nodeSelector, tolerations, resourcesSFS)
+	query, _, _, _, _, err := AdaptFunc(
+		monitor,
+		selectable,
+		selector,
+		false,
+		namespace,
+		image,
+		serviceAccountName,
+		replicaCount,
+		storageCapacity,
+		dbPort,
+		httpPort,
+		storageClass,
+		nodeSelector,
+		tolerations,
+		resourcesSFS,
+	)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient)
@@ -277,7 +314,28 @@ func TestStatefulset_Adapt2(t *testing.T) {
 	namespace := "testNs2"
 	name := "test2"
 	image := "cockroach2"
-	labels := map[string]string{"test2": "test2"}
+
+	nameLabels := labels.MustForName(labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "cockroachdb", "v0"), "testComponent2"), name)
+	k8sSelectableLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent2",
+		"app.kubernetes.io/managed-by": "testOp2",
+		"app.kubernetes.io/name":       name,
+		"app.kubernetes.io/part-of":    "testProd2",
+		"app.kubernetes.io/version":    "testVersion2",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
+	}
+	k8sSelectorLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent2",
+		"app.kubernetes.io/managed-by": "testOp2",
+		"app.kubernetes.io/name":       name,
+		"app.kubernetes.io/part-of":    "testProd2",
+		"orbos.ch/selectable":          "yes",
+	}
+	selector := labels.DeriveNameSelector(nameLabels, false)
+	selectable := labels.AsSelectable(nameLabels)
+
 	serviceAccountName := "testSA2"
 	replicaCount := 2
 	storageCapacity := "40Gi"
@@ -295,23 +353,23 @@ func TestStatefulset_Adapt2(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    k8sSelectableLabels,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
 			Replicas:    helper.PointerInt32(int32(replicaCount)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: k8sSelectorLabels,
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: k8sSelectableLabels,
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,
 					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
-					Affinity:           getAffinity(labels),
+					Affinity:           getAffinity(k8sSelectableLabels),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           image,
@@ -418,9 +476,25 @@ func TestStatefulset_Adapt2(t *testing.T) {
 		},
 	}
 
-	k8sClient.EXPECT().ApplyStatefulSet(sfs)
+	k8sClient.EXPECT().ApplyStatefulSet(sfs, false)
 
-	query, _, _, _, _, err := AdaptFunc(monitor, namespace, name, image, labels, serviceAccountName, replicaCount, storageCapacity, dbPort, httpPort, storageClass, nodeSelector, tolerations, resourcesSFS)
+	query, _, _, _, _, err := AdaptFunc(
+		monitor,
+		selectable,
+		selector,
+		false,
+		namespace,
+		image,
+		serviceAccountName,
+		replicaCount,
+		storageCapacity,
+		dbPort,
+		httpPort,
+		storageClass,
+		nodeSelector,
+		tolerations,
+		resourcesSFS,
+	)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient)

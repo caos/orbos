@@ -111,9 +111,7 @@ func TestCertificate_AdaptWithCA(t *testing.T) {
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb.node",
 		"app.kubernetes.io/part-of":    "testProd",
-		"app.kubernetes.io/version":    "testVersion",
-		"caos.ch/apiversion":           "v0",
-		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
 	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
@@ -160,9 +158,7 @@ func TestNode_AdaptWithoutCA(t *testing.T) {
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb.node",
 		"app.kubernetes.io/part-of":    "testProd",
-		"app.kubernetes.io/version":    "testVersion",
-		"caos.ch/apiversion":           "v0",
-		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
 	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
@@ -206,9 +202,7 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb.node",
 		"app.kubernetes.io/part-of":    "testProd",
-		"app.kubernetes.io/version":    "testVersion",
-		"caos.ch/apiversion":           "v0",
-		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
 	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
@@ -260,9 +254,7 @@ func TestNode_AdaptCreateUser(t *testing.T) {
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb.node",
 		"app.kubernetes.io/part-of":    "testProd",
-		"app.kubernetes.io/version":    "testVersion",
-		"caos.ch/apiversion":           "v0",
-		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
 	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
