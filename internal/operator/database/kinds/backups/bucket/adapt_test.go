@@ -28,7 +28,7 @@ func TestBucket_Secrets(t *testing.T) {
 
 	kindVersion := "v0"
 	kind := "BucketBackup"
-	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), kind, kindVersion), kind)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "BucketBackup", kindVersion), "testComponent")
 
 	timestamp := "test2"
 	nodeselector := map[string]string{"test2": "test2"}

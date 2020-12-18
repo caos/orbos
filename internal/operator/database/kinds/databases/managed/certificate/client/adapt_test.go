@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/pem"
 	"github.com/caos/orbos/mntr"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -101,7 +102,8 @@ func TestClient_Adapt1(t *testing.T) {
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
 	user := "test"
-	labels := map[string]string{"test": "test"}
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "cockroachdb", "v0"), "cockroachdb")
+
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
 
@@ -120,7 +122,7 @@ func TestClient_Adapt1(t *testing.T) {
 	}
 	core.SetQueriedForDatabase(queried, current)
 
-	createUser, _, err := AdaptFunc(monitor, namespace, labels)
+	createUser, _, err := AdaptFunc(monitor, namespace, componentLabels)
 	assert.NoError(t, err)
 	query := createUser(user)
 
@@ -135,7 +137,8 @@ func TestClient_Adapt2(t *testing.T) {
 	monitor := mntr.Monitor{}
 	namespace := "testNs2"
 	user := "test2"
-	labels := map[string]string{"test2": "test2"}
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "cockroachdb", "v0"), "cockroachdb")
+
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
 
@@ -154,7 +157,7 @@ func TestClient_Adapt2(t *testing.T) {
 	}
 	core.SetQueriedForDatabase(queried, current)
 
-	createUser, _, err := AdaptFunc(monitor, namespace, labels)
+	createUser, _, err := AdaptFunc(monitor, namespace, componentLabels)
 	assert.NoError(t, err)
 	query := createUser(user)
 
