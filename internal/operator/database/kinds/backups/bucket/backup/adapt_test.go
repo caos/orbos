@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -18,7 +19,7 @@ func TestBackup_AdaptInstantBackup1(t *testing.T) {
 	features := []string{Instant}
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
+
 	databases := []string{"testDb"}
 	bucketName := "testBucket"
 	cron := "testCron"
@@ -30,7 +31,9 @@ func TestBackup_AdaptInstantBackup1(t *testing.T) {
 	version := "testVersion"
 	secretKey := "testKey"
 	secretName := "testSecretName"
-	jobName := cronJobNamePrefix + backupName
+	jobName := GetJobName(backupName)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "testKind2", "testVersion2"), "testComponent")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		return nil
@@ -38,8 +41,7 @@ func TestBackup_AdaptInstantBackup1(t *testing.T) {
 
 	jobDef := getJob(
 		namespace,
-		labels,
-		jobName,
+		nameLabels,
 		getJobSpecDef(
 			nodeselector,
 			tolerations,
@@ -65,7 +67,7 @@ func TestBackup_AdaptInstantBackup1(t *testing.T) {
 		monitor,
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		databases,
 		checkDBReady,
 		bucketName,
@@ -92,7 +94,6 @@ func TestBackup_AdaptInstantBackup2(t *testing.T) {
 	features := []string{Instant}
 	monitor := mntr.Monitor{}
 	namespace := "testNs2"
-	labels := map[string]string{"test2": "test2"}
 	databases := []string{"testDb2"}
 	bucketName := "testBucket2"
 	cron := "testCron2"
@@ -105,6 +106,8 @@ func TestBackup_AdaptInstantBackup2(t *testing.T) {
 	secretKey := "testKey2"
 	secretName := "testSecretName2"
 	jobName := GetJobName(backupName)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "testKind2", "testVersion2"), "testComponent")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		return nil
@@ -112,8 +115,7 @@ func TestBackup_AdaptInstantBackup2(t *testing.T) {
 
 	jobDef := getJob(
 		namespace,
-		labels,
-		jobName,
+		nameLabels,
 		getJobSpecDef(
 			nodeselector,
 			tolerations,
@@ -139,7 +141,7 @@ func TestBackup_AdaptInstantBackup2(t *testing.T) {
 		monitor,
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		databases,
 		checkDBReady,
 		bucketName,
@@ -166,7 +168,6 @@ func TestBackup_AdaptBackup1(t *testing.T) {
 	features := []string{Normal}
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
 	databases := []string{"testDb"}
 	bucketName := "testBucket"
 	cron := "testCron"
@@ -179,6 +180,8 @@ func TestBackup_AdaptBackup1(t *testing.T) {
 	secretKey := "testKey"
 	secretName := "testSecretName"
 	jobName := GetJobName(backupName)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "testKind2", "testVersion2"), "testComponent")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		return nil
@@ -186,8 +189,7 @@ func TestBackup_AdaptBackup1(t *testing.T) {
 
 	jobDef := getCronJob(
 		namespace,
-		labels,
-		jobName,
+		nameLabels,
 		cron,
 		getJobSpecDef(
 			nodeselector,
@@ -211,7 +213,7 @@ func TestBackup_AdaptBackup1(t *testing.T) {
 		monitor,
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		databases,
 		checkDBReady,
 		bucketName,
@@ -238,7 +240,6 @@ func TestBackup_AdaptBackup2(t *testing.T) {
 	features := []string{Normal}
 	monitor := mntr.Monitor{}
 	namespace := "testNs2"
-	labels := map[string]string{"test2": "test2"}
 	databases := []string{"testDb2"}
 	bucketName := "testBucket2"
 	cron := "testCron2"
@@ -251,6 +252,8 @@ func TestBackup_AdaptBackup2(t *testing.T) {
 	secretKey := "testKey2"
 	secretName := "testSecretName2"
 	jobName := GetJobName(backupName)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "testKind2", "testVersion2"), "testComponent")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		return nil
@@ -258,8 +261,7 @@ func TestBackup_AdaptBackup2(t *testing.T) {
 
 	jobDef := getCronJob(
 		namespace,
-		labels,
-		jobName,
+		nameLabels,
 		cron,
 		getJobSpecDef(
 			nodeselector,
@@ -283,7 +285,7 @@ func TestBackup_AdaptBackup2(t *testing.T) {
 		monitor,
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		databases,
 		checkDBReady,
 		bucketName,
