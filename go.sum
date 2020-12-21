@@ -27,8 +27,8 @@ cloud.google.com/go/storage v1.5.0/go.mod h1:tpKbwo567HUNpVclU5sGELwQWBDZ8gh0Zeo
 cloud.google.com/go/storage v1.6.0 h1:UDpwYIwla4jHGzZJaEJYx1tOejbgSoNqsAfHAUYe2r8=
 cloud.google.com/go/storage v1.6.0/go.mod h1:N7U0C8pVQ/+NIKOBQyamJIeKQKkZ+mxpohlUTyfDhBk=
 dmitri.shuralyov.com/gpu/mtl v0.0.0-20190408044501-666a987793e9/go.mod h1:H6x//7gZCb22OMCxBHrMx7a5I7Hp++hsVxbQ4BYO7hU=
-github.com/AlecAivazis/survey/v2 v2.0.8 h1:zVjWKN+JIAfmrq6nGWG3DfLS8ypEBhxYy0p7FM+riFk=
-github.com/AlecAivazis/survey/v2 v2.0.8/go.mod h1:9FJRdMdDm8rnT+zHVbvQT2RTSTLq0Ttd6q3Vl2fahjk=
+github.com/AlecAivazis/survey/v2 v2.2.7 h1:5NbxkF4RSKmpywYdcRgUmos1o+roJY8duCLZXbVjoig=
+github.com/AlecAivazis/survey/v2 v2.2.7/go.mod h1:9DYvHgXtiXm6nCn+jXnOXLKbH+Yo9u8fAS/SduGdoPk=
 github.com/AppsFlyer/go-sundheit v0.2.0 h1:FArqX+HbqZ6U32RC3giEAWRUpkggqxHj91KIvxNgwjU=
 github.com/AppsFlyer/go-sundheit v0.2.0/go.mod h1:rCRkVTMQo7/krF7xQ9X0XEF1an68viFR6/Gy02q+4ds=
 github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 h1:w+iIsaOQNcT7OZ575w+acHgRric5iCyQh+xv+KJ4HB8=
