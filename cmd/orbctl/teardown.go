@@ -44,11 +44,14 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 		}
 	)
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
 		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err

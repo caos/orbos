@@ -37,6 +37,13 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			monitor = monitor.Verbose()
 		}
 
+		for _, pool := range desiredKind.Spec.Pools {
+			if pool.StorageDiskType == "" {
+				pool.StorageDiskType = "pd-standard"
+				migrate = true
+			}
+		}
+
 		if err := desiredKind.validate(); err != nil {
 			return nil, nil, nil, migrate, nil, err
 		}

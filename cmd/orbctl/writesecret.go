@@ -33,17 +33,20 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 	flags.StringVarP(&file, "file", "s", "", "File containing the value to encrypt")
 	flags.BoolVar(&stdin, "stdin", false, "Value to encrypt is read from standard input")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
 		s, err := key(value, file, stdin)
 		if err != nil {
 			return err
 		}
 
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
 		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err
@@ -69,7 +72,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			s,
 			operators.GetAllSecretsFunc(orbConfig, &version),
 			operators.PushFunc()); err != nil {
-			panic(err)
+			return err
 		}
 		return nil
 	}

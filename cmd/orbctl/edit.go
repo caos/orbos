@@ -22,12 +22,15 @@ func EditCommand(rv RootValues) *cobra.Command {
 		Short:   "Edit a file and push changes to the remote orb repository",
 		Args:    cobra.ExactArgs(1),
 		Example: `orbctl edit desired.yml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			_, _, orbConfig, gitClient, errFunc := rv()
-			if errFunc != nil {
-				return errFunc(cmd)
+			_, _, orbConfig, gitClient, errFunc, err := rv()
+			if err != nil {
+				return err
 			}
+			defer func() {
+				err = errFunc(err)
+			}()
 
 			if err := orbConfig.IsConnectable(); err != nil {
 				return err

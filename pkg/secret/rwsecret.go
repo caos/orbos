@@ -53,6 +53,9 @@ func Rewrite(monitor mntr.Monitor, gitClient *git.Client, newMasterKey string, d
 
 func Write(monitor mntr.Monitor, gitClient *git.Client, path, value string, getFunc GetFuncs, pushFunc PushFuncs) error {
 	allSecrets, allTrees, err := getFunc(monitor, gitClient)
+	if err != nil {
+		return err
+	}
 
 	secret, err := findSecret(allSecrets, &path, true)
 	if err != nil {
