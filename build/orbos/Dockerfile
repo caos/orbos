@@ -11,7 +11,7 @@ RUN mkdir /dependencies && \
     curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \
     mv ./kubectl /dependencies/kubectl && \
-    curl -L "https://get.helm.sh/helm-v2.12.0-linux-amd64.tar.gz" |tar xvz && \
+    curl -L "https://get.helm.sh/helm-v2.17.0-linux-amd64.tar.gz" |tar xvz && \
     mv linux-amd64/helm /dependencies/helm && \
     chmod +x /dependencies/helm
 
