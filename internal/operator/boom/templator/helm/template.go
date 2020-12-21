@@ -1,6 +1,7 @@
 package helm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -127,8 +128,7 @@ func (h *Helm) runHelmTemplate(overlay string, app templator.HelmApplication, va
 		ValuesFilePath:   valuesAbsFilePath,
 	})
 	if err != nil {
-		monitor.Error(err)
-		return err
+		return fmt.Errorf("helm templating failed: %w: %s", err, string(out))
 	}
 
 	return yaml.New(resultAbsFilePath).AddString(string(out))

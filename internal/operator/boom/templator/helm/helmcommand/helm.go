@@ -53,5 +53,5 @@ func doHelmCommandOutput(basePath, command string) ([]byte, error) {
 	helm := strings.Join([]string{"helm", "--home", helmHomeFolderPathAbs, command}, " ")
 
 	cmd := exec.Command("/bin/sh", "-c", helm)
-	return cmd.Output()
+	return cmd.CombinedOutput()
 }
