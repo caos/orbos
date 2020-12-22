@@ -1,6 +1,9 @@
 package managed
 
 import (
+	"testing"
+	"time"
+
 	coremock "github.com/caos/orbos/internal/operator/database/kinds/databases/core/mock"
 	"github.com/caos/orbos/mntr"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
@@ -14,8 +17,6 @@ import (
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
-	"time"
 )
 
 func getDesiredTree(t *testing.T, masterkey string, desired interface{}) *tree.Tree {
@@ -177,7 +178,7 @@ func TestManaged_Adapt2(t *testing.T) {
 	apiLabels := labels.MustForAPI(operatorLabels, "testKind2", "v1")
 
 	nodeselector := map[string]string{"test2": "test2"}
-	tolerations := []corev1.Toleration{}
+	var tolerations []corev1.Toleration
 	version := "testVersion2"
 	features := []string{"database"}
 	masterkey := "testMk2"
