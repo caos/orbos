@@ -177,6 +177,7 @@ func runFirewallCommand(monitor mntr.Monitor, args ...string) (string, error) {
 }
 
 func runCommand(monitor mntr.Monitor, binary string, args ...string) (string, error) {
+
 	outBuf := new(bytes.Buffer)
 	defer outBuf.Reset()
 	errBuf := new(bytes.Buffer)
@@ -186,9 +187,9 @@ func runCommand(monitor mntr.Monitor, binary string, args ...string) (string, er
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 
-	fullCmd := strings.Join(cmd.Args, "' '")
+	fullCmd := fmt.Sprintf("'%s'", strings.Join(cmd.Args, "' '"))
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf(`running '%s' failed with stderr %s: %w`, fullCmd, errBuf.String(), err)
+		return "", fmt.Errorf(`running %s failed with stderr %s: %w`, fullCmd, errBuf.String(), err)
 	}
 
 	stdout := outBuf.String()
@@ -197,5 +198,5 @@ func runCommand(monitor mntr.Monitor, binary string, args ...string) (string, er
 		fmt.Println(stdout)
 	}
 
-	return stdout, nil
+	return strings.TrimSuffix(stdout, "\n"), nil
 }
