@@ -106,7 +106,8 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 			return err
 		}
 
-		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneName))
+		if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
 			return err
 		}
 
@@ -185,9 +186,9 @@ func runCommand(monitor mntr.Monitor, binary string, args ...string) (string, er
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 
-	fullCmd := strings.Join(cmd.Args, `" "`)
+	fullCmd := strings.Join(cmd.Args, "' '")
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf(`running "%s" failed with stderr %s: %w`, fullCmd, errBuf.String(), err)
+		return "", fmt.Errorf(`running '%s' failed with stderr %s: %w`, fullCmd, errBuf.String(), err)
 	}
 
 	stdout := outBuf.String()
