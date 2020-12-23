@@ -12,7 +12,7 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, binaryVersion string) error {
 	foundBoom, err := api.ExistsBoomYml(gitClient)
 	if err != nil {
 		return err
@@ -34,7 +34,6 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 
 	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-	binaryVersion := "unknown"
 	if desiredKind != nil &&
 		desiredKind.Spec != nil &&
 		desiredKind.Spec.Boom != nil &&
@@ -47,6 +46,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), apiKind, apiVersion),
 		k8sClient,
 		desiredKind.Spec.Boom,
+		binaryVersion,
 	); err != nil {
 		return err
 	}

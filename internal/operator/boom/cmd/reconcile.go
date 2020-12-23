@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -11,7 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernetes.Client, boomSpec *latest.Boom) error {
+func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernetes.Client, boomSpec *latest.Boom, binaryVersion string) error {
 
 	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
@@ -24,16 +26,15 @@ func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernete
 		},
 	})
 
-	var imageRegistry string
+	imageRegistry := "ghcr.io"
+	var boomVersion string
 	var nodeselector map[string]string
 	var tolerations k8s.Tolerations
-	if boomSpec != nil {
-		if boomSpec.Version == "" {
-			err := errors.New("No version set in boom.yml")
-			monitor.Error(err)
-			return err
-		}
 
+	if boomSpec != nil {
+		if boomSpec.Version != "" {
+			boomVersion = boomSpec.Version
+		}
 		if boomSpec.Resources != nil {
 			resources = *boomSpec.Resources
 		}
@@ -43,19 +44,23 @@ func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernete
 		if boomSpec.Tolerations != nil {
 			tolerations = boomSpec.Tolerations
 		}
-		imageRegistry = boomSpec.CustomImageRegistry
+		if boomSpec.CustomImageRegistry != "" {
+			imageRegistry = boomSpec.CustomImageRegistry
+		}
 	}
-	recMonitor := monitor.WithField("version", boomSpec.Version)
-	if imageRegistry == "" {
-		imageRegistry = "ghcr.io"
+	if boomVersion == "" {
+		monitor.Info(fmt.Sprintf("No version set in boom.yml, so current binary version %s will get applied", binaryVersion))
+		boomVersion = binaryVersion
 	}
+
+	recMonitor := monitor.WithField("version", boomVersion)
 
 	if !k8sClient.Available() {
 		recMonitor.Info("Failed to connect to k8s")
 		return nil
 	}
 
-	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomSpec.Version, tolerations, nodeselector, &resources, imageRegistry); err != nil {
+	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomVersion, tolerations, nodeselector, &resources, imageRegistry); err != nil {
 		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
 		return err
 	}

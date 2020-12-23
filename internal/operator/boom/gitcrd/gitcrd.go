@@ -162,10 +162,13 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), apiKind, apiVersion),
 			k8sClient,
 			boomSpec,
+			boomSpec.Version,
 		); err != nil {
 			c.status = err
 			return
 		}
+	} else {
+		monitor.Info("not reconciling BOOM itself as selfReconciling is not specified to true or version is empty")
 	}
 
 	// pre-steps
