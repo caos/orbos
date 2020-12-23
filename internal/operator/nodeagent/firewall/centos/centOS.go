@@ -75,7 +75,7 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		return current, nil, err
 	}
 
-	addSources, removeSources, err := getAddAndRemoveSources(monitor, zoneName, current, desired)
+	addSources, removeSources, err := getAddAndRemoveSources(zoneName, current, desired)
 	if err != nil {
 		return current, nil, err
 	}
@@ -172,16 +172,16 @@ func listFirewall(monitor mntr.Monitor, zone string, arg string) ([]string, erro
 }
 
 func runFirewallCommand(monitor mntr.Monitor, args ...string) (string, error) {
-	return runCommand(monitor, append([]string{"firewall-cmd"}, args...)...)
+	return runCommand(monitor, "firewall-cmd", args...)
 }
 
-func runCommand(monitor mntr.Monitor, args ...string) (string, error) {
+func runCommand(monitor mntr.Monitor, binary string, args ...string) (string, error) {
 	outBuf := new(bytes.Buffer)
 	defer outBuf.Reset()
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.Command("firewall-cmd", args...)
+	cmd := exec.Command(binary, args...)
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 
