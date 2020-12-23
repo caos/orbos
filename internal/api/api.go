@@ -55,7 +55,6 @@ func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredF
 }
 
 func ExistsZitadelYml(gitClient *git.Client) (bool, error) {
-	panic("xyzh")
 	return existsFileInGit(gitClient, zitadelFile)
 }
 
