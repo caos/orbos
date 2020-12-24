@@ -3,13 +3,14 @@ package cmds
 import (
 	"context"
 	"errors"
+	"io/ioutil"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
-	"io/ioutil"
 )
 
 func Takeoff(
@@ -94,7 +95,7 @@ func Takeoff(
 			monitor.Info("Failed to connect to k8s")
 		}
 
-		if err := deployBoom(monitor, gitClient, &kubeconfig); err != nil {
+		if err := deployBoom(monitor, gitClient, &kubeconfig, version); err != nil {
 			return err
 		}
 
