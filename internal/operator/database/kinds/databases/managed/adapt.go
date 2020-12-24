@@ -31,7 +31,7 @@ const (
 	publicServiceName  = sfsName + "-public"
 	cockroachPort      = int32(26257)
 	cockroachHTTPPort  = int32(8080)
-	image              = "cockroachdb/cockroach:v20.1.5"
+	image              = "cockroachdb/cockroach:v20.2.3"
 )
 
 func AdaptFunc(
