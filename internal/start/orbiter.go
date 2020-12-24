@@ -3,6 +3,7 @@ package start
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -199,7 +200,10 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbc
 			path,
 			operators.GetAllSecretsFunc(orbConfig, &version))
 		if err != nil || value == "" {
-			return nil, errors.New("Failed to get kubeconfig")
+			if value == "" && err == nil {
+				err = errors.New("no kubeconfig found")
+			}
+			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
 		monitor.Info("Read kubeconfigs")
 
