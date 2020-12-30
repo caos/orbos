@@ -140,6 +140,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 				Value: &sshKey,
 			}},
 		},
+		ServiceAccounts: []*compute.ServiceAccount{{
+			Scopes: []string{"https://www.googleapis.com/auth/compute"},
+		}},
 	}
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
