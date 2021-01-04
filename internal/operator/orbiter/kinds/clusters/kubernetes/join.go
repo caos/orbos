@@ -149,7 +149,7 @@ discovery:
   bootstrapToken:
     apiServerEndpoint: {{ .JoinAt.IP }}:{{ .BindPort }}
     token: {{ .Token }}
-    unsafeSkipCAVerification: false
+    unsafeSkipCAVerification: true
   timeout: 5m0s
 nodeRegistration:
   kubeletExtraArgs:
