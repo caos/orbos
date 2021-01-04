@@ -3,13 +3,13 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/pkg/git"
+
+	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 
@@ -31,191 +31,216 @@ func join(
 	certKey string,
 	client *kubernetes.Client,
 	imageRepository string,
-	gitClient *git.Client) (*string, error) {
+	gitClient *git.Client,
+	providerK8sSpec infra.Kubernetes) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
 		"tier":    joining.pool.tier,
 	})
 
-	var applyNetworkCommand string
-	prepareKubeadmInit := func() error { return nil }
+	applyResources := providerK8sSpec.Apply
+
 	switch desired.Spec.Networking.Network {
 	case "cilium":
-		ciliumPath := "/var/orbiter/cilium.yaml"
-		prepareKubeadmInit = func() error {
-			buf := new(bytes.Buffer)
-			defer buf.Reset()
+		buf := new(bytes.Buffer)
+		defer buf.Reset()
 
-			istioReg := desired.Spec.CustomImageRegistry
-			if istioReg != "" {
-				istioReg += "/"
-			}
-
-			ciliumReg := desired.Spec.CustomImageRegistry
-			if ciliumReg == "" {
-				ciliumReg = "docker.io"
-			}
-
-			template.Must(template.New("").Parse(string(executables.PreBuilt("cilium.yaml")))).Execute(buf, struct {
-				IstioProxyImageRegistry string
-				CiliumImageRegistry     string
-			}{
-				IstioProxyImageRegistry: istioReg,
-				CiliumImageRegistry:     ciliumReg,
-			})
-
-			return joining.infra.WriteFile(ciliumPath, bytes.NewReader(executables.PreBuilt("cilium.yaml")), 600)
+		istioReg := desired.Spec.CustomImageRegistry
+		if istioReg != "" && !strings.HasSuffix(istioReg, "/") {
+			istioReg += "/"
 		}
-		applyNetworkCommand = fmt.Sprintf("kubectl create -f %s", ciliumPath)
+
+		ciliumReg := desired.Spec.CustomImageRegistry
+		if ciliumReg == "" {
+			ciliumReg = "docker.io"
+		}
+
+		template.Must(template.New("").Parse(string(executables.PreBuilt("cilium.yaml")))).Execute(buf, struct {
+			IstioProxyImageRegistry string
+			CiliumImageRegistry     string
+		}{
+			IstioProxyImageRegistry: istioReg,
+			CiliumImageRegistry:     ciliumReg,
+		})
+		applyResources += fmt.Sprintf("---\n\n%s", buf.String())
 	case "calico":
-		calicoPath := "/var/orbiter/calico.yaml"
-		prepareKubeadmInit = func() error {
 
-			reg := desired.Spec.CustomImageRegistry
-			if reg != "" {
-				reg += "/"
-			}
-
-			buf := new(bytes.Buffer)
-			defer buf.Reset()
-			template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
-				ImageRegistry string
-			}{
-				ImageRegistry: reg,
-			})
-
-			return joining.infra.WriteFile(calicoPath, buf, 600)
+		reg := desired.Spec.CustomImageRegistry
+		if reg != "" && !strings.HasSuffix(reg, "/") {
+			reg += "/"
 		}
-		applyNetworkCommand = fmt.Sprintf(`kubectl create -f %s`, calicoPath)
+
+		buf := new(bytes.Buffer)
+		defer buf.Reset()
+		template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
+			ImageRegistry string
+		}{
+			ImageRegistry: reg,
+		})
+		applyResources += fmt.Sprintf("---\n\n%s", buf.String())
 	case "":
-		applyNetworkCommand = "true"
 	default:
 		networkFile := gitClient.Read(desired.Spec.Networking.Network)
 		if len(networkFile) == 0 {
 			return nil, fmt.Errorf("network file %s is empty or not found in git repository", desired.Spec.Networking.Network)
 		}
 
-		remotePath := filepath.Join("/var/orbiter/", filepath.Base(desired.Spec.Networking.Network))
-		prepareKubeadmInit = func(closedNetworkFile []byte, closedFilePath string) func() error {
-			return func() error {
-				return joining.infra.WriteFile(closedFilePath, bytes.NewReader(closedNetworkFile), 600)
-			}
-		}(networkFile, remotePath)
-		applyNetworkCommand = fmt.Sprintf(`kubectl create -f %s`, remotePath)
+		applyResources += fmt.Sprintf("---\n\n%s", networkFile)
 	}
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
-	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
+	cloudCfgPath := "/var/orbiter/cloud-config"
+
+	kubeadmCfg := new(bytes.Buffer)
+	defer kubeadmCfg.Reset()
+
+	template.Must(template.New("").Parse(`kind: ClusterConfiguration
+apiVersion: kubeadm.k8s.io/v1beta2
+apiServer:
+  timeoutForControlPlane: 4m0s
+  certSANs:
+  - "{{ .CertSAN }}"{{if .ProviderK8sSpec.CloudController.Supported }}
+  extraArgs:
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"
+  extraVolumes:
+  - name: cloud
+    hostPath: "{{ .CloudConfigPath }}"
+    mountPath: "{{ .CloudConfigPath }}"
+controllerManager:
+  extraArgs:
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"
+  extraVolumes:
+  - name: cloud
+    hostPath: "{{ .CloudConfigPath }}"
+    mountPath: "{{ .CloudConfigPath }}"{{ end }}
+certificatesDir: /etc/kubernetes/pki
+clusterName: "{{ .ClusterName }}"
+controlPlaneEndpoint: "{{ .ControlPlaneEndpoint }}"
+dns:
+  type: CoreDNS
+etcd:
+  local:
+    imageRepository: "{{ .ImageRepository }}"
+    dataDir: /var/lib/etcd
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381
+imageRepository: "{{ .ImageRepository }}"
+kubernetesVersion: "{{ .KubernetesVersion }}"
+networking:
+  dnsDomain: "{{ .DNSDomain }}"
+  podSubnet: "{{ .PodSubnet }}"
+  serviceSubnet: "{{ .ServiceSubnet }}"
+scheduler: {}
+
+---
+
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+
+---{{if .JoinAt }}
+kind: JoinConfiguration
+apiVersion: kubeadm.k8s.io/v1beta2
+caCertPath: /etc/kubernetes/pki/ca.crt
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: {{ .JoinAt.IP }}:{{ .BindPort }}
+    token: {{ .Token }}
+    unsafeSkipCAVerification: false
+  timeout: 5m0s
+nodeRegistration:
+  kubeletExtraArgs:
+    node-ip: "{{ .Node.IP }}"{{if .ProviderK8sSpec.CloudController.Supported}}
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"{{end}}
+  name: "{{ .Node.ID }}"{{if .IsControlPlane }}
+controlPlane:
+  localAPIEndpoint:
+    advertiseAddress: "{{ .Node.IP }}"
+    bindPort: {{ .BindPort }}
+  certificateKey: {{.CertKey}}{{end}}{{else}}
 kind: InitConfiguration
+apiVersion: kubeadm.k8s.io/v1beta2
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
-  token: %s
+  token: {{ .Token }}
   ttl: 10m0s
   usages:
   - signing
   - authentication
 localAPIEndpoint:
-  advertiseAddress: %s
-  bindPort: %d
+  advertiseAddress: "{{ .Node.IP }}"
+  bindPort: {{ .BindPort }}
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
-  name: %s
+  name:  "{{ .Node.ID }}"
   kubeletExtraArgs:
-    node-ip: %s
+    node-ip: "{{ .Node.IP }}"{{if .ProviderK8sSpec.CloudController.Supported }}
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"{{end}}
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-cgroupDriver: systemd
----
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: ClusterConfiguration
-apiServer:
-  timeoutForControlPlane: 4m0s
-  certSANs:
-  - "%s"
-certificatesDir: /etc/kubernetes/pki
-clusterName: %s
-controlPlaneEndpoint: %s
-controllerManager: {}
-dns:
-  type: CoreDNS
-etcd:
-  local:
-    imageRepository: "%s"
-    dataDir: /var/lib/etcd
-    extraArgs:
-      listen-metrics-urls: http://0.0.0.0:2381
-imageRepository: %s
-kubernetesVersion: %s
-networking:
-  dnsDomain: %s
-  podSubnet: %s
-  serviceSubnet: %s
-scheduler: {}
-`,
-		joinToken,
-		joining.infra.IP(),
-		kubeAPI.BackendPort,
-		joining.infra.ID(),
-		joining.infra.IP(),
-		kubeAPI.Location,
-		clusterID,
-		kubeAPI,
-		imageRepository,
-		imageRepository,
-		kubernetesVersion,
-		desired.Spec.Networking.DNSDomain,
-		desired.Spec.Networking.PodCidr,
-		desired.Spec.Networking.ServiceCidr)
-
-	if joinAt != nil {
-		kubeadmCfg += fmt.Sprintf(`---
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: JoinConfiguration
-caCertPath: /etc/kubernetes/pki/ca.crt
-discovery:
-  bootstrapToken:
-    apiServerEndpoint: %s:%d
-    token: %s
-    unsafeSkipCAVerification: true
-  timeout: 5m0s
-nodeRegistration:
-  kubeletExtraArgs:
-    node-ip: %s
-  name: %s
-`,
-			joinAt.IP(),
-			kubeAPI.BackendPort,
-			joinToken,
-			joining.infra.IP(),
-			joining.infra.ID())
-
-		if joining.pool.tier == Controlplane {
-			kubeadmCfg += fmt.Sprintf(`controlPlane:
-  localAPIEndpoint:
-    advertiseAddress: %s
-    bindPort: %d
-  certificateKey: %s
-`,
-				joining.infra.IP(),
-				kubeAPI.BackendPort,
-				certKey)
-		}
-	}
+{{end}}
+`)).Execute(kubeadmCfg, struct {
+		Token                string
+		Node                 infra.Machine
+		BindPort             uint16
+		CertSAN              string
+		ClusterName          string
+		ControlPlaneEndpoint string
+		ImageRepository      string
+		KubernetesVersion    string
+		DNSDomain            string
+		PodSubnet            string
+		ServiceSubnet        string
+		JoinAt               infra.Machine
+		IsControlPlane       bool
+		CertKey              string
+		ProviderK8sSpec      infra.Kubernetes
+		CloudConfigPath      string
+	}{
+		Token:                joinToken,
+		Node:                 joining.infra,
+		BindPort:             kubeAPI.BackendPort,
+		CertSAN:              kubeAPI.Location,
+		ClusterName:          clusterID,
+		ControlPlaneEndpoint: kubeAPI.String(),
+		ImageRepository:      imageRepository,
+		KubernetesVersion:    kubernetesVersion.String(),
+		DNSDomain:            desired.Spec.Networking.DNSDomain,
+		PodSubnet:            string(desired.Spec.Networking.PodCidr),
+		ServiceSubnet:        string(desired.Spec.Networking.ServiceCidr),
+		JoinAt:               joinAt,
+		IsControlPlane:       joining.pool.tier == Controlplane,
+		CertKey:              certKey,
+		ProviderK8sSpec:      providerK8sSpec,
+		CloudConfigPath:      cloudCfgPath,
+	})
 
 	if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
-		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
+		return cmp.WriteFile(kubeadmCfgPath, kubeadmCfg, 600)
 	}); err != nil {
 		return nil, err
 	}
 	monitor.WithFields(map[string]interface{}{
 		"path": kubeadmCfgPath,
 	}).Debug("Written file")
+
+	if providerK8sSpec.CloudController.Supported && providerK8sSpec.CloudController.CloudConfig != nil {
+		if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
+			return cmp.WriteFile(cloudCfgPath, providerK8sSpec.CloudController.CloudConfig(joining.infra), 600)
+		}); err != nil {
+			return nil, err
+		}
+		monitor.WithFields(map[string]interface{}{
+			"path": cloudCfgPath,
+		}).Debug("Written file")
+	}
 
 	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
 	resetStdout, err := joining.infra.Execute(nil, cmd)
@@ -259,14 +284,10 @@ nodeRegistration:
 		return nil, err
 	}
 
-	if err := prepareKubeadmInit(); err != nil {
-		return nil, err
-	}
-
-	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && %s", kubeAPI.BackendPort, kubeadmCfgPath, applyNetworkCommand)
+	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config", kubeAPI.BackendPort, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, initCmd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(`error initializing kubernetes by executing command (%s): %s: %w`, initCmd, initStdout, err)
 	}
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(initStdout),
@@ -281,6 +302,12 @@ nodeRegistration:
 	monitor.Changed("Cluster initialized")
 
 	kc := strings.ReplaceAll(kubeconfigBuf.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
+
+	if applyResources != "" {
+		if out, err := joining.infra.Execute(strings.NewReader(applyResources), "kubectl create -f -"); err != nil {
+			return nil, fmt.Errorf("error applying initial resources: %w: %s", err, string(out))
+		}
+	}
 
 	return &kc, nil
 }

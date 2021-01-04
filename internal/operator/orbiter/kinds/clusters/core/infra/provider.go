@@ -19,6 +19,18 @@ func (a Address) String() string {
 type ProviderCurrent interface {
 	Pools() map[string]Pool
 	Ingresses() map[string]*Address
+	Kubernetes() Kubernetes
+}
+
+type Kubernetes struct {
+	Apply           string
+	CloudController InTreeCloudControllerManager
+}
+
+type InTreeCloudControllerManager struct {
+	Supported    bool
+	CloudConfig  func(machine Machine) io.Reader
+	ProviderName string
 }
 
 type Ingress struct {

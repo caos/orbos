@@ -123,11 +123,12 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	name := newName()
+	nwTags := networkTags(m.context.orbID, m.context.providerID, poolName)
 	sshKey := fmt.Sprintf("orbiter:%s", m.key.Public.Value)
 	createInstance := &compute.Instance{
 		Name:        name,
 		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
-		Tags:        &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
+		Tags:        &compute.Tags{Items: nwTags},
 		NetworkInterfaces: []*compute.NetworkInterface{{
 			Network: m.context.networkURL,
 		}},
@@ -381,11 +382,15 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 
 func networkTags(orbID, providerID string, poolName ...string) []string {
 	tags := []string{
-		fmt.Sprintf("orb-%s", orbID),
+		orbNetworkTag(orbID),
 		fmt.Sprintf("provider-%s", providerID),
 	}
 	for _, pool := range poolName {
 		tags = append(tags, fmt.Sprintf("pool-%s", pool))
 	}
 	return tags
+}
+
+func orbNetworkTag(orbID string) string {
+	return fmt.Sprintf("orb-%s", orbID)
 }

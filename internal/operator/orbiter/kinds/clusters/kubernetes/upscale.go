@@ -29,6 +29,7 @@ func ensureUpScale(
 	oneoff bool,
 	initializeMachine func(infra.Machine, *initializedPool) initializedMachine,
 	gitClient *git.Client,
+	providerK8sSpec infra.Kubernetes,
 ) (changed bool, err error) {
 
 	wCount := 0
@@ -202,7 +203,9 @@ nodes:
 			string(certKey),
 			k8sClient,
 			imageRepository,
-			gitClient)
+			gitClient,
+			providerK8sSpec,
+		)
 
 		if err != nil {
 			return false, err
@@ -235,7 +238,9 @@ nodes:
 			"",
 			k8sClient,
 			imageRepository,
-			gitClient); err != nil {
+			gitClient,
+			providerK8sSpec,
+		); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}
 	}
