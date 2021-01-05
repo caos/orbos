@@ -2,10 +2,11 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
-	"github.com/caos/orbos/pkg/kubernetes"
 	"sort"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
+	"github.com/caos/orbos/pkg/kubernetes"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
@@ -194,7 +195,7 @@ func initialize(
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
 			if !softwareContains(*naSpec.Software, k8sSoftware) {
 				naSpec.Software.Merge(k8sSoftware)
-				machineMonitor.Changed("Kubernetes software desired")
+				machineMonitor.Debug("Kubernetes software desired")
 			}
 		}
 

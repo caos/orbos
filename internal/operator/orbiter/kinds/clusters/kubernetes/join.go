@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"strings"
 	"text/template"
 	"time"
@@ -63,7 +64,7 @@ func join(
 			IstioProxyImageRegistry: istioReg,
 			CiliumImageRegistry:     ciliumReg,
 		})
-		applyResources += fmt.Sprintf("---\n\n%s", buf.String())
+		applyResources = concatYAML(applyResources, buf)
 	case "calico":
 
 		reg := desired.Spec.CustomImageRegistry
@@ -78,7 +79,7 @@ func join(
 		}{
 			ImageRegistry: reg,
 		})
-		applyResources += fmt.Sprintf("---\n\n%s", buf.String())
+		applyResources = concatYAML(applyResources, buf)
 	case "":
 	default:
 		networkFile := gitClient.Read(desired.Spec.Networking.Network)
@@ -86,7 +87,7 @@ func join(
 			return nil, fmt.Errorf("network file %s is empty or not found in git repository", desired.Spec.Networking.Network)
 		}
 
-		applyResources += fmt.Sprintf("---\n\n%s", networkFile)
+		applyResources = concatYAML(applyResources, bytes.NewReader(networkFile))
 	}
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
@@ -303,11 +304,21 @@ nodeRegistration:
 
 	kc := strings.ReplaceAll(kubeconfigBuf.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
 
-	if applyResources != "" {
-		if out, err := joining.infra.Execute(strings.NewReader(applyResources), "kubectl create -f -"); err != nil {
+	if applyResources != nil {
+		if out, err := joining.infra.Execute(applyResources, "kubectl create -f -"); err != nil {
 			return nil, fmt.Errorf("error applying initial resources: %w: %s", err, string(out))
 		}
 	}
 
 	return &kc, nil
+}
+
+func concatYAML(head, tail io.Reader) io.Reader {
+	if head == nil {
+		return tail
+	}
+	if tail == nil {
+		return head
+	}
+	return io.MultiReader(head, strings.NewReader("---\n\n"), tail)
 }

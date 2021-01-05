@@ -82,8 +82,8 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
-			}, func() error {
-				if err := lbDestroy(); err != nil {
+			}, func(delegates map[string]interface{}) error {
+				if err := lbDestroy(delegates); err != nil {
 					return err
 				}
 

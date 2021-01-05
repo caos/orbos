@@ -19,7 +19,7 @@ func GetQueryAndDestroyFuncs(
 	oneoff bool,
 	deployOrbiter bool,
 	clusterCurrent *tree.Tree,
-	destroyProviders func() (map[string]interface{}, error),
+	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan struct{},
 	gitClient *git.Client,

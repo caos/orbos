@@ -127,7 +127,11 @@ type ClientInt interface {
 
 	ApplyNamespace(rsc *core.Namespace) error
 	DeleteNamespace(name string) error
+
+	ListPersistentVolumes() (*core.PersistentVolumeList, error)
 }
+
+var _ ClientInt = (*Client)(nil)
 
 type Client struct {
 	monitor           mntr.Monitor
@@ -207,6 +211,10 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 	}
 
 	return c.set.CoreV1().Secrets(namespace).List(context.Background(), mach.ListOptions{LabelSelector: labelSelector})
+}
+
+func (c *Client) ListPersistentVolumes() (*core.PersistentVolumeList, error) {
+	return c.set.CoreV1().PersistentVolumes().List(context.Background(), mach.ListOptions{})
 }
 
 func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {

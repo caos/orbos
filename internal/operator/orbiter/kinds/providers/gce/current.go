@@ -1,9 +1,12 @@
 package gce
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
+
+	"github.com/caos/orbos/internal/executables"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -33,47 +36,8 @@ func (c *Current) Cleanupped() <-chan error {
 
 func (c *Current) Kubernetes() infra.Kubernetes {
 	return infra.Kubernetes{
-		Apply: `apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: slow-ext4
-provisioner: kubernetes.io/gce-pd
-parameters:
-  type: pd-standard
-  fstype: ext4
-  replication-type: none
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: fast-ext4
-provisioner: kubernetes.io/gce-pd
-parameters:
-  type: pd-ssd
-  fstype: ext4
-  replication-type: none
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: slow-xfs
-provisioner: kubernetes.io/gce-pd
-parameters:
-  type: pd-standard
-  fstype: xfs
-  replication-type: none
----
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: fast-xfs
-provisioner: kubernetes.io/gce-pd
-parameters:
-  type: pd-ssd
-  fstype: xfs
-  replication-type: none
-`,
-		CloudController: infra.InTreeCloudControllerManager{
+		Apply: bytes.NewReader(executables.PreBuilt("kubernetes_gce.yaml")),
+		CloudController: infra.CloudControllerManager{
 			Supported: true,
 			CloudConfig: func(machine infra.Machine) io.Reader {
 				instance := machine.(*instance)
@@ -98,7 +62,7 @@ node-tags = "%s"
 					tags[2],
 				))
 			},
-			ProviderName: "gce",
+			ProviderName: "external",
 		},
 	}
 }

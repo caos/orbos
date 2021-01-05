@@ -84,8 +84,8 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
 				}
 				return orbiter.QueryFuncGoroutine(queryFunc)
-			}, func() error {
-				if err := lbDestroy(); err != nil {
+			}, func(delegates map[string]interface{}) error {
+				if err := lbDestroy(delegates); err != nil {
 					return err
 				}
 

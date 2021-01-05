@@ -23,11 +23,11 @@ type ProviderCurrent interface {
 }
 
 type Kubernetes struct {
-	Apply           string
-	CloudController InTreeCloudControllerManager
+	Apply           io.Reader
+	CloudController CloudControllerManager
 }
 
-type InTreeCloudControllerManager struct {
+type CloudControllerManager struct {
 	Supported    bool
 	CloudConfig  func(machine Machine) io.Reader
 	ProviderName string
