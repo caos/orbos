@@ -547,9 +547,6 @@ func EnsureOrbiterArtifacts(
 							},
 						},
 					}},
-					NodeSelector: map[string]string{
-						"node-role.kubernetes.io/master": "",
-					},
 					Tolerations: []core.Toleration{{
 						Key:      "node-role.kubernetes.io/master",
 						Effect:   "NoSchedule",
