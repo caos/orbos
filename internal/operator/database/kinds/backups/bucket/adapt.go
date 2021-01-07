@@ -30,6 +30,8 @@ func AdaptFunc(
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
 	version string,
+	dbURL string,
+	dbPort int32,
 	features []string,
 ) core.AdaptFunc {
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secretpkg.Secret, err error) {
@@ -61,7 +63,6 @@ func AdaptFunc(
 			name,
 			namespace,
 			componentLabels,
-			[]string{},
 			checkDBReady,
 			desiredKind.Spec.Bucket,
 			desiredKind.Spec.Cron,
@@ -70,8 +71,9 @@ func AdaptFunc(
 			timestamp,
 			nodeselector,
 			tolerations,
+			dbURL,
+			dbPort,
 			features,
-			version,
 		)
 		if err != nil {
 			return nil, nil, nil, err
@@ -82,7 +84,6 @@ func AdaptFunc(
 			name,
 			namespace,
 			componentLabels,
-			[]string{},
 			desiredKind.Spec.Bucket,
 			timestamp,
 			nodeselector,
@@ -90,7 +91,8 @@ func AdaptFunc(
 			checkDBReady,
 			secretName,
 			secretKey,
-			version,
+			dbURL,
+			dbPort,
 		)
 		if err != nil {
 			return nil, nil, nil, err
@@ -108,6 +110,8 @@ func AdaptFunc(
 			secretName,
 			secretKey,
 			version,
+			dbURL,
+			dbPort,
 		)
 		if err != nil {
 			return nil, nil, nil, err
@@ -148,7 +152,6 @@ func AdaptFunc(
 					name,
 					namespace,
 					componentLabels,
-					databases,
 					checkDBReady,
 					desiredKind.Spec.Bucket,
 					desiredKind.Spec.Cron,
@@ -157,8 +160,9 @@ func AdaptFunc(
 					timestamp,
 					nodeselector,
 					tolerations,
+					dbURL,
+					dbPort,
 					features,
-					version,
 				)
 				if err != nil {
 					return nil, err
@@ -169,7 +173,6 @@ func AdaptFunc(
 					name,
 					namespace,
 					componentLabels,
-					databases,
 					desiredKind.Spec.Bucket,
 					timestamp,
 					nodeselector,
@@ -177,7 +180,8 @@ func AdaptFunc(
 					checkDBReady,
 					secretName,
 					secretKey,
-					version,
+					dbURL,
+					dbPort,
 				)
 				if err != nil {
 					return nil, err
@@ -195,29 +199,30 @@ func AdaptFunc(
 					secretName,
 					secretKey,
 					version,
+					dbURL,
+					dbPort,
 				)
 				if err != nil {
 					return nil, err
 				}
 
 				queriers := make([]core.QueryFunc, 0)
-				if databases != nil && len(databases) != 0 {
-					for _, feature := range features {
-						switch feature {
-						case backup.Normal, backup.Instant:
-							queriers = append(queriers,
-								core.ResourceQueryToZitadelQuery(queryS),
-								queryB,
-							)
-						case clean.Instant:
-							queriers = append(queriers,
-								queryC,
-							)
-						case restore.Instant:
-							queriers = append(queriers,
-								queryR,
-							)
-						}
+
+				for _, feature := range features {
+					switch feature {
+					case backup.Normal, backup.Instant:
+						queriers = append(queriers,
+							core.ResourceQueryToZitadelQuery(queryS),
+							queryB,
+						)
+					case clean.Instant:
+						queriers = append(queriers,
+							queryC,
+						)
+					case restore.Instant:
+						queriers = append(queriers,
+							queryR,
+						)
 					}
 				}
 

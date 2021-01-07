@@ -18,10 +18,11 @@ const (
 	secretPath                       = "/secrets/sa.json"
 	jobPrefix                        = "backup-"
 	jobSuffix                        = "-restore"
-	image                            = "ghcr.io/caos/crbackup"
+	image                            = "cockroachdb/cockroach:v20.2.3"
 	internalSecretName               = "client-certs"
 	rootSecretName                   = "cockroachdb.client.root"
 	timeout            time.Duration = 60
+	saJsonBase64Env                  = "SAJSON"
 )
 
 func AdaptFunc(
@@ -29,7 +30,6 @@ func AdaptFunc(
 	backupName string,
 	namespace string,
 	componentLabels *labels.Component,
-	databases []string,
 	bucketName string,
 	timestamp string,
 	nodeselector map[string]string,
@@ -37,7 +37,8 @@ func AdaptFunc(
 	checkDBReady core.EnsureFunc,
 	secretName string,
 	secretKey string,
-	version string,
+	dbURL string,
+	dbPort int32,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -47,9 +48,12 @@ func AdaptFunc(
 	jobName := jobPrefix + backupName + jobSuffix
 	command := getCommand(
 		timestamp,
-		databases,
 		bucketName,
 		backupName,
+		certPath,
+		secretPath,
+		dbURL,
+		dbPort,
 	)
 
 	jobdef := getJob(
@@ -59,7 +63,6 @@ func AdaptFunc(
 		tolerations,
 		secretName,
 		secretKey,
-		version,
 		command)
 
 	destroyJ, err := job.AdaptFuncToDestroy(jobName, namespace)
@@ -79,7 +82,7 @@ func AdaptFunc(
 	queriers := []core.QueryFunc{
 		core.EnsureFuncToQueryFunc(checkDBReady),
 		core.ResourceQueryToZitadelQuery(queryJ),
-		core.EnsureFuncToQueryFunc(getCleanupFunc(monitor, jobdef.Namespace, jobdef.Name)),
+		//core.EnsureFuncToQueryFunc(getCleanupFunc(monitor, jobdef.Namespace, jobdef.Name)),
 	}
 
 	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {

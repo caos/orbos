@@ -168,7 +168,6 @@ func AdaptFunc(
 			}
 		}
 
-		featureRestore := false
 		destroyers := make([]core2.DestroyFunc, 0)
 		for _, feature := range features {
 			if feature == "database" {
@@ -180,8 +179,6 @@ func AdaptFunc(
 					destroyCert,
 					destroyRoot,
 				)
-			} else if feature == "restore" {
-				featureRestore = true
 			}
 		}
 
@@ -209,6 +206,8 @@ func AdaptFunc(
 						nodeselector,
 						tolerations,
 						version,
+						publicServiceName,
+						cockroachPort,
 						features,
 					)
 					if err != nil {
@@ -223,21 +222,19 @@ func AdaptFunc(
 		}
 
 		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
-				if !featureRestore {
-					queriedCurrentDB, err := core.ParseQueriedForDatabase(queried)
-					if err != nil || queriedCurrentDB == nil {
-						// TODO: query system state
-						currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
-						currentDB.Current.URL = publicServiceName
-						currentDB.Current.ReadyFunc = checkDBReady
-						currentDB.Current.AddUserFunc = addUser
-						currentDB.Current.DeleteUserFunc = deleteUser
-						currentDB.Current.ListUsersFunc = listUsers
-						currentDB.Current.ListDatabasesFunc = listDatabases
+				queriedCurrentDB, err := core.ParseQueriedForDatabase(queried)
+				if err != nil || queriedCurrentDB == nil {
+					// TODO: query system state
+					currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
+					currentDB.Current.URL = publicServiceName
+					currentDB.Current.ReadyFunc = checkDBReady
+					currentDB.Current.AddUserFunc = addUser
+					currentDB.Current.DeleteUserFunc = deleteUser
+					currentDB.Current.ListUsersFunc = listUsers
+					currentDB.Current.ListDatabasesFunc = listDatabases
 
-						core.SetQueriedForDatabase(queried, current)
-						internalMonitor.Info("set current state of managed database")
-					}
+					core.SetQueriedForDatabase(queried, current)
+					internalMonitor.Info("set current state of managed database")
 				}
 
 				ensure, err := core2.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)

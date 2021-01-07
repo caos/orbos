@@ -13,14 +13,15 @@ import (
 )
 
 const (
+	image                            = "cockroachdb/cockroach:v20.2.3"
 	defaultMode        int32         = 256
 	certPath                         = "/cockroach/cockroach-certs"
 	secretPath                       = "/secrets/sa.json"
 	backupPath                       = "/cockroach"
 	backupNameEnv                    = "BACKUP_NAME"
+	saJsonBase64Env                  = "SAJSON"
 	cronJobNamePrefix                = "backup-"
 	internalSecretName               = "client-certs"
-	image                            = "ghcr.io/caos/crbackup"
 	rootSecretName                   = "cockroachdb.client.root"
 	timeout            time.Duration = 60
 	Normal                           = "backup"
@@ -32,7 +33,6 @@ func AdaptFunc(
 	backupName string,
 	namespace string,
 	componentLabels *labels.Component,
-	databases []string,
 	checkDBReady core.EnsureFunc,
 	bucketName string,
 	cron string,
@@ -41,8 +41,9 @@ func AdaptFunc(
 	timestamp string,
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
+	dbURL string,
+	dbPort int32,
 	features []string,
-	version string,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
@@ -51,9 +52,12 @@ func AdaptFunc(
 
 	command := getBackupCommand(
 		timestamp,
-		databases,
 		bucketName,
 		backupName,
+		certPath,
+		secretPath,
+		dbURL,
+		dbPort,
 	)
 
 	jobSpecDef := getJobSpecDef(
@@ -62,7 +66,6 @@ func AdaptFunc(
 		secretName,
 		secretKey,
 		backupName,
-		version,
 		command,
 	)
 
@@ -119,7 +122,7 @@ func AdaptFunc(
 			queriers = append(queriers,
 				core.EnsureFuncToQueryFunc(checkDBReady),
 				core.ResourceQueryToZitadelQuery(queryJ),
-				core.EnsureFuncToQueryFunc(getCleanupFunc(monitor, jobDef.Namespace, jobDef.Name)),
+				//core.EnsureFuncToQueryFunc(getCleanupFunc(monitor, jobDef.Namespace, jobDef.Name)),
 			)
 		}
 	}

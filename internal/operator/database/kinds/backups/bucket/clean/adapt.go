@@ -36,13 +36,19 @@ func AdaptFunc(
 	secretName string,
 	secretKey string,
 	version string,
+	dbURL string,
+	dbPort int32,
 ) (
 	queryFunc core.QueryFunc,
 	destroyFunc core.DestroyFunc,
 	err error,
 ) {
 
-	command := getCommand(databases)
+	command := getCommand(
+		databases,
+		dbURL,
+		dbPort,
+	)
 
 	jobDef := getJob(
 		namespace,

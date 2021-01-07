@@ -23,6 +23,8 @@ func GetQueryAndDestroyFuncs(
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
 	version string,
+	dbURL string,
+	dbPort int32,
 	features []string,
 ) (
 	core.QueryFunc,
@@ -32,7 +34,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "databases.caos.ch/BucketBackup":
-		return bucket.AdaptFunc(name, namespace, labels.MustForComponent(labels.MustForAPI(operatorLabels, "BucketBackup", desiredTree.Common.Version), "backup"), checkDBReady, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
+		return bucket.AdaptFunc(name, namespace, labels.MustForComponent(labels.MustForAPI(operatorLabels, "BucketBackup", desiredTree.Common.Version), "backup"), checkDBReady, timestamp, nodeselector, tolerations, version, dbURL, dbPort, features)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}

@@ -1,32 +1,39 @@
 package clean
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 func getCommand(
 	databases []string,
+	dbURL string,
+	dbPort int32,
 ) string {
 	backupCommands := make([]string, 0)
 	for _, database := range databases {
 		backupCommands = append(backupCommands,
 			strings.Join([]string{
-				"/scripts/clean-db.sh",
-				certPath,
-				database,
+				"cockroach",
+				"sql",
+				"--certs-dir=" + certPath,
+				"--host=" + dbURL,
+				"--port=" + strconv.Itoa(int(dbPort)),
+				"-e",
+				"\"DROP DATABASE IF EXISTS " + database + " CASCADE;\"",
 			}, " "))
 	}
-	for _, database := range databases {
+	/*
 		backupCommands = append(backupCommands,
 			strings.Join([]string{
-				"/scripts/clean-user.sh",
-				certPath,
-				database,
+				"cockroach",
+				"sql",
+				"--certs-dir=" + certPath,
+				"--host=" + dbURL,
+				"--port=" + strconv.Itoa(int(dbPort)),
+				"-e",
+				"\"TRUNCATE defaultdb.flyway_schema_history;\"",
 			}, " "))
-	}
-	backupCommands = append(backupCommands,
-		strings.Join([]string{
-			"/scripts/clean-migration.sh",
-			certPath,
-		}, " "))
-
+	*/
 	return strings.Join(backupCommands, " && ")
 }
