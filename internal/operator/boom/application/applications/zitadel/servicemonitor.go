@@ -2,8 +2,10 @@ package zitadel
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
+	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func GetServicemonitor(instanceName string) *servicemonitor.Config {
@@ -24,13 +26,10 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 				TargetLabel:  "instance",
 			}},
 		}},
-		MonitorMatchingLabels: labels.GetMonitorLabels(instanceName, monitorName),
-		ServiceMatchingLabels: map[string]string{
-			"app.kubernetes.io/component": "iam-database",
-			"app.kubernetes.io/part-of":   "zitadel",
-			"zitadel.caos.ch/servicetype": "internal",
-		},
-		JobName:           monitorName.String(),
-		NamespaceSelector: []string{"caos-zitadel"},
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+
+		ServiceMatchingLabels: labels.MustK8sMap(managed.PublicServiceNameSelector()),
+		JobName:               monitorName.String(),
+		NamespaceSelector:     []string{"caos-zitadel"},
 	}
 }

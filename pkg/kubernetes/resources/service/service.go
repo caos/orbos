@@ -19,7 +19,7 @@ type Port struct {
 
 func AdaptFuncToEnsure(
 	namespace string,
-	nameLabels *labels.Name,
+	nameLabels labels.IDLabels,
 	ports []Port,
 	t string,
 	selector *labels.Selector,
