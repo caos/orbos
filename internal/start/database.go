@@ -78,7 +78,7 @@ func DatabaseRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kube
 		return err
 	}
 
-	database.Takeoff(monitor, gitClient, orb.AdaptFunc(timestamp, binaryVersion, "restore"), k8sClient)()
+	database.Takeoff(monitor, gitClient, orb.AdaptFunc(timestamp, binaryVersion, "clean", "restore"), k8sClient)()
 
 	return nil
 }
