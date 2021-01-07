@@ -15,7 +15,7 @@ func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
 	publicServiceNameLabels *labels.Name,
-	serviceNameLabels *labels.Name,
+	privateServiceNameLabels *labels.Name,
 	cockroachSelector *labels.Selector,
 	cockroachPort int32,
 	cockroachHTTPPort int32,
@@ -26,15 +26,17 @@ func AdaptFunc(
 ) {
 	internalMonitor := monitor.WithField("type", "services")
 
-	destroySPD, err := service.AdaptFuncToDestroy("default", publicServiceNameLabels.Name())
+	publicServiceSelectable := labels.AsSelectable(publicServiceNameLabels)
+
+	destroySPD, err := service.AdaptFuncToDestroy("default", publicServiceSelectable.Name())
 	if err != nil {
 		return nil, nil, err
 	}
-	destroySP, err := service.AdaptFuncToDestroy(namespace, publicServiceNameLabels.Name())
+	destroySP, err := service.AdaptFuncToDestroy(namespace, publicServiceSelectable.Name())
 	if err != nil {
 		return nil, nil, err
 	}
-	destroyS, err := service.AdaptFuncToDestroy(namespace, serviceNameLabels.Name())
+	destroyS, err := service.AdaptFuncToDestroy(namespace, privateServiceNameLabels.Name())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -48,15 +50,15 @@ func AdaptFunc(
 		{Port: 26257, TargetPort: strconv.Itoa(int(cockroachPort)), Name: "grpc"},
 		{Port: 8080, TargetPort: strconv.Itoa(int(cockroachHTTPPort)), Name: "http"},
 	}
-	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceNameLabels, ports, "", cockroachSelector, false, "", "")
+	querySPD, err := service.AdaptFuncToEnsure("default", publicServiceSelectable, ports, "", cockroachSelector, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceNameLabels, ports, "", cockroachSelector, false, "", "")
+	querySP, err := service.AdaptFuncToEnsure(namespace, publicServiceSelectable, ports, "", cockroachSelector, false, "", "")
 	if err != nil {
 		return nil, nil, err
 	}
-	queryS, err := service.AdaptFuncToEnsure(namespace, serviceNameLabels, ports, "", cockroachSelector, true, "None", "")
+	queryS, err := service.AdaptFuncToEnsure(namespace, privateServiceNameLabels, ports, "", cockroachSelector, true, "None", "")
 	if err != nil {
 		return nil, nil, err
 	}
