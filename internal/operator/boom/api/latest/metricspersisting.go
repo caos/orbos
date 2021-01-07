@@ -35,6 +35,8 @@ type Metrics struct {
 	Argocd bool `json:"argocd"`
 	//Bool if metrics should get scraped from kube-state-metrics
 	KubeStateMetrics bool `json:"kube-state-metrics" yaml:"kube-state-metrics"`
+	//Bool if metrics should get scraped from prometheus
+	Prometheus bool `json:"prometheus" yaml:"prometheus"`
 	//Bool if metrics should get scraped from prometheus-node-exporter
 	PrometheusNodeExporter bool `json:"prometheus-node-exporter" yaml:"prometheus-node-exporter"`
 	//Bool if metrics should get scraped from prometheus-systemd-exporter
@@ -47,12 +49,16 @@ type Metrics struct {
 	LoggingOperator bool `json:"logging-operator" yaml:"logging-operator"`
 	//Bool if metrics should get scraped from loki
 	Loki bool `json:"loki"`
-	//Bool if metrics should get scraped from boom
+	//Bool if metrics should get scraped from BOOM
 	Boom bool `json:"boom" yaml:"boom"`
-	//Bool if metrics should get scraped from orbiter
+	//Bool if metrics should get scraped from ORBITER
 	Orbiter bool `json:"orbiter" yaml:"orbiter"`
-	//Bool if metrics should get scraped from zitadel
+	//Bool if metrics should get scraped from ZITADEL
 	Zitadel bool `json:"zitadel" yaml:"zitadel"`
+	//Bool if metrics should get scraped from database
+	Database bool `json:"database" yaml:"database"`
+	//Bool if metrics should get scraped from networking
+	Networking bool `json:"networking" yaml:"networking"`
 }
 
 type RemoteWrite struct {

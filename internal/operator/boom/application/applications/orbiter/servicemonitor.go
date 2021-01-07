@@ -11,9 +11,9 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	appName = "orbiter"
 	monitorlabels := labels.GetMonitorLabels(instanceName, appName)
 	ls := map[string]string{
-		"app.kubernetes.io/component": "orbiter",
-		"app.kubernetes.io/instance":  "orbiter",
-		"app.kubernetes.io/part-of":   "orbos",
+		"app.kubernetes.io/part-of":    "ORBOS",
+		"app.kubernetes.io/managed-by": "orbiter.caos.ch",
+		"app.kubernetes.io/component":  "operator",
 	}
 
 	relabelings := []*servicemonitor.ConfigRelabeling{{

@@ -11,7 +11,6 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	appName = "boom"
 	monitorlabels := labels.GetMonitorLabels(instanceName, appName)
 	ls := map[string]string{
-		"app.kubernetes.io/instance":  "boom",
 		"app.kubernetes.io/part-of":   "orbos",
 		"app.kubernetes.io/component": "boom",
 	}
