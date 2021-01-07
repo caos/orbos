@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	component          = "cockroachdb"
+	component          = "database"
 	sfsName            = "cockroachdb"
 	pdbName            = sfsName + "-budget"
 	serviceAccountName = sfsName
