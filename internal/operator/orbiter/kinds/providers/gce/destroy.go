@@ -51,8 +51,7 @@ func destroy(context *context, delegates map[string]interface{}) error {
 							}
 						}
 					}
-					// delete disks
-					return nil
+					return helpers.Fanout(deleteDisks)()
 				},
 				func() error {
 					_, deleteFirewalls, err := queryFirewall(context, nil)

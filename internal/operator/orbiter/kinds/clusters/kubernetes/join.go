@@ -101,7 +101,7 @@ apiVersion: kubeadm.k8s.io/v1beta2
 apiServer:
   timeoutForControlPlane: 4m0s
   certSANs:
-  - "{{ .CertSAN }}"{{if .ProviderK8sSpec.CloudController.Supported }}
+  - "{{ .CertSAN }}"{{if and .ProviderK8sSpec.CloudController.Supported (ne .ProviderK8sSpec.CloudController.ProviderName "external") }}
   extraArgs:
     cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
     cloud-config: "{{ .CloudConfigPath }}"
@@ -285,7 +285,12 @@ nodeRegistration:
 		return nil, err
 	}
 
-	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config", kubeAPI.BackendPort, kubeadmCfgPath)
+	initCmd := fmt.Sprintf(`\
+sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && \
+mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && \
+sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && \
+kubectl -n kube-system patch deployment coredns --type='json' \
+-p='[{"op": "add", "path": "/spec/template/spec/tolerations/0", "value": {"effect": "NoSchedule", key: "node.cloudprovider.kubernetes.io/uninitialized", value: "true" } }]'`, kubeAPI.BackendPort, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, initCmd)
 	if err != nil {
 		return nil, fmt.Errorf(`error initializing kubernetes by executing command (%s): %s: %w`, initCmd, initStdout, err)

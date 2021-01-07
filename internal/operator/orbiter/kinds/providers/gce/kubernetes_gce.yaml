@@ -21,7 +21,7 @@ subjects:
     namespace: kube-system
 ---
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
   labels:
     k8s-app: cloud-controller-manager
@@ -37,23 +37,36 @@ spec:
         k8s-app: cloud-controller-manager
     spec:
       serviceAccountName: cloud-controller-manager
+      initContainers:
+      - name: install-ca-certs
+        image: alpine:3.11
+        command:
+        - sh
+        - -c
+        - apk update && apk add ca-certificates
+        volumeMounts:
+          - name: ca-certs
+            mountPath: /etc/ssl/certs
+            readOnly: false
       containers:
-        - name: cloud-controller-manager
-          # for in-tree providers we use k8s.gcr.io/cloud-controller-manager
-          # this can be replaced with any other image for out-of-tree providers
-          image: k8s.gcr.io/cloud-controller-manager:v1.8.0
-          command:
-            - /usr/local/bin/cloud-controller-manager
-            - --cloud-provider=gce
-            - --leader-elect=true
-            - --use-service-account-credentials
+      - name: cloud-controller-manager
+        image: k8s.gcr.io/cloud-controller-manager:v1.8.0
+        command:
+          - /usr/local/bin/cloud-controller-manager
+          - --cloud-provider=gce
+          - --leader-elect=true
+        volumeMounts:
+        - name: ca-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+      volumes:
+        - name: ca-certs
+          emptyDir: {}
       tolerations:
         # this is required so CCM can bootstrap itself
         - key: node.cloudprovider.kubernetes.io/uninitialized
           value: "true"
           effect: NoSchedule
-        # this is to have the daemonset runnable on master nodes
-        # the taint may vary depending on your cluster setup
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
 ---
@@ -70,6 +83,7 @@ apiVersion: storage.k8s.io/v1
 metadata:
   name: fast
 provisioner: pd.csi.storage.gke.io
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   type: pd-ssd
 ---
@@ -78,6 +92,7 @@ apiVersion: storage.k8s.io/v1
 metadata:
   name: slow
 provisioner: pd.csi.storage.gke.io
+volumeBindingMode: WaitForFirstConsumer
 parameters:
   type: pd-standard
 

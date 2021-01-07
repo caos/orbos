@@ -78,7 +78,7 @@ func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) er
 		return errors.Errorf("provider %s not configured", poolSpec.Provider)
 	}
 	if _, ok := prov[poolSpec.Pool]; !ok {
-		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Provider, poolSpec.Pool)
+		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Pool, poolSpec.Provider)
 	}
 	return nil
 }

@@ -42,7 +42,6 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 			CloudConfig: func(machine infra.Machine) io.Reader {
 				instance := machine.(*instance)
 				ctx := instance.context
-				tags := networkTags(ctx.orbID, ctx.providerID, instance.pool)
 				return strings.NewReader(fmt.Sprintf(`[Global]
 project-id = "%s"
 network-name = "%s"
@@ -50,16 +49,10 @@ node-instance-prefix = "orbos-"
 multizone = false
 local-zone = "%s"
 container-api-endpoint = "Don't use container API'"
-node-tags = "%s"
-node-tags = "%s"
-node-tags = "%s"
 `,
 					ctx.projectID,
 					ctx.networkName,
 					ctx.desired.Zone,
-					tags[0],
-					tags[1],
-					tags[2],
 				))
 			},
 			ProviderName: "external",
