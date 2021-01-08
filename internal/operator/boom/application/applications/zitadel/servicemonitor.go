@@ -2,7 +2,7 @@ package zitadel
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
 )
 
@@ -21,11 +21,9 @@ func getZitadelServicemonitor(instanceName string) *servicemonitor.Config {
 		Endpoints: []*servicemonitor.ConfigEndpoint{{
 			Port: "http",
 		}},
-		MonitorMatchingLabels: labels.GetMonitorLabels(instanceName, monitorName),
-		ServiceMatchingLabels: map[string]string{
-			"app.kubernetes.io/part-of":   "ZITADEL",
-			"app.kubernetes.io/component": "ZITADEL",
-		},
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+		ServiceMatchingLabels: getApplicationServiceLabels(),
+
 		JobName:           monitorName.String(),
 		NamespaceSelector: []string{"caos-zitadel"},
 	}
@@ -39,12 +37,9 @@ func getOperatorServicemonitor(instanceName string) *servicemonitor.Config {
 		Endpoints: []*servicemonitor.ConfigEndpoint{{
 			Port: "http",
 		}},
-		MonitorMatchingLabels: labels.GetMonitorLabels(instanceName, monitorName),
-		ServiceMatchingLabels: map[string]string{
-			"app.kubernetes.io/part-of":    "ZITADEL",
-			"app.kubernetes.io/managed-by": "zitadel.caos.ch",
-			"app.kubernetes.io/component":  "operator",
-		},
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+		ServiceMatchingLabels: getOperatorServiceLabels(),
+
 		JobName:           monitorName.String(),
 		NamespaceSelector: []string{"caos-system"},
 	}

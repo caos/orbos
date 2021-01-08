@@ -182,7 +182,7 @@ func AdaptFunc(
 					}},
 				},
 			},
-			PodManagementPolicy: appsv1.PodManagementPolicyType("Parallel"),
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: "RollingUpdate",
 			},

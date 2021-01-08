@@ -1,18 +1,16 @@
 package orbiter
 
-import "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
+import (
+	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/pkg/labels"
+)
 
 func GetFlow(outputs []string) *logging.FlowConfig {
-	ls := map[string]string{
-		"app.kubernetes.io/part-of":    "ORBOS",
-		"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-		"app.kubernetes.io/component":  "operator",
-	}
-
 	return &logging.FlowConfig{
 		Name:         "flow-orbiter",
 		Namespace:    "caos-system",
-		SelectLabels: ls,
+		SelectLabels: labels.MustK8sMap(orb.OperatorSelector()),
 		Outputs:      outputs,
 		ParserType:   "logfmt",
 	}

@@ -10,31 +10,20 @@ func GetFlows(outputs []string) []*logging.FlowConfig {
 }
 
 func getZitadelFlow(outputs []string) *logging.FlowConfig {
-	ls := map[string]string{
-		"app.kubernetes.io/part-of":   "ZITADEL",
-		"app.kubernetes.io/component": "operator",
-	}
-
 	return &logging.FlowConfig{
 		Name:         "flow-zitadel",
 		Namespace:    "caos-system",
-		SelectLabels: ls,
+		SelectLabels: getApplicationServiceLabels(),
 		Outputs:      outputs,
 		ParserType:   "logfmt",
 	}
 }
 
 func getOperatorFlow(outputs []string) *logging.FlowConfig {
-	ls := map[string]string{
-		"app.kubernetes.io/part-of":    "ZITADEL",
-		"app.kubernetes.io/managed-by": "zitadel.caos.ch",
-		"app.kubernetes.io/component":  "operator",
-	}
-
 	return &logging.FlowConfig{
-		Name:         "flow-zitadel",
+		Name:         "flow-zitadel-operator",
 		Namespace:    "caos-system",
-		SelectLabels: ls,
+		SelectLabels: getOperatorServiceLabels(),
 		Outputs:      outputs,
 		ParserType:   "logfmt",
 	}

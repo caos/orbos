@@ -2,7 +2,7 @@ package database
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
 )
 
@@ -30,13 +30,12 @@ func getDatabaseServiceMonitor(instanceName string) *servicemonitor.Config {
 				TargetLabel:  "instance",
 			}},
 		}},
-		MonitorMatchingLabels: labels.GetMonitorLabels(instanceName, monitorName),
-		ServiceMatchingLabels: map[string]string{
-			"app.kubernetes.io/component": "cockroachdb",
-			"app.kubernetes.io/part-of":   "ORBOS",
-		},
-		JobName:           monitorName.String(),
-		NamespaceSelector: []string{"caos-zitadel"},
+
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+
+		ServiceMatchingLabels: getApplicationServiceLabels(),
+		JobName:               monitorName.String(),
+		NamespaceSelector:     []string{"caos-zitadel"},
 	}
 }
 
@@ -48,13 +47,9 @@ func getOperatorServiceMonitor(instanceName string) *servicemonitor.Config {
 		Endpoints: []*servicemonitor.ConfigEndpoint{{
 			Port: "http",
 		}},
-		MonitorMatchingLabels: labels.GetMonitorLabels(instanceName, monitorName),
-		ServiceMatchingLabels: map[string]string{
-			"app.kubernetes.io/component":  "operator",
-			"app.kubernetes.io/managed-by": "database.caos.ch",
-			"app.kubernetes.io/part-of":    "ORBOS",
-		},
-		JobName:           monitorName.String(),
-		NamespaceSelector: []string{"caos-system"},
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+		ServiceMatchingLabels: getOperatorServiceLabels(),
+		JobName:               monitorName.String(),
+		NamespaceSelector:     []string{"caos-system"},
 	}
 }

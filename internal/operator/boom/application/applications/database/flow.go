@@ -10,31 +10,20 @@ func GetFlows(outputs []string) []*logging.FlowConfig {
 }
 
 func getOperatorFlow(outputs []string) *logging.FlowConfig {
-	ls := map[string]string{
-		"app.kubernetes.io/component":  "operator",
-		"app.kubernetes.io/managed-by": "database.caos.ch",
-		"app.kubernetes.io/part-of":    "ORBOS",
-	}
-
 	return &logging.FlowConfig{
 		Name:         "flow-database-operator",
 		Namespace:    "caos-system",
-		SelectLabels: ls,
+		SelectLabels: getOperatorServiceLabels(),
 		Outputs:      outputs,
 		ParserType:   "logfmt",
 	}
 }
 
 func getDatabaseFlow(outputs []string) *logging.FlowConfig {
-	ls := map[string]string{
-		"app.kubernetes.io/component": "database",
-		"app.kubernetes.io/part-of":   "ORBOS",
-	}
-
 	return &logging.FlowConfig{
 		Name:         "flow-database",
 		Namespace:    "caos-system",
-		SelectLabels: ls,
+		SelectLabels: getApplicationServiceLabels(),
 		Outputs:      outputs,
 		ParserType:   "logfmt",
 	}

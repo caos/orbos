@@ -6,11 +6,16 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/namespace"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/caos/orbos/pkg/treelabels"
 	"github.com/pkg/errors"
 )
+
+func OperatorSelector() *labels.Selector {
+	return labels.OpenOperatorSelector("database")
+}
 
 func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core.AdaptFunc {
 	namespaceStr := "caos-zitadel"
@@ -51,7 +56,6 @@ func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core
 			desiredKind.Database,
 			databaseCurrent,
 			namespaceStr,
-			operatorLabels,
 			treelabels.MustForAPI(desiredKind.Database, operatorLabels),
 			timestamp,
 			desiredKind.Spec.NodeSelector,

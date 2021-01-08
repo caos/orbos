@@ -17,6 +17,14 @@ type InternalSelector struct {
 	InternalPartofProp     `yaml:",inline"`
 }
 
+func OpenComponentSelector(component string) *Selector {
+	return DeriveComponentSelector(MustForComponent(MustForAPI(NoopOperator("ORBOS"), "", ""), component), false)
+}
+
+func OpenOperatorSelector(component string) *Selector {
+	return DeriveComponentSelector(MustForComponent(MustForAPI(MustForOperator("ORBOS", component, "v1"), "", ""), "operator"), false)
+}
+
 func DeriveComponentSelector(l *Component, open bool) *Selector {
 	selector := &Selector{
 		base: newName(l, ""),

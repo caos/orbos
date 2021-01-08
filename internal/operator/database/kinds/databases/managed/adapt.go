@@ -29,14 +29,14 @@ const (
 	pdbName            = sfsName + "-budget"
 	serviceAccountName = sfsName
 	publicServiceName  = sfsName + "-public"
+	privateServiceName = sfsName
 	cockroachPort      = int32(26257)
 	cockroachHTTPPort  = int32(8080)
 	image              = "cockroachdb/cockroach:v20.2.3"
 )
 
 func AdaptFunc(
-	operatorLabels *labels.Operator,
-	apiLabels *labels.API,
+	componentLabels *labels.Component,
 	namespace string,
 	timestamp string,
 	nodeselector map[string]string,
@@ -64,8 +64,7 @@ func AdaptFunc(
 		map[string]*secret.Secret,
 		error,
 	) {
-		componentLabels := labels.MustForComponent(apiLabels, "cockroachdb")
-		internalMonitor := monitor.WithField("component", "cockroachdb")
+		internalMonitor := monitor.WithField("kind", "cockroachdb")
 		allSecrets := map[string]*secret.Secret{}
 
 		desiredKind, err := parseDesiredV0(desired)
@@ -120,7 +119,7 @@ func AdaptFunc(
 			internalMonitor,
 			namespace,
 			labels.MustForName(componentLabels, publicServiceName),
-			cockroachNameLabels,
+			labels.MustForName(componentLabels, privateServiceName),
 			cockroachSelector,
 			cockroachPort,
 			cockroachHTTPPort,
@@ -203,7 +202,7 @@ func AdaptFunc(
 						currentBackup,
 						backupName,
 						namespace,
-						operatorLabels,
+						componentLabels,
 						checkDBReady,
 						strings.TrimPrefix(timestamp, backupName+"."),
 						nodeselector,

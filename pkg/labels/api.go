@@ -38,6 +38,10 @@ func MustForAPI(l *Operator, kind, version string) *API {
 	return a
 }
 
+func MustReplaceAPI(l *API, kind, version string) *API {
+	return MustForAPI(l.base, kind, version)
+}
+
 func (l *API) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&l.model); err != nil {
 		return err
