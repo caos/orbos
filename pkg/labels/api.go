@@ -15,6 +15,17 @@ type API struct {
 	base  *Operator
 }
 
+func NoopAPI(l *Operator) *API {
+	return &API{
+		base: l,
+		model: InternalAPI{
+			Kind:             "unkown",
+			ApiVersion:       "unkown",
+			InternalOperator: l.model,
+		},
+	}
+}
+
 func ForAPI(l *Operator, kind, version string) (*API, error) {
 	if kind == "" || version == "" {
 		return nil, errors.New("kind and version must not be nil")

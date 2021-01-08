@@ -18,11 +18,11 @@ type InternalSelector struct {
 }
 
 func OpenComponentSelector(component string) *Selector {
-	return DeriveComponentSelector(MustForComponent(MustForAPI(NoopOperator("ORBOS"), "", ""), component), false)
+	return DeriveComponentSelector(MustForComponent(NoopAPI(NoopOperator("ORBOS")), component), false)
 }
 
 func OpenOperatorSelector(component string) *Selector {
-	return DeriveComponentSelector(MustForComponent(MustForAPI(MustForOperator("ORBOS", component, "v1"), "", ""), "operator"), false)
+	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator("ORBOS", component)), "operator"), false)
 }
 
 func DeriveComponentSelector(l *Component, open bool) *Selector {

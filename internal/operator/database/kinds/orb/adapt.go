@@ -14,7 +14,7 @@ import (
 )
 
 func OperatorSelector() *labels.Selector {
-	return labels.OpenOperatorSelector("database")
+	return labels.OpenOperatorSelector("database.caos.ch")
 }
 
 func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core.AdaptFunc {
