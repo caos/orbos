@@ -334,14 +334,11 @@ func getAffinity(labels map[string]string) *corev1.Affinity {
 
 	return &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-				Weight: 100,
-				PodAffinityTerm: corev1.PodAffinityTerm{
-					LabelSelector: &metav1.LabelSelector{
-						MatchExpressions: affinity,
-					},
-					TopologyKey: "kubernetes.io/hostname",
+			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: affinity,
 				},
+				TopologyKey: "kubernetes.io/hostname",
 			}},
 		},
 	}
