@@ -13,12 +13,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	NamespaceStr = "caos-zitadel"
+)
+
 func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("database.caos.ch")
 }
 
 func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core.AdaptFunc {
-	namespaceStr := "caos-zitadel"
 
 	return func(monitor mntr.Monitor, orbDesiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
@@ -38,11 +41,11 @@ func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core
 			orbMonitor = orbMonitor.Verbose()
 		}
 
-		queryNS, err := namespace.AdaptFuncToEnsure(namespaceStr)
+		queryNS, err := namespace.AdaptFuncToEnsure(NamespaceStr)
 		if err != nil {
 			return nil, nil, nil, err
 		}
-		destroyNS, err := namespace.AdaptFuncToDestroy(namespaceStr)
+		destroyNS, err := namespace.AdaptFuncToDestroy(NamespaceStr)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -55,7 +58,7 @@ func AdaptFunc(timestamp string, binaryVersion *string, features ...string) core
 			orbMonitor,
 			desiredKind.Database,
 			databaseCurrent,
-			namespaceStr,
+			NamespaceStr,
 			treelabels.MustForAPI(desiredKind.Database, operatorLabels),
 			timestamp,
 			desiredKind.Spec.NodeSelector,

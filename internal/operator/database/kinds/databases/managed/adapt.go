@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	sfsName            = "cockroachdb"
-	pdbName            = sfsName + "-budget"
-	serviceAccountName = sfsName
-	publicServiceName  = sfsName + "-public"
-	privateServiceName = sfsName
+	SfsName            = "cockroachdb"
+	pdbName            = SfsName + "-budget"
+	serviceAccountName = SfsName
+	PublicServiceName  = SfsName + "-public"
+	privateServiceName = SfsName
 	cockroachPort      = int32(26257)
 	cockroachHTTPPort  = int32(8080)
 	image              = "cockroachdb/cockroach:v20.2.3"
@@ -91,7 +91,7 @@ func AdaptFunc(
 
 		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, labels.MustForName(componentLabels, serviceAccountName))
 
-		cockroachNameLabels := labels.MustForName(componentLabels, sfsName)
+		cockroachNameLabels := labels.MustForName(componentLabels, SfsName)
 		cockroachSelector := labels.DeriveNameSelector(cockroachNameLabels, false)
 		cockroachSelectabel := labels.AsSelectable(cockroachNameLabels)
 		querySFS, destroySFS, ensureInit, checkDBReady, listDatabases, err := statefulset.AdaptFunc(
@@ -118,7 +118,7 @@ func AdaptFunc(
 		queryS, destroyS, err := services.AdaptFunc(
 			internalMonitor,
 			namespace,
-			labels.MustForName(componentLabels, publicServiceName),
+			labels.MustForName(componentLabels, PublicServiceName),
 			labels.MustForName(componentLabels, privateServiceName),
 			cockroachSelector,
 			cockroachPort,
@@ -227,7 +227,7 @@ func AdaptFunc(
 					if err != nil || queriedCurrentDB == nil {
 						// TODO: query system state
 						currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
-						currentDB.Current.URL = publicServiceName
+						currentDB.Current.URL = PublicServiceName
 						currentDB.Current.ReadyFunc = checkDBReady
 						currentDB.Current.AddUserFunc = addUser
 						currentDB.Current.DeleteUserFunc = deleteUser
