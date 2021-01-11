@@ -7,5 +7,5 @@ func getOperatorServiceLabels() map[string]string {
 }
 
 func getApplicationServiceLabels() map[string]string {
-	return labels.MustK8sMap(labels.DeriveComponentSelector(labels.MustForComponent(labels.NoopAPI(labels.NoopOperator("ZITADEL")), "zitadel.caos.ch"), false))
+	return labels.MustK8sMap(labels.DeriveComponentSelector(labels.MustForComponent(labels.NoopAPI(labels.SelectorOperator("ZITADEL", "zitadel.caos.ch")), "ZITADEL"), false))
 }

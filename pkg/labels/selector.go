@@ -18,7 +18,7 @@ type InternalSelector struct {
 }
 
 func OpenComponentSelector(component string) *Selector {
-	return DeriveComponentSelector(MustForComponent(NoopAPI(NoopOperator("ORBOS")), component), false)
+	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator("ORBOS", component+".caos.ch")), component), false)
 }
 
 func OpenOperatorSelector(component string) *Selector {
