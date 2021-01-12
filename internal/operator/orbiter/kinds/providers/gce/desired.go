@@ -86,6 +86,9 @@ func (d Desired) validateAdapt() error {
 }
 
 func (d Desired) validateQuery() error {
+	if d.Spec.JSONKey == nil || d.Spec.JSONKey.Value == "" {
+		return errors.New("jsonkey missing... please provide a google service accounts jsonkey using orbctl writesecret command")
+	}
 	if d.Spec.SSHKey == nil ||
 		d.Spec.SSHKey.Private == nil ||
 		d.Spec.SSHKey.Private.Value == "" ||
@@ -93,10 +96,7 @@ func (d Desired) validateQuery() error {
 		d.Spec.SSHKey.Public.Value == "" {
 		return errors.New("ssh key missing... please initialize your orb using orbctl configure command")
 	}
-
-	if d.Spec.JSONKey == nil || d.Spec.JSONKey.Value == "" {
-		return errors.New("jsonkey missing... please provide a service accounts jsonkey using orbctl writesecret command")
-	}
+	return nil
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*Desired, error) {
