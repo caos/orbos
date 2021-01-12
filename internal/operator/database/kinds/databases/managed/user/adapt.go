@@ -33,7 +33,7 @@ func AdaptFunc(
 
 	deleteSql := fmt.Sprintf("DROP USER IF EXISTS %s", userName)
 
-	_, _, addUserFunc, deleteUserFunc, _, err := certificate.AdaptFunc(monitor, namespace, componentLabels, "")
+	_, _, addUserFunc, deleteUserFunc, _, err := certificate.AdaptFunc(monitor, namespace, componentLabels, "", false)
 	if err != nil {
 		return nil, nil, err
 	}

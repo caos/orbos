@@ -18,6 +18,7 @@ func AdaptFunc(
 	namespace string,
 	componentLabels *labels.Component,
 	clusterDns string,
+	generateNodeIfNotExists bool,
 ) (
 	core.QueryFunc,
 	core.DestroyFunc,
@@ -33,6 +34,7 @@ func AdaptFunc(
 		namespace,
 		labels.MustForName(componentLabels, nodeSecret),
 		clusterDns,
+		generateNodeIfNotExists,
 	)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err

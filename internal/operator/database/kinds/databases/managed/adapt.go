@@ -77,7 +77,21 @@ func AdaptFunc(
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
 		}
-		queryCert, destroyCert, addUser, deleteUser, listUsers, err := certificate.AdaptFunc(internalMonitor, namespace, componentLabels, desiredKind.Spec.ClusterDns)
+
+		var (
+			isFeatureDatabase bool
+			isFeatureRestore  bool
+		)
+		for _, feature := range features {
+			switch feature {
+			case "database":
+				isFeatureDatabase = true
+			case "restore":
+				isFeatureRestore = true
+			}
+		}
+
+		queryCert, destroyCert, addUser, deleteUser, listUsers, err := certificate.AdaptFunc(internalMonitor, namespace, componentLabels, desiredKind.Spec.ClusterDns, isFeatureDatabase)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -154,35 +168,28 @@ func AdaptFunc(
 		current.Parsed = currentDB
 
 		queriers := make([]core2.QueryFunc, 0)
-		for _, feature := range features {
-			if feature == "database" {
-				queriers = append(queriers,
-					queryRBAC,
-					queryCert,
-					addRoot,
-					core2.ResourceQueryToZitadelQuery(querySFS),
-					core2.ResourceQueryToZitadelQuery(queryPDB),
-					queryS,
-					core2.EnsureFuncToQueryFunc(ensureInit),
-				)
-			}
+		if isFeatureDatabase {
+			queriers = append(queriers,
+				queryRBAC,
+				queryCert,
+				addRoot,
+				core2.ResourceQueryToZitadelQuery(querySFS),
+				core2.ResourceQueryToZitadelQuery(queryPDB),
+				queryS,
+				core2.EnsureFuncToQueryFunc(ensureInit),
+			)
 		}
 
-		featureRestore := false
 		destroyers := make([]core2.DestroyFunc, 0)
-		for _, feature := range features {
-			if feature == "database" {
-				destroyers = append(destroyers,
-					core2.ResourceDestroyToZitadelDestroy(destroyPDB),
-					destroyS,
-					core2.ResourceDestroyToZitadelDestroy(destroySFS),
-					destroyRBAC,
-					destroyCert,
-					destroyRoot,
-				)
-			} else if feature == "restore" {
-				featureRestore = true
-			}
+		if isFeatureDatabase {
+			destroyers = append(destroyers,
+				core2.ResourceDestroyToZitadelDestroy(destroyPDB),
+				destroyS,
+				core2.ResourceDestroyToZitadelDestroy(destroySFS),
+				destroyRBAC,
+				destroyCert,
+				destroyRoot,
+			)
 		}
 
 		if desiredKind.Spec.Backups != nil {
@@ -223,7 +230,7 @@ func AdaptFunc(
 		}
 
 		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
-				if !featureRestore {
+				if !isFeatureRestore {
 					queriedCurrentDB, err := core.ParseQueriedForDatabase(queried)
 					if err != nil || queriedCurrentDB == nil {
 						// TODO: query system state

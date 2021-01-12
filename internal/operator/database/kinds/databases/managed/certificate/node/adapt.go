@@ -2,6 +2,7 @@ package node
 
 import (
 	"crypto/rsa"
+	"errors"
 	"reflect"
 
 	"github.com/caos/orbos/pkg/labels"
@@ -27,6 +28,7 @@ func AdaptFunc(
 	namespace string,
 	nameLabels *labels.Name,
 	clusterDns string,
+	generateIfNotExists bool,
 ) (
 	core2.QueryFunc,
 	core2.DestroyFunc,
@@ -51,6 +53,11 @@ func AdaptFunc(
 			}
 
 			if len(allNodeSecrets.Items) == 0 {
+
+				if !generateIfNotExists {
+					return nil, errors.New("node secret not found")
+				}
+
 				emptyCert := true
 				emptyKey := true
 				if currentCaCert := currentDB.GetCertificate(); currentCaCert != nil && len(currentCaCert) != 0 {
