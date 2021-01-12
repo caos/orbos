@@ -53,11 +53,18 @@ func (d Desired) validateAdapt() error {
 	return nil
 }
 
-func (d Desired) validateQuery() error {
-
+func (d Desired) validateAPIToken() error {
 	if d.Spec.APIToken == nil ||
 		d.Spec.APIToken.Value == "" {
 		return errors.New("apitoken missing... please provide a cloudscale api token using orbctl writesecret command")
+	}
+	return nil
+}
+
+func (d Desired) validateQuery() error {
+
+	if err := d.validateAPIToken(); err != nil {
+		return err
 	}
 
 	if d.Spec.SSHKey.Private == nil ||
