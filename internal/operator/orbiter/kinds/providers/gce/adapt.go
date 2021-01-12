@@ -44,7 +44,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			}
 		}
 
-		if err := desiredKind.validate(); err != nil {
+		if err := desiredKind.validateAdapt(); err != nil {
 			return nil, nil, nil, migrate, nil, err
 		}
 
@@ -60,9 +60,8 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 		}
 		secret.AppendSecrets("", secrets, lbSecrets)
 
-		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-		if err != nil {
-			return nil, nil, nil, migrate, nil, err
+		buildContextFunc := func() (*context, error) {
+			return buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 		}
 
 		current := &Current{
@@ -78,6 +77,15 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
+				if err := desiredKind.validateQuery(); err != nil {
+					return nil, err
+				}
+
+				ctx, err := buildContextFunc()
+				if err != nil {
+					return nil, err
+				}
+
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
 					return nil, err
 				}
@@ -91,6 +99,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func() error {
 				if err := lbDestroy(); err != nil {
+					return err
+				}
+
+				ctx, err := buildContextFunc()
+				if err != nil {
 					return err
 				}
 
@@ -116,6 +129,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				if desiredKind.Spec.JSONKey == nil {
 					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
 					return nil
+				}
+
+				ctx, err := buildContextFunc()
+				if err != nil {
+					return err
 				}
 
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
