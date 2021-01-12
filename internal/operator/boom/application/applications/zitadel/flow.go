@@ -2,29 +2,31 @@ package zitadel
 
 import "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
 
-func GetFlows(outputs []string) []*logging.FlowConfig {
+func GetFlows(outputs, clusterOutputs []string) []*logging.FlowConfig {
 	return []*logging.FlowConfig{
-		getOperatorFlow(outputs),
-		getZitadelFlow(outputs),
+		getOperatorFlow(outputs, clusterOutputs),
+		getZitadelFlow(outputs, clusterOutputs),
 	}
 }
 
-func getZitadelFlow(outputs []string) *logging.FlowConfig {
+func getZitadelFlow(outputs, clusterOutputs []string) *logging.FlowConfig {
 	return &logging.FlowConfig{
-		Name:         "flow-zitadel",
-		Namespace:    "caos-system",
-		SelectLabels: getApplicationServiceLabels(),
-		Outputs:      outputs,
-		ParserType:   "logfmt",
+		Name:           "flow-zitadel",
+		Namespace:      "caos-system",
+		SelectLabels:   getApplicationServiceLabels(),
+		Outputs:        outputs,
+		ClusterOutputs: clusterOutputs,
+		ParserType:     "logfmt",
 	}
 }
 
-func getOperatorFlow(outputs []string) *logging.FlowConfig {
+func getOperatorFlow(outputs, clusterOutputs []string) *logging.FlowConfig {
 	return &logging.FlowConfig{
-		Name:         "flow-zitadel-operator",
-		Namespace:    "caos-system",
-		SelectLabels: getOperatorServiceLabels(),
-		Outputs:      outputs,
-		ParserType:   "logfmt",
+		Name:           "flow-zitadel-operator",
+		Namespace:      "caos-system",
+		SelectLabels:   getOperatorServiceLabels(),
+		Outputs:        outputs,
+		ClusterOutputs: clusterOutputs,
+		ParserType:     "logfmt",
 	}
 }

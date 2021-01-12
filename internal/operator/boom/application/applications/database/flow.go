@@ -2,29 +2,31 @@ package database
 
 import "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
 
-func GetFlows(outputs []string) []*logging.FlowConfig {
+func GetFlows(outputs, clusterOutputs []string) []*logging.FlowConfig {
 	return []*logging.FlowConfig{
-		getOperatorFlow(outputs),
-		getDatabaseFlow(outputs),
+		getOperatorFlow(outputs, clusterOutputs),
+		getDatabaseFlow(outputs, clusterOutputs),
 	}
 }
 
-func getOperatorFlow(outputs []string) *logging.FlowConfig {
+func getOperatorFlow(outputs, clusterOutputs []string) *logging.FlowConfig {
 	return &logging.FlowConfig{
-		Name:         "flow-database-operator",
-		Namespace:    "caos-system",
-		SelectLabels: getOperatorServiceLabels(),
-		Outputs:      outputs,
-		ParserType:   "logfmt",
+		Name:           "flow-database-operator",
+		Namespace:      "caos-system",
+		SelectLabels:   getOperatorServiceLabels(),
+		Outputs:        outputs,
+		ClusterOutputs: clusterOutputs,
+		ParserType:     "logfmt",
 	}
 }
 
-func getDatabaseFlow(outputs []string) *logging.FlowConfig {
+func getDatabaseFlow(outputs, clusterOutputs []string) *logging.FlowConfig {
 	return &logging.FlowConfig{
-		Name:         "flow-database",
-		Namespace:    "caos-system",
-		SelectLabels: getApplicationServiceLabels(),
-		Outputs:      outputs,
-		ParserType:   "logfmt",
+		Name:           "flow-database",
+		Namespace:      "caos-system",
+		SelectLabels:   getApplicationServiceLabels(),
+		Outputs:        outputs,
+		ClusterOutputs: clusterOutputs,
+		ParserType:     "logfmt",
 	}
 }

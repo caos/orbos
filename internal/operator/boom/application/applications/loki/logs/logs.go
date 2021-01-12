@@ -120,27 +120,27 @@ func getAllFlows(toolsetCRDSpec *toolsetslatest.ToolsetSpec, outputNames []strin
 	}
 
 	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Boom {
-		flows = append(flows, logging.NewFlow(boom.GetFlow(outputNames)))
+		flows = append(flows, logging.NewFlow(boom.GetFlow(outputNames, clusterOutputs)))
 	}
 
 	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Orbiter {
-		flows = append(flows, logging.NewFlow(orbiter.GetFlow(outputNames)))
+		flows = append(flows, logging.NewFlow(orbiter.GetFlow(outputNames, clusterOutputs)))
 	}
 
 	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Zitadel {
-		for _, flow := range zitadel.GetFlows(outputNames) {
+		for _, flow := range zitadel.GetFlows(outputNames, clusterOutputs) {
 			flows = append(flows, logging.NewFlow(flow))
 		}
 	}
 
 	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Database {
-		for _, flow := range database.GetFlows(outputNames) {
+		for _, flow := range database.GetFlows(outputNames, clusterOutputs) {
 			flows = append(flows, logging.NewFlow(flow))
 		}
 	}
 
 	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Networking {
-		flows = append(flows, logging.NewFlow(networking.GetFlow(outputNames)))
+		flows = append(flows, logging.NewFlow(networking.GetFlow(outputNames, clusterOutputs)))
 	}
 
 	return flows
