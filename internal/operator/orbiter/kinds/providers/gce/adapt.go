@@ -108,6 +108,12 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 				return destroy(ctx, delegates)
 			}, func(orb orb.Orb) error {
+
+				if err := desiredKind.validateJSONKey(); err != nil {
+					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
+					return err
+				}
+
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
@@ -123,11 +129,6 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 						Private: &secret.Secret{Value: priv},
 						Public:  &secret.Secret{Value: pub},
 					}
-				}
-
-				if desiredKind.Spec.JSONKey == nil {
-					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
-					return nil
 				}
 
 				ctx, err := buildContextFunc()

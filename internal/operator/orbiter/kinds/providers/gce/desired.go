@@ -2,6 +2,7 @@ package gce
 
 import (
 	"fmt"
+
 	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/pkg/tree"
@@ -85,10 +86,19 @@ func (d Desired) validateAdapt() error {
 	return nil
 }
 
-func (d Desired) validateQuery() error {
+func (d Desired) validateJSONKey() error {
 	if d.Spec.JSONKey == nil || d.Spec.JSONKey.Value == "" {
 		return errors.New("jsonkey missing... please provide a google service accounts jsonkey using orbctl writesecret command")
 	}
+	return nil
+}
+
+func (d Desired) validateQuery() error {
+
+	if err := d.validateJSONKey(); err != nil {
+		return err
+	}
+
 	if d.Spec.SSHKey == nil ||
 		d.Spec.SSHKey.Private == nil ||
 		d.Spec.SSHKey.Private.Value == "" ||
