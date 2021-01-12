@@ -64,7 +64,7 @@ type Spec struct {
 	ReplacementRequired []string
 }
 
-func (d Desired) validate() error {
+func (d Desired) validateAdapt() error {
 	if d.Loadbalancing == nil {
 		return errors.New("no loadbalancing configured")
 	}
@@ -84,6 +84,21 @@ func (d Desired) validate() error {
 	}
 	return nil
 }
+
+func (d Desired) validateQuery() error {
+	if d.Spec.SSHKey == nil ||
+		d.Spec.SSHKey.Private == nil ||
+		d.Spec.SSHKey.Private.Value == "" ||
+		d.Spec.SSHKey.Public == nil ||
+		d.Spec.SSHKey.Public.Value == "" {
+		return errors.New("ssh key missing... please initialize your orb using orbctl configure command")
+	}
+
+	if d.Spec.JSONKey == nil || d.Spec.JSONKey.Value == "" {
+		return errors.New("jsonkey missing... please provide a service accounts jsonkey using orbctl writesecret command")
+	}
+}
+
 func parseDesiredV0(desiredTree *tree.Tree) (*Desired, error) {
 	desiredKind := &Desired{
 		Common: desiredTree.Common,
