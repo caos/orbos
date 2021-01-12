@@ -458,7 +458,7 @@ func EnsureBoomArtifacts(
 		ObjectMeta: mach.ObjectMeta{
 			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels:    k8sNameLabels,
+			Labels:    k8sPodSelector,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{
@@ -575,7 +575,7 @@ func EnsureOrbiterArtifacts(
 		ObjectMeta: mach.ObjectMeta{
 			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels:    k8sNameLabels,
+			Labels:    k8sPodSelector,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{
