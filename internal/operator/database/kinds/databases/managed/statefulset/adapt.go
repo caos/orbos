@@ -278,7 +278,15 @@ func AdaptFunc(
 			return nil, err
 		}
 		databases := strings.Split(databasesStr, "\n")
-		return databases[2 : len(databases)-1], nil
+		dbAndOwners := databases[1 : len(databases)-1]
+		dbs := []string{}
+		for _, dbAndOwner := range dbAndOwners {
+			parts := strings.Split(dbAndOwner, "\t")
+			if parts[1] != "node" {
+				dbs = append(dbs, parts[0])
+			}
+		}
+		return dbs, nil
 	}
 
 	return wrapedQuery, wrapedDestroy, ensureInit, checkDBReady, getAllDBs, err
