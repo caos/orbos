@@ -1,5 +1,3 @@
-//go:generate goderive .
-
 package kubernetes
 
 import (
@@ -1037,7 +1035,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	}
 
 	// --ignore-daemonsets
-	pods := DeriveFilter(func(pod core.Pod) bool {
+	pods := deriveFilter(func(pod core.Pod) bool {
 		controllerRef := mach.GetControllerOf(&pod)
 		return controllerRef == nil || controllerRef.Kind != apps.SchemeGroupVersion.WithKind("DaemonSet").Kind
 	}, append([]core.Pod{}, podItems.Items...))
