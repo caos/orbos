@@ -1,4 +1,3 @@
-//go:generate stringer -type=drainReason
 //go:generate goderive .
 
 package kubernetes

@@ -5,13 +5,12 @@
 package application
 
 import (
-	reflect "reflect"
-
 	latest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	name "github.com/caos/orbos/internal/operator/boom/name"
 	chart "github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	mntr "github.com/caos/orbos/mntr"
 	gomock "github.com/golang/mock/gomock"
+	reflect "reflect"
 )
 
 // MockApplication is a mock of Application interface

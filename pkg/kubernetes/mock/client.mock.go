@@ -716,6 +716,21 @@ func (mr *MockClientIntMockRecorder) DeleteNamespace(name interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNamespace", reflect.TypeOf((*MockClientInt)(nil).DeleteNamespace), name)
 }
 
+// ListPersistentVolumes mocks base method
+func (m *MockClientInt) ListPersistentVolumes() (*v11.PersistentVolumeList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPersistentVolumes")
+	ret0, _ := ret[0].(*v11.PersistentVolumeList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPersistentVolumes indicates an expected call of ListPersistentVolumes
+func (mr *MockClientIntMockRecorder) ListPersistentVolumes() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumes", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumes))
+}
+
 // MockMachine is a mock of Machine interface
 type MockMachine struct {
 	ctrl     *gomock.Controller
