@@ -203,7 +203,7 @@ func AdaptFunc(
 						return nil, nil, nil, err
 					}
 
-					secret.AppendSecrets("", allSecrets, secrets)
+					secret.AppendSecrets(backupName, allSecrets, secrets)
 					destroyers = append(destroyers, destroyB)
 					queriers = append(queriers, queryB)
 				}
