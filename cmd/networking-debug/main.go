@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"github.com/caos/orbos/internal/controller"
+	"github.com/caos/orbos/internal/orb"
 	"io/ioutil"
 
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -17,6 +19,8 @@ func main() {
 	orbconfig := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
 	kubeconfig := flag.String("kubeconfig", "~/.kube/config", "The kubeconfig file to use")
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
+	metricsAddr := flag.String("metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	crdMode := flag.Bool("crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	flag.Parse()
 
@@ -30,18 +34,29 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
-	kc, err := ioutil.ReadFile(helpers.PruneHome(*kubeconfig))
-	if err != nil {
-		panic(err)
-	}
+	if *crdMode {
+		_, err := orb.ParseOrbConfig(helpers.PruneHome(*orbconfig))
+		if err != nil {
+			panic(err)
+		}
 
-	if err := start.Networking(
-		monitor,
-		helpers.PruneHome(*orbconfig),
-		kubernetes.NewK8sClient(monitor, strPtr(string(kc))),
-		strPtr("networking-development"),
-	); err != nil {
-		panic(err)
+		if err := controller.Start(monitor, "crdoperators", *metricsAddr, "networking"); err != nil {
+			panic(err)
+		}
+	} else {
+		kc, err := ioutil.ReadFile(helpers.PruneHome(*kubeconfig))
+		if err != nil {
+			panic(err)
+		}
+
+		if err := start.Networking(
+			monitor,
+			helpers.PruneHome(*orbconfig),
+			kubernetes.NewK8sClient(monitor, strPtr(string(kc))),
+			strPtr("networking-development"),
+		); err != nil {
+			panic(err)
+		}
 	}
 }
 

@@ -45,6 +45,13 @@ type Spec struct {
 
 type Empty struct{}
 
+// +kubebuilder:object:root=true
+type NetworkingList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Networking `json:"items"`
+}
+
 func init() {
-	SchemeBuilder.Register(&Networking{})
+	SchemeBuilder.Register(&Networking{}, &NetworkingList{})
 }

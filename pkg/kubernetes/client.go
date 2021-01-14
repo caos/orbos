@@ -161,6 +161,15 @@ func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
 	return kc
 }
 
+func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config) *Client {
+	kc := &Client{monitor: monitor}
+	err := kc.RefreshConfig(conf)
+	if err != nil {
+		// do nothing
+	}
+	return kc
+}
+
 func (c *Client) Available() bool {
 	return c.set != nil
 }

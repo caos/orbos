@@ -45,6 +45,13 @@ type Spec struct {
 
 type Empty struct{}
 
+// +kubebuilder:object:root=true
+type DatabaseList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Database `json:"items"`
+}
+
 func init() {
-	SchemeBuilder.Register(&Database{})
+	SchemeBuilder.Register(&Database{}, &DatabaseList{})
 }

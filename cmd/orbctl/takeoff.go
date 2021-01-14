@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"github.com/caos/orbos/cmd/orbctl/cmds"
+	"github.com/caos/orbos/internal/controller"
 	"github.com/caos/orbos/internal/start"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
@@ -143,8 +145,10 @@ func StartBoom(rv RootValues) *cobra.Command {
 
 func StartDatabase(rv RootValues) *cobra.Command {
 	var (
-		kubeconfig string
-		cmd        = &cobra.Command{
+		crdMode     bool
+		metricsAddr string
+		kubeconfig  string
+		cmd         = &cobra.Command{
 			Use:   "database",
 			Short: "Launch a database operator",
 			Long:  "Ensures a desired state of the database",
@@ -152,6 +156,8 @@ func StartDatabase(rv RootValues) *cobra.Command {
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		_, monitor, orbConfig, _, errFunc, err := rv()
@@ -162,13 +168,17 @@ func StartDatabase(rv RootValues) *cobra.Command {
 			err = errFunc(err)
 		}()
 
-		k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
-		if err != nil {
-			return err
-		}
+		if crdMode {
+			return controller.Start(monitor, version, metricsAddr, controller.Database)
+		} else {
+			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
+			if err != nil {
+				return err
+			}
 
-		if k8sClient.Available() {
-			return start.Database(monitor, orbConfig.Path, k8sClient, &version)
+			if k8sClient.Available() {
+				return start.Database(monitor, orbConfig.Path, k8sClient, &version)
+			}
 		}
 		return nil
 	}
@@ -177,8 +187,10 @@ func StartDatabase(rv RootValues) *cobra.Command {
 
 func StartNetworking(rv RootValues) *cobra.Command {
 	var (
-		kubeconfig string
-		cmd        = &cobra.Command{
+		crdMode     bool
+		metricsAddr string
+		kubeconfig  string
+		cmd         = &cobra.Command{
 			Use:   "networking",
 			Short: "Launch a networking operator",
 			Long:  "Ensures a desired state of networking for an application",
@@ -186,6 +198,8 @@ func StartNetworking(rv RootValues) *cobra.Command {
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		_, monitor, orbConfig, _, errFunc, err := rv()
@@ -196,13 +210,17 @@ func StartNetworking(rv RootValues) *cobra.Command {
 			err = errFunc(err)
 		}()
 
-		k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
-		if err != nil {
-			return err
-		}
+		if crdMode {
+			return controller.Start(monitor, version, metricsAddr, controller.Networking)
+		} else {
+			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
+			if err != nil {
+				return err
+			}
 
-		if k8sClient.Available() {
-			return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
+			if k8sClient.Available() {
+				return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
+			}
 		}
 		return nil
 	}
