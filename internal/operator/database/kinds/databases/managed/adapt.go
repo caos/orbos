@@ -25,14 +25,20 @@ import (
 )
 
 const (
+	component          = "database"
 	sfsName            = "cockroachdb"
 	pdbName            = sfsName + "-budget"
 	serviceAccountName = sfsName
 	publicServiceName  = sfsName + "-public"
+	privateServiceName = sfsName
 	cockroachPort      = int32(26257)
 	cockroachHTTPPort  = int32(8080)
 	image              = "cockroachdb/cockroach:v20.2.3"
 )
+
+func PublicServiceNameSelector() *labels.Selector {
+	return labels.OpenNameSelector(component, publicServiceName)
+}
 
 func AdaptFunc(
 	operatorLabels *labels.Operator,
@@ -134,7 +140,7 @@ func AdaptFunc(
 			internalMonitor,
 			namespace,
 			labels.MustForName(componentLabels, publicServiceName),
-			cockroachNameLabels,
+			labels.MustForName(componentLabels, privateServiceName),
 			cockroachSelector,
 			cockroachPort,
 			cockroachHTTPPort,
