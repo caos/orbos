@@ -10,7 +10,7 @@ import (
 type newOrbctlCommandFunc func() (*exec.Cmd, error)
 
 func buildOrbctl(orbconfig string) (newOrbctlCommandFunc, error) {
-	newCmd, err := chore.Orbctl(false)
+	newCmd, err := chore.Orbctl(false, false)
 	if err != nil {
 		return nil, err
 	}
