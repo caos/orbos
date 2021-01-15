@@ -1,10 +1,10 @@
-package database
+package boom
 
 import (
 	"context"
 	"errors"
-	v1 "github.com/caos/orbos/internal/api/database/v1"
-	orbdb "github.com/caos/orbos/internal/operator/database/kinds/orb"
+	v1 "github.com/caos/orbos/internal/api/networking/v1"
+	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
@@ -22,11 +22,11 @@ type Reconciler struct {
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	internalMonitor := r.Monitor.WithFields(map[string]interface{}{
-		"kind":      "database",
+		"kind":      "boom",
 		"namespace": req.NamespacedName,
 	})
 
-	unstruct, err := r.ClientInt.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Database", req.Namespace, req.Name)
+	unstruct, err := r.ClientInt.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", req.Namespace, req.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -40,35 +40,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, errors.New("no spec in crd")
 	}
 
-	data, err := yaml.Marshal(specMap)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	desired := &tree.Tree{}
-	if err := yaml.Unmarshal(data, &desired); err != nil {
-		return ctrl.Result{}, err
-	}
-
-	query, _, _, err := orbdb.AdaptFunc("", &r.Version, "database")(internalMonitor, desired, &tree.Tree{})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	ensure, err := query(r.ClientInt, map[string]interface{}{})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	if err := ensure(r.ClientInt); err != nil {
-		return ctrl.Result{}, err
-	}
+	//TODO
 
 	return ctrl.Result{}, nil
 }
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Database{}).
+		For(&v1.Networking{}).
 		Complete(r)
 }

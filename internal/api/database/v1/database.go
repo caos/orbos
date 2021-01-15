@@ -1,6 +1,5 @@
 // +kubebuilder:object:generate=true
 // +groupName=caos.ch
-// +kubebuilder:storageversion
 package v1
 
 import (
@@ -22,6 +21,7 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
+// +kubebuilder:storageversion
 // +kubebuilder:object:root=true
 // +kubebuilder:crd=Database
 type Database struct {

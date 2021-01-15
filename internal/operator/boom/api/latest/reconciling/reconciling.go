@@ -102,10 +102,10 @@ type CustomImage struct {
 }
 
 type GopassStore struct {
-	SSHKey *secret.Secret `yaml:"sshKey,omitempty"`
+	SSHKey *secret.Secret `json:"sshKey,omitempty" yaml:"sshKey,omitempty"`
 	//Existing secret with ssh-key to clone the repository for gopass
 	ExistingSSHKeySecret *secret.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
-	GPGKey               *secret.Secret   `yaml:"gpgKey,omitempty"`
+	GPGKey               *secret.Secret   `json:"gpgKey,omitempty" yaml:"gpgKey,omitempty"`
 	//Existing secret with gpg-key to decode the repository for gopass
 	ExistingGPGKeySecret *secret.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
 	//URL to repository for gopass store

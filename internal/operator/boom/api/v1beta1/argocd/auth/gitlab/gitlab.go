@@ -37,10 +37,10 @@ func (c *Config) IsZero() bool {
 }
 
 type Config struct {
-	ClientID *secret2.Secret `yaml:"clientID,omitempty"`
+	ClientID *secret2.Secret `json:"clientID,omitempty" yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
 	ExistingClientIDSecret *secret2.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret           *secret2.Secret   `yaml:"clientSecret,omitempty"`
+	ClientSecret           *secret2.Secret   `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 	//Existing secret with the clientSecret
 	ExistingClientSecretSecret *secret2.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//BaseURL of the gitlab instance
