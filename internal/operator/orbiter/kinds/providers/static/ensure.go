@@ -72,12 +72,20 @@ func query(
 			return vip.IP
 		}
 
-		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, true, nil, mapVIP)
+		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, &dynamiclbmodel.VRRP{
+			VRRPInterface: "eth0",
+			NotifyMaster:  nil,
+			AuthCheck:     nil,
+		}, mapVIP)
 		externalMachinesService = wrappedMachinesService
 		ensureLBFunc = func() *orbiter.EnsureResult {
 			return orbiter.ToEnsureResult(wrappedMachinesService.InitializeDesiredNodeAgents())
 		}
-		for _, pool := range lbCurrent.Current.Spec {
+		deployPools, _, err := lbCurrent.Current.Spec(internalMachinesService)
+		if err != nil {
+			return nil, err
+		}
+		for _, pool := range deployPools {
 			for _, vip := range pool {
 				for _, src := range vip.Transport {
 					current.Current.Ingresses[src.Name] = &infra.Address{
@@ -117,7 +125,14 @@ func query(
 		if err != nil {
 			return orbiter.ToEnsureResult(false, err)
 		}
+		result := ensureLBFunc()
 
-		return ensureLBFunc()
+		if result.Err == nil {
+			fwDone, err := core.DesireInternalOSFirewall(monitor, nodeAgentsDesired, nodeAgentsCurrent, externalMachinesService, desired.Spec.ExternalInterfaces)
+			result.Err = err
+			result.Done = result.Done && fwDone
+		}
+
+		return result
 	}, addPools(current, desired, externalMachinesService)
 }

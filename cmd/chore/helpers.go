@@ -18,9 +18,13 @@ func Run(cmd *exec.Cmd) error {
 	return nil
 }
 
-func Orbctl(debug bool) (func() *exec.Cmd, error) {
+func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 
 	noop := func() *exec.Cmd { return nil }
+
+	if skipRebuild {
+		return runOrbctlCmd(debug), nil
+	}
 
 	cmd := exec.Command("git", "branch", "--show-current")
 	outBuf := new(bytes.Buffer)
@@ -76,11 +80,14 @@ func Orbctl(debug bool) (func() *exec.Cmd, error) {
 		return noop, err
 	}
 
+	return runOrbctlCmd(debug), nil
+}
+
+func runOrbctlCmd(debug bool) func() *exec.Cmd {
 	return func() *exec.Cmd {
 		if debug {
 			return exec.Command("dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "./artifacts/orbctl-Linux-x86_64", "--")
 		}
-
 		return exec.Command("./artifacts/orbctl-Linux-x86_64")
-	}, nil
+	}
 }

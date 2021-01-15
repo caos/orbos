@@ -16,15 +16,17 @@ import (
 )
 
 func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string, oneoff bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
+		secrets = make(map[string]*secret.Secret, 0)
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
 
 		if desiredKind.Spec.RebootRequired == nil {
 			desiredKind.Spec.RebootRequired = make([]string, 0)
@@ -35,24 +37,31 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			monitor = monitor.Verbose()
 		}
 
-		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+		for _, pool := range desiredKind.Spec.Pools {
+			if pool.StorageDiskType == "" {
+				pool.StorageDiskType = "pd-standard"
+				migrate = true
+			}
+		}
+
+		if err := desiredKind.validateAdapt(); err != nil {
+			return nil, nil, nil, migrate, nil, err
 		}
 
 		lbCurrent := &tree.Tree{}
 		var lbQuery orbiter.QueryFunc
 
-		lbQuery, lbDestroy, lbConfigure, migrateLocal, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
+		lbQuery, lbDestroy, lbConfigure, migrateLocal, lbSecrets, err := loadbalancers.GetQueryAndDestroyFunc(monitor, whitelist, desiredKind.Loadbalancing, lbCurrent, finishedChan)
 		if err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 		if migrateLocal {
 			migrate = true
 		}
+		secret.AppendSecrets("", secrets, lbSecrets)
 
-		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-		if err != nil {
-			return nil, nil, nil, migrate, err
+		buildContextFunc := func() (*context, error) {
+			return buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 		}
 
 		current := &Current{
@@ -67,6 +76,15 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				defer func() {
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
+
+				if err := desiredKind.validateQuery(); err != nil {
+					return nil, err
+				}
+
+				ctx, err := buildContextFunc()
+				if err != nil {
+					return nil, err
+				}
 
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
 					return nil, err
@@ -84,8 +102,19 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return err
 				}
 
+				ctx, err := buildContextFunc()
+				if err != nil {
+					return err
+				}
+
 				return destroy(ctx)
 			}, func(orb orb.Orb) error {
+
+				if err := desiredKind.validateJSONKey(); err != nil {
+					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
+					return err
+				}
+
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
@@ -103,9 +132,9 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					}
 				}
 
-				if desiredKind.Spec.JSONKey == nil {
-					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
-					return nil
+				ctx, err := buildContextFunc()
+				if err != nil {
+					return err
 				}
 
 				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
@@ -113,6 +142,9 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 
 				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)
-			}, migrate, nil
+			},
+			migrate,
+			secrets,
+			nil
 	}
 }

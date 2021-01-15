@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/caos/orbos/internal/tree"
@@ -25,8 +26,14 @@ func ExecCommand(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVar(&command, "command", "", "Command to be executed")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient := rv()
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
 
@@ -44,7 +51,7 @@ func ExecCommand(rv RootValues) *cobra.Command {
 
 			machine, found := machines[machineID]
 			if !found {
-				panic(fmt.Sprintf("Machine with ID %s unknown", machineID))
+				return errors.New(fmt.Sprintf("Machine with ID %s unknown", machineID))
 			}
 
 			if command != "" {

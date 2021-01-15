@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	core "k8s.io/api/core/v1"
 
@@ -18,9 +20,23 @@ func AdaptFunc(
 	oneoff bool,
 	deployOrbiter bool,
 	destroyProviders func() (map[string]interface{}, error),
-	whitelist func(whitelist []*orbiter.CIDR)) orbiter.AdaptFunc {
+	whitelist func(whitelist []*orbiter.CIDR),
+	gitClient *git.Client,
+) orbiter.AdaptFunc {
 
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+	return func(
+		monitor mntr.Monitor,
+		finishedChan chan struct{},
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (
+		queryFunc orbiter.QueryFunc,
+		destroyFunc orbiter.DestroyFunc,
+		configureFunc orbiter.ConfigureFunc,
+		migrate bool,
+		secrets map[string]*secret.Secret,
+		err error,
+	) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -31,7 +47,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -53,7 +69,7 @@ func AdaptFunc(
 		}
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
@@ -80,7 +96,12 @@ func AdaptFunc(
 				panic(err)
 			}
 
-			if err := EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter); err != nil {
+			imageRegistry := desiredKind.Spec.CustomImageRegistry
+			if imageRegistry == "" {
+				imageRegistry = "ghcr.io"
+			}
+
+			if err := EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter, imageRegistry); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
@@ -117,7 +138,9 @@ func AdaptFunc(
 					nodeAgentsCurrent,
 					nodeAgentsDesired,
 					k8sClient,
-					oneoff)
+					oneoff,
+					gitClient,
+				)
 				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 			}, func() error {
 				defer func() {
@@ -136,6 +159,10 @@ func AdaptFunc(
 				}
 
 				return orbiter.DestroyFuncGoroutine(destroyFunc)
-			}, orbiter.NoopConfigure, migrate, nil
+			},
+			orbiter.NoopConfigure,
+			migrate,
+			getSecretsMap(desiredKind),
+			nil
 	}
 }

@@ -1,7 +1,7 @@
 package config
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	ambassadormetrics "github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/metrics"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/apiserver"
 	argocdmetrics "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/metrics"
@@ -15,10 +15,11 @@ import (
 	pnemetrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/metrics"
 	pometrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/metrics"
 	psemetrics "github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/metrics"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/zitadel"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func ScrapeMetricsCrdsConfig(instanceName string, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) *Config {
+func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetslatest.ToolsetSpec) *Config {
 	servicemonitors := make([]*servicemonitor.Config, 0)
 
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
@@ -73,13 +74,18 @@ func ScrapeMetricsCrdsConfig(instanceName string, toolsetCRDSpec *toolsetsv1beta
 		servicemonitors = append(servicemonitors, orbiter.GetServicemonitor(instanceName))
 	}
 
+	if toolsetCRDSpec.MetricsPersisting != nil && (toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Zitadel) {
+		servicemonitors = append(servicemonitors, zitadel.GetServicemonitor(instanceName))
+	}
+
 	if len(servicemonitors) > 0 {
 		servicemonitors = append(servicemonitors, metrics.GetServicemonitor(instanceName))
 
 		prom := &Config{
 			Prefix:                  "",
-			Namespace:               "caos-system",
+			Namespace:               namespace,
 			MonitorLabels:           labels.GetMonitorSelectorLabels(instanceName),
+			RuleLabels:              labels.GetRuleSelectorLabels(instanceName),
 			ServiceMonitors:         servicemonitors,
 			AdditionalScrapeConfigs: getScrapeConfigs(),
 		}

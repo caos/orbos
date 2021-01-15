@@ -11,9 +11,14 @@ func RebootCommand(rv RootValues) *cobra.Command {
 		Use:   "reboot",
 		Short: "Gracefully reboot machines",
 		Long:  "Pass machine ids as arguments, omit arguments for selecting machines interactively",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			_, monitor, orbConfig, gitClient := rv()
-
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			_, monitor, orbConfig, gitClient, errFunc, err := rv()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errFunc(err)
+			}()
 			return requireMachines(monitor, gitClient, orbConfig, args, func(machine infra.Machine) (required bool, require func(), unrequire func()) {
 				return machine.RebootRequired()
 			})

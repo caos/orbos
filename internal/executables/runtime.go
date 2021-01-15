@@ -24,12 +24,12 @@ func Populate() {
 	populate()
 }
 
-func PreBuilt(name string) ([]byte, error) {
+func PreBuilt(name string) []byte {
 	executable, ok := executables[name]
 	if !ok {
-		return nil, errors.Errorf("%s was not prebuilt", name)
+		panic(errors.Errorf("%s was not prebuilt", name))
 	}
-	return executable, nil
+	return executable
 }
 
 func PreBuild(packables <-chan PackableTuple) (err error) {
@@ -43,6 +43,7 @@ func PreBuild(packables <-chan PackableTuple) (err error) {
 	defer func() {
 		if err != nil {
 			os.Remove(tmpFile)
+			panic(err)
 		}
 		err = os.Rename(tmpFile, outFile)
 	}()

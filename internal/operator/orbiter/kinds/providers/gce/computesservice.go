@@ -102,6 +102,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		InitializeParams: &compute.AttachedDiskInitializeParams{
 			DiskSizeGb:  int64(desired.StorageGB),
 			SourceImage: desired.OSImage,
+			DiskType:    fmt.Sprintf("zones/%s/diskTypes/%s", m.context.desired.Zone, desired.StorageDiskType),
 		}},
 	}
 
@@ -193,11 +194,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		func() {},
 	)
 
-	for _, name := range diskNames {
+	for idx, name := range diskNames {
 		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
 		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10*time.Second, infraMachine, func(m infra.Machine) error {
 			_, formatErr := m.Execute(nil,
-				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-%s` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, name, mountPoint),
+				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount -o discard,defaults,nobarrier /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-local-nvme-ssd-%d` %s ext4 discard,defaults,nofail,nobarrier 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, idx, mountPoint),
 			)
 			return formatErr
 		}); err != nil {
@@ -356,7 +357,7 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 		m.cache.Lock()
 		cleanMachines := make([]*instance, 0)
 		for _, cachedMachine := range m.cache.instances[pool] {
-			if cachedMachine.id != id {
+			if cachedMachine.X_ID != id {
 				cleanMachines = append(cleanMachines, cachedMachine)
 			}
 		}

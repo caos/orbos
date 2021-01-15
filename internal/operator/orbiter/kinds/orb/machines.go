@@ -26,11 +26,27 @@ func ListMachines() MachinesFunc {
 		machines = make(map[string]infra.Machine, 0)
 		machineIDs = make([]string, 0)
 
-		for _, clusterTree := range desiredKind.Clusters {
-			clusters.GetSecrets(monitor, clusterTree)
+		for clusterID, clusterTree := range desiredKind.Clusters {
+			clusterCurrent := &tree.Tree{}
+			_, _, _, _, _, err := clusters.GetQueryAndDestroyFuncs(
+				monitor,
+				clusterID,
+				clusterTree,
+				true,
+				false,
+				clusterCurrent,
+				nil,
+				nil,
+				nil,
+				nil,
+			)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		for provID, providerTree := range desiredKind.Providers {
+
 			providerMachines, err := providers.ListMachines(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				providerTree,
@@ -47,6 +63,7 @@ func ListMachines() MachinesFunc {
 				machines[machineID] = providerMachine
 			}
 		}
+
 		return machineIDs, machines, nil
 	}
 }

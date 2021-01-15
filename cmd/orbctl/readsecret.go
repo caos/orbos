@@ -3,7 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/caos/orbos/internal/operator/secretfuncs"
+	"github.com/caos/orbos/internal/secret/operators"
+
 	"github.com/caos/orbos/internal/secret"
 
 	"github.com/spf13/cobra"
@@ -17,9 +18,15 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 		Long:    "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 		Args:    cobra.MaximumNArgs(1),
 		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			_, monitor, orbConfig, gitClient := rv()
+			_, monitor, orbConfig, gitClient, errFunc, err := rv()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errFunc(err)
+			}()
 
 			if err := orbConfig.IsComplete(); err != nil {
 				return err
@@ -41,10 +48,10 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 			value, err := secret.Read(
 				monitor,
 				gitClient,
-				secretfuncs.GetSecrets(),
-				path)
+				path,
+				operators.GetAllSecretsFunc(orbConfig))
 			if err != nil {
-				panic(err)
+				return err
 			}
 			if _, err := os.Stdout.Write([]byte(value)); err != nil {
 				panic(err)

@@ -13,7 +13,9 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client)
+type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc, error)
+
+type errFunc func(err error) error
 
 func RootCommand() (*cobra.Command, RootValues) {
 
@@ -43,13 +45,7 @@ $ orbctl -f ~/.orb/myorb [command]
 	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
 
-	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client) {
-
-		monitor := mntr.Monitor{
-			OnInfo:   mntr.LogMessage,
-			OnChange: mntr.LogMessage,
-			OnError:  mntr.LogError,
-		}
+	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc, error) {
 
 		if verbose {
 			monitor = monitor.Verbose()
@@ -59,10 +55,16 @@ $ orbctl -f ~/.orb/myorb [command]
 		orbConfig, err := orb.ParseOrbConfig(prunedPath)
 		if err != nil {
 			orbConfig = &orb.Orb{Path: prunedPath}
+			return nil, mntr.Monitor{}, nil, nil, nil, err
 		}
 
 		ctx := context.Background()
 
-		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch")
+		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch"), func(err error) error {
+			if err != nil {
+				monitor.Error(err)
+			}
+			return nil
+		}, nil
 	}
 }

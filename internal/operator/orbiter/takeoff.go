@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/caos/orbos/internal/secret"
+
 	"github.com/caos/orbos/internal/api"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/tree"
@@ -80,26 +82,26 @@ func Metrics() {
 	}()
 }
 
-func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, error) {
+func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, map[string]*secret.Secret, error) {
 
 	treeDesired, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {
-		return nil, nil, nil, false, nil, nil, err
+		return nil, nil, nil, false, nil, nil, nil, err
 	}
 	treeCurrent := &tree.Tree{}
 
-	adaptFunc := func() (QueryFunc, DestroyFunc, ConfigureFunc, bool, error) {
+	adaptFunc := func() (QueryFunc, DestroyFunc, ConfigureFunc, bool, map[string]*secret.Secret, error) {
 		return adapt(monitor, finished, treeDesired, treeCurrent)
 	}
-	query, destroy, configure, migrate, err := AdaptFuncGoroutine(adaptFunc)
-	return query, destroy, configure, migrate, treeDesired, treeCurrent, err
+	query, destroy, configure, migrate, secrets, err := AdaptFuncGoroutine(adaptFunc)
+	return query, destroy, configure, migrate, treeDesired, treeCurrent, secrets, err
 }
 
 func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 
 	return func() {
 
-		query, _, _, migrate, treeDesired, treeCurrent, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
+		query, _, _, migrate, treeDesired, treeCurrent, _, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
 		if err != nil {
 			monitor.Error(err)
 			return
@@ -176,7 +178,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 
 		reconciledCurrentStateMsg := "Current state reconciled"
-		currentReconciled, err := conf.GitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()...)
+		currentReconciled, err := conf.GitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()[0])
 		if err != nil {
 			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
 			return

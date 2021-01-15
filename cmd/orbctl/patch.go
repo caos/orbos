@@ -38,7 +38,13 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
-		_, _, orbConfig, gitClient := rv()
+		_, _, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := initRepo(orbConfig, gitClient); err != nil {
 			return err

@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -120,6 +120,20 @@ func DefaultValues(imageTags map[string]string) *Values {
 				TargetPort: 8443,
 				NodePort:   30443,
 			},
+			},
+			Annotations: &ModuleAnnotation{
+				Module: &AmbassadorModuleAnnotation{
+					ApiVersion: "ambassador/v2",
+					Kind:       "Module",
+					Name:       "ambassador",
+					Config: &AmbassadorModuleConfig{
+						UseProxyProto: true,
+						EnableGRPCWeb: false,
+						Diagnostics: &AmbassadorDiagnosticst{
+							Enabled: false,
+						},
+					},
+				},
 			},
 		},
 		ServiceAccount: &ServiceAccount{

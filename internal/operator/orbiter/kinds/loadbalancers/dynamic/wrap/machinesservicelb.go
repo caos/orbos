@@ -1,7 +1,6 @@
 package wrap
 
 import (
-	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -11,18 +10,15 @@ var _ core.MachinesService = (*CmpSvcLB)(nil)
 
 type CmpSvcLB struct {
 	core.MachinesService
-	dynamic       dynamic.Current
-	nodeagents    *common.DesiredNodeAgents
-	notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string
-	vrrp          bool
-	vip           func(*dynamic.VIP) string
+	dynamic dynamic.Current
+	vrrp    *dynamic.VRRP
+	vip     func(*dynamic.VIP) string
 }
 
-func MachinesService(svc core.MachinesService, curr dynamic.Current, vrrp bool, notifyMasters func(machine infra.Machine, peers infra.Machines, vips []*dynamic.VIP) string, vip func(*dynamic.VIP) string) *CmpSvcLB {
+func MachinesService(svc core.MachinesService, curr dynamic.Current, vrrp *dynamic.VRRP, vip func(*dynamic.VIP) string) *CmpSvcLB {
 	return &CmpSvcLB{
 		MachinesService: svc,
 		dynamic:         curr,
-		notifyMasters:   notifyMasters,
 		vrrp:            vrrp,
 		vip:             vip,
 	}
@@ -61,5 +57,5 @@ func (i *CmpSvcLB) Create(poolName string) (infra.Machine, error) {
 }
 
 func (c *CmpSvcLB) desire(selfPool string) (bool, error) {
-	return c.dynamic.Current.Desire(selfPool, c, c.vrrp, c.notifyMasters, c.vip)
+	return c.dynamic.Current.Desire(selfPool, c, c.vrrp, c.vip)
 }

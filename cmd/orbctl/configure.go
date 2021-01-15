@@ -42,13 +42,20 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&newMasterKey, "masterkey", "", "Reencrypts all secrets")
 	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		ctx, monitor, orbConfig, gitClient := rv()
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if orbConfig.URL == "" && newRepoURL == "" {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
 		}
 
+		// TODO: Remove?
 		if orbConfig.URL != "" && newRepoURL != "" && orbConfig.URL != newRepoURL {
 			return fmt.Errorf("repository url %s is not reconfigurable", orbConfig.URL)
 		}
@@ -137,11 +144,13 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 
 		if foundOrbiter {
 
-			_, _, configure, _, desired, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
 				orbConfig,
 				gitCommit,
 				true,
-				false))
+				false,
+				gitClient,
+			))
 			if err != nil {
 				return err
 			}
@@ -154,15 +163,14 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err := secret.Rewrite(
 				monitor,
 				gitClient,
-				"orbiter",
 				rewriteKey,
 				desired,
-			); err != nil {
-				panic(err)
+				api.PushOrbiterDesiredFunc); err != nil {
+				return err
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}
@@ -191,7 +199,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, err := boomapi.ParseToolset(tree)
+			toolset, _, _, err := boomapi.ParseToolset(tree)
 			if err != nil {
 				return err
 			}
@@ -200,9 +208,9 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			if err := secret.Rewrite(
 				monitor,
 				gitClient,
-				"boom",
 				rewriteKey,
-				tree); err != nil {
+				tree,
+				api.PushBoomDesiredFunc); err != nil {
 				return err
 			}
 		}

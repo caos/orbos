@@ -1,7 +1,7 @@
 package ambassador
 
 import (
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
 	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
 	"github.com/caos/orbos/internal/utils/helper"
@@ -12,7 +12,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 )
 
-func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) ([]interface{}, error) {
+func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
 
 	ret := make([]interface{}, 0)
 	if toolsetCRDSpec.Reconciling.Network != nil {
@@ -32,7 +32,7 @@ func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *too
 	return ret, nil
 }
 
-func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec, resultFilePath string) error {
+func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec, resultFilePath string) error {
 
 	if err := helper.DeleteFirstResourceFromYaml(resultFilePath, "v1", "Pod", "ambassador-test-ready"); err != nil {
 		return err
@@ -41,11 +41,17 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1
 	return nil
 }
 
-func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetsv1beta2.ToolsetSpec) interface{} {
-	spec := toolsetCRDSpec.APIGateway
+func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := helm.GetImageTags()
 
 	values := helm.DefaultValues(imageTags)
+
+	spec := toolsetCRDSpec.APIGateway
+
+	if spec == nil {
+		return values
+	}
+
 	if spec.ReplicaCount != 0 {
 		values.ReplicaCount = spec.ReplicaCount
 	}
@@ -84,10 +90,17 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
-	values.CreateDevPortalMapping = toolsetCRDSpec.APIGateway.ActivateDevPortal
+	values.CreateDevPortalMapping = spec.ActivateDevPortal
 
-	if spec.Resources == nil {
+	if spec.Resources != nil {
 		values.Resources = spec.Resources
+	}
+
+	// default is false
+	values.Service.Annotations.Module.Config.EnableGRPCWeb = spec.GRPCWeb
+	// default is true
+	if spec.ProxyProtocol != nil {
+		values.Service.Annotations.Module.Config.UseProxyProto = *spec.ProxyProtocol
 	}
 
 	if spec.Caching == nil {

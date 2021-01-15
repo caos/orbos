@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
 	"github.com/caos/orbos/mntr"
 )
+
+const containerdVersion = "1.4.3"
 
 type Installer interface {
 	isCRI()
@@ -54,15 +57,46 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	installed, err := c.manager.CurrentVersions("docker-ce")
+	installed, err := c.manager.CurrentVersions("docker-ce", "containerd.io")
 	if err != nil {
 		return pkg, err
 	}
-	version := ""
-	for _, pkg := range installed {
-		version = fmt.Sprintf("%s %s %s", version, pkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(pkg.Version))
+	var (
+		dockerVersion     string
+		containerdVersion string
+	)
+	for _, installedPkg := range installed {
+		switch installedPkg.Package {
+		case "docker-ce":
+			dockerVersion = fmt.Sprintf("%s %s %s", dockerVersion, installedPkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(installedPkg.Version))
+			continue
+		case "containerd.io":
+			containerdVersion = installedPkg.Version
+			continue
+		default:
+			panic(errors.Errorf("unexpected installed package %s", installedPkg.Package))
+		}
 	}
-	pkg.Version = strings.TrimSpace(version)
+	pkg.Version = strings.TrimSpace(dockerVersion)
+	if !strings.Contains(containerdVersion, "1.4.3") {
+		if pkg.Config == nil {
+			pkg.Config = map[string]string{}
+		}
+		pkg.Config["containerd.io"] = containerdVersion
+	} else {
+		// Deprecated Code: Ensure existing containerd versions get locked
+		// TODO: Remove in ORBOS v4
+		lock, err := exec.Command("yum", "versionlock", "list").Output()
+		if err != nil {
+			return pkg, err
+		}
+		if !strings.Contains(string(lock), "containerd.io-1.4.3") {
+			if pkg.Config == nil {
+				pkg.Config = map[string]string{}
+			}
+			pkg.Config["containerd.io"] = containerdVersion
+		}
+	}
 
 	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
 	if pkg.Config == nil {

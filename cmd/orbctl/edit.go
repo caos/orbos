@@ -22,11 +22,26 @@ func EditCommand(rv RootValues) *cobra.Command {
 		Use:     "edit <path>",
 		Short:   "Edit the file in your favorite text editor",
 		Args:    cobra.ExactArgs(1),
-		Example: `orbctl file edit orbiter.yml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			_, _, orbConfig, gitClient := rv()
+		Example: `orbctl file edit desired.yml`,
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			if err := initRepo(orbConfig, gitClient); err != nil {
+			_, _, orbConfig, gitClient, errFunc, err := rv()
+			if err != nil {
+				return err
+			}
+			defer func() {
+				err = errFunc(err)
+			}()
+
+			if err := orbConfig.IsConnectable(); err != nil {
+				return err
+			}
+
+			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+				return err
+			}
+
+			if err := gitClient.Clone(); err != nil {
 				return err
 			}
 

@@ -12,6 +12,19 @@ type Configuration struct {
 	LogLevel      string         `yaml:"logLevel"`
 }
 
+func (c *Configuration) IsZero() bool {
+	if (c.Tracing == nil || c.Tracing.IsZero()) &&
+		(c.Cache == nil) &&
+		(c.Secrets == nil || c.Secrets.IsZero()) &&
+		(c.Notifications == nil || c.Notifications.IsZero()) &&
+		(c.Passwords == nil || c.Passwords.IsZero()) &&
+		!c.DebugMode &&
+		c.LogLevel == "" {
+		return true
+	}
+	return false
+}
+
 type Passwords struct {
 	Migration    *secret.Secret `yaml:"migration"`
 	Management   *secret.Secret `yaml:"management"`
@@ -20,6 +33,19 @@ type Passwords struct {
 	Adminapi     *secret.Secret `yaml:"adminapi"`
 	Notification *secret.Secret `yaml:"notification"`
 	Eventstore   *secret.Secret `yaml:"eventstore"`
+}
+
+func (p *Passwords) IsZero() bool {
+	if (p.Migration == nil || p.Migration.IsZero()) &&
+		(p.Management == nil || p.Management.IsZero()) &&
+		(p.Auth == nil || p.Auth.IsZero()) &&
+		(p.Authz == nil || p.Authz.IsZero()) &&
+		(p.Adminapi == nil || p.Adminapi.IsZero()) &&
+		(p.Notification == nil || p.Notification.IsZero()) &&
+		(p.Eventstore == nil || p.Eventstore.IsZero()) {
+		return true
+	}
+	return false
 }
 
 type Secrets struct {
@@ -33,10 +59,34 @@ type Secrets struct {
 	IDPConfigVerificationID string         `yaml:"idpConfigVerificationID,omitempty"`
 }
 
+func (s *Secrets) IsZero() bool {
+	if (s.Keys == nil || s.Keys.IsZero()) &&
+		s.UserVerificationID == "" &&
+		s.OTPVerificationID == "" &&
+		s.OIDCKeysID == "" &&
+		s.CookieID == "" &&
+		s.CSRFID == "" &&
+		s.DomainVerificationID == "" &&
+		s.IDPConfigVerificationID == "" {
+		return true
+	}
+	return false
+}
+
 type Notifications struct {
 	GoogleChatURL *secret.Secret `yaml:"googleChatURL,omitempty"`
 	Email         *Email         `yaml:"email,omitempty"`
 	Twilio        *Twilio        `yaml:"twilio,omitempty"`
+}
+
+func (n *Notifications) IsZero() bool {
+	if (n.GoogleChatURL == nil || n.GoogleChatURL.IsZero()) &&
+		(n.Email == nil || n.Email.IsZero()) &&
+		(n.Twilio == nil || n.Twilio.IsZero()) {
+		return true
+	}
+	return false
+
 }
 
 type Tracing struct {
@@ -46,10 +96,29 @@ type Tracing struct {
 	Type               string         `yaml:"type,omitempty"`
 }
 
+func (t *Tracing) IsZero() bool {
+	if (t.ServiceAccountJSON == nil || t.ServiceAccountJSON.IsZero()) &&
+		t.ProjectID == "" &&
+		t.Fraction == "" &&
+		t.Type == "" {
+		return true
+	}
+	return false
+}
+
 type Twilio struct {
 	SenderName string         `yaml:"senderName,omitempty"`
 	AuthToken  *secret.Secret `yaml:"authToken,omitempty"`
 	SID        *secret.Secret `yaml:"sid,omitempty"`
+}
+
+func (t *Twilio) IsZero() bool {
+	if (t.SID == nil || t.SID.IsZero()) &&
+		(t.AuthToken == nil || t.AuthToken.IsZero()) &&
+		t.SenderName == "" {
+		return true
+	}
+	return false
 }
 
 type Email struct {
@@ -59,6 +128,18 @@ type Email struct {
 	SenderName    string         `yaml:"senderName,omitempty"`
 	TLS           bool           `yaml:"tls,omitempty"`
 	AppKey        *secret.Secret `yaml:"appKey,omitempty"`
+}
+
+func (e *Email) IsZero() bool {
+	if (e.AppKey == nil || e.AppKey.IsZero()) &&
+		!e.TLS &&
+		e.SMTPHost == "" &&
+		e.SMTPUser == "" &&
+		e.SenderAddress == "" &&
+		e.SenderName == "" {
+		return true
+	}
+	return false
 }
 
 type Cache struct {

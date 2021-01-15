@@ -4,8 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"path/filepath"
 	"strings"
+	"text/template"
 	"time"
+
+	"github.com/caos/orbos/internal/git"
+
+	"github.com/caos/orbos/internal/executables"
 
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -27,7 +33,9 @@ func join(
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
 	certKey string,
-	client *Client) (*string, error) {
+	client *Client,
+	imageRepository string,
+	gitClient *git.Client) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
@@ -35,13 +43,70 @@ func join(
 	})
 
 	var applyNetworkCommand string
+	prepareKubeadmInit := func() error { return nil }
 	switch desired.Spec.Networking.Network {
 	case "cilium":
-		applyNetworkCommand = "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml"
+		ciliumPath := "/var/orbiter/cilium.yaml"
+		prepareKubeadmInit = func() error {
+			buf := new(bytes.Buffer)
+			defer buf.Reset()
+
+			istioReg := desired.Spec.CustomImageRegistry
+			if istioReg != "" {
+				istioReg += "/"
+			}
+
+			ciliumReg := desired.Spec.CustomImageRegistry
+			if ciliumReg == "" {
+				ciliumReg = "docker.io"
+			}
+
+			template.Must(template.New("").Parse(string(executables.PreBuilt("cilium.yaml")))).Execute(buf, struct {
+				IstioProxyImageRegistry string
+				CiliumImageRegistry     string
+			}{
+				IstioProxyImageRegistry: istioReg,
+				CiliumImageRegistry:     ciliumReg,
+			})
+
+			return joining.infra.WriteFile(ciliumPath, bytes.NewReader(executables.PreBuilt("cilium.yaml")), 600)
+		}
+		applyNetworkCommand = fmt.Sprintf("kubectl create -f %s", ciliumPath)
 	case "calico":
-		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.16/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
+		calicoPath := "/var/orbiter/calico.yaml"
+		prepareKubeadmInit = func() error {
+
+			reg := desired.Spec.CustomImageRegistry
+			if reg != "" {
+				reg += "/"
+			}
+
+			buf := new(bytes.Buffer)
+			defer buf.Reset()
+			template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
+				ImageRegistry string
+			}{
+				ImageRegistry: reg,
+			})
+
+			return joining.infra.WriteFile(calicoPath, buf, 600)
+		}
+		applyNetworkCommand = fmt.Sprintf(`kubectl create -f %s`, calicoPath)
+	case "":
+		applyNetworkCommand = "true"
 	default:
-		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
+		networkFile := gitClient.Read(desired.Spec.Networking.Network)
+		if len(networkFile) == 0 {
+			return nil, fmt.Errorf("network file %s is empty or not found in git repository", desired.Spec.Networking.Network)
+		}
+
+		remotePath := filepath.Join("/var/orbiter/", filepath.Base(desired.Spec.Networking.Network))
+		prepareKubeadmInit = func(closedNetworkFile []byte, closedFilePath string) func() error {
+			return func() error {
+				return joining.infra.WriteFile(closedFilePath, bytes.NewReader(closedNetworkFile), 600)
+			}
+		}(networkFile, remotePath)
+		applyNetworkCommand = fmt.Sprintf(`kubectl create -f %s`, remotePath)
 	}
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
@@ -61,6 +126,8 @@ localAPIEndpoint:
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
   name: %s
+  kubeletExtraArgs:
+    node-ip: %s
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
@@ -83,10 +150,11 @@ dns:
   type: CoreDNS
 etcd:
   local:
+    imageRepository: "%s"
     dataDir: /var/lib/etcd
     extraArgs:
       listen-metrics-urls: http://0.0.0.0:2381
-imageRepository: k8s.gcr.io
+imageRepository: %s
 kubernetesVersion: %s
 networking:
   dnsDomain: %s
@@ -98,9 +166,12 @@ scheduler: {}
 		joining.infra.IP(),
 		kubeAPI.BackendPort,
 		joining.infra.ID(),
+		joining.infra.IP(),
 		kubeAPI.Location,
 		clusterID,
 		kubeAPI,
+		imageRepository,
+		imageRepository,
 		kubernetesVersion,
 		desired.Spec.Networking.DNSDomain,
 		desired.Spec.Networking.PodCidr,
@@ -118,11 +189,14 @@ discovery:
     unsafeSkipCAVerification: true
   timeout: 5m0s
 nodeRegistration:
+  kubeletExtraArgs:
+    node-ip: %s
   name: %s
 `,
 			joinAt.IP(),
 			kubeAPI.BackendPort,
 			joinToken,
+			joining.infra.IP(),
 			joining.infra.ID())
 
 		if joining.pool.tier == Controlplane {
@@ -187,6 +261,10 @@ nodeRegistration:
 	}
 
 	if err := joining.pool.infra.EnsureMember(joining.infra); err != nil {
+		return nil, err
+	}
+
+	if err := prepareKubeadmInit(); err != nil {
 		return nil, err
 	}
 

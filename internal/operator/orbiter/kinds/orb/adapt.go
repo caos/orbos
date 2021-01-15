@@ -2,9 +2,11 @@ package orb
 
 import (
 	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
 
@@ -17,20 +19,35 @@ func AdaptFunc(
 	orbConfig *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
-	deployOrbiter bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+	deployOrbiter bool,
+	gitClient *git.Client,
+) orbiter.AdaptFunc {
+	return func(
+		monitor mntr.Monitor,
+		finishedChan chan struct{},
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (
+		queryFunc orbiter.QueryFunc,
+		destroyFunc orbiter.DestroyFunc,
+		configureFunc orbiter.ConfigureFunc,
+		migrate bool,
+		secrets map[string]*secret.Secret,
+		err error,
+	) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
+		secrets = make(map[string]*secret.Secret, 0)
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
@@ -54,7 +71,7 @@ func AdaptFunc(
 			//			})
 
 			//			providerID := id + provID
-			query, destroy, configure, migrateLocal, err := providers.GetQueryAndDestroyFuncs(
+			query, destroy, configure, migrateLocal, providerSecrets, err := providers.GetQueryAndDestroyFuncs(
 				monitor,
 				provID,
 				providerTree,
@@ -66,9 +83,8 @@ func AdaptFunc(
 				orbConfig.Repokey,
 				oneoff,
 			)
-
 			if err != nil {
-				return nil, nil, nil, migrate, err
+				return nil, nil, nil, migrate, nil, err
 			}
 
 			if migrateLocal {
@@ -78,6 +94,7 @@ func AdaptFunc(
 			providerQueriers = append(providerQueriers, query)
 			providerDestroyers = append(providerDestroyers, destroy)
 			providerConfigurers = append(providerConfigurers, configure)
+			secret.AppendSecrets(provID, secrets, providerSecrets)
 		}
 
 		var provCurr map[string]interface{}
@@ -107,7 +124,7 @@ func AdaptFunc(
 
 			clusterCurrent := &tree.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
-			query, destroy, configure, migrateLocal, err := clusters.GetQueryAndDestroyFuncs(
+			query, destroy, configure, migrateLocal, clusterSecrets, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
 				clusterID,
 				clusterTree,
@@ -117,14 +134,15 @@ func AdaptFunc(
 				destroyProviders,
 				whitelistChan,
 				finishedChan,
+				gitClient,
 			)
-
 			if err != nil {
-				return nil, nil, nil, migrate, err
+				return nil, nil, nil, migrate, nil, err
 			}
 			clusterQueriers = append(clusterQueriers, query)
 			clusterDestroyers = append(clusterDestroyers, destroy)
 			clusterConfigurers = append(clusterConfigurers, configure)
+			secret.AppendSecrets(clusterID, secrets, clusterSecrets)
 			if migrateLocal {
 				migrate = true
 			}
@@ -177,17 +195,22 @@ func AdaptFunc(
 						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 					}()
 
+					done := true
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
 						ensureFunc := func() *orbiter.EnsureResult {
 							return ensurer(psf)
 						}
 
-						if result := orbiter.EnsureFuncGoroutine(ensureFunc); result.Err != nil || !result.Done {
+						result := orbiter.EnsureFuncGoroutine(ensureFunc)
+						if result.Err != nil {
 							return result
+						}
+						if !result.Done {
+							done = false
 						}
 					}
 
-					return orbiter.ToEnsureResult(true, nil)
+					return orbiter.ToEnsureResult(done, nil)
 				}, nil
 			}, func() error {
 				defer func() {
@@ -211,6 +234,9 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, migrate, nil
+			},
+			migrate,
+			secrets,
+			nil
 	}
 }

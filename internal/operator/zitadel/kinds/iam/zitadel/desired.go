@@ -1,7 +1,7 @@
 package zitadel
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/zitadel/kinds/iam/zitadel/configuration"
 	"github.com/caos/orbos/internal/tree"
 	"github.com/pkg/errors"
@@ -23,6 +23,19 @@ type Spec struct {
 	Tolerations   []corev1.Toleration          `yaml:"tolerations,omitempty"`
 	Affinity      *k8s.Affinity                `yaml:"affinity,omitempty"`
 	Resources     *k8s.Resources               `yaml:"resources,omitempty"`
+}
+
+func (s *Spec) IsZero() bool {
+	if (s.Configuration == nil || s.Configuration.IsZero()) &&
+		!s.Verbose &&
+		s.ReplicaCount == 0 &&
+		s.NodeSelector == nil &&
+		s.Tolerations == nil &&
+		s.Affinity == nil &&
+		s.Resources == nil {
+		return true
+	}
+	return false
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {

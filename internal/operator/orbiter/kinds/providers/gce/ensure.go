@@ -38,7 +38,11 @@ func query(
 	if !ok {
 		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
-	normalized, firewalls := normalize(context, lbCurrent.Current.Spec)
+	vips, _, err := lbCurrent.Current.Spec(context.machinesService)
+	if err != nil {
+		return nil, err
+	}
+	normalized, firewalls := normalize(context, vips)
 
 	var (
 		ensureLB             func() error
@@ -82,7 +86,6 @@ func query(
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
 				if pool == destPool {
-
 					key := fmt.Sprintf(
 						"%s:%d%s",
 						"0.0.0.0",
@@ -90,12 +93,14 @@ func query(
 						lb.healthcheck.gce.RequestPath)
 
 					value := fmt.Sprintf(
-						"%d@%s://%s:%d%s",
-						lb.healthcheck.desired.Code,
+						"--protocol %s --ip %s --port %d --path %s --status %d --proxy=%t",
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
 						internalPort(lb),
-						lb.healthcheck.desired.Path)
+						lb.healthcheck.desired.Path,
+						lb.healthcheck.desired.Code,
+						lb.healthcheck.proxyProtocol,
+					)
 
 					if v := na.Software.Health.Config[key]; v != value {
 						na.Software.Health.Config[key] = value
@@ -104,16 +109,16 @@ func query(
 							"checks": value,
 						}).Changed("Healthcheck desired")
 					}
-					fw := common.ToFirewall(map[string]*common.Allowed{
+					fw := common.ToFirewall("external", map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
 							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
 							Protocol: "tcp",
 						},
 					})
 					if !na.Firewall.Contains(fw) {
-						na.Firewall.Merge(fw)
-						machineMonitor.WithField("ports", fw.Ports()).Changed("Firewall desired")
+						machineMonitor.WithField("ports", fw.AllZones()).Debug("Firewall desired")
 					}
+					na.Firewall.Merge(fw)
 				}
 			}
 		}
@@ -129,7 +134,7 @@ func query(
 	}
 
 	context.machinesService.onCreate = desireNodeAgent
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, false, nil, func(vip *dynamic.VIP) string {
+	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, nil, func(vip *dynamic.VIP) string {
 		for _, transport := range vip.Transport {
 			address, ok := current.Current.Ingresses[transport.Name]
 			if ok {
@@ -170,7 +175,17 @@ func query(
 			},
 			func() error {
 				var err error
-				done, err = wrappedMachines.InitializeDesiredNodeAgents()
+				lbDone, err := wrappedMachines.InitializeDesiredNodeAgents()
+				if err != nil {
+					return err
+				}
+
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				if err != nil {
+					return err
+				}
+				done = lbDone && fwDone
+
 				return err
 			},
 		})())

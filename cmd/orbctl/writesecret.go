@@ -4,7 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/secretfuncs"
+	"github.com/caos/orbos/internal/secret/operators"
+
 	"github.com/caos/orbos/internal/secret"
 
 	"github.com/pkg/errors"
@@ -33,14 +34,20 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 	flags.StringVarP(&file, "file", "s", "", "File containing the value to encrypt")
 	flags.BoolVar(&stdin, "stdin", false, "Value to encrypt is read from standard input")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
 		s, err := content(value, file, stdin)
 		if err != nil {
 			return err
 		}
 
-		_, monitor, orbConfig, gitClient := rv()
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err
@@ -62,10 +69,11 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		if err := secret.Write(
 			monitor,
 			gitClient,
-			secretfuncs.GetSecrets(),
 			path,
-			s); err != nil {
-			panic(err)
+			s,
+			operators.GetAllSecretsFunc(orbConfig),
+			operators.PushFunc()); err != nil {
+			return err
 		}
 		return nil
 	}

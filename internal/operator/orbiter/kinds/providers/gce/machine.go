@@ -27,7 +27,6 @@ type machine interface {
 
 type instance struct {
 	mntr.Monitor
-	id      string
 	ip      string
 	url     string
 	pool    string
@@ -41,6 +40,10 @@ type instance struct {
 	replacementRequired  bool
 	requireReplacement   func()
 	unrequireReplacement func()
+	X_ID                 string `header:"id"`
+	X_internalIP         string `header:"internal ip"`
+	X_externalIP         string `header:"external ip"`
+	X_Pool               string `header:"pool"`
 }
 
 func newMachine(
@@ -61,7 +64,7 @@ func newMachine(
 	unrequireReplacement func()) *instance {
 	return &instance{
 		Monitor:              monitor,
-		id:                   id,
+		X_ID:                 id,
 		ip:                   ip,
 		url:                  url,
 		pool:                 pool,
@@ -79,7 +82,7 @@ func newMachine(
 }
 
 func (c *instance) ID() string {
-	return c.id
+	return c.X_ID
 }
 
 func (c *instance) IP() string {
@@ -131,12 +134,15 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 	}
 	desiredTree.Parsed = desired
 
-	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	_, _, _, _, _, err = loadbalancers.GetQueryAndDestroyFunc(monitor, nil, desired.Loadbalancing, &tree.Tree{}, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	loadbalancers.GetSecrets(monitor, desired.Loadbalancing)
+	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	if err != nil {
+		return nil, err
+	}
 
 	return core.ListMachines(ctx.machinesService)
 }

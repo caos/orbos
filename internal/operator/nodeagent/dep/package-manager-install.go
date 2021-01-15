@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/pkg/errors"
 )
 
@@ -23,9 +25,8 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 			continue
 		}
 
-		installPkgs = append(installPkgs, sw.Package)
-
 		if sw.Version == "" {
+			installPkgs = append(installPkgs, sw.Package)
 			continue
 		}
 
@@ -56,17 +57,36 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		errBuf.Reset()
 	}
 
-	if len(installPkgs) <= 0 {
-		return nil
+	for _, pkg := range installPkgs {
+		if err := rembasedInstallPkg(p.monitor, pkg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func rembasedInstallPkg(monitor mntr.Monitor, pkg string) error {
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	cmd := exec.Command("yum", "install", "-y", pkg)
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
+	err := cmd.Run()
+	errStr := errBuf.String()
+	outStr := outBuf.String()
+	monitor.WithFields(map[string]interface{}{
+		"stdout": outStr,
+		"stderr": errStr,
+	}).Debug("Executed yum install")
+	if err != nil {
+		if strings.Contains(errStr+outStr, "is already installed") {
+			err = nil
+		}
 	}
 
-	cmd := exec.Command("yum", append([]string{"install", "-y"}, installPkgs...)...)
-	cmd.Stderr = errBuf
-	if p.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	return errors.Wrapf(cmd.Run(), "installing yum packages %s failed with stderr %s", strings.Join(installPkgs, " and "), errBuf.String())
+	return errors.Wrapf(err, "installing yum package %s failed with stderr %s", pkg, errStr)
 }
 
 // TODO: Use lower level apt instead of apt-get?

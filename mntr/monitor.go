@@ -9,13 +9,15 @@ import (
 
 type OnMessage func(string, map[string]string)
 type OnError func(error, map[string]string)
+type OnRecoverPanic func(interface{}, map[string]string)
 
 type Monitor struct {
-	Fields   map[string]interface{}
-	OnInfo   OnMessage
-	OnChange OnMessage
-	OnError  OnError
-	verbose  bool
+	Fields         map[string]interface{}
+	OnInfo         OnMessage
+	OnChange       OnMessage
+	OnError        OnError
+	OnRecoverPanic OnRecoverPanic
+	verbose        bool
 }
 
 func (m Monitor) WithField(key string, value interface{}) Monitor {
@@ -71,6 +73,24 @@ func (m Monitor) Error(err error) {
 
 	m.addDebugContext()
 	m.OnError(err, normalize(m.Fields))
+}
+
+func (m Monitor) RecoverPanic() {
+	if m.OnRecoverPanic == nil {
+		return
+	}
+
+	if r := recover(); r != nil {
+		m.Fields = merge(map[string]interface{}{
+			"ts":    now(),
+			"panic": r,
+			"msg":   "An internal error occured. Please file an issue at https://github.com/caos/orbos/issues containing the following stack trace",
+		}, m.Fields)
+
+		m.addDebugContext()
+		m.OnRecoverPanic(r, normalize(m.Fields))
+		panic(r)
+	}
 }
 
 func (m Monitor) Debug(dbg string) {

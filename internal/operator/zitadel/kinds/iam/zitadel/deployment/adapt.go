@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/k8s"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/resources/deployment"
 	"github.com/caos/orbos/internal/operator/zitadel"
@@ -19,13 +19,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	//zitadelImage can be found in github.com/caos/zitadel repo
+	zitadelImage = "ghcr.io/caos/zitadel:0.109.19"
+)
+
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
 	labels map[string]string,
 	replicaCount int,
 	affinity *k8s.Affinity,
-	imagePullSecret string,
 	cmName string,
 	certPath string,
 	secretName string,
@@ -235,7 +239,7 @@ func AdaptFunc(
 							RunAsNonRoot: &runAsNonRoot,
 						},
 						Name:            containerName,
-						Image:           "ghcr.io/caos/zitadel:0.85.2",
+						Image:           zitadelImage,
 						ImagePullPolicy: "IfNotPresent",
 						Ports: []corev1.ContainerPort{
 							{Name: "grpc", ContainerPort: 50001},
@@ -341,7 +345,7 @@ func AdaptFunc(
 		zitadel.DestroyersToDestroyFunc(internalMonitor, destroyers),
 		func(k8sClient *kubernetes.Client) error {
 			internalMonitor.Info("waiting for deployment to be ready")
-			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, true, 60); err != nil {
+			if err := k8sClient.WaitUntilDeploymentReady(namespace, deployName, true, true, 300); err != nil {
 				internalMonitor.Error(errors.Wrap(err, "error while waiting for deployment to be ready"))
 				return err
 			}

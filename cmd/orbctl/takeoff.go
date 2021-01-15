@@ -31,12 +31,18 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig for boom deployment")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		if recur && destroy {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, gitClient := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		return cmds.Takeoff(
 			monitor,
@@ -75,12 +81,18 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		if recur && destroy {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, gitClient := rv()
+		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
@@ -97,7 +109,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient)
+		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig)
 		return err
 	}
 	return cmd
@@ -116,8 +128,14 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, _ := rv()
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, _, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		return start.Boom(monitor, orbConfig.Path, localmode, version)
 	}
@@ -136,8 +154,14 @@ func StartZitadel(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, _ := rv()
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, _, errFunc, err := rv()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {

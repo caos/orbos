@@ -30,6 +30,29 @@ type Argocd struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
 }
 
+func (r *Argocd) InitSecrets() {
+	if r.Auth == nil {
+		r.Auth = &auth.Auth{}
+	}
+	r.Auth.InitSecrets()
+}
+
+func (r *Argocd) IsZero() bool {
+	if !r.Deploy &&
+		r.CustomImage == nil &&
+		r.Network == nil &&
+		(r.Auth == nil || r.Auth.IsZero()) &&
+		r.Rbac == nil &&
+		r.Repositories == nil &&
+		r.Credentials == nil &&
+		r.KnownHosts == nil &&
+		r.NodeSelector == nil {
+		return true
+	}
+
+	return false
+}
+
 type Rbac struct {
 	//Attribute policy.csv which goes into configmap argocd-rbac-cm
 	Csv string `json:"policy.csv,omitempty" yaml:"policy.csv,omitempty"`
@@ -42,8 +65,6 @@ type Rbac struct {
 type CustomImage struct {
 	//Flag if custom argocd-image should get used with gopass
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	//Name of used imagePullSecret to pull customImage
-	ImagePullSecret string `json:"imagePullSecret,omitempty" yaml:"imagePullSecret,omitempty"`
 	//List of gopass stores which should get cloned by argocd on startup
 	GopassStores []*GopassStore `json:"gopassStores,omitempty" yaml:"gopassStores,omitempty"`
 }

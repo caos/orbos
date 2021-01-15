@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 )
@@ -20,7 +21,13 @@ func ensure(
 	workerMachines []*initializedMachine,
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
+	gitClient *git.Client,
 ) (done bool, err error) {
+
+	desireFW := firewallFunc(monitor, *desired)
+	for _, machine := range append(controlplaneMachines, workerMachines...) {
+		desireFW(machine)
+	}
 
 	if err := scaleDown(append(workers, controlplane), k8sClient, uninitializeMachine, monitor, pdf); err != nil {
 		return false, err
@@ -60,7 +67,9 @@ func ensure(
 			target := targetVersion.DefineSoftware()
 			machine.desiredNodeagent.Software = &target
 			return *machine
-		})
+		},
+		gitClient,
+	)
 	if !scalingDone {
 		monitor.Info("Scaling is not done yet")
 	}

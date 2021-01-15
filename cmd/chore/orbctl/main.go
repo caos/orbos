@@ -8,16 +8,19 @@ import (
 
 func main() {
 
-	var debug bool
+	var debug, skipRequild bool
 	for idx, arg := range os.Args {
-		if arg == "--debug" {
+		switch arg {
+		case "--debug":
 			debug = true
-			os.Args = append(os.Args[0:idx], os.Args[idx+1:]...)
-			break
+			removeFromCommandArguments(idx)
+		case "--skip-rebuild":
+			skipRequild = true
+			removeFromCommandArguments(idx)
 		}
 	}
 
-	newOrbctl, err := chore.Orbctl(debug)
+	newOrbctl, err := chore.Orbctl(debug, skipRequild)
 	if err != nil {
 		panic(err)
 	}
@@ -31,4 +34,8 @@ func main() {
 	if err := cmd.Run(); err != nil {
 		panic(err)
 	}
+}
+
+func removeFromCommandArguments(idx int) {
+	os.Args = append(os.Args[0:idx], os.Args[idx+1:]...)
 }

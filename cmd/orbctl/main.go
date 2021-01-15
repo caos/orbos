@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"os"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/internal/stores/github"
 )
 
@@ -14,15 +16,17 @@ var (
 	version            = "none"
 	githubClientID     = "none"
 	githubClientSecret = "none"
+	monitor            = mntr.Monitor{
+		OnInfo:         mntr.LogMessage,
+		OnChange:       mntr.LogMessage,
+		OnError:        mntr.LogError,
+		OnRecoverPanic: mntr.LogPanic,
+	}
 )
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			_, _ = os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
-			os.Exit(1)
-		}
-	}()
+
+	defer monitor.RecoverPanic()
 
 	github.ClientID = githubClientID
 	github.ClientSecret = githubClientSecret
@@ -50,6 +54,7 @@ func main() {
 		ReplaceCommand(rootValues),
 		RebootCommand(rootValues),
 		ExecCommand(rootValues),
+		ListCommand(rootValues),
 	)
 
 	rootCmd.AddCommand(
