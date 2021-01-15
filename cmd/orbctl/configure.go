@@ -25,7 +25,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func ConfigCommand(rv RootValues) *cobra.Command {
+func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		kubeconfig   string
@@ -45,13 +45,19 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+		ctx := rv.Ctx
 
 		if orbConfig.URL == "" && newRepoURL == "" {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")

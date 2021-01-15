@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"github.com/caos/orbos/cmd/orbctl/cmds"
 	"github.com/caos/orbos/internal/controller"
 	"github.com/caos/orbos/internal/start"
@@ -11,7 +10,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
-func TakeoffCommand(rv RootValues) *cobra.Command {
+func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 	var (
 		verbose          bool
 		recur            bool
@@ -37,13 +36,17 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+		ctx := rv.Ctx
 
 		return cmds.Takeoff(
 			monitor,
@@ -63,7 +66,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func StartOrbiter(rv RootValues) *cobra.Command {
+func StartOrbiter(getRv GetRootValues) *cobra.Command {
 	var (
 		verbose          bool
 		recur            bool
@@ -87,14 +90,18 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
 		}
 
-		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+		ctx := rv.Ctx
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
@@ -116,7 +123,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func StartBoom(rv RootValues) *cobra.Command {
+func StartBoom(getRv GetRootValues) *cobra.Command {
 	var (
 		localmode bool
 		cmd       = &cobra.Command{
@@ -130,25 +137,28 @@ func StartBoom(rv RootValues) *cobra.Command {
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, _, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
 
 		return start.Boom(monitor, orbConfig.Path, localmode, version)
 	}
 	return cmd
 }
 
-func StartDatabase(rv RootValues) *cobra.Command {
+func StartDatabase(getRv GetRootValues) *cobra.Command {
 	var (
-		crdMode     bool
-		metricsAddr string
-		kubeconfig  string
-		cmd         = &cobra.Command{
+		crdMode    bool
+		kubeconfig string
+		cmd        = &cobra.Command{
 			Use:   "database",
 			Short: "Launch a database operator",
 			Long:  "Ensures a desired state of the database",
@@ -156,20 +166,23 @@ func StartDatabase(rv RootValues) *cobra.Command {
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, _, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+
 		if crdMode {
-			return controller.Start(monitor, version, metricsAddr, controller.Database)
+			return controller.Start(monitor, version, rv.MetricsAddr, controller.Database)
 		} else {
 			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
 			if err != nil {
@@ -185,12 +198,11 @@ func StartDatabase(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func StartNetworking(rv RootValues) *cobra.Command {
+func StartNetworking(getRv GetRootValues) *cobra.Command {
 	var (
-		crdMode     bool
-		metricsAddr string
-		kubeconfig  string
-		cmd         = &cobra.Command{
+		crdMode    bool
+		kubeconfig string
+		cmd        = &cobra.Command{
 			Use:   "networking",
 			Short: "Launch a networking operator",
 			Long:  "Ensures a desired state of networking for an application",
@@ -198,20 +210,23 @@ func StartNetworking(rv RootValues) *cobra.Command {
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
 	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, _, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+
 		if crdMode {
-			return controller.Start(monitor, version, metricsAddr, controller.Networking)
+			return controller.Start(monitor, version, rv.MetricsAddr, controller.Networking)
 		} else {
 			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
 			if err != nil {

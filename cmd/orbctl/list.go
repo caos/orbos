@@ -14,7 +14,7 @@ import (
 	"github.com/caos/orbos/pkg/tree"
 )
 
-func ListCommand(rv RootValues) *cobra.Command {
+func ListCommand(getRv GetRootValues) *cobra.Command {
 	var (
 		column, context string
 		cmd             = &cobra.Command{
@@ -30,13 +30,17 @@ func ListCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&context, "context", "", "Print machines from this context only")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
 

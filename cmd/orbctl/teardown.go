@@ -13,7 +13,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
-func TeardownCommand(rv RootValues) *cobra.Command {
+func TeardownCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		cmd = &cobra.Command{
@@ -45,13 +45,18 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func WriteSecretCommand(rv RootValues) *cobra.Command {
+func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		value string
@@ -40,13 +40,17 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		if err := orbConfig.IsComplete(); err != nil {
 			return err

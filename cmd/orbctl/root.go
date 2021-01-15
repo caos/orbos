@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -13,15 +14,25 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-type RootValues func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc, error)
+type RootValues struct {
+	Ctx         context.Context
+	Monitor     mntr.Monitor
+	OrbConfig   *orb.Orb
+	GitClient   *git.Client
+	MetricsAddr string
+	ErrFunc     errFunc
+}
+
+type GetRootValues func() (*RootValues, error)
 
 type errFunc func(err error) error
 
-func RootCommand() (*cobra.Command, RootValues) {
+func RootCommand() (*cobra.Command, GetRootValues) {
 
 	var (
 		verbose       bool
 		orbConfigPath string
+		metricsAddr   string
 	)
 
 	cmd := &cobra.Command{
@@ -44,8 +55,9 @@ $ orbctl -f ~/.orb/myorb [command]
 	flags := cmd.PersistentFlags()
 	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
+	flag.StringVar(&metricsAddr, "metrics-addr", "", "The address the metric endpoint binds to.")
 
-	return cmd, func() (context.Context, mntr.Monitor, *orb.Orb, *git.Client, errFunc, error) {
+	return cmd, func() (*RootValues, error) {
 
 		if verbose {
 			monitor = monitor.Verbose()
@@ -55,16 +67,23 @@ $ orbctl -f ~/.orb/myorb [command]
 		orbConfig, err := orb.ParseOrbConfig(prunedPath)
 		if err != nil {
 			orbConfig = &orb.Orb{Path: prunedPath}
-			return nil, mntr.Monitor{}, nil, nil, nil, err
+			return nil, err
 		}
 
 		ctx := context.Background()
 
-		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch"), func(err error) error {
-			if err != nil {
-				monitor.Error(err)
-			}
-			return nil
+		return &RootValues{
+			Ctx:         ctx,
+			Monitor:     monitor,
+			OrbConfig:   orbConfig,
+			GitClient:   git.New(ctx, monitor, "orbos", "orbos@caos.ch"),
+			MetricsAddr: metricsAddr,
+			ErrFunc: func(err error) error {
+				if err != nil {
+					monitor.Error(err)
+				}
+				return nil
+			},
 		}, nil
 	}
 }

@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func BackupCommand(rv RootValues) *cobra.Command {
+func BackupCommand(getRv GetRootValues) *cobra.Command {
 	var (
 		backup string
 		cmd    = &cobra.Command{
@@ -21,13 +21,18 @@ func BackupCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&backup, "backup", "", "Name used for backup folder")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		if err := orbConfig.IsConnectable(); err != nil {
 			return err

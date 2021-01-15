@@ -16,7 +16,7 @@ import (
 	"github.com/caos/orbos/pkg/git"
 )
 
-func EditCommand(rv RootValues) *cobra.Command {
+func EditCommand(getRv GetRootValues) *cobra.Command {
 	return &cobra.Command{
 		Use:     "edit [file]",
 		Short:   "Edit a file and push changes to the remote orb repository",
@@ -24,13 +24,16 @@ func EditCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			_, _, orbConfig, gitClient, errFunc, err := rv()
+			rv, err := getRv()
 			if err != nil {
 				return err
 			}
 			defer func() {
-				err = errFunc(err)
+				err = rv.ErrFunc(err)
 			}()
+
+			orbConfig := rv.OrbConfig
+			gitClient := rv.GitClient
 
 			if err := orbConfig.IsConnectable(); err != nil {
 				return err

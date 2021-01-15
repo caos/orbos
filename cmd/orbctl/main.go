@@ -32,35 +32,35 @@ func main() {
 	github.ClientSecret = githubClientSecret
 	github.Key = RandStringBytes(32)
 
-	rootCmd, rootValues := RootCommand()
+	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
-	takeoff := TakeoffCommand(rootValues)
+	takeoff := TakeoffCommand(getRootValues)
 	takeoff.AddCommand(
-		StartBoom(rootValues),
-		StartOrbiter(rootValues),
-		StartDatabase(rootValues),
-		StartNetworking(rootValues),
+		StartBoom(getRootValues),
+		StartOrbiter(getRootValues),
+		StartDatabase(getRootValues),
+		StartNetworking(getRootValues),
 	)
 
 	nodes := NodeCommand()
 	nodes.AddCommand(
-		ReplaceCommand(rootValues),
-		RebootCommand(rootValues),
-		ExecCommand(rootValues),
-		ListCommand(rootValues),
+		ReplaceCommand(getRootValues),
+		RebootCommand(getRootValues),
+		ExecCommand(getRootValues),
+		ListCommand(getRootValues),
 	)
 
 	rootCmd.AddCommand(
-		ReadSecretCommand(rootValues),
-		WriteSecretCommand(rootValues),
-		EditCommand(rootValues),
-		TeardownCommand(rootValues),
-		ConfigCommand(rootValues),
-		APICommand(rootValues),
-		BackupListCommand(rootValues),
-		RestoreCommand(rootValues),
-		BackupCommand(rootValues),
+		ReadSecretCommand(getRootValues),
+		WriteSecretCommand(getRootValues),
+		EditCommand(getRootValues),
+		TeardownCommand(getRootValues),
+		ConfigCommand(getRootValues),
+		APICommand(getRootValues),
+		BackupListCommand(getRootValues),
+		RestoreCommand(getRootValues),
+		BackupCommand(getRootValues),
 		takeoff,
 		nodes,
 	)
