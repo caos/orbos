@@ -39,7 +39,7 @@ clusters:
       controlplane:
         updatesdisabled: false
         provider: provider-under-test
-        nodes: 1
+        nodes: 3
         pool: management
         taints:
         - key: node-role.kubernetes.io/master
@@ -57,7 +57,7 @@ clusters:
       workers:
       - updatesdisabled: false
         provider: provider-under-test
-        nodes: 1
+        nodes: 3
         pool: application
       - updatesdisabled: false
         provider: provider-under-test
