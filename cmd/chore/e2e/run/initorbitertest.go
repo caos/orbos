@@ -51,7 +51,7 @@ clusters:
       verbose: false
       versions:
         kubernetes: v1.18.8
-        orbiter: %s
+        orbiter: %s-dev
       workers:
       - updatesdisabled: false
         provider: provider-under-test
@@ -82,6 +82,7 @@ providers:
               protocol: https
               path: /ambassador/v0/check_ready
               code: 200
+            proxyprotocol: true
           - name: httpingress
             frontendport: 80
             backendport: 30080
@@ -93,6 +94,7 @@ providers:
               protocol: http
               path: /ambassador/v0/check_ready
               code: 200
+            proxyprotocol: true
         management:
         - ip: 192.168.122.10
           transport:

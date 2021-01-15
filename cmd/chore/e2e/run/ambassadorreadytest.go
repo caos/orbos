@@ -50,7 +50,7 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 
 	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpingress
 
-	msg, err := helpers.Check("http", ep.Location, ep.Frontendport, "/ambassador/v0/check_ready", 200, false)
+	msg, err := helpers.Check("https", ep.Location, ep.Frontendport, "/ambassador/v0/check_ready", 200, true)
 	fmt.Println(msg)
 	return err
 }

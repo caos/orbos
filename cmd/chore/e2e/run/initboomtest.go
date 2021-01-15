@@ -15,7 +15,7 @@ metadata:
   name: caos
   namespace: caos-system
 spec:
-  boomVersion: %s
+  boomVersion: %s-dev
   postApply:
     deploy: false
   metricCollection:
