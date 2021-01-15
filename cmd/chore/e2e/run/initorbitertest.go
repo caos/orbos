@@ -50,7 +50,7 @@ clusters:
         podcidr: 100.127.224.0/20
       verbose: false
       versions:
-        kubernetes: v1.16.0
+        kubernetes: v1.18.8
         orbiter: %s
       workers:
       - updatesdisabled: false
