@@ -2,19 +2,14 @@ package boom
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	var appName name.Application
 	appName = "boom"
-	monitorlabels := labels.GetMonitorLabels(instanceName, appName)
-	ls := map[string]string{
-		"app.kubernetes.io/instance":  "boom",
-		"app.kubernetes.io/part-of":   "orbos",
-		"app.kubernetes.io/component": "boom",
-	}
 
 	endpoint := &servicemonitor.ConfigEndpoint{
 		Port: "metrics",
@@ -24,8 +19,8 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	return &servicemonitor.Config{
 		Name:                  "boom-servicemonitor",
 		Endpoints:             []*servicemonitor.ConfigEndpoint{endpoint},
-		MonitorMatchingLabels: monitorlabels,
-		ServiceMatchingLabels: ls,
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, appName),
+		ServiceMatchingLabels: labels.MustK8sMap(labels.OpenOperatorSelector("boom.caos.ch")),
 		JobName:               "boom",
 	}
 }

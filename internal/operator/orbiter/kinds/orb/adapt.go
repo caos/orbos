@@ -16,6 +16,10 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+func OperatorSelector() *labels.Selector {
+	return labels.OpenOperatorSelector("orbiter.caos.ch")
+}
+
 func AdaptFunc(
 	operatorLabels *labels.Operator,
 	orbConfig *orb.Orb,

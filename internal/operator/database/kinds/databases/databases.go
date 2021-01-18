@@ -12,12 +12,19 @@ import (
 	core "k8s.io/api/core/v1"
 )
 
+const (
+	component = "database"
+)
+
+func ComponentSelector() *labels.Selector {
+	return labels.OpenComponentSelector(component)
+}
+
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
 	namespace string,
-	operatorLabels *labels.Operator,
 	apiLabels *labels.API,
 	timestamp string,
 	nodeselector map[string]string,
@@ -30,11 +37,14 @@ func GetQueryAndDestroyFuncs(
 	secrets map[string]*secret.Secret,
 	err error,
 ) {
+	componentLabels := labels.MustForComponent(apiLabels, component)
+	internalMonitor := monitor.WithField("component", component)
+
 	switch desiredTree.Common.Kind {
 	case "databases.caos.ch/CockroachDB":
-		return managed.AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desiredTree, currentTree)
-	case "databases.caos.ch/ProvidedDatabse":
-		return provided.AdaptFunc()(monitor, desiredTree, currentTree)
+		return managed.AdaptFunc(componentLabels, namespace, timestamp, nodeselector, tolerations, version, features)(internalMonitor, desiredTree, currentTree)
+	case "databases.caos.ch/ProvidedDatabase":
+		return provided.AdaptFunc()(internalMonitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, errors.Errorf("unknown database kind %s", desiredTree.Common.Kind)
 	}

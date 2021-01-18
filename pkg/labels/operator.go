@@ -21,6 +21,15 @@ func NoopOperator(product string) *Operator {
 	}}
 }
 
+func SelectorOperator(product, operator string) *Operator {
+	return &Operator{model: InternalOperator{
+		Version:               "unknown",
+		InternalPartofProp:    InternalPartofProp{PartOf: product},
+		InternalManagedByProp: InternalManagedByProp{ManagedBy: operator},
+		//		Major:                 major(version),
+	}}
+}
+
 func ForOperator(product, operator, version string) (*Operator, error) {
 
 	if operator == "" || version == "" {

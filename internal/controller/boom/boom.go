@@ -9,6 +9,8 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
 	"gopkg.in/yaml.v3"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"path/filepath"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,19 +26,26 @@ type Reconciler struct {
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	internalMonitor := r.Monitor.WithFields(map[string]interface{}{
-		"kind":      "boom",
-		"namespace": req.NamespacedName,
+		"kind": "boom",
+		"name": req.NamespacedName,
 	})
 
 	unstruct, err := r.ClientInt.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", req.Namespace, req.Name)
-	if err != nil {
+	if !macherrs.IsNotFound(err) && err != nil {
 		return ctrl.Result{}, err
 	}
 
-	data, err := yaml.Marshal(unstruct.Object)
+	var data []byte
+	if macherrs.IsNotFound(err) {
+		unstruct = &unstructured.Unstructured{Object: v1.GetEmpty(req.Namespace, req.Name)}
+		err = nil
+	}
+
+	dataInt, err := yaml.Marshal(unstruct.Object)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	data = dataInt
 
 	desired := &tree.Tree{}
 	if err := yaml.Unmarshal(data, &desired); err != nil {

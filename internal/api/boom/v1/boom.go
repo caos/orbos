@@ -47,3 +47,56 @@ type BoomList struct {
 func init() {
 	SchemeBuilder.Register(&Boom{}, &BoomList{})
 }
+
+func GetEmpty(namespace, name string) map[string]interface{} {
+	return map[string]interface{}{
+		"apiVersion": "caos.ch/v1",
+		"kind":       "Boom",
+		"metadata": map[string]interface{}{
+			"name":      name,
+			"namespace": namespace,
+		},
+		"spec": map[string]interface{}{
+			"forceApply": true,
+			"postApply": map[string]interface{}{
+				"deploy": false,
+			},
+			"preApply": map[string]interface{}{
+				"deploy": false,
+			},
+			"metricCollection": map[string]interface{}{
+				"deploy": false,
+			},
+			"logCollection": map[string]interface{}{
+				"deploy": false,
+			},
+			"nodeMetricsExporter": map[string]interface{}{
+				"deploy": false,
+			},
+			"systemdMetricsExporter": map[string]interface{}{
+				"deploy": false,
+			},
+			"monitoring": map[string]interface{}{
+				"deploy": false,
+			},
+			"apiGateway": map[string]interface{}{
+				"deploy": false,
+			},
+			"kubeMetricsExporter": map[string]interface{}{
+				"deploy": false,
+			},
+			"reconciling": map[string]interface{}{
+				"deploy": false,
+			},
+			"metricsPersisting": map[string]interface{}{
+				"deploy": false,
+			},
+			"logsPersisting": map[string]interface{}{
+				"deploy": false,
+			},
+			"metricsServer": map[string]interface{}{
+				"deploy": true,
+			},
+		},
+	}
+}
