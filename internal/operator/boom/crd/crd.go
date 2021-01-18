@@ -2,6 +2,9 @@ package crd
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/operator/boom/cmd"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
@@ -93,6 +96,35 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 		c.status = errors.New("No bundle for crd")
 		monitor.Error(c.status)
 		return
+	}
+
+	boomSpec := toolsetCRD.Spec.Boom
+	if boomSpec != nil && boomSpec.SelfReconciling && boomSpec.Version != "" {
+		conf, err := clientgo.GetClusterConfig()
+		if err != nil {
+			c.status = err
+			return
+		}
+
+		dummyKubeconfig := ""
+		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
+		if err := k8sClient.RefreshConfig(conf); err != nil {
+			c.status = err
+			return
+		}
+
+		if err := cmd.Reconcile(
+			monitor,
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, toolsetCRD.APIVersion),
+			k8sClient,
+			boomSpec,
+			boomSpec.Version,
+		); err != nil {
+			c.status = err
+			return
+		}
+	} else {
+		monitor.Info("not reconciling BOOM itself as selfReconciling is not specified to true or version is empty")
 	}
 
 	c.status = c.bundle.Reconcile(currentResourceList, toolsetCRD.Spec)

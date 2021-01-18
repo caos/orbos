@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/caos/orbos/internal/controller"
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/utils/clientgo"
 
 	"github.com/caos/orbos/pkg/git"
 
@@ -16,6 +19,8 @@ func main() {
 
 	orbconfig := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
+	metricsAddr := flag.String("metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	crdMode := flag.Bool("crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	flag.Parse()
 
@@ -29,21 +34,34 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
-	ensure := git.New(context.Background(), monitor.WithField("task", "ensure"), "Boom", "boom@caos.ch")
-	query := git.New(context.Background(), monitor.WithField("task", "query"), "Boom", "boom@caos.ch")
+	if *crdMode {
+		clientgo.InConfig = false
+		_, err := orb.ParseOrbConfig(helpers.PruneHome(*orbconfig))
+		if err != nil {
+			panic(err)
+		}
 
-	ensure.Clone()
-	query.Clone()
+		if err := controller.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, controller.Boom); err != nil {
+			panic(err)
+		}
+	} else {
 
-	takeoff, _ := boom.Takeoff(
-		monitor,
-		"./artifacts",
-		true,
-		helpers.PruneHome(*orbconfig),
-		ensure, query,
-	)
+		ensure := git.New(context.Background(), monitor.WithField("task", "ensure"), "Boom", "boom@caos.ch")
+		query := git.New(context.Background(), monitor.WithField("task", "query"), "Boom", "boom@caos.ch")
 
-	for {
-		takeoff()
+		ensure.Clone()
+		query.Clone()
+
+		takeoff, _ := boom.Takeoff(
+			monitor,
+			"./artifacts",
+			true,
+			helpers.PruneHome(*orbconfig),
+			ensure, query,
+		)
+
+		for {
+			takeoff()
+		}
 	}
 }

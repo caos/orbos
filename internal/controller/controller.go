@@ -1,8 +1,10 @@
 package controller
 
 import (
+	boomv1 "github.com/caos/orbos/internal/api/boom/v1"
 	databasev1 "github.com/caos/orbos/internal/api/database/v1"
 	networkingv1 "github.com/caos/orbos/internal/api/networking/v1"
+	"github.com/caos/orbos/internal/controller/boom"
 	"github.com/caos/orbos/internal/controller/database"
 	"github.com/caos/orbos/internal/controller/networking"
 	"github.com/caos/orbos/mntr"
@@ -16,6 +18,7 @@ import (
 const (
 	Database   = "database"
 	Networking = "networking"
+	Boom       = "boom"
 )
 
 var (
@@ -27,9 +30,10 @@ func init() {
 
 	_ = databasev1.AddToScheme(scheme)
 	_ = networkingv1.AddToScheme(scheme)
+	_ = boomv1.AddToScheme(scheme)
 }
 
-func Start(monitor mntr.Monitor, version, metricsAddr string, features ...string) error {
+func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string, features ...string) error {
 	cfg := ctrl.GetConfigOrDie()
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme,
@@ -59,6 +63,16 @@ func Start(monitor mntr.Monitor, version, metricsAddr string, features ...string
 				Monitor:   monitor,
 				Scheme:    mgr.GetScheme(),
 				Version:   version,
+			}).SetupWithManager(mgr); err != nil {
+				return errors.Wrap(err, "unable to create controller")
+			}
+		case Boom:
+			if err = (&boom.Reconciler{
+				ClientInt:          kubernetes.NewK8sClientWithConfig(monitor, cfg),
+				Monitor:            monitor,
+				Scheme:             mgr.GetScheme(),
+				ToolsDirectoryPath: toolsDirectoryPath,
+				Version:            version,
 			}).SetupWithManager(mgr); err != nil {
 				return errors.Wrap(err, "unable to create controller")
 			}

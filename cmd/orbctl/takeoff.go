@@ -182,7 +182,7 @@ func StartDatabase(getRv GetRootValues) *cobra.Command {
 		orbConfig := rv.OrbConfig
 
 		if crdMode {
-			return controller.Start(monitor, version, rv.MetricsAddr, controller.Database)
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Database)
 		} else {
 			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
 			if err != nil {
@@ -226,7 +226,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 		orbConfig := rv.OrbConfig
 
 		if crdMode {
-			return controller.Start(monitor, version, rv.MetricsAddr, controller.Networking)
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Networking)
 		} else {
 			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
 			if err != nil {

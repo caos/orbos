@@ -40,7 +40,7 @@ func main() {
 			panic(err)
 		}
 
-		if err := controller.Start(monitor, "crdoperators", *metricsAddr, "database"); err != nil {
+		if err := controller.Start(monitor, "crdoperators", "./artifcats", *metricsAddr, controller.Database); err != nil {
 			panic(err)
 		}
 	} else {

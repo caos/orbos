@@ -6,15 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/pkg/labels"
-
-	"github.com/caos/orbos/pkg/kubernetes"
-
 	orbosapi "github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
-	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/boom/crd"
 	crdconfig "github.com/caos/orbos/internal/operator/boom/crd/config"
 	"github.com/caos/orbos/internal/operator/boom/current"
@@ -136,39 +131,10 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		"action": "reconiling",
 	})
 
-	toolsetCRD, apiKind, apiVersion, err := c.getCrdContent()
+	toolsetCRD, err := c.getCrdContent()
 	if err != nil {
 		c.status = err
 		return
-	}
-
-	boomSpec := toolsetCRD.Spec.Boom
-	if boomSpec != nil && boomSpec.SelfReconciling && boomSpec.Version != "" {
-		conf, err := clientgo.GetClusterConfig()
-		if err != nil {
-			c.status = err
-			return
-		}
-
-		dummyKubeconfig := ""
-		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
-		if err := k8sClient.RefreshConfig(conf); err != nil {
-			c.status = err
-			return
-		}
-
-		if err := cmd.Reconcile(
-			monitor,
-			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), apiKind, apiVersion),
-			k8sClient,
-			boomSpec,
-			boomSpec.Version,
-		); err != nil {
-			c.status = err
-			return
-		}
-	} else {
-		monitor.Info("not reconciling BOOM itself as selfReconciling is not specified to true or version is empty")
 	}
 
 	// pre-steps
@@ -212,19 +178,19 @@ func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
 
 }
 
-func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, string, string, error) {
+func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
 	desiredTree, err := orbosapi.ReadBoomYml(c.git)
 	if err != nil {
-		return nil, "", "", err
+		return nil, err
 	}
 
-	desiredKind, _, _, apiKind, apiVersion, err := api.ParseToolset(desiredTree)
+	desiredKind, _, _, _, _, err := api.ParseToolset(desiredTree)
 	if err != nil {
-		return nil, "", "", errors.Wrap(err, "parsing desired state failed")
+		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desiredKind
 
-	return desiredKind, apiKind, apiVersion, nil
+	return desiredKind, nil
 }
 
 func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource) {
@@ -238,7 +204,7 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 		return
 	}
 
-	toolsetCRD, _, _, err := c.getCrdContent()
+	toolsetCRD, err := c.getCrdContent()
 	if err != nil {
 		c.status = err
 		return
