@@ -42,4 +42,5 @@ require (
 	k8s.io/client-go v0.19.2
 	k8s.io/kubectl v0.18.3
 	sigs.k8s.io/controller-runtime v0.7.0
+	sigs.k8s.io/controller-tools v0.4.1
 )
