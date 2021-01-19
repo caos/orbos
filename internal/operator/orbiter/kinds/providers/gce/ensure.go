@@ -86,7 +86,6 @@ func query(
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
 				if pool == destPool {
-
 					key := fmt.Sprintf(
 						"%s:%d%s",
 						"0.0.0.0",
@@ -94,12 +93,14 @@ func query(
 						lb.healthcheck.gce.RequestPath)
 
 					value := fmt.Sprintf(
-						"%d@%s://%s:%d%s",
-						lb.healthcheck.desired.Code,
+						"--protocol %s --ip %s --port %d --path %s --status %d --proxy=%t",
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
 						internalPort(lb),
-						lb.healthcheck.desired.Path)
+						lb.healthcheck.desired.Path,
+						lb.healthcheck.desired.Code,
+						lb.healthcheck.proxyProtocol,
+					)
 
 					if v := na.Software.Health.Config[key]; v != value {
 						na.Software.Health.Config[key] = value

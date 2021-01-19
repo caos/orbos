@@ -45,9 +45,9 @@ func Reconcile(monitor mntr.Monitor, k8sClient *kubernetes.Client, binaryVersion
 
 	recMonitor := monitor.WithField("version", boomVersion)
 
-	imageRegistry := boomSpec.CustomImageRegistry
-	if imageRegistry == "" {
-		imageRegistry = "ghcr.io"
+	imageRegistry := "ghcr.io"
+	if boomSpec != nil && boomSpec.CustomImageRegistry != "" {
+		imageRegistry = boomSpec.CustomImageRegistry
 	}
 
 	if !deployBoom {

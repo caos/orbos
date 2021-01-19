@@ -3,11 +3,8 @@ package centos
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -34,13 +31,8 @@ func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 			}
 		}
 
-		cmd := exec.Command("systemctl", "is-active", "firewalld")
-		if monitor.IsVerbose() {
-			fmt.Println(strings.Join(cmd.Args, " "))
-			cmd.Stdout = os.Stdout
-		}
-
-		if cmd.Run() != nil || len(ensurers) == 0 {
+		_, inactiveErr := runCommand(monitor, "systemctl", "is-active", "firewalld")
+		if inactiveErr == nil && len(ensurers) == 0 {
 			monitor.Debug("Not changing firewall")
 			return current, nil, nil
 		}
@@ -80,22 +72,37 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 	current.Sources = sources
 
 	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), ignore)
+	if err != nil {
+		return current, nil, err
+	}
 
 	ensureIfaces, removeIfaces, err := getEnsureAndRemoveInterfaces(zoneName, current, desired)
+	if err != nil {
+		return current, nil, err
+	}
 
 	addSources, removeSources, err := getAddAndRemoveSources(zoneName, current, desired)
+	if err != nil {
+		return current, nil, err
+	}
+
+	ensureTarget, err := getEnsureTarget(monitor, zoneName)
+	if err != nil {
+		return current, nil, err
+	}
 
 	monitor.WithFields(map[string]interface{}{
 		"open":  strings.Join(addPorts, ";"),
 		"close": strings.Join(removePorts, ";"),
 	}).Debug("firewall changes determined")
 
-	if (addPorts == nil || len(addPorts) == 0) &&
-		(removePorts == nil || len(removePorts) == 0) &&
-		(addSources == nil || len(addSources) == 0) &&
-		(removeSources == nil || len(removeSources) == 0) &&
-		(ensureIfaces == nil || len(ensureIfaces) == 0) &&
-		(removeIfaces == nil || len(removeIfaces) == 0) {
+	if len(addPorts) == 0 &&
+		len(removePorts) == 0 &&
+		len(addSources) == 0 &&
+		len(removeSources) == 0 &&
+		len(ensureIfaces) == 0 &&
+		len(removeIfaces) == 0 &&
+		len(ensureTarget) == 0 {
 		return current, nil, nil
 	}
 
@@ -108,6 +115,10 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneName))
 		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
+			return err
+		}
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneName))
+		if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
 			return err
 		}
 
@@ -136,69 +147,23 @@ func ensure(monitor mntr.Monitor, changes []string, zone string) error {
 		return nil
 	}
 
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-
-	cmd := exec.Command("systemctl", "enable", "firewalld")
-	cmd.Stderr = errBuf
-
-	fullCmd := strings.Join(cmd.Args, " ")
-	if monitor.IsVerbose() {
-		fmt.Println(fullCmd)
-		cmd.Stdout = os.Stdout
+	if _, err := runCommand(monitor, "systemctl", "enable", "firewalld"); err != nil {
+		return err
 	}
 
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
-	}
-
-	errBuf.Reset()
-	cmd = exec.Command("systemctl", "start", "firewalld")
-	cmd.Stderr = errBuf
-
-	fullCmd = strings.Join(cmd.Args, " ")
-	if monitor.IsVerbose() {
-		fmt.Println(fullCmd)
-		cmd.Stdout = os.Stdout
-	}
-
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errBuf.String())
+	if _, err := runCommand(monitor, "systemctl", "start", "firewalld"); err != nil {
+		return err
 	}
 
 	return changeFirewall(monitor, changes, zone)
 }
 
 func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err error) {
-
-	changesMonitor := monitor.WithField("changes", strings.Join(changes, ";"))
-	changesMonitor.Debug("Changing firewall")
-
-	defer func() {
-		if err == nil {
-			changesMonitor.Debug("firewall changed")
-		} else {
-			changesMonitor.Error(err)
-		}
-	}()
-
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
 	if len(changes) == 0 {
 		return nil
 	}
 
-	errBuf.Reset()
-	cmd := exec.Command("firewall-cmd", append([]string{"--permanent", "--zone", zone}, changes...)...)
-	cmd.Stderr = errBuf
-
-	fullCmd := strings.Join(cmd.Args, " ")
-	if monitor.IsVerbose() {
-		fmt.Println(fullCmd)
-		cmd.Stdout = os.Stdout
-	}
-
-	if err := errors.Wrapf(cmd.Run(), "running %s failed with stderr %s", fullCmd, errBuf.String()); err != nil {
+	if _, err := runFirewallCommand(monitor, append([]string{"--permanent", "--zone", zone}, changes...)...); err != nil {
 		return err
 	}
 
@@ -206,37 +171,42 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err er
 }
 
 func reloadFirewall(monitor mntr.Monitor) error {
-	errBuf := new(bytes.Buffer)
-	errBuf.Reset()
-	cmd := exec.Command("firewall-cmd", "--reload")
-	cmd.Stderr = errBuf
-	if monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
 
-	return errors.Wrapf(cmd.Run(), "running firewall-cmd --reload failed with stderr %s", errBuf.String())
+	_, err := runFirewallCommand(monitor, "--reload")
+	return err
 }
 
 func listFirewall(monitor mntr.Monitor, zone string, arg string) ([]string, error) {
+
+	out, err := runFirewallCommand(monitor, "--zone", zone, arg)
+	return strings.Fields(out), err
+}
+
+func runFirewallCommand(monitor mntr.Monitor, args ...string) (string, error) {
+	return runCommand(monitor, "firewall-cmd", args...)
+}
+
+func runCommand(monitor mntr.Monitor, binary string, args ...string) (string, error) {
+
 	outBuf := new(bytes.Buffer)
 	defer outBuf.Reset()
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.Command("firewall-cmd", arg, "--zone", zone)
+	cmd := exec.Command(binary, args...)
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 
+	fullCmd := fmt.Sprintf("'%s'", strings.Join(cmd.Args, "' '"))
 	if err := cmd.Run(); err != nil {
-		return nil, errors.Wrapf(err, "running firewall-cmd %s in order to list firewall failed with stderr %s", arg, errBuf.String())
+		return "", fmt.Errorf(`running %s failed with stderr %s: %w`, fullCmd, errBuf.String(), err)
 	}
 
 	stdout := outBuf.String()
 	if monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
+		fmt.Println(fullCmd)
 		fmt.Println(stdout)
 	}
 
-	return strings.Fields(stdout), nil
+	return strings.TrimSuffix(stdout, "\n"), nil
 }

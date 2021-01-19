@@ -38,7 +38,7 @@ type SSHKey struct {
 	Public  *secret.Secret `yaml:",omitempty"`
 }
 
-func (d Desired) validate() error {
+func (d Desired) validateAdapt() error {
 	if d.Loadbalancing == nil {
 		return errors.New("no loadbalancing configured")
 	}
@@ -52,6 +52,31 @@ func (d Desired) validate() error {
 	}
 	return nil
 }
+
+func (d Desired) validateAPIToken() error {
+	if d.Spec.APIToken == nil ||
+		d.Spec.APIToken.Value == "" {
+		return errors.New("apitoken missing... please provide a cloudscale api token using orbctl writesecret command")
+	}
+	return nil
+}
+
+func (d Desired) validateQuery() error {
+
+	if err := d.validateAPIToken(); err != nil {
+		return err
+	}
+
+	if d.Spec.SSHKey.Private == nil ||
+		d.Spec.SSHKey.Private.Value == "" ||
+		d.Spec.SSHKey.Public == nil ||
+		d.Spec.SSHKey.Public.Value == "" {
+		return errors.New("ssh key missing... please initialize your orb using orbctl configure command")
+	}
+
+	return nil
+}
+
 func parseDesired(desiredTree *tree.Tree) (*Desired, error) {
 	desiredKind := &Desired{
 		Common: desiredTree.Common,

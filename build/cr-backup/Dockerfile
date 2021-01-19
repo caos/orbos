@@ -1,6 +1,6 @@
-FROM cockroachdb/cockroach:v20.1.8
+FROM cockroachdb/cockroach:v20.2.3
 
-RUN apt-get -y update && apt-get -y install curl wget
+RUN microdnf install curl wget tar gzip
 
 RUN wget https://storage.googleapis.com/oauth2l/latest/linux_amd64.tgz
 RUN tar zxvf linux_amd64.tgz

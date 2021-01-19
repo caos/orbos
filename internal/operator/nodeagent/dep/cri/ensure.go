@@ -38,8 +38,12 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		}
 	}
 
+	// Obviously, docker doesn't care about the exact containerd version, so neighter should ORBITER
+	// https://docs.docker.com/engine/install/centos/
+	// https://docs.docker.com/engine/install/ubuntu/
 	if err := c.manager.Install(&dep.Software{
 		Package: "containerd.io",
+		Version: containerdVersion,
 	}); err != nil {
 		c.monitor.Error(err)
 	}

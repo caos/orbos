@@ -3,13 +3,10 @@ package dynamic
 import (
 	"bytes"
 	"fmt"
-	"net"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
-
-	"github.com/pires/go-proxyproto"
 
 	"github.com/caos/orbos/internal/secret"
 
@@ -135,25 +132,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl, nodeAgentsCurrent)
 
 			current.Current.Spec = enrichedVIPs
-			doReset := true
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
-
-				if doReset {
-					// Reset LB Software and whole Firewalls
-					for _, id := range nodeagents.List() {
-						na, found := nodeagents.Get(id)
-						if !found {
-							continue
-						}
-						na.Firewall = &common.Firewall{}
-						if na.Software != nil {
-							na.Software.KeepaliveD = common.Package{}
-							na.Software.Nginx = common.Package{}
-						}
-					}
-				}
-				doReset = false
-
 				var lbMachines []infra.Machine
 
 				done := true
@@ -318,7 +297,7 @@ vrrp_sync_group VG1 {
 }
 
 {{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ vip $vip }} {
-	script       "/usr/local/bin/health 200@http://127.0.0.1:29999/ready"
+	script       "/usr/local/bin/health --protocol http --ip 127.0.0.1 --port 29999 --path /ready --status 200"
 	interval 2   # check every 2 seconds
 	fall 15      # require 15 failures for KO
 	rise 2       # require 2 successes for OK
@@ -478,7 +457,7 @@ http {
 									if !ok {
 										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
 									}
-									nodeNatDesires.Firewall = common.ToFirewall("external", srcFW)
+									nodeNatDesires.Firewall.Merge(common.ToFirewall("external", srcFW))
 									nodeNatDesires.Machine = machine
 
 									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
@@ -548,39 +527,17 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 }
 
 func probe(probeType, ip string, port uint16, proxyProtocol bool, hc HealthChecks, source Transport) {
-	vipProbe := fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path)
 
 	var success float64
-	if proxyProtocol {
-		header := &proxyproto.Header{
-			Version:           1,
-			Command:           proxyproto.PROXY,
-			TransportProtocol: proxyproto.TCPv4,
-			SourceAddr: &net.TCPAddr{
-				IP:   net.ParseIP("10.1.1.1"),
-				Port: 1000,
-			},
-			DestinationAddr: &net.TCPAddr{
-				IP:   net.ParseIP(ip),
-				Port: int(port),
-			},
-		}
-
-		_, err := helpers.CheckProxy(vipProbe, int(hc.Code), header)
-		if err == nil {
-			success = 1
-		}
-	} else {
-		_, err := helpers.Check(vipProbe, int(hc.Code))
-		if err == nil {
-			success = 1
-		}
+	_, err := helpers.Check(hc.Protocol, ip, port, hc.Path, int(hc.Code), proxyProtocol)
+	if err == nil {
+		success = 1
 	}
 
 	probes.With(prometheus.Labels{
 		"name":   source.Name,
 		"type":   probeType,
-		"target": vipProbe,
+		"target": fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path),
 	}).Set(success)
 }
 

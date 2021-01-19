@@ -27,7 +27,7 @@ type Keys struct {
 	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
 }
 
-func (d DesiredV0) validate() error {
+func (d DesiredV0) validateAdapt() error {
 
 	for pool, machines := range d.Spec.Pools {
 		for _, machine := range machines {
@@ -36,6 +36,24 @@ func (d DesiredV0) validate() error {
 			}
 		}
 	}
+	return nil
+}
+
+func (d DesiredV0) validateQuery() error {
+
+	if d.Spec.Keys == nil ||
+		d.Spec.Keys.BootstrapKeyPrivate == nil ||
+		d.Spec.Keys.BootstrapKeyPrivate.Value == "" {
+		return errors.New("bootstrap private ssh key missing... please provide a private ssh bootstrap key using orbctl writesecret command")
+	}
+
+	if d.Spec.Keys.MaintenanceKeyPrivate == nil ||
+		d.Spec.Keys.MaintenanceKeyPrivate.Value == "" ||
+		d.Spec.Keys.MaintenanceKeyPublic == nil ||
+		d.Spec.Keys.MaintenanceKeyPublic.Value == "" {
+		return errors.New("maintenance ssh key missing... please initialize your orb using orbctl configure command")
+	}
+
 	return nil
 }
 

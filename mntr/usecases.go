@@ -16,6 +16,12 @@ func LogError(err error, fields map[string]string) {
 	}
 }
 
+func LogPanic(recov interface{}, fields map[string]string) {
+	if recov != nil {
+		log(fields)
+	}
+}
+
 func log(fields map[string]string) {
 	WriteToStdout(LogRecord(AggregateLogFields(fields)))
 }
