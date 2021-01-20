@@ -96,6 +96,8 @@ type ClientInt interface {
 	GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error)
 	ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error
 	DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error
+	ApplyCRDResource(crd *unstructured.Unstructured) error
+	DeleteCRDResource(group, version, kind, name string) error
 
 	ApplyCronJob(rsc *v1beta1.CronJob) error
 	DeleteCronJob(namespace string, name string) error
@@ -1233,7 +1235,6 @@ func checkReady(containers []containerStatus) bool {
 
 func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error) {
 	crds := c.apixv1beta1client.CustomResourceDefinitions()
-
 	return crds.Get(context.Background(), name, mach.GetOptions{})
 }
 
@@ -1249,6 +1250,7 @@ func (c *Client) GetNamespacedCRDResource(group, version, kind, namespace, name 
 
 	return resource.Get(context.Background(), name, mach.GetOptions{})
 }
+
 func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error {
 	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
 		Group: group,
@@ -1287,6 +1289,51 @@ func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, na
 	}
 
 	return c.dynamic.Resource(mapping.Resource).Namespace(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyCRDResource(crd *unstructured.Unstructured) error {
+	kind := crd.Object["kind"].(string)
+	apiVersion := strings.Split(crd.Object["apiVersion"].(string), "/")
+	metadata := crd.Object["metadata"].(map[string]interface{})
+	name := metadata["name"].(string)
+
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: apiVersion[0],
+		Kind:  kind,
+	}, apiVersion[1])
+	if err != nil {
+		return err
+	}
+
+	resources := c.dynamic.Resource(mapping.Resource)
+	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
+	if err != nil && !macherrs.IsNotFound(err) {
+		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+	}
+	if err == nil {
+		crd.SetResourceVersion(existing.GetResourceVersion())
+	}
+	err = nil
+
+	return c.applyResource("crd", name, func() error {
+		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
+		return err
+	}, func() error {
+		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) DeleteCRDResource(group, version, kind, name string) error {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return err
+	}
+
+	return c.dynamic.Resource(mapping.Resource).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ExecInPodOfDeployment(namespace, name, container, command string) error {

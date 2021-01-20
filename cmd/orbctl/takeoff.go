@@ -126,6 +126,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 func StartBoom(getRv GetRootValues) *cobra.Command {
 	var (
 		localmode bool
+		crdMode   bool
 		cmd       = &cobra.Command{
 			Use:   "boom",
 			Short: "Launch a boom",
@@ -135,6 +136,7 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
+	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
@@ -149,7 +151,11 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 
-		return start.Boom(monitor, orbConfig.Path, localmode, version)
+		if crdMode {
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Boom)
+		} else {
+			return start.Boom(monitor, orbConfig.Path, localmode, version)
+		}
 	}
 	return cmd
 }
