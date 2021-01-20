@@ -7,6 +7,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
@@ -68,6 +71,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 		destroy          bool
 		deploy           bool
 		ingestionAddress string
+		pprof            bool
 		cmd              = &cobra.Command{
 			Use:   "orbiter",
 			Short: "Launch an orbiter",
@@ -78,6 +82,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", true, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
+	flags.BoolVar(&pprof, "pprof", false, "Start pprof to analyse memory usage")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
@@ -106,6 +111,12 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			OrbConfigPath:    orbConfig.Path,
 			GitCommit:        gitCommit,
 			IngestionAddress: ingestionAddress,
+		}
+
+		if pprof {
+			go func() {
+				log.Println(http.ListenAndServe("localhost:6060", nil))
+			}()
 		}
 
 		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)

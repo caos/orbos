@@ -23,6 +23,7 @@ func AdaptFunc(
 	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
+	pprof bool,
 	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR),
 	gitClient *git.Client,
@@ -109,6 +110,7 @@ func AdaptFunc(
 				monitor,
 				apiLabels,
 				k8sClient,
+				pprof,
 				desiredKind.Spec.Versions.Orbiter,
 				imageRegistry,
 			); err != nil {
