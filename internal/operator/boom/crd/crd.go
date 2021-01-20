@@ -75,7 +75,7 @@ func (c *Crd) GetBundle() *bundle.Bundle {
 	return c.bundle
 }
 
-func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetslatest.Toolset) {
+func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetslatest.Toolset, gitops bool) {
 	if c.GetStatus() != nil {
 		return
 	}
@@ -119,6 +119,7 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 			k8sClient,
 			boomSpec,
 			boomSpec.Version,
+			gitops,
 		); err != nil {
 			c.status = err
 			return

@@ -178,6 +178,6 @@ func (a *App) ReconcileCrd(namespacedName string, toolsetCRD *tree.Tree) error {
 		return err
 	}
 
-	managedcrd.Reconcile(currentResourceList, desired)
+	managedcrd.Reconcile(currentResourceList, desired, false)
 	return managedcrd.GetStatus()
 }

@@ -22,7 +22,8 @@ func EnsureBoomArtifacts(
 	tolerations k8s.Tolerations,
 	nodeselector map[string]string,
 	resources *k8s.Resources,
-	imageRegistry string) error {
+	imageRegistry string,
+	gitops bool) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,
@@ -81,7 +82,8 @@ func EnsureBoomArtifacts(
 
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
-	crd := `apiVersion: apiextensions.k8s.io/v1
+	if !gitops {
+		crd := `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
@@ -161,19 +163,25 @@ status:
   conditions: []
   storedVersions: []`
 
-	crdDefinition := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal([]byte(crd), &crdDefinition.Object); err != nil {
-		return err
+		crdDefinition := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal([]byte(crd), &crdDefinition.Object); err != nil {
+			return err
+		}
+
+		if err := client.ApplyCRDResource(
+			crdDefinition,
+		); err != nil {
+			return err
+		}
+		monitor.WithFields(map[string]interface{}{
+			"version": version,
+		}).Debug("Boom crd ensured")
 	}
 
-	if err := client.ApplyCRDResource(
-		crdDefinition,
-	); err != nil {
-		return err
+	cmd := []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"}
+	if gitops {
+		cmd = append(cmd, "--gitops")
 	}
-	monitor.WithFields(map[string]interface{}{
-		"version": version,
-	}).Debug("Boom crd ensured")
 
 	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
@@ -196,7 +204,7 @@ status:
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
-						Command:         []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"},
+						Command:         cmd,
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
 							Name:          "metrics",

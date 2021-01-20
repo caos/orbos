@@ -15,7 +15,7 @@ func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("networking.caos.ch")
 }
 
-func AdaptFunc(binaryVersion *string) core.AdaptFunc {
+func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
@@ -48,7 +48,7 @@ func AdaptFunc(binaryVersion *string) core.AdaptFunc {
 		}
 		if desiredKind.Spec.SelfReconciling {
 			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
+				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree, gitops)),
 			)
 		}
 

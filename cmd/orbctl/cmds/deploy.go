@@ -12,7 +12,7 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, binaryVersion string) error {
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, binaryVersion string, gitops bool) error {
 	foundBoom, err := api.ExistsBoomYml(gitClient)
 	if err != nil {
 		return err
@@ -47,13 +47,14 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		k8sClient,
 		desiredKind.Spec.Boom,
 		binaryVersion,
+		gitops,
 	); err != nil {
 		return err
 	}
 	return nil
 }
 
-func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, gitops bool) error {
 	found, err := api.ExistsDatabaseYml(gitClient)
 	if err != nil {
 		return err
@@ -69,7 +70,8 @@ func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *str
 
 			if err := orbdb.Reconcile(
 				monitor,
-				tree)(k8sClient); err != nil {
+				tree,
+				gitops)(k8sClient); err != nil {
 				return err
 			}
 		} else {
@@ -79,7 +81,7 @@ func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *str
 	return nil
 }
 
-func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, gitops bool) error {
 	found, err := api.ExistsNetworkingYml(gitClient)
 	if err != nil {
 		return err
@@ -93,7 +95,7 @@ func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *s
 				return err
 			}
 
-			if err := orbnw.Reconcile(monitor, tree)(k8sClient); err != nil {
+			if err := orbnw.Reconcile(monitor, tree, gitops)(k8sClient); err != nil {
 				return err
 			}
 		} else {

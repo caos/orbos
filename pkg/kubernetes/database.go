@@ -20,7 +20,8 @@ func EnsureDatabaseArtifacts(
 	version string,
 	nodeselector map[string]string,
 	tolerations []core.Toleration,
-	imageRegistry string) error {
+	imageRegistry string,
+	gitops bool) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"database": version,
@@ -77,7 +78,8 @@ func EnsureDatabaseArtifacts(
 		return err
 	}
 
-	crd := `apiVersion: apiextensions.k8s.io/v1
+	if !gitops {
+		crd := `apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
@@ -172,19 +174,25 @@ status:
   conditions: []
   storedVersions: []`
 
-	crdDefinition := &unstructured.Unstructured{}
-	if err := yaml.Unmarshal([]byte(crd), &crdDefinition.Object); err != nil {
-		return err
+		crdDefinition := &unstructured.Unstructured{}
+		if err := yaml.Unmarshal([]byte(crd), &crdDefinition.Object); err != nil {
+			return err
+		}
+
+		if err := client.ApplyCRDResource(
+			crdDefinition,
+		); err != nil {
+			return err
+		}
+		monitor.WithFields(map[string]interface{}{
+			"version": version,
+		}).Debug("Database Operator crd ensured")
 	}
 
-	if err := client.ApplyCRDResource(
-		crdDefinition,
-	); err != nil {
-		return err
+	cmd := []string{"/orbctl", "takeoff", "database", "-f", "/secrets/orbconfig"}
+	if gitops {
+		cmd = append(cmd, "--gitops")
 	}
-	monitor.WithFields(map[string]interface{}{
-		"version": version,
-	}).Debug("Database Operator crd ensured")
 
 	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
@@ -207,7 +215,7 @@ status:
 						Name:            "database",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, version),
-						Command:         []string{"/orbctl", "takeoff", "database", "-f", "/secrets/orbconfig"},
+						Command:         cmd,
 						Args:            []string{},
 						Ports: []core.ContainerPort{{
 							Name:          "metrics",

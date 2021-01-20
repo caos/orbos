@@ -26,6 +26,9 @@ func Takeoff(
 	version string,
 	gitCommit string,
 	kubeconfig string,
+	gitOpsBoom bool,
+	gitOpsDatabase bool,
+	gitOpsNetworking bool,
 ) error {
 	if err := orbConfig.IsComplete(); err != nil {
 		return err
@@ -95,15 +98,15 @@ func Takeoff(
 			monitor.Info("Failed to connect to k8s")
 		}
 
-		if err := deployBoom(monitor, gitClient, &kubeconfig, version); err != nil {
+		if err := deployBoom(monitor, gitClient, &kubeconfig, version, gitOpsBoom); err != nil {
 			return err
 		}
 
-		if err := deployDatabase(monitor, gitClient, &kubeconfig); err != nil {
+		if err := deployDatabase(monitor, gitClient, &kubeconfig, gitOpsDatabase); err != nil {
 			return err
 		}
 
-		if err := deployNetworking(monitor, gitClient, &kubeconfig); err != nil {
+		if err := deployNetworking(monitor, gitClient, &kubeconfig, gitOpsNetworking); err != nil {
 			return err
 		}
 	}

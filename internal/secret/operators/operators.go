@@ -88,7 +88,7 @@ func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Mo
 			}
 			allTrees[database] = dbYML
 
-			_, _, dbSecrets, err := dbOrb.AdaptFunc("", binaryVersion, "database", "backup")(monitor, dbYML, nil)
+			_, _, dbSecrets, err := dbOrb.AdaptFunc("", binaryVersion, false, "database", "backup")(monitor, dbYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -108,7 +108,7 @@ func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Mo
 			}
 			allTrees[networking] = nwYML
 
-			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
+			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil, false)(monitor, nwYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}

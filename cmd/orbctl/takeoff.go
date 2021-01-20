@@ -18,6 +18,9 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 		deploy           bool
 		kubeconfig       string
 		ingestionAddress string
+		gitOpsBoom       bool
+		gitOpsDatabase   bool
+		gitOpsNetworking bool
 		cmd              = &cobra.Command{
 			Use:   "takeoff",
 			Short: "Launch an orbiter",
@@ -28,6 +31,9 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
+	flags.BoolVar(&gitOpsBoom, "gitops-boom", false, "Ensure Boom runs in gitops mode")
+	flags.BoolVar(&gitOpsDatabase, "gitops-database", false, "Ensure Database-operator runs in gitops mode")
+	flags.BoolVar(&gitOpsNetworking, "gitops-networking", false, "Ensure Networking-operator runs in gitops mode")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig for boom deployment")
 
@@ -61,6 +67,9 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 			version,
 			gitCommit,
 			kubeconfig,
+			gitOpsBoom,
+			gitOpsDatabase,
+			gitOpsNetworking,
 		)
 	}
 	return cmd
@@ -125,9 +134,9 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 
 func StartBoom(getRv GetRootValues) *cobra.Command {
 	var (
-		localmode bool
-		crdMode   bool
-		cmd       = &cobra.Command{
+		localmode  bool
+		gitOpsMode bool
+		cmd        = &cobra.Command{
 			Use:   "boom",
 			Short: "Launch a boom",
 			Long:  "Ensures a desired state",
@@ -136,7 +145,7 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 
 	flags := cmd.Flags()
 	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
-	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
+	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
@@ -151,10 +160,10 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 
-		if crdMode {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Boom)
-		} else {
+		if gitOpsMode {
 			return start.Boom(monitor, orbConfig.Path, localmode, version)
+		} else {
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Boom)
 		}
 	}
 	return cmd
@@ -162,7 +171,7 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 
 func StartDatabase(getRv GetRootValues) *cobra.Command {
 	var (
-		crdMode    bool
+		gitOpsMode bool
 		kubeconfig string
 		cmd        = &cobra.Command{
 			Use:   "database",
@@ -172,7 +181,7 @@ func StartDatabase(getRv GetRootValues) *cobra.Command {
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
-	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
+	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
@@ -187,9 +196,7 @@ func StartDatabase(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 
-		if crdMode {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Database)
-		} else {
+		if gitOpsMode {
 			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
 			if err != nil {
 				return err
@@ -198,6 +205,8 @@ func StartDatabase(getRv GetRootValues) *cobra.Command {
 			if k8sClient.Available() {
 				return start.Database(monitor, orbConfig.Path, k8sClient, &version)
 			}
+		} else {
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Database)
 		}
 		return nil
 	}
@@ -206,7 +215,7 @@ func StartDatabase(getRv GetRootValues) *cobra.Command {
 
 func StartNetworking(getRv GetRootValues) *cobra.Command {
 	var (
-		crdMode    bool
+		gitOpsMode bool
 		kubeconfig string
 		cmd        = &cobra.Command{
 			Use:   "networking",
@@ -216,7 +225,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
-	flags.BoolVar(&crdMode, "crdmode", false, "defines if the operator should run in crd mode not gitops mode")
+	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
@@ -231,9 +240,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 
-		if crdMode {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Networking)
-		} else {
+		if gitOpsMode {
 			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
 			if err != nil {
 				return err
@@ -242,6 +249,8 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 			if k8sClient.Available() {
 				return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
 			}
+		} else {
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Networking)
 		}
 		return nil
 	}
