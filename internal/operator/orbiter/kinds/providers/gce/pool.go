@@ -35,7 +35,7 @@ func (i *infraPool) EnsureMembers() error {
 
 func (i *infraPool) ensureMembers(machine infra.Machine) error {
 
-	allInstances, err := i.context.machinesService.instances()
+	allInstances, err := getAllInstances(i.context.machinesService)
 	if err != nil {
 		return err
 	}

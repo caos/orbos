@@ -45,7 +45,7 @@ func (m *machinesService) use(key *SSHKey) error {
 }
 
 func (m *machinesService) restartPreemptibleMachines() error {
-	pools, err := m.instances()
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return err
 	}
@@ -231,20 +231,21 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 func (m *machinesService) ListPools() ([]string, error) {
 
-	pools, err := m.instances()
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return nil, err
 	}
 
 	var poolNames []string
 	for poolName := range pools {
-		poolNames = append(poolNames, poolName)
+		copyPoolName := poolName
+		poolNames = append(poolNames, copyPoolName)
 	}
 	return poolNames, nil
 }
 
 func (m *machinesService) List(poolName string) (infra.Machines, error) {
-	pools, err := m.instances()
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return nil, err
 	}
@@ -258,93 +259,108 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 	return machines, nil
 }
 
-func (m *machinesService) instances() (map[string][]*instance, error) {
-	if m.cache.instances != nil {
+type retInstances struct {
+	instances map[string][]*instance
+	err       error
+}
+
+func getAllInstances(m *machinesService) (map[string][]*instance, error) {
+	instances := func() (map[string][]*instance, error) {
+		if m.cache.instances != nil {
+			return m.cache.instances, nil
+		}
+
+		instances, err := m.context.client.Instances.
+			List(m.context.projectID, m.context.desired.Zone).
+			Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.context.orbID, m.context.providerID)).
+			Fields("items(name,labels,selfLink,status,scheduling(preemptible),networkInterfaces(networkIP))").
+			Do()
+		if err != nil {
+			return nil, err
+		}
+
+		m.cache.instances = make(map[string][]*instance)
+		for _, inst := range instances.Items {
+			if inst.Labels["orb"] != m.context.orbID || inst.Labels["provider"] != m.context.providerID {
+				continue
+			}
+
+			pool := inst.Labels["pool"]
+
+			var machine machine
+			if m.oneoff {
+				machine = newGCEMachine(m.context, m.context.monitor.WithFields(toFields(inst.Labels)), inst.Name)
+			} else {
+				sshMachine := ssh.NewMachine(m.context.monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
+				if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
+					return nil, err
+				}
+				machine = sshMachine
+			}
+
+			rebootRequired := false
+			unrequireReboot := func() {}
+			for idx, req := range m.context.desired.RebootRequired {
+				if req == inst.Name {
+					rebootRequired = true
+					unrequireReboot = func(pos int) func() {
+						return func() {
+							m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:pos], m.context.desired.RebootRequired[pos+1:]...)
+						}
+					}(idx)
+					break
+				}
+			}
+
+			replacementRequired := false
+			unrequireReplacement := func() {}
+			for idx, req := range m.context.desired.ReplacementRequired {
+				if req == inst.Name {
+					replacementRequired = true
+					unrequireReplacement = func(pos int) func() {
+						return func() {
+							m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired[0:pos], m.context.desired.ReplacementRequired[pos+1:]...)
+						}
+					}(idx)
+					break
+				}
+			}
+
+			mach := newMachine(
+				m.context,
+				m.context.monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
+				inst.Name,
+				inst.NetworkInterfaces[0].NetworkIP,
+				inst.SelfLink,
+				pool,
+				m.removeMachineFunc(pool, inst.Name),
+				inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
+				machine,
+				rebootRequired,
+				func(id string) func() {
+					return func() { m.context.desired.RebootRequired = append(m.context.desired.RebootRequired, id) }
+				}(inst.Name),
+				unrequireReboot,
+				replacementRequired,
+				func(id string) func() {
+					return func() { m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired, id) }
+				}(inst.Name),
+				unrequireReplacement,
+			)
+
+			m.cache.instances[pool] = append(m.cache.instances[pool], mach)
+		}
+
 		return m.cache.instances, nil
 	}
 
-	instances, err := m.context.client.Instances.
-		List(m.context.projectID, m.context.desired.Zone).
-		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.context.orbID, m.context.providerID)).
-		Fields("items(name,labels,selfLink,status,scheduling(preemptible),networkInterfaces(networkIP))").
-		Do()
-	if err != nil {
-		return nil, err
-	}
-
-	m.cache.instances = make(map[string][]*instance)
-	for _, inst := range instances.Items {
-		if inst.Labels["orb"] != m.context.orbID || inst.Labels["provider"] != m.context.providerID {
-			continue
-		}
-
-		pool := inst.Labels["pool"]
-
-		var machine machine
-		if m.oneoff {
-			machine = newGCEMachine(m.context, m.context.monitor.WithFields(toFields(inst.Labels)), inst.Name)
-		} else {
-			sshMachine := ssh.NewMachine(m.context.monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
-			if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
-				return nil, err
-			}
-			machine = sshMachine
-		}
-
-		rebootRequired := false
-		unrequireReboot := func() {}
-		for idx, req := range m.context.desired.RebootRequired {
-			if req == inst.Name {
-				rebootRequired = true
-				unrequireReboot = func(pos int) func() {
-					return func() {
-						m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:pos], m.context.desired.RebootRequired[pos+1:]...)
-					}
-				}(idx)
-				break
-			}
-		}
-
-		replacementRequired := false
-		unrequireReplacement := func() {}
-		for idx, req := range m.context.desired.ReplacementRequired {
-			if req == inst.Name {
-				replacementRequired = true
-				unrequireReplacement = func(pos int) func() {
-					return func() {
-						m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired[0:pos], m.context.desired.ReplacementRequired[pos+1:]...)
-					}
-				}(idx)
-				break
-			}
-		}
-
-		mach := newMachine(
-			m.context,
-			m.context.monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
-			inst.Name,
-			inst.NetworkInterfaces[0].NetworkIP,
-			inst.SelfLink,
-			pool,
-			m.removeMachineFunc(pool, inst.Name),
-			inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
-			machine,
-			rebootRequired,
-			func(id string) func() {
-				return func() { m.context.desired.RebootRequired = append(m.context.desired.RebootRequired, id) }
-			}(inst.Name),
-			unrequireReboot,
-			replacementRequired,
-			func(id string) func() {
-				return func() { m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired, id) }
-			}(inst.Name),
-			unrequireReplacement,
-		)
-
-		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
-	}
-
-	return m.cache.instances, nil
+	retChan := make(chan retInstances)
+	go func() {
+		instances, err := instances()
+		retChan <- retInstances{instances, err}
+	}()
+	ret := <-retChan
+	return ret.instances, ret.err
 }
 
 func toFields(labels map[string]string) map[string]interface{} {
