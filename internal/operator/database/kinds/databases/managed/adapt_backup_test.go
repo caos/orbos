@@ -56,8 +56,7 @@ func getTreeWithDBAndBackup(t *testing.T, masterkey string, saJson string, backu
 
 func TestManaged_AdaptBucketBackup(t *testing.T) {
 	monitor := mntr.Monitor{}
-	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
-	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "testKind", "v0"), "database")
 
 	labels := map[string]string{
 		"app.kubernetes.io/component":  "backup",
@@ -82,9 +81,9 @@ func TestManaged_AdaptBucketBackup(t *testing.T) {
 
 	features := []string{backup.Normal}
 	bucket.SetBackup(k8sClient, namespace, labels, saJson)
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(60))
 
-	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(componentLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	databases := []string{"test1", "test2"}
@@ -98,8 +97,7 @@ func TestManaged_AdaptBucketBackup(t *testing.T) {
 
 func TestManaged_AdaptBucketInstantBackup(t *testing.T) {
 	monitor := mntr.Monitor{}
-	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
-	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "testKind", "v0"), "database")
 	labels := map[string]string{
 		"app.kubernetes.io/component":  "backup",
 		"app.kubernetes.io/managed-by": "testOp",
@@ -121,11 +119,11 @@ func TestManaged_AdaptBucketInstantBackup(t *testing.T) {
 
 	features := []string{backup.Instant}
 	bucket.SetInstantBackup(k8sClient, namespace, backupName, labels, saJson)
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(60))
 
 	desired := getTreeWithDBAndBackup(t, masterkey, saJson, backupName)
 
-	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(componentLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	databases := []string{"test1", "test2"}
@@ -139,8 +137,7 @@ func TestManaged_AdaptBucketInstantBackup(t *testing.T) {
 
 func TestManaged_AdaptBucketCleanAndRestore(t *testing.T) {
 	monitor := mntr.Monitor{}
-	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
-	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "testKind", "v0"), "database")
 	labels := map[string]string{
 		"app.kubernetes.io/component":  "backup",
 		"app.kubernetes.io/managed-by": "testOp",
@@ -163,11 +160,11 @@ func TestManaged_AdaptBucketCleanAndRestore(t *testing.T) {
 	features := []string{restore.Instant, clean.Instant}
 	bucket.SetRestore(k8sClient, namespace, backupName, labels, saJson)
 	bucket.SetClean(k8sClient, namespace, backupName)
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60)).Times(2)
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(60)).Times(2)
 
 	desired := getTreeWithDBAndBackup(t, masterkey, saJson, backupName)
 
-	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(componentLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	databases := []string{"test1", "test2"}

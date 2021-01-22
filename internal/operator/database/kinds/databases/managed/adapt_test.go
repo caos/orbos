@@ -34,7 +34,7 @@ func TestManaged_Adapt1(t *testing.T) {
 	monitor := mntr.Monitor{}
 
 	nodeLabels := map[string]string{
-		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/component":  "database",
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb.node",
 		"app.kubernetes.io/part-of":    "testProd",
@@ -42,7 +42,7 @@ func TestManaged_Adapt1(t *testing.T) {
 	}
 
 	cockroachLabels := map[string]string{
-		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/component":  "database",
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb-budget",
 		"app.kubernetes.io/part-of":    "testProd",
@@ -52,15 +52,14 @@ func TestManaged_Adapt1(t *testing.T) {
 	}
 
 	cockroachSelectorLabels := map[string]string{
-		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/component":  "database",
 		"app.kubernetes.io/managed-by": "testOp",
 		"app.kubernetes.io/name":       "cockroachdb",
 		"app.kubernetes.io/part-of":    "testProd",
 		"orbos.ch/selectable":          "yes",
 	}
 
-	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
-	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "testKind", "v0"), "database")
 
 	namespace := "testNs"
 	timestamp := "testTs"
@@ -115,11 +114,11 @@ func TestManaged_Adapt1(t *testing.T) {
 	//statefulset
 	k8sClient.EXPECT().ApplyStatefulSet(gomock.Any(), gomock.Any()).Times(1)
 	//running for setup
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, false, time.Duration(60))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, false, time.Duration(60))
 	//not ready for setup
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(1))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(1))
 	//ready after setup
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(60))
 	//client
 	k8sClient.EXPECT().ListSecrets(namespace, nodeLabels).Times(1).Return(secretList, nil)
 	dbCurrent.EXPECT().GetCertificate().Times(1).Return(nil)
@@ -133,7 +132,7 @@ func TestManaged_Adapt1(t *testing.T) {
 	dbCurrent.EXPECT().SetCertificateKey(gomock.Any()).Times(1)
 	k8sClient.EXPECT().ApplySecret(gomock.Any()).Times(1)
 
-	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(componentLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -149,7 +148,7 @@ func TestManaged_Adapt2(t *testing.T) {
 	timestamp := "testTs"
 
 	nodeLabels := map[string]string{
-		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/component":  "database2",
 		"app.kubernetes.io/managed-by": "testOp2",
 		"app.kubernetes.io/name":       "cockroachdb.node",
 		"app.kubernetes.io/part-of":    "testProd2",
@@ -157,7 +156,7 @@ func TestManaged_Adapt2(t *testing.T) {
 	}
 
 	cockroachLabels := map[string]string{
-		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/component":  "database2",
 		"app.kubernetes.io/managed-by": "testOp2",
 		"app.kubernetes.io/name":       "cockroachdb-budget",
 		"app.kubernetes.io/part-of":    "testProd2",
@@ -167,15 +166,14 @@ func TestManaged_Adapt2(t *testing.T) {
 	}
 
 	cockroachSelectorLabels := map[string]string{
-		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/component":  "database2",
 		"app.kubernetes.io/managed-by": "testOp2",
 		"app.kubernetes.io/name":       "cockroachdb",
 		"app.kubernetes.io/part-of":    "testProd2",
 		"orbos.ch/selectable":          "yes",
 	}
 
-	operatorLabels := labels.MustForOperator("testProd2", "testOp2", "testVersion2")
-	apiLabels := labels.MustForAPI(operatorLabels, "testKind2", "v1")
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "testKind2", "v1"), "database2")
 
 	nodeselector := map[string]string{"test2": "test2"}
 	var tolerations []corev1.Toleration
@@ -228,11 +226,11 @@ func TestManaged_Adapt2(t *testing.T) {
 	//statefulset
 	k8sClient.EXPECT().ApplyStatefulSet(gomock.Any(), gomock.Any()).Times(1)
 	//running for setup
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, false, time.Duration(60))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, false, time.Duration(60))
 	//not ready for setup
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(1))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(1))
 	//ready after setup
-	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60))
+	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, SfsName, true, true, time.Duration(60))
 	//client
 	k8sClient.EXPECT().ListSecrets(namespace, nodeLabels).Times(1).Return(secretList, nil)
 	dbCurrent.EXPECT().GetCertificate().Times(1).Return(nil)
@@ -246,7 +244,7 @@ func TestManaged_Adapt2(t *testing.T) {
 	dbCurrent.EXPECT().SetCertificateKey(gomock.Any()).Times(1)
 	k8sClient.EXPECT().ApplySecret(gomock.Any()).Times(1)
 
-	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(componentLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)

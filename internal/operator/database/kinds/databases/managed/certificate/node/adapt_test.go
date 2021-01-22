@@ -137,7 +137,7 @@ func TestNode_AdaptWithCA(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns)
+	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns, true)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -181,7 +181,7 @@ func TestNode_AdaptWithoutCA(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns)
+	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns, true)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -233,7 +233,7 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns)
+	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns, true)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)

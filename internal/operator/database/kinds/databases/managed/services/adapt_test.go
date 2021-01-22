@@ -38,6 +38,7 @@ func TestService_Adapt1(t *testing.T) {
 		"app.kubernetes.io/version":    "testVersion",
 		"caos.ch/apiversion":           "v0",
 		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
 	}
 	publicNameLabels := labels.MustForName(componentLabels, publicName)
 
@@ -140,6 +141,7 @@ func TestService_Adapt2(t *testing.T) {
 		"app.kubernetes.io/version":    "testVersion2",
 		"caos.ch/apiversion":           "v0",
 		"caos.ch/kind":                 "cockroachdb",
+		"orbos.ch/selectable":          "yes",
 	}
 	publicNameLabels := labels.MustForName(componentLabels, publicName)
 

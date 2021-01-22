@@ -137,7 +137,7 @@ func TestCertificate_AdaptWithCA(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, _, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns)
+	query, _, _, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns, true)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -181,7 +181,7 @@ func TestNode_AdaptWithoutCA(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, _, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns)
+	query, _, _, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns, true)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -232,7 +232,7 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, _, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns)
+	query, _, _, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns, true)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -292,7 +292,7 @@ func TestNode_AdaptCreateUser(t *testing.T) {
 	}
 	core.SetQueriedForDatabase(queried, current)
 
-	_, _, createUser, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns)
+	_, _, createUser, _, _, err := AdaptFunc(monitor, namespace, componentLabels, clusterDns, true)
 	assert.NoError(t, err)
 	query, err := createUser(user)
 	assert.NoError(t, err)
