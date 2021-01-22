@@ -461,7 +461,7 @@ func EnsureOrbiterArtifacts(
 							InitialDelaySeconds: 10,
 							TimeoutSeconds:      1,
 							PeriodSeconds:       20,
-							SuccessThreshold:    3,
+							SuccessThreshold:    1,
 							FailureThreshold:    3 * 5,
 						},
 					}},
