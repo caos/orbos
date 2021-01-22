@@ -86,8 +86,8 @@ func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
 			msg = "ORBITER is not healthy. See the logs."
 			status = 404
 		}
-		writer.Write([]byte(msg))
 		writer.WriteHeader(status)
+		writer.Write([]byte(msg))
 	})
 
 	go func() {
