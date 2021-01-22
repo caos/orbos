@@ -46,6 +46,12 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 	finishedChan := make(chan struct{})
 	takeoffChan := make(chan struct{})
 
+	healthyChan := make(chan bool)
+
+	if conf.Recur {
+		go orbiter.Instrument(monitor, healthyChan)
+	}
+
 	on := func() { takeoffChan <- struct{}{} }
 	go on()
 	var initialized bool
@@ -55,7 +61,7 @@ loop:
 		case <-finishedChan:
 			break loop
 		case <-takeoffChan:
-			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, func(iterated bool) {
+			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, healthyChan, func(iterated bool) {
 				if iterated {
 					initialized = true
 				}
@@ -67,7 +73,17 @@ loop:
 	return GetKubeconfigs(monitor, orbctlGit, orbConfig)
 }
 
-func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
+func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, healthyChan chan bool, done func(iterated bool)) {
+
+	var err error
+	defer func() {
+		if err != nil {
+			healthyChan <- false
+			return
+		}
+		healthyChan <- true
+	}()
+
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		monitor.Error(err)
@@ -106,16 +122,13 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}
 
 	if firstIteration {
-		if conf.Recur {
-			orbiter.Metrics()
-		}
 
 		if err := pushEvents([]*ingestion.EventRequest{{
 			CreationDate: ptypes.TimestampNow(),
 			Type:         "orbiter.tookoff",
 			Data: &structpb.Struct{
 				Fields: map[string]*structpb.Value{
-					"commit": &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: conf.GitCommit}},
+					"commit": {Kind: &structpb.Value_StringValue{StringValue: conf.GitCommit}},
 				},
 			},
 		}}); err != nil {
@@ -166,7 +179,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		OrbConfig:     *orbFile,
 	}
 
-	takeoff := orbiter.Takeoff(monitor, takeoffConf)
+	takeoff := orbiter.Takeoff(monitor, takeoffConf, healthyChan)
 
 	go func() {
 		started := time.Now()

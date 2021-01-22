@@ -1,6 +1,7 @@
 package orbiter
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -72,14 +73,39 @@ type event struct {
 	files  []git.File
 }
 
-func Metrics() {
+func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
+	healthy := true
+
+	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/health", func(writer http.ResponseWriter, request *http.Request) {
+		msg := "OK"
+		status := 200
+		if !healthy {
+			msg = "ORBITER is not healthy. See the logs."
+			status = 404
+		}
+		writer.Write([]byte(msg))
+		writer.WriteHeader(status)
+	})
+
 	go func() {
-		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
-		http.Handle("/metrics", promhttp.Handler())
-		if err := http.ListenAndServe(":9000", nil); err != nil {
-			panic(err)
+		for newHealthiness := range healthyChan {
+			if newHealthiness == healthy {
+				continue
+			}
+			healthy = newHealthiness
+			if !newHealthiness {
+				monitor.Error(errors.New("ORBITER is unhealthy now"))
+				continue
+			}
+			monitor.Info("ORBITER is healthy now")
 		}
 	}()
+
+	if err := http.ListenAndServe(":9000", nil); err != nil {
+		panic(err)
+	}
 }
 
 func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, map[string]*secret.Secret, error) {
@@ -97,9 +123,18 @@ func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, 
 	return query, destroy, configure, migrate, treeDesired, treeCurrent, secrets, err
 }
 
-func Takeoff(monitor mntr.Monitor, conf *Config) func() {
+func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 
 	return func() {
+
+		var err error
+		defer func() {
+			if err != nil {
+				healthyChan <- false
+				return
+			}
+			healthyChan <- true
+		}()
 
 		query, _, _, migrate, treeDesired, treeCurrent, _, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
 		if err != nil {
