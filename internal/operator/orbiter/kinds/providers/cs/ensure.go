@@ -57,8 +57,13 @@ func query(
 	}
 
 	context.machinesService.onCreate = func(pool string, m infra.Machine) error {
+		_, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, true, []string{"eth0"})
+		if err != nil {
+			return err
+		}
 
-		_, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+		vips := hostedVIPs(hostPools, m, current)
+		_, err = core.DesireOSNetworkingForMachine(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, m, "dummy", vips)
 		if err != nil {
 			return err
 		}
@@ -85,11 +90,21 @@ func query(
 					return err
 				}
 
-				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, true, []string{"eth0"})
 				if err != nil {
 					return err
 				}
-				done = lbDone && fwDone
+
+				vips, err := allHostedVIPs(hostPools, context.machinesService, current)
+				if err != nil {
+					return err
+				}
+				nwDone, err := core.DesireOSNetworking(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, "dummy", vips)
+				if err != nil {
+					return err
+				}
+
+				done = lbDone && fwDone && nwDone
 				return nil
 			},
 		})())
