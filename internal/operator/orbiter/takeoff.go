@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/caos/orbos/internal/secret"
 
@@ -90,16 +91,25 @@ func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
 	})
 
 	go func() {
-		for newHealthiness := range healthyChan {
-			if newHealthiness == healthy {
-				continue
+		timeout := 10 * time.Minute
+		ticker := time.NewTimer(timeout)
+		for {
+			select {
+			case newHealthiness := <-healthyChan:
+				ticker.Reset(timeout)
+				if newHealthiness == healthy {
+					continue
+				}
+				healthy = newHealthiness
+				if !newHealthiness {
+					monitor.Error(errors.New("ORBITER is unhealthy now"))
+					continue
+				}
+				monitor.Info("ORBITER is healthy now")
+			case <-ticker.C:
+				monitor.Error(errors.New("ORBITER is unhealthy now as it did not report healthiness for 10 minutes"))
+				healthy = false
 			}
-			healthy = newHealthiness
-			if !newHealthiness {
-				monitor.Error(errors.New("ORBITER is unhealthy now"))
-				continue
-			}
-			monitor.Info("ORBITER is healthy now")
 		}
 	}()
 
