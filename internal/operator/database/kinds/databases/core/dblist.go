@@ -7,6 +7,8 @@ import (
 	"github.com/caos/orbos/pkg/tree"
 )
 
+var current DatabaseCurrent = &CurrentDBList{}
+
 type CurrentDBList struct {
 	Common  *tree.Common `yaml:",inline"`
 	Current *DatabaseCurrentDBList
@@ -44,13 +46,13 @@ func (c *CurrentDBList) SetCertificate(cert []byte) {
 	return
 }
 
-func (c *CurrentDBList) GetListDatabasesFunc() func(k8sClient *kubernetes.Client) ([]string, error) {
-	return func(k8sClient *kubernetes.Client) ([]string, error) {
+func (c *CurrentDBList) GetListDatabasesFunc() func(k8sClient kubernetes.ClientInt) ([]string, error) {
+	return func(k8sClient kubernetes.ClientInt) ([]string, error) {
 		return c.Current.Databases, nil
 	}
 }
 
-func (c *CurrentDBList) GetListUsersFunc() func(k8sClient *kubernetes.Client) ([]string, error) {
+func (c *CurrentDBList) GetListUsersFunc() func(k8sClient kubernetes.ClientInt) ([]string, error) {
 	return nil
 }
 

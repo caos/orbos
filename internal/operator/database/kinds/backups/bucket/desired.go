@@ -28,7 +28,7 @@ func (s *Spec) IsZero() bool {
 	return false
 }
 
-func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
+func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{
 		Common: desiredTree.Common,
 		Spec:   &Spec{},

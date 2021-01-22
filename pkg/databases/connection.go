@@ -12,7 +12,7 @@ import (
 
 func GetConnectionInfo(
 	monitor mntr.Monitor,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	gitClient *git.Client,
 ) (string, string, error) {
 	desired, err := api.ReadDatabaseYml(gitClient)

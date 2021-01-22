@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/app"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 )
 
@@ -18,8 +18,8 @@ func adaptFunc(
 	core.EnsureFunc,
 	error,
 ) {
-	return func(_ *kubernetes2.Client, _ map[string]interface{}) (core.EnsureFunc, error) {
-			return func(k8sClient *kubernetes2.Client) error {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (core.EnsureFunc, error) {
+			return func(k8sClient kubernetes.ClientInt) error {
 
 				internalLabels := map[string]string{}
 				for k, v := range cfg.Labels {
@@ -47,11 +47,11 @@ func adaptFunc(
 				}
 				return nil
 			}, nil
-		}, func(k8sClient *kubernetes2.Client) error {
+		}, func(k8sClient kubernetes.ClientInt) error {
 			//TODO
 			return nil
 		},
-		func(k8sClient *kubernetes2.Client) error {
+		func(k8sClient kubernetes.ClientInt) error {
 			monitor.Info("waiting for certificate to be created")
 			if err := k8sClient.WaitForSecret(cfg.Namespace, cfg.OriginCASecretName, 60); err != nil {
 				return errors.Wrap(err, "error while waiting for certificate secret to be created")

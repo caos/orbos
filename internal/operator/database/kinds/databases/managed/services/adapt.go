@@ -77,7 +77,7 @@ func AdaptFunc(
 		core.ResourceQueryToZitadelQuery(queryS),
 	}
 
-	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 
 			return core.QueriersToEnsureFunc(internalMonitor, false, queriers, k8sClient, queried)
 		},

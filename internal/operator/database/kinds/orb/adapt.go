@@ -4,7 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/namespace"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
@@ -85,14 +85,14 @@ func AdaptFunc(timestamp string, features ...string) core.AdaptFunc {
 			Database: databaseCurrent,
 		}
 
-		return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 				if queried == nil {
 					queried = map[string]interface{}{}
 				}
 				monitor.WithField("queriers", len(queriers)).Info("Querying")
 				return core.QueriersToEnsureFunc(monitor, true, queriers, k8sClient, queried)
 			},
-			func(k8sClient *kubernetes2.Client) error {
+			func(k8sClient kubernetes.ClientInt) error {
 				monitor.WithField("destroyers", len(queriers)).Info("Destroy")
 				return core.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
 			},

@@ -1,7 +1,7 @@
 package host
 
 import (
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -53,15 +53,15 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 			},
 		}}
 
-	return func(k8sClient *kubernetes2.Client) (resources.EnsureFunc, error) {
-		return func(k8sClient *kubernetes2.Client) error {
+	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client kubernetes.ClientInt) error {
 		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }

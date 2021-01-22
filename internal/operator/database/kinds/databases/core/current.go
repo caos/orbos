@@ -20,8 +20,8 @@ type DatabaseCurrent interface {
 	SetCertificate([]byte)
 	GetAddUserFunc() func(user string) (core.QueryFunc, error)
 	GetDeleteUserFunc() func(user string) (core.DestroyFunc, error)
-	GetListUsersFunc() func(k8sClient *kubernetes.Client) ([]string, error)
-	GetListDatabasesFunc() func(k8sClient *kubernetes.Client) ([]string, error)
+	GetListUsersFunc() func(k8sClient kubernetes.ClientInt) ([]string, error)
+	GetListDatabasesFunc() func(k8sClient kubernetes.ClientInt) ([]string, error)
 }
 
 func ParseQueriedForDatabase(queried map[string]interface{}) (DatabaseCurrent, error) {
@@ -55,8 +55,10 @@ func SetQueriedForDatabaseDBList(queried map[string]interface{}, databases []str
 			Databases: databases,
 		},
 	}
+
 	currentDB := &tree.Tree{
 		Parsed: currentDBList,
 	}
-	queried[queriedName] = currentDB
+
+	SetQueriedForDatabase(queried, currentDB)
 }

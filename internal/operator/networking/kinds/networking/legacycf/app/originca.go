@@ -2,14 +2,14 @@ package app
 
 import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/cloudflare/cloudflare-go"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"reflect"
 )
 
-func (a *App) EnsureOriginCACertificate(k8sClient *kubernetes2.Client, namespace string, labels map[string]string, domain string, originCASecretName string) error {
+func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespace string, labels map[string]string, domain string, originCASecretName string) error {
 
 	certKey := "tls.crt"
 	keyKey := "tls.key"

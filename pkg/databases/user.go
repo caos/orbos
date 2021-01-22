@@ -12,7 +12,7 @@ import (
 
 func ListUsers(
 	monitor mntr.Monitor,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	gitClient *git.Client,
 ) ([]string, error) {
 	desired, err := api.ReadDatabaseYml(gitClient)
@@ -55,7 +55,7 @@ func ListUsers(
 func AddUser(
 	monitor mntr.Monitor,
 	user string,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	gitClient *git.Client,
 ) error {
 	desired, err := api.ReadDatabaseYml(gitClient)
@@ -94,7 +94,7 @@ func AddUser(
 func DeleteUser(
 	monitor mntr.Monitor,
 	user string,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	gitClient *git.Client,
 ) error {
 	desired, err := api.ReadDatabaseYml(gitClient)

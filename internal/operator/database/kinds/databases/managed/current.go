@@ -4,7 +4,7 @@ import (
 	"crypto/rsa"
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
 )
 
@@ -20,8 +20,8 @@ type CurrentDB struct {
 	CA                *certificate.Current
 	AddUserFunc       func(user string) (core.QueryFunc, error)
 	DeleteUserFunc    func(user string) (core.DestroyFunc, error)
-	ListUsersFunc     func(k8sClient *kubernetes2.Client) ([]string, error)
-	ListDatabasesFunc func(k8sClient *kubernetes2.Client) ([]string, error)
+	ListUsersFunc     func(k8sClient kubernetes.ClientInt) ([]string, error)
+	ListDatabasesFunc func(k8sClient kubernetes.ClientInt) ([]string, error)
 }
 
 func (c *Current) GetURL() string {
@@ -56,11 +56,11 @@ func (c *Current) SetCertificate(cert []byte) {
 	c.Current.CA.Certificate = cert
 }
 
-func (c *Current) GetListDatabasesFunc() func(k8sClient *kubernetes2.Client) ([]string, error) {
+func (c *Current) GetListDatabasesFunc() func(k8sClient kubernetes.ClientInt) ([]string, error) {
 	return c.Current.ListDatabasesFunc
 }
 
-func (c *Current) GetListUsersFunc() func(k8sClient *kubernetes2.Client) ([]string, error) {
+func (c *Current) GetListUsersFunc() func(k8sClient kubernetes.ClientInt) ([]string, error) {
 	return c.Current.ListUsersFunc
 }
 

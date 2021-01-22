@@ -1,7 +1,7 @@
 package pdb
 
 import (
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +14,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, maxUnav
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
+			Labels:    labels,
 		},
 		Spec: policy.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{
@@ -22,15 +23,15 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, maxUnav
 			MaxUnavailable: &maxUnavailableParsed,
 		},
 	}
-	return func(_ *kubernetes2.Client) (resources.EnsureFunc, error) {
-		return func(k8sClient *kubernetes2.Client) error {
+	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyPodDisruptionBudget(pdb)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client kubernetes.ClientInt) error {
 		return client.DeletePodDisruptionBudget(namespace, name)
 	}, nil
 }

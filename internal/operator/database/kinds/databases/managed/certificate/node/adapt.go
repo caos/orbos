@@ -13,6 +13,14 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
 )
 
+const (
+	nodeSecret     = "cockroachdb.node"
+	caCertKey      = "ca.crt"
+	caPrivKeyKey   = "ca.key"
+	nodeCertKey    = "node.crt"
+	nodePrivKeyKey = "node.key"
+)
+
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
@@ -29,23 +37,10 @@ func AdaptFunc(
 	}
 	nodeLabels["database.caos.ch/secret-type"] = "node"
 
-	desiredNode := make([]*certificates.SecretInternal, 0)
-
-	desiredNode = append(desiredNode, &certificates.SecretInternal{
-		Name:      "nodeSecret",
-		Namespace: "namespace",
-		Labels:    nodeLabels,
-	})
-
 	caPrivKey := new(rsa.PrivateKey)
 	caCert := make([]byte, 0)
-	nodeSecret := "cockroachdb.node"
-	caCertKey := "ca.crt"
-	caPrivKeyKey := "ca.key"
-	nodeCertKey := "node.crt"
-	nodePrivKeyKey := "node.key"
 
-	return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core2.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 			queriers := make([]core2.QueryFunc, 0)
 
 			currentDB, err := core.ParseQueriedForDatabase(queried)
@@ -132,13 +127,12 @@ func AdaptFunc(
 			currentDB.SetCertificateKey(caPrivKey)
 
 			return core2.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
-		}, func(k8sClient *kubernetes.Client) error {
-			allClientSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
+		}, func(k8sClient kubernetes.ClientInt) error {
+			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
 			if err != nil {
 				return err
 			}
-			_, deleteSecrets := certificates.QueryCertificate([]*certificates.SecretInternal{}, allClientSecrets.Items)
-			for _, deleteSecret := range deleteSecrets {
+			for _, deleteSecret := range allNodeSecrets.Items {
 				destroyer, err := secret.AdaptFuncToDestroy(namespace, deleteSecret.Name)
 				if err != nil {
 					return err

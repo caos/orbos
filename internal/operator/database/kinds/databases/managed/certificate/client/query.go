@@ -9,7 +9,7 @@ import (
 func QueryCertificates(
 	namespace string,
 	labels map[string]string,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 ) (
 	[]string,
 	error,
@@ -27,7 +27,9 @@ func QueryCertificates(
 	}
 	certs := []string{}
 	for _, secret := range list.Items {
-		certs = append(certs, strings.TrimPrefix(secret.Name, "cockroachdb.client."))
+		if strings.HasPrefix(secret.Name, clientSecretPrefix) {
+			certs = append(certs, strings.TrimPrefix(secret.Name, clientSecretPrefix))
+		}
 	}
 
 	return certs, nil

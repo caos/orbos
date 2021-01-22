@@ -30,7 +30,7 @@ func AdaptFuncToEnsure(
 	resources.QueryFunc,
 	error,
 ) {
-	return func(_ *kubernetes2.Client) (resources.EnsureFunc, error) {
+	return func(_ kubernetes2.ClientInt) (resources.EnsureFunc, error) {
 		portList := make([]corev1.ServicePort, 0)
 		for _, port := range ports {
 			portList = append(portList, corev1.ServicePort{
@@ -57,14 +57,14 @@ func AdaptFuncToEnsure(
 			},
 		}
 
-		return func(k8sClient *kubernetes2.Client) error {
+		return func(k8sClient kubernetes2.ClientInt) error {
 			return k8sClient.ApplyService(service)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client kubernetes2.ClientInt) error {
 		return client.DeleteService(namespace, name)
 	}, nil
 }

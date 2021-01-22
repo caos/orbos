@@ -15,6 +15,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+const (
+	secretName = "backup-serviceaccountjson"
+	secretKey  = "serviceaccountjson"
+)
+
 func AdaptFunc(
 	name string,
 	namespace string,
@@ -27,12 +32,10 @@ func AdaptFunc(
 	features []string,
 ) core.AdaptFunc {
 	return func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secretpkg.Secret, err error) {
-		secretName := "backup-serviceaccountjson"
-		secretKey := "serviceaccountjson"
 
 		internalMonitor := monitor.WithField("component", "backup")
 
-		desiredKind, err := parseDesiredV0(desired)
+		desiredKind, err := ParseDesiredV0(desired)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
@@ -41,8 +44,6 @@ func AdaptFunc(
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
 		}
-
-		//queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users, nodeselector, tolerations)
 
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
@@ -71,8 +72,11 @@ func AdaptFunc(
 			features,
 			version,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
-		_, destroyR, _, err := restore.ApplyFunc(
+		_, destroyR, err := restore.AdaptFunc(
 			monitor,
 			name,
 			namespace,
@@ -87,8 +91,11 @@ func AdaptFunc(
 			secretKey,
 			version,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 
-		_, destroyC, _, err := clean.ApplyFunc(
+		_, destroyC, err := clean.AdaptFunc(
 			monitor,
 			name,
 			namespace,
@@ -101,26 +108,30 @@ func AdaptFunc(
 			secretKey,
 			version,
 		)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+
 		destroyers := make([]core.DestroyFunc, 0)
 		for _, feature := range features {
 			switch feature {
-			case "backup", "instantbackup":
+			case backup.Normal, backup.Instant:
 				destroyers = append(destroyers,
 					core.ResourceDestroyToZitadelDestroy(destroyS),
 					destroyB,
 				)
-			case "clear":
+			case clean.Instant:
 				destroyers = append(destroyers,
 					destroyC,
 				)
-			case "restore":
+			case restore.Instant:
 				destroyers = append(destroyers,
 					destroyR,
 				)
 			}
 		}
 
-		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 				currentDB, err := coreDB.ParseQueriedForDatabase(queried)
 				if err != nil {
 					return nil, err
@@ -152,7 +163,7 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				queryR, _, checkAndCleanupR, err := restore.ApplyFunc(
+				queryR, _, err := restore.AdaptFunc(
 					monitor,
 					name,
 					namespace,
@@ -171,7 +182,7 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				queryC, _, checkAndCleanupC, err := clean.ApplyFunc(
+				queryC, _, err := clean.AdaptFunc(
 					monitor,
 					name,
 					namespace,
@@ -192,20 +203,18 @@ func AdaptFunc(
 				if databases != nil && len(databases) != 0 {
 					for _, feature := range features {
 						switch feature {
-						case "backup", "instantbackup":
+						case backup.Normal, backup.Instant:
 							queriers = append(queriers,
 								core.ResourceQueryToZitadelQuery(queryS),
 								queryB,
 							)
-						case "clear":
+						case clean.Instant:
 							queriers = append(queriers,
 								queryC,
-								core.EnsureFuncToQueryFunc(checkAndCleanupC),
 							)
-						case "restore":
+						case restore.Instant:
 							queriers = append(queriers,
 								queryR,
-								core.EnsureFuncToQueryFunc(checkAndCleanupR),
 							)
 						}
 					}

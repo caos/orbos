@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/mntr"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func AdaptFunc(
@@ -40,7 +40,7 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, err
 	}
-	ensureUser := func(k8sClient *kubernetes2.Client) error {
+	ensureUser := func(k8sClient kubernetes.ClientInt) error {
 		return k8sClient.ExecInPodOfDeployment(namespace, deployName, containerName, fmt.Sprintf("%s -e '%s;'", cmdSql, createSql))
 	}
 
@@ -48,7 +48,7 @@ func AdaptFunc(
 	if err != nil {
 		return nil, nil, err
 	}
-	destoryUser := func(k8sClient *kubernetes2.Client) error {
+	destoryUser := func(k8sClient kubernetes.ClientInt) error {
 		return k8sClient.ExecInPodOfDeployment(namespace, deployName, containerName, fmt.Sprintf("%s -e '%s;'", cmdSql, deleteSql))
 	}
 
@@ -62,7 +62,7 @@ func AdaptFunc(
 		deleteUser,
 	}
 
-	return func(k8sClient *kubernetes2.Client, queried map[string]interface{}) (core.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core.EnsureFunc, error) {
 			return core.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		},
 		core.DestroyersToDestroyFunc(monitor, destroyers),

@@ -64,6 +64,69 @@ func (n *NotAvailableError) Error() string {
 	return "Kubernetes is not available"
 }
 
+type ClientInt interface {
+	ApplyService(rsc *core.Service) error
+	DeleteService(namespace, name string) error
+
+	GetJob(namespace, name string) (*batch.Job, error)
+	ApplyJob(rsc *batch.Job) error
+	DeleteJob(namespace string, name string) error
+	WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error
+
+	ApplyServiceAccount(rsc *core.ServiceAccount) error
+	DeleteServiceAccount(namespace, name string) error
+
+	ApplyStatefulSet(rsc *apps.StatefulSet) error
+	DeleteStatefulset(namespace, name string) error
+	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
+
+	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
+	ExecInPod(namespace, name, container, command string) error
+
+	ApplyDeployment(rsc *apps.Deployment) error
+	DeleteDeployment(namespace, name string) error
+	PatchDeployment(namespace, name string, data string) error
+	WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
+	ScaleDeployment(namespace, name string, replicaCount int) error
+	ExecInPodOfDeployment(namespace, name, container, command string) error
+
+	CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error)
+	GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error)
+	ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error
+	DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error
+
+	ApplyCronJob(rsc *v1beta1.CronJob) error
+	DeleteCronJob(namespace string, name string) error
+
+	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
+	ApplySecret(rsc *core.Secret) error
+	DeleteSecret(namespace, name string) error
+	WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error
+
+	GetConfigMap(namespace, name string) (*core.ConfigMap, error)
+	ApplyConfigmap(rsc *core.ConfigMap) error
+	DeleteConfigmap(namespace, name string) error
+	WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error
+
+	ApplyRole(rsc *rbac.Role) error
+	DeleteRole(namespace, name string) error
+
+	ApplyClusterRole(rsc *rbac.ClusterRole) error
+	DeleteClusterRole(name string) error
+
+	ApplyRoleBinding(rsc *rbac.RoleBinding) error
+	DeleteRoleBinding(namespace, name string) error
+
+	ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error
+	DeleteClusterRoleBinding(name string) error
+
+	ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error
+	DeletePodDisruptionBudget(namespace string, name string) error
+
+	ApplyNamespace(rsc *core.Namespace) error
+	DeleteNamespace(name string) error
+}
+
 type Client struct {
 	monitor           mntr.Monitor
 	set               *kubernetes.Clientset
@@ -123,7 +186,6 @@ func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 		return err
 	})
 }
-
 func (c *Client) DeleteNamespace(name string) error {
 	return c.set.CoreV1().Namespaces().Delete(context.Background(), name, mach.DeleteOptions{})
 }
@@ -165,7 +227,6 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment) error {
 		return err
 	})
 }
-
 func (c *Client) DeleteDeployment(namespace, name string) error {
 	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
@@ -350,7 +411,6 @@ func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error
 		return nil
 	})
 }
-
 func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error {
 	return c.set.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
@@ -393,7 +453,6 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet) error {
 		return nil
 	})
 }
-
 func (c *Client) DeleteStatefulset(namespace, name string) error {
 	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
@@ -1107,7 +1166,6 @@ func (c *Client) GetNamespacedCRDResource(group, version, kind, namespace, name 
 
 	return resource.Get(context.Background(), name, mach.GetOptions{})
 }
-
 func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error {
 	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
 		Group: group,
@@ -1178,7 +1236,6 @@ func (c *Client) ExecInPodOfDeployment(namespace, name, container, command strin
 	req := c.set.CoreV1().RESTClient().Post().Resource("pods").Namespace(namespace).Name(firstPod.Name).SubResource("exec")
 	return c.execInPod(cmd, container, req)
 }
-
 func (c *Client) ExecInPod(namespace, name, container, command string) error {
 	cmd := []string{
 		"sh",

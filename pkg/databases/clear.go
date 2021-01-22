@@ -12,7 +12,7 @@ import (
 
 func Clear(
 	monitor mntr.Monitor,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	gitClient *git.Client,
 	databases []string,
 ) error {
@@ -23,7 +23,7 @@ func Clear(
 	}
 	current := &tree.Tree{}
 
-	query, _, _, err := orbdb.AdaptFunc("", "clear")(monitor, desired, current)
+	query, _, _, err := orbdb.AdaptFunc("", "clean")(monitor, desired, current)
 	if err != nil {
 		monitor.Error(err)
 		return err
