@@ -138,7 +138,15 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 	return func() {
 
 		var err error
-		defer common.ReportHealthiness(healthyChan, err, true)
+		defer func() {
+			go func() {
+				if err != nil {
+					healthyChan <- false
+					return
+				}
+				healthyChan <- true
+			}()
+		}()
 
 		query, _, _, migrate, treeDesired, treeCurrent, _, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
 		if err != nil {
@@ -259,7 +267,10 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if changed {
-			err = conf.GitClient.Push()
+			pushErr := conf.GitClient.Push()
+			if err == nil {
+				err = pushErr
+			}
 			monitor.Error(err)
 		}
 
