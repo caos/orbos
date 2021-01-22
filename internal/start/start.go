@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/operator/common"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/secret/operators"
 
@@ -76,13 +78,7 @@ loop:
 func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, healthyChan chan bool, done func(iterated bool)) {
 
 	var err error
-	defer func() {
-		if err != nil {
-			healthyChan <- false
-			return
-		}
-		healthyChan <- true
-	}()
+	defer common.ReportHealthiness(healthyChan, err, false)
 
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {

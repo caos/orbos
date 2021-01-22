@@ -138,13 +138,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 	return func() {
 
 		var err error
-		defer func() {
-			if err != nil {
-				healthyChan <- false
-				return
-			}
-			healthyChan <- true
-		}()
+		defer common.ReportHealthiness(healthyChan, err, true)
 
 		query, _, _, migrate, treeDesired, treeCurrent, _, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
 		if err != nil {
@@ -157,7 +151,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			Version: "v0",
 		}
 		rawDesiredNodeAgents := conf.GitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
-		if err := yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents); err != nil {
+		if err = yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents); err != nil {
 			monitor.Error(err)
 			return
 		}
@@ -186,7 +180,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		*/
 
 		if migrate {
-			if err := api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
+			if err = api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -265,7 +259,8 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if changed {
-			monitor.Error(conf.GitClient.Push())
+			err = conf.GitClient.Push()
+			monitor.Error(err)
 		}
 
 		/*
