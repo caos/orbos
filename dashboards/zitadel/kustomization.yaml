@@ -22,6 +22,9 @@ configMapGenerator:
 - name: grafana-dashboard-zitadel-cockroachdb-storage
   files:
     - json/storage.json
+- name: grafana-dashboard-zitadel
+  files:
+    - json/zitadel.json
 
 generatorOptions:
  disableNameSuffixHash: true

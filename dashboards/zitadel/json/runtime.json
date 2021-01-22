@@ -1,40 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_PROMETHEUS",
-      "label": "Prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "5.0.3"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": "5.0.0"
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "5.0.0"
-    },
-    {
-      "type": "panel",
-      "id": "table",
-      "name": "Table",
-      "version": "5.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -51,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
-  "id": null,
-  "iteration": 1530778153457,
+  "iteration": 1610376366300,
   "links": [
     {
       "asDropdown": true,
@@ -76,7 +39,14 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 0,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -84,6 +54,7 @@
         "x": 0,
         "y": 0
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -99,6 +70,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -117,7 +89,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "count(up{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "count(up{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "hide": false,
           "interval": "",
@@ -128,7 +100,7 @@
           "step": 120
         },
         {
-          "expr": "count(up{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"} == 1)",
+          "expr": "count(up{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"} == 1)",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -138,7 +110,7 @@
           "step": 120
         },
         {
-          "expr": "min(liveness_livenodes{cluster=\"$cluster\",job=\"cockroachdb\",instance=~\"$node\"})",
+          "expr": "min(liveness_livenodes{cluster=\"$cluster\",job=\"$job\",instance=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Live nodes (node liveness heartbeats)",
@@ -148,6 +120,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Nodes: $node",
       "tooltip": {
@@ -181,13 +154,23 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [],
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -207,6 +190,7 @@
       "styles": [
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -222,6 +206,7 @@
         },
         {
           "alias": "",
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -238,7 +223,7 @@
       ],
       "targets": [
         {
-          "expr": "build_timestamp{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "build_timestamp{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "table",
           "interval": "",
           "intervalFactor": 2,
@@ -250,7 +235,7 @@
       ],
       "title": "Built Timestamp",
       "transform": "table",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -260,7 +245,14 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -268,6 +260,7 @@
         "x": 0,
         "y": 7
       },
+      "hiddenSeries": false,
       "id": 12,
       "legend": {
         "avg": false,
@@ -283,6 +276,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -292,7 +286,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sys_uptime{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "sys_uptime{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -303,6 +297,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Uptime: $node",
       "tooltip": {
@@ -336,7 +331,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [
@@ -348,6 +347,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -366,6 +371,7 @@
       },
       "styles": [
         {
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Current",
           "type": "number",
@@ -374,7 +380,7 @@
       ],
       "targets": [
         {
-          "expr": "sys_uptime{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "sys_uptime{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -386,7 +392,7 @@
       ],
       "title": "Uptime: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -396,7 +402,14 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -404,6 +417,7 @@
         "x": 0,
         "y": 14
       },
+      "hiddenSeries": false,
       "id": 9,
       "legend": {
         "avg": false,
@@ -419,6 +433,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -428,7 +443,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(sys_rss{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "sum(sys_rss{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -438,7 +453,7 @@
           "step": 120
         },
         {
-          "expr": "sum(sys_go_allocbytes{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "sum(sys_go_allocbytes{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -448,7 +463,7 @@
           "step": 120
         },
         {
-          "expr": "sum(sys_go_totalbytes{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "sum(sys_go_totalbytes{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -458,7 +473,7 @@
           "step": 120
         },
         {
-          "expr": "sum(sys_cgo_allocbytes{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "sum(sys_cgo_allocbytes{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -468,7 +483,7 @@
           "step": 120
         },
         {
-          "expr": "sum(sys_cgo_totalbytes{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "sum(sys_cgo_totalbytes{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -480,6 +495,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Memory: $node",
       "tooltip": {
@@ -513,7 +529,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [
@@ -533,6 +553,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -552,6 +578,7 @@
       },
       "styles": [
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -567,7 +594,7 @@
       ],
       "targets": [
         {
-          "expr": "sys_rss{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "sys_rss{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -578,7 +605,7 @@
       ],
       "title": "RSS: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -588,7 +615,14 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -596,6 +630,7 @@
         "x": 0,
         "y": 21
       },
+      "hiddenSeries": false,
       "id": 11,
       "legend": {
         "avg": false,
@@ -611,6 +646,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -620,7 +656,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(sys_goroutines{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"})",
+          "expr": "sum(sys_goroutines{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"})",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -632,6 +668,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "Goroutines: $node",
       "tooltip": {
@@ -665,7 +702,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [
@@ -685,6 +726,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -703,6 +750,7 @@
       },
       "styles": [
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -719,7 +767,7 @@
       ],
       "targets": [
         {
-          "expr": "sys_goroutines{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "sys_goroutines{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -730,7 +778,7 @@
       ],
       "title": "Goroutines: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -740,7 +788,14 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -748,6 +803,7 @@
         "x": 0,
         "y": 28
       },
+      "hiddenSeries": false,
       "id": 14,
       "legend": {
         "avg": false,
@@ -763,6 +819,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -777,7 +834,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(sys_gc_count{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
+          "expr": "sum(rate(sys_gc_count{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -786,7 +843,7 @@
           "step": 120
         },
         {
-          "expr": "sum(rate(sys_gc_pause_ns{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
+          "expr": "sum(rate(sys_gc_pause_ns{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -798,6 +855,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "GC: $node",
       "tooltip": {
@@ -831,7 +889,11 @@
           "min": 0,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [
@@ -851,6 +913,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -869,11 +937,13 @@
       },
       "styles": [
         {
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "date"
         },
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -889,7 +959,7 @@
       ],
       "targets": [
         {
-          "expr": "rate(sys_gc_pause_ns{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval])",
+          "expr": "rate(sys_gc_pause_ns{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -900,7 +970,7 @@
       ],
       "title": "GC Pauses: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -910,7 +980,14 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
+      "fillGradient": 0,
       "grid": {},
       "gridPos": {
         "h": 7,
@@ -918,6 +995,7 @@
         "x": 0,
         "y": 35
       },
+      "hiddenSeries": false,
       "id": 17,
       "legend": {
         "avg": false,
@@ -933,6 +1011,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -942,7 +1021,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(sys_cpu_user_ns{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
+          "expr": "sum(rate(sys_cpu_user_ns{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -951,7 +1030,7 @@
           "step": 120
         },
         {
-          "expr": "sum(rate(sys_cpu_sys_ns{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
+          "expr": "sum(rate(sys_cpu_sys_ns{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "System",
@@ -962,6 +1041,7 @@
       ],
       "thresholds": [],
       "timeFrom": null,
+      "timeRegions": [],
       "timeShift": null,
       "title": "CPU Time: $node",
       "tooltip": {
@@ -995,7 +1075,11 @@
           "min": null,
           "show": true
         }
-      ]
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
     },
     {
       "columns": [
@@ -1019,6 +1103,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -1037,6 +1127,7 @@
       },
       "styles": [
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1052,7 +1143,7 @@
       ],
       "targets": [
         {
-          "expr": "rate(sys_cpu_user_ns{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]) + rate(sys_cpu_sys_ns{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval])",
+          "expr": "rate(sys_cpu_user_ns{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]) + rate(sys_cpu_sys_ns{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1064,7 +1155,7 @@
       ],
       "title": "CPU Time: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -1074,6 +1165,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "grid": {},
       "gridPos": {
@@ -1097,6 +1194,7 @@
       "links": [],
       "nullPointMode": "null as zero",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1106,7 +1204,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(rate(sys_cgocalls{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
+          "expr": "sum(rate(sys_cgocalls{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval]))",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1174,6 +1272,12 @@
       "datasource": "$datasource",
       "editable": true,
       "error": false,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -1192,6 +1296,7 @@
       },
       "styles": [
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1207,7 +1312,7 @@
       ],
       "targets": [
         {
-          "expr": "rate(sys_cgocalls{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval])",
+          "expr": "rate(sys_cgocalls{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}[$rate_interval])",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1219,7 +1324,7 @@
       ],
       "title": "CGo Calls: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -1228,6 +1333,12 @@
       "dashes": false,
       "datasource": "$datasource",
       "description": "Mean clock offset with other nodes as measured by cockroach.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -1250,6 +1361,7 @@
       "links": [],
       "nullPointMode": "null",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1259,7 +1371,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "clock_offset_meannanos{job=\"cockroachdb\",cluster=\"$cluster\", instance=~\"$node\"}",
+          "expr": "clock_offset_meannanos{job=\"$job\",cluster=\"$cluster\", instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1324,6 +1436,12 @@
         }
       ],
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -1342,11 +1460,13 @@
       },
       "styles": [
         {
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "date"
         },
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1362,7 +1482,7 @@
       ],
       "targets": [
         {
-          "expr": "clock_offset_meannanos{job=\"cockroachdb\",cluster=\"$cluster\", instance=~\"$node\"}",
+          "expr": "clock_offset_meannanos{job=\"$job\",cluster=\"$cluster\", instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1374,7 +1494,7 @@
       ],
       "title": "Clock Offset: $node",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -1382,6 +1502,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -1404,6 +1530,7 @@
       "links": [],
       "nullPointMode": "connected",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1413,7 +1540,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "round_trip_latency:rate1m:quantile_50{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "round_trip_latency:rate1m:quantile_50{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}}",
@@ -1478,6 +1605,12 @@
         }
       ],
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -1496,11 +1629,13 @@
       },
       "styles": [
         {
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "date"
         },
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1516,7 +1651,7 @@
       ],
       "targets": [
         {
-          "expr": "round_trip_latency:rate1m:quantile_50{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "round_trip_latency:rate1m:quantile_50{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1528,7 +1663,7 @@
       ],
       "title": "Round Trip Latency: 50th Percentile",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -1536,6 +1671,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -1558,6 +1699,7 @@
       "links": [],
       "nullPointMode": "connected",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1567,7 +1709,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "round_trip_latency:rate1m:quantile_95{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "round_trip_latency:rate1m:quantile_95{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}}",
@@ -1632,6 +1774,12 @@
         }
       ],
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -1650,11 +1798,13 @@
       },
       "styles": [
         {
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "date"
         },
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1670,7 +1820,7 @@
       ],
       "targets": [
         {
-          "expr": "round_trip_latency:rate1m:quantile_95{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "round_trip_latency:rate1m:quantile_95{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1682,7 +1832,7 @@
       ],
       "title": "Round Trip Latency: 95th Percentile",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     },
     {
       "aliasColors": {},
@@ -1690,6 +1840,12 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fill": 1,
       "gridPos": {
         "h": 7,
@@ -1712,6 +1868,7 @@
       "links": [],
       "nullPointMode": "connected",
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 5,
       "points": false,
       "renderer": "flot",
@@ -1721,7 +1878,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "round_trip_latency:rate1m:quantile_99{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "round_trip_latency:rate1m:quantile_99{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{instance}}",
@@ -1786,6 +1943,12 @@
         }
       ],
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
       "fontSize": "90%",
       "gridPos": {
         "h": 7,
@@ -1804,11 +1967,13 @@
       },
       "styles": [
         {
+          "align": "auto",
           "dateFormat": "YYYY-MM-DD HH:mm:ss",
           "pattern": "Time",
           "type": "date"
         },
         {
+          "align": "auto",
           "colorMode": null,
           "colors": [
             "rgba(245, 54, 54, 0.9)",
@@ -1824,7 +1989,7 @@
       ],
       "targets": [
         {
-          "expr": "round_trip_latency:rate1m:quantile_99{job=\"cockroachdb\",cluster=\"$cluster\",instance=~\"$node\"}",
+          "expr": "round_trip_latency:rate1m:quantile_99{job=\"$job\",cluster=\"$cluster\",instance=~\"$node\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 2,
@@ -1836,11 +2001,11 @@
       ],
       "title": "Round Trip Latency: 99th Percentile",
       "transform": "timeseries_aggregations",
-      "type": "table"
+      "type": "table-old"
     }
   ],
   "refresh": false,
-  "schemaVersion": 16,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [
     "cockroach"
@@ -1849,6 +2014,7 @@
     "list": [
       {
         "current": {
+          "selected": false,
           "text": "caos-prometheus",
           "value": "caos-prometheus"
         },
@@ -1863,51 +2029,13 @@
         "regex": "",
         "skipUrlSync": false,
         "type": "datasource"
-      },{
-        "allValue": null,
-        "current": {},
-        "datasource": "$datasource",
-        "hide": 0,
-        "includeAll": false,
-        "label": "Cluster name",
-        "multi": false,
-        "name": "cluster",
-        "options": [],
-        "query": "sys_uptime{job=\"cockroachdb\"}",
-        "refresh": 1,
-        "regex": "/cluster=\"([^\"]+)\"/",
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": ".*",
-        "current": {},
-        "datasource": "$datasource",
-        "hide": 0,
-        "includeAll": true,
-        "label": "Node",
-        "multi": false,
-        "name": "node",
-        "options": [],
-        "query": "label_values(sys_uptime{job=\"cockroachdb\",cluster=\"$cluster\"},instance)",
-        "refresh": 1,
-        "regex": "",
-        "sort": 3,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
       },
       {
         "auto": false,
         "auto_count": 30,
         "auto_min": "10s",
         "current": {
+          "selected": false,
           "text": "30s",
           "value": "30s"
         },
@@ -1967,7 +2095,87 @@
         "query": "30s,1m,5m,10m,30m,1h,6h,12h,1d",
         "refresh": 2,
         "regex": "",
+        "skipUrlSync": false,
         "type": "interval"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "cockroachdb-public",
+          "value": "cockroachdb-public"
+        },
+        "datasource": "$datasource",
+        "definition": "label_values(sys_uptime, job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "job",
+        "options": [],
+        "query": "label_values(sys_uptime, job)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 2,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "isNone": true,
+          "selected": false,
+          "text": "None",
+          "value": ""
+        },
+        "datasource": "$datasource",
+        "definition": "sys_uptime{job=\"$job\"}",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Cluster name",
+        "multi": false,
+        "name": "cluster",
+        "options": [],
+        "query": "sys_uptime{job=\"$job\"}",
+        "refresh": 1,
+        "regex": "/cluster=\"([^\"]+)\"/",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": ".*",
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
+        "datasource": "$datasource",
+        "definition": "label_values(sys_uptime{job=\"$job\",cluster=\"$cluster\"},instance)",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Node",
+        "multi": false,
+        "name": "node",
+        "options": [],
+        "query": "label_values(sys_uptime{job=\"$job\",cluster=\"$cluster\"},instance)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 3,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
       }
     ]
   },
@@ -2003,5 +2211,5 @@
   "timezone": "utc",
   "title": "Cockroach Runtime",
   "uid": "000000001",
-  "version": 84
+  "version": 1
 }

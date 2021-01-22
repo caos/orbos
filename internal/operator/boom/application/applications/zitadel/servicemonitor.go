@@ -4,32 +4,43 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
 	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed"
-	"github.com/caos/orbos/pkg/labels"
 )
 
-func GetServicemonitor(instanceName string) *servicemonitor.Config {
+func GetServicemonitors(instanceName string) []*servicemonitor.Config {
+	return []*servicemonitor.Config{
+		getOperatorServicemonitor(instanceName),
+		getZitadelServicemonitor(instanceName),
+	}
+}
 
-	var monitorName name.Application = "zitadel-cockroachdb"
+func getZitadelServicemonitor(instanceName string) *servicemonitor.Config {
+	var monitorName name.Application = "zitadel-servicemonitor"
 
 	return &servicemonitor.Config{
 		Name: monitorName.String(),
 		Endpoints: []*servicemonitor.ConfigEndpoint{{
 			Port: "http",
-			Path: "/_status/vars",
-			TLSConfig: &servicemonitor.ConfigTLSConfig{
-				InsecureSkipVerify: true,
-			},
-			Relabelings: []*servicemonitor.ConfigRelabeling{{
-				Action:       "replace",
-				SourceLabels: []string{"__meta_kubernetes_pod_node_name"},
-				TargetLabel:  "instance",
-			}},
 		}},
 		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+		ServiceMatchingLabels: getApplicationServiceLabels(),
 
-		ServiceMatchingLabels: labels.MustK8sMap(managed.PublicServiceNameSelector()),
-		JobName:               monitorName.String(),
-		NamespaceSelector:     []string{"caos-zitadel"},
+		JobName:           monitorName.String(),
+		NamespaceSelector: []string{"caos-zitadel"},
+	}
+}
+
+func getOperatorServicemonitor(instanceName string) *servicemonitor.Config {
+	var monitorName name.Application = "zitadel-operator-servicemonitor"
+
+	return &servicemonitor.Config{
+		Name: monitorName.String(),
+		Endpoints: []*servicemonitor.ConfigEndpoint{{
+			Port: "http",
+		}},
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, monitorName),
+		ServiceMatchingLabels: getOperatorServiceLabels(),
+
+		JobName:           monitorName.String(),
+		NamespaceSelector: []string{"caos-system"},
 	}
 }

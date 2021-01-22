@@ -2,19 +2,15 @@ package orbiter
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	var appName name.Application
 	appName = "orbiter"
-	monitorlabels := labels.GetMonitorLabels(instanceName, appName)
-	ls := map[string]string{
-		"app.kubernetes.io/component": "orbiter",
-		"app.kubernetes.io/instance":  "orbiter",
-		"app.kubernetes.io/part-of":   "orbos",
-	}
 
 	relabelings := []*servicemonitor.ConfigRelabeling{{
 		Action:       "replace",
@@ -50,8 +46,8 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 	return &servicemonitor.Config{
 		Name:                  "orbiter-servicemonitor",
 		Endpoints:             []*servicemonitor.ConfigEndpoint{endpoint},
-		MonitorMatchingLabels: monitorlabels,
-		ServiceMatchingLabels: ls,
+		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, appName),
+		ServiceMatchingLabels: labels.MustK8sMap(orb.OperatorSelector()),
 		JobName:               "orbiter",
 	}
 }

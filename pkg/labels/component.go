@@ -42,6 +42,14 @@ func MustForComponent(l *API, component string) *Component {
 	return c
 }
 
+func MustReplaceComponent(l *Component, component string) *Component {
+	return MustForComponent(GetAPIFromComponent(l), component)
+}
+
+func GetAPIFromComponent(l *Component) *API {
+	return l.base
+}
+
 /*
 func (l *Component) Major() int8 {
 	return l.base.Major()

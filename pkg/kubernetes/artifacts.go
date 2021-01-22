@@ -29,7 +29,8 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 		ObjectMeta: mach.ObjectMeta{
 			Name: "caos-system",
 			Labels: map[string]string{
-				"name": "caos-system",
+				"name":                      "caos-system",
+				"app.kubernetes.io/part-of": "orbos",
 			},
 		},
 	})
@@ -47,6 +48,9 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "caos",
 			Namespace: "caos-system",
+			Labels: map[string]string{
+				"app.kubernetes.io/part-of": "orbos",
+			},
 		},
 		StringData: map[string]string{
 			"orbconfig": string(orbfile),
@@ -454,7 +458,7 @@ func EnsureBoomArtifacts(
 		ObjectMeta: mach.ObjectMeta{
 			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels:    k8sNameLabels,
+			Labels:    k8sPodSelector,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{
@@ -568,7 +572,7 @@ func EnsureOrbiterArtifacts(
 		ObjectMeta: mach.ObjectMeta{
 			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels:    k8sNameLabels,
+			Labels:    k8sPodSelector,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{

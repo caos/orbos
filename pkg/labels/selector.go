@@ -17,8 +17,12 @@ type InternalSelector struct {
 	InternalPartofProp     `yaml:",inline"`
 }
 
-func OpenNameSelector(component, name string) *Selector {
-	return DeriveNameSelector(MustForName(MustForComponent(MustForAPI(NoopOperator(""), "", ""), component), name), false)
+func OpenComponentSelector(component string) *Selector {
+	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator("ORBOS", component+".caos.ch")), component), false)
+}
+
+func OpenOperatorSelector(component string) *Selector {
+	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator("ORBOS", component)), "operator"), false)
 }
 
 func DeriveComponentSelector(l *Component, open bool) *Selector {

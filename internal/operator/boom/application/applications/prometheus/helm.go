@@ -31,41 +31,42 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *late
 		monitor.Info("Not sending telemetry data to MISSION as secret grafana-cloud is missing in namespace caos-system")
 	}
 
-	config := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), info.GetNamespace(), toolsetCRDSpec)
+	configResult := config.ScrapeMetricsCrdsConfig(info.GetInstanceName(), info.GetNamespace(), toolsetCRDSpec)
+	if configResult == nil {
+		return nil
+	}
 
 	values := helm.DefaultValues(p.GetImageTags())
-	if config != nil {
-		if config.StorageSpec != nil {
-			storageSpec := &helm.StorageSpec{
-				VolumeClaimTemplate: &helm.VolumeClaimTemplate{
-					Spec: &helm.VolumeClaimTemplateSpec{
-						StorageClassName: config.StorageSpec.StorageClass,
-						AccessModes:      config.StorageSpec.AccessModes,
-						Resources: &helm.Resources{
-							Requests: &helm.Request{
-								Storage: config.StorageSpec.Storage,
-							},
+	if configResult.StorageSpec != nil {
+		storageSpec := &helm.StorageSpec{
+			VolumeClaimTemplate: &helm.VolumeClaimTemplate{
+				Spec: &helm.VolumeClaimTemplateSpec{
+					StorageClassName: configResult.StorageSpec.StorageClass,
+					AccessModes:      configResult.StorageSpec.AccessModes,
+					Resources: &helm.Resources{
+						Requests: &helm.Request{
+							Storage: configResult.StorageSpec.Storage,
 						},
 					},
 				},
-			}
-
-			values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
+			},
 		}
 
-		if config.ServiceMonitors != nil {
-			additionalServiceMonitors := make([]*servicemonitor.Values, 0)
-			for _, specServiceMonitor := range config.ServiceMonitors {
-				valuesServiceMonitor := servicemonitor.SpecToValues(specServiceMonitor)
-				additionalServiceMonitors = append(additionalServiceMonitors, valuesServiceMonitor)
-			}
+		values.Prometheus.PrometheusSpec.StorageSpec = storageSpec
+	}
 
-			values.Prometheus.AdditionalServiceMonitors = additionalServiceMonitors
+	if configResult.ServiceMonitors != nil {
+		additionalServiceMonitors := make([]*servicemonitor.Values, 0)
+		for _, specServiceMonitor := range configResult.ServiceMonitors {
+			valuesServiceMonitor := servicemonitor.SpecToValues(specServiceMonitor)
+			additionalServiceMonitors = append(additionalServiceMonitors, valuesServiceMonitor)
 		}
 
-		if config.AdditionalScrapeConfigs != nil {
-			values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = config.AdditionalScrapeConfigs
-		}
+		values.Prometheus.AdditionalServiceMonitors = additionalServiceMonitors
+	}
+
+	if configResult.AdditionalScrapeConfigs != nil {
+		values.Prometheus.PrometheusSpec.AdditionalScrapeConfigs = configResult.AdditionalScrapeConfigs
 	}
 
 	spec := toolsetCRDSpec.MetricsPersisting

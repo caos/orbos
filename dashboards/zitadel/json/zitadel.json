@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1610384515138,
+  "id": 32,
   "links": [],
   "panels": [
     {
@@ -23,124 +23,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": "caos-prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "links": []
+          "unit": "ms"
         },
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 11,
         "w": 24,
         "x": 0,
         "y": 0
-      },
-      "hiddenSeries": false,
-      "id": 6,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "percentage": false,
-      "pluginVersion": "7.1.5",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "dist_kube_statefulset_replicas{controller=\"$job\",namespace=\"caos-zitadel\"} - dist_kube_statefulset_status_replicas_current{controller=\"$job\",namespace=\"caos-zitadel\"}",
-          "legendFormat": "{{controller}}",
-          "refId": "A"
-        },
-        {
-          "expr": "dist_kube_deployment_status_replicas{controller=\"zitadel\",namespace=\"caos-zitadel\"} - dist_kube_deployment_spec_replicas{controller=\"zitadel\",namespace=\"caos-zitadel\"}",
-          "legendFormat": "{{controller}}",
-          "refId": "B"
-        },
-        {
-          "expr": "dist_kube_deployment_status_replicas{controller=\"zitadel-operator\",namespace=\"caos-system\"} - dist_kube_deployment_spec_replicas{controller=\"zitadel-operator\",namespace=\"caos-system\"}",
-          "legendFormat": "{{controller}}",
-          "refId": "C"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Unready Pods",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "decimals": null,
-          "format": "short",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$datasource",
-      "fieldConfig": {
-        "defaults": {
-          "custom": {},
-          "links": []
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 6
       },
       "hiddenSeries": false,
       "id": 4,
@@ -167,8 +64,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "cr_runtime_high_open_fd_count",
-          "legendFormat": "{{pod}}",
+          "expr": "zitadel_spooler_div_milliseconds",
+          "interval": "",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -176,7 +74,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Open File Descriptors",
+      "title": "ALL",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -192,12 +90,11 @@
       },
       "yaxes": [
         {
-          "decimals": null,
-          "format": "short",
+          "format": "ms",
           "label": null,
           "logBase": 1,
-          "max": "1",
-          "min": "0",
+          "max": null,
+          "min": null,
           "show": true
         },
         {
@@ -219,21 +116,20 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": "caos-prometheus",
       "fieldConfig": {
         "defaults": {
-          "custom": {},
-          "links": []
+          "custom": {}
         },
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 24,
         "x": 0,
-        "y": 12
+        "y": 11
       },
       "hiddenSeries": false,
       "id": 2,
@@ -260,8 +156,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "cr_runtime_pod_flapping",
-          "legendFormat": "{{pod}}",
+          "expr": "zitadel_active_session_counter",
+          "interval": "",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -269,7 +166,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Flapping Pods",
+      "title": "active sessions",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -289,13 +186,12 @@
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
-          "decimals": null,
           "format": "short",
-          "label": "",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
@@ -312,24 +208,24 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": "caos-prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "links": []
+          "unit": "ms"
         },
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 24,
+        "h": 7,
+        "w": 5,
         "x": 0,
         "y": 18
       },
       "hiddenSeries": false,
-      "id": 5,
+      "id": 6,
       "legend": {
         "avg": false,
         "current": false,
@@ -353,8 +249,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "1 - cr_runtime_version_mismatches",
-          "legendFormat": "overall count",
+          "expr": "zitadel_spooler_div_milliseconds{database=\"adminapi\"}",
+          "interval": "",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -362,7 +259,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Version Mismatches",
+      "title": "adminapi",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -378,17 +275,16 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
-          "decimals": null,
           "format": "short",
-          "label": "",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
@@ -405,21 +301,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": "caos-prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "links": []
+          "unit": "ms"
         },
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 24
+        "h": 7,
+        "w": 5,
+        "x": 5,
+        "y": 18
       },
       "hiddenSeries": false,
       "id": 7,
@@ -446,8 +342,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "clock_offset_meannanos",
-          "legendFormat": "{{pod}}",
+          "expr": "zitadel_spooler_div_milliseconds{database=\"auth\"}",
+          "interval": "",
+          "legendFormat": "",
           "refId": "A"
         }
       ],
@@ -455,7 +352,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Clock offsets",
+      "title": "auth",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -471,17 +368,16 @@
       },
       "yaxes": [
         {
-          "format": "ns",
+          "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
-          "decimals": null,
           "format": "short",
-          "label": "",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
@@ -498,21 +394,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": "caos-prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "links": []
+          "unit": "ms"
         },
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 30
+        "h": 7,
+        "w": 4,
+        "x": 10,
+        "y": 18
       },
       "hiddenSeries": false,
       "id": 8,
@@ -539,21 +435,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(security_certificate_expiration_ca{job=\"$job\"} - time()) / 86400",
-          "legendFormat": "CA {{pod}}",
+          "expr": "zitadel_spooler_div_milliseconds{database=\"authz\"}",
+          "interval": "",
+          "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "expr": "(security_certificate_expiration_node{job=\"$job\"} - time()) / 86400",
-          "legendFormat": "Node {{pod}}",
-          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Certificate Expiration",
+      "title": "authz",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -569,17 +461,16 @@
       },
       "yaxes": [
         {
-          "format": "d",
+          "format": "ms",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
-          "decimals": null,
           "format": "short",
-          "label": "",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
@@ -596,21 +487,21 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "$datasource",
+      "datasource": "caos-prometheus",
       "fieldConfig": {
         "defaults": {
           "custom": {},
-          "links": []
+          "unit": "ms"
         },
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 24,
-        "x": 0,
-        "y": 36
+        "h": 7,
+        "w": 4,
+        "x": 14,
+        "y": 18
       },
       "hiddenSeries": false,
       "id": 9,
@@ -637,26 +528,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "requests_slow_latch{job=\"$job\"}",
-          "legendFormat": "latch store {{store}}",
+          "expr": "zitadel_spooler_div_milliseconds{database=\"management\"}",
+          "interval": "",
+          "legendFormat": "",
           "refId": "A"
-        },
-        {
-          "expr": "requests_slow_lease{job=\"$job\"}",
-          "legendFormat": "lease store {{store}}",
-          "refId": "B"
-        },
-        {
-          "expr": "requests_slow_raft{job=\"$job\"}",
-          "legendFormat": "raft store {{store}}",
-          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Slow Requests",
+      "title": "management",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -672,17 +554,109 @@
       },
       "yaxes": [
         {
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
           "format": "short",
           "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "caos-prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 6,
+        "x": 18,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 10,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "percentage": false,
+      "pluginVersion": "7.1.5",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "zitadel_spooler_div_milliseconds{database=\"notification\"}",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "notification",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ms",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
           "show": true
         },
         {
-          "decimals": null,
           "format": "short",
-          "label": "",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": null,
@@ -695,112 +669,16 @@
       }
     }
   ],
+  "refresh": "1h",
   "schemaVersion": 26,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": [
-      {
-        "current": {
-          "selected": false,
-          "text": "caos-prometheus",
-          "value": "caos-prometheus"
-        },
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "datasource",
-        "options": [],
-        "query": "prometheus",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "type": "datasource"
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": "$datasource",
-        "definition": "label_values(caos_cr_capacity_store_ryg, store)",
-        "hide": 2,
-        "includeAll": true,
-        "label": null,
-        "multi": true,
-        "name": "store",
-        "options": [],
-        "query": "label_values(caos_cr_capacity_store_ryg, store)",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 3,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "All",
-          "value": "$__all"
-        },
-        "datasource": "$datasource",
-        "definition": "label_values(caos_cr_replicas_nodes_ryg, pod)",
-        "hide": 2,
-        "includeAll": true,
-        "label": null,
-        "multi": true,
-        "name": "pod",
-        "options": [],
-        "query": "label_values(caos_cr_replicas_nodes_ryg, pod)",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 1,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      },
-      {
-        "allValue": null,
-        "current": {
-          "selected": false,
-          "text": "cockroachdb-public",
-          "value": "cockroachdb-public"
-        },
-        "datasource": "$datasource",
-        "definition": "label_values(sys_uptime, job)",
-        "hide": 0,
-        "includeAll": false,
-        "label": null,
-        "multi": false,
-        "name": "job",
-        "options": [],
-        "query": "label_values(sys_uptime, job)",
-        "refresh": 1,
-        "regex": "",
-        "skipUrlSync": false,
-        "sort": 0,
-        "tagValuesQuery": "",
-        "tags": [],
-        "tagsQuery": "",
-        "type": "query",
-        "useTags": false
-      }
-    ]
+    "list": []
   },
   "time": {
-    "from": "now-15m",
-    "to": "now"
+    "from": "2021-01-05T13:24:40.570Z",
+    "to": "2021-01-05T13:44:37.592Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -817,7 +695,7 @@
     ]
   },
   "timezone": "",
-  "title": "Health / ZITADEL Details",
-  "uid": "eZoLxzcGz",
-  "version": 2
+  "title": "Zitadel Metrics",
+  "uid": "P4rP75aGz",
+  "version": 5
 }
