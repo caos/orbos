@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/pkg/errors"
 )
 
@@ -21,12 +22,6 @@ func adaptFunc(
 	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (core.EnsureFunc, error) {
 			return func(k8sClient kubernetes.ClientInt) error {
 
-				internalLabels := map[string]string{}
-				for k, v := range cfg.Labels {
-					internalLabels[k] = v
-				}
-				internalLabels["app.kubernetes.io/component"] = "legacycloudflare"
-
 				groups := make(map[string][]string, 0)
 				if cfg.Groups != nil {
 					for _, group := range cfg.Groups {
@@ -39,8 +34,9 @@ func adaptFunc(
 					return err
 				}
 
+				caSecretLabels := labels.MustForName(labels.MustForComponent(cfg.Labels, "cloudflare"), cfg.OriginCASecretName)
 				for _, domain := range cfg.Domains {
-					err = apps.Ensure(k8sClient, cfg.Namespace, internalLabels, domain.Domain, domain.Subdomains, domain.Rules, cfg.OriginCASecretName)
+					err = apps.Ensure(k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
 					if err != nil {
 						return err
 					}

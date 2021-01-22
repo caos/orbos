@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/pkg/tree"
@@ -73,7 +74,7 @@ func (d *DesiredV0) validate() error {
 	}
 
 	seenPools := map[string][]string{
-		d.Spec.ControlPlane.Provider: []string{d.Spec.ControlPlane.Pool},
+		d.Spec.ControlPlane.Provider: {d.Spec.ControlPlane.Pool},
 	}
 
 	for _, worker := range d.Spec.Workers {

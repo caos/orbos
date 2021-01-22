@@ -3,16 +3,17 @@ package role
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	rbac "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name, apiGroups, kubeResources, verbs []string) (resources.QueryFunc, error) {
 	role := &rbac.Role{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: apiGroups,

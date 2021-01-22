@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/pkg/labels"
 	core "k8s.io/api/core/v1"
 
 	"github.com/pkg/errors"
@@ -17,10 +19,11 @@ import (
 var deployErrors int
 
 func AdaptFunc(
+	apiLabels *labels.API,
 	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
-	destroyProviders func() (map[string]interface{}, error),
+	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR),
 	gitClient *git.Client,
 ) orbiter.AdaptFunc {
@@ -102,7 +105,13 @@ func AdaptFunc(
 				imageRegistry = "ghcr.io"
 			}
 
-			if err := kubernetes.EnsureOrbiterArtifacts(monitor, k8sClient, desiredKind.Spec.Versions.Orbiter, imageRegistry); err != nil {
+			if err := kubernetes.EnsureOrbiterArtifacts(
+				monitor,
+				apiLabels,
+				k8sClient,
+				desiredKind.Spec.Versions.Orbiter,
+				imageRegistry,
+			); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
@@ -120,10 +129,11 @@ func AdaptFunc(
 			}
 		}
 
+		currentKind := "orbiter.caos.ch/KubernetesCluster"
 		current := &CurrentCluster{}
 		currentTree.Parsed = &Current{
 			Common: tree.Common{
-				Kind:    "orbiter.caos.ch/KubernetesCluster",
+				Kind:    currentKind,
 				Version: "v0",
 			},
 			Current: current,
@@ -143,12 +153,25 @@ func AdaptFunc(
 					gitClient,
 				)
 				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
-			}, func() error {
+			}, func(delegate map[string]interface{}) error {
 				defer func() {
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
-				providers, err := destroyProviders()
+				if k8sClient.Available() {
+					volumes, err := k8sClient.ListPersistentVolumes()
+					if err != nil {
+						return err
+					}
+
+					volumeNames := make([]infra.Volume, len(volumes.Items))
+					for idx := range volumes.Items {
+						volumeNames[idx] = infra.Volume{Name: volumes.Items[idx].Name}
+					}
+					delegate[currentKind] = volumeNames
+				}
+
+				providers, err := destroyProviders(delegate)
 				if err != nil {
 					return err
 				}

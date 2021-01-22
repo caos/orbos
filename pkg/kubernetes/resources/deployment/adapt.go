@@ -6,10 +6,10 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 )
 
-func AdaptFuncToEnsure(deployment *appsv1.Deployment) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(deployment *appsv1.Deployment, force bool) (resources.QueryFunc, error) {
 	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyDeployment(deployment)
+			return k8sClient.ApplyDeployment(deployment, force)
 		}, nil
 	}, nil
 }

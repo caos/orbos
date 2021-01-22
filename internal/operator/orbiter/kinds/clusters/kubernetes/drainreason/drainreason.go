@@ -1,3 +1,5 @@
+//go:generate stringer -type=DrainReason
+
 package drainreason
 
 type DrainReason int

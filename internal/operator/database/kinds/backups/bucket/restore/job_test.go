@@ -2,6 +2,7 @@ package restore
 
 import (
 	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/stretchr/testify/assert"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,14 +20,23 @@ func TestBackup_Job1(t *testing.T) {
 	secretName := "testSecretName"
 	jobName := "testJob"
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
+	k8sLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       jobName,
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testOpVersion",
+		"caos.ch/apiversion":           "testVersion",
+		"caos.ch/kind":                 "testKind"}
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testOpVersion"), "testKind", "testVersion"), "testComponent")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	equals :=
 		&batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      jobName,
 				Namespace: namespace,
-				Labels:    labels,
+				Labels:    k8sLabels,
 			},
 			Spec: batchv1.JobSpec{
 				Template: corev1.PodTemplateSpec{
@@ -73,7 +83,7 @@ func TestBackup_Job1(t *testing.T) {
 			},
 		}
 
-	assert.Equal(t, equals, getJob(namespace, labels, jobName, nodeselector, tolerations, secretName, secretKey, version, command))
+	assert.Equal(t, equals, getJob(namespace, nameLabels, nodeselector, tolerations, secretName, secretKey, version, command))
 }
 
 func TestBackup_Job2(t *testing.T) {
@@ -86,14 +96,23 @@ func TestBackup_Job2(t *testing.T) {
 	secretName := "testSecretName2"
 	jobName := "testJob2"
 	namespace := "testNs2"
-	labels := map[string]string{"test2": "test2"}
+	k8sLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent2",
+		"app.kubernetes.io/managed-by": "testOp2",
+		"app.kubernetes.io/name":       jobName,
+		"app.kubernetes.io/part-of":    "testProd2",
+		"app.kubernetes.io/version":    "testOpVersion2",
+		"caos.ch/apiversion":           "testVersion2",
+		"caos.ch/kind":                 "testKind2"}
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testOpVersion2"), "testKind2", "testVersion2"), "testComponent2")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	equals :=
 		&batchv1.Job{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      jobName,
 				Namespace: namespace,
-				Labels:    labels,
+				Labels:    k8sLabels,
 			},
 			Spec: batchv1.JobSpec{
 				Template: corev1.PodTemplateSpec{
@@ -140,5 +159,5 @@ func TestBackup_Job2(t *testing.T) {
 			},
 		}
 
-	assert.Equal(t, equals, getJob(namespace, labels, jobName, nodeselector, tolerations, secretName, secretKey, version, command))
+	assert.Equal(t, equals, getJob(namespace, nameLabels, nodeselector, tolerations, secretName, secretKey, version, command))
 }

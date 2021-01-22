@@ -7,6 +7,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/golang/mock/gomock"
@@ -24,7 +25,11 @@ func TestBucket_Secrets(t *testing.T) {
 	cron := "testCron2"
 	monitor := mntr.Monitor{}
 	namespace := "testNs2"
-	labels := map[string]string{"test2": "test2"}
+
+	kindVersion := "v0"
+	kind := "BucketBackup"
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "BucketBackup", kindVersion), "testComponent")
+
 	timestamp := "test2"
 	nodeselector := map[string]string{"test2": "test2"}
 	tolerations := []corev1.Toleration{
@@ -34,8 +39,8 @@ func TestBucket_Secrets(t *testing.T) {
 
 	desired := getDesiredTree(t, masterkey, &DesiredV0{
 		Common: &tree.Common{
-			Kind:    "databases.caos.ch/BucketBackup",
-			Version: "v0",
+			Kind:    "databases.caos.ch/" + kind,
+			Version: kindVersion,
 		},
 		Spec: &Spec{
 			Verbose: true,
@@ -58,7 +63,7 @@ func TestBucket_Secrets(t *testing.T) {
 	_, _, secrets, err := AdaptFunc(
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		checkDBReady,
 		timestamp,
 		nodeselector,
@@ -87,7 +92,17 @@ func TestBucket_AdaptBackup(t *testing.T) {
 	cron := "testCron2"
 	monitor := mntr.Monitor{}
 	namespace := "testNs2"
-	labels := map[string]string{"test2": "test2"}
+
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "BucketBackup", "v0"), "testComponent")
+	k8sLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "backup-serviceaccountjson",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "BucketBackup",
+	}
 	timestamp := "test2"
 	nodeselector := map[string]string{"test2": "test2"}
 	tolerations := []corev1.Toleration{
@@ -114,12 +129,12 @@ func TestBucket_AdaptBackup(t *testing.T) {
 		return nil
 	}
 
-	SetBackup(client, namespace, labels, saJson)
+	SetBackup(client, namespace, k8sLabels, saJson)
 
 	query, _, _, err := AdaptFunc(
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		checkDBReady,
 		timestamp,
 		nodeselector,
@@ -150,7 +165,17 @@ func TestBucket_AdaptInstantBackup(t *testing.T) {
 	cron := "testCron"
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
+
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "BucketBackup", "v0"), "testComponent")
+	k8sLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "backup-serviceaccountjson",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "BucketBackup",
+	}
 	timestamp := "test"
 	nodeselector := map[string]string{"test": "test"}
 	tolerations := []corev1.Toleration{
@@ -178,12 +203,12 @@ func TestBucket_AdaptInstantBackup(t *testing.T) {
 		return nil
 	}
 
-	SetInstantBackup(client, namespace, backupName, labels, saJson)
+	SetInstantBackup(client, namespace, backupName, k8sLabels, saJson)
 
 	query, _, _, err := AdaptFunc(
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		checkDBReady,
 		timestamp,
 		nodeselector,
@@ -214,7 +239,18 @@ func TestBucket_AdaptRestore(t *testing.T) {
 	cron := "testCron"
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
+
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "BucketBackup", "v0"), "testComponent")
+	k8sLabels := map[string]string{
+		"app.kubernetes.io/component":  "testComponent",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "backup-serviceaccountjson",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "BucketBackup",
+	}
+
 	timestamp := "test"
 	nodeselector := map[string]string{"test": "test"}
 	tolerations := []corev1.Toleration{
@@ -242,12 +278,12 @@ func TestBucket_AdaptRestore(t *testing.T) {
 		return nil
 	}
 
-	SetRestore(client, namespace, backupName, labels, saJson)
+	SetRestore(client, namespace, backupName, k8sLabels, saJson)
 
 	query, _, _, err := AdaptFunc(
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		checkDBReady,
 		timestamp,
 		nodeselector,
@@ -278,7 +314,9 @@ func TestBucket_AdaptClean(t *testing.T) {
 	cron := "testCron"
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
+
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "BucketBackup", "v0"), "testComponent")
+
 	timestamp := "test"
 	nodeselector := map[string]string{"test": "test"}
 	tolerations := []corev1.Toleration{
@@ -311,7 +349,7 @@ func TestBucket_AdaptClean(t *testing.T) {
 	query, _, _, err := AdaptFunc(
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		checkDBReady,
 		timestamp,
 		nodeselector,

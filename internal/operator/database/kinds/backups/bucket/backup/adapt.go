@@ -1,13 +1,15 @@
 package backup
 
 import (
+	"time"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/cronjob"
 	"github.com/caos/orbos/pkg/kubernetes/resources/job"
+	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
-	"time"
 )
 
 const (
@@ -29,7 +31,7 @@ func AdaptFunc(
 	monitor mntr.Monitor,
 	backupName string,
 	namespace string,
-	labels map[string]string,
+	componentLabels *labels.Component,
 	databases []string,
 	checkDBReady core.EnsureFunc,
 	bucketName string,
@@ -69,8 +71,7 @@ func AdaptFunc(
 
 	cronJobDef := getCronJob(
 		namespace,
-		labels,
-		GetJobName(backupName),
+		labels.MustForName(componentLabels, GetJobName(backupName)),
 		cron,
 		jobSpecDef,
 	)
@@ -87,8 +88,7 @@ func AdaptFunc(
 
 	jobDef := getJob(
 		namespace,
-		labels,
-		cronJobNamePrefix+backupName,
+		labels.MustForName(componentLabels, cronJobNamePrefix+backupName),
 		jobSpecDef,
 	)
 

@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 
@@ -58,6 +60,7 @@ func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) e
 
 func EnsureDatabaseArtifacts(
 	monitor mntr.Monitor,
+	apiLabels *labels.API,
 	client ClientInt,
 	version string,
 	nodeselector map[string]string,
@@ -72,10 +75,14 @@ func EnsureDatabaseArtifacts(
 		return nil
 	}
 
+	nameLabels := toNameLabels(apiLabels, "database-operator")
+	k8sNameLabels := labels.MustK8sMap(nameLabels)
+
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "database-operator",
 			Namespace: "caos-system",
+			Labels:    k8sNameLabels,
 		},
 	}); err != nil {
 		return err
@@ -83,12 +90,8 @@ func EnsureDatabaseArtifacts(
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "database-operator-clusterrole",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "database",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "database",
-			},
+			Name:   "database-operator-clusterrole",
+			Labels: k8sNameLabels,
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -101,12 +104,8 @@ func EnsureDatabaseArtifacts(
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "database-operator-clusterrolebinding",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "database",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "database",
-			},
+			Name:   "database-operator-clusterrolebinding",
+			Labels: k8sNameLabels,
 		},
 
 		RoleRef: rbac.RoleRef{
@@ -123,33 +122,20 @@ func EnsureDatabaseArtifacts(
 		return err
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "database-operator",
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "database",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "database",
-				"app.kubernetes.io/managed-by": "database.caos.ch",
-			},
+			Labels:    k8sNameLabels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/instance":  "database",
-					"app.kubernetes.io/part-of":   "orbos",
-					"app.kubernetes.io/component": "database",
-				},
+				MatchLabels: labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false)),
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/instance":  "database",
-						"app.kubernetes.io/part-of":   "orbos",
-						"app.kubernetes.io/component": "database",
-					},
+					Labels: labels.MustK8sMap(labels.AsSelectable(nameLabels)),
 				},
 				Spec: core.PodSpec{
 					ServiceAccountName: "database-operator",
@@ -194,7 +180,9 @@ func EnsureDatabaseArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -206,6 +194,7 @@ func EnsureDatabaseArtifacts(
 
 func EnsureNetworkingArtifacts(
 	monitor mntr.Monitor,
+	apiLabels *labels.API,
 	client ClientInt,
 	version string,
 	nodeselector map[string]string,
@@ -220,10 +209,14 @@ func EnsureNetworkingArtifacts(
 		return nil
 	}
 
+	nameLabels := toNameLabels(apiLabels, "networking-operator")
+	k8sNameLabels := labels.MustK8sMap(nameLabels)
+
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "networking-operator",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
+			Labels:    k8sNameLabels,
 		},
 	}); err != nil {
 		return err
@@ -231,12 +224,8 @@ func EnsureNetworkingArtifacts(
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "networking-operator-clusterrole",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "networking",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "networking",
-			},
+			Name:   nameLabels.Name(),
+			Labels: k8sNameLabels,
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -249,58 +238,41 @@ func EnsureNetworkingArtifacts(
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "networking-operator-clusterrolebinding",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "networking",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "networking",
-			},
+			Name:   nameLabels.Name(),
+			Labels: k8sNameLabels,
 		},
 
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "networking-operator-clusterrole",
+			Name:     nameLabels.Name(),
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "networking-operator",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
 		return err
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "networking-operator",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "networking",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "networking",
-				"app.kubernetes.io/managed-by": "networking.caos.ch",
-			},
+			Labels:    k8sNameLabels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/instance":  "networking",
-					"app.kubernetes.io/part-of":   "orbos",
-					"app.kubernetes.io/component": "networking",
-				},
+				MatchLabels: labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false)),
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/instance":  "networking",
-						"app.kubernetes.io/part-of":   "orbos",
-						"app.kubernetes.io/component": "networking",
-					},
+					Labels: labels.MustK8sMap(labels.AsSelectable(nameLabels)),
 				},
 				Spec: core.PodSpec{
-					ServiceAccountName: "networking-operator",
+					ServiceAccountName: nameLabels.Name(),
 					Containers: []core.Container{{
 						Name:            "networking",
 						ImagePullPolicy: core.PullIfNotPresent,
@@ -342,7 +314,8 @@ func EnsureNetworkingArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -354,6 +327,7 @@ func EnsureNetworkingArtifacts(
 
 func EnsureBoomArtifacts(
 	monitor mntr.Monitor,
+	apiLabels *labels.API,
 	client *Client,
 	version string,
 	tolerations k8s.Tolerations,
@@ -369,10 +343,14 @@ func EnsureBoomArtifacts(
 		return nil
 	}
 
+	nameLabels := toNameLabels(apiLabels, "boom")
+	k8sNameLabels := labels.MustK8sMap(nameLabels)
+
 	if err := client.ApplyServiceAccount(&core.ServiceAccount{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
+			Labels:    k8sNameLabels,
 		},
 	}); err != nil {
 		return err
@@ -380,12 +358,8 @@ func EnsureBoomArtifacts(
 
 	if err := client.ApplyClusterRole(&rbac.ClusterRole{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-clusterrole",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "boom",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "boom",
-			},
+			Name:   nameLabels.Name(),
+			Labels: k8sNameLabels,
 		},
 		Rules: []rbac.PolicyRule{{
 			APIGroups: []string{"*"},
@@ -398,58 +372,43 @@ func EnsureBoomArtifacts(
 
 	if err := client.ApplyClusterRoleBinding(&rbac.ClusterRoleBinding{
 		ObjectMeta: mach.ObjectMeta{
-			Name: "boom-clusterrolebinding",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":  "boom",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "boom",
-			},
+			Name:   nameLabels.Name(),
+			Labels: k8sNameLabels,
 		},
 
 		RoleRef: rbac.RoleRef{
 			APIGroup: "rbac.authorization.k8s.io",
 			Kind:     "ClusterRole",
-			Name:     "boom-clusterrole",
+			Name:     nameLabels.Name(),
 		},
 		Subjects: []rbac.Subject{{
 			Kind:      "ServiceAccount",
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
 		}},
 	}); err != nil {
 		return err
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
+
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "boom",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "boom.caos.ch",
-			},
+			Labels:    k8sNameLabels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/instance":  "boom",
-					"app.kubernetes.io/part-of":   "orbos",
-					"app.kubernetes.io/component": "boom",
-				},
+				MatchLabels: k8sPodSelector,
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
-						"app.kubernetes.io/instance":  "boom",
-						"app.kubernetes.io/part-of":   "orbos",
-						"app.kubernetes.io/component": "boom",
-					},
+					Labels: labels.MustK8sMap(labels.AsSelectable(nameLabels)),
 				},
 				Spec: core.PodSpec{
-					ServiceAccountName: "boom",
+					ServiceAccountName: nameLabels.Name(),
 					Containers: []core.Container{{
 						Name:            "boom",
 						ImagePullPolicy: core.PullIfNotPresent,
@@ -482,7 +441,9 @@ func EnsureBoomArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -491,14 +452,9 @@ func EnsureBoomArtifacts(
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "boom",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "boom",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "boom",
-				"app.kubernetes.io/managed-by": "boom.caos.ch",
-			},
+			Labels:    k8sNameLabels,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{
@@ -507,12 +463,8 @@ func EnsureBoomArtifacts(
 				Port:       2112,
 				TargetPort: intstr.FromInt(2112),
 			}},
-			Selector: map[string]string{
-				"app.kubernetes.io/instance":  "boom",
-				"app.kubernetes.io/part-of":   "orbos",
-				"app.kubernetes.io/component": "boom",
-			},
-			Type: core.ServiceTypeClusterIP,
+			Selector: k8sPodSelector,
+			Type:     core.ServiceTypeClusterIP,
 		},
 	}); err != nil {
 		return err
@@ -522,8 +474,13 @@ func EnsureBoomArtifacts(
 	return nil
 }
 
+func toNameLabels(apiLabels *labels.API, operatorName string) *labels.Name {
+	return labels.MustForName(labels.MustForComponent(apiLabels, "operator"), operatorName)
+}
+
 func EnsureOrbiterArtifacts(
 	monitor mntr.Monitor,
+	apiLabels *labels.API,
 	client *Client,
 	orbiterversion string,
 	imageRegistry string) error {
@@ -536,29 +493,24 @@ func EnsureOrbiterArtifacts(
 		return nil
 	}
 
-	if err := client.ApplyDeployment(&apps.Deployment{
+	nameLabels := toNameLabels(apiLabels, "orbiter")
+	k8sNameLabels := labels.MustK8sMap(nameLabels)
+	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
+
+	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "orbiter",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "orbiter",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "orbiter",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-			},
+			Labels:    k8sNameLabels,
 		},
 		Spec: apps.DeploymentSpec{
 			Replicas: int32Ptr(1),
 			Selector: &mach.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "orbiter",
-				},
+				MatchLabels: k8sPodSelector,
 			},
 			Template: core.PodTemplateSpec{
 				ObjectMeta: mach.ObjectMeta{
-					Labels: map[string]string{
-						"app": "orbiter",
-					},
+					Labels: labels.MustK8sMap(labels.AsSelectable(nameLabels)),
 				},
 				Spec: core.PodSpec{
 					Containers: []core.Container{{
@@ -595,9 +547,6 @@ func EnsureOrbiterArtifacts(
 							},
 						},
 					}},
-					NodeSelector: map[string]string{
-						"node-role.kubernetes.io/master": "",
-					},
 					Tolerations: []core.Toleration{{
 						Key:      "node-role.kubernetes.io/master",
 						Effect:   "NoSchedule",
@@ -606,7 +555,9 @@ func EnsureOrbiterArtifacts(
 				},
 			},
 		},
-	}); err != nil {
+	}
+
+	if err := client.ApplyDeployment(deployment, true); err != nil {
 		return err
 	}
 	monitor.WithFields(map[string]interface{}{
@@ -615,14 +566,9 @@ func EnsureOrbiterArtifacts(
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
-			Name:      "orbiter",
+			Name:      nameLabels.Name(),
 			Namespace: "caos-system",
-			Labels: map[string]string{
-				"app.kubernetes.io/instance":   "orbiter",
-				"app.kubernetes.io/part-of":    "orbos",
-				"app.kubernetes.io/component":  "orbiter",
-				"app.kubernetes.io/managed-by": "orbiter.caos.ch",
-			},
+			Labels:    k8sNameLabels,
 		},
 		Spec: core.ServiceSpec{
 			Ports: []core.ServicePort{{
@@ -631,10 +577,8 @@ func EnsureOrbiterArtifacts(
 				Port:       9000,
 				TargetPort: intstr.FromInt(9000),
 			}},
-			Selector: map[string]string{
-				"app": "orbiter",
-			},
-			Type: core.ServiceTypeClusterIP,
+			Selector: k8sPodSelector,
+			Type:     core.ServiceTypeClusterIP,
 		},
 	}); err != nil {
 		return err

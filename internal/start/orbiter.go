@@ -3,9 +3,12 @@ package start
 import (
 	"context"
 	"errors"
+	"fmt"
 	"runtime/debug"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
@@ -33,7 +36,7 @@ type OrbiterConfig struct {
 	IngestionAddress string
 }
 
-func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
+func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbconfig.Orb, version string) ([]string, error) {
 
 	go checks(monitor, orbctlGit)
 
@@ -58,7 +61,7 @@ loop:
 		}
 	}
 
-	return GetKubeconfigs(monitor, orbctlGit, orbConfig)
+	return GetKubeconfigs(monitor, orbctlGit, orbConfig, version)
 }
 
 func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
@@ -144,6 +147,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}
 
 	adaptFunc := orb.AdaptFunc(
+		labels.MustForOperator("ORBOS", "orbiter.caos.ch", conf.Version),
 		orbFile,
 		conf.GitCommit,
 		!conf.Recur,
@@ -174,7 +178,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}()
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb, version string) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)
@@ -194,9 +198,12 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbc
 			monitor,
 			gitClient,
 			path,
-			operators.GetAllSecretsFunc(orbConfig))
+			operators.GetAllSecretsFunc(orbConfig, &version))
 		if err != nil || value == "" {
-			return nil, errors.New("Failed to get kubeconfig")
+			if value == "" && err == nil {
+				err = errors.New("no kubeconfig found")
+			}
+			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 		}
 		monitor.Info("Read kubeconfigs")
 

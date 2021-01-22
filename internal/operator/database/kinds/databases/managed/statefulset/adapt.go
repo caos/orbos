@@ -2,10 +2,12 @@ package statefulset
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/utils/helper"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sort"
 	"strings"
+
+	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
@@ -45,10 +47,11 @@ func (a Affinitys) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 func AdaptFunc(
 	monitor mntr.Monitor,
+	sfsSelectable *labels.Selectable,
+	podSelector *labels.Selector,
+	force bool,
 	namespace string,
-	name string,
 	image string,
-	labels map[string]string,
 	serviceAccountName string,
 	replicaCount int,
 	storageCapacity string,
@@ -73,27 +76,29 @@ func AdaptFunc(
 		return nil, nil, nil, nil, nil, err
 	}
 
+	name := sfsSelectable.Name()
+	k8sSelectable := labels.MustK8sMap(sfsSelectable)
 	statefulsetDef := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    k8sSelectable,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			ServiceName: name,
 			Replicas:    helper.PointerInt32(int32(replicaCount)),
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: labels.MustK8sMap(podSelector),
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels: k8sSelectable,
 				},
 				Spec: corev1.PodSpec{
 					NodeSelector:       nodeSelector,
 					Tolerations:        tolerations,
 					ServiceAccountName: serviceAccountName,
-					Affinity:           getAffinity(labels),
+					Affinity:           getAffinity(k8sSelectable),
 					Containers: []corev1.Container{{
 						Name:            name,
 						Image:           image,
@@ -177,7 +182,7 @@ func AdaptFunc(
 					}},
 				},
 			},
-			PodManagementPolicy: appsv1.PodManagementPolicyType("Parallel"),
+			PodManagementPolicy: appsv1.ParallelPodManagement,
 			UpdateStrategy: appsv1.StatefulSetUpdateStrategy{
 				Type: "RollingUpdate",
 			},
@@ -200,7 +205,7 @@ func AdaptFunc(
 		},
 	}
 
-	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef)
+	query, err := statefulset.AdaptFuncToEnsure(statefulsetDef, force)
 	if err != nil {
 		return nil, nil, nil, nil, nil, err
 	}
@@ -273,7 +278,15 @@ func AdaptFunc(
 			return nil, err
 		}
 		databases := strings.Split(databasesStr, "\n")
-		return databases[2 : len(databases)-1], nil
+		dbAndOwners := databases[1 : len(databases)-1]
+		dbs := []string{}
+		for _, dbAndOwner := range dbAndOwners {
+			parts := strings.Split(dbAndOwner, "\t")
+			if parts[1] != "node" {
+				dbs = append(dbs, parts[0])
+			}
+		}
+		return dbs, nil
 	}
 
 	return wrapedQuery, wrapedDestroy, ensureInit, checkDBReady, getAllDBs, err
@@ -329,14 +342,11 @@ func getAffinity(labels map[string]string) *corev1.Affinity {
 
 	return &corev1.Affinity{
 		PodAntiAffinity: &corev1.PodAntiAffinity{
-			PreferredDuringSchedulingIgnoredDuringExecution: []corev1.WeightedPodAffinityTerm{{
-				Weight: 100,
-				PodAffinityTerm: corev1.PodAffinityTerm{
-					LabelSelector: &metav1.LabelSelector{
-						MatchExpressions: affinity,
-					},
-					TopologyKey: "kubernetes.io/hostname",
+			RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{{
+				LabelSelector: &metav1.LabelSelector{
+					MatchExpressions: affinity,
 				},
+				TopologyKey: "kubernetes.io/hostname",
 			}},
 		},
 	}

@@ -40,10 +40,11 @@ type targetPool struct {
 }
 
 type healthcheck struct {
-	log     StandardLogFunc
-	gce     *compute.HttpHealthCheck
-	desired dynamic.HealthChecks
-	pools   []string
+	log           StandardLogFunc
+	gce           *compute.HttpHealthCheck
+	desired       dynamic.HealthChecks
+	proxyProtocol bool
+	pools         []string
 }
 
 type firewall struct {
@@ -199,9 +200,10 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 								level(msg)
 							}
 						},
-						gce:     hc,
-						desired: src.HealthChecks,
-						pools:   src.BackendPools,
+						gce:           hc,
+						desired:       src.HealthChecks,
+						pools:         src.BackendPools,
+						proxyProtocol: *src.ProxyProtocol,
 					},
 					address:   normalizedAddress,
 					transport: src.Name,

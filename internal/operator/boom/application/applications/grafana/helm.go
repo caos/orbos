@@ -185,7 +185,8 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest
 	}
 
 	if spec.Tolerations != nil {
-		for _, tol := range spec.Tolerations {
+		for idx := range spec.Tolerations {
+			tol := spec.Tolerations[idx]
 			values.Grafana.Tolerations = append(values.Grafana.Tolerations, tol)
 		}
 	}

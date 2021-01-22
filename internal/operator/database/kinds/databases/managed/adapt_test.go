@@ -1,9 +1,13 @@
 package managed
 
 import (
+	"testing"
+	"time"
+
 	coremock "github.com/caos/orbos/internal/operator/database/kinds/databases/core/mock"
 	"github.com/caos/orbos/mntr"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/golang/mock/gomock"
@@ -13,8 +17,6 @@ import (
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"testing"
-	"time"
 )
 
 func getDesiredTree(t *testing.T, masterkey string, desired interface{}) *tree.Tree {
@@ -30,9 +32,36 @@ func getDesiredTree(t *testing.T, masterkey string, desired interface{}) *tree.T
 
 func TestManaged_Adapt1(t *testing.T) {
 	monitor := mntr.Monitor{}
-	labels := map[string]string{"test": "test"}
-	cockroachLabels := map[string]string{"test": "test", "app.kubernetes.io/component": "cockroachdb"}
-	nodeLabels := map[string]string{"app.kubernetes.io/component": "cockroachdb", "database.caos.ch/secret-type": "node", "test": "test"}
+
+	nodeLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "cockroachdb.node",
+		"app.kubernetes.io/part-of":    "testProd",
+		"orbos.ch/selectable":          "yes",
+	}
+
+	cockroachLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "cockroachdb-budget",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "testKind",
+	}
+
+	cockroachSelectorLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "cockroachdb",
+		"app.kubernetes.io/part-of":    "testProd",
+		"orbos.ch/selectable":          "yes",
+	}
+
+	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
+	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+
 	namespace := "testNs"
 	timestamp := "testTs"
 	nodeselector := map[string]string{"test": "test"}
@@ -68,7 +97,7 @@ func TestManaged_Adapt1(t *testing.T) {
 		},
 		Spec: policy.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: cockroachLabels,
+				MatchLabels: cockroachSelectorLabels,
 			},
 			MaxUnavailable: &unav,
 		},
@@ -84,7 +113,7 @@ func TestManaged_Adapt1(t *testing.T) {
 	k8sClient.EXPECT().ApplyRoleBinding(gomock.Any()).Times(1)
 	k8sClient.EXPECT().ApplyClusterRoleBinding(gomock.Any()).Times(1)
 	//statefulset
-	k8sClient.EXPECT().ApplyStatefulSet(gomock.Any()).Times(1)
+	k8sClient.EXPECT().ApplyStatefulSet(gomock.Any(), gomock.Any()).Times(1)
 	//running for setup
 	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, false, time.Duration(60))
 	//not ready for setup
@@ -104,7 +133,7 @@ func TestManaged_Adapt1(t *testing.T) {
 	dbCurrent.EXPECT().SetCertificateKey(gomock.Any()).Times(1)
 	k8sClient.EXPECT().ApplySecret(gomock.Any()).Times(1)
 
-	query, _, _, err := AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -118,11 +147,38 @@ func TestManaged_Adapt2(t *testing.T) {
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
 	timestamp := "testTs"
-	labels := map[string]string{"test2": "test2"}
-	cockroachLabels := map[string]string{"test2": "test2", "app.kubernetes.io/component": "cockroachdb"}
-	nodeLabels := map[string]string{"app.kubernetes.io/component": "cockroachdb", "database.caos.ch/secret-type": "node", "test2": "test2"}
+
+	nodeLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp2",
+		"app.kubernetes.io/name":       "cockroachdb.node",
+		"app.kubernetes.io/part-of":    "testProd2",
+		"orbos.ch/selectable":          "yes",
+	}
+
+	cockroachLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp2",
+		"app.kubernetes.io/name":       "cockroachdb-budget",
+		"app.kubernetes.io/part-of":    "testProd2",
+		"app.kubernetes.io/version":    "testVersion2",
+		"caos.ch/apiversion":           "v1",
+		"caos.ch/kind":                 "testKind2",
+	}
+
+	cockroachSelectorLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp2",
+		"app.kubernetes.io/name":       "cockroachdb",
+		"app.kubernetes.io/part-of":    "testProd2",
+		"orbos.ch/selectable":          "yes",
+	}
+
+	operatorLabels := labels.MustForOperator("testProd2", "testOp2", "testVersion2")
+	apiLabels := labels.MustForAPI(operatorLabels, "testKind2", "v1")
+
 	nodeselector := map[string]string{"test2": "test2"}
-	tolerations := []corev1.Toleration{}
+	var tolerations []corev1.Toleration
 	version := "testVersion2"
 	features := []string{"database"}
 	masterkey := "testMk2"
@@ -154,7 +210,7 @@ func TestManaged_Adapt2(t *testing.T) {
 		},
 		Spec: policy.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: cockroachLabels,
+				MatchLabels: cockroachSelectorLabels,
 			},
 			MaxUnavailable: &unav,
 		},
@@ -170,7 +226,7 @@ func TestManaged_Adapt2(t *testing.T) {
 	k8sClient.EXPECT().ApplyRoleBinding(gomock.Any()).Times(1)
 	k8sClient.EXPECT().ApplyClusterRoleBinding(gomock.Any()).Times(1)
 	//statefulset
-	k8sClient.EXPECT().ApplyStatefulSet(gomock.Any()).Times(1)
+	k8sClient.EXPECT().ApplyStatefulSet(gomock.Any(), gomock.Any()).Times(1)
 	//running for setup
 	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, false, time.Duration(60))
 	//not ready for setup
@@ -190,7 +246,7 @@ func TestManaged_Adapt2(t *testing.T) {
 	dbCurrent.EXPECT().SetCertificateKey(gomock.Any()).Times(1)
 	k8sClient.EXPECT().ApplySecret(gomock.Any()).Times(1)
 
-	query, _, _, err := AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)

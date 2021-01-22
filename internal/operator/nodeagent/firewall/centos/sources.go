@@ -2,6 +2,7 @@ package centos
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 )

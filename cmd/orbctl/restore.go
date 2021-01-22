@@ -22,11 +22,14 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVar(&backup, "backup", "", "Backup used for db restore")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
 		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := orbConfig.IsConnectable(); err != nil {
 			return err
@@ -67,14 +70,14 @@ func RestoreCommand(rv RootValues) *cobra.Command {
 				backup = result
 			}
 
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig, version)
 			if err != nil {
 				return err
 			}
 			for _, kubeconfig := range kubeconfigs {
 				k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					if err := start.DatabaseRestore(monitor, orbConfig.Path, k8sClient, backup); err != nil {
+					if err := start.DatabaseRestore(monitor, orbConfig.Path, k8sClient, backup, &version); err != nil {
 						return err
 					}
 				}

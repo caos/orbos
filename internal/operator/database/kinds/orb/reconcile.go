@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/pkg/treelabels"
 	"github.com/pkg/errors"
 )
 
@@ -33,7 +34,7 @@ func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree) core.EnsureFunc {
 			imageRegistry = "ghcr.io"
 		}
 
-		if err := kubernetes.EnsureDatabaseArtifacts(monitor, k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations, imageRegistry); err != nil {
+		if err := kubernetes.EnsureDatabaseArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&desiredKind.Spec.Version)), k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations, imageRegistry); err != nil {
 			recMonitor.Error(errors.Wrap(err, "Failed to deploy database-operator into k8s-cluster"))
 			return err
 		}

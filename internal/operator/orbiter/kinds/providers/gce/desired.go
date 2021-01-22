@@ -15,12 +15,13 @@ type Desired struct {
 }
 
 type Pool struct {
-	OSImage     string
-	MinCPUCores int
-	MinMemoryGB int
-	StorageGB   int
-	Preemptible bool
-	LocalSSDs   uint8
+	OSImage         string
+	MinCPUCores     int
+	MinMemoryGB     int
+	StorageGB       int
+	StorageDiskType string
+	Preemptible     bool
+	LocalSSDs       uint8
 }
 
 func (p Pool) validate() error {
@@ -31,19 +32,19 @@ func (p Pool) validate() error {
 	if p.MinMemoryGB == 0 {
 		return errors.New("no memory configured")
 	}
-	if p.StorageGB == 0 {
-		return errors.New("no storage configured")
+	if p.StorageGB < 20 {
+		return fmt.Errorf("at least 20GB of storage is needed for the boot disk")
 	}
-	switch p.OSImage {
-	case
-		"projects/gce-uefi-images/global/images/centos-7-v20200403",
-		"projects/centos-cloud/global/images/centos-7-v20200429":
-		if p.StorageGB < 20 {
-			return fmt.Errorf("at least 20GB of storage is needed for image %s", p.OSImage)
-		}
+
+	switch p.StorageDiskType {
+	case "pd-standard",
+		"pd-balanced",
+		"pd-ssd":
+		break
 	default:
-		return fmt.Errorf("OSImage \"%s\" is not supported", p.OSImage)
+		return fmt.Errorf("DiskType \"%s\" is not supported", p.StorageDiskType)
 	}
+
 	return nil
 }
 
@@ -63,7 +64,7 @@ type Spec struct {
 	ReplacementRequired []string
 }
 
-func (d Desired) validate() error {
+func (d Desired) validateAdapt() error {
 	if d.Loadbalancing == nil {
 		return errors.New("no loadbalancing configured")
 	}
@@ -83,6 +84,21 @@ func (d Desired) validate() error {
 	}
 	return nil
 }
+
+func (d Desired) validateQuery() error {
+	if d.Spec.JSONKey == nil || d.Spec.JSONKey.Value == "" {
+		return errors.New("jsonkey missing... please provide a google service accounts jsonkey using orbctl writesecret command")
+	}
+	if d.Spec.SSHKey == nil ||
+		d.Spec.SSHKey.Private == nil ||
+		d.Spec.SSHKey.Private.Value == "" ||
+		d.Spec.SSHKey.Public == nil ||
+		d.Spec.SSHKey.Public.Value == "" {
+		return errors.New("ssh key missing... please initialize your orb using orbctl configure command")
+	}
+	return nil
+}
+
 func parseDesiredV0(desiredTree *tree.Tree) (*Desired, error) {
 	desiredKind := &Desired{
 		Common: desiredTree.Common,

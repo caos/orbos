@@ -4,6 +4,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate"
 	"github.com/caos/orbos/pkg/secret"
@@ -23,17 +25,24 @@ import (
 )
 
 const (
+	component          = "database"
 	sfsName            = "cockroachdb"
 	pdbName            = sfsName + "-budget"
 	serviceAccountName = sfsName
 	publicServiceName  = sfsName + "-public"
+	privateServiceName = sfsName
 	cockroachPort      = int32(26257)
 	cockroachHTTPPort  = int32(8080)
-	image              = "cockroachdb/cockroach:v20.1.5"
+	image              = "cockroachdb/cockroach:v20.2.3"
 )
 
+func PublicServiceNameSelector() *labels.Selector {
+	return labels.OpenNameSelector(component, publicServiceName)
+}
+
 func AdaptFunc(
-	labels map[string]string,
+	operatorLabels *labels.Operator,
+	apiLabels *labels.API,
 	namespace string,
 	timestamp string,
 	nodeselector map[string]string,
@@ -51,12 +60,6 @@ func AdaptFunc(
 	error,
 ) {
 
-	internalLabels := map[string]string{}
-	for k, v := range labels {
-		internalLabels[k] = v
-	}
-	internalLabels["app.kubernetes.io/component"] = "cockroachdb"
-
 	return func(
 		monitor mntr.Monitor,
 		desired *tree.Tree,
@@ -67,7 +70,8 @@ func AdaptFunc(
 		map[string]*secret.Secret,
 		error,
 	) {
-		internalMonitor := monitor.WithField("kind", "managedDatabase")
+		componentLabels := labels.MustForComponent(apiLabels, "cockroachdb")
+		internalMonitor := monitor.WithField("component", "cockroachdb")
 		allSecrets := map[string]*secret.Secret{}
 
 		desiredKind, err := parseDesiredV0(desired)
@@ -79,7 +83,21 @@ func AdaptFunc(
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
 		}
-		queryCert, destroyCert, addUser, deleteUser, listUsers, err := certificate.AdaptFunc(internalMonitor, namespace, internalLabels, desiredKind.Spec.ClusterDns)
+
+		var (
+			isFeatureDatabase bool
+			isFeatureRestore  bool
+		)
+		for _, feature := range features {
+			switch feature {
+			case "database":
+				isFeatureDatabase = true
+			case "restore":
+				isFeatureRestore = true
+			}
+		}
+
+		queryCert, destroyCert, addUser, deleteUser, listUsers, err := certificate.AdaptFunc(internalMonitor, namespace, componentLabels, desiredKind.Spec.ClusterDns, isFeatureDatabase)
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -92,14 +110,18 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, serviceAccountName, internalLabels)
+		queryRBAC, destroyRBAC, err := rbac.AdaptFunc(internalMonitor, namespace, labels.MustForName(componentLabels, serviceAccountName))
 
+		cockroachNameLabels := labels.MustForName(componentLabels, sfsName)
+		cockroachSelector := labels.DeriveNameSelector(cockroachNameLabels, false)
+		cockroachSelectabel := labels.AsSelectable(cockroachNameLabels)
 		querySFS, destroySFS, ensureInit, checkDBReady, listDatabases, err := statefulset.AdaptFunc(
 			internalMonitor,
+			cockroachSelectabel,
+			cockroachSelector,
+			desiredKind.Spec.Force,
 			namespace,
-			sfsName,
 			image,
-			internalLabels,
 			serviceAccountName,
 			desiredKind.Spec.ReplicaCount,
 			desiredKind.Spec.StorageCapacity,
@@ -114,7 +136,15 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		queryS, destroyS, err := services.AdaptFunc(internalMonitor, namespace, publicServiceName, sfsName, internalLabels, cockroachPort, cockroachHTTPPort)
+		queryS, destroyS, err := services.AdaptFunc(
+			internalMonitor,
+			namespace,
+			labels.MustForName(componentLabels, publicServiceName),
+			labels.MustForName(componentLabels, privateServiceName),
+			cockroachSelector,
+			cockroachPort,
+			cockroachHTTPPort,
+		)
 
 		//externalName := "cockroachdb-public." + namespaceStr + ".svc.cluster.local"
 		//queryES, destroyES, err := service.AdaptFunc("cockroachdb-public", "default", labels, []service.Port{}, "ExternalName", map[string]string{}, false, "", externalName)
@@ -122,7 +152,7 @@ func AdaptFunc(
 		//	return nil, nil, err
 		//}
 
-		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, pdbName, internalLabels, "1")
+		queryPDB, err := pdb.AdaptFuncToEnsure(namespace, labels.MustForName(componentLabels, pdbName), cockroachSelector, "1")
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -144,35 +174,28 @@ func AdaptFunc(
 		current.Parsed = currentDB
 
 		queriers := make([]core2.QueryFunc, 0)
-		for _, feature := range features {
-			if feature == "database" {
-				queriers = append(queriers,
-					queryRBAC,
-					queryCert,
-					addRoot,
-					core2.ResourceQueryToZitadelQuery(querySFS),
-					core2.ResourceQueryToZitadelQuery(queryPDB),
-					queryS,
-					core2.EnsureFuncToQueryFunc(ensureInit),
-				)
-			}
+		if isFeatureDatabase {
+			queriers = append(queriers,
+				queryRBAC,
+				queryCert,
+				addRoot,
+				core2.ResourceQueryToZitadelQuery(querySFS),
+				core2.ResourceQueryToZitadelQuery(queryPDB),
+				queryS,
+				core2.EnsureFuncToQueryFunc(ensureInit),
+			)
 		}
 
-		featureRestore := false
 		destroyers := make([]core2.DestroyFunc, 0)
-		for _, feature := range features {
-			if feature == "database" {
-				destroyers = append(destroyers,
-					core2.ResourceDestroyToZitadelDestroy(destroyPDB),
-					destroyS,
-					core2.ResourceDestroyToZitadelDestroy(destroySFS),
-					destroyRBAC,
-					destroyCert,
-					destroyRoot,
-				)
-			} else if feature == "restore" {
-				featureRestore = true
-			}
+		if isFeatureDatabase {
+			destroyers = append(destroyers,
+				core2.ResourceDestroyToZitadelDestroy(destroyPDB),
+				destroyS,
+				core2.ResourceDestroyToZitadelDestroy(destroySFS),
+				destroyRBAC,
+				destroyCert,
+				destroyRoot,
+			)
 		}
 
 		if desiredKind.Spec.Backups != nil {
@@ -193,7 +216,7 @@ func AdaptFunc(
 						currentBackup,
 						backupName,
 						namespace,
-						internalLabels,
+						operatorLabels,
 						checkDBReady,
 						strings.TrimPrefix(timestamp, backupName+"."),
 						nodeselector,
@@ -213,18 +236,15 @@ func AdaptFunc(
 		}
 
 		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
-				if !featureRestore {
+				if !isFeatureRestore {
 					queriedCurrentDB, err := core.ParseQueriedForDatabase(queried)
 					if err != nil || queriedCurrentDB == nil {
+						// TODO: query system state
 						currentDB.Current.Port = strconv.Itoa(int(cockroachPort))
 						currentDB.Current.URL = publicServiceName
 						currentDB.Current.ReadyFunc = checkDBReady
-						currentDB.Current.AddUserFunc = func(user string) (core2.QueryFunc, error) {
-							return addUser(user)
-						}
-						currentDB.Current.DeleteUserFunc = func(user string) (core2.DestroyFunc, error) {
-							return deleteUser(user)
-						}
+						currentDB.Current.AddUserFunc = addUser
+						currentDB.Current.DeleteUserFunc = deleteUser
 						currentDB.Current.ListUsersFunc = listUsers
 						currentDB.Current.ListDatabasesFunc = listDatabases
 

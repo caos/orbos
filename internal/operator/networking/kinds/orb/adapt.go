@@ -10,14 +10,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-func AdaptFunc() core.AdaptFunc {
+func AdaptFunc(binaryVersion *string) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
-	labels := map[string]string{
-		"app.kubernetes.io/managed-by": "networking.caos.ch",
-		"app.kubernetes.io/part-of":    "orbos",
-	}
-
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -36,8 +31,9 @@ func AdaptFunc() core.AdaptFunc {
 			orbMonitor = orbMonitor.Verbose()
 		}
 
+		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, desiredKind.Networking, networkingCurrent, namespaceStr, labels)
+		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
 			return nil, nil, nil, err
 		}

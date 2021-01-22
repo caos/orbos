@@ -6,6 +6,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed/certificate/pem"
 	"github.com/caos/orbos/mntr"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -103,8 +104,15 @@ func TestNode_AdaptWithCA(t *testing.T) {
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
 	clusterDns := "testDns"
-	labels := map[string]string{"test": "test"}
-	nodeLabels := map[string]string{"database.caos.ch/secret-type": "node", "test": "test"}
+	nameLabels := labels.MustForName(labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "cockroachdb", "v0"), "cockroachdb"), "testNode")
+
+	nodeLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "testNode",
+		"app.kubernetes.io/part-of":    "testProd",
+		"orbos.ch/selectable":          "yes",
+	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
 
@@ -129,7 +137,7 @@ func TestNode_AdaptWithCA(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, err := AdaptFunc(monitor, namespace, labels, clusterDns)
+	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -143,8 +151,15 @@ func TestNode_AdaptWithoutCA(t *testing.T) {
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
 	clusterDns := "testDns"
-	labels := map[string]string{"test": "test"}
-	nodeLabels := map[string]string{"database.caos.ch/secret-type": "node", "test": "test"}
+	nameLabels := labels.MustForName(labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "cockroachdb", "v0"), "cockroachdb"), "testNode")
+
+	nodeLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "testNode",
+		"app.kubernetes.io/part-of":    "testProd",
+		"orbos.ch/selectable":          "yes",
+	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
 
@@ -166,7 +181,7 @@ func TestNode_AdaptWithoutCA(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, err := AdaptFunc(monitor, namespace, labels, clusterDns)
+	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)
@@ -180,8 +195,14 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
 	clusterDns := "testDns"
-	labels := map[string]string{"test": "test"}
-	nodeLabels := map[string]string{"database.caos.ch/secret-type": "node", "test": "test"}
+	nameLabels := labels.MustForName(labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "cockroachdb", "v0"), "cockroachdb"), "testNode")
+	nodeLabels := map[string]string{
+		"app.kubernetes.io/component":  "cockroachdb",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "testNode",
+		"app.kubernetes.io/part-of":    "testProd",
+		"orbos.ch/selectable":          "yes",
+	}
 	dbCurrent := coremock.NewMockDatabaseCurrent(gomock.NewController(t))
 	k8sClient := kubernetesmock.NewMockClientInt(gomock.NewController(t))
 
@@ -212,7 +233,7 @@ func TestNode_AdaptAlreadyExisting(t *testing.T) {
 
 	core.SetQueriedForDatabase(queried, current)
 
-	query, _, err := AdaptFunc(monitor, namespace, labels, clusterDns)
+	query, _, err := AdaptFunc(monitor, namespace, nameLabels, clusterDns)
 	assert.NoError(t, err)
 
 	ensure, err := query(k8sClient, queried)

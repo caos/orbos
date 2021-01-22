@@ -2,7 +2,10 @@ package node
 
 import (
 	"crypto/rsa"
+	"errors"
 	"reflect"
+
+	"github.com/caos/orbos/pkg/labels"
 
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/database/kinds/databases/core"
@@ -14,7 +17,6 @@ import (
 )
 
 const (
-	nodeSecret     = "cockroachdb.node"
 	caCertKey      = "ca.crt"
 	caPrivKeyKey   = "ca.key"
 	nodeCertKey    = "node.crt"
@@ -24,21 +26,18 @@ const (
 func AdaptFunc(
 	monitor mntr.Monitor,
 	namespace string,
-	labels map[string]string,
+	nameLabels *labels.Name,
 	clusterDns string,
+	generateIfNotExists bool,
 ) (
 	core2.QueryFunc,
 	core2.DestroyFunc,
 	error,
 ) {
-	nodeLabels := map[string]string{}
-	for k, v := range labels {
-		nodeLabels[k] = v
-	}
-	nodeLabels["database.caos.ch/secret-type"] = "node"
 
 	caPrivKey := new(rsa.PrivateKey)
 	caCert := make([]byte, 0)
+	nodeSecretSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
 	return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (core2.EnsureFunc, error) {
 			queriers := make([]core2.QueryFunc, 0)
@@ -48,12 +47,17 @@ func AdaptFunc(
 				return nil, err
 			}
 
-			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
+			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeSecretSelector)
 			if err != nil {
 				return nil, err
 			}
 
 			if len(allNodeSecrets.Items) == 0 {
+
+				if !generateIfNotExists {
+					return nil, errors.New("node secret not found")
+				}
+
 				emptyCert := true
 				emptyKey := true
 				if currentCaCert := currentDB.GetCertificate(); currentCaCert != nil && len(currentCaCert) != 0 {
@@ -103,7 +107,7 @@ func AdaptFunc(
 						nodePrivKeyKey: string(pemNodePrivKey),
 						nodeCertKey:    string(pemNodeCert),
 					}
-					queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, nodeSecret, nodeLabels, nodeSecretData)
+					queryNodeSecret, err := secret.AdaptFuncToEnsure(namespace, labels.AsSelectable(nameLabels), nodeSecretData)
 					if err != nil {
 						return nil, err
 					}
@@ -128,7 +132,7 @@ func AdaptFunc(
 
 			return core2.QueriersToEnsureFunc(monitor, false, queriers, k8sClient, queried)
 		}, func(k8sClient kubernetes.ClientInt) error {
-			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeLabels)
+			allNodeSecrets, err := k8sClient.ListSecrets(namespace, nodeSecretSelector)
 			if err != nil {
 				return err
 			}

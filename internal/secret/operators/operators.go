@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	dbOrb "github.com/caos/orbos/internal/operator/database/kinds/orb"
@@ -23,7 +25,7 @@ const (
 	networking string = "networking"
 )
 
-func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
+func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 		allSecrets := make(map[string]*secret.Secret, 0)
 		allTrees := make(map[string]*tree.Tree, 0)
@@ -31,14 +33,13 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 		if err != nil {
 			return nil, nil, err
 		}
-
 		if foundBoom {
 			boomYML, err := api.ReadBoomYml(gitClient)
 			if err != nil {
 				return nil, nil, err
 			}
 			allTrees[boom] = boomYML
-			_, _, boomSecrets, err := boomapi.ParseToolset(boomYML)
+			_, _, boomSecrets, _, _, err := boomapi.ParseToolset(boomYML)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -60,6 +61,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			allTrees[orbiter] = orbiterYML
 
 			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(
+				labels.NoopOperator("ORBOS"),
 				orb,
 				"",
 				true,
@@ -86,7 +88,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[database] = dbYML
 
-			_, _, dbSecrets, err := dbOrb.AdaptFunc("", "database", "backup")(monitor, dbYML, nil)
+			_, _, dbSecrets, err := dbOrb.AdaptFunc("", binaryVersion, "database", "backup")(monitor, dbYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -106,7 +108,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[networking] = nwYML
 
-			_, _, nwSecrets, err := nwOrb.AdaptFunc()(monitor, nwYML, nil)
+			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}

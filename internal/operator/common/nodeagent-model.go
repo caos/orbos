@@ -145,7 +145,16 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentSpec{
-			Software: &Software{},
+			Software: &Software{
+				Sysctl: Package{
+					Config: map[string]string{
+						string(IpForward):             "0",
+						string(NonLocalBind):          "0",
+						string(BridgeNfCallIptables):  "0",
+						string(BridgeNfCallIp6tables): "0",
+					},
+				},
+			},
 			Firewall: &Firewall{
 				Zones: map[string]*Zone{
 					"internal": {
@@ -173,3 +182,12 @@ type NodeAgentsDesiredKind struct {
 	Version string
 	Spec    NodeAgentsSpec `yaml:",omitempty"`
 }
+
+type KernelModule string
+
+const (
+	IpForward             KernelModule = "net.ipv4.ip_forward"
+	NonLocalBind          KernelModule = "net.ipv4.ip_nonlocal_bind"
+	BridgeNfCallIptables  KernelModule = "net.bridge.bridge-nf-call-iptables"
+	BridgeNfCallIp6tables KernelModule = "net.bridge.bridge-nf-call-ip6tables"
+)

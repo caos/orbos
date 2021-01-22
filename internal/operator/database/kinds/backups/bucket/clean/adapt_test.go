@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
@@ -17,7 +18,6 @@ func TestBackup_Adapt1(t *testing.T) {
 
 	monitor := mntr.Monitor{}
 	namespace := "testNs"
-	labels := map[string]string{"test": "test"}
 	databases := []string{"testDb"}
 	nodeselector := map[string]string{"test": "test"}
 	tolerations := []corev1.Toleration{
@@ -27,6 +27,8 @@ func TestBackup_Adapt1(t *testing.T) {
 	secretKey := "testKey"
 	secretName := "testSecretName"
 	jobName := GetJobName(backupName)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd", "testOp", "testVersion"), "testKind", "testVersion"), "testComponent")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		return nil
@@ -34,8 +36,7 @@ func TestBackup_Adapt1(t *testing.T) {
 
 	jobDef := getJob(
 		namespace,
-		labels,
-		jobName,
+		nameLabels,
 		nodeselector,
 		tolerations,
 		secretName,
@@ -55,7 +56,7 @@ func TestBackup_Adapt1(t *testing.T) {
 		monitor,
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		databases,
 		nodeselector,
 		tolerations,
@@ -77,7 +78,6 @@ func TestBackup_Adapt2(t *testing.T) {
 
 	monitor := mntr.Monitor{}
 	namespace := "testNs2"
-	labels := map[string]string{"test2": "test2"}
 	databases := []string{"testDb1", "testDb2"}
 	nodeselector := map[string]string{"test2": "test2"}
 	tolerations := []corev1.Toleration{
@@ -87,6 +87,8 @@ func TestBackup_Adapt2(t *testing.T) {
 	secretKey := "testKey2"
 	secretName := "testSecretName2"
 	jobName := GetJobName(backupName)
+	componentLabels := labels.MustForComponent(labels.MustForAPI(labels.MustForOperator("testProd2", "testOp2", "testVersion2"), "testKind2", "testVersion2"), "testComponent2")
+	nameLabels := labels.MustForName(componentLabels, jobName)
 
 	checkDBReady := func(k8sClient kubernetes.ClientInt) error {
 		return nil
@@ -94,8 +96,7 @@ func TestBackup_Adapt2(t *testing.T) {
 
 	jobDef := getJob(
 		namespace,
-		labels,
-		jobName,
+		nameLabels,
 		nodeselector,
 		tolerations,
 		secretName,
@@ -115,7 +116,7 @@ func TestBackup_Adapt2(t *testing.T) {
 		monitor,
 		backupName,
 		namespace,
-		labels,
+		componentLabels,
 		databases,
 		nodeselector,
 		tolerations,

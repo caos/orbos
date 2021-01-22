@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	"github.com/caos/orbos/pkg/kubernetes"
 	"io/ioutil"
+
+	"github.com/caos/orbos/pkg/kubernetes"
 
 	"github.com/caos/orbos/internal/start"
 
@@ -38,6 +39,7 @@ func main() {
 		monitor,
 		helpers.PruneHome(*orbconfig),
 		kubernetes.NewK8sClient(monitor, strPtr(string(kc))),
+		strPtr("database-development"),
 	); err != nil {
 		panic(err)
 	}

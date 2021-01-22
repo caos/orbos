@@ -11,38 +11,38 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*secret.Secret, error) {
+func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*secret.Secret, string, string, error) {
 	desiredKindCommon := common.New()
 	if err := desiredTree.Original.Decode(desiredKindCommon); err != nil {
-		return nil, false, nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, false, nil, "", "", errors.Wrap(err, "parsing desired state failed")
 	}
 
 	switch desiredKindCommon.APIVersion {
 	case "boom.caos.ch/v1beta1":
 		old, _, err := v1beta1.ParseToolset(desiredTree)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, false, nil, "", "", err
 		}
 		v1beta2Toolset, _ := migrate.V1beta1Tov1beta2(old)
 		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
 
-		return v1Toolset, true, secrets, err
+		return v1Toolset, true, secrets, desiredKindCommon.Kind, "v1beta1", err
 	case "boom.caos.ch/v1beta2":
 		v1beta2Toolset, _, err := v1beta2.ParseToolset(desiredTree)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, false, nil, "", "", err
 		}
 		v1Toolset, secrets := migrate.V1beta2Tov1(v1beta2Toolset)
 
-		return v1Toolset, true, secrets, nil
+		return v1Toolset, true, secrets, desiredKindCommon.Kind, "v1beta2", nil
 	case "boom.caos.ch/v1":
 		desiredKind, secrets, err := latest.ParseToolset(desiredTree)
 		if err != nil {
-			return nil, false, nil, err
+			return nil, false, nil, "", "", err
 		}
-		return desiredKind, false, secrets, nil
+		return desiredKind, false, secrets, desiredKindCommon.Kind, "v1", nil
 	default:
-		return nil, false, nil, errors.New("APIVersion unknown")
+		return nil, false, nil, "", "", errors.New("APIVersion unknown")
 	}
 
 }

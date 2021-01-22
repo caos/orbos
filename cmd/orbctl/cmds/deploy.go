@@ -9,9 +9,10 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, binaryVersion string) error {
 	foundBoom, err := api.ExistsBoomYml(gitClient)
 	if err != nil {
 		return err
@@ -25,14 +26,28 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string)
 		return err
 	}
 
-	desiredKind, _, _, err := boomapi.ParseToolset(desiredTree)
+	// TODO: Parse toolset in cmdboom.Reconcile function (see deployDatabase, deployNetworking)
+	desiredKind, _, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
 	if err != nil {
 		return err
 	}
 
 	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-	if err := cmdboom.Reconcile(monitor, k8sClient, desiredKind.Spec.Boom); err != nil {
+	if desiredKind != nil &&
+		desiredKind.Spec != nil &&
+		desiredKind.Spec.Boom != nil &&
+		desiredKind.Spec.Boom.Version != "" {
+		binaryVersion = desiredKind.Spec.Boom.Version
+	}
+
+	if err := cmdboom.Reconcile(
+		monitor,
+		labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), apiKind, apiVersion),
+		k8sClient,
+		desiredKind.Spec.Boom,
+		binaryVersion,
+	); err != nil {
 		return err
 	}
 	return nil
@@ -52,7 +67,9 @@ func deployDatabase(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *str
 				return err
 			}
 
-			if err := orbdb.Reconcile(monitor, tree)(k8sClient); err != nil {
+			if err := orbdb.Reconcile(
+				monitor,
+				tree)(k8sClient); err != nil {
 				return err
 			}
 		} else {

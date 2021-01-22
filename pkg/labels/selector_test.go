@@ -11,20 +11,20 @@ func TestSelectorLabels_Equal(t *testing.T) {
 	nameLabels := validNameLabels(t)
 	expectValueEquality(
 		t,
-		labels.DeriveSelector(nameLabels, true),
-		labels.DeriveSelector(nameLabels, true),
-		labels.DeriveSelector(nameLabels, false),
+		labels.DeriveNameSelector(nameLabels, true),
+		labels.DeriveNameSelector(nameLabels, true),
+		labels.DeriveNameSelector(nameLabels, false),
 	)
 }
 
 func TestSelectorLabels_Open_MarshalYAML(t *testing.T) {
-	testSelectorLabels(t, labels.DeriveSelector(validNameLabels(t), true), `orbos.ch/select: true
+	testSelectorLabels(t, labels.DeriveNameSelector(validNameLabels(t), true), `orbos.ch/selectable: "yes"
 app.kubernetes.io/component: testSuite
 `)
 }
 
 func TestSelectorLabels_Close_MarshalYAML(t *testing.T) {
-	testSelectorLabels(t, labels.DeriveSelector(validNameLabels(t), false), `orbos.ch/select: true
+	testSelectorLabels(t, labels.DeriveNameSelector(validNameLabels(t), false), `orbos.ch/selectable: "yes"
 app.kubernetes.io/name: testcase
 app.kubernetes.io/component: testSuite
 app.kubernetes.io/managed-by: TEST_OPERATOR_LABELS

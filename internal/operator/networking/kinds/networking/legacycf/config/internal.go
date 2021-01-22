@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/caos/orbos/pkg/labels"
 	secret2 "github.com/caos/orbos/pkg/secret"
 )
 
@@ -11,7 +12,7 @@ type InternalConfig struct {
 	Prefix             string
 	Namespace          string
 	OriginCASecretName string
-	Labels             map[string]string
+	Labels             *labels.API
 }
 
 type Credentials struct {

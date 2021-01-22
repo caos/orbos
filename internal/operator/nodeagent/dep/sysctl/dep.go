@@ -42,14 +42,7 @@ func (*sysctlDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-type SysctlPropery string
-
-const (
-	IpForward             SysctlPropery = "net.ipv4.ip_forward"
-	NonLocalBind          SysctlPropery = "net.ipv4.ip_nonlocal_bind"
-	BridgeNfCallIptables  SysctlPropery = "net.bridge.bridge-nf-call-iptables"
-	BridgeNfCallIp6tables SysctlPropery = "net.bridge.bridge-nf-call-ip6tables"
-)
+var supportedModules = []common.KernelModule{common.IpForward, common.NonLocalBind, common.BridgeNfCallIptables, common.BridgeNfCallIp6tables}
 
 func Contains(this common.Package, that common.Package) bool {
 	if that.Config == nil {
@@ -67,45 +60,27 @@ func Contains(this common.Package, that common.Package) bool {
 	return true
 }
 
-func Enable(pkg *common.Package, property SysctlPropery) {
-
+func Enable(pkg *common.Package, property common.KernelModule) {
 	if pkg.Config == nil {
 		pkg.Config = make(map[string]string)
 	}
 
-	if _, ok := pkg.Config[string(IpForward)]; !ok {
-		pkg.Config[string(IpForward)] = "0"
+	for idx := range supportedModules {
+		module := supportedModules[idx]
+		if _, ok := pkg.Config[string(module)]; !ok {
+			pkg.Config[string(module)] = "0"
+		}
 	}
-
-	if _, ok := pkg.Config[string(NonLocalBind)]; !ok {
-		pkg.Config[string(NonLocalBind)] = "0"
-	}
-	if _, ok := pkg.Config[string(BridgeNfCallIptables)]; !ok {
-		pkg.Config[string(BridgeNfCallIptables)] = "0"
-	}
-	if _, ok := pkg.Config[string(BridgeNfCallIp6tables)]; !ok {
-		pkg.Config[string(BridgeNfCallIp6tables)] = "0"
-	}
-
 	pkg.Config[string(property)] = "1"
 }
 
 func (s *sysctlDep) Current() (pkg common.Package, err error) {
 
-	if err := currentSysctlConfig(s.monitor, IpForward, &pkg); err != nil {
-		return pkg, err
-	}
-
-	if err := currentSysctlConfig(s.monitor, NonLocalBind, &pkg); err != nil {
-		return pkg, err
-	}
-
-	if err := currentSysctlConfig(s.monitor, BridgeNfCallIptables, &pkg); err != nil {
-		return pkg, err
-	}
-
-	if err := currentSysctlConfig(s.monitor, BridgeNfCallIp6tables, &pkg); err != nil {
-		return pkg, err
+	for idx := range supportedModules {
+		module := supportedModules[idx]
+		if err := currentSysctlConfig(s.monitor, module, &pkg); err != nil {
+			return pkg, err
+		}
 	}
 
 	return pkg, nil
@@ -119,10 +94,10 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 %s = %s
 %s = %s
 `,
-		string(IpForward), ensure.Config[string(IpForward)],
-		string(NonLocalBind), ensure.Config[string(NonLocalBind)],
-		string(BridgeNfCallIptables), ensure.Config[string(BridgeNfCallIptables)],
-		string(BridgeNfCallIp6tables), ensure.Config[string(BridgeNfCallIp6tables)],
+		string(common.IpForward), ensure.Config[string(common.IpForward)],
+		string(common.NonLocalBind), ensure.Config[string(common.NonLocalBind)],
+		string(common.BridgeNfCallIptables), ensure.Config[string(common.BridgeNfCallIptables)],
+		string(common.BridgeNfCallIp6tables), ensure.Config[string(common.BridgeNfCallIp6tables)],
 	)), os.ModePerm); err != nil {
 		return err
 	}
@@ -134,7 +109,7 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 	return nil
 }
 
-func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *common.Package) error {
+func currentSysctlConfig(monitor mntr.Monitor, property common.KernelModule, pkg *common.Package) error {
 
 	propertyStr := string(property)
 

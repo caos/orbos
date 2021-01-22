@@ -58,7 +58,9 @@ func (s *Software) Merge(sw Software) {
 		s.Sysctl.Config = make(map[string]string)
 	}
 	for key, value := range sw.Sysctl.Config {
-		s.Sysctl.Config[key] = value
+		if value == "1" {
+			s.Sysctl.Config[key] = value
+		}
 	}
 	if !sw.Health.Equals(zeroPkg) && s.Health.Config == nil {
 		s.Health.Config = make(map[string]string)

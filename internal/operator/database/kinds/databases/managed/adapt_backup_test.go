@@ -7,6 +7,7 @@ import (
 	"github.com/caos/orbos/internal/operator/database/kinds/backups/bucket/restore"
 	"github.com/caos/orbos/mntr"
 	kubernetesmock "github.com/caos/orbos/pkg/kubernetes/mock"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/golang/mock/gomock"
@@ -55,8 +56,18 @@ func getTreeWithDBAndBackup(t *testing.T, masterkey string, saJson string, backu
 
 func TestManaged_AdaptBucketBackup(t *testing.T) {
 	monitor := mntr.Monitor{}
-	labels := map[string]string{"test": "test"}
-	cockroachLabels := map[string]string{"test": "test", "app.kubernetes.io/component": "cockroachdb"}
+	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
+	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+
+	labels := map[string]string{
+		"app.kubernetes.io/component":  "backup",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "backup-serviceaccountjson",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "BucketBackup",
+	}
 	namespace := "testNs"
 	timestamp := "testTs"
 	nodeselector := map[string]string{"test": "test"}
@@ -70,10 +81,10 @@ func TestManaged_AdaptBucketBackup(t *testing.T) {
 	desired := getTreeWithDBAndBackup(t, masterkey, saJson, backupName)
 
 	features := []string{backup.Normal}
-	bucket.SetBackup(k8sClient, namespace, cockroachLabels, saJson)
+	bucket.SetBackup(k8sClient, namespace, labels, saJson)
 	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60))
 
-	query, _, _, err := AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	databases := []string{"test1", "test2"}
@@ -87,8 +98,17 @@ func TestManaged_AdaptBucketBackup(t *testing.T) {
 
 func TestManaged_AdaptBucketInstantBackup(t *testing.T) {
 	monitor := mntr.Monitor{}
-	labels := map[string]string{"test": "test"}
-	cockroachLabels := map[string]string{"test": "test", "app.kubernetes.io/component": "cockroachdb"}
+	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
+	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+	labels := map[string]string{
+		"app.kubernetes.io/component":  "backup",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "backup-serviceaccountjson",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "BucketBackup",
+	}
 	namespace := "testNs"
 	timestamp := "testTs"
 	nodeselector := map[string]string{"test": "test"}
@@ -100,12 +120,12 @@ func TestManaged_AdaptBucketInstantBackup(t *testing.T) {
 	backupName := "testBucket"
 
 	features := []string{backup.Instant}
-	bucket.SetInstantBackup(k8sClient, namespace, backupName, cockroachLabels, saJson)
+	bucket.SetInstantBackup(k8sClient, namespace, backupName, labels, saJson)
 	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60))
 
 	desired := getTreeWithDBAndBackup(t, masterkey, saJson, backupName)
 
-	query, _, _, err := AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	databases := []string{"test1", "test2"}
@@ -119,8 +139,17 @@ func TestManaged_AdaptBucketInstantBackup(t *testing.T) {
 
 func TestManaged_AdaptBucketCleanAndRestore(t *testing.T) {
 	monitor := mntr.Monitor{}
-	labels := map[string]string{"test": "test"}
-	cockroachLabels := map[string]string{"test": "test", "app.kubernetes.io/component": "cockroachdb"}
+	operatorLabels := labels.MustForOperator("testProd", "testOp", "testVersion")
+	apiLabels := labels.MustForAPI(operatorLabels, "testKind", "v0")
+	labels := map[string]string{
+		"app.kubernetes.io/component":  "backup",
+		"app.kubernetes.io/managed-by": "testOp",
+		"app.kubernetes.io/name":       "backup-serviceaccountjson",
+		"app.kubernetes.io/part-of":    "testProd",
+		"app.kubernetes.io/version":    "testVersion",
+		"caos.ch/apiversion":           "v0",
+		"caos.ch/kind":                 "BucketBackup",
+	}
 	namespace := "testNs"
 	timestamp := "testTs"
 	nodeselector := map[string]string{"test": "test"}
@@ -132,13 +161,13 @@ func TestManaged_AdaptBucketCleanAndRestore(t *testing.T) {
 	backupName := "testBucket"
 
 	features := []string{restore.Instant, clean.Instant}
-	bucket.SetRestore(k8sClient, namespace, backupName, cockroachLabels, saJson)
+	bucket.SetRestore(k8sClient, namespace, backupName, labels, saJson)
 	bucket.SetClean(k8sClient, namespace, backupName)
 	k8sClient.EXPECT().WaitUntilStatefulsetIsReady(namespace, sfsName, true, true, time.Duration(60)).Times(2)
 
 	desired := getTreeWithDBAndBackup(t, masterkey, saJson, backupName)
 
-	query, _, _, err := AdaptFunc(labels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
+	query, _, _, err := AdaptFunc(operatorLabels, apiLabels, namespace, timestamp, nodeselector, tolerations, version, features)(monitor, desired, &tree.Tree{})
 	assert.NoError(t, err)
 
 	databases := []string{"test1", "test2"}

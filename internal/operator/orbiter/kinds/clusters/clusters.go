@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -12,12 +13,13 @@ import (
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
+	operator *labels.Operator,
 	clusterID string,
 	clusterTree *tree.Tree,
 	oneoff bool,
 	deployOrbiter bool,
 	clusterCurrent *tree.Tree,
-	destroyProviders func() (map[string]interface{}, error),
+	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan struct{},
 	gitClient *git.Client,
@@ -34,6 +36,7 @@ func GetQueryAndDestroyFuncs(
 	case "orbiter.caos.ch/KubernetesCluster":
 		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
 			return kubernetes.AdaptFunc(
+				labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version),
 				clusterID,
 				oneoff,
 				deployOrbiter,

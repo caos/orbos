@@ -37,7 +37,7 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 			migrate = true
 		}
 
-		if err := desiredKind.validate(); err != nil {
+		if err := desiredKind.validateAdapt(); err != nil {
 			return nil, nil, nil, migrate, nil, err
 		}
 
@@ -67,6 +67,10 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
 				}()
 
+				if err := desiredKind.validateQuery(); err != nil {
+					return nil, err
+				}
+
 				lbQueryFunc := func() (orbiter.EnsureFunc, error) {
 					return lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
 				}
@@ -84,8 +88,8 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
 				}
 				return orbiter.QueryFuncGoroutine(queryFunc)
-			}, func() error {
-				if err := lbDestroy(); err != nil {
+			}, func(delegates map[string]interface{}) error {
+				if err := lbDestroy(delegates); err != nil {
 					return err
 				}
 

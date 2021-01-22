@@ -2,6 +2,7 @@ package clean
 
 import (
 	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/pkg/labels"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -9,8 +10,7 @@ import (
 
 func getJob(
 	namespace string,
-	labels map[string]string,
-	jobName string,
+	nameLabels *labels.Name,
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
 	secretName string,
@@ -21,9 +21,9 @@ func getJob(
 
 	return &batchv1.Job{
 		ObjectMeta: v1.ObjectMeta{
-			Name:      jobName,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 		Spec: batchv1.JobSpec{
 			Template: corev1.PodTemplateSpec{
@@ -32,7 +32,7 @@ func getJob(
 					Tolerations:   tolerations,
 					RestartPolicy: corev1.RestartPolicyNever,
 					Containers: []corev1.Container{{
-						Name:  jobName,
+						Name:  nameLabels.Name(),
 						Image: image + ":" + version,
 						Command: []string{
 							"/bin/bash",

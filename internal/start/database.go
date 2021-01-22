@@ -2,16 +2,17 @@ package start
 
 import (
 	"context"
+	"time"
+
 	"github.com/caos/orbos/internal/operator/database"
 	"github.com/caos/orbos/internal/operator/database/kinds/orb"
 	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
-	"time"
 )
 
-func Database(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client) error {
+func Database(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, binaryVersion *string) error {
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}
@@ -30,7 +31,7 @@ func Database(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2
 			return err
 		}
 
-		takeoff := database.Takeoff(monitor, gitClient, orb.AdaptFunc("", "database", "backup"), k8sClient)
+		takeoff := database.Takeoff(monitor, gitClient, orb.AdaptFunc("", binaryVersion, "database", "backup"), k8sClient)
 
 		go func() {
 			started := time.Now()
@@ -47,7 +48,7 @@ func Database(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2
 	return nil
 }
 
-func DatabaseBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, backup string) error {
+func DatabaseBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, backup string, binaryVersion *string) error {
 	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
 	if err != nil {
 		monitor.Error(err)
@@ -60,11 +61,11 @@ func DatabaseBackup(monitor mntr.Monitor, orbConfigPath string, k8sClient *kuber
 		return err
 	}
 
-	database.Takeoff(monitor, gitClient, orb.AdaptFunc(backup, "instantbackup"), k8sClient)()
+	database.Takeoff(monitor, gitClient, orb.AdaptFunc(backup, binaryVersion, "instantbackup"), k8sClient)()
 	return nil
 }
 
-func DatabaseRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, timestamp string) error {
+func DatabaseRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, timestamp string, binaryVersion *string) error {
 	orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
 	if err != nil {
 		monitor.Error(err)
@@ -77,7 +78,7 @@ func DatabaseRestore(monitor mntr.Monitor, orbConfigPath string, k8sClient *kube
 		return err
 	}
 
-	database.Takeoff(monitor, gitClient, orb.AdaptFunc(timestamp, "restore"), k8sClient)()
+	database.Takeoff(monitor, gitClient, orb.AdaptFunc(timestamp, binaryVersion, "restore"), k8sClient)()
 
 	return nil
 }

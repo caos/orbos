@@ -9,6 +9,7 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/secret"
+	"github.com/caos/orbos/pkg/labels"
 	secretpkg "github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -23,7 +24,7 @@ const (
 func AdaptFunc(
 	name string,
 	namespace string,
-	labels map[string]string,
+	componentLabels *labels.Component,
 	checkDBReady core.EnsureFunc,
 	timestamp string,
 	nodeselector map[string]string,
@@ -50,7 +51,7 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
+		queryS, err := secret.AdaptFuncToEnsure(namespace, labels.MustForName(componentLabels, secretName), map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -59,7 +60,7 @@ func AdaptFunc(
 			internalMonitor,
 			name,
 			namespace,
-			labels,
+			componentLabels,
 			[]string{},
 			checkDBReady,
 			desiredKind.Spec.Bucket,
@@ -80,7 +81,7 @@ func AdaptFunc(
 			monitor,
 			name,
 			namespace,
-			labels,
+			componentLabels,
 			[]string{},
 			desiredKind.Spec.Bucket,
 			timestamp,
@@ -99,7 +100,7 @@ func AdaptFunc(
 			monitor,
 			name,
 			namespace,
-			labels,
+			componentLabels,
 			[]string{},
 			nodeselector,
 			tolerations,
@@ -146,7 +147,7 @@ func AdaptFunc(
 					internalMonitor,
 					name,
 					namespace,
-					labels,
+					componentLabels,
 					databases,
 					checkDBReady,
 					desiredKind.Spec.Bucket,
@@ -167,7 +168,7 @@ func AdaptFunc(
 					monitor,
 					name,
 					namespace,
-					labels,
+					componentLabels,
 					databases,
 					desiredKind.Spec.Bucket,
 					timestamp,
@@ -186,7 +187,7 @@ func AdaptFunc(
 					monitor,
 					name,
 					namespace,
-					labels,
+					componentLabels,
 					databases,
 					nodeselector,
 					tolerations,

@@ -3,22 +3,23 @@ package pdb
 import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	policy "k8s.io/api/policy/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func AdaptFuncToEnsure(namespace, name string, labels map[string]string, maxUnavailable string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(namespace string, nameLabels *labels.Name, target *labels.Selector, maxUnavailable string) (resources.QueryFunc, error) {
 	maxUnavailableParsed := intstr.Parse(maxUnavailable)
 	pdb := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
+			Name:      nameLabels.Name(),
 			Namespace: namespace,
-			Labels:    labels,
+			Labels:    labels.MustK8sMap(nameLabels),
 		},
 		Spec: policy.PodDisruptionBudgetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
+				MatchLabels: labels.MustK8sMap(target),
 			},
 			MaxUnavailable: &maxUnavailableParsed,
 		},

@@ -1,12 +1,14 @@
 package clean
 
 import (
+	"time"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources/job"
+	"github.com/caos/orbos/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
-	"time"
 )
 
 const (
@@ -26,7 +28,7 @@ func AdaptFunc(
 	monitor mntr.Monitor,
 	backupName string,
 	namespace string,
-	labels map[string]string,
+	componentLabels *labels.Component,
 	databases []string,
 	nodeselector map[string]string,
 	tolerations []corev1.Toleration,
@@ -44,8 +46,7 @@ func AdaptFunc(
 
 	jobDef := getJob(
 		namespace,
-		labels,
-		GetJobName(backupName),
+		labels.MustForName(componentLabels, GetJobName(backupName)),
 		nodeselector,
 		tolerations,
 		secretName,

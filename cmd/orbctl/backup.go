@@ -20,11 +20,14 @@ func BackupCommand(rv RootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.StringVar(&backup, "backup", "", "Name used for backup folder")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		_, monitor, orbConfig, gitClient, errFunc := rv()
-		if errFunc != nil {
-			return errFunc(cmd)
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		if err != nil {
+			return err
 		}
+		defer func() {
+			err = errFunc(err)
+		}()
 
 		if err := orbConfig.IsConnectable(); err != nil {
 			return err
@@ -43,15 +46,14 @@ func BackupCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 		if found {
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig, version)
 			if err != nil {
 				return err
 			}
 			for _, kubeconfig := range kubeconfigs {
 				k8sClient := kubernetes2.NewK8sClient(monitor, &kubeconfig)
 				if k8sClient.Available() {
-					err := start.DatabaseBackup(monitor, orbConfig.Path, k8sClient, backup)
-					if err != nil {
+					if err := start.DatabaseBackup(monitor, orbConfig.Path, k8sClient, backup, &version); err != nil {
 						return err
 					}
 				}

@@ -102,6 +102,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		InitializeParams: &compute.AttachedDiskInitializeParams{
 			DiskSizeGb:  int64(desired.StorageGB),
 			SourceImage: desired.OSImage,
+			DiskType:    fmt.Sprintf("zones/%s/diskTypes/%s", m.context.desired.Zone, desired.StorageDiskType),
 		}},
 	}
 
@@ -122,11 +123,12 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	name := newName()
+	nwTags := networkTags(m.context.orbID, m.context.providerID, poolName)
 	sshKey := fmt.Sprintf("orbiter:%s", m.key.Public.Value)
 	createInstance := &compute.Instance{
 		Name:        name,
 		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
-		Tags:        &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
+		Tags:        &compute.Tags{Items: nwTags},
 		NetworkInterfaces: []*compute.NetworkInterface{{
 			Network: m.context.networkURL,
 		}},
@@ -139,6 +141,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 				Value: &sshKey,
 			}},
 		},
+		ServiceAccounts: []*compute.ServiceAccount{{
+			Scopes: []string{"https://www.googleapis.com/auth/compute"},
+		}},
 	}
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
@@ -193,11 +198,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		func() {},
 	)
 
-	for _, name := range diskNames {
+	for idx, name := range diskNames {
 		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
 		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10*time.Second, infraMachine, func(m infra.Machine) error {
 			_, formatErr := m.Execute(nil,
-				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-%s` %s ext4 discard,defaults,nofail 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, name, mountPoint),
+				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount -o discard,defaults,nobarrier /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-local-nvme-ssd-%d` %s ext4 discard,defaults,nofail,nobarrier 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, idx, mountPoint),
 			)
 			return formatErr
 		}); err != nil {
@@ -377,11 +382,15 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 
 func networkTags(orbID, providerID string, poolName ...string) []string {
 	tags := []string{
-		fmt.Sprintf("orb-%s", orbID),
+		orbNetworkTag(orbID),
 		fmt.Sprintf("provider-%s", providerID),
 	}
 	for _, pool := range poolName {
 		tags = append(tags, fmt.Sprintf("pool-%s", pool))
 	}
 	return tags
+}
+
+func orbNetworkTag(orbID string) string {
+	return fmt.Sprintf("orb-%s", orbID)
 }
