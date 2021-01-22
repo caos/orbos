@@ -449,6 +449,21 @@ func EnsureOrbiterArtifacts(
 								"memory": resource.MustParse("250Mi"),
 							},
 						},
+						LivenessProbe: &core.Probe{
+							Handler: core.Handler{
+								HTTPGet: &core.HTTPGetAction{
+									Path:        "/health",
+									Port:        intstr.FromInt(9000),
+									Scheme:      core.URISchemeHTTP,
+									HTTPHeaders: make([]core.HTTPHeader, 0, 0),
+								},
+							},
+							InitialDelaySeconds: 10,
+							TimeoutSeconds:      1,
+							PeriodSeconds:       20,
+							SuccessThreshold:    3,
+							FailureThreshold:    3 * 5,
+						},
 					}},
 					Volumes: []core.Volume{{
 						Name: "keys",
