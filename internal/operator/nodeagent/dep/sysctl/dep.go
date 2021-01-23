@@ -165,12 +165,11 @@ func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *comm
 		}
 	}
 
-	if pkg.Config == nil {
-		pkg.Config = make(map[string]string)
-	}
-	pkg.Config[propertyStr] = "0"
 	enabled := outBuf.String() == fmt.Sprintf("%s = 1\n", property)
 	if enabled {
+		if pkg.Config == nil {
+			pkg.Config = make(map[string]string)
+		}
 		pkg.Config[propertyStr] = "1"
 	}
 
