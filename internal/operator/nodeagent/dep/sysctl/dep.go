@@ -119,10 +119,10 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 %s = %s
 %s = %s
 `,
-		string(IpForward), oneOrZero(ensure.Config, IpForward),
-		string(NonLocalBind), oneOrZero(ensure.Config, NonLocalBind),
-		string(BridgeNfCallIptables), oneOrZero(ensure.Config, BridgeNfCallIptables),
-		string(BridgeNfCallIp6tables), oneOrZero(ensure.Config, BridgeNfCallIp6tables),
+		string(IpForward), ensure.Config[string(IpForward)],
+		string(NonLocalBind), ensure.Config[string(NonLocalBind)],
+		string(BridgeNfCallIptables), ensure.Config[string(BridgeNfCallIptables)],
+		string(BridgeNfCallIp6tables), ensure.Config[string(BridgeNfCallIp6tables)],
 	)), os.ModePerm); err != nil {
 		return err
 	}
@@ -132,14 +132,6 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
 	}
 	return nil
-}
-
-func oneOrZero(cfg map[string]string, property SysctlPropery) string {
-	val := cfg[string(property)]
-	if val == "1" {
-		return val
-	}
-	return "0"
 }
 
 func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *common.Package) error {
