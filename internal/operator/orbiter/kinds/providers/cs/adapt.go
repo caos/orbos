@@ -97,6 +97,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 
 				return destroy(ctx, current)
 			}, func(orb orb.Orb) error {
+
+				if err := desiredKind.validateAPIToken(); err != nil {
+					return err
+				}
+
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}

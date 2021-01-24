@@ -27,7 +27,7 @@ func query(
 	desired *Spec,
 	current *Current,
 	lb interface{},
-	context *context,
+	svc *machinesService,
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	naFuncs core.IterateNodeAgentFuncs,
@@ -38,11 +38,11 @@ func query(
 	if !ok {
 		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
 	}
-	vips, _, err := lbCurrent.Current.Spec(context.machinesService)
+	vips, _, err := lbCurrent.Current.Spec(svc)
 	if err != nil {
 		return nil, err
 	}
-	normalized, firewalls := normalize(context, vips)
+	normalized, firewalls := normalize(svc.context, vips)
 
 	var (
 		ensureLB             func() error
@@ -51,12 +51,12 @@ func query(
 	if err := helpers.Fanout([]func() error{
 		func() error {
 			var err error
-			ensureLB, err = queryLB(context, normalized)
+			ensureLB, err = queryLB(svc.context, normalized)
 			return err
 		},
 		func() error {
 			var err error
-			createFWs, deleteFWs, err = queryFirewall(context, firewalls)
+			createFWs, deleteFWs, err = queryFirewall(svc.context, firewalls)
 			return err
 		},
 	})(); err != nil {
@@ -77,7 +77,7 @@ func query(
 	desireNodeAgent := func(pool string, machine infra.Machine) error {
 
 		machineID := machine.ID()
-		machineMonitor := context.monitor.WithField("machine", machineID)
+		machineMonitor := svc.context.monitor.WithField("machine", machineID)
 		na, _ := nodeAgentsDesired.Get(machineID)
 		if na.Software.Health.Config == nil {
 			na.Software.Health.Config = make(map[string]string)
@@ -133,8 +133,8 @@ func query(
 		return nil
 	}
 
-	context.machinesService.onCreate = desireNodeAgent
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, nil, func(vip *dynamic.VIP) string {
+	svc.onCreate = desireNodeAgent
+	wrappedMachines := wrap.MachinesService(svc, *lbCurrent, nil, func(vip *dynamic.VIP) string {
 		for _, transport := range vip.Transport {
 			address, ok := current.Current.Ingresses[transport.Name]
 			if ok {
@@ -147,19 +147,19 @@ func query(
 
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
-			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },
-			func() error { return ensureNetwork(context, createFWs, deleteFWs) },
-			context.machinesService.restartPreemptibleMachines,
+			func() error { return ensureIdentityAwareProxyAPIEnabled(svc.context) },
+			func() error { return ensureNetwork(svc.context, createFWs, deleteFWs) },
+			svc.restartPreemptibleMachines,
 			ensureLB,
 			func() error {
-				pools, err := context.machinesService.ListPools()
+				pools, err := svc.ListPools()
 				if err != nil {
 					return err
 				}
 
 				var desireNodeAgents []func() error
 				for _, pool := range pools {
-					machines, listErr := context.machinesService.List(pool)
+					machines, listErr := svc.List(pool)
 					if listErr != nil {
 						err = helpers.Concat(err, listErr)
 					}
@@ -180,7 +180,7 @@ func query(
 					return err
 				}
 
-				fwDone, err := core.DesireInternalOSFirewall(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, context.machinesService, []string{"eth0"})
+				fwDone, err := core.DesireInternalOSFirewall(svc.context.monitor, nodeAgentsDesired, nodeAgentsCurrent, svc, []string{"eth0"})
 				if err != nil {
 					return err
 				}
@@ -189,7 +189,7 @@ func query(
 				return err
 			},
 		})())
-	}, initPools(current, desired, context, normalized, wrappedMachines)
+	}, initPools(current, desired, svc, normalized, wrappedMachines)
 }
 
 func internalPort(lb *normalizedLoadbalancer) uint16 {
