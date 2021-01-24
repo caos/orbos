@@ -107,7 +107,7 @@ func query(
 						machineMonitor.WithFields(map[string]interface{}{
 							"listen": key,
 							"checks": value,
-						}).Changed("Healthcheck desired")
+						}).Debug("Healthcheck desired")
 					}
 					fw := common.ToFirewall("external", map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
