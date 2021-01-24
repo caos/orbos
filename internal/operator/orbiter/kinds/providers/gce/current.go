@@ -60,11 +60,11 @@ container-api-endpoint = "Don't use container API'"
 	}
 }
 
-func initPools(current *Current, desired *Spec, context *context, normalized []*normalizedLoadbalancer, machines core.MachinesService) error {
+func initPools(current *Current, desired *Spec, svc *machinesService, normalized []*normalizedLoadbalancer, machines core.MachinesService) error {
 
 	current.Current.pools = make(map[string]infra.Pool)
 	for pool := range desired.Pools {
-		current.Current.pools[pool] = newInfraPool(pool, context, normalized, machines)
+		current.Current.pools[pool] = newInfraPool(pool, svc, normalized, machines)
 	}
 
 	pools, err := machines.ListPools()
@@ -74,7 +74,7 @@ func initPools(current *Current, desired *Spec, context *context, normalized []*
 	for _, pool := range pools {
 		// Also return pools that are not configured
 		if _, ok := current.Current.pools[pool]; !ok {
-			current.Current.pools[pool] = newInfraPool(pool, context, normalized, machines)
+			current.Current.pools[pool] = newInfraPool(pool, svc, normalized, machines)
 		}
 	}
 	return nil

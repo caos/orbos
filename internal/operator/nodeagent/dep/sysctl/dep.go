@@ -94,10 +94,10 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 %s = %s
 %s = %s
 `,
-		string(common.IpForward), ensure.Config[string(common.IpForward)],
-		string(common.NonLocalBind), ensure.Config[string(common.NonLocalBind)],
-		string(common.BridgeNfCallIptables), ensure.Config[string(common.BridgeNfCallIptables)],
-		string(common.BridgeNfCallIp6tables), ensure.Config[string(common.BridgeNfCallIp6tables)],
+		string(common.IpForward), oneOrZero(ensure.Config, common.IpForward),
+		string(common.NonLocalBind), oneOrZero(ensure.Config, common.NonLocalBind),
+		string(common.BridgeNfCallIptables), oneOrZero(ensure.Config, common.BridgeNfCallIptables),
+		string(common.BridgeNfCallIp6tables), oneOrZero(ensure.Config, common.BridgeNfCallIp6tables),
 	)), os.ModePerm); err != nil {
 		return err
 	}
@@ -107,6 +107,14 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
 	}
 	return nil
+}
+
+func oneOrZero(cfg map[string]string, property common.KernelModule) string {
+	val := cfg[string(property)]
+	if val == "1" {
+		return val
+	}
+	return "0"
 }
 
 func currentSysctlConfig(monitor mntr.Monitor, property common.KernelModule, pkg *common.Package) error {
@@ -132,12 +140,11 @@ func currentSysctlConfig(monitor mntr.Monitor, property common.KernelModule, pkg
 		}
 	}
 
-	if pkg.Config == nil {
-		pkg.Config = make(map[string]string)
-	}
-	pkg.Config[propertyStr] = "0"
 	enabled := outBuf.String() == fmt.Sprintf("%s = 1\n", property)
 	if enabled {
+		if pkg.Config == nil {
+			pkg.Config = make(map[string]string)
+		}
 		pkg.Config[propertyStr] = "1"
 	}
 

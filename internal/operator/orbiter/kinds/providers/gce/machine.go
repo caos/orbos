@@ -139,10 +139,10 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 		return nil, err
 	}
 
-	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	svc, err := service(monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return core.ListMachines(ctx.machinesService)
+	return core.ListMachines(svc)
 }
