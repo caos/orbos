@@ -1,6 +1,8 @@
 package gce
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"google.golang.org/api/servicemanagement/v1"
@@ -22,8 +24,28 @@ func computeOpCall(call func(...googleapi.CallOption) (*compute.Operation, error
 		if err != nil {
 			return nil, err
 		}
+		if op != nil && op.Error != nil {
+			return nil, opErrs(op.Error)
+		}
 		return toOperation(op.Progress), err
 	}
+}
+
+type opErr struct {
+	msg string
+}
+
+func (o *opErr) Error() string {
+	return o.msg
+}
+
+func opErrs(errors *compute.OperationError) error {
+	opErr := opErr{}
+	for idx := range errors.Errors {
+		opErr.msg = fmt.Sprintf("%s%s,", opErr.msg, errors.Errors[idx].Message)
+	}
+	opErr.msg = strings.TrimSuffix(opErr.msg, ",")
+	return &opErr
 }
 
 func servicesOpCall(call func(...googleapi.CallOption) (*servicemanagement.Operation, error)) func() (*operation, error) {
