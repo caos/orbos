@@ -7,24 +7,23 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func destroy(context *context, delegates map[string]interface{}) error {
-
+func destroy(svc *machinesService, delegates map[string]interface{}) error {
 	return helpers.Fanout([]func() error{
 		func() error {
-			destroyLB, err := queryLB(context, nil)
+			destroyLB, err := queryLB(svc.context, nil)
 			if err != nil {
 				return err
 			}
 			return destroyLB()
 		},
 		func() error {
-			pools, err := context.machinesService.ListPools()
+			pools, err := svc.ListPools()
 			if err != nil {
 				return err
 			}
 			var delFuncs []func() error
 			for _, pool := range pools {
-				machines, err := context.machinesService.List(pool)
+				machines, err := svc.List(pool)
 				if err != nil {
 					return err
 				}
@@ -40,25 +39,25 @@ func destroy(context *context, delegates map[string]interface{}) error {
 				func() error {
 					var deleteDisks []func() error
 
-					deleteMonitor := context.monitor.WithField("type", "persistent disk")
+					deleteMonitor := svc.context.monitor.WithField("type", "persistent disk")
 
 					for kind, delegate := range delegates {
 						volumes, ok := delegate.([]infra.Volume)
 						if ok {
 							for idx := range volumes {
 								diskName := volumes[idx].Name
-								deleteDisks = append(deleteDisks, deleteDiskFunc(context, deleteMonitor.WithField("id", diskName), kind, diskName))
+								deleteDisks = append(deleteDisks, deleteDiskFunc(svc.context, deleteMonitor.WithField("id", diskName), kind, diskName))
 							}
 						}
 					}
 					return helpers.Fanout(deleteDisks)()
 				},
 				func() error {
-					_, deleteFirewalls, err := queryFirewall(context, nil)
+					_, deleteFirewalls, err := queryFirewall(svc.context, nil)
 					if err != nil {
 						return err
 					}
-					return destroyNetwork(context, deleteFirewalls)
+					return destroyNetwork(svc.context, deleteFirewalls)
 				},
 			})()
 		},
