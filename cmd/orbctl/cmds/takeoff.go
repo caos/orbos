@@ -99,10 +99,6 @@ func Takeoff(
 			return err
 		}
 
-		if err := deployDatabase(monitor, gitClient, &kubeconfig); err != nil {
-			return err
-		}
-
 		if err := deployNetworking(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}

@@ -141,40 +141,6 @@ func StartBoom(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func StartDatabase(rv RootValues) *cobra.Command {
-	var (
-		kubeconfig string
-		cmd        = &cobra.Command{
-			Use:   "database",
-			Short: "Launch a database operator",
-			Long:  "Ensures a desired state of the database",
-		}
-	)
-	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
-
-	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, _, errFunc, err := rv()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err = errFunc(err)
-		}()
-
-		k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
-		if err != nil {
-			return err
-		}
-
-		if k8sClient.Available() {
-			return start.Database(monitor, orbConfig.Path, k8sClient, &version)
-		}
-		return nil
-	}
-	return cmd
-}
-
 func StartNetworking(rv RootValues) *cobra.Command {
 	var (
 		kubeconfig string
