@@ -157,15 +157,10 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		desiredNodeAgents := common.NodeAgentsDesiredKind{
 			Kind:    "nodeagent.caos.ch/NodeAgents",
 			Version: "v0",
+			Spec: common.NodeAgentsSpec{
+				Commit: conf.OrbiterCommit,
+			},
 		}
-		rawDesiredNodeAgents := conf.GitClient.Read("caos-internal/orbiter/node-agents-desired.yml")
-		if err = yaml.Unmarshal(rawDesiredNodeAgents, &desiredNodeAgents); err != nil {
-			monitor.Error(err)
-			return
-		}
-		desiredNodeAgents.Kind = "nodeagent.caos.ch/NodeAgents"
-		desiredNodeAgents.Version = "v0"
-		desiredNodeAgents.Spec.Commit = conf.OrbiterCommit
 
 		marshalCurrentFiles := func() []git.File {
 			return []git.File{{
@@ -176,16 +171,6 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 				Content: common.MarshalYAML(desiredNodeAgents),
 			}}
 		}
-		/*
-			events := make([]*event, 0)
-			monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
-				conf.PushEvents([]*ingestion.EventRequest{mntr.EventRecord("orbiter", evt, fields)})
-				events = append(events, &event{
-					commit: mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
-					files:  marshalCurrentFiles(),
-				})
-			}, monitor.OnChange)
-		*/
 
 		if migrate {
 			if err = api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
@@ -202,7 +187,6 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 
 		handleAdapterError := func(err error) {
 			monitor.Error(err)
-			//			monitor.Error(gitClient.Clone())
 			if commitErr := conf.GitClient.Commit(mntr.CommitRecord([]*mntr.Field{{Pos: 0, Key: "err", Value: err.Error()}})); commitErr != nil {
 				monitor.Error(err)
 				return
@@ -238,8 +222,6 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			}
 		}
 
-		//		events = make([]*event, 0)
-
 		ensureFunc := func() *EnsureResult {
 			return ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
 		}
@@ -273,28 +255,5 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			}
 			monitor.Error(err)
 		}
-
-		/*
-			for _, event := range events {
-
-				changed, err := conf.GitClient.StageAndCommit(event.commit, event.files...)
-				if err != nil {
-					monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", event.commit, err.Error()))
-					return
-				}
-
-				monitor.WithFields(map[string]interface{}{
-					event.files[0].Path: string(event.files[0].Content),
-					event.files[1].Path: string(event.files[1].Content),
-				}).Debug("Current files staged")
-
-				if !changed {
-					panic(fmt.Sprint("Event has no effect:", event.commit))
-				}
-			}
-			if len(events) > 0 {
-				monitor.Error(conf.GitClient.Push())
-			}
-		*/
 	}
 }

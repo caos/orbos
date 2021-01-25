@@ -88,45 +88,58 @@ func AdaptFunc(
 
 		queryM, destroyM, checkMigrationDone, cleanupMigration, err := migration.AdaptFunc(monitor, namespace, "restore", labels, secretPasswordName, migrationUser, users, nodeselector, tolerations)
 
+		destroyers := make([]zitadel.DestroyFunc, 0)
 		destroyS, err := secret.AdaptFuncToDestroy(namespace, secretName)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		queriers := make([]zitadel.QueryFunc, 0)
-		destroyers := make([]zitadel.DestroyFunc, 0)
 		for _, feature := range features {
 			switch feature {
 			case "backup", "instantbackup":
-				queriers = append(queriers,
-					zitadel.ResourceQueryToZitadelQuery(queryS),
-					queryB,
-				)
 				destroyers = append(destroyers,
 					zitadel.ResourceDestroyToZitadelDestroy(destroyS),
 					destroyB,
 				)
 			case "restore":
-				queriers = append(queriers,
-					queryC,
-					zitadel.EnsureFuncToQueryFunc(checkAndCleanupC),
-					queryM,
-					zitadel.EnsureFuncToQueryFunc(checkMigrationDone),
-					zitadel.EnsureFuncToQueryFunc(cleanupMigration),
-					queryR,
-					zitadel.EnsureFuncToQueryFunc(checkAndCleanupR),
-				)
 				destroyers = append(destroyers,
+					zitadel.ResourceDestroyToZitadelDestroy(destroyS),
 					destroyC,
 					destroyM,
 					destroyR,
 				)
 			}
+		}
+
+		queriers := make([]zitadel.QueryFunc, 0)
+		if desiredKind.Spec != nil && desiredKind.Spec.ServiceAccountJSON != nil {
+			queryS, err := secret.AdaptFuncToEnsure(namespace, secretName, labels, map[string]string{secretKey: desiredKind.Spec.ServiceAccountJSON.Value})
+			if err != nil {
+				return nil, nil, nil, err
+			}
+
+			for _, feature := range features {
+				switch feature {
+				case "backup", "instantbackup":
+					queriers = append(queriers,
+						zitadel.ResourceQueryToZitadelQuery(queryS),
+						queryB,
+					)
+				case "restore":
+					queriers = append(queriers,
+						zitadel.ResourceQueryToZitadelQuery(queryS),
+						queryC,
+						zitadel.EnsureFuncToQueryFunc(checkAndCleanupC),
+						queryM,
+						zitadel.EnsureFuncToQueryFunc(checkMigrationDone),
+						zitadel.EnsureFuncToQueryFunc(cleanupMigration),
+						queryR,
+						zitadel.EnsureFuncToQueryFunc(checkAndCleanupR),
+					)
+				}
+			}
+		} else {
+			monitor.Info("No backup or restore as no serviceaccount is defined")
 		}
 
 		return func(k8sClient *kubernetes.Client, queried map[string]interface{}) (zitadel.EnsureFunc, error) {

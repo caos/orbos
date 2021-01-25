@@ -39,6 +39,7 @@ func ensure(
 	}
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
+
 	upgradingDone, err := ensureSoftware(
 		monitor,
 		targetVersion,
@@ -65,7 +66,7 @@ func ensure(
 		func(created infra.Machine, pool *initializedPool) initializedMachine {
 			machine := initializeMachine(created, pool)
 			target := targetVersion.DefineSoftware()
-			machine.desiredNodeagent.Software = &target
+			machine.desiredNodeagent.Software.Merge(target)
 			return *machine
 		},
 		gitClient,

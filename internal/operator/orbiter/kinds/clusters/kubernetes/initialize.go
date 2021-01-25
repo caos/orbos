@@ -192,7 +192,7 @@ func initialize(
 			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
 			if !softwareContains(*naSpec.Software, k8sSoftware) {
 				naSpec.Software.Merge(k8sSoftware)
-				machineMonitor.Changed("Kubernetes software desired")
+				machineMonitor.Debug("Kubernetes software desired")
 			}
 		}
 
