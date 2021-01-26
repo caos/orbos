@@ -1259,18 +1259,21 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	if err != nil && !macherrs.IsNotFound(err) {
 		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
 	}
+	update := func() error {
+		return err
+	}
 	if err == nil {
 		crd.SetResourceVersion(existing.GetResourceVersion())
+		update = func() error {
+			_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+			return err
+		}
 	}
-	err = nil
 
 	return c.applyResource("crd", name, func() error {
 		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
 		return err
-	}, func() error {
-		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
-		return err
-	})
+	}, update)
 }
 
 func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error {
