@@ -28,7 +28,7 @@ There has to be a git-repository with an boom.yml in the base. Then a `BOOM` ins
 orbctl -f $HOME/.orb/config takeoff
 ```
 
-If you want to run boom together with orbiter you can follow the documentation in the [readme.md](../../readme.md). If you want to run boom on a existing cluster
+If you want to run boom together with orbiter you can follow the documentation in the [README.md](../../README.md). If you want to run boom on a existing cluster
 
 ## Boom on an existing Cluster
 
