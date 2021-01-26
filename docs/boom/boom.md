@@ -32,7 +32,7 @@ If you want to run boom together with orbiter you can follow the documentation i
 
 ## Boom on an existing Cluster
 
-If you just want to use Boom without Orbiter to bootstrap some tools you can follow these steps:
+If you just want to use `BOOM` without `ORBITER` to bootstrap some tools you can follow these steps:
 
 1. Install orbctl locally
 
