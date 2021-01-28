@@ -17,7 +17,7 @@ import (
 )
 
 func OperatorSelector() *labels.Selector {
-	return labels.OpenOperatorSelector("orbiter.caos.ch")
+	return labels.OpenOperatorSelector("ORBOS", "orbiter.caos.ch")
 }
 
 func AdaptFunc(

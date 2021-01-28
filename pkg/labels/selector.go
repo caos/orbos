@@ -17,12 +17,12 @@ type InternalSelector struct {
 	InternalPartofProp     `yaml:",inline"`
 }
 
-func OpenComponentSelector(component string) *Selector {
-	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator("ORBOS", component+".caos.ch")), component), false)
+func OpenComponentSelector(product string, component string) *Selector {
+	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator(product, component+".caos.ch")), component), false)
 }
 
-func OpenOperatorSelector(component string) *Selector {
-	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator("ORBOS", component)), "operator"), false)
+func OpenOperatorSelector(product string, component string) *Selector {
+	return DeriveComponentSelector(MustForComponent(NoopAPI(SelectorOperator(product, component)), "operator"), false)
 }
 
 func DeriveComponentSelector(l *Component, open bool) *Selector {

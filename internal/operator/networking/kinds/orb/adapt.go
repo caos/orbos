@@ -12,7 +12,7 @@ import (
 )
 
 func OperatorSelector() *labels.Selector {
-	return labels.OpenOperatorSelector("networking.caos.ch")
+	return labels.OpenOperatorSelector("ORBOS", "networking.caos.ch")
 }
 
 func AdaptFunc(binaryVersion *string) core.AdaptFunc {
