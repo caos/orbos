@@ -92,7 +92,7 @@ func (a *App) Ensure(
 			FallbackPool:   poolNames[0],
 			Enabled:        &enabled,
 			Proxied:        true,
-			SteeringPolicy: "Random",
+			SteeringPolicy: "random",
 		})
 	}
 
