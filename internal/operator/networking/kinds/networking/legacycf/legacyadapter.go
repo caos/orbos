@@ -36,7 +36,19 @@ func adaptFunc(
 
 				caSecretLabels := labels.MustForName(labels.MustForComponent(cfg.Labels, "cloudflare"), cfg.OriginCASecretName)
 				for _, domain := range cfg.Domains {
-					err = apps.Ensure(k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
+					err = apps.Ensure(
+						cfg.ID,
+						k8sClient,
+						cfg.Namespace,
+						domain.Domain,
+						domain.Subdomains,
+						domain.Rules,
+						caSecretLabels,
+						domain.ClusterID,
+						domain.Region,
+						domain.LoadBalancer,
+						domain.FloatingIP,
+					)
 					if err != nil {
 						return err
 					}

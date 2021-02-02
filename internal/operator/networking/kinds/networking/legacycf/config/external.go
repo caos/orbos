@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"strings"
 
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
@@ -11,8 +12,12 @@ import (
 )
 
 type ExternalConfig struct {
+	ID            string
 	Verbose       bool
 	Domain        string
+	ClusterID     string `yaml:"clusterid"`
+	Region        string `yaml:"region"`
+	LoadBalancer  bool   `yaml:"loadbalancer"`
 	IP            orbiter.IPAddress
 	Rules         []*Rule
 	Groups        []*Group     `yaml:"groups"`
@@ -38,6 +43,7 @@ func (i *ExternalConfig) IsZero() bool {
 func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
+		ID:                 e.ID,
 		Domains:            []*InternalDomain{dom},
 		Groups:             e.Groups,
 		Credentials:        e.Credentials,
@@ -59,22 +65,36 @@ func (e *ExternalConfig) Validate() error {
 }
 
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
-
+	subdomains := []*Subdomain{}
 	// TODO: Remove
-	subdomains := []*Subdomain{
-		subdomain("accounts", e.IP),
-		subdomain("api", e.IP),
-		subdomain("console", e.IP),
-		subdomain("issuer", e.IP),
+	if e.LoadBalancer {
+		lbName := GetLBName(e.Domain)
+		subdomains = append(subdomains,
+			subdomain("accounts", lbName, "CNAME"),
+			subdomain("api", lbName, "CNAME"),
+			subdomain("console", lbName, "CNAME"),
+			subdomain("issuer", lbName, "CNAME"),
+		)
+	} else {
+		subdomains = append(subdomains,
+			subdomain("accounts", string(e.IP), "A"),
+			subdomain("api", string(e.IP), "A"),
+			subdomain("console", string(e.IP), "A"),
+			subdomain("issuer", string(e.IP), "A"),
+		)
 	}
 	for _, sd := range e.AdditionalDNS {
 		subdomains = append(subdomains, sd)
 	}
 
 	return &InternalDomain{
-			Domain:     e.Domain,
-			Subdomains: subdomains,
-			Rules:      e.Rules,
+			FloatingIP:   string(e.IP),
+			ClusterID:    e.ClusterID,
+			Region:       e.Region,
+			Domain:       e.Domain,
+			Subdomains:   subdomains,
+			Rules:        e.Rules,
+			LoadBalancer: e.LoadBalancer,
 		},
 		&current{
 			domain:            e.Domain,
@@ -85,14 +105,17 @@ func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
 			tlsCertName:       "tls-cert-wildcard",
 		}
 }
+func GetLBName(domain string) string {
+	return strings.Join([]string{"lb", domain}, ".")
+}
 
-func subdomain(subdomain string, ip orbiter.IPAddress) *Subdomain {
+func subdomain(subdomain string, target string, ty string) *Subdomain {
 	return &Subdomain{
 		Subdomain: subdomain,
-		IP:        string(ip),
+		IP:        target,
 		Proxied:   true,
 		TTL:       0,
-		Type:      "A",
+		Type:      ty,
 	}
 }
 

@@ -12,6 +12,13 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) e
 		return err
 	}
 
+	deleteRecords := getRecordsToDelete(currentRecords, records)
+	if deleteRecords != nil && len(deleteRecords) > 0 {
+		if err := a.cloudflare.DeleteDNSRecords(domain, deleteRecords); err != nil {
+			return err
+		}
+	}
+
 	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
 	if createRecords != nil && len(createRecords) > 0 {
 		_, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
@@ -23,13 +30,6 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) e
 	if updateRecords != nil && len(updateRecords) > 0 {
 		_, err := a.cloudflare.UpdateDNSRecords(domain, updateRecords)
 		if err != nil {
-			return err
-		}
-	}
-
-	deleteRecords := getRecordsToDelete(currentRecords, records)
-	if deleteRecords != nil && len(deleteRecords) > 0 {
-		if err := a.cloudflare.DeleteDNSRecords(domain, deleteRecords); err != nil {
 			return err
 		}
 	}

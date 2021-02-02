@@ -20,6 +20,7 @@ func New(user string, key string, userServiceKey string) (*Cloudflare, error) {
 	}
 
 	api.APIUserServiceKey = userServiceKey
+	api.AccountID = "86ed4d09664b2b395548c37339c7f179"
 
 	return &Cloudflare{
 		api: api,
