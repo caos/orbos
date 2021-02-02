@@ -1,12 +1,15 @@
 package job
 
 import (
+	"reflect"
+	"time"
+
+	v1 "k8s.io/api/core/v1"
+
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	batch "k8s.io/api/batch/v1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
-	"reflect"
-	"time"
 )
 
 func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
@@ -32,9 +35,13 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 		if job.Spec.Template.ObjectMeta.Labels != nil && !reflect.DeepEqual(job.Spec.Template.ObjectMeta.Labels, jobDef.Spec.Template.ObjectMeta.Labels) {
 			changedImmutable = true
 		}
-		if !reflect.DeepEqual(job.Spec.Template.Spec, jobDef.Spec.Template.Spec) &&
-			//workaround as securitycontext is a pointer to ensure that it only triggers if the values are different
-			!reflect.DeepEqual(*job.Spec.Template.Spec.SecurityContext, *jobDef.Spec.Template.Spec.SecurityContext) {
+
+		//workaround as securitycontext is a pointer to ensure that it only triggers if the values are different
+		if job.Spec.Template.Spec.SecurityContext == nil {
+			job.Spec.Template.Spec.SecurityContext = &v1.PodSecurityContext{}
+		}
+
+		if !reflect.DeepEqual(job.Spec.Template.Spec, jobDef.Spec.Template.Spec) {
 			changedImmutable = true
 		}
 
