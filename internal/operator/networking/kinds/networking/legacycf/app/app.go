@@ -17,8 +17,8 @@ type App struct {
 	internalPrefix string
 }
 
-func New(user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
-	api, err := cloudflare.New(user, key, userServiceKey)
+func New(accountName string, user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
+	api, err := cloudflare.New(accountName, user, key, userServiceKey)
 	if err != nil {
 		return nil, err
 	}
@@ -46,9 +46,7 @@ func (a *App) Ensure(
 	subdomains []*config.Subdomain,
 	rules []*config.Rule,
 	originCALabels *labels.Name,
-	clusterID string,
-	region string,
-	lbs bool,
+	lbs *config.LoadBalancer,
 	floatingIP string,
 ) error {
 	firewallRulesInt := make([]*cloudflare.FirewallRule, 0)
@@ -57,17 +55,17 @@ func (a *App) Ensure(
 	poolsInt := make([]*cloudflare.LoadBalancerPool, 0)
 	lbsInt := make([]*cloudflare.LoadBalancer, 0)
 
-	if lbs {
+	if lbs != nil && lbs.Create {
 		originsInt := []*cloudflare.LoadBalancerOrigin{{
-			Name:    getPoolName(domain, region, clusterID),
+			Name:    getPoolName(domain, lbs.Region, lbs.ClusterID),
 			Address: floatingIP,
 			Enabled: true,
 		}}
 
 		poolsInt = append(poolsInt, &cloudflare.LoadBalancerPool{
-			Name:        getPoolName(domain, region, clusterID),
+			Name:        getPoolName(domain, lbs.Region, lbs.ClusterID),
 			Description: id,
-			Enabled:     lbs,
+			Enabled:     lbs.Enabled,
 			Origins:     originsInt,
 		})
 	}
@@ -77,7 +75,7 @@ func (a *App) Ensure(
 		return err
 	}
 
-	if lbs {
+	if lbs != nil && lbs.Create {
 		//ids get filled in the EnsureLoadBalancerPools-function
 		poolNames := []string{}
 		if poolsInt != nil {
@@ -98,7 +96,7 @@ func (a *App) Ensure(
 		})
 	}
 
-	if err := a.EnsureLoadBalancers(id, clusterID, region, domain, lbsInt); err != nil {
+	if err := a.EnsureLoadBalancers(id, lbs.ClusterID, lbs.Region, domain, lbsInt); err != nil {
 		return err
 	}
 

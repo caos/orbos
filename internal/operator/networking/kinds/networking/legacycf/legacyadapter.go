@@ -29,7 +29,7 @@ func adaptFunc(
 					}
 				}
 
-				apps, err := app.New(cfg.Credentials.User.Value, cfg.Credentials.APIKey.Value, cfg.Credentials.UserServiceKey.Value, groups, cfg.Prefix)
+				apps, err := app.New(cfg.AccountName, cfg.Credentials.User.Value, cfg.Credentials.APIKey.Value, cfg.Credentials.UserServiceKey.Value, groups, cfg.Prefix)
 				if err != nil {
 					return err
 				}
@@ -44,8 +44,6 @@ func adaptFunc(
 						domain.Subdomains,
 						domain.Rules,
 						caSecretLabels,
-						domain.ClusterID,
-						domain.Region,
 						domain.LoadBalancer,
 						domain.FloatingIP,
 					)

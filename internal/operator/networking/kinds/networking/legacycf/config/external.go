@@ -12,18 +12,17 @@ import (
 )
 
 type ExternalConfig struct {
+	AccountName   string `yaml:"accountName"`
 	ID            string
 	Verbose       bool
 	Domain        string
-	ClusterID     string `yaml:"clusterid"`
-	Region        string `yaml:"region"`
-	LoadBalancer  bool   `yaml:"loadbalancer"`
 	IP            orbiter.IPAddress
 	Rules         []*Rule
-	Groups        []*Group     `yaml:"groups"`
-	Credentials   *Credentials `yaml:"credentials"`
-	Prefix        string       `yaml:"prefix"`
-	AdditionalDNS []*Subdomain `yaml:"additionalSubdomains,omitempty"`
+	Groups        []*Group      `yaml:"groups"`
+	Credentials   *Credentials  `yaml:"credentials"`
+	Prefix        string        `yaml:"prefix"`
+	AdditionalDNS []*Subdomain  `yaml:"additionalSubdomains,omitempty"`
+	LoadBalancer  *LoadBalancer `yaml:"loadBalancer,omitempty"`
 }
 
 func (i *ExternalConfig) IsZero() bool {
@@ -43,6 +42,7 @@ func (i *ExternalConfig) IsZero() bool {
 func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
+		AccountName:        e.AccountName,
 		ID:                 e.ID,
 		Domains:            []*InternalDomain{dom},
 		Groups:             e.Groups,
@@ -67,7 +67,7 @@ func (e *ExternalConfig) Validate() error {
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
 	subdomains := []*Subdomain{}
 	// TODO: Remove
-	if e.LoadBalancer {
+	if e.LoadBalancer != nil && e.LoadBalancer.Enabled {
 		lbName := GetLBName(e.Domain)
 		subdomains = append(subdomains,
 			subdomain("accounts", lbName, "CNAME"),
@@ -87,14 +87,20 @@ func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
 		subdomains = append(subdomains, sd)
 	}
 
+	lb := &LoadBalancer{}
+	if e.LoadBalancer != nil {
+		lb.Enabled = e.LoadBalancer.Enabled
+		lb.Create = e.LoadBalancer.Create
+		lb.Region = e.LoadBalancer.Region
+		lb.ClusterID = e.LoadBalancer.ClusterID
+	}
+
 	return &InternalDomain{
 			FloatingIP:   string(e.IP),
-			ClusterID:    e.ClusterID,
-			Region:       e.Region,
 			Domain:       e.Domain,
 			Subdomains:   subdomains,
 			Rules:        e.Rules,
-			LoadBalancer: e.LoadBalancer,
+			LoadBalancer: lb,
 		},
 		&current{
 			domain:            e.Domain,
