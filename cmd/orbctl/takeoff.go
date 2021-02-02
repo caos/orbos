@@ -19,7 +19,6 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 		kubeconfig       string
 		ingestionAddress string
 		gitOpsBoom       bool
-		gitOpsDatabase   bool
 		gitOpsNetworking bool
 		cmd              = &cobra.Command{
 			Use:   "takeoff",
@@ -32,7 +31,6 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
 	flags.BoolVar(&gitOpsBoom, "gitops-boom", false, "Ensure Boom runs in gitops mode")
-	flags.BoolVar(&gitOpsDatabase, "gitops-database", false, "Ensure Database-operator runs in gitops mode")
 	flags.BoolVar(&gitOpsNetworking, "gitops-networking", false, "Ensure Networking-operator runs in gitops mode")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig for boom deployment")
@@ -68,7 +66,6 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 			gitCommit,
 			kubeconfig,
 			gitOpsBoom,
-			gitOpsDatabase,
 			gitOpsNetworking,
 		)
 	}
@@ -165,50 +162,6 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 		} else {
 			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Boom)
 		}
-	}
-	return cmd
-}
-
-func StartDatabase(getRv GetRootValues) *cobra.Command {
-	var (
-		gitOpsMode bool
-		kubeconfig string
-		cmd        = &cobra.Command{
-			Use:   "database",
-			Short: "Launch a database operator",
-			Long:  "Ensures a desired state of the database",
-		}
-	)
-	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
-	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
-
-	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-
-		rv, err := getRv()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
-
-		monitor := rv.Monitor
-		orbConfig := rv.OrbConfig
-
-		if gitOpsMode {
-			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
-			if err != nil {
-				return err
-			}
-
-			if k8sClient.Available() {
-				return start.Database(monitor, orbConfig.Path, k8sClient, &version)
-			}
-		} else {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Database)
-		}
-		return nil
 	}
 	return cmd
 }

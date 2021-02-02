@@ -128,7 +128,7 @@ func query(
 		result := ensureLBFunc()
 
 		if result.Err == nil {
-			fwDone, err := core.DesireInternalOSFirewall(monitor, nodeAgentsDesired, nodeAgentsCurrent, externalMachinesService, desired.Spec.ExternalInterfaces)
+			fwDone, err := core.DesireInternalOSFirewall(monitor, nodeAgentsDesired, nodeAgentsCurrent, externalMachinesService, false, desired.Spec.ExternalInterfaces)
 			result.Err = err
 			result.Done = result.Done && fwDone
 		}

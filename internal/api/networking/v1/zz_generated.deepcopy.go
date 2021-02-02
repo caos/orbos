@@ -21,7 +21,7 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/caos/orbos/internal/operator/database/kinds/orb"
+	"github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/pkg/tree"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )

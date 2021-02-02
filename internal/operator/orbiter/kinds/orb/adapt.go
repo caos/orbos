@@ -17,7 +17,7 @@ import (
 )
 
 func OperatorSelector() *labels.Selector {
-	return labels.OpenOperatorSelector("orbiter.caos.ch")
+	return labels.OpenOperatorSelector("ORBOS", "orbiter.caos.ch")
 }
 
 func AdaptFunc(
@@ -104,14 +104,14 @@ func AdaptFunc(
 		}
 
 		var provCurr map[string]interface{}
-		destroyProviders := func() (map[string]interface{}, error) {
+		destroyProviders := func(delegatedFromClusters map[string]interface{}) (map[string]interface{}, error) {
 			if provCurr != nil {
 				return provCurr, nil
 			}
 
 			provCurr = make(map[string]interface{})
 			for _, destroyer := range providerDestroyers {
-				if err := destroyer(); err != nil {
+				if err := destroyer(delegatedFromClusters); err != nil {
 					return nil, err
 				}
 			}
@@ -219,13 +219,13 @@ func AdaptFunc(
 
 					return orbiter.ToEnsureResult(done, nil)
 				}, nil
-			}, func() error {
+			}, func(delegates map[string]interface{}) error {
 				defer func() {
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
 				for _, destroyer := range clusterDestroyers {
-					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
+					if err := destroyer(delegates); err != nil {
 						return err
 					}
 				}

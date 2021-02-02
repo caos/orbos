@@ -3,7 +3,7 @@
 package v1
 
 import (
-	orbdb "github.com/caos/orbos/internal/operator/database/kinds/orb"
+	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/pkg/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -39,7 +39,7 @@ type Status struct {
 
 type Spec struct {
 	Common     *tree.Common `json:",inline" yaml:",inline"`
-	Spec       *orbdb.Spec  `json:"spec" yaml:"spec"`
+	Spec       *orbnw.Spec  `json:"spec" yaml:"spec"`
 	Networking *Empty       `json:"networking" yaml:"networking"`
 }
 

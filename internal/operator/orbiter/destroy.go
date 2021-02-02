@@ -9,9 +9,9 @@ import (
 	"github.com/caos/orbos/pkg/tree"
 )
 
-type DestroyFunc func() error
+type DestroyFunc func(map[string]interface{}) error
 
-func NoopDestroy() error {
+func NoopDestroy(map[string]interface{}) error {
 	return nil
 }
 
@@ -40,7 +40,7 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finis
 		return err
 	}
 
-	if err := destroy(); err != nil {
+	if err := destroy(make(map[string]interface{})); err != nil {
 		return err
 	}
 

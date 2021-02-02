@@ -11,7 +11,6 @@ import (
 const (
 	orbiterFile    = "orbiter.yml"
 	boomFile       = "boom.yml"
-	databaseFile   = "database.yml"
 	networkingFile = "networking.yml"
 )
 
@@ -52,25 +51,6 @@ func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredF
 	return func(monitor mntr.Monitor) error {
 		monitor.Info("Writing boom desired state")
 		return PushBoomYml(monitor, "Boom desired state written", gitClient, desired)
-	}
-}
-
-func ExistsDatabaseYml(gitClient *git.Client) (bool, error) {
-	return existsFileInGit(gitClient, databaseFile)
-}
-
-func ReadDatabaseYml(gitClient *git.Client) (*tree.Tree, error) {
-	return readFileInGit(gitClient, databaseFile)
-}
-
-func PushDatabaseYml(monitor mntr.Monitor, msg string, gitClient *git.Client, desired *tree.Tree) (err error) {
-	return pushFileInGit(monitor, msg, gitClient, desired, databaseFile)
-}
-
-func PushDatabaseDesiredFunc(gitClient *git.Client, desired *tree.Tree) PushDesiredFunc {
-	return func(monitor mntr.Monitor) error {
-		monitor.Info("Writing database desired state")
-		return PushDatabaseYml(monitor, "Database desired state written", gitClient, desired)
 	}
 }
 

@@ -27,7 +27,6 @@ func Takeoff(
 	gitCommit string,
 	kubeconfig string,
 	gitOpsBoom bool,
-	gitOpsDatabase bool,
 	gitOpsNetworking bool,
 ) error {
 	if err := orbConfig.IsComplete(); err != nil {
@@ -101,11 +100,6 @@ func Takeoff(
 		if err := deployBoom(monitor, gitClient, &kubeconfig, version, gitOpsBoom); err != nil {
 			return err
 		}
-
-		if err := deployDatabase(monitor, gitClient, &kubeconfig, gitOpsDatabase); err != nil {
-			return err
-		}
-
 		if err := deployNetworking(monitor, gitClient, &kubeconfig, gitOpsNetworking); err != nil {
 			return err
 		}

@@ -6,23 +6,7 @@ import (
 	"github.com/caos/orbos/pkg/tree"
 )
 
-func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesService) error {
-	current.Current.pools = make(map[string]infra.Pool)
-	for pool := range desired.Spec.Pools {
-		current.Current.pools[pool] = newInfraPool(pool, machinesSvc)
-	}
-
-	unconfiguredPools, err := machinesSvc.ListPools()
-	if err != nil {
-		return nil
-	}
-	for _, unconfiguredPool := range unconfiguredPools {
-		if _, ok := current.Current.pools[unconfiguredPool]; !ok {
-			current.Current.pools[unconfiguredPool] = newInfraPool(unconfiguredPool, machinesSvc)
-		}
-	}
-	return nil
-}
+var _ infra.ProviderCurrent = (*Current)(nil)
 
 type Current struct {
 	Common  *tree.Common `yaml:",inline"`
@@ -41,4 +25,26 @@ func (c *Current) Ingresses() map[string]*infra.Address {
 }
 func (c *Current) Cleanupped() <-chan error {
 	return c.Current.cleanupped
+}
+
+func (c *Current) Kubernetes() infra.Kubernetes {
+	return infra.Kubernetes{}
+}
+
+func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesService) error {
+	current.Current.pools = make(map[string]infra.Pool)
+	for pool := range desired.Spec.Pools {
+		current.Current.pools[pool] = newInfraPool(pool, machinesSvc)
+	}
+
+	unconfiguredPools, err := machinesSvc.ListPools()
+	if err != nil {
+		return nil
+	}
+	for _, unconfiguredPool := range unconfiguredPools {
+		if _, ok := current.Current.pools[unconfiguredPool]; !ok {
+			current.Current.pools[unconfiguredPool] = newInfraPool(unconfiguredPool, machinesSvc)
+		}
+	}
+	return nil
 }

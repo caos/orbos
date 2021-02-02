@@ -7,7 +7,7 @@ import (
 )
 
 // deriveFilter returns a list of all items in the list that matches the predicate.
-func DeriveFilter(predicate func(v1.Pod) bool, list []v1.Pod) []v1.Pod {
+func deriveFilter(predicate func(v1.Pod) bool, list []v1.Pod) []v1.Pod {
 	j := 0
 	for i, elem := range list {
 		if predicate(elem) {

@@ -6,7 +6,17 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func DesireInternalOSFirewall(monitor mntr.Monitor, nodeAgentsDesired *common.DesiredNodeAgents, nodeAgentsCurrent *common.CurrentNodeAgents, service MachinesService, openInterfaces []string) (bool, error) {
+func DesireInternalOSFirewall(
+	monitor mntr.Monitor,
+	nodeAgentsDesired *common.DesiredNodeAgents,
+	nodeAgentsCurrent *common.CurrentNodeAgents,
+	service MachinesService,
+	masquerade bool,
+	openInterfaces []string,
+) (
+	bool,
+	error,
+) {
 	done := true
 	desireNodeAgent := func(machine infra.Machine, fw common.Firewall) {
 		machineMonitor := monitor.WithField("machine", machine.ID())
@@ -14,9 +24,9 @@ func DesireInternalOSFirewall(monitor mntr.Monitor, nodeAgentsDesired *common.De
 		deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 		deepNa.Firewall.Merge(fw)
-		machineMonitor.WithField("ports", fw.AllZones()).Debug("Desired Cloudscale Firewall")
+		machineMonitor.WithField("ports", fw.ToCurrent()).Debug("Desired Cloudscale Firewall")
 		if !fw.IsContainedIn(deepNaCurr.Open) {
-			machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
+			machineMonitor.WithField("ports", deepNa.Firewall.ToCurrent()).Info("Awaiting firewalld config")
 			done = false
 		}
 	}
@@ -41,8 +51,8 @@ func DesireInternalOSFirewall(monitor mntr.Monitor, nodeAgentsDesired *common.De
 		desireNodeAgent(machine, common.Firewall{
 			Zones: map[string]*common.Zone{
 				"public":   {},
-				"internal": {Sources: ips},
-				"external": {Interfaces: openInterfaces},
+				"internal": {Masquerade: masquerade, Sources: ips},
+				"external": {Masquerade: masquerade, Interfaces: openInterfaces},
 			}})
 	}
 	return done, nil

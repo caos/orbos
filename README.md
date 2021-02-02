@@ -57,6 +57,9 @@ gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
 gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
     --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
     --role=roles/serviceusage.serviceUsageAdmin
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iam.serviceAccountUser
 
 
 # Create a JSON key for the service account

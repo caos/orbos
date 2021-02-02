@@ -8,7 +8,6 @@ import (
 
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-	dbOrb "github.com/caos/orbos/internal/operator/database/kinds/orb"
 	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/internal/orb"
@@ -21,7 +20,6 @@ import (
 const (
 	boom       string = "boom"
 	orbiter    string = "orbiter"
-	database   string = "database"
 	networking string = "networking"
 )
 
@@ -77,26 +75,6 @@ func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Mo
 			}
 		}
 
-		foundDB, err := api.ExistsDatabaseYml(gitClient)
-		if err != nil {
-			return nil, nil, err
-		}
-		if foundDB {
-			dbYML, err := api.ReadDatabaseYml(gitClient)
-			if err != nil {
-				return nil, nil, err
-			}
-			allTrees[database] = dbYML
-
-			_, _, dbSecrets, err := dbOrb.AdaptFunc("", binaryVersion, false, "database", "backup")(monitor, dbYML, nil)
-			if err != nil {
-				return nil, nil, err
-			}
-			if dbSecrets != nil && len(dbSecrets) > 0 {
-				secret.AppendSecrets(database, allSecrets, dbSecrets)
-			}
-		}
-
 		foundNW, err := api.ExistsNetworkingYml(gitClient)
 		if err != nil {
 			return nil, nil, err
@@ -130,8 +108,6 @@ func PushFunc() func(monitor mntr.Monitor, gitClient *git.Client, trees map[stri
 			operator = boom
 		} else if strings.HasPrefix(path, networking) {
 			operator = networking
-		} else if strings.HasPrefix(path, database) {
-			operator = database
 		} else {
 			return errors.New("Operator unknown")
 		}
@@ -147,8 +123,6 @@ func PushFunc() func(monitor mntr.Monitor, gitClient *git.Client, trees map[stri
 			return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
 		} else if operator == networking {
 			return api.PushNetworkingDesiredFunc(gitClient, desired)(monitor)
-		} else if operator == database {
-			return api.PushDatabaseDesiredFunc(gitClient, desired)(monitor)
 		}
 
 		return errors.New("Operator push function unknown")

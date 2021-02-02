@@ -1,6 +1,3 @@
-//go:generate stringer -type=drainReason
-//go:generate goderive .
-
 package kubernetes
 
 import (
@@ -129,7 +126,11 @@ type ClientInt interface {
 
 	ApplyNamespace(rsc *core.Namespace) error
 	DeleteNamespace(name string) error
+
+	ListPersistentVolumes() (*core.PersistentVolumeList, error)
 }
+
+var _ ClientInt = (*Client)(nil)
 
 type Client struct {
 	monitor           mntr.Monitor
@@ -218,6 +219,10 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 	}
 
 	return c.set.CoreV1().Secrets(namespace).List(context.Background(), mach.ListOptions{LabelSelector: labelSelector})
+}
+
+func (c *Client) ListPersistentVolumes() (*core.PersistentVolumeList, error) {
+	return c.set.CoreV1().PersistentVolumes().List(context.Background(), mach.ListOptions{})
 }
 
 func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
@@ -1041,7 +1046,7 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 	}
 
 	// --ignore-daemonsets
-	pods := DeriveFilter(func(pod core.Pod) bool {
+	pods := deriveFilter(func(pod core.Pod) bool {
 		controllerRef := mach.GetControllerOf(&pod)
 		return controllerRef == nil || controllerRef.Kind != apps.SchemeGroupVersion.WithKind("DaemonSet").Kind
 	}, append([]core.Pod{}, podItems.Items...))
@@ -1265,18 +1270,21 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	if err != nil && !macherrs.IsNotFound(err) {
 		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
 	}
+	update := func() error {
+		return err
+	}
 	if err == nil {
 		crd.SetResourceVersion(existing.GetResourceVersion())
+		update = func() error {
+			_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+			return err
+		}
 	}
-	err = nil
 
 	return c.applyResource("crd", name, func() error {
 		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
 		return err
-	}, func() error {
-		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
-		return err
-	})
+	}, update)
 }
 
 func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error {

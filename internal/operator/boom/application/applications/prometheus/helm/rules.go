@@ -1,15 +1,13 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/database/kinds/databases/managed"
-	orbdb "github.com/caos/orbos/internal/operator/database/kinds/orb"
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	cockroachStatefulsetName = managed.SfsName
-	cockroachServiceName     = managed.PublicServiceName
-	cockroachNamespace       = orbdb.NamespaceStr
+	cockroachStatefulsetName = "cockroachdb"
+	cockroachServiceName     = "cockroachdb-public"
+	cockroachNamespace       = "caos-zitadel"
 	caosToolingNamespace     = "caos-system"
 	nodeExporterService      = "node-exporter"
 	kubeStateMetricsService  = "kube-state-metrics"

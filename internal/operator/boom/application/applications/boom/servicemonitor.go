@@ -20,7 +20,7 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 		Name:                  "boom-servicemonitor",
 		Endpoints:             []*servicemonitor.ConfigEndpoint{endpoint},
 		MonitorMatchingLabels: deprecatedlabels.GetMonitorLabels(instanceName, appName),
-		ServiceMatchingLabels: labels.MustK8sMap(labels.OpenOperatorSelector("boom.caos.ch")),
+		ServiceMatchingLabels: labels.MustK8sMap(labels.OpenOperatorSelector("ORBOS", "boom.caos.ch")),
 		JobName:               "boom",
 	}
 }
