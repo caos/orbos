@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/cmd/orbctl/cmds"
 	"github.com/caos/orbos/internal/controller"
 	"github.com/caos/orbos/internal/start"
+	"github.com/caos/orbos/internal/utils/clientgo"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -131,7 +132,6 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 
 func StartBoom(getRv GetRootValues) *cobra.Command {
 	var (
-		localmode  bool
 		gitOpsMode bool
 		cmd        = &cobra.Command{
 			Use:   "boom",
@@ -141,7 +141,6 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 	)
 
 	flags := cmd.Flags()
-	flags.BoolVar(&localmode, "localmode", false, "Local mode for boom")
 	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
@@ -157,10 +156,12 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 
+		monitor.Info("Takeoff Boom")
+
 		if gitOpsMode {
-			return start.Boom(monitor, orbConfig.Path, localmode, version)
+			return start.Boom(monitor, orbConfig.Path, version)
 		} else {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Boom)
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, "", controller.Boom)
 		}
 	}
 	return cmd
@@ -177,11 +178,10 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 		}
 	)
 	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
+	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by networking operator")
 	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-
 		rv, err := getRv()
 		if err != nil {
 			return err
@@ -193,17 +193,20 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 
+		monitor.Info("Takeoff Networking")
+
 		if gitOpsMode {
-			k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
+			cfg, err := clientgo.GetClusterConfig(monitor, kubeconfig)
 			if err != nil {
 				return err
 			}
+			k8sClient := kubernetes2.NewK8sClientWithConfig(monitor, cfg)
 
 			if k8sClient.Available() {
 				return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
 			}
 		} else {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, controller.Networking)
+			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, kubeconfig, controller.Networking)
 		}
 		return nil
 	}

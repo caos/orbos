@@ -1,6 +1,9 @@
 package clientgo
 
 import (
+	"errors"
+	"fmt"
+	"github.com/caos/orbos/mntr"
 	"os"
 	"path/filepath"
 
@@ -10,14 +13,34 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-var InConfig = true
-
-func GetClusterConfig() (*rest.Config, error) {
-	if InConfig {
-		return getInClusterConfig()
-	} else {
-		return getOutClusterConfig()
+func GetClusterConfig(monitor mntr.Monitor, path string) (*rest.Config, error) {
+	if path != "" {
+		if cfg, err := getOutClusterConfigPath(path); err == nil {
+			return cfg, nil
+		}
+		monitor.Info(fmt.Sprintf("no kubeconfig under path %s found", path))
 	}
+
+	if cfg, err := getOutClusterConfig(); err == nil {
+		return cfg, nil
+	}
+	monitor.Info(fmt.Sprintf("no kubeconfig under path %s found", "$HOME/.kube/config"))
+
+	if cfg, err := getInClusterConfig(); err == nil {
+		return cfg, nil
+	}
+	monitor.Info("no incluster kubeconfig found")
+	err := errors.New("no kubeconfig found")
+	monitor.Error(err)
+	return nil, err
+}
+func getOutClusterConfigPath(path string) (*rest.Config, error) {
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", path)
+	if err != nil {
+		return nil, err
+	}
+	return config, pkgerrors.Wrap(err, "Error while creating out-cluster config")
 }
 
 func getOutClusterConfig() (*rest.Config, error) {

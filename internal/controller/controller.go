@@ -5,6 +5,7 @@ import (
 	networkingv1 "github.com/caos/orbos/internal/api/networking/v1"
 	"github.com/caos/orbos/internal/controller/boom"
 	"github.com/caos/orbos/internal/controller/networking"
+	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
@@ -29,8 +30,12 @@ func init() {
 	_ = boomv1.AddToScheme(scheme)
 }
 
-func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string, features ...string) error {
-	cfg := ctrl.GetConfigOrDie()
+func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string, kubeconfig string, features ...string) error {
+	cfg, err := clientgo.GetClusterConfig(monitor, kubeconfig)
+	if err != nil {
+		return err
+	}
+
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,

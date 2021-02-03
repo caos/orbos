@@ -23,17 +23,17 @@ type googleConnector struct {
 }
 
 func getGoogle(spec *google.Connector, redirect string) (interface{}, error) {
-	clientID, err := helper2.GetSecretValue(spec.Config.ClientID, spec.Config.ExistingClientIDSecret)
+	clientID, err := helper2.GetSecretValueOnlyIncluster(spec.Config.ClientID, spec.Config.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper2.GetSecretValue(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
+	clientSecret, err := helper2.GetSecretValueOnlyIncluster(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAccountJSON, err := helper2.GetSecretValue(spec.Config.ServiceAccountJSON, spec.Config.ExistingServiceAccountJSONSecret)
+	serviceAccountJSON, err := helper2.GetSecretValueOnlyIncluster(spec.Config.ServiceAccountJSON, spec.Config.ExistingServiceAccountJSONSecret)
 	if err != nil {
 		return nil, err
 	}

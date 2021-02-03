@@ -30,15 +30,15 @@ func adaptFunc(
 					}
 				}
 
-				user, err := helper.GetSecretValue(cfg.Credentials.User, cfg.Credentials.ExistingUser)
+				user, err := helper.GetSecretValue(k8sClient, cfg.Credentials.User, cfg.Credentials.ExistingUser)
 				if err != nil {
 					return err
 				}
-				apiKey, err := helper.GetSecretValue(cfg.Credentials.APIKey, cfg.Credentials.ExistingAPIKey)
+				apiKey, err := helper.GetSecretValue(k8sClient, cfg.Credentials.APIKey, cfg.Credentials.ExistingAPIKey)
 				if err != nil {
 					return err
 				}
-				userServiceKey, err := helper.GetSecretValue(cfg.Credentials.UserServiceKey, cfg.Credentials.ExistingUserServiceKey)
+				userServiceKey, err := helper.GetSecretValue(k8sClient, cfg.Credentials.UserServiceKey, cfg.Credentials.ExistingUserServiceKey)
 				if err != nil {
 					return err
 				}

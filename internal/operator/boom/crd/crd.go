@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
@@ -100,7 +101,7 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 
 	boomSpec := toolsetCRD.Spec.Boom
 	if boomSpec != nil && boomSpec.SelfReconciling && boomSpec.Version != "" {
-		conf, err := clientgo.GetClusterConfig()
+		conf, err := ctrl.GetConfig()
 		if err != nil {
 			c.status = err
 			return

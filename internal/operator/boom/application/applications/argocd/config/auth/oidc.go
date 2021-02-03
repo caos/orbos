@@ -25,12 +25,12 @@ func GetOIDC(spec *auth.Auth) (string, error) {
 		return "", nil
 	}
 
-	clientID, err := helper2.GetSecretValue(spec.OIDC.ClientID, spec.OIDC.ExistingClientIDSecret)
+	clientID, err := helper2.GetSecretValueOnlyIncluster(spec.OIDC.ClientID, spec.OIDC.ExistingClientIDSecret)
 	if err != nil {
 		return "", err
 	}
 
-	clientSecret, err := helper2.GetSecretValue(spec.OIDC.ClientSecret, spec.OIDC.ExistingClientSecretSecret)
+	clientSecret, err := helper2.GetSecretValueOnlyIncluster(spec.OIDC.ClientSecret, spec.OIDC.ExistingClientSecretSecret)
 	if err != nil {
 		return "", err
 	}

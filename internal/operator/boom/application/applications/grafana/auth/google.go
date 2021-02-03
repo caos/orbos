@@ -8,12 +8,12 @@ import (
 )
 
 func GetGoogleAuthConfig(spec *google.Auth) (map[string]string, error) {
-	clientID, err := helper2.GetSecretValue(spec.ClientID, spec.ExistingClientIDSecret)
+	clientID, err := helper2.GetSecretValueOnlyIncluster(spec.ClientID, spec.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper2.GetSecretValue(spec.ClientSecret, spec.ExistingClientSecretSecret)
+	clientSecret, err := helper2.GetSecretValueOnlyIncluster(spec.ClientSecret, spec.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}

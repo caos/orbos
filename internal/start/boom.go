@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version string) error {
+func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {
 
 	ensureClient := gitClient(monitor, "ensure")
 	queryClient := gitClient(monitor, "query")
@@ -30,7 +30,6 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 		ensure, query := boom.Takeoff(
 			monitor,
 			"/boom",
-			localmode,
 			orbConfigPath,
 			ensureClient,
 			queryClient,

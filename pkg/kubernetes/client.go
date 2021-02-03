@@ -100,6 +100,7 @@ type ClientInt interface {
 	DeleteCronJob(namespace string, name string) error
 
 	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
+	GetSecret(namespace string, name string) (*core.Secret, error)
 	ApplySecret(rsc *core.Secret) error
 	DeleteSecret(namespace, name string) error
 	WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error
@@ -144,7 +145,7 @@ type Client struct {
 func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
 	kubeconfigStr := ""
 	if kubeconfigPath != "" {
-		value, err := ioutil.ReadFile(kubeconfigPath)
+		value, err := ioutil.ReadFile(helpers.PruneHome(kubeconfigPath))
 		if err != nil {
 			monitor.Error(err)
 			return nil, err
@@ -547,6 +548,9 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 		_, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{})
 		return err
 	})
+}
+func (c *Client) GetSecret(namespace string, name string) (*core.Secret, error) {
+	return c.set.CoreV1().Secrets(namespace).Get(context.Background(), name, mach.GetOptions{})
 }
 
 func (c *Client) WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error {

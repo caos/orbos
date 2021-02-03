@@ -5,8 +5,6 @@ import (
 	"flag"
 	"github.com/caos/orbos/internal/controller"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/utils/clientgo"
-
 	"github.com/caos/orbos/pkg/git"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -35,13 +33,12 @@ func main() {
 	}
 
 	if *crdMode {
-		clientgo.InConfig = false
 		_, err := orb.ParseOrbConfig(helpers.PruneHome(*orbconfig))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := controller.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, controller.Boom); err != nil {
+		if err := controller.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, "", controller.Boom); err != nil {
 			panic(err)
 		}
 	} else {
@@ -55,7 +52,6 @@ func main() {
 		takeoff, _ := boom.Takeoff(
 			monitor,
 			"./artifacts",
-			true,
 			helpers.PruneHome(*orbconfig),
 			ensure, query,
 		)

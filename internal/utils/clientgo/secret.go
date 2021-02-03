@@ -2,13 +2,14 @@ package clientgo
 
 import (
 	"context"
+	"github.com/caos/orbos/mntr"
 	pkgerrors "github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func GetSecret(name, namespace string) (*v1.Secret, error) {
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(mntr.Monitor{}, "")
 	if err != nil {
 		return nil, err
 	}

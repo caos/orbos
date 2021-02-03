@@ -13,7 +13,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/app"
 	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"
 	gitcrdconfig "github.com/caos/orbos/internal/operator/boom/gitcrd/config"
-	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -36,12 +35,8 @@ func Metrics(monitor mntr.Monitor) {
 	}()
 }
 
-func Takeoff(monitor mntr.Monitor, toolsDirectoryPath string, localMode bool, orbpath string, ensureClient, queryClient *git.Client) (func(), func()) {
+func Takeoff(monitor mntr.Monitor, toolsDirectoryPath string, orbpath string, ensureClient, queryClient *git.Client) (func(), func()) {
 	gitcrdMonitor := monitor.WithField("type", "gitcrd")
-
-	if localMode {
-		clientgo.InConfig = false
-	}
 
 	gconfig.DashboardsDirectoryPath = filepath.Join(toolsDirectoryPath, "dashboards")
 

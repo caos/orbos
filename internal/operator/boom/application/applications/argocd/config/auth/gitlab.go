@@ -15,12 +15,12 @@ type gitlabConnector struct {
 }
 
 func getGitlab(spec *gitlab.Connector, redirect string) (interface{}, error) {
-	clientID, err := helper2.GetSecretValue(spec.Config.ClientID, spec.Config.ExistingClientIDSecret)
+	clientID, err := helper2.GetSecretValueOnlyIncluster(spec.Config.ClientID, spec.Config.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper2.GetSecretValue(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
+	clientSecret, err := helper2.GetSecretValueOnlyIncluster(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}

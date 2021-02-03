@@ -84,9 +84,10 @@ func (a ResourceSorter) Less(i, j int) bool {
 		(a[i].Group == a[j].Group && a[i].Version == a[j].Version && a[i].Resource == a[j].Resource && a[i].Kind == a[j].Kind && a[i].Name == a[j].Name && a[i].Namespace < a[j].Namespace))
 }
 
-func GetResource(group, version, resource, namespace, name string) (*Resource, error) {
+func GetResource(monitor mntr.Monitor, group, version, resource, namespace, name string) (*Resource, error) {
 	res := schema.GroupVersionResource{Group: group, Version: version, Resource: resource}
-	conf, err := GetClusterConfig()
+
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +110,9 @@ func GetResource(group, version, resource, namespace, name string) (*Resource, e
 	}, nil
 }
 
-func DeleteResource(resource *Resource) error {
+func DeleteResource(monitor mntr.Monitor, resource *Resource) error {
 	res := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Resource}
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return err
 	}
@@ -141,7 +142,7 @@ func GetGroupVersionsResources(monitor mntr.Monitor, filtersResources []string) 
 		"action": "groupVersionResources",
 	})
 
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +203,7 @@ func ListResources(monitor mntr.Monitor, resourceInfoList []*ResourceInfo, label
 	listMonitor := monitor.WithFields(map[string]interface{}{
 		"action": "listResources",
 	})
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return nil, err
 	}

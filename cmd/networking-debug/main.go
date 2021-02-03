@@ -4,8 +4,7 @@ import (
 	"flag"
 	"github.com/caos/orbos/internal/controller"
 	"github.com/caos/orbos/internal/orb"
-	"io/ioutil"
-
+	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/pkg/kubernetes"
 
 	"github.com/caos/orbos/internal/start"
@@ -15,12 +14,14 @@ import (
 )
 
 func main() {
+	var orbconfig, kubeconfig, metricsAddr string
+	var verbose, gitopsmode bool
 
-	orbconfig := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
-	kubeconfig := flag.String("kubeconfig", "~/.kube/config", "The kubeconfig file to use")
-	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
-	metricsAddr := flag.String("metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	crdMode := flag.Bool("crdmode", false, "defines if the operator should run in crd mode not gitops mode")
+	flag.StringVar(&orbconfig, "orbconfig", "~/.orb/config", "The orbconfig file to use")
+	flag.StringVar(&kubeconfig, "kc", "~/.kube/config", "The kubeconfig file to use")
+	flag.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
+	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	flag.BoolVar(&gitopsmode, "gitopsmode", false, "defines if the operator should run in gitops mode not crd mode")
 
 	flag.Parse()
 
@@ -30,29 +31,29 @@ func main() {
 		OnError:  mntr.LogError,
 	}
 
-	if *verbose {
+	if verbose {
 		monitor = monitor.Verbose()
 	}
 
-	if *crdMode {
-		_, err := orb.ParseOrbConfig(helpers.PruneHome(*orbconfig))
+	if !gitopsmode {
+		_, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := controller.Start(monitor, "crdoperators", "./artifcats", *metricsAddr, controller.Networking); err != nil {
+		if err := controller.Start(monitor, "crdoperators", "./artifacts", metricsAddr, kubeconfig, controller.Networking); err != nil {
 			panic(err)
 		}
 	} else {
-		kc, err := ioutil.ReadFile(helpers.PruneHome(*kubeconfig))
+		cfg, err := clientgo.GetClusterConfig(monitor, kubeconfig)
 		if err != nil {
 			panic(err)
 		}
 
 		if err := start.Networking(
 			monitor,
-			helpers.PruneHome(*orbconfig),
-			kubernetes.NewK8sClient(monitor, strPtr(string(kc))),
+			helpers.PruneHome(orbconfig),
+			kubernetes.NewK8sClientWithConfig(monitor, cfg),
 			strPtr("networking-development"),
 		); err != nil {
 			panic(err)
