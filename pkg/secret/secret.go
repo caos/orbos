@@ -37,6 +37,13 @@ type Existing struct {
 	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
 }
 
+func (s *Existing) IsZero() bool {
+	if s.Name == "" && s.Key == "" {
+		return true
+	}
+	return false
+}
+
 // Existing: Used secret that has to be already existing in the cluster and should contain id/username and secret/password
 type ExistingIDSecret struct {
 	//Name of the Secret

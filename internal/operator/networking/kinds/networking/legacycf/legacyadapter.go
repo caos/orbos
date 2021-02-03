@@ -4,6 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/app"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
+	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
@@ -29,7 +30,20 @@ func adaptFunc(
 					}
 				}
 
-				apps, err := app.New(cfg.Credentials.User.Value, cfg.Credentials.APIKey.Value, cfg.Credentials.UserServiceKey.Value, groups, cfg.Prefix)
+				user, err := helper.GetSecretValue(cfg.Credentials.User, cfg.Credentials.ExistingUser)
+				if err != nil {
+					return err
+				}
+				apiKey, err := helper.GetSecretValue(cfg.Credentials.APIKey, cfg.Credentials.ExistingAPIKey)
+				if err != nil {
+					return err
+				}
+				userServiceKey, err := helper.GetSecretValue(cfg.Credentials.UserServiceKey, cfg.Credentials.ExistingUserServiceKey)
+				if err != nil {
+					return err
+				}
+
+				apps, err := app.New(user, apiKey, userServiceKey, groups, cfg.Prefix)
 				if err != nil {
 					return err
 				}
