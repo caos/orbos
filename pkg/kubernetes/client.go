@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	extensions "k8s.io/api/extensions/v1beta1"
+
 	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
@@ -112,6 +114,9 @@ type ClientInt interface {
 
 	ApplyClusterRole(rsc *rbac.ClusterRole) error
 	DeleteClusterRole(name string) error
+
+	ApplyIngress(rsc *extensions.Ingress) error
+	DeleteIngress(namespace, name string) error
 
 	ApplyRoleBinding(rsc *rbac.RoleBinding) error
 	DeleteRoleBinding(namespace, name string) error
@@ -643,6 +648,26 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 
 func (c *Client) DeleteServiceAccount(namespace, name string) error {
 	return c.set.CoreV1().ServiceAccounts(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyIngress(rsc *extensions.Ingress) error {
+	resources := c.set.ExtensionsV1beta1().Ingresses(rsc.GetNamespace())
+	return c.applyResource("ingress", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		svc, err := resources.Get(context.Background(), rsc.Name, mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+		_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) DeleteIngress(namespace, name string) error {
+	return c.set.ExtensionsV1beta1().Ingresses(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
