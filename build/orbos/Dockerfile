@@ -28,7 +28,7 @@ ENV PATH="/dependencies:${PATH}"
 
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "--" ]
 
-FROM alpine3.13 as prod
+FROM alpine:3.13.1 as prod
 
 RUN apk update && \
     addgroup -S -g 1000 orbiter && \
