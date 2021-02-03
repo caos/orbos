@@ -28,10 +28,9 @@ ENV PATH="/dependencies:${PATH}"
 
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "--" ]
 
-FROM python:3.8.3-alpine3.11 as prod
+FROM alpine3.13 as prod
 
 RUN apk update && \
-    apk add openssh && \
     addgroup -S -g 1000 orbiter && \
     adduser -S -u 1000 orbiter -G orbiter
 
