@@ -1,19 +1,19 @@
 package auth
 
 import (
+	"github.com/caos/orbos/pkg/helper"
 	"strings"
 
 	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func GetGoogleAuthConfig(spec *google.Auth) (map[string]string, error) {
-	clientID, err := helper2.GetSecretValueOnlyIncluster(spec.ClientID, spec.ExistingClientIDSecret)
+	clientID, err := helper.GetSecretValueOnlyIncluster(spec.ClientID, spec.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper2.GetSecretValueOnlyIncluster(spec.ClientSecret, spec.ExistingClientSecretSecret)
+	clientSecret, err := helper.GetSecretValueOnlyIncluster(spec.ClientSecret, spec.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}
