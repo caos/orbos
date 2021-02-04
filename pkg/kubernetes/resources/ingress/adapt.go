@@ -15,7 +15,7 @@ func AdaptFuncToEnsure(
 	host,
 	prefix,
 	service string,
-	servicePort int,
+	servicePort uint16,
 	annotations map[string]string,
 ) (resources.QueryFunc, error) {
 
