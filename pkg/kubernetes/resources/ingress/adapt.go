@@ -9,7 +9,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func AdaptFuncToEnsure(namespace string, id labels.IDLabels, host, prefix, service string, servicePort int, annotations map[string]string) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(
+	namespace string,
+	id labels.IDLabels,
+	host,
+	prefix,
+	service string,
+	servicePort int,
+	annotations map[string]string,
+) (resources.QueryFunc, error) {
 
 	ingress := &v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
@@ -23,7 +31,7 @@ func AdaptFuncToEnsure(namespace string, id labels.IDLabels, host, prefix, servi
 				Host: host,
 				IngressRuleValue: v1beta1.IngressRuleValue{HTTP: &v1beta1.HTTPIngressRuleValue{Paths: []v1beta1.HTTPIngressPath{{
 					Path:     prefix,
-					PathType: pathTypePtr(v1beta1.PathTypeImplementationSpecific),
+					PathType: pathTypePtr(v1beta1.PathTypePrefix),
 					Backend: v1beta1.IngressBackend{
 						ServiceName: service,
 						ServicePort: intstr.FromInt(servicePort),
