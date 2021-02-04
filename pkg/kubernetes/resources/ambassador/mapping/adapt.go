@@ -8,6 +8,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+const (
+	group   = "getambassador.io"
+	version = "v2"
+	kind    = "Mapping"
+)
+
 type CORS struct {
 	Origins        string
 	Methods        string
@@ -16,12 +22,6 @@ type CORS struct {
 	ExposedHeaders string
 	MaxAge         string
 }
-
-const (
-	group   = "getambassador.io"
-	version = "v2"
-	kind    = "Mapping"
-)
 
 func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bool, host, prefix, rewrite, service, timeoutMS, connectTimeoutMS string, cors *CORS) (resources.QueryFunc, error) {
 
