@@ -34,7 +34,7 @@ func AdaptFuncToEnsure(
 					PathType: pathTypePtr(v1beta1.PathTypePrefix),
 					Backend: v1beta1.IngressBackend{
 						ServiceName: service,
-						ServicePort: intstr.FromInt(servicePort),
+						ServicePort: intstr.FromInt(int(servicePort)),
 						Resource:    nil,
 					},
 				}}}},
