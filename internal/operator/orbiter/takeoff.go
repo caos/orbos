@@ -1,8 +1,10 @@
 package orbiter
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/caos/orbos/internal/secret"
 
@@ -72,14 +74,48 @@ type event struct {
 	files  []git.File
 }
 
-func Metrics() {
+func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
+	healthy := true
+
+	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
+	http.Handle("/metrics", promhttp.Handler())
+	http.HandleFunc("/health", func(writer http.ResponseWriter, request *http.Request) {
+		msg := "OK"
+		status := 200
+		if !healthy {
+			msg = "ORBITER is not healthy. See the logs."
+			status = 404
+		}
+		writer.WriteHeader(status)
+		writer.Write([]byte(msg))
+	})
+
 	go func() {
-		prometheus.MustRegister(prometheus.NewBuildInfoCollector())
-		http.Handle("/metrics", promhttp.Handler())
-		if err := http.ListenAndServe(":9000", nil); err != nil {
-			panic(err)
+		timeout := 10 * time.Minute
+		ticker := time.NewTimer(timeout)
+		for {
+			select {
+			case newHealthiness := <-healthyChan:
+				ticker.Reset(timeout)
+				if newHealthiness == healthy {
+					continue
+				}
+				healthy = newHealthiness
+				if !newHealthiness {
+					monitor.Error(errors.New("ORBITER is unhealthy now"))
+					continue
+				}
+				monitor.Info("ORBITER is healthy now")
+			case <-ticker.C:
+				monitor.Error(errors.New("ORBITER is unhealthy now as it did not report healthiness for 10 minutes"))
+				healthy = false
+			}
 		}
 	}()
+
+	if err := http.ListenAndServe(":9000", nil); err != nil {
+		panic(err)
+	}
 }
 
 func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, map[string]*secret.Secret, error) {
@@ -97,9 +133,20 @@ func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, 
 	return query, destroy, configure, migrate, treeDesired, treeCurrent, secrets, err
 }
 
-func Takeoff(monitor mntr.Monitor, conf *Config) func() {
+func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 
 	return func() {
+
+		var err error
+		defer func() {
+			go func() {
+				if err != nil {
+					healthyChan <- false
+					return
+				}
+				healthyChan <- true
+			}()
+		}()
 
 		query, _, _, migrate, treeDesired, treeCurrent, _, err := Adapt(conf.GitClient, monitor, conf.FinishedChan, conf.Adapt)
 		if err != nil {
@@ -126,7 +173,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 
 		if migrate {
-			if err := api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
+			if err = api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -202,7 +249,11 @@ func Takeoff(monitor mntr.Monitor, conf *Config) func() {
 		}
 
 		if changed {
-			monitor.Error(conf.GitClient.Push())
+			pushErr := conf.GitClient.Push()
+			if err == nil {
+				err = pushErr
+			}
+			monitor.Error(err)
 		}
 	}
 }
