@@ -46,6 +46,12 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 
 	if conf.Recur {
 		go orbiter.Instrument(monitor, healthyChan)
+	} else {
+		go func() {
+			for h := range healthyChan {
+				fmt.Println(h)
+			}
+		}()
 	}
 
 	on := func() { takeoffChan <- struct{}{} }
@@ -96,6 +102,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 
 	if err := gitClient.Clone(); err != nil {
 		monitor.Error(err)
+		done(false)
 		return
 	}
 
