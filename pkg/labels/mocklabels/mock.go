@@ -20,9 +20,9 @@ var (
 	selectableKey      = "orbos.ch/selectable"
 	selectableVal      = "yes"
 
-	operator           = labels.MustForOperator(productVal, operatorVal, operatorVersionVal)
-	api                = labels.MustForAPI(operator, apiKindVal, apiVersionVal)
-	Component          = labels.MustForComponent(api, componentVal)
+	Operator           = labels.MustForOperator(productVal, operatorVal, operatorVersionVal)
+	Api                = labels.MustForAPI(Operator, apiKindVal, apiVersionVal)
+	Component          = labels.MustForComponent(Api, componentVal)
 	Name               = labels.MustForName(Component, NameVal)
 	ClosedNameSelector = labels.DeriveNameSelector(Name, false)
 	Selectable         = labels.AsSelectable(Name)
