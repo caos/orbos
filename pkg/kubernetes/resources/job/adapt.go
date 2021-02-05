@@ -1,10 +1,8 @@
 package job
 
 import (
-	"reflect"
+	"strings"
 	"time"
-
-	v1 "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
@@ -24,37 +22,6 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 			}, nil
 		}
 
-		//check if any immutable fields were changed
-		changedImmutable := false
-		if !reflect.DeepEqual(job.GetAnnotations(), jobDef.GetAnnotations()) {
-			changedImmutable = true
-		}
-		if job.Spec.Selector != nil && !reflect.DeepEqual(job.Spec.Selector, jobDef.Spec.Selector) {
-			changedImmutable = true
-		}
-		if job.Spec.Template.ObjectMeta.Labels != nil && !reflect.DeepEqual(job.Spec.Template.ObjectMeta.Labels, jobDef.Spec.Template.ObjectMeta.Labels) {
-			changedImmutable = true
-		}
-
-		//workaround as securitycontext is a pointer to ensure that it only triggers if the values are different
-		if job.Spec.Template.Spec.SecurityContext == nil {
-			job.Spec.Template.Spec.SecurityContext = &v1.PodSecurityContext{}
-		}
-
-		if !reflect.DeepEqual(job.Spec.Template.Spec, jobDef.Spec.Template.Spec) {
-			changedImmutable = true
-		}
-
-		if changedImmutable {
-			return func(k8sClient kubernetes.ClientInt) error {
-				if err := k8sClient.DeleteJob(job.GetNamespace(), job.GetName()); err != nil {
-					return err
-				}
-				time.Sleep(1 * time.Second)
-				return k8sClient.ApplyJob(job)
-			}, nil
-		}
-
 		//check if selector or the labels are empty, as this have default values
 		if job.Spec.Selector == nil {
 			job.Spec.Selector = jobDef.Spec.Selector
@@ -64,9 +31,15 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 		}
 
 		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyJob(job)
+			if err := k8sClient.ApplyJob(job); err != nil && strings.Contains(err.Error(), "field is immutable") {
+				if err := k8sClient.DeleteJob(job.GetNamespace(), job.GetName()); err != nil {
+					return err
+				}
+				time.Sleep(1 * time.Second)
+				return k8sClient.ApplyJob(job)
+			}
+			return err
 		}, nil
-
 	}, nil
 }
 
