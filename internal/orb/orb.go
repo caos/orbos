@@ -2,12 +2,12 @@ package orb
 
 import (
 	"fmt"
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"io/ioutil"
 	"os"
 
 	"github.com/caos/orbos/internal/helpers"
 
-	"github.com/caos/orbos/internal/secret"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -68,7 +68,7 @@ func ParseOrbConfig(orbConfigPath string) (*Orb, error) {
 	}
 
 	orb.Path = orbConfigPath
-	secret.Masterkey = orb.Masterkey
+	secret2.Masterkey = orb.Masterkey
 	return orb, nil
 }
 

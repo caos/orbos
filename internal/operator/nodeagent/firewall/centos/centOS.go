@@ -12,9 +12,9 @@ import (
 )
 
 func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
-	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.Current, func() error, error) {
+	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.FirewallCurrent, func() error, error) {
 		ensurers := make([]func() error, 0)
-		current := make(common.Current, 0)
+		current := make(common.FirewallCurrent, 0)
 
 		if desired.Zones == nil {
 			desired.Zones = make(map[string]*common.Zone, 0)
@@ -71,6 +71,11 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 	}
 	current.Sources = sources
 
+	ensureMasquerade, err := getEnsureMasquerade(monitor, zoneName, current, desired)
+	if err != nil {
+		return current, nil, err
+	}
+
 	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), ignore)
 	if err != nil {
 		return current, nil, err
@@ -81,7 +86,7 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		return current, nil, err
 	}
 
-	addSources, removeSources, err := getAddAndRemoveSources(zoneName, current, desired)
+	addSources, removeSources, err := getAddAndRemoveSources(monitor, zoneName, current, desired)
 	if err != nil {
 		return current, nil, err
 	}
@@ -108,36 +113,44 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 
 	zoneNameCopy := zoneName
 	return current, func() error {
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeIfaces, zoneName))
+		if ensureMasquerade != "" {
+			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureMasquerade, zoneNameCopy))
+			if err := ensure(monitor, []string{ensureMasquerade}, zoneNameCopy); err != nil {
+				return err
+			}
+		}
+
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeIfaces, zoneNameCopy))
 		if err := ensure(monitor, removeIfaces, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneNameCopy))
 		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
 			return err
 		}
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneName))
+
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
 		if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeSources, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removeSources, zoneNameCopy))
 		if err := ensure(monitor, removeSources, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addSources, zoneNameCopy))
 		if err := ensure(monitor, addSources, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removePorts, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", removePorts, zoneNameCopy))
 		if err := ensure(monitor, removePorts, zoneNameCopy); err != nil {
 			return err
 		}
 
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneName))
+		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", addPorts, zoneNameCopy))
 		return ensure(monitor, addPorts, zoneNameCopy)
 	}, nil
 }

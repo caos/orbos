@@ -2,15 +2,14 @@ package main
 
 import (
 	"github.com/caos/orbos/cmd/orbctl/cmds"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/start"
+	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 
 func TakeoffCommand(rv RootValues) *cobra.Command {
-
 	var (
 		verbose          bool
 		recur            bool
@@ -109,7 +108,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig)
+		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		return err
 	}
 	return cmd
@@ -142,19 +141,19 @@ func StartBoom(rv RootValues) *cobra.Command {
 	return cmd
 }
 
-func StartZitadel(rv RootValues) *cobra.Command {
+func StartNetworking(rv RootValues) *cobra.Command {
 	var (
 		kubeconfig string
 		cmd        = &cobra.Command{
-			Use:   "zitadel",
-			Short: "Launch a zitadel operator",
-			Long:  "Ensures a desired state",
+			Use:   "networking",
+			Short: "Launch a networking operator",
+			Long:  "Ensures a desired state of networking for an application",
 		}
 	)
 	flags := cmd.Flags()
 	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by zitadel operator")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
+	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		_, monitor, orbConfig, _, errFunc, err := rv()
 		if err != nil {
 			return err
@@ -163,9 +162,13 @@ func StartZitadel(rv RootValues) *cobra.Command {
 			err = errFunc(err)
 		}()
 
-		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+		k8sClient, err := kubernetes2.NewK8sClientWithPath(monitor, kubeconfig)
+		if err != nil {
+			return err
+		}
+
 		if k8sClient.Available() {
-			return start.Zitadel(monitor, orbConfig.Path, k8sClient)
+			return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
 		}
 		return nil
 	}

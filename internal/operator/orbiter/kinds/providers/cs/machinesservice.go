@@ -5,10 +5,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/caos/orbos/internal/secret"
-
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/internal/helpers"
 

@@ -1,34 +1,4 @@
 {
-  "__inputs": [
-    {
-      "name": "DS_CAOS-PROMETHEUS",
-      "label": "caos-prometheus",
-      "description": "",
-      "type": "datasource",
-      "pluginId": "prometheus",
-      "pluginName": "Prometheus"
-    }
-  ],
-  "__requires": [
-    {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "6.6.2"
-    },
-    {
-      "type": "panel",
-      "id": "graph",
-      "name": "Graph",
-      "version": ""
-    },
-    {
-      "type": "datasource",
-      "id": "prometheus",
-      "name": "Prometheus",
-      "version": "1.0.0"
-    }
-  ],
   "annotations": {
     "list": [
       {
@@ -45,8 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": null,
-  "iteration": 1601983466686,
+  "iteration": 1610384515138,
   "links": [],
   "panels": [
     {
@@ -55,6 +24,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -77,10 +53,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -90,7 +64,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "dist_kube_statefulset_replicas{controller=\"cockroachdb\",namespace=\"caos-zitadel\"} - dist_kube_statefulset_status_replicas_current{controller=\"cockroachdb\",namespace=\"caos-zitadel\"}",
+          "expr": "dist_kube_statefulset_replicas{controller=\"$job\",namespace=\"caos-zitadel\"} - dist_kube_statefulset_status_replicas_current{controller=\"$job\",namespace=\"caos-zitadel\"}",
           "legendFormat": "{{controller}}",
           "refId": "A"
         },
@@ -153,6 +127,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -175,10 +156,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -241,6 +220,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -263,10 +249,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -329,6 +313,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -351,10 +342,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -417,6 +406,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -439,10 +435,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -505,6 +499,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -527,10 +528,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -540,12 +539,12 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "(security_certificate_expiration_ca{job=\"cockroachdb\"} - time()) / 86400",
+          "expr": "(security_certificate_expiration_ca{job=\"$job\"} - time()) / 86400",
           "legendFormat": "CA {{pod}}",
           "refId": "A"
         },
         {
-          "expr": "(security_certificate_expiration_node{job=\"cockroachdb\"} - time()) / 86400",
+          "expr": "(security_certificate_expiration_node{job=\"$job\"} - time()) / 86400",
           "legendFormat": "Node {{pod}}",
           "refId": "B"
         }
@@ -598,6 +597,13 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "links": []
+        },
+        "overrides": []
+      },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
@@ -620,10 +626,8 @@
       "lines": true,
       "linewidth": 1,
       "nullPointMode": "null",
-      "options": {
-        "dataLinks": []
-      },
       "percentage": false,
+      "pluginVersion": "7.1.5",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -633,17 +637,17 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "requests_slow_latch{job=\"cockroachdb\"}",
+          "expr": "requests_slow_latch{job=\"$job\"}",
           "legendFormat": "latch store {{store}}",
           "refId": "A"
         },
         {
-          "expr": "requests_slow_lease{job=\"cockroachdb\"}",
+          "expr": "requests_slow_lease{job=\"$job\"}",
           "legendFormat": "lease store {{store}}",
           "refId": "B"
         },
         {
-          "expr": "requests_slow_raft{job=\"cockroachdb\"}",
+          "expr": "requests_slow_raft{job=\"$job\"}",
           "legendFormat": "raft store {{store}}",
           "refId": "C"
         }
@@ -691,13 +695,14 @@
       }
     }
   ],
-  "schemaVersion": 22,
+  "schemaVersion": 26,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": [
       {
         "current": {
+          "selected": false,
           "text": "caos-prometheus",
           "value": "caos-prometheus"
         },
@@ -715,7 +720,11 @@
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": "$datasource",
         "definition": "label_values(caos_cr_capacity_store_ryg, store)",
         "hide": 2,
@@ -737,7 +746,11 @@
       },
       {
         "allValue": null,
-        "current": {},
+        "current": {
+          "selected": false,
+          "text": "All",
+          "value": "$__all"
+        },
         "datasource": "$datasource",
         "definition": "label_values(caos_cr_replicas_nodes_ryg, pod)",
         "hide": 2,
@@ -751,6 +764,32 @@
         "regex": "",
         "skipUrlSync": false,
         "sort": 1,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "cockroachdb-public",
+          "value": "cockroachdb-public"
+        },
+        "datasource": "$datasource",
+        "definition": "label_values(sys_uptime, job)",
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "job",
+        "options": [],
+        "query": "label_values(sys_uptime, job)",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
         "tagValuesQuery": "",
         "tags": [],
         "tagsQuery": "",
@@ -780,5 +819,5 @@
   "timezone": "",
   "title": "Health / ZITADEL Details",
   "uid": "eZoLxzcGz",
-  "version": 7
+  "version": 2
 }

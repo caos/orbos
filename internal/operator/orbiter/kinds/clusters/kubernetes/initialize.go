@@ -5,6 +5,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
+	"github.com/caos/orbos/pkg/kubernetes"
+
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -69,7 +72,7 @@ func initialize(
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	providerPools map[string]map[string]infra.Pool,
-	k8s *Client,
+	k8s *kubernetes.Client,
 	postInit func(machine *initializedMachine)) (
 	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
@@ -175,8 +178,8 @@ func initialize(
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					current.Ready = true
-					current.Updating = k8s.Tainted(node, updating)
-					current.Rebooting = k8s.Tainted(node, rebooting)
+					current.Updating = k8s.Tainted(node, drainreason.Updating)
+					current.Rebooting = k8s.Tainted(node, drainreason.Rebooting)
 				}
 			}
 		}
@@ -288,7 +291,7 @@ func initialize(
 		}, nil
 }
 
-func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) func() error {
+func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *kubernetes.Client, tier Tier, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) func() error {
 	n := &node
 	reconcileNode := false
 	reconcileMonitor := monitor.WithField("node", n.Name)
@@ -308,11 +311,11 @@ func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Clien
 	}
 	return func() error {
 		reconcileMonitor.Info("Reconciling node")
-		return k8s.updateNode(n)
+		return k8s.UpdateNode(n)
 	}
 }
 
-func reconcileTaints(node *v1.Node, pool Pool, k8s *Client, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) map[string]interface{} {
+func reconcileTaints(node *v1.Node, pool Pool, k8s *kubernetes.Client, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) map[string]interface{} {
 	desiredTaints := pool.Taints.ToK8sTaints()
 	newTaints := append([]core.Taint{}, desiredTaints...)
 	updateTaints := false
@@ -320,7 +323,7 @@ func reconcileTaints(node *v1.Node, pool Pool, k8s *Client, naSpec *common.NodeA
 	// user defined taints
 outer:
 	for _, existing := range node.Spec.Taints {
-		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") || strings.HasPrefix(existing.Key, taintKeyPrefix) {
+		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") || strings.HasPrefix(existing.Key, kubernetes.TaintKeyPrefix) {
 			newTaints = append(newTaints, existing)
 			continue
 		}
@@ -335,13 +338,13 @@ outer:
 		break
 	}
 	// internal taints
-	if k8s.Tainted(node, updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
-		newTaints = k8s.RemoveFromTaints(newTaints, updating)
+	if k8s.Tainted(node, drainreason.Updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
+		newTaints = k8s.RemoveFromTaints(newTaints, drainreason.Updating)
 		updateTaints = true
 	}
 
-	if k8s.Tainted(node, rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
-		newTaints = k8s.RemoveFromTaints(newTaints, rebooting)
+	if k8s.Tainted(node, drainreason.Rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
+		newTaints = k8s.RemoveFromTaints(newTaints, drainreason.Rebooting)
 		updateTaints = true
 	}
 

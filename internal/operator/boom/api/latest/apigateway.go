@@ -1,6 +1,6 @@
 package latest
 
-import "github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+import "github.com/caos/orbos/pkg/kubernetes/k8s"
 
 type APIGateway struct {
 	//Flag if tool should be deployed

@@ -5,7 +5,7 @@ import (
 
 	"github.com/caos/orbos/internal/helpers"
 
-	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/pkg/git"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +27,7 @@ func RootCommand() (*cobra.Command, RootValues) {
 	cmd := &cobra.Command{
 		Use:   "orbctl [flags]",
 		Short: "Interact with your orbs",
-		Long: `orbctl launches orbiters and simplifies common tasks such as updating your kubeconfig.
+		Long: `orbctl launches orbiters, booms, database-operators and networking-operators and simplifies common tasks such as updating your kubeconfig.
 Participate in our community on https://github.com/caos/orbos
 and visit our website at https://caos.ch`,
 		Example: `$ mkdir -p ~/.orb

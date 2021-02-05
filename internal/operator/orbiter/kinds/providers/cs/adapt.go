@@ -7,11 +7,12 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/internal/tree"
-	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
+
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string, oneoff bool) orbiter.AdaptFunc {
@@ -85,8 +86,8 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
-			}, func() error {
-				if err := lbDestroy(); err != nil {
+			}, func(delegates map[string]interface{}) error {
+				if err := lbDestroy(delegates); err != nil {
 					return err
 				}
 

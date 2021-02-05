@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -70,7 +70,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			gitClient,
 			path,
 			s,
-			operators.GetAllSecretsFunc(orbConfig),
+			operators.GetAllSecretsFunc(orbConfig, &version),
 			operators.PushFunc()); err != nil {
 			return err
 		}

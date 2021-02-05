@@ -2,9 +2,10 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
-func destroy(providerCurrents map[string]interface{}, k8sClient *Client) error {
+func destroy(providerCurrents map[string]interface{}, k8sClient *kubernetes.Client) error {
 
 	if k8sClient.Available() {
 		k8sClient.DeleteDeployment("caos-system", "orbiter")

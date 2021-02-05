@@ -3,8 +3,8 @@ package v1beta1
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 	"strings"
 )

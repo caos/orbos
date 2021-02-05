@@ -6,10 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
+
+	"github.com/caos/orbos/pkg/kubernetes"
 
 	orbosapi "github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
@@ -24,6 +25,7 @@ import (
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -34,7 +36,6 @@ type GitCrd struct {
 	crdDirectoryPath string
 	status           error
 	monitor          mntr.Monitor
-	deploy           bool
 }
 
 func New(conf *config.Config) *GitCrd {
@@ -49,7 +50,6 @@ func New(conf *config.Config) *GitCrd {
 		crdDirectoryPath: conf.CrdDirectoryPath,
 		git:              conf.Git,
 		monitor:          monitor,
-		deploy:           conf.Deploy,
 	}
 
 	crdConf := &crdconfig.Config{
@@ -136,14 +136,14 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		"action": "reconiling",
 	})
 
-	toolsetCRD, err := c.getCrdContent()
+	toolsetCRD, apiKind, apiVersion, err := c.getCrdContent()
 	if err != nil {
 		c.status = err
 		return
 	}
 
 	boomSpec := toolsetCRD.Spec.Boom
-	if boomSpec != nil && boomSpec.Version != "" {
+	if boomSpec != nil && boomSpec.SelfReconciling && boomSpec.Version != "" {
 		conf, err := clientgo.GetClusterConfig()
 		if err != nil {
 			c.status = err
@@ -157,10 +157,18 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 			return
 		}
 
-		if err := cmd.Reconcile(monitor, k8sClient, "", c.deploy, boomSpec); err != nil {
+		if err := cmd.Reconcile(
+			monitor,
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), apiKind, apiVersion),
+			k8sClient,
+			boomSpec,
+			boomSpec.Version,
+		); err != nil {
 			c.status = err
 			return
 		}
+	} else {
+		monitor.Info("not reconciling BOOM itself as selfReconciling is not specified to true or version is empty")
 	}
 
 	// pre-steps
@@ -204,19 +212,19 @@ func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
 
 }
 
-func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
+func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, string, string, error) {
 	desiredTree, err := orbosapi.ReadBoomYml(c.git)
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
-	desiredKind, _, _, err := api.ParseToolset(desiredTree)
+	desiredKind, _, _, apiKind, apiVersion, err := api.ParseToolset(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, "", "", errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desiredKind
 
-	return desiredKind, nil
+	return desiredKind, apiKind, apiVersion, nil
 }
 
 func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource) {
@@ -230,7 +238,7 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 		return
 	}
 
-	toolsetCRD, err := c.getCrdContent()
+	toolsetCRD, _, _, err := c.getCrdContent()
 	if err != nil {
 		c.status = err
 		return

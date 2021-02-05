@@ -2,16 +2,16 @@ package orbiter
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 )
 
-type DestroyFunc func() error
+type DestroyFunc func(map[string]interface{}) error
 
-func NoopDestroy() error {
+func NoopDestroy(map[string]interface{}) error {
 	return nil
 }
 
@@ -40,7 +40,7 @@ func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finis
 		return err
 	}
 
-	if err := destroy(); err != nil {
+	if err := destroy(make(map[string]interface{})); err != nil {
 		return err
 	}
 

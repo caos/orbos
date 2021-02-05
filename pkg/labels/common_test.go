@@ -3,6 +3,8 @@ package labels_test
 import (
 	"testing"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -13,7 +15,7 @@ func expectNotMarshallable(t *testing.T, labels interface{}) {
 	}
 }
 
-func expectValueEquality(t *testing.T, one labels.comparable, oneTick labels.comparable, two labels.comparable) {
+func expectValueEquality(t *testing.T, one labels.Labels, oneTick labels.Labels, two labels.Labels) {
 
 	if one.Equal(two) {
 		t.Error("Expected unequal")

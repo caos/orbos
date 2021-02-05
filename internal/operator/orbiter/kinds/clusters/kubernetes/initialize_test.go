@@ -65,7 +65,7 @@ func Test_reconcileTaints(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, _ := reconcileTaints(tt.args.node, tt.args.pool, mntr.Monitor{})
+			got := reconcileTaints(tt.args.node, tt.args.pool, mntr.Monitor{})
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("reconcileTaints() got = %v, want %v", got, tt.want)
 			}

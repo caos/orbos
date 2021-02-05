@@ -3,7 +3,7 @@ package yaml
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	"gopkg.in/yaml.v3"
 )
 

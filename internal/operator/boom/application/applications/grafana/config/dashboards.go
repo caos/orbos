@@ -89,6 +89,7 @@ func getGrafanaDashboards(dashboardsfolder string, toolsetCRDSpec *toolsetslates
 				"grafana-dashboard-zitadel-cockroachdb-storage",
 				"grafana-dashboard-zitadel-health",
 				"grafana-dashboard-zitadel-health-details",
+				"grafana-dashboard-zitadel",
 			},
 			Folder: filepath.Join(dashboardsfolder, "zitadel"),
 		}

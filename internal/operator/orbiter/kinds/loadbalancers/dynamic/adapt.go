@@ -8,11 +8,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"
@@ -142,11 +142,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
-						machineMonitor.WithField("open", fw.AllZones()).Debug("Loadbalancing firewall desired")
+						machineMonitor.WithField("open", fw.ToCurrent()).Debug("Loadbalancing firewall desired")
 					}
 					deepNa.Firewall.Merge(fw)
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
+						machineMonitor.WithField("ports", deepNa.Firewall.ToCurrent()).Info("Awaiting firewalld config")
 						done = false
 					}
 					for _, port := range fw.Ports("external") {

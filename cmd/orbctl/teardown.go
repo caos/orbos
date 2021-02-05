@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/spf13/cobra"
 
@@ -87,6 +89,7 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 				monitor,
 				gitClient,
 				orb.AdaptFunc(
+					labels.NoopOperator("ORBOS"),
 					orbConfig,
 					gitCommit,
 					true,

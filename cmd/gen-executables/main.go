@@ -60,6 +60,7 @@ func main() {
 	packableFiles := executables.PackableFiles(toChan([]string{
 		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/calico.yaml"),
 		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/cilium.yaml"),
+		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/providers/gce/kubernetes_gce.yaml"),
 	}))
 
 	if err := executables.PreBuild(deriveJoinPackables(packableExecutables, packableFiles)); err != nil {

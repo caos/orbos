@@ -1,17 +1,29 @@
 package labels
 
-import "errors"
+import (
+	"errors"
 
-var _ Labels = (*API)(nil)
+	"gopkg.in/yaml.v3"
+)
+
+var (
+	_ Labels = (*API)(nil)
+)
 
 type API struct {
 	model InternalAPI
+	base  *Operator
 }
 
-type InternalAPI struct {
-	Kind             string `yaml:"orbos.ch/kind"`
-	ApiVersion       string `yaml:"orbos.ch/apiversion"`
-	InternalOperator `yaml:",inline"`
+func NoopAPI(l *Operator) *API {
+	return &API{
+		base: l,
+		model: InternalAPI{
+			Kind:             "unkown",
+			ApiVersion:       "unkown",
+			InternalOperator: l.model,
+		},
+	}
 }
 
 func ForAPI(l *Operator, kind, version string) (*API, error) {
@@ -19,11 +31,14 @@ func ForAPI(l *Operator, kind, version string) (*API, error) {
 		return nil, errors.New("kind and version must not be nil")
 	}
 
-	return &API{model: InternalAPI{
-		Kind:             kind,
-		ApiVersion:       version,
-		InternalOperator: l.model,
-	}}, nil
+	return &API{
+		base: l,
+		model: InternalAPI{
+			Kind:             kind,
+			ApiVersion:       version,
+			InternalOperator: l.model,
+		},
+	}, nil
 }
 
 func MustForAPI(l *Operator, kind, version string) *API {
@@ -34,6 +49,24 @@ func MustForAPI(l *Operator, kind, version string) *API {
 	return a
 }
 
+func MustReplaceAPI(l *API, kind, version string) *API {
+	return MustForAPI(l.base, kind, version)
+}
+
+func (l *API) UnmarshalYAML(node *yaml.Node) error {
+	if err := node.Decode(&l.model); err != nil {
+		return err
+	}
+	l.base = &Operator{}
+	return node.Decode(l.base)
+}
+
+/*
+func (l *API) Major() int8 {
+	return l.base.Major()
+}
+*/
+
 func (l *API) Equal(r comparable) bool {
 	if right, ok := r.(*API); ok {
 		return l.model == right.model
@@ -43,4 +76,10 @@ func (l *API) Equal(r comparable) bool {
 
 func (l *API) MarshalYAML() (interface{}, error) {
 	return nil, errors.New("type *labels.API is not serializable")
+}
+
+type InternalAPI struct {
+	Kind             string `yaml:"caos.ch/kind"`
+	ApiVersion       string `yaml:"caos.ch/apiversion"`
+	InternalOperator `yaml:",inline"`
 }

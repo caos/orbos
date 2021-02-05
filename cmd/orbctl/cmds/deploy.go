@@ -2,15 +2,16 @@ package cmds
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	cmdzitadel "github.com/caos/orbos/internal/operator/zitadel/cmd"
+	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, binaryVersion string) error {
 	foundBoom, err := api.ExistsBoomYml(gitClient)
 	if err != nil {
 		return err
@@ -24,21 +25,34 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		return err
 	}
 
-	desiredKind, _, _, err := boomapi.ParseToolset(desiredTree)
+	// TODO: Parse toolset in cmdboom.Reconcile function (see deployDatabase, deployNetworking)
+	desiredKind, _, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
 	if err != nil {
 		return err
 	}
 
 	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
-	if err := cmdboom.Reconcile(monitor, k8sClient, version, true, desiredKind.Spec.Boom); err != nil {
+	if desiredKind != nil &&
+		desiredKind.Spec != nil &&
+		desiredKind.Spec.Boom != nil &&
+		desiredKind.Spec.Boom.Version != "" {
+		binaryVersion = desiredKind.Spec.Boom.Version
+	}
+
+	if err := cmdboom.Reconcile(
+		monitor,
+		labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), apiKind, apiVersion),
+		k8sClient,
+		desiredKind.Spec.Boom,
+		binaryVersion,
+	); err != nil {
 		return err
 	}
 	return nil
 }
-
-func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string) error {
-	found, err := api.ExistsZitadelYml(gitClient)
+func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string) error {
+	found, err := api.ExistsNetworkingYml(gitClient)
 	if err != nil {
 		return err
 	}
@@ -46,12 +60,12 @@ func deployZitadel(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *stri
 		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
 
 		if k8sClient.Available() {
-			tree, err := api.ReadZitadelYml(gitClient)
+			tree, err := api.ReadNetworkinglYml(gitClient)
 			if err != nil {
 				return err
 			}
 
-			if err := cmdzitadel.Reconcile(monitor, tree, version)(k8sClient); err != nil {
+			if err := orbnw.Reconcile(monitor, tree)(k8sClient); err != nil {
 				return err
 			}
 		} else {

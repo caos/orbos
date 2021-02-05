@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/gitlab"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/oidc"
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 type Auth struct {

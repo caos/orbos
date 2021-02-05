@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func Takeoff(
@@ -56,7 +56,7 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig)
+		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		if err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func Takeoff(
 			return err
 		}
 
-		if err := deployZitadel(monitor, gitClient, &kubeconfig, version); err != nil {
+		if err := deployNetworking(monitor, gitClient, &kubeconfig); err != nil {
 			return err
 		}
 	}

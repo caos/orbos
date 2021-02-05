@@ -5,7 +5,7 @@ import (
 	github "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Github"
 	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
 	google "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Google"
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 type Auth struct {

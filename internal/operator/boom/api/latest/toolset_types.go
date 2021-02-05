@@ -1,9 +1,9 @@
 package latest
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type Metadata struct {
@@ -61,6 +61,8 @@ type Boom struct {
 	//Use this registry to pull the BOOM image from
 	//@default: ghcr.io
 	CustomImageRegistry string `json:"customImageRegistry,omitempty" yaml:"customImageRegistry,omitempty"`
+	//Flag if boom should reconcile itself
+	SelfReconciling bool `json:"selfReconciling" yaml:"selfReconciling"`
 }
 
 type Toolset struct {

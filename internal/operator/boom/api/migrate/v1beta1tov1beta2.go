@@ -7,7 +7,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/migrate/storage"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) (*v1beta2.Toolset, map[string]*secret.Secret) {

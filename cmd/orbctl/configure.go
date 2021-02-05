@@ -6,6 +6,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
+	secret2 "github.com/caos/orbos/pkg/secret"
+
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 
 	"github.com/caos/orbos/internal/start"
@@ -18,8 +22,6 @@ import (
 	"github.com/caos/orbos/internal/stores/github"
 
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-	"github.com/caos/orbos/internal/secret"
 	"github.com/spf13/cobra"
 )
 
@@ -68,7 +70,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		if newMasterKey != "" {
 			monitor.Info("Changing masterkey in current orbconfig")
 			if orbConfig.Masterkey == "" {
-				secret.Masterkey = newMasterKey
+				secret2.Masterkey = newMasterKey
 			}
 			orbConfig.Masterkey = newMasterKey
 			changes = true
@@ -145,6 +147,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		if foundOrbiter {
 
 			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+				labels.NoopOperator("ORBOS"),
 				orbConfig,
 				gitCommit,
 				true,
@@ -160,7 +163,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			monitor.Info("Repopulating orbiter secrets")
-			if err := secret.Rewrite(
+			if err := secret2.Rewrite(
 				monitor,
 				gitClient,
 				rewriteKey,
@@ -170,7 +173,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig, version)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}
@@ -199,13 +202,13 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, _, err := boomapi.ParseToolset(tree)
+			toolset, _, _, _, _, err := boomapi.ParseToolset(tree)
 			if err != nil {
 				return err
 			}
 
 			tree.Parsed = toolset
-			if err := secret.Rewrite(
+			if err := secret2.Rewrite(
 				monitor,
 				gitClient,
 				rewriteKey,

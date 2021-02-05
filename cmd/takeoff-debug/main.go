@@ -3,10 +3,10 @@ package main
 import (
 	"flag"
 	"github.com/caos/orbos/cmd/orbctl/cmds"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 	"golang.org/x/net/context"
 )
 

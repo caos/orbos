@@ -23,7 +23,7 @@ type metricsStruct struct {
 var (
 	metrics = &metricsStruct{
 		gitClone:               newCounterVec("boom_git_clone", "Counter how many times git repositories were cloned", "result", "url"),
-		crdFormat:              newCounterVec("boom_crd_format", "Counter how many failures there were with the crd unmarshalling", "result", "url", "reason"),
+		crdFormat:              newCounterVec("boom_crd_format", "Counter how many failures there were with the crd unmarshalling", "result", "reason"),
 		currentStateWrite:      newCounterVec("boom_current_state_write", "Counter how many times the current state was written", "result", "url"),
 		currentStateRead:       newCounterVec("boom_current_state_read", "Counter how many times the current state was read", "result"),
 		reconcilingBundle:      newCounterVec("boom_reconciling_bundle", "Counter how many times the bundle was reconciled", "result", "bundle"),

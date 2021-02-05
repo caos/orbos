@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/pkg/git"
 
 	"github.com/caos/orbos/internal/orb"
 
@@ -51,23 +51,22 @@ func Takeoff(monitor mntr.Monitor, toolsDirectoryPath string, localMode bool, or
 	return task(
 			monitor,
 			orbpath,
-			gitConf(gitcrdMonitor.WithField("task", "ensure"), ensureClient, toolsDirectoryPath, !localMode),
+			gitConf(gitcrdMonitor.WithField("task", "ensure"), ensureClient, toolsDirectoryPath),
 			appStruct.ReadSpecs,
 			appStruct.Reconcile),
 		task(
 			monitor,
 			orbpath,
-			gitConf(gitcrdMonitor.WithField("task", "query"), queryClient, toolsDirectoryPath, !localMode),
+			gitConf(gitcrdMonitor.WithField("task", "query"), queryClient, toolsDirectoryPath),
 			currentStruct.ReadSpecs,
 			currentStruct.WriteBackCurrentState)
 }
 
-func gitConf(monitor mntr.Monitor, client *git.Client, toolsDirectoryPath string, deploy bool) gitcrdconfig.Config {
+func gitConf(monitor mntr.Monitor, client *git.Client, toolsDirectoryPath string) gitcrdconfig.Config {
 	return gitcrdconfig.Config{
 		Monitor:          monitor,
 		CrdDirectoryPath: filepath.Join(toolsDirectoryPath, "crd"),
 		Git:              client,
-		Deploy:           deploy,
 	}
 }
 

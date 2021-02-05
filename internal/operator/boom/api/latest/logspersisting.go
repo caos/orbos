@@ -1,8 +1,8 @@
 package latest
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/storage"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type LogsPersisting struct {
@@ -29,11 +29,11 @@ type LogsPersisting struct {
 // Logs: When the logs spec is nil all logs will get persisted in loki.
 type Logs struct {
 	//Bool if logs will get persisted for ambassador
-	Ambassador bool `json:"ambassador"`
+	Ambassador bool `json:"ambassador" yaml:"ambassador"`
 	//Bool if logs will get persisted for grafana
-	Grafana bool `json:"grafana"`
+	Grafana bool `json:"grafana" yaml:"grafana"`
 	//Bool if logs will get persisted for argo-cd
-	Argocd bool `json:"argocd"`
+	Argocd bool `json:"argocd" yaml:"argocd"`
 	//Bool if logs will get persisted for kube-state-metrics
 	KubeStateMetrics bool `json:"kube-state-metrics" yaml:"kube-state-metrics"`
 	//Bool if logs will get persisted for prometheus-node-exporter
@@ -45,9 +45,19 @@ type Logs struct {
 	//Bool if logs will get persisted for logging-operator
 	LoggingOperator bool `json:"logging-operator" yaml:"logging-operator"`
 	//Bool if logs will get persisted for loki
-	Loki bool `json:"loki"`
+	Loki bool `json:"loki" yaml:"loki"`
 	//Bool if logs will get persisted for prometheus
-	Prometheus bool `json:"prometheus"`
+	Prometheus bool `json:"prometheus" yaml:"prometheus"`
 	//Bool if logs will get persisted for the metrics-secret
 	MetricsServer bool `json:"metrics-server" yaml:"metrics-server"`
+	//Bool if logs will get persisted for ORBITER
+	Orbiter bool `json:"orbiter" yaml:"orbiter"`
+	//Bool if logs will get persisted for BOOM
+	Boom bool `json:"boom" yaml:"boom"`
+	//Bool if logs will get persisted for ZITADEL
+	Zitadel bool `json:"zitadel" yaml:"zitadel"`
+	//Bool if logs will get persisted for Database
+	Database bool `json:"database" yaml:"database"`
+	//Bool if logs will get persisted for Networking
+	Networking bool `json:"networking" yaml:"networking"`
 }

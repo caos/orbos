@@ -2,9 +2,10 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func ensure(
@@ -13,7 +14,7 @@ func ensure(
 	desired *DesiredV0,
 	kubeAPIAddress *infra.Address,
 	pdf api.PushDesiredFunc,
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	oneoff bool,
 	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
@@ -22,6 +23,7 @@ func ensure(
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
 	gitClient *git.Client,
+	providerK8sSpec infra.Kubernetes,
 ) (done bool, err error) {
 
 	desireFW := firewallFunc(monitor, *desired)
@@ -70,6 +72,7 @@ func ensure(
 			return *machine
 		},
 		gitClient,
+		providerK8sSpec,
 	)
 	if !scalingDone {
 		monitor.Info("Scaling is not done yet")

@@ -1,7 +1,7 @@
 package google
 
 import (
-	"github.com/caos/orbos/internal/secret"
+	secret2 "github.com/caos/orbos/pkg/secret"
 )
 
 type Connector struct {
@@ -24,19 +24,19 @@ func (c *Connector) IsZero() bool {
 }
 
 type Config struct {
-	ClientID *secret.Secret `yaml:"clientID,omitempty"`
+	ClientID *secret2.Secret `yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
-	ExistingClientIDSecret *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret           *secret.Secret   `yaml:"clientSecret,omitempty"`
+	ExistingClientIDSecret *secret2.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
+	ClientSecret           *secret2.Secret   `yaml:"clientSecret,omitempty"`
 	//Existing secret with the clientSecret
-	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
+	ExistingClientSecretSecret *secret2.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//List of hosted domains which are permitted to login
 	HostedDomains []string `json:"hostedDomains,omitempty" yaml:"hostedDomains,omitempty"`
 	//List of groups in the hosted domains which are permitted to login
-	Groups             []string       `json:"groups,omitempty" yaml:"groups,omitempty"`
-	ServiceAccountJSON *secret.Secret `yaml:"serviceAccountJSON,omitempty"`
+	Groups             []string        `json:"groups,omitempty" yaml:"groups,omitempty"`
+	ServiceAccountJSON *secret2.Secret `yaml:"serviceAccountJSON,omitempty"`
 	//Existing secret with the JSON of the service account
-	ExistingServiceAccountJSONSecret *secret.Existing `json:"existingServiceAccountJSONSecret,omitempty" yaml:"existingServiceAccountJSONSecret,omitempty"`
+	ExistingServiceAccountJSONSecret *secret2.Existing `json:"existingServiceAccountJSONSecret,omitempty" yaml:"existingServiceAccountJSONSecret,omitempty"`
 	//File where the serviceAccountJSON will get persisted to impersonate G Suite admin
 	ServiceAccountFilePath string `json:"serviceAccountFilePath,omitempty" yaml:"serviceAccountFilePath,omitempty"`
 	//Email of a G Suite admin to impersonate

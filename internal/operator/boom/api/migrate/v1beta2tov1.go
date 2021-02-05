@@ -3,7 +3,7 @@ package migrate
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func V1beta2Tov1(oldToolset *v1beta2.Toolset) (newToolset *latest.Toolset, secrets map[string]*secret.Secret) {

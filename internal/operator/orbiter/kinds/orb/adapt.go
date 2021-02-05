@@ -2,12 +2,13 @@ package orb
 
 import (
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -15,7 +16,12 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+func OperatorSelector() *labels.Selector {
+	return labels.OpenOperatorSelector("ORBOS", "orbiter.caos.ch")
+}
+
 func AdaptFunc(
+	operatorLabels *labels.Operator,
 	orbConfig *orb.Orb,
 	orbiterCommit string,
 	oneoff bool,
@@ -98,14 +104,14 @@ func AdaptFunc(
 		}
 
 		var provCurr map[string]interface{}
-		destroyProviders := func() (map[string]interface{}, error) {
+		destroyProviders := func(delegatedFromClusters map[string]interface{}) (map[string]interface{}, error) {
 			if provCurr != nil {
 				return provCurr, nil
 			}
 
 			provCurr = make(map[string]interface{})
 			for _, destroyer := range providerDestroyers {
-				if err := destroyer(); err != nil {
+				if err := destroyer(delegatedFromClusters); err != nil {
 					return nil, err
 				}
 			}
@@ -126,6 +132,7 @@ func AdaptFunc(
 			clusterCurrents[clusterID] = clusterCurrent
 			query, destroy, configure, migrateLocal, clusterSecrets, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
+				operatorLabels,
 				clusterID,
 				clusterTree,
 				oneoff,
@@ -212,13 +219,13 @@ func AdaptFunc(
 
 					return orbiter.ToEnsureResult(done, nil)
 				}, nil
-			}, func() error {
+			}, func(delegates map[string]interface{}) error {
 				defer func() {
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
 				for _, destroyer := range clusterDestroyers {
-					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
+					if err := destroyer(delegates); err != nil {
 						return err
 					}
 				}

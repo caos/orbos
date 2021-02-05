@@ -4,14 +4,15 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
 type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, repoURL string) (machineIDs []string, machines map[string]infra.Machine, err error)
 
-func ListMachines() MachinesFunc {
+func ListMachines(operarorLabels *labels.Operator) MachinesFunc {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, repoURL string) (machineIDs []string, machines map[string]infra.Machine, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -30,6 +31,7 @@ func ListMachines() MachinesFunc {
 			clusterCurrent := &tree.Tree{}
 			_, _, _, _, _, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
+				operarorLabels,
 				clusterID,
 				clusterTree,
 				true,

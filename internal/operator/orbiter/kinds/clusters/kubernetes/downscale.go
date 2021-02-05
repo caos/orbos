@@ -3,9 +3,10 @@ package kubernetes
 import (
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
-func scaleDown(pools []*initializedPool, k8sClient *Client, uninitializeMachine uninitializeMachineFunc, monitor mntr.Monitor, pdf api.PushDesiredFunc) error {
+func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitializeMachine uninitializeMachineFunc, monitor mntr.Monitor, pdf api.PushDesiredFunc) error {
 	for _, pool := range pools {
 		for _, machine := range pool.downscaling {
 			id := machine.infra.ID()

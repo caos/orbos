@@ -4,24 +4,26 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
+	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	zitadelOrb "github.com/caos/orbos/internal/operator/zitadel/kinds/orb"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 const (
-	boom    string = "boom"
-	orbiter string = "orbiter"
-	zitadel string = "zitadel"
+	boom       string = "boom"
+	orbiter    string = "orbiter"
+	networking string = "networking"
 )
 
-func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
+func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 		allSecrets := make(map[string]*secret.Secret, 0)
 		allTrees := make(map[string]*tree.Tree, 0)
@@ -29,20 +31,19 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 		if err != nil {
 			return nil, nil, err
 		}
-
 		if foundBoom {
 			boomYML, err := api.ReadBoomYml(gitClient)
 			if err != nil {
 				return nil, nil, err
 			}
-			allTrees["boom"] = boomYML
-			_, _, boomSecrets, err := boomapi.ParseToolset(boomYML)
+			allTrees[boom] = boomYML
+			_, _, boomSecrets, _, _, err := boomapi.ParseToolset(boomYML)
 			if err != nil {
 				return nil, nil, err
 			}
 
 			if boomSecrets != nil && len(boomSecrets) > 0 {
-				secret.AppendSecrets("boom", allSecrets, boomSecrets)
+				secret.AppendSecrets(boom, allSecrets, boomSecrets)
 			}
 		}
 
@@ -55,9 +56,10 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			if err != nil {
 				return nil, nil, err
 			}
-			allTrees["orbiter"] = orbiterYML
+			allTrees[orbiter] = orbiterYML
 
 			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(
+				labels.NoopOperator("ORBOS"),
 				orb,
 				"",
 				true,
@@ -69,27 +71,27 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 
 			if orbiterSecrets != nil && len(orbiterSecrets) > 0 {
-				secret.AppendSecrets("orbiter", allSecrets, orbiterSecrets)
+				secret.AppendSecrets(orbiter, allSecrets, orbiterSecrets)
 			}
 		}
 
-		foundZitadel, err := api.ExistsZitadelYml(gitClient)
+		foundNW, err := api.ExistsNetworkingYml(gitClient)
 		if err != nil {
 			return nil, nil, err
 		}
-		if foundZitadel {
-			zitadelYML, err := api.ReadZitadelYml(gitClient)
+		if foundNW {
+			nwYML, err := api.ReadNetworkinglYml(gitClient)
 			if err != nil {
 				return nil, nil, err
 			}
-			allTrees["zitadel"] = zitadelYML
+			allTrees[networking] = nwYML
 
-			_, _, zitadelSecrets, err := zitadelOrb.AdaptFunc("", "networking", "zitadel", "database", "backup")(monitor, zitadelYML, nil)
+			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}
-			if zitadelSecrets != nil && len(zitadelSecrets) > 0 {
-				secret.AppendSecrets("zitadel", allSecrets, zitadelSecrets)
+			if nwSecrets != nil && len(nwSecrets) > 0 {
+				secret.AppendSecrets(networking, allSecrets, nwSecrets)
 			}
 		}
 
@@ -104,8 +106,8 @@ func PushFunc() func(monitor mntr.Monitor, gitClient *git.Client, trees map[stri
 			operator = orbiter
 		} else if strings.HasPrefix(path, boom) {
 			operator = boom
-		} else if strings.HasPrefix(path, zitadel) {
-			operator = zitadel
+		} else if strings.HasPrefix(path, networking) {
+			operator = networking
 		} else {
 			return errors.New("Operator unknown")
 		}
@@ -119,8 +121,8 @@ func PushFunc() func(monitor mntr.Monitor, gitClient *git.Client, trees map[stri
 			return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
 		} else if operator == boom {
 			return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
-		} else if operator == zitadel {
-			return api.PushZitadelDesiredFunc(gitClient, desired)(monitor)
+		} else if operator == networking {
+			return api.PushNetworkingDesiredFunc(gitClient, desired)(monitor)
 		}
 
 		return errors.New("Operator push function unknown")

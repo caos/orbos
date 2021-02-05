@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/secret/operators"
 	"os"
 
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
+
+	"github.com/caos/orbos/internal/secret/operators"
 
 	"github.com/spf13/cobra"
 )
@@ -48,7 +49,7 @@ func ReadSecretCommand(rv RootValues) *cobra.Command {
 				monitor,
 				gitClient,
 				path,
-				operators.GetAllSecretsFunc(orbConfig))
+				operators.GetAllSecretsFunc(orbConfig, &version))
 			if err != nil {
 				return err
 			}
