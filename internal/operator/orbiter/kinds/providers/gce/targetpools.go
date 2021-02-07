@@ -10,7 +10,7 @@ import (
 
 var _ ensureLBFunc = queryTargetPools
 
-func queryTargetPools(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
+func queryTargetPools(context *svcConfig, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gcePools, err := context.client.TargetPools.
 		List(context.projectID, context.desired.Region).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).

@@ -7,7 +7,7 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-func destroyNetwork(c *context, deleteFirewalls []func() error) error {
+func destroyNetwork(c *svcConfig, deleteFirewalls []func() error) error {
 	svc, err := compute.NewService(c.ctx, *c.auth)
 	if err != nil {
 		return err
@@ -32,7 +32,7 @@ func destroyNetwork(c *context, deleteFirewalls []func() error) error {
 	)(), 404)
 }
 
-func ensureNetwork(c *context, createFirewalls []func() error, deleteFirewalls []func() error) error {
+func ensureNetwork(c *svcConfig, createFirewalls []func() error, deleteFirewalls []func() error) error {
 	svc, err := compute.NewService(c.ctx, *c.auth)
 	if err != nil {
 		return err

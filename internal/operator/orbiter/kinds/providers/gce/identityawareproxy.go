@@ -6,7 +6,7 @@ import (
 	"google.golang.org/api/servicemanagement/v1"
 )
 
-func ensureIdentityAwareProxyAPIEnabled(c *context) error {
+func ensureIdentityAwareProxyAPIEnabled(c *svcConfig) error {
 	svc, err := servicemanagement.NewService(c.ctx, *c.auth)
 	if err != nil {
 		return err

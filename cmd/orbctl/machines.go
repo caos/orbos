@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 
 	"github.com/caos/orbos/pkg/labels"
@@ -15,6 +16,8 @@ import (
 )
 
 func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *cfg.Orb, do func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error) error {
+
+	ctx := context.Background()
 
 	if err := orbConfig.IsConnectable(); err != nil {
 		return err
@@ -44,7 +47,7 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *cfg.Orb, d
 		return err
 	}
 
-	listMachines := orb.ListMachines(labels.NoopOperator("ORBOS"))
+	listMachines := orb.ListMachines(ctx, labels.NoopOperator("ORBOS"))
 
 	machineIDs, machines, err := listMachines(
 		monitor,

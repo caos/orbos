@@ -8,7 +8,7 @@ import (
 
 var _ ensureLBFunc = queryHealthchecks
 
-func queryHealthchecks(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
+func queryHealthchecks(context *svcConfig, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceHealthchecks, err := context.client.HttpHealthChecks.
 		List(context.projectID).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).

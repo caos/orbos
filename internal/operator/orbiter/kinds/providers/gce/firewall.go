@@ -9,7 +9,7 @@ import (
 
 var _ ensureFWFunc = queryFirewall
 
-func queryFirewall(context *context, firewalls []*firewall) ([]func() error, []func() error, error) {
+func queryFirewall(context *svcConfig, firewalls []*firewall) ([]func() error, []func() error, error) {
 	gceFirewalls, err := context.client.Firewalls.
 		List(context.projectID).
 		Filter(fmt.Sprintf(`network = "https://www.googleapis.com/compute/v1/%s"`, context.networkURL)).

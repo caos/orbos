@@ -1,7 +1,7 @@
 package gce
 
 import (
-	ctxpkg "context"
+	"context"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -12,7 +12,7 @@ import (
 	"google.golang.org/api/option"
 )
 
-type context struct {
+type svcConfig struct {
 	monitor     mntr.Monitor
 	networkName string
 	networkURL  string
@@ -21,15 +21,13 @@ type context struct {
 	projectID   string
 	desired     *Spec
 	client      *compute.Service
-	//	machinesService *machinesService
-	ctx  ctxpkg.Context
-	auth *option.ClientOption
+	ctx         context.Context
+	auth        *option.ClientOption
 }
 
-func service(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, error) {
+func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
-	ctx := ctxpkg.Background()
 	opt := option.WithCredentialsJSON(jsonKey)
 	computeClient, err := compute.NewService(ctx, opt)
 	if err != nil {
@@ -50,7 +48,7 @@ func service(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneo
 	h.Reset()
 	networkURL := fmt.Sprintf("projects/%s/global/networks/%s", key.ProjectID, networkName)
 
-	return newMachinesService(&context{
+	return newMachinesService(&svcConfig{
 		monitor:     monitor,
 		orbID:       orbID,
 		providerID:  providerID,

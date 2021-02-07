@@ -8,7 +8,7 @@ import (
 
 var _ ensureLBFunc = queryAddresses
 
-func queryAddresses(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
+func queryAddresses(context *svcConfig, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 
 	addresses := normalizedLoadbalancing(loadbalancing).uniqueAddresses()
 

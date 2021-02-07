@@ -67,10 +67,10 @@ func (i *infraPool) ensureMembers(machine infra.Machine) error {
 
 				if err := operateFunc(
 					n.targetPool.log("Adding instances to target pool", true, addInstances),
-					computeOpCall(i.svc.context.client.TargetPools.
+					computeOpCall(i.svc.cfg.client.TargetPools.
 						AddInstance(
-							i.svc.context.projectID,
-							i.svc.context.desired.Region,
+							i.svc.cfg.projectID,
+							i.svc.cfg.desired.Region,
 							n.targetPool.gce.Name,
 							&compute.TargetPoolsAddInstanceRequest{Instances: instances(addInstances).refs()},
 						).

@@ -8,7 +8,7 @@ import (
 
 var _ ensureLBFunc = queryForwardingRules
 
-func queryForwardingRules(context *context, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
+func queryForwardingRules(context *svcConfig, loadbalancing []*normalizedLoadbalancer) ([]func() error, []func() error, error) {
 	gceRules, err := context.client.ForwardingRules.
 		List(context.projectID, context.desired.Region).
 		Filter(fmt.Sprintf(`description : "orb=%s;provider=%s*"`, context.orbID, context.providerID)).

@@ -219,7 +219,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		for _, kubeconfig := range allKubeconfigs {
-			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
+			k8sClient := kubernetes.NewK8sClient(ctx, monitor, &kubeconfig)
 			if k8sClient.Available() {
 				monitor.Info("Ensuring orbconfig in kubernetes cluster")
 				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {

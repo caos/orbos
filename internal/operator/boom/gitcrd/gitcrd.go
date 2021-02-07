@@ -1,6 +1,7 @@
 package gitcrd
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -128,6 +129,8 @@ func (c *GitCrd) GetRepoURL() string {
 }
 
 func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if c.status != nil {
 		return
 	}
@@ -151,7 +154,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		}
 
 		dummyKubeconfig := ""
-		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
+		k8sClient := kubernetes.NewK8sClient(ctx, monitor, &dummyKubeconfig)
 		if err := k8sClient.RefreshConfig(conf); err != nil {
 			c.status = err
 			return

@@ -38,6 +38,9 @@ type OrbiterConfig struct {
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbconfig.Orb, version string) ([]string, error) {
 
+	oCtx, oCancel := context.WithCancel(ctx)
+	defer oCancel()
+
 	go checks(monitor, orbctlGit)
 
 	finishedChan := make(chan struct{})
@@ -63,7 +66,7 @@ loop:
 		case <-finishedChan:
 			break loop
 		case <-takeoffChan:
-			iterate(conf, orbctlGit, !initialized, ctx, monitor, finishedChan, healthyChan, func(iterated bool) {
+			iterate(oCtx, conf, orbctlGit, !initialized, monitor, finishedChan, healthyChan, func(iterated bool) {
 				if iterated {
 					initialized = true
 				}
@@ -75,7 +78,7 @@ loop:
 	return GetKubeconfigs(monitor, orbctlGit, orbConfig, version)
 }
 
-func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, healthyChan chan bool, done func(iterated bool)) {
+func iterate(ctx context.Context, conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, monitor mntr.Monitor, finishedChan chan struct{}, healthyChan chan bool, done func(iterated bool)) {
 
 	var err error
 	defer func() {
@@ -184,7 +187,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		OrbConfig:     *orbFile,
 	}
 
-	takeoff := orbiter.Takeoff(monitor, takeoffConf, healthyChan)
+	takeoff := orbiter.Takeoff(ctx, monitor, takeoffConf, healthyChan)
 
 	go func() {
 		started := time.Now()
