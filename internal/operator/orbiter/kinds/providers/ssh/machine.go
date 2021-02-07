@@ -201,7 +201,7 @@ func (c *Machine) open() (sess *sshlib.Session, close func(), err error) {
 }
 
 func mustClose(closer io.Closer) {
-	if err := closer.Close(); err != nil {
+	if err := closer.Close(); err != nil && err.Error() != "EOF" {
 		panic(err)
 	}
 }
