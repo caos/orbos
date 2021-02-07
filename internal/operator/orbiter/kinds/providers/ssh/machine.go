@@ -196,7 +196,6 @@ func (c *Machine) open() (sess *sshlib.Session, close func(), err error) {
 	return sess, func() {
 		mustClose(sess)
 		mustClose(sshConn)
-		mustClose(conn)
 	}, nil
 }
 
