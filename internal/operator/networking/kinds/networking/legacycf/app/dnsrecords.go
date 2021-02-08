@@ -1,8 +1,9 @@
 package app
 
 import (
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
 func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) error {
@@ -19,7 +20,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) e
 		}
 	}
 
-	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
+	createRecords, updateRecords := getRecordsToCreateAndUpdate(currentRecords, records)
 	if createRecords != nil && len(createRecords) > 0 {
 		_, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
 		if err != nil {
@@ -67,7 +68,7 @@ func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloud
 	return deleteRecords
 }
 
-func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNSRecord, records []*cloudflare.DNSRecord) ([]*cloudflare.DNSRecord, []*cloudflare.DNSRecord) {
+func getRecordsToCreateAndUpdate(currentRecords []*cloudflare.DNSRecord, records []*cloudflare.DNSRecord) ([]*cloudflare.DNSRecord, []*cloudflare.DNSRecord) {
 	createRecords := make([]*cloudflare.DNSRecord, 0)
 	updateRecords := make([]*cloudflare.DNSRecord, 0)
 
