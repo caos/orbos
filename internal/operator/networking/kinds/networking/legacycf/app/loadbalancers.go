@@ -157,7 +157,7 @@ func getLoadBalancerToUpdate(
 				}
 
 				//only update the lb if a pool has to be added
-				if !containedDefault && !containedRegion {
+				if containedDefault && containedRegion {
 					continue
 				}
 
