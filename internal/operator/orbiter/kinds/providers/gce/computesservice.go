@@ -55,7 +55,11 @@ func (m *machinesService) restartPreemptibleMachines() error {
 			if instance.start {
 				if err := operateFunc(
 					func() { instance.Monitor.Debug("Restarting preemptible instance") },
-					computeOpCall(m.cfg.client.Instances.Start(m.cfg.projectID, m.cfg.desired.Zone, instance.ID()).RequestId(uuid.NewV1().String()).Do),
+					computeOpCall(m.cfg.computeClient.Instances.
+						Start(m.cfg.projectID, m.cfg.desired.Zone, instance.ID()).
+						Context(m.cfg.ctx).
+						RequestId(uuid.NewV1().String()).
+						Do),
 					func() error { instance.Monitor.Info("Preemptible instance restarted"); return nil },
 				)(); err != nil {
 					return err
@@ -153,13 +157,18 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 
 	if err := operateFunc(
 		func() { monitor.Debug("Creating instance") },
-		computeOpCall(m.cfg.client.Instances.Insert(m.cfg.projectID, m.cfg.desired.Zone, createInstance).RequestId(uuid.NewV1().String()).Do),
+		computeOpCall(m.cfg.computeClient.Instances.
+			Insert(m.cfg.projectID, m.cfg.desired.Zone, createInstance).
+			Context(m.cfg.ctx).
+			RequestId(uuid.NewV1().String()).
+			Do),
 		func() error { monitor.Info("Instance created"); return nil },
 	)(); err != nil {
 		return nil, err
 	}
 
-	newInstance, err := m.cfg.client.Instances.Get(m.cfg.projectID, m.cfg.desired.Zone, createInstance.Name).
+	newInstance, err := m.cfg.computeClient.Instances.Get(m.cfg.projectID, m.cfg.desired.Zone, createInstance.Name).
+		Context(m.cfg.ctx).
 		Fields("selfLink,networkInterfaces(networkIP)").
 		Do()
 	if err != nil {
@@ -263,8 +272,9 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		return m.cache.instances, nil
 	}
 
-	instances, err := m.cfg.client.Instances.
+	instances, err := m.cfg.computeClient.Instances.
 		List(m.cfg.projectID, m.cfg.desired.Zone).
+		Context(m.cfg.ctx).
 		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.cfg.orbID, m.cfg.providerID)).
 		Fields("items(name,labels,selfLink,status,scheduling(preemptible),networkInterfaces(networkIP))").
 		Do()
@@ -375,7 +385,10 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 			}),
 			"instance",
 			id,
-			m.cfg.client.Instances.Delete(m.cfg.projectID, m.cfg.desired.Zone, id).RequestId(uuid.NewV1().String()).Do,
+			m.cfg.computeClient.Instances.Delete(m.cfg.projectID, m.cfg.desired.Zone, id).
+				Context(m.cfg.ctx).
+				RequestId(uuid.NewV1().String()).
+				Do,
 		)()
 	}
 }

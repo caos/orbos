@@ -5,6 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"net"
+	"net/http"
+	"time"
+
+	"google.golang.org/api/servicemanagement/v1"
 
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -13,32 +18,62 @@ import (
 )
 
 type svcConfig struct {
-	monitor     mntr.Monitor
-	networkName string
-	networkURL  string
-	orbID       string
-	providerID  string
-	projectID   string
-	desired     *Spec
-	client      *compute.Service
-	ctx         context.Context
-	auth        *option.ClientOption
+	monitor       mntr.Monitor
+	networkName   string
+	networkURL    string
+	orbID         string
+	providerID    string
+	projectID     string
+	desired       *Spec
+	computeClient *compute.Service
+	apiClient     *servicemanagement.APIService
+	ctx           context.Context
+	clientOptions *option.ClientOption
 }
 
-func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, error) {
+func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, func(), error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
-	opt := option.WithCredentialsJSON(jsonKey)
-	computeClient, err := compute.NewService(ctx, opt)
+
+	c := &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
+
+	// avoids goroutine leaking
+	// https://github.com/googleapis/google-cloud-go/issues/1025
+	close := c.Transport.(*http.Transport).CloseIdleConnections
+
+	clientOpts := []option.ClientOption{
+		option.WithCredentialsJSON(jsonKey),
+		option.WithHTTPClient(c),
+	}
+
+	computeClient, err := compute.NewService(ctx, clientOpts...)
 	if err != nil {
-		return nil, err
+		return nil, close, err
+	}
+
+	apiClient, err := servicemanagement.NewService(ctx, clientOpts...)
+	if err != nil {
+		return nil, close, err
 	}
 
 	key := struct {
 		ProjectID string `json:"project_id"`
 	}{}
 	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
-		return nil, err
+		return nil, close, err
 	}
 
 	monitor = monitor.WithField("projectID", key.ProjectID)
@@ -49,15 +84,17 @@ func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, pr
 	networkURL := fmt.Sprintf("projects/%s/global/networks/%s", key.ProjectID, networkName)
 
 	return newMachinesService(&svcConfig{
-		monitor:     monitor,
-		orbID:       orbID,
-		providerID:  providerID,
-		projectID:   key.ProjectID,
-		desired:     desired,
-		client:      computeClient,
-		ctx:         ctx,
-		auth:        &opt,
-		networkName: networkName,
-		networkURL:  networkURL,
-	}, oneoff), nil
+			monitor:       monitor,
+			orbID:         orbID,
+			providerID:    providerID,
+			projectID:     key.ProjectID,
+			desired:       desired,
+			computeClient: computeClient,
+			apiClient:     apiClient,
+			ctx:           ctx,
+			networkName:   networkName,
+			networkURL:    networkURL,
+		}, oneoff),
+		close,
+		nil
 }

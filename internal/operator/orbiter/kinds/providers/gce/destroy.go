@@ -64,11 +64,14 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 	})()
 }
 
-func deleteDiskFunc(context *svcConfig, monitor mntr.Monitor, kind, id string) func() error {
+func deleteDiskFunc(cfg *svcConfig, monitor mntr.Monitor, kind, id string) func() error {
 	return func() error {
 		return operateFunc(
 			func() { monitor.Debug("Removing resource") },
-			computeOpCall(context.client.Disks.Delete(context.projectID, context.desired.Zone, id).RequestId(uuid.NewV1().String()).Do),
+			computeOpCall(cfg.computeClient.Disks.Delete(cfg.projectID, cfg.desired.Zone, id).
+				Context(cfg.ctx).
+				RequestId(uuid.NewV1().String()).
+				Do),
 			func() error { monitor.Info("Resource removed"); return nil },
 		)()
 	}

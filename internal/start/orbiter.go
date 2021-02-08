@@ -90,6 +90,9 @@ func iterate(ctx context.Context, conf *OrbiterConfig, gitClient *git.Client, fi
 		}()
 	}()
 
+	iCtx, iCancel := context.WithCancel(ctx)
+	defer iCancel()
+
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		monitor.Error(err)
@@ -97,7 +100,7 @@ func iterate(ctx context.Context, conf *OrbiterConfig, gitClient *git.Client, fi
 		return
 	}
 
-	if err := gitClient.Configure(orbFile.URL, []byte(orbFile.Repokey)); err != nil {
+	if err := gitClient.Configure(iCtx, orbFile.URL, []byte(orbFile.Repokey)); err != nil {
 		monitor.Error(err)
 		done(false)
 		return

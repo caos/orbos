@@ -63,7 +63,7 @@ func New(conf *config.Config) *GitCrd {
 }
 
 func (c *GitCrd) Clone(url string, key []byte) error {
-	err := c.git.Configure(url, key)
+	err := c.git.Configure(context.TODO(), url, key)
 	if err != nil {
 		c.monitor.Error(err)
 		return err

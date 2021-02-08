@@ -82,7 +82,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 		}
 
 		configureGit := func() error {
-			return gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey))
+			return gitClient.Configure(ctx, orbConfig.URL, []byte(orbConfig.Repokey))
 		}
 
 		// If the repokey already has read/write permissions, don't generate a new one.

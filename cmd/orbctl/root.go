@@ -60,7 +60,7 @@ $ orbctl -f ~/.orb/myorb [command]
 
 		ctx := context.Background()
 
-		return ctx, monitor, orbConfig, git.New(ctx, monitor, "orbos", "orbos@caos.ch"), func(err error) error {
+		return ctx, monitor, orbConfig, git.New(monitor, "orbos", "orbos@caos.ch"), func(err error) error {
 			if err != nil {
 				monitor.Error(err)
 			}
