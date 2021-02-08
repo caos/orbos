@@ -95,7 +95,7 @@ func StartOrbiter(rv RootValues) *cobra.Command {
 			err = errFunc(err)
 		}()
 
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+		if err := gitClient.Configure(ctx, orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
