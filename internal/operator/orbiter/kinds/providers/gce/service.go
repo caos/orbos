@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"net"
-	"net/http"
-	"time"
 
 	"google.golang.org/api/servicemanagement/v1"
 
@@ -34,29 +31,30 @@ type svcConfig struct {
 func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, func(), error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
-
-	c := &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-				DualStack: true,
-			}).DialContext,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
-
+	/*
+		c := &http.Client{
+			Transport: &http.Transport{
+				Proxy: http.ProxyFromEnvironment,
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+					DualStack: true,
+				}).DialContext,
+				MaxIdleConns:          100,
+				IdleConnTimeout:       90 * time.Second,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+		}
+	*/
 	// avoids goroutine leaking
 	// https://github.com/googleapis/google-cloud-go/issues/1025
-	close := c.Transport.(*http.Transport).CloseIdleConnections
+	//	close := c.Transport.(*http.Transport).CloseIdleConnections
 
+	close := func() {}
 	clientOpts := []option.ClientOption{
+		// option.WithHTTPClient(c),
 		option.WithCredentialsJSON(jsonKey),
-		option.WithHTTPClient(c),
 	}
 
 	computeClient, err := compute.NewService(ctx, clientOpts...)

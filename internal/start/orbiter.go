@@ -91,7 +91,6 @@ func iterate(ctx context.Context, conf *OrbiterConfig, gitClient *git.Client, fi
 	}()
 
 	iCtx, iCancel := context.WithCancel(ctx)
-	defer iCancel()
 
 	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
@@ -195,6 +194,7 @@ func iterate(ctx context.Context, conf *OrbiterConfig, gitClient *git.Client, fi
 	go func() {
 		started := time.Now()
 		takeoff()
+		iCancel()
 
 		monitor.WithFields(map[string]interface{}{
 			"took": time.Since(started),
