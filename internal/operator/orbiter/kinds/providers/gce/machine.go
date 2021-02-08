@@ -140,12 +140,10 @@ func ListMachines(ctx context.Context, monitor mntr.Monitor, desiredTree *tree.T
 		return nil, err
 	}
 
-	svc, close, err := service(ctx, monitor, &desired.Spec, orbID, providerID, true)
+	svc, err := service(ctx, monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
 		return nil, err
 	}
-
-	defer close()
 
 	return core.ListMachines(svc)
 }

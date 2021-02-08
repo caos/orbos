@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"runtime/debug"
 	"strings"
 	"time"
@@ -51,8 +52,8 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		go orbiter.Instrument(monitor, healthyChan)
 	} else {
 		go func() {
-			for h := range healthyChan {
-				fmt.Println(h)
+			for range healthyChan {
+				// receive and ignore
 			}
 		}()
 	}
@@ -64,6 +65,7 @@ loop:
 	for {
 		select {
 		case <-finishedChan:
+			oCancel()
 			break loop
 		case <-takeoffChan:
 			iterate(oCtx, conf, orbctlGit, !initialized, monitor, finishedChan, healthyChan, func(iterated bool) {
@@ -194,12 +196,14 @@ func iterate(ctx context.Context, conf *OrbiterConfig, gitClient *git.Client, fi
 	go func() {
 		started := time.Now()
 		takeoff()
-		iCancel()
 
+		// cleanup
+		iCancel()
+		http.DefaultTransport.(*http.Transport).CloseIdleConnections()
+		debug.FreeOSMemory()
 		monitor.WithFields(map[string]interface{}{
 			"took": time.Since(started),
 		}).Info("Iteration done")
-		debug.FreeOSMemory()
 		done(true)
 	}()
 }

@@ -62,7 +62,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 		}
 		secret.AppendSecrets("", secrets, lbSecrets)
 
-		svcFunc := func(ctx ctxpkg.Context) (*machinesService, func(), error) {
+		svcFunc := func(ctx ctxpkg.Context) (*machinesService, error) {
 			return service(ctx, monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 		}
 
@@ -83,8 +83,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil, err
 				}
 
-				svc, close, err := svcFunc(ctx)
-				defer close()
+				svc, err := svcFunc(ctx)
 				if err != nil {
 					return nil, err
 				}
@@ -105,11 +104,11 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return err
 				}
 
-				ctx, close, err := svcFunc(ctxpkg.Background())
-				defer close()
+				ctx, err := svcFunc(ctxpkg.Background())
 				if err != nil {
 					return err
 				}
+
 				return destroy(ctx, delegates)
 			}, func(orb orb.Orb) error {
 
@@ -135,8 +134,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					}
 				}
 
-				svc, close, err := svcFunc(ctxpkg.Background())
-				defer close()
+				svc, err := svcFunc(ctxpkg.Background())
 				if err != nil {
 					return err
 				}

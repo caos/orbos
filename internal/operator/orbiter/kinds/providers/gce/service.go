@@ -28,50 +28,27 @@ type svcConfig struct {
 	clientOptions *option.ClientOption
 }
 
-func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, func(), error) {
+func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
-	/*
-		c := &http.Client{
-			Transport: &http.Transport{
-				Proxy: http.ProxyFromEnvironment,
-				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second,
-					KeepAlive: 30 * time.Second,
-					DualStack: true,
-				}).DialContext,
-				MaxIdleConns:          100,
-				IdleConnTimeout:       90 * time.Second,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ExpectContinueTimeout: 1 * time.Second,
-			},
-		}
-	*/
-	// avoids goroutine leaking
-	// https://github.com/googleapis/google-cloud-go/issues/1025
-	//	close := c.Transport.(*http.Transport).CloseIdleConnections
 
-	close := func() {}
-	clientOpts := []option.ClientOption{
-		// option.WithHTTPClient(c),
-		option.WithCredentialsJSON(jsonKey),
+	creds := option.WithCredentialsJSON(jsonKey)
+
+	computeClient, err := compute.NewService(ctx, creds)
+	if err != nil {
+		return nil, err
 	}
 
-	computeClient, err := compute.NewService(ctx, clientOpts...)
+	apiClient, err := servicemanagement.NewService(ctx, creds)
 	if err != nil {
-		return nil, close, err
-	}
-
-	apiClient, err := servicemanagement.NewService(ctx, clientOpts...)
-	if err != nil {
-		return nil, close, err
+		return nil, err
 	}
 
 	key := struct {
 		ProjectID string `json:"project_id"`
 	}{}
 	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
-		return nil, close, err
+		return nil, err
 	}
 
 	monitor = monitor.WithField("projectID", key.ProjectID)
@@ -93,6 +70,5 @@ func service(ctx context.Context, monitor mntr.Monitor, desired *Spec, orbID, pr
 			networkName:   networkName,
 			networkURL:    networkURL,
 		}, oneoff),
-		close,
 		nil
 }
