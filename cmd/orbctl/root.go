@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -61,17 +58,7 @@ $ orbctl -f ~/.orb/myorb [command]
 			return nil, mntr.Monitor{}, nil, nil, nil, err
 		}
 
-		ctx := context.Background()
-		cCtx, cancel := context.WithCancel(ctx)
-		c := make(chan os.Signal)
-		signal.Notify(c, os.Interrupt, syscall.SIGTERM)
-		go func() {
-			monitor.WithField("signal", (<-c).String()).Info("Aborting")
-			// code should cleanup gracefully where full idemptotence is not possible
-			cancel()
-		}()
-
-		return cCtx, monitor, orbConfig, git.New(monitor, "orbos", "orbos@caos.ch"), func(err error) error {
+		return context.Background(), monitor, orbConfig, git.New(monitor, "orbos", "orbos@caos.ch"), func(err error) error {
 			if err != nil {
 				monitor.Error(err)
 			}
