@@ -13,7 +13,6 @@ import (
 
 type ExternalConfig struct {
 	AccountName   string `yaml:"accountName"`
-	ID            string
 	Verbose       bool
 	Domain        string
 	IP            orbiter.IPAddress
@@ -39,11 +38,11 @@ func (i *ExternalConfig) IsZero() bool {
 	return false
 }
 
-func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
+func (e *ExternalConfig) Internal(id, namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
 		AccountName:        e.AccountName,
-		ID:                 e.ID,
+		ID:                 id,
 		Domains:            []*InternalDomain{dom},
 		Groups:             e.Groups,
 		Credentials:        e.Credentials,

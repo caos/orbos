@@ -70,6 +70,7 @@ func getLoadBalancerToDelete(
 			for _, lb := range lbs {
 				if currentLb.Name == lb.Name {
 					found = true
+					break
 				}
 			}
 		}
@@ -94,18 +95,20 @@ func getLoadBalancerToDelete(
 func getLoadBalancerToCreate(currentLbs []*cloudflare.LoadBalancer, lbs []*cloudflare.LoadBalancer) []*cloudflare.LoadBalancer {
 	createLbs := make([]*cloudflare.LoadBalancer, 0)
 
-	if lbs != nil {
-		for _, lb := range lbs {
-			found := false
-			for _, currentLb := range currentLbs {
-				if currentLb.Name == lb.Name {
-					found = true
-					break
-				}
+	if lbs == nil {
+		return createLbs
+	}
+
+	for _, lb := range lbs {
+		found := false
+		for _, currentLb := range currentLbs {
+			if currentLb.Name == lb.Name {
+				found = true
+				break
 			}
-			if found == false {
-				createLbs = append(createLbs, lb)
-			}
+		}
+		if !found {
+			createLbs = append(createLbs, lb)
 		}
 	}
 
@@ -123,52 +126,60 @@ func getLoadBalancerToUpdate(
 ) []*cloudflare.LoadBalancer {
 	updateLbs := make([]*cloudflare.LoadBalancer, 0)
 
+	if lbs == nil {
+		return updateLbs
+	}
+
 	poolName := getPoolName(domain, region, clusterID)
 
-	if lbs != nil {
-		for _, lb := range lbs {
-			for _, currentLb := range currentLbs {
-				if currentLb.Name == config.GetLBName(domain) {
-					containedRegion := false
-					containedDefault := false
-					for _, currentPool := range currentLb.DefaultPools {
-						if currentPool == poolName {
-							containedDefault = true
-						}
-					}
-					for currentRegion, currentPools := range currentLb.RegionPools {
-						if currentRegion == region {
-							for _, currentPool := range currentPools {
-								if currentPool == poolName {
-									containedRegion = true
-								}
-							}
-						}
-					}
-
-					//only update the lb if a pool has to be added
-					if !containedDefault || !containedRegion {
-						lb.ID = currentLb.ID
-						// add already entered pools for update
-						//all pools which are maintained by operators with other ids
-						lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(cf, currentLb.DefaultPools, id)...)
-
-						// combine the defined region pools for update
-						for currentRegion, currentPools := range currentLb.RegionPools {
-							regionSlice, found := lb.RegionPools[currentRegion]
-							if found {
-								lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(cf, currentLb.DefaultPools, id)...)
-
-								regionSlice = append(regionSlice, currentPools...)
-							} else {
-								defPool := []string{}
-								defPool = append(defPool, filterNotSameID(cf, currentPools, id)...)
-								lb.RegionPools[currentRegion] = defPool
-							}
-						}
-						updateLbs = append(updateLbs, lb)
+	for _, lb := range lbs {
+		for _, currentLb := range currentLbs {
+			if currentLb.Name == config.GetLBName(domain) {
+				containedRegion := false
+				containedDefault := false
+				for _, currentPool := range currentLb.DefaultPools {
+					if currentPool == poolName {
+						containedDefault = true
+						break
 					}
 				}
+
+			regionPoolsLoop:
+				for currentRegion, currentPools := range currentLb.RegionPools {
+					if currentRegion == region {
+						for _, currentPool := range currentPools {
+							if currentPool == poolName {
+								containedRegion = true
+								break regionPoolsLoop
+							}
+						}
+					}
+				}
+
+				//only update the lb if a pool has to be added
+				if containedDefault && containedRegion {
+					continue
+				}
+
+				lb.ID = currentLb.ID
+				// add already entered pools for update
+				//all pools which are maintained by operators with other ids
+				lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(cf, currentLb.DefaultPools, id)...)
+
+				// combine the defined region pools for update
+				for currentRegion, currentPools := range currentLb.RegionPools {
+					regionSlice, found := lb.RegionPools[currentRegion]
+					if found {
+						lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(cf, currentLb.DefaultPools, id)...)
+
+						regionSlice = append(regionSlice, currentPools...)
+					} else {
+						defPool := []string{}
+						defPool = append(defPool, filterNotSameID(cf, currentPools, id)...)
+						lb.RegionPools[currentRegion] = defPool
+					}
+				}
+				updateLbs = append(updateLbs, lb)
 			}
 		}
 	}

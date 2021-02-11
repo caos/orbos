@@ -14,7 +14,7 @@ import (
 
 func AdaptFunc(
 	namespace string,
-	ID string,
+	id string,
 	operatorLabels *labels.Operator,
 ) opcore.AdaptFunc {
 	return func(
@@ -35,7 +35,6 @@ func AdaptFunc(
 			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
-		desiredKind.Spec.ID = ID
 
 		if !monitor.IsVerbose() && desiredKind.Spec.Verbose {
 			internalMonitor.Verbose()
@@ -49,7 +48,7 @@ func AdaptFunc(
 			return nil, nil, nil, err
 		}
 
-		internalSpec, current := desiredKind.Spec.Internal(namespace, apiLabels)
+		internalSpec, current := desiredKind.Spec.Internal(id, namespace, apiLabels)
 
 		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
 		current.ReadyCertificate = readyCertificate
