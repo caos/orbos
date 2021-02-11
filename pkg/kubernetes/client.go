@@ -354,13 +354,18 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 	})
 }
 
-func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeout time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
 		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
 		if err != nil {
 			returnChannel <- err
+			return
+		}
+
+		if job.Status.Succeeded > 0 {
+			returnChannel <- nil
 			return
 		}
 
@@ -381,18 +386,8 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSec
 	select {
 	case res := <-returnChannel:
 		return res
-	case <-time.After(timeoutSeconds * time.Second):
-		ctx := context.Background()
-		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
-		if err != nil {
-			return errors.New("timeout while waiting for job to complete, no job found")
-		}
-
-		if job.Status.Succeeded > 0 {
-			c.monitor.Debug("no pods found for job, but job succeeded, so ignoring the timeout")
-			return nil
-		}
-		return errors.New("timeout while waiting for job to complete")
+	case <-time.After(timeout):
+		return fmt.Errorf("timeout after %s while waiting for job to complete", timeout)
 	}
 }
 
