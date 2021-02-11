@@ -406,6 +406,34 @@ func (mr *MockClientIntMockRecorder) DeleteNamespacedCRDResource(group, version,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNamespacedCRDResource", reflect.TypeOf((*MockClientInt)(nil).DeleteNamespacedCRDResource), group, version, kind, namespace, name)
 }
 
+// ApplyCRDResource mocks base method
+func (m *MockClientInt) ApplyCRDResource(crd *unstructured.Unstructured) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyCRDResource", crd)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyCRDResource indicates an expected call of ApplyCRDResource
+func (mr *MockClientIntMockRecorder) ApplyCRDResource(crd interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCRDResource", reflect.TypeOf((*MockClientInt)(nil).ApplyCRDResource), crd)
+}
+
+// DeleteCRDResource mocks base method
+func (m *MockClientInt) DeleteCRDResource(group, version, kind, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCRDResource", group, version, kind, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCRDResource indicates an expected call of DeleteCRDResource
+func (mr *MockClientIntMockRecorder) DeleteCRDResource(group, version, kind, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCRDResource", reflect.TypeOf((*MockClientInt)(nil).DeleteCRDResource), group, version, kind, name)
+}
+
 // ApplyCronJob mocks base method
 func (m *MockClientInt) ApplyCronJob(rsc *v1beta1.CronJob) error {
 	m.ctrl.T.Helper()
@@ -447,6 +475,21 @@ func (m *MockClientInt) ListSecrets(namespace string, labels map[string]string) 
 func (mr *MockClientIntMockRecorder) ListSecrets(namespace, labels interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSecrets", reflect.TypeOf((*MockClientInt)(nil).ListSecrets), namespace, labels)
+}
+
+// GetSecret mocks base method
+func (m *MockClientInt) GetSecret(namespace, name string) (*v11.Secret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecret", namespace, name)
+	ret0, _ := ret[0].(*v11.Secret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecret indicates an expected call of GetSecret
+func (mr *MockClientIntMockRecorder) GetSecret(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockClientInt)(nil).GetSecret), namespace, name)
 }
 
 // ApplySecret mocks base method
