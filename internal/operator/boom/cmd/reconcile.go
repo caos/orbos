@@ -13,7 +13,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernetes.Client, boomSpec *latest.Boom, binaryVersion string, gitops bool) error {
+func Reconcile(
+	monitor mntr.Monitor,
+	apiLabels *labels.API,
+	k8sClient *kubernetes.Client,
+	boomSpec *latest.Boom,
+	binaryVersion string,
+	gitops bool,
+) error {
 
 	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{

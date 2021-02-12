@@ -100,7 +100,7 @@ func Takeoff(
 		if err := deployBoom(monitor, gitClient, &kubeconfig, version, gitOpsBoom); err != nil {
 			return err
 		}
-		if err := deployNetworking(monitor, gitClient, &kubeconfig, gitOpsNetworking); err != nil {
+		if err := deployNetworking(monitor, gitClient, &kubeconfig, version, gitOpsNetworking); err != nil {
 			return err
 		}
 	}

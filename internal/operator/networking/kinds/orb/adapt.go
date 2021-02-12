@@ -45,11 +45,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		queriers := []core.QueryFunc{
 			queryNW,
-		}
-		if desiredKind.Spec.SelfReconciling {
-			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree, gitops)),
-			)
+			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredKind.Spec, gitops)),
 		}
 
 		destroyers := []core.DestroyFunc{
