@@ -83,8 +83,7 @@ func EnsureBoomArtifacts(
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
 
 	if !gitops {
-		crd := `---
-apiVersion: apiextensions.k8s.io/v1beta1
+		crd := `apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:

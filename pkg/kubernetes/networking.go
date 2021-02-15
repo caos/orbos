@@ -121,6 +121,8 @@ spec:
                   description: 'Use this registry to pull the Networking-operator
                     image from @default: ghcr.io'
                   type: string
+                gitOps:
+                  type: boolean
                 nodeSelector:
                   additionalProperties:
                     type: string
