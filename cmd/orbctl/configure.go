@@ -179,7 +179,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig, version)
+			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}

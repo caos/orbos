@@ -53,7 +53,7 @@ func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 				monitor,
 				gitClient,
 				path,
-				operators.GetAllSecretsFunc(orbConfig, &version))
+				operators.GetAllSecretsFunc(orbConfig))
 			if err != nil {
 				return err
 			}

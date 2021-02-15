@@ -3,7 +3,6 @@ module github.com/caos/orbos
 go 1.14
 
 require (
-	cloud.google.com/go/storage v1.6.0
 	github.com/AlecAivazis/survey/v2 v2.0.8
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.31.12
@@ -16,7 +15,6 @@ require (
 	github.com/google/go-github/v31 v31.0.0
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
-	github.com/manifoldco/promptui v0.7.0
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect

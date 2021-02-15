@@ -120,7 +120,6 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 			k8sClient,
 			boomSpec,
 			boomSpec.Version,
-			gitops,
 		); err != nil {
 			c.status = err
 			return

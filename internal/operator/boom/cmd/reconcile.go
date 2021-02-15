@@ -19,7 +19,6 @@ func Reconcile(
 	k8sClient *kubernetes.Client,
 	boomSpec *latest.Boom,
 	binaryVersion string,
-	gitops bool,
 ) error {
 
 	resources := k8s.Resources(corev1.ResourceRequirements{
@@ -37,6 +36,7 @@ func Reconcile(
 	var boomVersion string
 	var nodeselector map[string]string
 	var tolerations k8s.Tolerations
+	var gitops bool
 
 	if boomSpec != nil {
 		if boomSpec.Version != "" {
@@ -53,6 +53,9 @@ func Reconcile(
 		}
 		if boomSpec.CustomImageRegistry != "" {
 			imageRegistry = boomSpec.CustomImageRegistry
+		}
+		if boomSpec.GitOps {
+			gitops = boomSpec.GitOps
 		}
 	}
 	if boomVersion == "" {

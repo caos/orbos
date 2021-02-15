@@ -148,7 +148,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		preapplymonitor.Info("Done")
 	}
 
-	c.crd.Reconcile(currentResourceList, toolsetCRD, true)
+	c.crd.Reconcile(currentResourceList, toolsetCRD, toolsetCRD.Spec.Boom.GitOps)
 	err = c.crd.GetStatus()
 	if err != nil {
 		c.status = err

@@ -61,7 +61,7 @@ loop:
 		}
 	}
 
-	return GetKubeconfigs(monitor, orbctlGit, orbConfig, version)
+	return GetKubeconfigs(monitor, orbctlGit, orbConfig)
 }
 
 func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, done func(iterated bool)) {
@@ -178,7 +178,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}()
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb, version string) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)
@@ -198,7 +198,7 @@ func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbc
 			monitor,
 			gitClient,
 			path,
-			operators.GetAllSecretsFunc(orbConfig, &version))
+			operators.GetAllSecretsFunc(orbConfig))
 		if err != nil || value == "" {
 			if value == "" && err == nil {
 				err = errors.New("no kubeconfig found")
