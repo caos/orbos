@@ -44,6 +44,7 @@ func (c *gceMachine) Execute(stdin io.Reader, command string) ([]byte, error) {
 
 func (c *gceMachine) execute(stdin io.Reader, command string) (outBuf *bytes.Buffer, err error) {
 	outBuf = new(bytes.Buffer)
+	defer outBuf.Reset()
 	errBuf := new(bytes.Buffer)
 	defer resetBuffer(errBuf)
 

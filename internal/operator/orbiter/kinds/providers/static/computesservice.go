@@ -148,11 +148,11 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 		}
 
 		buf := new(bytes.Buffer)
+		defer buf.Reset()
 		if err := machine.ReadFile(c.statusFile, buf); err != nil {
 			// if error, treat as active
 		}
 		machine.X_active = strings.Contains(buf.String(), "active")
-		buf.Reset()
 		newCache = append(newCache, machine)
 	}
 

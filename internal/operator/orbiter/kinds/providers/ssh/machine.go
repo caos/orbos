@@ -56,6 +56,7 @@ func (c *Machine) Execute(stdin io.Reader, cmd string) (stdout []byte, err error
 	}
 
 	buf := new(bytes.Buffer)
+	defer buf.Reset()
 	sess.Stdin = stdin
 	sess.Stderr = buf
 
@@ -152,6 +153,7 @@ func (c *Machine) ReadFile(path string, data io.Writer) (err error) {
 		return err
 	}
 	stderr := new(bytes.Buffer)
+	defer stderr.Reset()
 	sess.Stdout = data
 	sess.Stderr = stderr
 
