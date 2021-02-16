@@ -136,6 +136,7 @@ func AdaptFunc(
 				clusterID,
 				clusterTree,
 				oneoff,
+				desiredKind.Spec.PProf,
 				deployOrbiter,
 				clusterCurrent,
 				destroyProviders,

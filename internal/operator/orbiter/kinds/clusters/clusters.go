@@ -17,6 +17,7 @@ func GetQueryAndDestroyFuncs(
 	clusterID string,
 	clusterTree *tree.Tree,
 	oneoff bool,
+	pprof bool,
 	deployOrbiter bool,
 	clusterCurrent *tree.Tree,
 	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
@@ -40,6 +41,7 @@ func GetQueryAndDestroyFuncs(
 				clusterID,
 				oneoff,
 				deployOrbiter,
+				pprof,
 				destroyProviders,
 				func(whitelist []*orbiter.CIDR) {
 					go func() {
