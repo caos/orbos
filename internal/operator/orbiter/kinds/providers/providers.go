@@ -28,6 +28,7 @@ func GetQueryAndDestroyFuncs(
 	finishedChan chan struct{},
 	orbiterCommit, repoURL, repoKey string,
 	oneoff bool,
+	pprof bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -53,6 +54,7 @@ func GetQueryAndDestroyFuncs(
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
+			pprof,
 		)(
 			monitor,
 			finishedChan,
@@ -66,6 +68,7 @@ func GetQueryAndDestroyFuncs(
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
+			pprof,
 		)(
 			monitor,
 			finishedChan,
@@ -77,7 +80,10 @@ func GetQueryAndDestroyFuncs(
 			return static.AdaptFunc(
 				provID,
 				wlFunc,
-				orbiterCommit, repoURL, repoKey,
+				orbiterCommit,
+				repoURL,
+				repoKey,
+				pprof,
 			)(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				finishedChan,

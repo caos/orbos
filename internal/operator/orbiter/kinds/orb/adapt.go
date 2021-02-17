@@ -88,6 +88,7 @@ func AdaptFunc(
 				orbConfig.URL,
 				orbConfig.Repokey,
 				oneoff,
+				desiredKind.Spec.PProf,
 			)
 			if err != nil {
 				return nil, nil, nil, migrate, nil, err

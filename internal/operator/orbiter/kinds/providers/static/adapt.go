@@ -15,7 +15,14 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string) orbiter.AdaptFunc {
+func AdaptFunc(
+	id string,
+	whitelist dynamic.WhiteListFunc,
+	orbiterCommit,
+	repoURL,
+	repoKey string,
+	pprof bool,
+) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -84,7 +91,7 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 				}
 
 				queryFunc := func() (orbiter.EnsureFunc, error) {
-					_, iterateNA := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+					_, iterateNA := core.NodeAgentFuncs(monitor, repoURL, repoKey, pprof)
 					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
 				}
 				return orbiter.QueryFuncGoroutine(queryFunc)
@@ -119,7 +126,7 @@ func AdaptFunc(id string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoUR
 					return nil
 				}
 
-				return core.ConfigureNodeAgents(svc, monitor, orb)
+				return core.ConfigureNodeAgents(svc, monitor, orb, pprof)
 			},
 			migrate,
 			secrets,
