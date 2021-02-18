@@ -264,7 +264,8 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 	pool := pools[poolName]
 	machines := make([]infra.Machine, len(pool))
 	for idx, machine := range pool {
-		machines[idx] = machine
+		copyInstance := *machine
+		machines[idx] = &copyInstance
 	}
 
 	return machines, nil
