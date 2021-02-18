@@ -342,7 +342,9 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 				rebootRequired = true
 				unrequireReboot = func(pos int) func() {
 					return func() {
-						copyDesired.RebootRequired = append(copyDesired.RebootRequired[0:pos], copyDesired.RebootRequired[pos+1:]...)
+						copy(copyDesired.RebootRequired[pos:], copyDesired.RebootRequired[pos+1:])
+						copyDesired.RebootRequired[len(copyDesired.RebootRequired)-1] = ""
+						copyDesired.RebootRequired = copyDesired.RebootRequired[:len(copyDesired.RebootRequired)-1]
 					}
 				}(idx)
 				break
@@ -356,7 +358,9 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 				replacementRequired = true
 				unrequireReplacement = func(pos int) func() {
 					return func() {
-						copyDesired.ReplacementRequired = append(copyDesired.ReplacementRequired[0:pos], copyDesired.ReplacementRequired[pos+1:]...)
+						copy(copyDesired.RebootRequired[pos:], copyDesired.RebootRequired[pos+1:])
+						copyDesired.RebootRequired[len(copyDesired.RebootRequired)-1] = ""
+						copyDesired.RebootRequired = copyDesired.RebootRequired[:len(copyDesired.RebootRequired)-1]
 					}
 				}(idx)
 				break

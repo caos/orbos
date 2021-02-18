@@ -47,7 +47,8 @@ func Generate() (private string, public string, err error) {
 func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error) {
 
 	var signers []sshlib.Signer
-	for _, key := range privKey {
+	for _, copyKey := range privKey {
+		key := copyKey
 		for _, cachedKey := range cachedKeys {
 			if string(cachedKey.private) == string(key) {
 				signers = append(signers, cachedKey.signer)
