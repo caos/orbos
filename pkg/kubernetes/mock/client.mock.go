@@ -11,9 +11,10 @@ import (
 	v10 "k8s.io/api/batch/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
 	v11 "k8s.io/api/core/v1"
-	v1beta10 "k8s.io/api/policy/v1beta1"
+	v1beta10 "k8s.io/api/extensions/v1beta1"
+	v1beta11 "k8s.io/api/policy/v1beta1"
 	v12 "k8s.io/api/rbac/v1"
-	v1beta11 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	v1beta12 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	reflect "reflect"
 	time "time"
@@ -349,10 +350,10 @@ func (mr *MockClientIntMockRecorder) ExecInPodOfDeployment(namespace, name, cont
 }
 
 // CheckCRD mocks base method
-func (m *MockClientInt) CheckCRD(name string) (*v1beta11.CustomResourceDefinition, error) {
+func (m *MockClientInt) CheckCRD(name string) (*v1beta12.CustomResourceDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckCRD", name)
-	ret0, _ := ret[0].(*v1beta11.CustomResourceDefinition)
+	ret0, _ := ret[0].(*v1beta12.CustomResourceDefinition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -647,6 +648,34 @@ func (mr *MockClientIntMockRecorder) DeleteClusterRole(name interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteClusterRole", reflect.TypeOf((*MockClientInt)(nil).DeleteClusterRole), name)
 }
 
+// ApplyIngress mocks base method
+func (m *MockClientInt) ApplyIngress(rsc *v1beta10.Ingress) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyIngress", rsc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyIngress indicates an expected call of ApplyIngress
+func (mr *MockClientIntMockRecorder) ApplyIngress(rsc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyIngress", reflect.TypeOf((*MockClientInt)(nil).ApplyIngress), rsc)
+}
+
+// DeleteIngress mocks base method
+func (m *MockClientInt) DeleteIngress(namespace, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteIngress", namespace, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteIngress indicates an expected call of DeleteIngress
+func (mr *MockClientIntMockRecorder) DeleteIngress(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteIngress", reflect.TypeOf((*MockClientInt)(nil).DeleteIngress), namespace, name)
+}
+
 // ApplyRoleBinding mocks base method
 func (m *MockClientInt) ApplyRoleBinding(rsc *v12.RoleBinding) error {
 	m.ctrl.T.Helper()
@@ -704,7 +733,7 @@ func (mr *MockClientIntMockRecorder) DeleteClusterRoleBinding(name interface{}) 
 }
 
 // ApplyPodDisruptionBudget mocks base method
-func (m *MockClientInt) ApplyPodDisruptionBudget(rsc *v1beta10.PodDisruptionBudget) error {
+func (m *MockClientInt) ApplyPodDisruptionBudget(rsc *v1beta11.PodDisruptionBudget) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyPodDisruptionBudget", rsc)
 	ret0, _ := ret[0].(error)

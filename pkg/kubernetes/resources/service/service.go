@@ -10,10 +10,10 @@ import (
 )
 
 type Port struct {
-	Port       int
+	Port       uint16
 	Protocol   string
 	TargetPort string
-	NodePort   int
+	NodePort   uint16
 	Name       string
 }
 

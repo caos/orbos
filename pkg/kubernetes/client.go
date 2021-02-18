@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	extensions "k8s.io/api/extensions/v1beta1"
+
 	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
@@ -115,6 +117,9 @@ type ClientInt interface {
 
 	ApplyClusterRole(rsc *rbac.ClusterRole) error
 	DeleteClusterRole(name string) error
+
+	ApplyIngress(rsc *extensions.Ingress) error
+	DeleteIngress(namespace, name string) error
 
 	ApplyRoleBinding(rsc *rbac.RoleBinding) error
 	DeleteRoleBinding(namespace, name string) error
@@ -359,13 +364,18 @@ func (c *Client) ApplyJob(rsc *batch.Job) error {
 	})
 }
 
-func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeout time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
 		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
 		if err != nil {
 			returnChannel <- err
+			return
+		}
+
+		if job.Status.Succeeded > 0 {
+			returnChannel <- nil
 			return
 		}
 
@@ -386,18 +396,8 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeoutSec
 	select {
 	case res := <-returnChannel:
 		return res
-	case <-time.After(timeoutSeconds * time.Second):
-		ctx := context.Background()
-		job, err := c.set.BatchV1().Jobs(namespace).Get(ctx, name, mach.GetOptions{})
-		if err != nil {
-			return errors.New("timeout while waiting for job to complete, no job found")
-		}
-
-		if job.Status.Succeeded > 0 {
-			c.monitor.Debug("no pods found for job, but job succeeded, so ignoring the timeout")
-			return nil
-		}
-		return errors.New("timeout while waiting for job to complete")
+	case <-time.After(timeout):
+		return fmt.Errorf("timeout after %s while waiting for job to complete", timeout)
 	}
 }
 
@@ -658,6 +658,26 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 
 func (c *Client) DeleteServiceAccount(namespace, name string) error {
 	return c.set.CoreV1().ServiceAccounts(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyIngress(rsc *extensions.Ingress) error {
+	resources := c.set.ExtensionsV1beta1().Ingresses(rsc.GetNamespace())
+	return c.applyResource("ingress", rsc.GetName(), func() error {
+		_, err := resources.Create(context.Background(), rsc, mach.CreateOptions{})
+		return err
+	}, func() error {
+		svc, err := resources.Get(context.Background(), rsc.Name, mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		rsc.ObjectMeta.ResourceVersion = svc.ObjectMeta.ResourceVersion
+		_, err = resources.Update(context.Background(), rsc, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) DeleteIngress(namespace, name string) error {
+	return c.set.ExtensionsV1beta1().Ingresses(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
