@@ -45,7 +45,11 @@ func (m *machinesService) use(key *SSHKey) error {
 }
 
 func (m *machinesService) restartPreemptibleMachines() error {
-	pools, err := getAllInstances(m)
+	getAllInstancesFunc := func() (map[string][]*instance, error) {
+		return getAllInstances(m)
+	}
+
+	pools, err := goroutineGetAllInstances(getAllInstancesFunc)
 	if err != nil {
 		return err
 	}
@@ -230,8 +234,11 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 }
 
 func (m *machinesService) ListPools() ([]string, error) {
+	getAllInstancesFunc := func() (map[string][]*instance, error) {
+		return getAllInstances(m)
+	}
 
-	pools, err := getAllInstances(m)
+	pools, err := goroutineGetAllInstances(getAllInstancesFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +252,11 @@ func (m *machinesService) ListPools() ([]string, error) {
 }
 
 func (m *machinesService) List(poolName string) (infra.Machines, error) {
-	pools, err := getAllInstances(m)
+	getAllInstancesFunc := func() (map[string][]*instance, error) {
+		return getAllInstances(m)
+	}
+
+	pools, err := goroutineGetAllInstances(getAllInstancesFunc)
 	if err != nil {
 		return nil, err
 	}
@@ -257,6 +268,21 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 	}
 
 	return machines, nil
+}
+
+type retPools struct {
+	pools map[string][]*instance
+	err   error
+}
+
+func goroutineGetAllInstances(get func() (map[string][]*instance, error)) (map[string][]*instance, error) {
+	retChan := make(chan retPools)
+	go func() {
+		pools, err := get()
+		retChan <- retPools{pools, err}
+	}()
+	ret := <-retChan
+	return ret.pools, ret.err
 }
 
 func getAllInstances(m *machinesService) (map[string][]*instance, error) {
