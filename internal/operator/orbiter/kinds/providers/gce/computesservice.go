@@ -289,9 +289,8 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 	monitor := m.context.monitor
 	copyKey := []byte(m.key.Private.Value)
 
-	var copyCache map[string][]*instance
+	copyCache := make(map[string][]*instance, 0)
 	if m.cache.instances != nil {
-		copyCache = make(map[string][]*instance, 0)
 		for k, v := range m.cache.instances {
 			copyCache[k] = v
 		}
@@ -301,7 +300,7 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 	copyContext := *m.context
 	copyDesired := *m.context.desired
 
-	if copyCache != nil {
+	if len(copyCache) > 0 {
 		return copyCache, nil
 	}
 
@@ -385,10 +384,19 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 			unrequireReplacement,
 		)
 
-		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
+		copyCache[pool] = append(copyCache[pool], mach)
 	}
 
-	return m.cache.instances, nil
+	for k, v := range copyCache {
+		copyInstances := make([]*instance, 0)
+		for _, copyInstance := range v {
+			copyValue := *copyInstance
+			copyInstances = append(copyInstances, &copyValue)
+		}
+		m.cache.instances[k] = copyInstances
+	}
+
+	return copyCache, nil
 }
 
 func toFields(labels map[string]string) map[string]interface{} {
