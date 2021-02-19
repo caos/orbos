@@ -287,32 +287,13 @@ func goroutineGetAllInstances(get func() (map[string][]*instance, error)) (map[s
 }
 
 func getAllInstances(m *machinesService) (map[string][]*instance, error) {
-	monitor := m.context.monitor
-	copyKey := []byte(m.key.Private.Value)
-
-	copyCache := make(map[string][]*instance, 0)
 	if m.cache.instances != nil {
-		for k, v := range m.cache.instances {
-			copyInstances := make([]*instance, 0)
-			for _, copyInstance := range v {
-				copyValue := *copyInstance
-				copyInstances = append(copyInstances, &copyValue)
-			}
-			copyCache[k] = copyInstances
-		}
+		return m.cache.instances, nil
 	}
 
-	copyInstances := *m.context.client.Instances
-	copyContext := *m.context
-	copyDesired := *m.context.desired
-
-	if len(copyCache) > 0 {
-		return copyCache, nil
-	}
-
-	instances, err := copyInstances.
-		List(copyContext.projectID, copyDesired.Zone).
-		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, copyContext.orbID, copyContext.providerID)).
+	instances, err := m.context.client.Instances.
+		List(m.context.projectID, m.context.desired.Zone).
+		Filter(fmt.Sprintf(`labels.orb=%s AND labels.provider=%s`, m.context.orbID, m.context.providerID)).
 		Fields("items(name,labels,selfLink,status,scheduling(preemptible),networkInterfaces(networkIP))").
 		Do()
 	if err != nil {
@@ -321,12 +302,15 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 
 	if m.cache.instances == nil {
 		m.cache.instances = make(map[string][]*instance)
+	} else {
+		for k := range m.cache.instances {
+			m.cache.instances[k] = nil
+			delete(m.cache.instances, k)
+		}
 	}
+	for _, inst := range instances.Items {
 
-	for _, tmpInst := range instances.Items {
-		inst := *tmpInst
-
-		if inst.Labels["orb"] != copyContext.orbID || inst.Labels["provider"] != copyContext.providerID {
+		if inst.Labels["orb"] != m.context.orbID || inst.Labels["provider"] != m.context.providerID {
 			continue
 		}
 
@@ -334,10 +318,10 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 
 		var machine machine
 		if m.oneoff {
-			machine = newGCEMachine(&copyContext, monitor.WithFields(toFields(inst.Labels)), inst.Name)
+			machine = newGCEMachine(m.context, m.context.monitor.WithFields(toFields(inst.Labels)), inst.Name)
 		} else {
-			sshMachine := ssh.NewMachine(monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
-			if err := sshMachine.UseKey(copyKey); err != nil {
+			sshMachine := ssh.NewMachine(m.context.monitor.WithFields(toFields(inst.Labels)), "orbiter", inst.NetworkInterfaces[0].NetworkIP)
+			if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
 				return nil, err
 			}
 			machine = sshMachine
@@ -345,14 +329,14 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 
 		rebootRequired := false
 		unrequireReboot := func() {}
-		for idx, req := range copyDesired.RebootRequired {
+		for idx, req := range m.context.desired.RebootRequired {
 			if req == inst.Name {
 				rebootRequired = true
 				unrequireReboot = func(pos int) func() {
 					return func() {
-						copy(copyDesired.RebootRequired[pos:], copyDesired.RebootRequired[pos+1:])
-						copyDesired.RebootRequired[len(copyDesired.RebootRequired)-1] = ""
-						copyDesired.RebootRequired = copyDesired.RebootRequired[:len(copyDesired.RebootRequired)-1]
+						copy(m.context.desired.RebootRequired[pos:], m.context.desired.RebootRequired[pos+1:])
+						m.context.desired.RebootRequired[len(m.context.desired.RebootRequired)-1] = ""
+						m.context.desired.RebootRequired = m.context.desired.RebootRequired[:len(m.context.desired.RebootRequired)-1]
 					}
 				}(idx)
 				break
@@ -361,14 +345,14 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 
 		replacementRequired := false
 		unrequireReplacement := func() {}
-		for idx, req := range copyDesired.ReplacementRequired {
+		for idx, req := range m.context.desired.ReplacementRequired {
 			if req == inst.Name {
 				replacementRequired = true
 				unrequireReplacement = func(pos int) func() {
 					return func() {
-						copy(copyDesired.RebootRequired[pos:], copyDesired.RebootRequired[pos+1:])
-						copyDesired.RebootRequired[len(copyDesired.RebootRequired)-1] = ""
-						copyDesired.RebootRequired = copyDesired.RebootRequired[:len(copyDesired.RebootRequired)-1]
+						copy(m.context.desired.ReplacementRequired[pos:], m.context.desired.ReplacementRequired[pos+1:])
+						m.context.desired.ReplacementRequired[len(m.context.desired.ReplacementRequired)-1] = ""
+						m.context.desired.ReplacementRequired = m.context.desired.ReplacementRequired[:len(m.context.desired.ReplacementRequired)-1]
 					}
 				}(idx)
 				break
@@ -376,8 +360,8 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 		}
 
 		mach := newMachine(
-			&copyContext,
-			monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
+			m.context,
+			m.context.monitor.WithField("name", inst.Name).WithFields(toFields(inst.Labels)),
 			inst.Name,
 			inst.NetworkInterfaces[0].NetworkIP,
 			inst.SelfLink,
@@ -387,32 +371,20 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 			machine,
 			rebootRequired,
 			func(id string) func() {
-				return func() { copyDesired.RebootRequired = append(copyDesired.RebootRequired, id) }
+				return func() { m.context.desired.RebootRequired = append(m.context.desired.RebootRequired, id) }
 			}(inst.Name),
 			unrequireReboot,
 			replacementRequired,
 			func(id string) func() {
-				return func() { copyDesired.ReplacementRequired = append(copyDesired.ReplacementRequired, id) }
+				return func() { m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired, id) }
 			}(inst.Name),
 			unrequireReplacement,
 		)
 
-		copyCache[pool] = append(copyCache[pool], mach)
+		m.cache.instances[pool] = append(m.cache.instances[pool], mach)
 	}
 
-	for k, v := range copyCache {
-		copyInstances := make([]*instance, 0)
-		for _, copyInstance := range v {
-			copyValue := *copyInstance
-			copyInstances = append(copyInstances, &copyValue)
-		}
-		for k := range m.cache.instances {
-			m.cache.instances[k] = nil
-		}
-		m.cache.instances[k] = copyInstances
-	}
-
-	return copyCache, nil
+	return m.cache.instances, nil
 }
 
 func toFields(labels map[string]string) map[string]interface{} {
