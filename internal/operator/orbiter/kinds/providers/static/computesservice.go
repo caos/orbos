@@ -158,6 +158,9 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	if c.cache == nil {
 		c.cache = make(map[string]cachedMachines)
+	} else if ok {
+		c.cache[poolName] = nil
+		delete(c.cache, poolName)
 	}
 	c.cache[poolName] = newCache
 	return newCache, nil
