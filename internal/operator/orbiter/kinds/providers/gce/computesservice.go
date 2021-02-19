@@ -293,7 +293,12 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 	copyCache := make(map[string][]*instance, 0)
 	if m.cache.instances != nil {
 		for k, v := range m.cache.instances {
-			copyCache[k] = v
+			copyInstances := make([]*instance, 0)
+			for _, copyInstance := range v {
+				copyValue := *copyInstance
+				copyInstances = append(copyInstances, &copyValue)
+			}
+			copyCache[k] = copyInstances
 		}
 	}
 
@@ -314,7 +319,10 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 		return nil, err
 	}
 
-	m.cache.instances = make(map[string][]*instance)
+	if m.cache.instances == nil {
+		m.cache.instances = make(map[string][]*instance)
+	}
+
 	for _, tmpInst := range instances.Items {
 		inst := *tmpInst
 
@@ -397,6 +405,9 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 		for _, copyInstance := range v {
 			copyValue := *copyInstance
 			copyInstances = append(copyInstances, &copyValue)
+		}
+		for k := range m.cache.instances {
+			m.cache.instances[k] = nil
 		}
 		m.cache.instances[k] = copyInstances
 	}
