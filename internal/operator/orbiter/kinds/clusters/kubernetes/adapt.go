@@ -180,11 +180,7 @@ func AdaptFunc(
 
 				desiredKind.Spec.Kubeconfig = nil
 
-				destroyFunc := func() error {
-					return destroy(providers, k8sClient)
-				}
-
-				return orbiter.DestroyFuncGoroutine(destroyFunc)
+				return destroy(providers, k8sClient)
 			},
 			orbiter.NoopConfigure,
 			migrate,

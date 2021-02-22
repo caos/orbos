@@ -78,23 +78,15 @@ func AdaptFunc(
 					return nil, err
 				}
 
-				lbQueryFunc := func() (orbiter.EnsureFunc, error) {
-					return lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil)
-				}
-
-				if _, err := orbiter.QueryFuncGoroutine(lbQueryFunc); err != nil {
+				if _, err := lbQuery(nodeAgentsCurrent, nodeAgentsDesired, nil); err != nil {
 					return nil, err
 				}
 
 				if err := svc.updateKeys(); err != nil {
 					return nil, err
 				}
-
-				queryFunc := func() (orbiter.EnsureFunc, error) {
-					_, iterateNA := core.NodeAgentFuncs(monitor, repoURL, repoKey, pprof)
-					return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
-				}
-				return orbiter.QueryFuncGoroutine(queryFunc)
+				_, iterateNA := core.NodeAgentFuncs(monitor, repoURL, repoKey, pprof)
+				return query(desiredKind, current, nodeAgentsDesired, nodeAgentsCurrent, lbCurrent.Parsed, monitor, svc, iterateNA, orbiterCommit)
 			}, func(delegates map[string]interface{}) error {
 				if err := lbDestroy(delegates); err != nil {
 					return err

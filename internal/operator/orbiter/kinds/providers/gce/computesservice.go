@@ -45,11 +45,7 @@ func (m *machinesService) use(key *SSHKey) error {
 }
 
 func (m *machinesService) restartPreemptibleMachines() error {
-	getAllInstancesFunc := func() (map[string][]*instance, error) {
-		return getAllInstances(m)
-	}
-
-	pools, err := goroutineGetAllInstances(getAllInstancesFunc)
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return err
 	}
@@ -234,11 +230,7 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 }
 
 func (m *machinesService) ListPools() ([]string, error) {
-	getAllInstancesFunc := func() (map[string][]*instance, error) {
-		return getAllInstances(m)
-	}
-
-	pools, err := goroutineGetAllInstances(getAllInstancesFunc)
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return nil, err
 	}
@@ -252,11 +244,7 @@ func (m *machinesService) ListPools() ([]string, error) {
 }
 
 func (m *machinesService) List(poolName string) (infra.Machines, error) {
-	getAllInstancesFunc := func() (map[string][]*instance, error) {
-		return getAllInstances(m)
-	}
-
-	pools, err := goroutineGetAllInstances(getAllInstancesFunc)
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return nil, err
 	}
