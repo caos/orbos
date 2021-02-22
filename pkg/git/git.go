@@ -28,6 +28,7 @@ import (
 
 const (
 	writeCheckTag = "writecheck"
+	branch        = "master"
 )
 
 type Client struct {
@@ -38,6 +39,7 @@ type Client struct {
 	auth      *gitssh.PublicKeys
 	repo      *gogit.Repository
 	fs        billy.Filesystem
+	storage   *memory.Storage
 	workTree  *gogit.Worktree
 	progress  io.Writer
 	repoURL   string
@@ -50,6 +52,8 @@ func New(ctx context.Context, monitor mntr.Monitor, committer, email string) *Cl
 		committer: committer,
 		email:     email,
 		monitor:   monitor,
+		storage:   memory.NewStorage(),
+		fs:        memfs.New(),
 	}
 
 	if monitor.IsVerbose() {
@@ -68,7 +72,10 @@ func (g *Client) Configure(repoURL string, deploykey []byte) error {
 		return errors.Wrap(err, "parsing deployment key failed")
 	}
 
-	g.repoURL = repoURL
+	if repoURL != g.repoURL {
+		g.repoURL = repoURL
+		g.cloned = false
+	}
 	g.monitor = g.monitor.WithField("repository", repoURL)
 
 	g.auth = &gitssh.PublicKeys{
@@ -172,30 +179,55 @@ func (g *Client) Clone() (err error) {
 }
 
 func (g *Client) clone() error {
-
-	g.fs = memfs.New()
-
-	g.monitor.Debug("Cloning")
 	var err error
-	g.repo, err = gogit.CloneContext(g.ctx, memory.NewStorage(), g.fs, &gogit.CloneOptions{
-		URL:          g.repoURL,
-		Auth:         g.auth,
-		SingleBranch: true,
-		Depth:        1,
-		Progress:     g.progress,
-	})
-	if err != nil {
-		return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
+
+	if g.cloned {
+		g.monitor.Debug("Fetching")
+		err := g.repo.FetchContext(g.ctx, &gogit.FetchOptions{
+			RemoteName: branch,
+			Auth:       g.auth,
+		})
+		if err != nil && err != gogit.NoErrAlreadyUpToDate {
+			return errors.Wrapf(err, "fetching repository from %s failed", g.repoURL)
+		}
+		g.monitor.Debug("Fetched")
+
+		if err != gogit.NoErrAlreadyUpToDate {
+			err := g.workTree.PullContext(g.ctx, &gogit.PullOptions{
+				SingleBranch: true,
+				Auth:         g.auth,
+				//Depth:        1,
+				RemoteName: branch,
+			})
+			if err != nil {
+				return errors.Wrapf(err, "pulling repository from %s failed", g.repoURL)
+			}
+			g.monitor.Debug("Pulled")
+		} else {
+			g.monitor.Debug("Already up-to-date")
+		}
+	} else {
+		g.monitor.Debug("Cloning")
+		g.repo, err = gogit.CloneContext(g.ctx, g.storage, g.fs, &gogit.CloneOptions{
+			RemoteName:   branch,
+			URL:          g.repoURL,
+			Auth:         g.auth,
+			SingleBranch: true,
+			//Depth:        1,
+			Progress: g.progress,
+		})
+		if err != nil {
+			return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
+		}
+		g.monitor.Debug("Cloned")
+
+		g.workTree, err = g.repo.Worktree()
+		if err != nil {
+			panic(err)
+		}
+
+		g.cloned = true
 	}
-	g.monitor.Debug("Cloned")
-
-	g.workTree, err = g.repo.Worktree()
-	if err != nil {
-		panic(err)
-	}
-
-	g.cloned = true
-
 	return nil
 }
 

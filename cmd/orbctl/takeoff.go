@@ -35,7 +35,7 @@ func TakeoffCommand(rv RootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		if recur && destroy {
-			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
+			return errors.New("flags --recur and --destroy are mutually exclusive, please provide either one or none")
 		}
 
 		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
