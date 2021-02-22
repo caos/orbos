@@ -186,6 +186,7 @@ func (g *Client) clone() error {
 		err := g.repo.FetchContext(g.ctx, &gogit.FetchOptions{
 			RemoteName: branch,
 			Auth:       g.auth,
+			Depth:      1,
 		})
 		if err != nil && err != gogit.NoErrAlreadyUpToDate {
 			return errors.Wrapf(err, "fetching repository from %s failed", g.repoURL)
@@ -196,8 +197,8 @@ func (g *Client) clone() error {
 			err := g.workTree.PullContext(g.ctx, &gogit.PullOptions{
 				SingleBranch: true,
 				Auth:         g.auth,
-				//Depth:        1,
-				RemoteName: branch,
+				Depth:        1,
+				RemoteName:   branch,
 			})
 			if err != nil {
 				return errors.Wrapf(err, "pulling repository from %s failed", g.repoURL)
