@@ -62,7 +62,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 			<-queryChan
 			<-ensureChan
 
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 30)
 			takeoffChan <- struct{}{}
 		}()
 	}

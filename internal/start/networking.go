@@ -42,7 +42,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 				"took": time.Since(started),
 			}).Info("Iteration done")
 
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 30)
 			takeoffChan <- struct{}{}
 		}()
 	}
