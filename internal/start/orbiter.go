@@ -68,7 +68,7 @@ loop:
 					initialized = true
 				}
 
-				time.Sleep(time.Second * 15)
+				time.Sleep(time.Second * 5)
 				go on()
 			})
 		}
