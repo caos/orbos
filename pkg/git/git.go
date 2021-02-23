@@ -11,19 +11,19 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/src-d/go-git.v4/config"
+	"github.com/go-git/go-git/v5/config"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/mntr"
+	billy "github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
+	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"golang.org/x/crypto/ssh"
-	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/memfs"
-	gogit "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
-	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 const (
@@ -101,6 +101,7 @@ func (g *Client) Check() error {
 }
 
 func (g *Client) readCheck() error {
+
 	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{g.repoURL},
@@ -179,56 +180,29 @@ func (g *Client) Clone() (err error) {
 }
 
 func (g *Client) clone() error {
+	g.fs = memfs.New()
+
+	g.monitor.Debug("Cloning")
 	var err error
-
-	if g.cloned {
-		g.monitor.Debug("Fetching")
-		err := g.repo.FetchContext(g.ctx, &gogit.FetchOptions{
-			RemoteName: branch,
-			Auth:       g.auth,
-			Depth:      1,
-		})
-		if err != nil && err != gogit.NoErrAlreadyUpToDate {
-			return errors.Wrapf(err, "fetching repository from %s failed", g.repoURL)
-		}
-		g.monitor.Debug("Fetched")
-
-		if err != gogit.NoErrAlreadyUpToDate {
-			err := g.workTree.PullContext(g.ctx, &gogit.PullOptions{
-				SingleBranch: true,
-				Auth:         g.auth,
-				Depth:        1,
-				RemoteName:   branch,
-			})
-			if err != nil {
-				return errors.Wrapf(err, "pulling repository from %s failed", g.repoURL)
-			}
-			g.monitor.Debug("Pulled")
-		} else {
-			g.monitor.Debug("Already up-to-date")
-		}
-	} else {
-		g.monitor.Debug("Cloning")
-		g.repo, err = gogit.CloneContext(g.ctx, g.storage, g.fs, &gogit.CloneOptions{
-			RemoteName:   branch,
-			URL:          g.repoURL,
-			Auth:         g.auth,
-			SingleBranch: true,
-			//Depth:        1,
-			Progress: g.progress,
-		})
-		if err != nil {
-			return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
-		}
-		g.monitor.Debug("Cloned")
-
-		g.workTree, err = g.repo.Worktree()
-		if err != nil {
-			panic(err)
-		}
-
-		g.cloned = true
+	g.repo, err = gogit.CloneContext(g.ctx, memory.NewStorage(), g.fs, &gogit.CloneOptions{
+		URL:          g.repoURL,
+		Auth:         g.auth,
+		SingleBranch: true,
+		Depth:        1,
+		Progress:     g.progress,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
 	}
+	g.monitor.Debug("Cloned")
+
+	g.workTree, err = g.repo.Worktree()
+	if err != nil {
+		panic(err)
+	}
+
+	g.cloned = true
+
 	return nil
 }
 
