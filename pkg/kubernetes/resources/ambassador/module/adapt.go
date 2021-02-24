@@ -48,9 +48,24 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, config 
 			return nil, err
 		}
 
-		existingMetadata := existing.Object["metadata"].(map[string]interface{})
-		exisistingLabels := existingMetadata["labels"].(map[string]string)
-		exisistingAnnotations := existingMetadata["annotations"].(map[string]string)
+		exisistingLabels := make(map[string]string)
+		exisistingAnnotations := make(map[string]string)
+
+		metadataT, ok := existing.Object["metadata"]
+		if ok {
+			existingMetadata := metadataT.(map[string]interface{})
+
+			labelsT, ok := existingMetadata["labels"]
+			if ok {
+				exisistingLabels = labelsT.(map[string]string)
+			}
+
+			annotationsT, ok := existingMetadata["annotations"]
+			if ok {
+				exisistingAnnotations = annotationsT.(map[string]string)
+			}
+		}
+
 		if !macherrs.IsNotFound(err) ||
 			!reflect.DeepEqual(labels, exisistingLabels) ||
 			!reflect.DeepEqual(annotations, exisistingAnnotations) ||
