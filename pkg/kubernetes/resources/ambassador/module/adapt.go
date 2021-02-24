@@ -52,16 +52,16 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, config 
 		exisistingAnnotations := make(map[string]string)
 
 		metadataT, ok := existing.Object["metadata"]
-		if ok {
+		if ok && metadataT != nil {
 			existingMetadata := metadataT.(map[string]interface{})
 
 			labelsT, ok := existingMetadata["labels"]
-			if ok {
+			if ok && labelsT != nil {
 				exisistingLabels = labelsT.(map[string]string)
 			}
 
 			annotationsT, ok := existingMetadata["annotations"]
-			if ok {
+			if ok && annotationsT != nil {
 				exisistingAnnotations = annotationsT.(map[string]string)
 			}
 		}
