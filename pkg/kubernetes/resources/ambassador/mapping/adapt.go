@@ -88,19 +88,37 @@ func AdaptFuncToEnsure(
 			return nil, err
 		}
 
-		existingMetadata := existing.Object["metadata"].(map[string]interface{})
-		exisistingLabels := existingMetadata["labels"].(map[string]string)
-		exisistingAnnotations := existingMetadata["annotations"].(map[string]string)
-		if !macherrs.IsNotFound(err) ||
-			!reflect.DeepEqual(crdlabels, exisistingLabels) ||
-			!reflect.DeepEqual(annotations, exisistingAnnotations) ||
-			!reflect.DeepEqual(crd.Object["spec"], existing.Object["spec"]) {
+		if !macherrs.IsNotFound(err) {
+			exisistingLabels := make(map[string]string)
+			exisistingAnnotations := make(map[string]string)
+			metadataT, ok := existing.Object["metadata"]
+			if ok && metadataT != nil {
+				existingMetadata := metadataT.(map[string]interface{})
+
+				labelsT, ok := existingMetadata["labels"]
+				if ok && labelsT != nil {
+					exisistingLabels = labelsT.(map[string]string)
+				}
+
+				annotationsT, ok := existingMetadata["annotations"]
+				if ok && annotationsT != nil {
+					exisistingAnnotations = annotationsT.(map[string]string)
+				}
+			}
+
+			if !reflect.DeepEqual(crdlabels, exisistingLabels) ||
+				!reflect.DeepEqual(annotations, exisistingAnnotations) ||
+				!reflect.DeepEqual(crd.Object["spec"], existing.Object["spec"]) {
+				return func(k8sClient kubernetes.ClientInt) error {
+					return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
+				}, nil
+			}
 			return func(k8sClient kubernetes.ClientInt) error {
-				return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
+				return nil
 			}, nil
 		}
 		return func(k8sClient kubernetes.ClientInt) error {
-			return nil
+			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
 		}, nil
 	}, nil
 }
