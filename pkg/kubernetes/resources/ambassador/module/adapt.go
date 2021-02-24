@@ -1,9 +1,11 @@
 package module
 
 import (
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"reflect"
 )
 
 type Config struct {
@@ -26,27 +28,45 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, config 
 		spec["config"] = specConfig
 	}
 
+	annotations := map[string]string{}
 	crd := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       kind,
 			"apiVersion": group + "/" + version,
 			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
-				"labels":    labels,
+				"name":        name,
+				"namespace":   namespace,
+				"labels":      labels,
+				"annotations": annotations,
 			},
 			"spec": spec,
 		}}
 
-	return func(k8sClient *kubernetes2.Client) (resources.EnsureFunc, error) {
-		return func(k8sClient *kubernetes2.Client) error {
-			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
+	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
+		if err != nil && !macherrs.IsNotFound(err) {
+			return nil, err
+		}
+
+		existingMetadata := existing.Object["metadata"].(map[string]interface{})
+		exisistingLabels := existingMetadata["labels"].(map[string]string)
+		exisistingAnnotations := existingMetadata["annotations"].(map[string]string)
+		if !macherrs.IsNotFound(err) ||
+			!reflect.DeepEqual(labels, exisistingLabels) ||
+			!reflect.DeepEqual(annotations, exisistingAnnotations) ||
+			!reflect.DeepEqual(crd.Object["spec"], existing.Object["spec"]) {
+			return func(k8sClient kubernetes.ClientInt) error {
+				return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
+			}, nil
+		}
+		return func(k8sClient kubernetes.ClientInt) error {
+			return nil
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client kubernetes.ClientInt) error {
 		return client.DeleteNamespacedCRDResource(group, version, kind, namespace, name)
 	}, nil
 }

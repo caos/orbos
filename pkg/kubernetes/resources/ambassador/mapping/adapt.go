@@ -4,7 +4,9 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	"github.com/caos/orbos/pkg/labels"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"reflect"
 )
 
 const (
@@ -64,22 +66,41 @@ func AdaptFuncToEnsure(
 		}
 		spec["cors"] = corsMap
 	}
+	crdlabels := labels.MustK8sMap(id)
+	annotations := map[string]string{}
 
 	crd := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       kind,
 			"apiVersion": group + "/" + version,
 			"metadata": map[string]interface{}{
-				"name":      id.Name(),
-				"namespace": namespace,
-				"labels":    labels.MustK8sMap(id),
+				"name":        id.Name(),
+				"namespace":   namespace,
+				"labels":      crdlabels,
+				"annotations": annotations,
 			},
 			"spec": spec,
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, id.Name())
+		if err != nil && !macherrs.IsNotFound(err) {
+			return nil, err
+		}
+
+		existingMetadata := existing.Object["metadata"].(map[string]interface{})
+		exisistingLabels := existingMetadata["labels"].(map[string]string)
+		exisistingAnnotations := existingMetadata["annotations"].(map[string]string)
+		if !macherrs.IsNotFound(err) ||
+			!reflect.DeepEqual(crdlabels, exisistingLabels) ||
+			!reflect.DeepEqual(annotations, exisistingAnnotations) ||
+			!reflect.DeepEqual(crd.Object["spec"], existing.Object["spec"]) {
+			return func(k8sClient kubernetes.ClientInt) error {
+				return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
+			}, nil
+		}
 		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
+			return nil
 		}, nil
 	}, nil
 }
