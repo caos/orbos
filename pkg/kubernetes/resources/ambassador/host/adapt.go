@@ -64,20 +64,20 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 		}
 
 		if !macherrs.IsNotFound(err) {
-			exisistingLabels := make(map[string]string)
-			exisistingAnnotations := make(map[string]string)
+			exisistingLabels := make(map[string]interface{})
+			exisistingAnnotations := make(map[string]interface{})
 			metadataT, ok := existing.Object["metadata"]
 			if ok && metadataT != nil {
 				existingMetadata := metadataT.(map[string]interface{})
 
 				labelsT, ok := existingMetadata["labels"]
 				if ok && labelsT != nil {
-					exisistingLabels = labelsT.(map[string]string)
+					exisistingLabels = labelsT.(map[string]interface{})
 				}
 
 				annotationsT, ok := existingMetadata["annotations"]
 				if ok && annotationsT != nil {
-					exisistingAnnotations = annotationsT.(map[string]string)
+					exisistingAnnotations = annotationsT.(map[string]interface{})
 				}
 			}
 
