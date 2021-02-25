@@ -4,9 +4,7 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	"github.com/caos/orbos/pkg/labels"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"reflect"
 )
 
 const (
@@ -66,57 +64,20 @@ func AdaptFuncToEnsure(
 		}
 		spec["cors"] = corsMap
 	}
-	crdlabels := labels.MustK8sMap(id)
-	annotations := map[string]string{}
 
 	crd := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       kind,
 			"apiVersion": group + "/" + version,
 			"metadata": map[string]interface{}{
-				"name":        id.Name(),
-				"namespace":   namespace,
-				"labels":      crdlabels,
-				"annotations": annotations,
+				"name":      id.Name(),
+				"namespace": namespace,
+				"labels":    labels.MustK8sMap(id),
 			},
 			"spec": spec,
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
-		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, id.Name())
-		if err != nil && !macherrs.IsNotFound(err) {
-			return nil, err
-		}
-
-		if !macherrs.IsNotFound(err) {
-			exisistingLabels := make(map[string]interface{})
-			exisistingAnnotations := make(map[string]interface{})
-			metadataT, ok := existing.Object["metadata"]
-			if ok && metadataT != nil {
-				existingMetadata := metadataT.(map[string]interface{})
-
-				labelsT, ok := existingMetadata["labels"]
-				if ok && labelsT != nil {
-					exisistingLabels = labelsT.(map[string]interface{})
-				}
-
-				annotationsT, ok := existingMetadata["annotations"]
-				if ok && annotationsT != nil {
-					exisistingAnnotations = annotationsT.(map[string]interface{})
-				}
-			}
-
-			if !reflect.DeepEqual(crdlabels, exisistingLabels) ||
-				!reflect.DeepEqual(annotations, exisistingAnnotations) ||
-				!reflect.DeepEqual(crd.Object["spec"], existing.Object["spec"]) {
-				return func(k8sClient kubernetes.ClientInt) error {
-					return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
-				}, nil
-			}
-			return func(k8sClient kubernetes.ClientInt) error {
-				return nil
-			}, nil
-		}
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
 		}, nil
