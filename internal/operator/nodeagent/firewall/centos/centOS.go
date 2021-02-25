@@ -22,11 +22,11 @@ func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 
 		for name, _ := range desired.Zones {
 
-			ensure := func() (*common.ZoneDesc, func() error, error) {
+			/*ensure := func() (*common.ZoneDesc, func() error, error) {
 				return ensureZone(monitor, name, desired, ignore)
 			}
-			currentZone, ensureFunc, err := goroutineEnsureZone(ensure)
-
+			currentZone, ensureFunc, err := goroutineEnsureZone(ensure)*/
+			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, ignore)
 			if err != nil {
 				return current, nil, err
 			}

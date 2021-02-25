@@ -45,29 +45,6 @@ func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
 	return &EnsureResult{Done: true}
 }
 
-type retQuery struct {
-	ensure EnsureFunc
-	err    error
-}
-
-func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
-	retChan := make(chan retQuery)
-	go func() {
-		ensure, err := query()
-		retChan <- retQuery{ensure, err}
-	}()
-	ret := <-retChan
-	return ret.ensure, ret.err
-}
-
-func EnsureFuncGoroutine(ensure func() *EnsureResult) *EnsureResult {
-	retChan := make(chan *EnsureResult)
-	go func() {
-		retChan <- ensure()
-	}()
-	return <-retChan
-}
-
 type event struct {
 	commit string
 	files  []git.File

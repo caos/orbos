@@ -106,11 +106,12 @@ func Iterator(
 			panic(err)
 		}
 
-		query := func() (func() error, error) {
+		/*query := func() (func() error, error) {
 			return doQuery(*naDesired, curr)
 		}
 
-		ensure, err := QueryFuncGoroutine(query)
+		ensure, err := QueryFuncGoroutine(query)*/
+		ensure, err := doQuery(*naDesired, curr)
 		if err != nil {
 			monitor.Error(err)
 			return

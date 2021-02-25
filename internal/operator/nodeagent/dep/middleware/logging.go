@@ -29,10 +29,11 @@ func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 }
 
 func (l *loggedDep) Current() (common.Package, error) {
-	currentFunc := func() (common.Package, error) {
+	/*currentFunc := func() (common.Package, error) {
 		return l.unwrapped.Current()
 	}
-	current, err := goroutineCurrent(currentFunc)
+	current, err := goroutineCurrent(currentFunc)*/
+	current, err := l.unwrapped.Current()
 	if err == nil {
 		l.monitor.WithFields(map[string]interface{}{
 			"version": current,
