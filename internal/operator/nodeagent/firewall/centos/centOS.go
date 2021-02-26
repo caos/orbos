@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
+func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.FirewallCurrent, func() error, error) {
 		ensurers := make([]func() error, 0)
 		current := make(common.FirewallCurrent, 0)
@@ -26,7 +26,7 @@ func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 				return ensureZone(monitor, name, desired, ignore)
 			}
 			currentZone, ensureFunc, err := goroutineEnsureZone(ensure)*/
-			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, ignore)
+			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, open)
 			if err != nil {
 				return current, nil, err
 			}
@@ -72,7 +72,7 @@ func goroutineEnsureZone(ensureZone func() (*common.ZoneDesc, func() error, erro
 	return ret.current, ret.ensure, ret.err
 }
 
-func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, ignore []string) (*common.ZoneDesc, func() error, error) {
+func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, open []string) (*common.ZoneDesc, func() error, error) {
 	current := &common.ZoneDesc{
 		Name:       zoneName,
 		Interfaces: []string{},
@@ -97,7 +97,7 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		return current, nil, err
 	}
 
-	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), ignore)
+	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), open)
 	if err != nil {
 		return current, nil, err
 	}
