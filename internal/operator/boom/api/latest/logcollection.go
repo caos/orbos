@@ -21,6 +21,8 @@ type LogCollection struct {
 	Outputs []string `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 	//Watch these namespaces
 	WatchNamespaces []string `json:"watchNamespaces,omitempty" yaml:"watchNamespaces,omitempty"`
+	//Override used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }
 
 type Component struct {

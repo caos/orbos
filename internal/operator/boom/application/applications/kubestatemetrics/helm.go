@@ -4,11 +4,17 @@ import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/kubestatemetrics/helm"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 )
 
 func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
-	values := helm.DefaultValues(k.GetImageTags())
+
+	imageTags := helm.GetImageTags()
+	helper.OverwriteExistingValues(imageTags, map[string]string{
+		"quay.io/coreos/kube-state-metrics": toolset.KubeMetricsExporter.OverwriteVersion,
+	})
+	values := helm.DefaultValues(imageTags)
 
 	spec := toolset.KubeMetricsExporter
 

@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"github.com/caos/orbos/internal/utils/helper"
 	"strings"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
@@ -45,6 +46,9 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest
 
 func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
+	helper.OverwriteExistingValues(imageTags, map[string]string{
+		"argoproj/argocd": toolsetCRDSpec.Reconciling.OverwriteVersion,
+	})
 	values := helm.DefaultValues(imageTags)
 
 	spec := toolsetCRDSpec.Reconciling

@@ -41,6 +41,8 @@ type Reconciling struct {
 	Controller *CommonComponent `json:"controller,omitempty" yaml:"controller,omitempty"`
 	//Server options
 	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
+	//Override used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }
 
 func (r *Reconciling) InitSecrets() {

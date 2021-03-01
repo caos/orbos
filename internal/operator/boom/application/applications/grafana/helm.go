@@ -71,7 +71,11 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest
 		return nil
 	}
 
-	values := helm.DefaultValues(g.GetImageTags())
+	imageTags := g.GetImageTags()
+	helper.OverwriteExistingValues(imageTags, map[string]string{
+		"grafana/grafana": toolset.Monitoring.OverwriteVersion,
+	})
+	values := helm.DefaultValues(imageTags)
 	conf := config.New(toolset)
 
 	values.KubeTargetVersionOverride = version

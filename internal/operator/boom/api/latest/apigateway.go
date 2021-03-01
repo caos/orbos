@@ -29,6 +29,8 @@ type APIGateway struct {
 	//Enable proxy protocol
 	//@default: true
 	ProxyProtocol *bool `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
+	//Override used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }
 
 type Caching struct {

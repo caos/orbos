@@ -4,6 +4,7 @@ import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
+	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
@@ -11,7 +12,11 @@ import (
 
 func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 
-	values := helm.DefaultValues(l.GetImageTags())
+	imageTags := l.GetImageTags()
+	helper.OverwriteExistingValues(imageTags, map[string]string{
+		"grafana/loki": toolset.LogsPersisting.OverwriteVersion,
+	})
+	values := helm.DefaultValues(imageTags)
 
 	values.FullNameOverride = info.GetName().String()
 

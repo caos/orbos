@@ -18,7 +18,11 @@ func (m *MetricsServer) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolset
 }
 
 func (m *MetricsServer) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
-	values := helm.DefaultValues(m.GetImageTags())
+	imageTags := m.GetImageTags()
+	helper.OverwriteExistingValues(imageTags, map[string]string{
+		"k8s.gcr.io/metrics-server-amd64": toolset.MetricsServer.OverwriteVersion,
+	})
+	values := helm.DefaultValues(imageTags)
 
 	// if spec.ReplicaCount != 0 {
 	// 	values.ReplicaCount = toolset.MetricsServer.ReplicaCount
