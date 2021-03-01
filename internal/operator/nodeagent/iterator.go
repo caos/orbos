@@ -4,10 +4,8 @@ package nodeagent
 
 import (
 	"fmt"
-	"io/ioutil"
-	"runtime/debug"
-
 	"gopkg.in/yaml.v3"
+	"io/ioutil"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
@@ -117,20 +115,7 @@ func Iterator(
 			return
 		}
 
-		readCurrent := func() common.NodeAgentsCurrentKind {
-			if err := gitClient.Clone(); err != nil {
-				panic(err)
-			}
-			current := common.NodeAgentsCurrentKind{}
-			yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &current)
-			current.Kind = "nodeagent.caos.ch/NodeAgents"
-			current.Version = "v0"
-			return current
-		}
-
-		current := readCurrent()
-		current.Current.Set(id, curr)
-
+		current := readCurrent(monitor, gitClient, id, curr)
 		reconciledCurrentStateMsg := "Current state reconciled"
 		reconciledCurrent, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), git.File{
 			Path:    "caos-internal/orbiter/node-agents-current.yml",
@@ -145,36 +130,50 @@ func Iterator(
 			monitor.Error(gitClient.Push())
 		}
 
-		events = make([]*event, 0)
 		if err := ensure(); err != nil {
 			monitor.Error(err)
 			return
 		}
 
-		current = readCurrent()
+		if events != nil && len(events) > 0 {
+			current := readCurrent(monitor, gitClient, id, curr)
 
-		for _, event := range events {
-			current.Current.Set(id, event.current)
-			changed, err := gitClient.StageAndCommit(event.commit, git.File{
-				Path:    "caos-internal/orbiter/node-agents-current.yml",
-				Content: common.MarshalYAML(current),
-			})
-			if err != nil {
-				monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", event.commit, err.Error()))
-				return
+			for _, event := range events {
+				current.Current.Set(id, event.current)
+				changed, err := gitClient.StageAndCommit(event.commit, git.File{
+					Path:    "caos-internal/orbiter/node-agents-current.yml",
+					Content: common.MarshalYAML(current),
+				})
+				if err != nil {
+					monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", event.commit, err.Error()))
+					return
+				}
+				if !changed {
+					monitor.Error(fmt.Errorf("event has no effect:", event.commit))
+					return
+				}
 			}
-			if !changed {
-				monitor.Error(fmt.Errorf("event has no effect:", event.commit))
-				return
-			}
-		}
-
-		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
-
-		debug.FreeOSMemory()
 	}
+}
+
+func readCurrent(monitor mntr.Monitor, gitClient *git.Client, id string, curr *common.NodeAgentCurrent) *common.NodeAgentsCurrentKind {
+	ret := &common.NodeAgentsCurrentKind{}
+	if err := gitClient.Clone(); err != nil {
+		panic(err)
+	}
+
+	current := common.NodeAgentsCurrentKind{}
+	if err := yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), ret); err != nil {
+		monitor.Error(err)
+		return ret
+	}
+
+	current.Kind = "nodeagent.caos.ch/NodeAgents"
+	current.Version = "v0"
+	current.Current.Set(id, curr)
+	return ret
 }
 
 type retQuery struct {
