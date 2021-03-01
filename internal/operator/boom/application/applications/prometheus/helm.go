@@ -38,9 +38,12 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *late
 	}
 
 	imageTags := p.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"quay.io/prometheus/prometheus": toolsetCRDSpec.MetricsPersisting.OverwriteVersion,
-	})
+	if toolsetCRDSpec != nil && toolsetCRDSpec.MetricsPersisting != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"quay.io/prometheus/prometheus": toolsetCRDSpec.MetricsPersisting.OverwriteVersion,
+		})
+	}
+
 	values := helm.DefaultValues(imageTags)
 	if configResult.StorageSpec != nil {
 		storageSpec := &helm.StorageSpec{

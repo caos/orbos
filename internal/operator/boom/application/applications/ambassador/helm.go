@@ -43,10 +43,11 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsla
 
 func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := helm.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"quay.io/datawire/aes": toolsetCRDSpec.APIGateway.OverwriteVersion,
-	})
-
+	if toolsetCRDSpec != nil && toolsetCRDSpec.APIGateway != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"quay.io/datawire/aes": toolsetCRDSpec.APIGateway.OverwriteVersion,
+		})
+	}
 	values := helm.DefaultValues(imageTags)
 
 	spec := toolsetCRDSpec.APIGateway

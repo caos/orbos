@@ -11,9 +11,11 @@ import (
 func (p *PrometheusOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.PrometheusNodeExporter
 	imageTags := p.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"quay.io/coreos/prometheus-operator": toolset.MetricCollection.OverwriteVersion,
-	})
+	if toolset != nil && toolset.MetricCollection != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"quay.io/coreos/prometheus-operator": toolset.MetricCollection.OverwriteVersion,
+		})
+	}
 	values := helm.DefaultValues(imageTags)
 
 	// if spec.ReplicaCount != 0 {

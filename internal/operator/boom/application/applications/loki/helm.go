@@ -13,9 +13,11 @@ import (
 func (l *Loki) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 
 	imageTags := l.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"grafana/loki": toolset.LogsPersisting.OverwriteVersion,
-	})
+	if toolset != nil && toolset.LogsPersisting != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"grafana/loki": toolset.LogsPersisting.OverwriteVersion,
+		})
+	}
 	values := helm.DefaultValues(imageTags)
 
 	values.FullNameOverride = info.GetName().String()

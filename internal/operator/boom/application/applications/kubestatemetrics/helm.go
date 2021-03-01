@@ -11,9 +11,11 @@ import (
 func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 
 	imageTags := helm.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"quay.io/coreos/kube-state-metrics": toolset.KubeMetricsExporter.OverwriteVersion,
-	})
+	if toolset != nil && toolset.KubeMetricsExporter != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"quay.io/coreos/kube-state-metrics": toolset.KubeMetricsExporter.OverwriteVersion,
+		})
+	}
 	values := helm.DefaultValues(imageTags)
 
 	spec := toolset.KubeMetricsExporter

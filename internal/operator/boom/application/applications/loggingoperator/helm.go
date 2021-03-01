@@ -16,9 +16,11 @@ func (l *LoggingOperator) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec
 func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.LoggingOperator
 	imageTags := l.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"banzaicloud/logging-operator": toolset.LogCollection.OverwriteVersion,
-	})
+	if toolset != nil && toolset.LogCollection != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"banzaicloud/logging-operator": toolset.LogCollection.OverwriteVersion,
+		})
+	}
 	values := helm.DefaultValues(imageTags)
 
 	// if spec.ReplicaCount != 0 {

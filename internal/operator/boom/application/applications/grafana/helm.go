@@ -72,9 +72,11 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest
 	}
 
 	imageTags := g.GetImageTags()
-	helper.OverwriteExistingValues(imageTags, map[string]string{
-		"grafana/grafana": toolset.Monitoring.OverwriteVersion,
-	})
+	if toolset != nil && toolset.Monitoring != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			"grafana/grafana": toolset.Monitoring.OverwriteVersion,
+		})
+	}
 	values := helm.DefaultValues(imageTags)
 	conf := config.New(toolset)
 
