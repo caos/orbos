@@ -1,13 +1,12 @@
-ORBFILE=$1
-INSTANCE=$2
-IP=$3
-PROFILE=$4
-OUTPUT=$5
+SSHKEYFILE=$1
+IP=$2
+PROFILE=$3
+OUTPUT=$4
 
 TMPFILENAME=tmp_profile
 
-orbctl -f ${ORBFILE} node exec --command="wget http://localhost:6060/debug/pprof/${PROFILE} -O ${TMPFILENAME}" ${INSTANCE}
+ssh -i ${SSHKEYFILE} orbiter@${IP} "wget http://localhost:6060/debug/pprof/${PROFILE} -O ${TMPFILENAME}"
 
-scp orbiter@${IP}:/home/orbiter/${TMPFILENAME} ${OUTPUT}
+scp -i ${SSHKEYFILE} orbiter@${IP}:/home/orbiter/${TMPFILENAME} ${OUTPUT}
 
-orbctl -f ${ORBFILE} node exec --command="rm -f ${TMPFILENAME}" ${INSTANCE}
+ssh -i ${SSHKEYFILE} orbiter@${IP} "rm -f ${TMPFILENAME}" ${INSTANCE}
