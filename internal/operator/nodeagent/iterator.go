@@ -170,18 +170,3 @@ func Iterator(
 		}
 	}
 }
-
-type retQuery struct {
-	ensure func() error
-	err    error
-}
-
-func QueryFuncGoroutine(query func() (func() error, error)) (func() error, error) {
-	retChan := make(chan retQuery)
-	go func() {
-		ensure, err := query()
-		retChan <- retQuery{ensure, err}
-	}()
-	ret := <-retChan
-	return ret.ensure, ret.err
-}
