@@ -67,6 +67,8 @@ loop:
 				if iterated {
 					initialized = true
 				}
+
+				time.Sleep(time.Second * 30)
 				go on()
 			})
 		}

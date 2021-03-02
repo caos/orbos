@@ -299,6 +299,7 @@ func getNetworkScriptPath(interfaceName string) string {
 
 func getNetworkFiles(name string, ty string, ips []string) map[string]string {
 	tmpBuf := new(bytes.Buffer)
+	defer tmpBuf.Reset()
 	tmpl := template.Must(template.New("").Parse(`NAME={{ .Name }}
 DEVICE={{ .Name }}
 ONBOOT=yes

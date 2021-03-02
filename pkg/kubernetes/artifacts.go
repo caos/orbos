@@ -352,6 +352,7 @@ func EnsureOrbiterArtifacts(
 	monitor mntr.Monitor,
 	apiLabels *labels.API,
 	client *Client,
+	pprof bool,
 	orbiterversion string,
 	imageRegistry string) error {
 
@@ -366,6 +367,10 @@ func EnsureOrbiterArtifacts(
 	nameLabels := toNameLabels(apiLabels, "orbiter")
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
+	cmd := []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="}
+	if pprof {
+		cmd = append(cmd, "--pprof")
+	}
 
 	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{
@@ -387,7 +392,7 @@ func EnsureOrbiterArtifacts(
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, orbiterversion),
-						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
+						Command:         cmd,
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",
 							ReadOnly:  true,
