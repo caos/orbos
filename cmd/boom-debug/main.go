@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/caos/orbos/internal/controller"
+
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/git"
 
@@ -38,7 +38,7 @@ func main() {
 			panic(err)
 		}
 
-		if err := controller.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, "", controller.Boom); err != nil {
+		if err := crdctrl.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, "", crdctrl.Boom); err != nil {
 			panic(err)
 		}
 	} else {

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	"github.com/caos/orbos/pkg/labels"
@@ -151,9 +152,27 @@ status:
 		}).Debug("Boom crd ensured")
 	}
 
-	cmd := []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"}
+	var (
+		cmd          = []string{"/orbctl", "takeoff", "boom"}
+		volumes      []core.Volume
+		volumeMounts []core.VolumeMount
+	)
 	if gitops {
 		cmd = append(cmd, "--gitops")
+		volumes = []core.Volume{{
+			Name: "orbconfig",
+			VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{
+					SecretName: "caos",
+				},
+			},
+		}}
+		volumeMounts = []core.VolumeMount{{
+			Name:      "orbconfig",
+			ReadOnly:  true,
+			MountPath: "/secrets",
+		}}
+		cmd = append(cmd, "-f", "/secrets/orbconfig")
 	}
 
 	deployment := &apps.Deployment{
@@ -184,23 +203,12 @@ status:
 							ContainerPort: 2112,
 							Protocol:      "TCP",
 						}},
-						VolumeMounts: []core.VolumeMount{{
-							Name:      "orbconfig",
-							ReadOnly:  true,
-							MountPath: "/secrets",
-						}},
-						Resources: core.ResourceRequirements(*resources),
+						VolumeMounts: volumeMounts,
+						Resources:    core.ResourceRequirements(*resources),
 					}},
-					NodeSelector: nodeselector,
-					Tolerations:  tolerations.K8s(),
-					Volumes: []core.Volume{{
-						Name: "orbconfig",
-						VolumeSource: core.VolumeSource{
-							Secret: &core.SecretVolumeSource{
-								SecretName: "caos",
-							},
-						},
-					}},
+					NodeSelector:                  nodeselector,
+					Tolerations:                   tolerations.K8s(),
+					Volumes:                       volumes,
 					TerminationGracePeriodSeconds: int64Ptr(10),
 				},
 			},

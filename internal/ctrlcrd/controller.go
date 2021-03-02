@@ -1,10 +1,10 @@
-package controller
+package ctrlcrd
 
 import (
 	boomv1 "github.com/caos/orbos/internal/api/boom/v1"
 	networkingv1 "github.com/caos/orbos/internal/api/networking/v1"
-	"github.com/caos/orbos/internal/controller/boom"
-	"github.com/caos/orbos/internal/controller/networking"
+	"github.com/caos/orbos/internal/ctrlcrd/boom"
+	"github.com/caos/orbos/internal/ctrlcrd/networking"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"

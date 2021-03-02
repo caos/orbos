@@ -1,4 +1,4 @@
-package start
+package ctrlgitops
 
 import (
 	"context"
@@ -31,7 +31,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 			return err
 		}
 
-		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion), k8sClient)
+		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion, true), k8sClient)
 
 		go func() {
 			started := time.Now()

@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/caos/orbos/cmd/orbctl/cmds"
-	"github.com/caos/orbos/internal/controller"
+	"github.com/caos/orbos/internal/ctrlcrd"
+	"github.com/caos/orbos/internal/ctrlgitops"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
@@ -117,7 +117,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		orbiterConfig := &start.OrbiterConfig{
+		orbiterConfig := &ctrlgitops.OrbiterConfig{
 			Recur:            recur,
 			Destroy:          destroy,
 			Deploy:           deploy,
@@ -128,7 +128,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
+		_, err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		return err
 	}
 	return cmd
@@ -163,9 +163,9 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 		monitor.Info("Takeoff Boom")
 
 		if rv.Gitops {
-			return start.Boom(monitor, orbConfig.Path, version)
+			return ctrlgitops.Boom(monitor, orbConfig.Path, version)
 		} else {
-			return controller.Start(monitor, version, "/boom", metricsAddr, "", controller.Boom)
+			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, "", ctrlcrd.Boom)
 		}
 	}
 	return cmd
@@ -205,10 +205,10 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 			k8sClient := kubernetes2.NewK8sClientWithConfig(monitor, cfg)
 
 			if k8sClient.Available() {
-				return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
+				return ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version)
 			}
 		} else {
-			return controller.Start(monitor, version, "/boom", metricsAddr, rv.Kubeconfig, controller.Networking)
+			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, rv.Kubeconfig, ctrlcrd.Networking)
 		}
 		return nil
 	}

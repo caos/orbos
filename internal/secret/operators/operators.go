@@ -86,7 +86,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[networking] = nwYML
 
-			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
+			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil, false)(monitor, nwYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}

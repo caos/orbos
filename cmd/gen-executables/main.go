@@ -15,7 +15,7 @@ import (
 
 func main() {
 
-	version := flag.String("version", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	version := flag.String("version", "none", "Value shown by orbctl --version")
 	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing orbiters current state")
 	githubClientID := flag.String("githubclientid", "none", "ClientID used for OAuth with github as store")
 	githubClientSecret := flag.String("githubclientsecret", "none", "ClientSecret used for OAuth with github as store")

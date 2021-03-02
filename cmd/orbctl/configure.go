@@ -6,13 +6,13 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/ctrlgitops"
+
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
 	secret2 "github.com/caos/orbos/pkg/secret"
 
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-
-	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 
@@ -179,7 +179,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := ctrlgitops.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}

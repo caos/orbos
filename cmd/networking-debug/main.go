@@ -2,12 +2,10 @@ package main
 
 import (
 	"flag"
-	"github.com/caos/orbos/internal/controller"
+
 	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/pkg/kubernetes"
-
-	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
@@ -41,7 +39,7 @@ func main() {
 			panic(err)
 		}
 
-		if err := controller.Start(monitor, "crdoperators", "./artifacts", metricsAddr, kubeconfig, controller.Networking); err != nil {
+		if err := crdctrl.Start(monitor, "crdoperators", "./artifacts", metricsAddr, kubeconfig, crdctrl.Networking); err != nil {
 			panic(err)
 		}
 	} else {
@@ -50,7 +48,7 @@ func main() {
 			panic(err)
 		}
 
-		if err := start.Networking(
+		if err := gitopsctrl.Networking(
 			monitor,
 			helpers.PruneHome(orbconfig),
 			kubernetes.NewK8sClientWithConfig(monitor, cfg),

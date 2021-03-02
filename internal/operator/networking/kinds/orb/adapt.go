@@ -15,7 +15,7 @@ func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("ORBOS", "networking.caos.ch")
 }
 
-func AdaptFunc(binaryVersion *string) core.AdaptFunc {
+func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
@@ -45,7 +45,7 @@ func AdaptFunc(binaryVersion *string) core.AdaptFunc {
 
 		queriers := []core.QueryFunc{
 			queryNW,
-			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredKind.Spec)),
+			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredKind.Spec, gitops)),
 		}
 
 		destroyers := []core.DestroyFunc{

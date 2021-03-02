@@ -3,6 +3,7 @@ package networking
 import (
 	"context"
 	"errors"
+
 	v1 "github.com/caos/orbos/internal/api/networking/v1"
 	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/mntr"
@@ -50,7 +51,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	query, _, _, err := orbnw.AdaptFunc(&r.Version)(internalMonitor, desired, &tree.Tree{})
+	query, _, _, err := orbnw.AdaptFunc(&r.Version, false)(internalMonitor, desired, &tree.Tree{})
 	if err != nil {
 		return ctrl.Result{}, err
 	}

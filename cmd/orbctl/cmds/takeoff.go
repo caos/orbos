@@ -5,9 +5,10 @@ import (
 	"errors"
 	"io/ioutil"
 
+	"github.com/caos/orbos/internal/ctrlgitops"
+
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -52,7 +53,7 @@ func Takeoff(
 
 	allKubeconfigs := make([]string, 0)
 	if foundOrbiter {
-		orbiterConfig := &start.OrbiterConfig{
+		orbiterConfig := &ctrlgitops.OrbiterConfig{
 			Recur:            recur,
 			Destroy:          destroy,
 			Deploy:           deploy,
@@ -63,7 +64,7 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
+		kubeconfigs, err := ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		if err != nil {
 			return err
 		}

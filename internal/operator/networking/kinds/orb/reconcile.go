@@ -12,6 +12,7 @@ import (
 func Reconcile(
 	monitor mntr.Monitor,
 	spec *Spec,
+	gitops bool,
 ) core.EnsureFunc {
 	return func(k8sClient kubernetes.ClientInt) (err error) {
 		recMonitor := monitor.WithField("version", spec.Version)
@@ -35,7 +36,7 @@ func Reconcile(
 				},
 			}
 
-			if err := kubernetes.EnsureNetworkingArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&spec.Version)), k8sClient, spec.Version, spec.NodeSelector, spec.Tolerations, imageRegistry, spec.GitOps); err != nil {
+			if err := kubernetes.EnsureNetworkingArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&spec.Version)), k8sClient, spec.Version, spec.NodeSelector, spec.Tolerations, imageRegistry, gitops); err != nil {
 				recMonitor.Error(errors.Wrap(err, "Failed to deploy networking-operator into k8s-cluster"))
 				return err
 			}
