@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	secret2 "github.com/caos/orbos/pkg/secret"
 	"path/filepath"
 	"strings"
+
+	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -86,12 +87,11 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	for _, machine := range pool {
-
-		if err := machine.WriteFile(fmt.Sprintf("/home/orbiter/.ssh/authorized_keys"), bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
-			return nil, err
-		}
-
 		if !machine.X_active {
+			machine.X_active = true
+			if err := machine.WriteFile(fmt.Sprintf("/home/orbiter/.ssh/authorized_keys"), bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
+				return nil, err
+			}
 
 			if err := machine.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
 				return nil, err
@@ -101,7 +101,6 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 				return nil, err
 			}
 
-			machine.X_active = true
 			return machine, nil
 		}
 	}
