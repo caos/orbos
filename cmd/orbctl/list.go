@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
@@ -41,6 +42,10 @@ func ListCommand(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
+
+		if !rv.Gitops {
+			return errors.New("list command is only supported with the --gitops flag and a committed orbiter.yml")
+		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
 

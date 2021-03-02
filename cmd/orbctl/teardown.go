@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -59,6 +60,10 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
+
+		if !rv.Gitops {
+			return errors.New("teardown command is only supported with the --gitops flag and a committed orbiter.yml")
+		}
 
 		if err := orb.IsComplete(orbConfig); err != nil {
 			return err

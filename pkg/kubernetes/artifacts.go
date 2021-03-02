@@ -26,7 +26,7 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 	})
 }
 
-func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
+func EnsureOrbconfigSecret(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
 	monitor.Debug("Ensuring configuration artifacts")
 
 	orbfile, err := yaml.Marshal(orb)

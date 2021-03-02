@@ -85,6 +85,10 @@ func Takeoff(
 		return nil
 	}
 
+	if len(allKubeconfigs) < 1 {
+		return errors.New("no kubeconfig found")
+	}
+
 	for _, kubeconfig := range allKubeconfigs {
 		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {
@@ -92,13 +96,14 @@ func Takeoff(
 				monitor.Info("failed to apply common resources into k8s-cluster")
 				return err
 			}
-			monitor.Info("Applied common resources")
 
-			if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-				monitor.Info("failed to apply configuration resources into k8s-cluster")
-				return err
+			if foundOrbiter || gitOpsBoom || gitOpsNetworking {
+				if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfig); err != nil {
+					monitor.Info("failed to apply configuration resources into k8s-cluster")
+					return err
+				}
 			}
-			monitor.Info("Applied configuration resources")
+			monitor.Info("Applied common resources")
 		} else {
 			monitor.Info("Failed to connect to k8s")
 		}

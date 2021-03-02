@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -28,6 +30,10 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 		defer func() {
 			err = rv.ErrFunc(err)
 		}()
+
+		if !rv.Gitops {
+			return errors.New("api command is only supported with the --gitops flag")
+		}
 
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig

@@ -54,6 +54,10 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			err = rv.ErrFunc(err)
 		}()
 
+		if !rv.Gitops {
+			return errors.New("configure command is only supported with the --gitops flag")
+		}
+
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
@@ -225,10 +229,11 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		}
 
 		for _, kubeconfig := range allKubeconfigs {
+
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
 				monitor.Info("Ensuring orbconfig in kubernetes cluster")
-				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
+				if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfig); err != nil {
 					monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
 					return err
 				}
