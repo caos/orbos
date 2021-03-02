@@ -2,9 +2,10 @@ package orb
 
 import (
 	"fmt"
-	secret2 "github.com/caos/orbos/pkg/secret"
 	"io/ioutil"
 	"os"
+
+	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -35,13 +36,17 @@ func (o *Orb) IsConnectable() (err error) {
 	return err
 }
 
-func (o *Orb) IsComplete() (err error) {
+func IsComplete(o *Orb) (err error) {
 
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("orbconfig is incomplete: %w", err)
 		}
 	}()
+
+	if o == nil {
+		return errors.New("path not provided")
+	}
 
 	if o.Masterkey == "" {
 		err = helpers.Concat(err, errors.New("master key is missing"))

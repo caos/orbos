@@ -29,23 +29,28 @@ func Takeoff(
 	gitOpsBoom bool,
 	gitOpsNetworking bool,
 ) error {
-	if err := orbConfig.IsComplete(); err != nil {
-		return err
+
+	orbConfigIsIncompleteErr := orb.IsComplete(orbConfig)
+	if orbConfigIsIncompleteErr != nil && (gitOpsBoom || gitOpsNetworking) {
+		return orbConfigIsIncompleteErr
 	}
 
-	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-		return err
-	}
+	var foundOrbiter bool
+	if orbConfigIsIncompleteErr == nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+			return err
+		}
 
-	if err := gitClient.Clone(); err != nil {
-		return err
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+		var err error
+		if foundOrbiter, err = api.ExistsOrbiterYml(gitClient); err != nil {
+			return err
+		}
 	}
 
 	allKubeconfigs := make([]string, 0)
-	foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-	if err != nil {
-		return err
-	}
 	if foundOrbiter {
 		orbiterConfig := &start.OrbiterConfig{
 			Recur:            recur,
@@ -65,7 +70,7 @@ func Takeoff(
 		allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 	} else {
 		if kubeconfig == "" {
-			return errors.New("Error to deploy BOOM as no kubeconfig is provided")
+			return errors.New("error to deploy BOOM or Networking Operator as no kubeconfig is provided")
 		}
 		value, err := ioutil.ReadFile(kubeconfig)
 		if err != nil {

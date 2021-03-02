@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/secret/operators"
 	"io/ioutil"
 	"os"
+
+	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/internal/secret/operators"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -52,7 +54,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		if err := orbConfig.IsComplete(); err != nil {
+		if err := orb.IsComplete(orbConfig); err != nil {
 			return err
 		}
 

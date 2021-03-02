@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/caos/orbos/internal/orb"
+
 	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/secret/operators"
@@ -32,7 +34,7 @@ func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient
 
-			if err := orbConfig.IsComplete(); err != nil {
+			if err := orb.IsComplete(orbConfig); err != nil {
 				return err
 			}
 

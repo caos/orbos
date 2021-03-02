@@ -4,7 +4,8 @@ import (
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +33,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		if err := orbConfig.IsComplete(); err != nil {
+		if err := orb.IsComplete(orbConfig); err != nil {
 			return err
 		}
 
@@ -50,7 +51,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 		}
 
 		if foundOrbiter {
-			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
 				orbConfig,
 				gitCommit,

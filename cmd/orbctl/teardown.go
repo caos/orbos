@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caos/orbos/internal/orb"
+
 	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
 func TeardownCommand(getRv GetRootValues) *cobra.Command {
@@ -58,7 +60,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		if err := orbConfig.IsComplete(); err != nil {
+		if err := orb.IsComplete(orbConfig); err != nil {
 			return err
 		}
 
@@ -93,7 +95,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 			return orbiter.Destroy(
 				monitor,
 				gitClient,
-				orb.AdaptFunc(
+				orbadapter.AdaptFunc(
 					labels.NoopOperator("ORBOS"),
 					orbConfig,
 					gitCommit,
