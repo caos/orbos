@@ -259,24 +259,11 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 	return machines, nil
 }
 
-type retPools struct {
-	pools map[string][]*instance
-	err   error
-}
-
-func goroutineGetAllInstances(get func() (map[string][]*instance, error)) (map[string][]*instance, error) {
-	retChan := make(chan retPools)
-	go func() {
-		pools, err := get()
-		retChan <- retPools{pools, err}
-	}()
-	ret := <-retChan
-	return ret.pools, ret.err
-}
-
 func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 	if m.cache.instances != nil {
 		return m.cache.instances, nil
+	} else {
+		m.cache.instances = make(map[string][]*instance)
 	}
 
 	instances, err := m.context.client.Instances.
@@ -288,14 +275,6 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 		return nil, err
 	}
 
-	if m.cache.instances == nil {
-		m.cache.instances = make(map[string][]*instance)
-	} else {
-		for k := range m.cache.instances {
-			m.cache.instances[k] = nil
-			delete(m.cache.instances, k)
-		}
-	}
 	for _, inst := range instances.Items {
 
 		if inst.Labels["orb"] != m.context.orbID || inst.Labels["provider"] != m.context.providerID {

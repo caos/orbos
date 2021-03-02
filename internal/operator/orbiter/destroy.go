@@ -14,14 +14,6 @@ func NoopDestroy(map[string]interface{}) error {
 	return nil
 }
 
-func DestroyFuncGoroutine(query func() error) error {
-	retChan := make(chan error)
-	go func() {
-		retChan <- query()
-	}()
-	return <-retChan
-}
-
 func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan struct{}) error {
 	treeDesired, err := api.ReadOrbiterYml(gitClient)
 	if err != nil {

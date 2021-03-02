@@ -29,79 +29,74 @@ func getAddAndRemovePorts(
 	alwaysOpen := ignoredPorts(open)
 
 	//ports that should stay open
-	if alwaysOpen != nil && len(alwaysOpen) > 0 {
-		for _, open := range alwaysOpen {
-			found := false
-			openStr := fmt.Sprintf("%s/%s", open.Port, open.Protocol)
-			if alreadyOpen != nil && len(alreadyOpen) > 0 {
-				for _, open := range alreadyOpen {
-					if open == openStr {
-						found = true
-						break
-					}
+	for _, open := range alwaysOpen {
+		found := false
+		openStr := fmt.Sprintf("%s/%s", open.Port, open.Protocol)
+		if alreadyOpen != nil && len(alreadyOpen) > 0 {
+			for _, open := range alreadyOpen {
+				if open == openStr {
+					found = true
+					break
 				}
 			}
-			if !found {
-				ensure = append(ensure, fmt.Sprintf("--add-port=%s", openStr))
-			}
+		}
+		if !found {
+			ensure = append(ensure, fmt.Sprintf("--add-port=%s", openStr))
 		}
 	}
 
 	//desired ports
-	if desiredPorts != nil && len(desiredPorts) > 0 {
-		for _, desired := range desiredPorts {
-			found := false
-			desStr := fmt.Sprintf("%s/%s", desired.Port, desired.Protocol)
-			if alreadyOpen != nil && len(alreadyOpen) > 0 {
-				for _, open := range alreadyOpen {
-					if open == desStr {
-						found = true
-						break
-					}
+	for _, desired := range desiredPorts {
+		found := false
+		desStr := fmt.Sprintf("%s/%s", desired.Port, desired.Protocol)
+		if alreadyOpen != nil && len(alreadyOpen) > 0 {
+			for _, open := range alreadyOpen {
+				if open == desStr {
+					found = true
+					break
 				}
-			}
-			if !found {
-				ensure = append(ensure, fmt.Sprintf("--add-port=%s", desStr))
 			}
 		}
+		if !found {
+			ensure = append(ensure, fmt.Sprintf("--add-port=%s", desStr))
+		}
 	}
+
 	//port that are not desired anymore
-	if alreadyOpen != nil && len(alreadyOpen) > 0 {
-		for _, open := range alreadyOpen {
-			found := false
+	for _, open := range alreadyOpen {
+		found := false
 
-			fields := strings.Split(open, "/")
-			port := fields[0]
-			protocol := fields[1]
+		fields := strings.Split(open, "/")
+		port := fields[0]
+		protocol := fields[1]
 
-			current.FW = append(current.FW, &common.Allowed{
-				Port:     port,
-				Protocol: protocol,
-			})
+		current.FW = append(current.FW, &common.Allowed{
+			Port:     port,
+			Protocol: protocol,
+		})
 
-			if desiredPorts != nil && len(desiredPorts) > 0 {
-				for _, desired := range desiredPorts {
-					if desired.Port == port && desired.Protocol == protocol {
+		if desiredPorts != nil && len(desiredPorts) > 0 {
+			for _, desired := range desiredPorts {
+				if desired.Port == port && desired.Protocol == protocol {
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			if alwaysOpen != nil && len(alwaysOpen) > 0 {
+				for _, open := range alwaysOpen {
+					if open.Port == port && open.Protocol == protocol {
 						found = true
 						break
 					}
 				}
 			}
+		}
 
-			if !found {
-				if alwaysOpen != nil && len(alwaysOpen) > 0 {
-					for _, open := range alwaysOpen {
-						if open.Port == port && open.Protocol == protocol {
-							found = true
-							break
-						}
-					}
-				}
-			}
-
-			if !found {
-				remove = append(remove, fmt.Sprintf("--remove-interface=%s", open))
-			}
+		if !found {
+			remove = append(remove, fmt.Sprintf("--remove-interface=%s", open))
 		}
 	}
 

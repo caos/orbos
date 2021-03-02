@@ -21,11 +21,6 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 		}
 
 		for name, _ := range desired.Zones {
-
-			/*ensure := func() (*common.ZoneDesc, func() error, error) {
-				return ensureZone(monitor, name, desired, ignore)
-			}
-			currentZone, ensureFunc, err := goroutineEnsureZone(ensure)*/
 			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, open)
 			if err != nil {
 				return current, nil, err
@@ -54,22 +49,6 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 			return nil
 		}, nil
 	})
-}
-
-type retEnsure struct {
-	current *common.ZoneDesc
-	ensure  func() error
-	err     error
-}
-
-func goroutineEnsureZone(ensureZone func() (*common.ZoneDesc, func() error, error)) (*common.ZoneDesc, func() error, error) {
-	retChan := make(chan retEnsure)
-	go func() {
-		current, ensure, err := ensureZone()
-		retChan <- retEnsure{current, ensure, err}
-	}()
-	ret := <-retChan
-	return ret.current, ret.ensure, ret.err
 }
 
 func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, open []string) (*common.ZoneDesc, func() error, error) {

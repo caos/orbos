@@ -13,10 +13,6 @@ type loggedDep struct {
 	*wrapped
 	unwrapped nodeagent.Installer
 }
-type retCurrent struct {
-	current common.Package
-	err     error
-}
 
 func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 	return &loggedDep{
@@ -29,10 +25,6 @@ func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 }
 
 func (l *loggedDep) Current() (common.Package, error) {
-	/*currentFunc := func() (common.Package, error) {
-		return l.unwrapped.Current()
-	}
-	current, err := goroutineCurrent(currentFunc)*/
 	current, err := l.unwrapped.Current()
 	if err == nil {
 		l.monitor.WithFields(map[string]interface{}{
@@ -40,16 +32,6 @@ func (l *loggedDep) Current() (common.Package, error) {
 		}).Debug("Queried current dependency version")
 	}
 	return current, errors.Wrapf(err, "querying installed package for dependency %s failed", l.String())
-}
-
-func goroutineCurrent(current func() (common.Package, error)) (common.Package, error) {
-	retChan := make(chan retCurrent)
-	go func() {
-		current, err := current()
-		retChan <- retCurrent{current, err}
-	}()
-	ret := <-retChan
-	return ret.current, ret.err
 }
 
 func (l *loggedDep) Ensure(remove common.Package, install common.Package) error {
