@@ -113,9 +113,22 @@ func Iterator(
 		if err != nil {
 			monitor.Error(err)
 			return
+
+		}
+		readCurrent := func() common.NodeAgentsCurrentKind {
+			if err := gitClient.Clone(); err != nil {
+				panic(err)
+			}
+			current := common.NodeAgentsCurrentKind{}
+			yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &current)
+			current.Kind = "nodeagent.caos.ch/NodeAgents"
+			current.Version = "v0"
+			return current
 		}
 
-		current := readCurrent(monitor, gitClient, id, curr)
+		current := readCurrent()
+		current.Current.Set(id, curr)
+
 		reconciledCurrentStateMsg := "Current state reconciled"
 		reconciledCurrent, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), git.File{
 			Path:    "caos-internal/orbiter/node-agents-current.yml",
@@ -136,7 +149,7 @@ func Iterator(
 		}
 
 		if events != nil && len(events) > 0 {
-			current := readCurrent(monitor, gitClient, id, curr)
+			current := readCurrent()
 
 			for _, event := range events {
 				current.Current.Set(id, event.current)
@@ -156,24 +169,6 @@ func Iterator(
 			monitor.Error(gitClient.Push())
 		}
 	}
-}
-
-func readCurrent(monitor mntr.Monitor, gitClient *git.Client, id string, curr *common.NodeAgentCurrent) *common.NodeAgentsCurrentKind {
-	ret := &common.NodeAgentsCurrentKind{}
-	if err := gitClient.Clone(); err != nil {
-		panic(err)
-	}
-
-	current := common.NodeAgentsCurrentKind{}
-	if err := yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), ret); err != nil {
-		monitor.Error(err)
-		return ret
-	}
-
-	current.Kind = "nodeagent.caos.ch/NodeAgents"
-	current.Version = "v0"
-	current.Current.Set(id, curr)
-	return ret
 }
 
 type retQuery struct {
