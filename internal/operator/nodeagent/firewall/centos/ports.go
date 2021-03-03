@@ -21,6 +21,7 @@ func getAddAndRemovePorts(
 
 	ensure := make([]string, 0)
 	remove := make([]string, 0)
+	currentFW := make([]*common.Allowed, 0)
 
 	alreadyOpen, err := getPorts(monitor, zone)
 	if err != nil {
@@ -70,7 +71,7 @@ func getAddAndRemovePorts(
 		port := fields[0]
 		protocol := fields[1]
 
-		current.FW = append(current.FW, &common.Allowed{
+		currentFW = append(currentFW, &common.Allowed{
 			Port:     port,
 			Protocol: protocol,
 		})
@@ -99,6 +100,9 @@ func getAddAndRemovePorts(
 			remove = append(remove, fmt.Sprintf("--remove-interface=%s", open))
 		}
 	}
+
+	//set currentstate
+	current.FW = currentFW
 
 	return ensure, remove, nil
 }

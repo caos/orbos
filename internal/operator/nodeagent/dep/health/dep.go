@@ -65,6 +65,10 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 
 		if s.systemd.Active(file.Name()) {
 			http, checks := extractArguments(content)
+			if _, ok := pkg.Config[http]; ok {
+				pkg.Config[http] = ""
+				delete(pkg.Config, http)
+			}
 			pkg.Config[http] = unquote(checks)
 		}
 	}
@@ -129,6 +133,7 @@ WantedBy=multi-user.target
 func unquote(args string) string {
 	s := strings.Split(args, " ")
 	for idx, a := range s {
+		s[idx] = ""
 		s[idx] = strings.Trim(a, `"`)
 	}
 	return strings.Join(s, " ")
@@ -137,6 +142,7 @@ func unquote(args string) string {
 func quote(args string) string {
 	s := strings.Split(args, " ")
 	for idx, a := range s {
+		s[idx] = ""
 		s[idx] = fmt.Sprintf(`"%s"`, a)
 	}
 	return strings.Join(s, " ")

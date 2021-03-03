@@ -53,10 +53,9 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 
 func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, open []string) (*common.ZoneDesc, func() error, error) {
 	current := &common.ZoneDesc{
-		Name:       zoneName,
-		Interfaces: []string{},
-		Services:   []*common.Service{},
-		FW:         []*common.Allowed{},
+		Name:     zoneName,
+		Services: []*common.Service{},
+		FW:       []*common.Allowed{},
 	}
 
 	ifaces, err := getInterfaces(monitor, zoneName)
