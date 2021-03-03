@@ -65,11 +65,7 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 
 		if s.systemd.Active(file.Name()) {
 			http, checks := extractArguments(content)
-			if _, ok := pkg.Config[http]; ok {
-				pkg.Config[http] = ""
-				delete(pkg.Config, http)
-			}
-			pkg.Config[http] = unquote(checks)
+			pkg.AddToConfig(http, unquote(checks))
 		}
 	}
 	return pkg, nil

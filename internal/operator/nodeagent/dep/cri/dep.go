@@ -79,10 +79,7 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 	}
 	pkg.Version = strings.TrimSpace(dockerVersion)
 	if !strings.Contains(containerdVersion, "1.4.3") {
-		if pkg.Config == nil {
-			pkg.Config = map[string]string{}
-		}
-		pkg.Config["containerd.io"] = containerdVersion
+		pkg.AddToConfig("containerd.io", containerdVersion)
 	} else {
 		// Deprecated Code: Ensure existing containerd versions get locked
 		// TODO: Remove in ORBOS v4
@@ -91,18 +88,13 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 			return pkg, err
 		}
 		if !strings.Contains(string(lock), "containerd.io-1.4.3") {
-			if pkg.Config == nil {
-				pkg.Config = map[string]string{}
-			}
-			pkg.Config["containerd.io"] = containerdVersion
+			pkg.AddToConfig("containerd.io", containerdVersion)
 		}
 	}
 
 	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
-	if pkg.Config == nil {
-		pkg.Config = map[string]string{}
-	}
-	pkg.Config["daemon.json"] = string(daemonJson)
+
+	pkg.AddToConfig("daemon.json", string(daemonJson))
 	return pkg, nil
 }
 

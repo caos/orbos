@@ -74,3 +74,15 @@ type Package struct {
 	Version string            `yaml:",omitempty"`
 	Config  map[string]string `yaml:",omitempty"`
 }
+
+func (p *Package) AddToConfig(k, v string) {
+	if p.Config == nil {
+		p.Config = make(map[string]string, 0)
+	}
+
+	if _, ok := p.Config[k]; ok {
+		p.Config[k] = ""
+		delete(p.Config, k)
+	}
+	p.Config[k] = v
+}

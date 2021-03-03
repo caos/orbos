@@ -40,6 +40,12 @@ func (*sshdDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+const (
+	listenaddress        = "listenaddress"
+	listening            = "listening"
+	gssapiauthentication = "gssapiauthentication"
+)
+
 func (s *sshdDep) Current() (pkg common.Package, err error) {
 
 	buf := new(bytes.Buffer)
@@ -62,29 +68,20 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 			value = fields[1]
 		}
 
-		if strings.Contains(line, "listenaddress") {
+		if strings.Contains(line, listenaddress) {
 			checkIP := "127.0.0.1"
 			if value != "[::]:22" && value != "0.0.0.0:22" {
-				if pkg.Config == nil {
-					pkg.Config = make(map[string]string)
-				}
 				checkIP = strings.Split(value, ":")[0]
-				pkg.Config["listenaddress"] = checkIP
+				pkg.AddToConfig(listenaddress, checkIP)
 			}
 			out, _ := exec.Command("ssh", "-T", checkIP).CombinedOutput()
 			if strings.Contains(string(out), "Connection refused") {
-				if pkg.Config == nil {
-					pkg.Config = make(map[string]string)
-				}
-				pkg.Config["listening"] = "false"
+				pkg.AddToConfig(listening, "false")
 			}
 		}
 
-		if strings.Contains(line, "gssapiauthentication") && value != "no" {
-			if pkg.Config == nil {
-				pkg.Config = make(map[string]string)
-			}
-			pkg.Config["gssapiauthentication"] = value
+		if strings.Contains(line, gssapiauthentication) && value != "no" {
+			pkg.AddToConfig(gssapiauthentication, value)
 		}
 
 		if err == io.EOF {
@@ -97,7 +94,7 @@ func (s *sshdDep) Current() (pkg common.Package, err error) {
 func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	appendLines := []string{"GSSAPIAuthentication no"}
-	listenAddress := ensure.Config["listenaddress"]
+	listenAddress := ensure.Config[listenaddress]
 	if listenAddress != "" {
 		appendLines = append(appendLines, fmt.Sprintf("ListenAddress %s", listenAddress))
 	}

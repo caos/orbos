@@ -89,9 +89,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 		}
 		return &line
 	})
-	pkg.Config = map[string]string{
-		"keepalived.conf": redacted.String(),
-	}
+	pkg.AddToConfig("keepalived.conf", redacted.String())
 
 	notifymaster, err := ioutil.ReadFile("/etc/keepalived/notifymaster.sh")
 	if os.IsNotExist(err) {
@@ -102,7 +100,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	}
 
 	if string(notifymaster) != "" {
-		pkg.Config["notifymaster.sh"] = string(notifymaster)
+		pkg.AddToConfig("notifymaster.sh", string(notifymaster))
 	}
 
 	authCheck, err := ioutil.ReadFile("/etc/keepalived/authcheck.sh")
@@ -113,12 +111,12 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 	if string(authCheck) != "" {
-		pkg.Config["authcheck.sh"] = string(authCheck)
+		pkg.AddToConfig("authcheck.sh", string(authCheck))
 		var exitCode int
 		if err := exec.Command("/etc/keepalived/authcheck.sh").Run(); err != nil {
 			exitCode = err.(*exec.ExitError).ExitCode()
 		}
-		pkg.Config["authcheckexitcode"] = strconv.Itoa(exitCode)
+		pkg.AddToConfig("authcheckexitcode", strconv.Itoa(exitCode))
 	}
 
 	return pkg, err

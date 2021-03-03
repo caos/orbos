@@ -126,6 +126,10 @@ func merge(fields map[string]interface{}, add map[string]interface{}) map[string
 	}
 	for k, v := range add {
 		panicOnReserved(k)
+		if _, ok := newFields[k]; ok {
+			newFields[k] = nil
+			delete(newFields, k)
+		}
 		newFields[k] = v
 	}
 	return newFields

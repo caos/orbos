@@ -50,7 +50,7 @@ func (s *hostnameDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	pkg.Config = map[string]string{"hostname": strings.TrimSuffix(buf.String(), "\n")}
+	pkg.AddToConfig("hostname", strings.TrimSuffix(buf.String(), "\n"))
 	return pkg, nil
 }
 

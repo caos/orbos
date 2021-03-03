@@ -61,17 +61,14 @@ func Contains(this common.Package, that common.Package) bool {
 }
 
 func Enable(pkg *common.Package, property common.KernelModule) {
-	if pkg.Config == nil {
-		pkg.Config = make(map[string]string)
-	}
 
 	for idx := range supportedModules {
 		module := supportedModules[idx]
 		if _, ok := pkg.Config[string(module)]; !ok {
-			pkg.Config[string(module)] = "0"
+			pkg.AddToConfig(string(module), "0")
 		}
 	}
-	pkg.Config[string(property)] = "1"
+	pkg.AddToConfig(string(property), "1")
 }
 
 func (s *sysctlDep) Current() (pkg common.Package, err error) {
@@ -140,13 +137,12 @@ func currentSysctlConfig(monitor mntr.Monitor, property common.KernelModule, pkg
 		}
 	}
 
-	if pkg.Config == nil {
-		pkg.Config = make(map[string]string)
-	}
-	pkg.Config[propertyStr] = "0"
 	enabled := outBuf.String() == fmt.Sprintf("%s = 1\n", property)
 	if enabled {
-		pkg.Config[propertyStr] = "1"
+		pkg.AddToConfig(propertyStr, "1")
+	} else {
+
+		pkg.AddToConfig(propertyStr, "0")
 	}
 
 	return nil

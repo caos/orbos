@@ -68,9 +68,7 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	pkg.Config = map[string]string{
-		"nginx.conf": string(config),
-	}
+	pkg.AddToConfig("nginx.conf", string(config))
 
 	return pkg, nil
 }
