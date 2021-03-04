@@ -126,6 +126,24 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 		}
 	}
 
+	if spec.AdditionalParameters != nil {
+		if spec.AdditionalParameters.Server != nil {
+			for _, param := range spec.AdditionalParameters.Server {
+				values.Server.ExtraArgs = append(values.Server.ExtraArgs, param)
+			}
+		}
+		if spec.AdditionalParameters.ApplicationController != nil {
+			for _, param := range spec.AdditionalParameters.ApplicationController {
+				values.Controller.ExtraArgs = append(values.Controller.ExtraArgs, param)
+			}
+		}
+		if spec.AdditionalParameters.RepoServer != nil {
+			for _, param := range spec.AdditionalParameters.RepoServer {
+				values.RepoServer.ExtraArgs = append(values.RepoServer.ExtraArgs, param)
+			}
+		}
+	}
+
 	if spec.Rbac != nil {
 		scopes := ""
 		for _, scope := range spec.Rbac.Scopes {

@@ -13,7 +13,6 @@ type Reconciling struct {
 	//@default: false
 	Deploy bool `json:"deploy" yaml:"deploy"`
 	//Use of custom argocd-image which includes gopass
-	//@default: false
 	CustomImage *CustomImage `json:"customImage,omitempty" yaml:"customImage,omitempty"`
 	//Network configuration, used for SSO and external access
 	Network *network.Network `json:"network,omitempty" yaml:"network,omitempty"`
@@ -43,6 +42,17 @@ type Reconciling struct {
 	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
 	//Override used image version
 	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
+	//Additional parameters to use in the deployments
+	AdditionalParameters *AdditionalParameters `json:"additionalParameters,omitempty" yaml:"additionalParameters,omitempty"`
+}
+
+type AdditionalParameters struct {
+	//Additional parameters for the Repo-Server
+	RepoServer []string `json:"repoServer,omitempty" yaml:"repoServer,omitempty"`
+	//Additional parameters for the Application-Controller
+	ApplicationController []string `json:"applicationController,omitempty" yaml:"applicationController,omitempty"`
+	//Additional parameters for the Server
+	Server []string `json:"server,omitempty" yaml:"server,omitempty"`
 }
 
 func (r *Reconciling) InitSecrets() {
