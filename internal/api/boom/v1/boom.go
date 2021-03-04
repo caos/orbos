@@ -51,7 +51,7 @@ func init() {
 func GetEmpty(namespace, name string) map[string]interface{} {
 	return map[string]interface{}{
 		"apiVersion": "caos.ch/v1",
-		"kind":       "Boom",
+		"kind":       "BOOM",
 		"metadata": map[string]interface{}{
 			"name":      name,
 			"namespace": namespace,
