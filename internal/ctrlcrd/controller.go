@@ -21,20 +21,26 @@ const (
 	Boom       = "boom"
 )
 
-func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string, kubeconfig string, features ...string) error {
+var (
+	scheme = runtime.NewScheme()
+)
 
-	scheme := runtime.NewScheme()
+func init() {
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding clientgo to scheme failed: %w", err)
+		panic(fmt.Errorf("adding clientgo to scheme failed: %w", err))
 	}
 
 	if err := networkingv1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding networking v1 to scheme failed: %w", err)
+		panic(fmt.Errorf("adding networking v1 to scheme failed: %w", err))
 	}
 
 	if err := boomv1.AddToScheme(scheme); err != nil {
-		return fmt.Errorf("adding boom v1 to scheme failed: %w", err)
+		panic(fmt.Errorf("adding boom v1 to scheme failed: %w", err))
 	}
+
+}
+
+func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string, kubeconfig string, features ...string) error {
 
 	cfg, err := clientgo.GetClusterConfig(monitor, kubeconfig)
 	if err != nil {

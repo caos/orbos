@@ -25,11 +25,15 @@ type Reconciler struct {
 	Version            string
 }
 
-func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
 	internalMonitor := r.Monitor.WithFields(map[string]interface{}{
 		"kind": "Boom",
 		"name": req.NamespacedName,
 	})
+
+	defer func() {
+		r.Monitor.Error(err)
+	}()
 
 	unstruct, err := r.ClientInt.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", req.Namespace, req.Name)
 	if !macherrs.IsNotFound(err) && err != nil {
