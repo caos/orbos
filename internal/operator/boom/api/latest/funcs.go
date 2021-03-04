@@ -23,6 +23,13 @@ func ParseToolset(desiredTree *tree.Tree) (*Toolset, map[string]*secret.Secret, 
 func GetSecretsMap(desiredKind *Toolset) map[string]*secret.Secret {
 	ret := make(map[string]*secret.Secret, 0)
 
+	if desiredKind.Spec.APIGateway == nil {
+		desiredKind.Spec.APIGateway = &APIGateway{}
+	}
+	ambassadorSpec := desiredKind.Spec.APIGateway
+	ambassadorSpec.InitSecrets()
+	ret["ambassador.licencekey"] = ambassadorSpec.LicenceKey
+
 	if desiredKind.Spec.Monitoring == nil {
 		desiredKind.Spec.Monitoring = &monitoring.Monitoring{}
 	}

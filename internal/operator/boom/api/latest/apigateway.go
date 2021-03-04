@@ -1,6 +1,9 @@
 package latest
 
-import "github.com/caos/orbos/pkg/kubernetes/k8s"
+import (
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	"github.com/caos/orbos/pkg/secret"
+)
 
 type APIGateway struct {
 	//Flag if tool should be deployed
@@ -31,6 +34,37 @@ type APIGateway struct {
 	ProxyProtocol *bool `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
 	//Override used image version
 	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
+	//License-key to use for Ambassador
+	LicenceKey *secret.Secret `json:"licenceKey,omitempty" yaml:"licenceKey,omitempty"`
+	//License-key to use for Ambassador
+	ExistingLicenceKey *secret.Existing `json:"existingLicenceKey,omitempty" yaml:"existingLicenceKey,omitempty"`
+}
+
+func (a *APIGateway) IsZero() bool {
+	if !a.Deploy &&
+		a.ReplicaCount == 0 &&
+		a.Affinity == nil &&
+		a.Service == nil &&
+		!a.ActivateDevPortal &&
+		a.NodeSelector == nil &&
+		a.Tolerations == nil &&
+		a.Resources == nil &&
+		a.Caching == nil &&
+		!a.GRPCWeb &&
+		a.ProxyProtocol == nil &&
+		a.OverwriteVersion == "" &&
+		(a.LicenceKey == nil || a.LicenceKey.IsZero()) &&
+		a.ExistingLicenceKey == nil {
+		return true
+	}
+
+	return false
+}
+
+func (a *APIGateway) InitSecrets() {
+	if a.LicenceKey == nil {
+		a.LicenceKey = &secret.Secret{}
+	}
 }
 
 type Caching struct {

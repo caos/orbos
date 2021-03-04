@@ -2,14 +2,13 @@ package ambassador
 
 import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
-	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/mntr"
-
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/crds"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/helm"
+	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
+	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/mntr"
 )
 
 func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
@@ -107,16 +106,23 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		values.Service.Annotations.Module.Config.UseProxyProto = *spec.ProxyProtocol
 	}
 
-	if spec.Caching == nil {
+	if spec.Caching != nil {
+		if spec.Caching.Enable {
+			values.Redis.Create = true
+		}
+
+		if spec.Caching.Resources != nil {
+			values.Redis.Resources = spec.Caching.Resources
+		}
+	}
+
+	licenceKey, err := helper.GetSecretValue(spec.LicenceKey, spec.ExistingLicenceKey)
+	if err != nil {
+		monitor.Debug("No licence key found")
 		return values
 	}
-
-	if spec.Caching.Enable {
-		values.Redis.Create = true
-	}
-
-	if spec.Caching.Resources != nil {
-		values.Redis.Resources = spec.Caching.Resources
+	if licenceKey != "" {
+		values.LicenseKey.Value = licenceKey
 	}
 
 	return values

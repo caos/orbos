@@ -14,7 +14,7 @@ type Admin struct {
 
 func (a *Admin) IsZero() bool {
 	if (a.Username == nil || a.Username.IsZero()) &&
-		(a.Username == nil || a.Username.IsZero()) &&
+		(a.Password == nil || a.Password.IsZero()) &&
 		a.ExistingSecret == nil {
 		return true
 	}
