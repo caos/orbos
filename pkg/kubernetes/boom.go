@@ -96,7 +96,7 @@ spec:
   group: caos.ch
   names:
     kind: BOOM
-    listKind: BoomList
+    listKind: BOOMList
     plural: booms
     singular: boom
   scope: ""
@@ -150,7 +150,7 @@ status:
 		}
 		monitor.WithFields(map[string]interface{}{
 			"version": version,
-		}).Debug("Boom crd ensured")
+		}).Debug("BOOM crd ensured")
 	}
 
 	var (
@@ -220,7 +220,7 @@ status:
 	}
 	monitor.WithFields(map[string]interface{}{
 		"version": version,
-	}).Debug("Boom deployment ensured")
+	}).Debug("BOOM deployment ensured")
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
@@ -241,7 +241,7 @@ status:
 	}); err != nil {
 		return err
 	}
-	monitor.Debug("Boom service ensured")
+	monitor.Debug("BOOM service ensured")
 
 	return nil
 }

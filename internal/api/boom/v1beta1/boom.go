@@ -20,8 +20,8 @@ var (
 )
 
 // +kubebuilder:object:root=true
-// +kubebuilder:crd=Boom
-type Boom struct {
+// +kubebuilder:crd=BOOM
+type BOOM struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -37,12 +37,12 @@ type Status struct {
 type Empty struct{}
 
 // +kubebuilder:object:root=true
-type BoomList struct {
+type BOOMList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Boom `json:"items"`
+	Items           []BOOM `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Boom{}, &BoomList{})
+	SchemeBuilder.Register(&BOOM{}, &BOOMList{})
 }

@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/boom/api/common"
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
@@ -10,7 +12,6 @@ import (
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 const (
@@ -23,7 +24,7 @@ func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*se
 		metrics.WrongCRDFormat()
 		return nil, false, nil, "", "", errors.Wrap(err, "parsing desired state failed")
 	}
-	if desiredKindCommon.Kind != "Boom" {
+	if desiredKindCommon.Kind != "BOOM" {
 		return nil, false, nil, "", "", errors.New("Kind unknown")
 	}
 
