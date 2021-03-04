@@ -72,6 +72,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 	for _, feature := range features {
 		switch feature {
 		case Networking:
+			monitor.Debug("Setting up networking")
 			if err = (&networking.Reconciler{
 				ClientInt: k8sClient,
 				Monitor:   monitor,
@@ -80,7 +81,9 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 			}).SetupWithManager(mgr); err != nil {
 				return fmt.Errorf("creating controller failed: %w", err)
 			}
+			monitor.Debug("Networking setup done")
 		case Boom:
+			monitor.Debug("Setting up BOOM")
 			if err = (&boom.Reconciler{
 				ClientInt:          k8sClient,
 				Monitor:            monitor,
@@ -90,11 +93,14 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 			}).SetupWithManager(mgr); err != nil {
 				return fmt.Errorf("creating controller failed: %w", err)
 			}
+			monitor.Debug("BOOM setup done")
 		}
 	}
 
+	monitor.Debug("Controller is starting")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		return fmt.Errorf("running manager failed: %w", err)
 	}
+	monitor.Debug("Controller is done")
 	return nil
 }
