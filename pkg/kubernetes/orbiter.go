@@ -57,7 +57,7 @@ func EnsureOrbiterArtifacts(
 						Name:            "orbiter",
 						ImagePullPolicy: core.PullIfNotPresent,
 						Image:           fmt.Sprintf("%s/caos/orbos:%s", imageRegistry, orbiterversion),
-						Command:         []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="},
+						Command:         cmd,
 						VolumeMounts: []core.VolumeMount{{
 							Name:      "keys",
 							ReadOnly:  true,
