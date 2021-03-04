@@ -24,7 +24,8 @@ func EnsureBoomArtifacts(
 	nodeselector map[string]string,
 	resources *k8s.Resources,
 	imageRegistry string,
-	gitops bool) error {
+	gitops bool,
+) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,
@@ -94,7 +95,7 @@ metadata:
 spec:
   group: caos.ch
   names:
-    kind: Boom
+    kind: BOOM
     listKind: BoomList
     plural: booms
     singular: boom
@@ -158,7 +159,7 @@ status:
 		volumeMounts []core.VolumeMount
 	)
 	if gitops {
-		cmd = append(cmd, "--gitops")
+		cmd = append(cmd, "--gitops", "-f", "/secrets/orbconfig")
 		volumes = []core.Volume{{
 			Name: "orbconfig",
 			VolumeSource: core.VolumeSource{
@@ -172,7 +173,6 @@ status:
 			ReadOnly:  true,
 			MountPath: "/secrets",
 		}}
-		cmd = append(cmd, "-f", "/secrets/orbconfig")
 	}
 
 	deployment := &apps.Deployment{

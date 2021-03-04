@@ -1,6 +1,8 @@
 package ctrlcrd
 
 import (
+	"fmt"
+
 	boomv1 "github.com/caos/orbos/internal/api/boom/v1"
 	networkingv1 "github.com/caos/orbos/internal/api/networking/v1"
 	"github.com/caos/orbos/internal/ctrlcrd/boom"
@@ -8,7 +10,6 @@ import (
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -44,7 +45,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 		LeaderElectionID:   "98jasd12l.caos.ch",
 	})
 	if err != nil {
-		return errors.Wrap(err, "unable to start manager")
+		return fmt.Errorf("starting manager failed: %w", err)
 	}
 
 	for _, feature := range features {
@@ -56,7 +57,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 				Scheme:    mgr.GetScheme(),
 				Version:   version,
 			}).SetupWithManager(mgr); err != nil {
-				return errors.Wrap(err, "unable to create controller")
+				return fmt.Errorf("creating controller failed: %w", err)
 			}
 		case Boom:
 			if err = (&boom.Reconciler{
@@ -66,14 +67,14 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 				ToolsDirectoryPath: toolsDirectoryPath,
 				Version:            version,
 			}).SetupWithManager(mgr); err != nil {
-				return errors.Wrap(err, "unable to create controller")
+				return fmt.Errorf("creating controller failed: %w", err)
 			}
 
 		}
 	}
 
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		return errors.Wrap(err, "problem running manager")
+		return fmt.Errorf("running manager failed: %w", err)
 	}
 	return nil
 }

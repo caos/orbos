@@ -61,7 +61,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 
 		if err := cmdboom.Reconcile(
 			monitor,
-			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), "Boom", "v1"),
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), "BOOM", "v1"),
 			k8sClient,
 			boom,
 			binaryVersion,
