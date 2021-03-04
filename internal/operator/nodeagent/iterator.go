@@ -104,12 +104,11 @@ func Iterator(
 			panic(err)
 		}
 
-		/*query := func() (func() error, error) {
+		query := func() (func() error, error) {
 			return doQuery(*naDesired, curr)
 		}
 
-		ensure, err := QueryFuncGoroutine(query)*/
-		ensure, err := doQuery(*naDesired, curr)
+		ensure, err := QueryFuncGoroutine(query)
 		if err != nil {
 			monitor.Error(err)
 			return
@@ -169,4 +168,19 @@ func Iterator(
 			monitor.Error(gitClient.Push())
 		}
 	}
+}
+
+type retQuery struct {
+	ensure func() error
+	err    error
+}
+
+func QueryFuncGoroutine(query func() (func() error, error)) (func() error, error) {
+	retChan := make(chan retQuery)
+	go func() {
+		ensure, err := query()
+		retChan <- retQuery{ensure, err}
+	}()
+	ret := <-retChan
+	return ret.ensure, ret.err
 }
