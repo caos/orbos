@@ -1,10 +1,7 @@
 package ctrlcrd
 
 import (
-	"context"
 	"fmt"
-
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	boomv1 "github.com/caos/orbos/internal/api/boom/v1"
 	networkingv1 "github.com/caos/orbos/internal/api/networking/v1"
@@ -15,7 +12,6 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgok8s "k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
@@ -45,14 +41,10 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 		return err
 	}
 
-	testClient, err := clientgok8s.NewForConfig(cfg)
-	if err != nil {
-		return err
-	}
-
-	if _, err := testClient.CoreV1().ConfigMaps("kube-public").Get(context.TODO(), "cluster-info", v1.GetOptions{}); err != nil {
+	k8sClient := kubernetes.NewK8sClientWithConfig(monitor, cfg)
+	if _, err := k8sClient.GetConfigMap("kube-public", "cluster-info"); err != nil {
 		if macherrs.IsNotFound(err) {
-			// A client error means the connection is basically possible
+			// This one and other client errors mean that the connection is basically possible
 			err = nil
 		} else {
 			return err
@@ -75,7 +67,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 		switch feature {
 		case Networking:
 			if err = (&networking.Reconciler{
-				ClientInt: kubernetes.NewK8sClientWithConfig(monitor, cfg),
+				ClientInt: k8sClient,
 				Monitor:   monitor,
 				Scheme:    mgr.GetScheme(),
 				Version:   version,
@@ -84,7 +76,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 			}
 		case Boom:
 			if err = (&boom.Reconciler{
-				ClientInt:          kubernetes.NewK8sClientWithConfig(monitor, cfg),
+				ClientInt:          k8sClient,
 				Monitor:            monitor,
 				Scheme:             mgr.GetScheme(),
 				ToolsDirectoryPath: toolsDirectoryPath,
