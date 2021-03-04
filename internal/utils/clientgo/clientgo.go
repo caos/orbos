@@ -14,7 +14,9 @@ import (
 
 func GetClusterConfig(monitor mntr.Monitor, path string) (*rest.Config, error) {
 
+	monitor.Debug("trying to use in-cluster kube client")
 	if cfg, err := getInClusterConfig(); err == nil {
+		monitor.Debug("using in-cluster kube client")
 		return cfg, nil
 	}
 
