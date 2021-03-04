@@ -21,8 +21,8 @@ var (
 
 // +kubebuilder:storageversion
 // +kubebuilder:object:root=true
-// +kubebuilder:crd=BOOM
-type BOOM struct {
+// +kubebuilder:crd=Boom
+type Boom struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
@@ -38,20 +38,20 @@ type Status struct {
 type Empty struct{}
 
 // +kubebuilder:object:root=true
-type BOOMList struct {
+type BoomList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []BOOM `json:"items"`
+	Items           []Boom `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&BOOM{}, &BOOMList{})
+	SchemeBuilder.Register(&Boom{}, &BoomList{})
 }
 
 func GetEmpty(namespace, name string) map[string]interface{} {
 	return map[string]interface{}{
 		"apiVersion": "caos.ch/v1",
-		"kind":       "BOOM",
+		"kind":       "Boom",
 		"metadata": map[string]interface{}{
 			"name":      name,
 			"namespace": namespace,

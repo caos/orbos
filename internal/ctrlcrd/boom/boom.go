@@ -27,11 +27,11 @@ type Reconciler struct {
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	internalMonitor := r.Monitor.WithFields(map[string]interface{}{
-		"kind": "BOOM",
+		"kind": "Boom",
 		"name": req.NamespacedName,
 	})
 
-	unstruct, err := r.ClientInt.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "BOOM", req.Namespace, req.Name)
+	unstruct, err := r.ClientInt.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", req.Namespace, req.Name)
 	if !macherrs.IsNotFound(err) && err != nil {
 		return ctrl.Result{}, err
 	}
@@ -65,6 +65,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 func (r *Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.BOOM{}).
+		For(&v1.Boom{}).
 		Complete(r)
 }

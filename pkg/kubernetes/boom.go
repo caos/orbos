@@ -95,8 +95,8 @@ metadata:
 spec:
   group: caos.ch
   names:
-    kind: BOOM
-    listKind: BOOMList
+    kind: Boom
+    listKind: BoomList
     plural: booms
     singular: boom
   scope: ""

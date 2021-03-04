@@ -24,7 +24,7 @@ func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, map[string]*se
 		metrics.WrongCRDFormat()
 		return nil, false, nil, "", "", errors.Wrap(err, "parsing desired state failed")
 	}
-	if desiredKindCommon.Kind != "BOOM" {
+	if desiredKindCommon.Kind != "Boom" {
 		return nil, false, nil, "", "", errors.New("Kind unknown")
 	}
 
