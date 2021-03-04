@@ -35,7 +35,7 @@ func (i *infraPool) EnsureMembers() error {
 
 func (i *infraPool) ensureMembers(machine infra.Machine) error {
 
-	allInstances, err := i.svc.instances()
+	allInstances, err := getAllInstances(i.svc)
 	if err != nil {
 		return err
 	}

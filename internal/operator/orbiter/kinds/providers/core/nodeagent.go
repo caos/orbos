@@ -21,8 +21,8 @@ import (
 
 type IterateNodeAgentFuncs func(currentNodeAgents *common.CurrentNodeAgents) (queryNodeAgent func(machine infra.Machine, orbiterCommit string) (bool, error), install func(machine infra.Machine) error)
 
-func ConfigureNodeAgents(svc MachinesService, monitor mntr.Monitor, orb orb.Orb) error {
-	configure, _ := NodeAgentFuncs(monitor, orb.URL, orb.Repokey)
+func ConfigureNodeAgents(svc MachinesService, monitor mntr.Monitor, orb orb.Orb, pprof bool) error {
+	configure, _ := NodeAgentFuncs(monitor, orb.URL, orb.Repokey, pprof)
 	return Each(svc, func(pool string, machine infra.Machine) error {
 		err := configure(machine)
 		if err != nil {
@@ -39,7 +39,12 @@ func ConfigureNodeAgents(svc MachinesService, monitor mntr.Monitor, orb orb.Orb)
 func NodeAgentFuncs(
 	monitor mntr.Monitor,
 	repoURL string,
-	repoKey string) (reconfigure func(machines infra.Machine) error, iterate IterateNodeAgentFuncs) {
+	repoKey string,
+	pprof bool,
+) (
+	reconfigure func(machines infra.Machine) error,
+	iterate IterateNodeAgentFuncs,
+) {
 
 	configure := func(machine infra.Machine) func() error {
 		machineMonitor := monitor.WithField("machine", machine.ID())
@@ -151,6 +156,10 @@ func NodeAgentFuncs(
 						configure(machine),
 						func() error {
 							if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+								pprofStr := ""
+								if pprof {
+									pprofStr = "--pprof"
+								}
 								return errors.Wrapf(cmp.WriteFile(systemdPath, strings.NewReader(fmt.Sprintf(`[Unit]
 Description=Node Agent
 After=network.target
@@ -158,7 +167,7 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=%s --id "%s"
+ExecStart=%s --id "%s" %s
 Restart=always
 MemoryLimit=250M
 MemoryAccounting=yes
@@ -168,7 +177,7 @@ MemoryAccounting=yes
 
 [Install]
 WantedBy=multi-user.target
-`, binary, machine.ID())), 600), "creating remote file %s failed", systemdPath)
+`, binary, machine.ID(), pprofStr)), 600), "creating remote file %s failed", systemdPath)
 							}); err != nil {
 								return errors.Wrap(err, "remotely configuring Node Agent systemd unit failed")
 							}

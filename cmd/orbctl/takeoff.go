@@ -1,6 +1,10 @@
 package main
 
 import (
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+
 	"github.com/caos/orbos/cmd/orbctl/cmds"
 	"github.com/caos/orbos/internal/ctrlcrd"
 	"github.com/caos/orbos/internal/ctrlgitops"
@@ -37,7 +41,7 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		if recur && destroy {
-			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
+			return errors.New("flags --recur and --destroy are mutually exclusive, please provide either one or none")
 		}
 
 		rv, err := getRv()
@@ -79,6 +83,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 		destroy          bool
 		deploy           bool
 		ingestionAddress string
+		pprof            bool
 		cmd              = &cobra.Command{
 			Use:   "orbiter",
 			Short: "Launch an orbiter",
@@ -89,6 +94,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", true, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
+	flags.BoolVar(&pprof, "pprof", false, "Start pprof to analyse memory usage")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
@@ -126,6 +132,12 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 			OrbConfigPath:    orbConfig.Path,
 			GitCommit:        gitCommit,
 			IngestionAddress: ingestionAddress,
+		}
+
+		if pprof {
+			go func() {
+				log.Println(http.ListenAndServe("localhost:6060", nil))
+			}()
 		}
 
 		_, err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)

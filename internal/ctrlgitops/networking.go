@@ -18,6 +18,8 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 		takeoffChan <- struct{}{}
 	}()
 
+	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+
 	for range takeoffChan {
 		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
 		if err != nil {
@@ -25,7 +27,6 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 			return err
 		}
 
-		gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			monitor.Error(err)
 			return err
@@ -41,6 +42,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 				"took": time.Since(started),
 			}).Info("Iteration done")
 
+			time.Sleep(time.Second * 30)
 			takeoffChan <- struct{}{}
 		}()
 	}

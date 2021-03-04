@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/labels"
 	apps "k8s.io/api/apps/v1"
@@ -15,6 +16,7 @@ func EnsureOrbiterArtifacts(
 	monitor mntr.Monitor,
 	apiLabels *labels.API,
 	client *Client,
+	pprof bool,
 	orbiterversion string,
 	imageRegistry string) error {
 
@@ -29,6 +31,11 @@ func EnsureOrbiterArtifacts(
 	nameLabels := toNameLabels(apiLabels, "orbiter")
 	k8sNameLabels := labels.MustK8sMap(nameLabels)
 	k8sPodSelector := labels.MustK8sMap(labels.DeriveNameSelector(nameLabels, false))
+
+	cmd := []string{"/orbctl", "--orbconfig", "/etc/orbiter/orbconfig", "takeoff", "orbiter", "--recur", "--ingestion="}
+	if pprof {
+		cmd = append(cmd, "--pprof")
+	}
 
 	deployment := &apps.Deployment{
 		ObjectMeta: mach.ObjectMeta{

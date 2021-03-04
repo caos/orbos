@@ -28,6 +28,7 @@ func GetQueryAndDestroyFuncs(
 	finishedChan chan struct{},
 	orbiterCommit, repoURL, repoKey string,
 	oneoff bool,
+	pprof bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -53,6 +54,7 @@ func GetQueryAndDestroyFuncs(
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
+			pprof,
 		)(
 			monitor,
 			finishedChan,
@@ -66,6 +68,7 @@ func GetQueryAndDestroyFuncs(
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
+			pprof,
 		)(
 			monitor,
 			finishedChan,
@@ -73,18 +76,18 @@ func GetQueryAndDestroyFuncs(
 			providerCurrent,
 		)
 	case "orbiter.caos.ch/StaticProvider":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
-			return static.AdaptFunc(
-				provID,
-				wlFunc,
-				orbiterCommit, repoURL, repoKey,
-			)(
-				monitor.WithFields(map[string]interface{}{"provider": provID}),
-				finishedChan,
-				providerTree,
-				providerCurrent)
-		}
-		return orbiter.AdaptFuncGoroutine(adaptFunc)
+		return static.AdaptFunc(
+			provID,
+			wlFunc,
+			orbiterCommit,
+			repoURL,
+			repoKey,
+			pprof,
+		)(
+			monitor.WithFields(map[string]interface{}{"provider": provID}),
+			finishedChan,
+			providerTree,
+			providerCurrent)
 	default:
 		return nil, nil, nil, false, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
 	}
