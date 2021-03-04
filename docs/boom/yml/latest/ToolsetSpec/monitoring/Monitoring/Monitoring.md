@@ -17,3 +17,4 @@
 | nodeSelector       | NodeSelector for deployment                                                                  |         |            | X    |
 | tolerations        | Tolerations to run grafana on nodes , [here](k8s/Tolerations/Tolerations.md)                 |         | X          |      |
 | resources          | Resource requirements , [here](k8s/Resources/Resources.md)                                   |         |            |      |
+| overwriteVersion   | Override used image version                                                                  |         |            |      |
