@@ -48,8 +48,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		go orbiter.Instrument(monitor, healthyChan)
 	} else {
 		go func() {
-			for h := range healthyChan {
-				fmt.Println(h)
+			for range healthyChan {
 			}
 		}()
 	}
