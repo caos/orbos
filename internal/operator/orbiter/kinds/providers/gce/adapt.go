@@ -4,8 +4,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -116,7 +116,7 @@ func AdaptFunc(
 					return err
 				}
 				return destroy(ctx, delegates)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 
 				if err := desiredKind.validateJSONKey(); err != nil {
 					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo

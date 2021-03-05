@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/secret"
@@ -31,9 +32,9 @@ type EnsureResult struct {
 	Done bool
 }
 
-type ConfigureFunc func(orb orbconfig.Orb) error
+type ConfigureFunc func(orb orbcfg.Orb) error
 
-func NoopConfigure(orb orbconfig.Orb) error {
+func NoopConfigure(orb orbcfg.Orb) error {
 	return nil
 }
 

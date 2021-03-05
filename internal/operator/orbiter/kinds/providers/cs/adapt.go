@@ -6,8 +6,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/mntr"
@@ -105,7 +105,7 @@ func AdaptFunc(
 				}
 
 				return destroy(ctx, current)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 
 				if err := desiredKind.validateAPIToken(); err != nil {
 					return err

@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"

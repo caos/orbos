@@ -5,10 +5,11 @@ import (
 	"errors"
 	"io/ioutil"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/internal/ctrlgitops"
 
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -17,7 +18,7 @@ import (
 func Takeoff(
 	monitor mntr.Monitor,
 	ctx context.Context,
-	orbConfig *orb.Orb,
+	orbConfig *orbcfg.Orb,
 	gitClient *git.Client,
 	recur bool,
 	destroy bool,
@@ -31,7 +32,7 @@ func Takeoff(
 	gitOpsNetworking bool,
 ) error {
 
-	orbConfigIsIncompleteErr := orb.IsComplete(orbConfig)
+	orbConfigIsIncompleteErr := orbcfg.IsComplete(orbConfig)
 	if orbConfigIsIncompleteErr != nil && (gitOpsBoom || gitOpsNetworking) {
 		return orbConfigIsIncompleteErr
 	}

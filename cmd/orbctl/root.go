@@ -6,10 +6,11 @@ import (
 	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -17,7 +18,7 @@ type RootValues struct {
 	Ctx        context.Context
 	Monitor    mntr.Monitor
 	Gitops     bool
-	OrbConfig  *orb.Orb
+	OrbConfig  *orbcfg.Orb
 	Kubeconfig string
 	GitClient  *git.Client
 	ErrFunc    errFunc
@@ -31,8 +32,7 @@ func RootCommand() (*cobra.Command, GetRootValues) {
 
 	ctx := context.Background()
 	rv := &RootValues{
-		Ctx:       ctx,
-		GitClient: git.New(ctx, monitor, "orbos", "orbos@caos.ch"),
+		Ctx: ctx,
 		ErrFunc: func(err error) error {
 			if err != nil {
 				monitor.Error(err)
@@ -76,6 +76,7 @@ $ orbctl -f ~/.orb/myorb [command]
 		}
 		rv.Monitor = monitor
 		rv.Kubeconfig = helpers.PruneHome(rv.Kubeconfig)
+		rv.GitClient = git.New(ctx, monitor, "orbos", "orbos@caos.ch")
 
 		if rv.Gitops {
 			prunedPath := helpers.PruneHome(orbConfigPath)

@@ -3,11 +3,12 @@ package main
 import (
 	"errors"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/spf13/cobra"
 )
@@ -39,7 +40,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		if err := orb.IsComplete(orbConfig); err != nil {
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 

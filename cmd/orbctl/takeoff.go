@@ -5,10 +5,11 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/cmd/orbctl/cmds"
 	"github.com/caos/orbos/internal/ctrlcrd"
 	"github.com/caos/orbos/internal/ctrlgitops"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
@@ -115,7 +116,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 		gitClient := rv.GitClient
 		ctx := rv.Ctx
 
-		if err := orb.IsComplete(orbConfig); err != nil {
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 

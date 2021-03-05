@@ -4,7 +4,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/orb"
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/internal/secret/operators"
 
 	"github.com/caos/orbos/pkg/secret"
@@ -58,7 +59,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return errors.New("writesecret command is only supported with the --gitops flag yet")
 		}
 
-		if err := orb.IsComplete(orbConfig); err != nil {
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 

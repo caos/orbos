@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/orb"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/labels"
 
@@ -65,7 +65,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 			return errors.New("teardown command is only supported with the --gitops flag and a committed orbiter.yml")
 		}
 
-		if err := orb.IsComplete(orbConfig); err != nil {
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 

@@ -4,8 +4,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -97,7 +97,7 @@ func AdaptFunc(
 				}
 
 				return destroy(svc, desiredKind, current)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
