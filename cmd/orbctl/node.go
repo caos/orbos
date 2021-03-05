@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/tree"
@@ -24,7 +25,7 @@ func NodeCommand() *cobra.Command {
 	}
 }
 
-func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orb.Orb, args []string, method func(machine infra.Machine) (required bool, require func(), unrequire func())) error {
+func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb, args []string, method func(machine infra.Machine) (required bool, require func(), unrequire func())) error {
 	return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error {
 
 		if len(args) <= 0 {

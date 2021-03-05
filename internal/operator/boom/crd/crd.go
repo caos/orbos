@@ -2,6 +2,8 @@ package crd
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
@@ -94,7 +96,7 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 	}
 
 	if c.bundle == nil {
-		c.status = errors.New("No bundle for crd")
+		c.status = errors.New("no bundle for crd")
 		monitor.Error(c.status)
 		return
 	}
@@ -114,12 +116,19 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 			return
 		}
 
+		apiVersion := toolsetCRD.APIVersion
+		apiVersionSplit := strings.Split(apiVersion, "/")
+		if len(apiVersionSplit) == 2 {
+			apiVersion = apiVersionSplit[1]
+		}
+
 		if err := cmd.Reconcile(
 			monitor,
-			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, toolsetCRD.APIVersion),
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, apiVersion),
 			k8sClient,
 			boomSpec,
 			boomSpec.Version,
+			gitops,
 		); err != nil {
 			c.status = err
 			return

@@ -9,6 +9,7 @@ type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
 	Spec   struct {
 		Verbose bool
+		PProf   bool
 	}
 	Clusters  map[string]*tree.Tree
 	Providers map[string]*tree.Tree

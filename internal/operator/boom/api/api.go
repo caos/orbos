@@ -1,6 +1,8 @@
 package api
 
 import (
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/boom/api/common"
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
@@ -10,7 +12,6 @@ import (
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
-	"strings"
 )
 
 const (

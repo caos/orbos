@@ -2,25 +2,26 @@ package main
 
 import (
 	"context"
-	"flag"
 
 	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 )
 
 type RootValues struct {
-	Ctx         context.Context
-	Monitor     mntr.Monitor
-	OrbConfig   *orb.Orb
-	GitClient   *git.Client
-	MetricsAddr string
-	ErrFunc     errFunc
+	Ctx        context.Context
+	Monitor    mntr.Monitor
+	Gitops     bool
+	OrbConfig  *orbcfg.Orb
+	Kubeconfig string
+	GitClient  *git.Client
+	ErrFunc    errFunc
 }
 
 type GetRootValues func() (*RootValues, error)
@@ -29,10 +30,20 @@ type errFunc func(err error) error
 
 func RootCommand() (*cobra.Command, GetRootValues) {
 
+	ctx := context.Background()
+	rv := &RootValues{
+		Ctx: ctx,
+		ErrFunc: func(err error) error {
+			if err != nil {
+				monitor.Error(err)
+			}
+			return nil
+		},
+	}
+
 	var (
-		verbose       bool
 		orbConfigPath string
-		metricsAddr   string
+		verbose       bool
 	)
 
 	cmd := &cobra.Command{
@@ -54,36 +65,29 @@ $ orbctl -f ~/.orb/myorb [command]
 
 	flags := cmd.PersistentFlags()
 	flags.StringVarP(&orbConfigPath, "orbconfig", "f", "~/.orb/config", "Path to the file containing the orbs git repo URL, deploy key and the master key for encrypting and decrypting secrets")
+	flags.StringVarP(&rv.Kubeconfig, "kubeconfig", "k", "~/.kube/config", "Path to the kubeconfig file to the cluster orbctl should target")
+	flags.BoolVar(&rv.Gitops, "gitops", false, "Run orbctl in gitops mode. Not specifying this flag is only supported for BOOM and Networking Operator")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
-	flag.StringVar(&metricsAddr, "metrics-addr", "", "The address the metric endpoint binds to.")
 
 	return cmd, func() (*RootValues, error) {
 
 		if verbose {
 			monitor = monitor.Verbose()
 		}
+		rv.Monitor = monitor
+		rv.Kubeconfig = helpers.PruneHome(rv.Kubeconfig)
+		rv.GitClient = git.New(ctx, monitor, "orbos", "orbos@caos.ch")
 
-		prunedPath := helpers.PruneHome(orbConfigPath)
-		orbConfig, err := orb.ParseOrbConfig(prunedPath)
-		if err != nil {
-			orbConfig = &orb.Orb{Path: prunedPath}
-			return nil, err
+		if rv.Gitops {
+			prunedPath := helpers.PruneHome(orbConfigPath)
+			orbConfig, err := orb.ParseOrbConfig(prunedPath)
+			if err != nil {
+				orbConfig = &orb.Orb{Path: prunedPath}
+				return nil, err
+			}
+			rv.OrbConfig = orbConfig
 		}
 
-		ctx := context.Background()
-
-		return &RootValues{
-			Ctx:         ctx,
-			Monitor:     monitor,
-			OrbConfig:   orbConfig,
-			GitClient:   git.New(ctx, monitor, "orbos", "orbos@caos.ch"),
-			MetricsAddr: metricsAddr,
-			ErrFunc: func(err error) error {
-				if err != nil {
-					monitor.Error(err)
-				}
-				return nil
-			},
-		}, nil
+		return rv, nil
 	}
 }

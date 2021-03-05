@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"flag"
-	"github.com/caos/orbos/internal/controller"
-	"github.com/caos/orbos/internal/orb"
+
+	"github.com/caos/orbos/internal/ctrlcrd"
+
 	"github.com/caos/orbos/pkg/git"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -15,10 +16,10 @@ import (
 
 func main() {
 
+	gitops := flag.Bool("gitops", false, "defines if the operator should run in gitops mode not crd mode")
 	orbconfig := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
 	metricsAddr := flag.String("metrics-addr", ":8080", "The address the metric endpoint binds to.")
-	crdMode := flag.Bool("crdmode", false, "defines if the operator should run in crd mode not gitops mode")
 
 	flag.Parse()
 
@@ -32,13 +33,8 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
-	if *crdMode {
-		_, err := orb.ParseOrbConfig(helpers.PruneHome(*orbconfig))
-		if err != nil {
-			panic(err)
-		}
-
-		if err := controller.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, "", controller.Boom); err != nil {
+	if !*gitops {
+		if err := ctrlcrd.Start(monitor, "crdoperators", "./artifacts", *metricsAddr, "", ctrlcrd.Boom); err != nil {
 			panic(err)
 		}
 	} else {

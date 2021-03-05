@@ -4,8 +4,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -15,7 +15,16 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string, oneoff bool) orbiter.AdaptFunc {
+func AdaptFunc(
+	providerID,
+	orbID string,
+	whitelist dynamic.WhiteListFunc,
+	orbiterCommit,
+	repoURL,
+	repoKey string,
+	oneoff bool,
+	pprof bool,
+) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
@@ -94,7 +103,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil, err
 				}
 
-				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey, pprof)
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, svc, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func(delegates map[string]interface{}) error {
@@ -107,7 +116,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return err
 				}
 				return destroy(ctx, delegates)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 
 				if err := desiredKind.validateJSONKey(); err != nil {
 					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
@@ -140,7 +149,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					panic(err)
 				}
 
-				return core.ConfigureNodeAgents(svc, svc.context.monitor, orb)
+				return core.ConfigureNodeAgents(svc, svc.context.monitor, orb, pprof)
 			},
 			migrate,
 			secrets,

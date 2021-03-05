@@ -2,8 +2,8 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/pkg/labels"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
-	"github.com/caos/orbos/internal/orb"
 	"gopkg.in/yaml.v2"
 	core "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,7 +26,7 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 	})
 }
 
-func EnsureConfigArtifacts(monitor mntr.Monitor, client *Client, orb *orb.Orb) error {
+func EnsureOrbconfigSecret(monitor mntr.Monitor, client *Client, orb *orbcfg.Orb) error {
 	monitor.Debug("Ensuring configuration artifacts")
 
 	orbfile, err := yaml.Marshal(orb)

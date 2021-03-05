@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -34,6 +35,10 @@ func EditCommand(getRv GetRootValues) *cobra.Command {
 
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient
+
+			if !rv.Gitops {
+				return errors.New("edit command is only supported with the --gitops flag")
+			}
 
 			if err := orbConfig.IsConnectable(); err != nil {
 				return err

@@ -1,4 +1,4 @@
-package start
+package ctrlgitops
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/api"
@@ -15,7 +17,6 @@ import (
 	"github.com/caos/orbos/internal/ingestion"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/secret/operators"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -36,7 +37,7 @@ type OrbiterConfig struct {
 	IngestionAddress string
 }
 
-func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbconfig.Orb, version string) ([]string, error) {
+func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbcfg.Orb, version string) ([]string, error) {
 
 	go checks(monitor, orbctlGit)
 
@@ -48,8 +49,7 @@ func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orb
 		go orbiter.Instrument(monitor, healthyChan)
 	} else {
 		go func() {
-			for h := range healthyChan {
-				fmt.Println(h)
+			for range healthyChan {
 			}
 		}()
 	}
@@ -67,6 +67,8 @@ loop:
 				if iterated {
 					initialized = true
 				}
+
+				time.Sleep(time.Second * 30)
 				go on()
 			})
 		}
@@ -87,7 +89,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		}()
 	}()
 
-	orbFile, err := orbconfig.ParseOrbConfig(conf.OrbConfigPath)
+	orbFile, err := orbcfg.ParseOrbConfig(conf.OrbConfigPath)
 	if err != nil {
 		monitor.Error(err)
 		done(false)
@@ -198,7 +200,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}()
 }
 
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbconfig.Orb) ([]string, error) {
+func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb) ([]string, error) {
 	kubeconfigs := make([]string, 0)
 
 	orbTree, err := api.ReadOrbiterYml(gitClient)

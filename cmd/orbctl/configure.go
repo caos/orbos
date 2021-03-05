@@ -6,13 +6,13 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/ctrlgitops"
+
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
 	secret2 "github.com/caos/orbos/pkg/secret"
 
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-
-	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 
@@ -53,6 +53,10 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		defer func() {
 			err = rv.ErrFunc(err)
 		}()
+
+		if !rv.Gitops {
+			return errors.New("configure command is only supported with the --gitops flag")
+		}
 
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
@@ -179,7 +183,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			}
 
 			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig)
+			kubeconfigs, err := ctrlgitops.GetKubeconfigs(monitor, gitClient, orbConfig)
 			if err == nil {
 				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
 			}
@@ -225,10 +229,11 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		}
 
 		for _, kubeconfig := range allKubeconfigs {
+
 			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 			if k8sClient.Available() {
 				monitor.Info("Ensuring orbconfig in kubernetes cluster")
-				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
+				if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfig); err != nil {
 					monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
 					return err
 				}

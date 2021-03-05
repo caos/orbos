@@ -3,6 +3,8 @@ package clientgo
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"strings"
 )
 
 var (
@@ -144,24 +145,24 @@ func GetGroupVersionsResources(monitor mntr.Monitor, filtersResources []string) 
 
 	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting cluster config failed: %w", err)
 	}
 
 	client, err := discovery.NewDiscoveryClientForConfig(conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating discovery client failed: %w", err)
 	}
 
 	apiGroups, err := client.ServerGroups()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting supported groups and versions failed: %w", err)
 	}
 	resourceInfoList := make([]*ResourceInfo, 0)
 	for _, apiGroup := range apiGroups.Groups {
 		version := apiGroup.PreferredVersion
 		apiResources, err := client.ServerResourcesForGroupVersion(version.GroupVersion)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting supported resources failed for %s: %w", version.GroupVersion, err)
 		}
 
 		for _, apiResource := range apiResources.APIResources {

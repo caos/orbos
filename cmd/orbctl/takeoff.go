@@ -1,9 +1,15 @@
 package main
 
 import (
+	"log"
+	"net/http"
+	_ "net/http/pprof"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/cmd/orbctl/cmds"
-	"github.com/caos/orbos/internal/controller"
-	"github.com/caos/orbos/internal/start"
+	"github.com/caos/orbos/internal/ctrlcrd"
+	"github.com/caos/orbos/internal/ctrlgitops"
 	"github.com/caos/orbos/internal/utils/clientgo"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
@@ -17,7 +23,6 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 		recur            bool
 		destroy          bool
 		deploy           bool
-		kubeconfig       string
 		ingestionAddress string
 		gitOpsBoom       bool
 		gitOpsNetworking bool
@@ -34,11 +39,10 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 	flags.BoolVar(&gitOpsBoom, "gitops-boom", false, "Ensure Boom runs in gitops mode")
 	flags.BoolVar(&gitOpsNetworking, "gitops-networking", false, "Ensure Networking-operator runs in gitops mode")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "Kubeconfig for boom deployment")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 		if recur && destroy {
-			return errors.New("flags --recur and --destroy are mutually exclusive, please provide eighter one or none")
+			return errors.New("flags --recur and --destroy are mutually exclusive, please provide either one or none")
 		}
 
 		rv, err := getRv()
@@ -65,9 +69,9 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 			ingestionAddress,
 			version,
 			gitCommit,
-			kubeconfig,
-			gitOpsBoom,
-			gitOpsNetworking,
+			rv.Kubeconfig,
+			rv.Gitops || gitOpsBoom,
+			rv.Gitops || gitOpsNetworking,
 		)
 	}
 	return cmd
@@ -80,6 +84,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 		destroy          bool
 		deploy           bool
 		ingestionAddress string
+		pprof            bool
 		cmd              = &cobra.Command{
 			Use:   "orbiter",
 			Short: "Launch an orbiter",
@@ -90,6 +95,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", true, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter deployment continously")
+	flags.BoolVar(&pprof, "pprof", false, "Start pprof to analyse memory usage")
 	flags.StringVar(&ingestionAddress, "ingestion", "", "Ingestion API address")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
@@ -109,11 +115,16 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 		ctx := rv.Ctx
+
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
+			return err
+		}
+
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
 
-		orbiterConfig := &start.OrbiterConfig{
+		orbiterConfig := &ctrlgitops.OrbiterConfig{
 			Recur:            recur,
 			Destroy:          destroy,
 			Deploy:           deploy,
@@ -124,7 +135,13 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 			IngestionAddress: ingestionAddress,
 		}
 
-		_, err = start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
+		if pprof {
+			go func() {
+				log.Println(http.ListenAndServe("localhost:6060", nil))
+			}()
+		}
+
+		_, err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
 		return err
 	}
 	return cmd
@@ -132,8 +149,8 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 
 func StartBoom(getRv GetRootValues) *cobra.Command {
 	var (
-		gitOpsMode bool
-		cmd        = &cobra.Command{
+		metricsAddr string
+		cmd         = &cobra.Command{
 			Use:   "boom",
 			Short: "Launch a boom",
 			Long:  "Ensures a desired state",
@@ -141,7 +158,7 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 	)
 
 	flags := cmd.Flags()
-	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
+	flags.StringVar(&metricsAddr, "metrics-addr", "", "The address the metric endpoint binds to.")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
@@ -158,10 +175,10 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 
 		monitor.Info("Takeoff Boom")
 
-		if gitOpsMode {
-			return start.Boom(monitor, orbConfig.Path, version)
+		if rv.Gitops {
+			return ctrlgitops.Boom(monitor, orbConfig.Path, version)
 		} else {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, "", controller.Boom)
+			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, "", ctrlcrd.Boom)
 		}
 	}
 	return cmd
@@ -169,17 +186,15 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 
 func StartNetworking(getRv GetRootValues) *cobra.Command {
 	var (
-		gitOpsMode bool
-		kubeconfig string
-		cmd        = &cobra.Command{
+		metricsAddr string
+		cmd         = &cobra.Command{
 			Use:   "networking",
 			Short: "Launch a networking operator",
 			Long:  "Ensures a desired state of networking for an application",
 		}
 	)
 	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "kubeconfig used by networking operator")
-	flags.BoolVar(&gitOpsMode, "gitops", false, "defines if the operator should run in gitops mode")
+	flags.StringVar(&metricsAddr, "metrics-addr", "", "The address the metric endpoint binds to.")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		rv, err := getRv()
@@ -195,18 +210,18 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 
 		monitor.Info("Takeoff Networking")
 
-		if gitOpsMode {
-			cfg, err := clientgo.GetClusterConfig(monitor, kubeconfig)
+		if rv.Gitops {
+			cfg, err := clientgo.GetClusterConfig(monitor, rv.Kubeconfig)
 			if err != nil {
 				return err
 			}
 			k8sClient := kubernetes2.NewK8sClientWithConfig(monitor, cfg)
 
 			if k8sClient.Available() {
-				return start.Networking(monitor, orbConfig.Path, k8sClient, &version)
+				return ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version)
 			}
 		} else {
-			return controller.Start(monitor, version, "/boom", rv.MetricsAddr, kubeconfig, controller.Networking)
+			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, rv.Kubeconfig, ctrlcrd.Networking)
 		}
 		return nil
 	}

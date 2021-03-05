@@ -1,9 +1,12 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/secret/operators"
 	"io/ioutil"
 	"os"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
+	"github.com/caos/orbos/internal/secret/operators"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -52,7 +55,11 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		if err := orbConfig.IsComplete(); err != nil {
+		if !rv.Gitops {
+			return errors.New("writesecret command is only supported with the --gitops flag yet")
+		}
+
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 
@@ -69,16 +76,13 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			path = args[0]
 		}
 
-		if err := secret.Write(
+		return secret.Write(
 			monitor,
 			gitClient,
 			path,
 			s,
 			operators.GetAllSecretsFunc(orbConfig),
-			operators.PushFunc()); err != nil {
-			return err
-		}
-		return nil
+			operators.PushFunc())
 	}
 	return cmd
 }

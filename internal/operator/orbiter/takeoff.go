@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/secret"
@@ -31,9 +32,9 @@ type EnsureResult struct {
 	Done bool
 }
 
-type ConfigureFunc func(orb orbconfig.Orb) error
+type ConfigureFunc func(orb orbcfg.Orb) error
 
-func NoopConfigure(orb orbconfig.Orb) error {
+func NoopConfigure(orb orbcfg.Orb) error {
 	return nil
 }
 
@@ -43,29 +44,6 @@ type EnsureFunc func(pdf api.PushDesiredFunc) *EnsureResult
 
 func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
 	return &EnsureResult{Done: true}
-}
-
-type retQuery struct {
-	ensure EnsureFunc
-	err    error
-}
-
-func QueryFuncGoroutine(query func() (EnsureFunc, error)) (EnsureFunc, error) {
-	retChan := make(chan retQuery)
-	go func() {
-		ensure, err := query()
-		retChan <- retQuery{ensure, err}
-	}()
-	ret := <-retChan
-	return ret.ensure, ret.err
-}
-
-func EnsureFuncGoroutine(ensure func() *EnsureResult) *EnsureResult {
-	retChan := make(chan *EnsureResult)
-	go func() {
-		retChan <- ensure()
-	}()
-	return <-retChan
 }
 
 type event struct {
@@ -125,10 +103,7 @@ func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, 
 	}
 	treeCurrent := &tree.Tree{}
 
-	adaptFunc := func() (QueryFunc, DestroyFunc, ConfigureFunc, bool, map[string]*secret.Secret, error) {
-		return adapt(monitor, finished, treeDesired, treeCurrent)
-	}
-	query, destroy, configure, migrate, secrets, err := AdaptFuncGoroutine(adaptFunc)
+	query, destroy, configure, migrate, secrets, err := adapt(monitor, finished, treeDesired, treeCurrent)
 	return query, destroy, configure, migrate, treeDesired, treeCurrent, secrets, err
 }
 
@@ -193,10 +168,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			monitor.Error(conf.GitClient.Push())
 		}
 
-		queryFunc := func() (EnsureFunc, error) {
-			return query(&currentNodeAgents.Current, &desiredNodeAgents.Spec.NodeAgents, nil)
-		}
-		ensure, err := QueryFuncGoroutine(queryFunc)
+		ensure, err := query(&currentNodeAgents.Current, &desiredNodeAgents.Spec.NodeAgents, nil)
 		if err != nil {
 			handleAdapterError(err)
 			return
@@ -221,11 +193,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			}
 		}
 
-		ensureFunc := func() *EnsureResult {
-			return ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
-		}
-
-		result := EnsureFuncGoroutine(ensureFunc)
+		result := ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
 		if result.Err != nil {
 			handleAdapterError(result.Err)
 			return

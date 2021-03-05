@@ -23,6 +23,7 @@ func AdaptFunc(
 	clusterID string,
 	oneoff bool,
 	deployOrbiter bool,
+	pprof bool,
 	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR),
 	gitClient *git.Client,
@@ -109,6 +110,7 @@ func AdaptFunc(
 				monitor,
 				apiLabels,
 				k8sClient,
+				pprof,
 				desiredKind.Spec.Versions.Orbiter,
 				imageRegistry,
 			); err != nil {
@@ -178,11 +180,7 @@ func AdaptFunc(
 
 				desiredKind.Spec.Kubeconfig = nil
 
-				destroyFunc := func() error {
-					return destroy(providers, k8sClient)
-				}
-
-				return orbiter.DestroyFuncGoroutine(destroyFunc)
+				return destroy(providers, k8sClient)
 			},
 			orbiter.NoopConfigure,
 			migrate,

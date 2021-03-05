@@ -4,13 +4,14 @@ import (
 	"errors"
 	"strings"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/pkg/labels"
 
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/secret"
@@ -23,7 +24,7 @@ const (
 	networking string = "networking"
 )
 
-func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
+func GetAllSecretsFunc(orb *orbcfg.Orb) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
 		allSecrets := make(map[string]*secret.Secret, 0)
 		allTrees := make(map[string]*tree.Tree, 0)
@@ -86,7 +87,7 @@ func GetAllSecretsFunc(orb *orb.Orb) func(monitor mntr.Monitor, gitClient *git.C
 			}
 			allTrees[networking] = nwYML
 
-			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
+			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil, false)(monitor, nwYML, nil)
 			if err != nil {
 				return nil, nil, err
 			}

@@ -1,10 +1,11 @@
-package start
+package ctrlgitops
 
 import (
-	"github.com/caos/orbos/internal/operator/boom"
-	"github.com/caos/orbos/mntr"
 	"runtime/debug"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/boom"
+	"github.com/caos/orbos/mntr"
 )
 
 func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {
@@ -61,6 +62,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {
 			<-queryChan
 			<-ensureChan
 
+			time.Sleep(time.Second * 30)
 			takeoffChan <- struct{}{}
 		}()
 	}

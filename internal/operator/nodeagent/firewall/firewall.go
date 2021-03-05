@@ -7,10 +7,10 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func Ensurer(monitor mntr.Monitor, os dep.OperatingSystem, ignore []string) nodeagent.FirewallEnsurer {
+func Ensurer(monitor mntr.Monitor, os dep.OperatingSystem, open []string) nodeagent.FirewallEnsurer {
 	switch os {
 	case dep.CentOS:
-		return centos.Ensurer(monitor, ignore)
+		return centos.Ensurer(monitor, open)
 	default:
 		return noopEnsurer()
 	}

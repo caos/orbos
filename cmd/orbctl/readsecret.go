@@ -1,7 +1,10 @@
 package main
 
 import (
+	"errors"
 	"os"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -32,7 +35,11 @@ func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient
 
-			if err := orbConfig.IsComplete(); err != nil {
+			if !rv.Gitops {
+				return errors.New("readsecret command is only supported with the --gitops flag yet")
+			}
+
+			if err := orbcfg.IsComplete(orbConfig); err != nil {
 				return err
 			}
 

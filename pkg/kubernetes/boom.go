@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	"github.com/caos/orbos/pkg/labels"
@@ -23,7 +24,8 @@ func EnsureBoomArtifacts(
 	nodeselector map[string]string,
 	resources *k8s.Resources,
 	imageRegistry string,
-	gitops bool) error {
+	gitops bool,
+) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"boom": version,
@@ -148,12 +150,29 @@ status:
 		}
 		monitor.WithFields(map[string]interface{}{
 			"version": version,
-		}).Debug("Boom crd ensured")
+		}).Debug("BOOM crd ensured")
 	}
 
-	cmd := []string{"/orbctl", "takeoff", "boom", "-f", "/secrets/orbconfig"}
+	var (
+		cmd          = []string{"/orbctl", "takeoff", "boom"}
+		volumes      []core.Volume
+		volumeMounts []core.VolumeMount
+	)
 	if gitops {
-		cmd = append(cmd, "--gitops")
+		cmd = append(cmd, "--gitops", "-f", "/secrets/orbconfig")
+		volumes = []core.Volume{{
+			Name: "orbconfig",
+			VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{
+					SecretName: "caos",
+				},
+			},
+		}}
+		volumeMounts = []core.VolumeMount{{
+			Name:      "orbconfig",
+			ReadOnly:  true,
+			MountPath: "/secrets",
+		}}
 	}
 
 	deployment := &apps.Deployment{
@@ -184,23 +203,12 @@ status:
 							ContainerPort: 2112,
 							Protocol:      "TCP",
 						}},
-						VolumeMounts: []core.VolumeMount{{
-							Name:      "orbconfig",
-							ReadOnly:  true,
-							MountPath: "/secrets",
-						}},
-						Resources: core.ResourceRequirements(*resources),
+						VolumeMounts: volumeMounts,
+						Resources:    core.ResourceRequirements(*resources),
 					}},
-					NodeSelector: nodeselector,
-					Tolerations:  tolerations.K8s(),
-					Volumes: []core.Volume{{
-						Name: "orbconfig",
-						VolumeSource: core.VolumeSource{
-							Secret: &core.SecretVolumeSource{
-								SecretName: "caos",
-							},
-						},
-					}},
+					NodeSelector:                  nodeselector,
+					Tolerations:                   tolerations.K8s(),
+					Volumes:                       volumes,
 					TerminationGracePeriodSeconds: int64Ptr(10),
 				},
 			},
@@ -212,7 +220,7 @@ status:
 	}
 	monitor.WithFields(map[string]interface{}{
 		"version": version,
-	}).Debug("Boom deployment ensured")
+	}).Debug("BOOM deployment ensured")
 
 	if err := client.ApplyService(&core.Service{
 		ObjectMeta: mach.ObjectMeta{
@@ -233,7 +241,7 @@ status:
 	}); err != nil {
 		return err
 	}
-	monitor.Debug("Boom service ensured")
+	monitor.Debug("BOOM service ensured")
 
 	return nil
 }

@@ -49,6 +49,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 			k8sClient,
 			desiredKind.Spec.Boom,
 			binaryVersion,
+			gitops,
 		); err != nil {
 			return err
 		}
@@ -56,15 +57,15 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		boom := &latest.Boom{
 			Version:         binaryVersion,
 			SelfReconciling: true,
-			GitOps:          gitops,
 		}
 
 		if err := cmdboom.Reconcile(
 			monitor,
-			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), "Boom", "v1"),
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", binaryVersion), "BOOM", "v1"),
 			k8sClient,
 			boom,
 			binaryVersion,
+			gitops,
 		); err != nil {
 			return err
 		}
@@ -91,13 +92,14 @@ func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *s
 					return err
 				}
 				spec := desired.Spec
-				spec.GitOps = gitops
 
 				// at takeoff the artifacts have to be applied
 				spec.SelfReconciling = true
 				if err := orbnw.Reconcile(
 					monitor,
-					spec)(k8sClient); err != nil {
+					spec,
+					gitops,
+				)(k8sClient); err != nil {
 					return err
 				}
 			} else {
@@ -112,12 +114,13 @@ func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *s
 			spec := &orbnw.Spec{
 				Version:         version,
 				SelfReconciling: true,
-				GitOps:          gitops,
 			}
 
 			if err := orbnw.Reconcile(
 				monitor,
-				spec)(k8sClient); err != nil {
+				spec,
+				gitops,
+			)(k8sClient); err != nil {
 				return err
 			}
 		} else {

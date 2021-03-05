@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/labels"
 	"gopkg.in/yaml.v3"
@@ -21,7 +22,8 @@ func EnsureNetworkingArtifacts(
 	nodeselector map[string]string,
 	tolerations []core.Toleration,
 	imageRegistry string,
-	gitops bool) error {
+	gitops bool,
+) error {
 
 	monitor.WithFields(map[string]interface{}{
 		"networking": version,
@@ -214,9 +216,26 @@ status:
 		}).Debug("Networking Operator crd ensured")
 	}
 
-	cmd := []string{"/orbctl", "takeoff", "networking", "-f", "/secrets/orbconfig"}
+	var (
+		cmd          = []string{"/orbctl", "takeoff", "networking"}
+		volumes      []core.Volume
+		volumeMounts []core.VolumeMount
+	)
 	if gitops {
-		cmd = append(cmd, "--gitops")
+		cmd = append(cmd, "--gitops", "-f", "/secrets/orbconfig")
+		volumes = []core.Volume{{
+			Name: "orbconfig",
+			VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{
+					SecretName: "caos",
+				},
+			},
+		}}
+		volumeMounts = []core.VolumeMount{{
+			Name:      "orbconfig",
+			ReadOnly:  true,
+			MountPath: "/secrets",
+		}}
 	}
 
 	deployment := &apps.Deployment{
@@ -247,11 +266,6 @@ status:
 							ContainerPort: 2112,
 							Protocol:      "TCP",
 						}},
-						VolumeMounts: []core.VolumeMount{{
-							Name:      "orbconfig",
-							ReadOnly:  true,
-							MountPath: "/secrets",
-						}},
 						Resources: core.ResourceRequirements{
 							Limits: core.ResourceList{
 								"cpu":    resource.MustParse("500m"),
@@ -262,17 +276,11 @@ status:
 								"memory": resource.MustParse("250Mi"),
 							},
 						},
+						VolumeMounts: volumeMounts,
 					}},
-					NodeSelector: nodeselector,
-					Tolerations:  tolerations,
-					Volumes: []core.Volume{{
-						Name: "orbconfig",
-						VolumeSource: core.VolumeSource{
-							Secret: &core.SecretVolumeSource{
-								SecretName: "caos",
-							},
-						},
-					}},
+					NodeSelector:                  nodeselector,
+					Tolerations:                   tolerations,
+					Volumes:                       volumes,
 					TerminationGracePeriodSeconds: int64Ptr(10),
 				},
 			},
