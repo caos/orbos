@@ -2,6 +2,7 @@ package crd
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -117,7 +118,7 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 
 		if err := cmd.Reconcile(
 			monitor,
-			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, toolsetCRD.APIVersion),
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, strings.Split(toolsetCRD.APIVersion, "/")[1]),
 			k8sClient,
 			boomSpec,
 			boomSpec.Version,
