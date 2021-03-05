@@ -116,9 +116,15 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 			return
 		}
 
+		apiVersion := toolsetCRD.APIVersion
+		apiVersionSplit := strings.Split(apiVersion, "/")
+		if len(apiVersionSplit) == 2 {
+			apiVersion = apiVersionSplit[1]
+		}
+
 		if err := cmd.Reconcile(
 			monitor,
-			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, strings.Split(toolsetCRD.APIVersion, "/")[1]),
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, apiVersion),
 			k8sClient,
 			boomSpec,
 			boomSpec.Version,
