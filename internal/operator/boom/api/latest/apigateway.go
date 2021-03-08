@@ -32,7 +32,9 @@ type APIGateway struct {
 	//Enable proxy protocol
 	//@default: true
 	ProxyProtocol *bool `json:"proxyProtocol,omitempty" yaml:"proxyProtocol,omitempty"`
-	//Override used image version
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
 	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 	//License-key to use for Ambassador
 	LicenceKey *secret.Secret `json:"licenceKey,omitempty" yaml:"licenceKey,omitempty"`

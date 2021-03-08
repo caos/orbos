@@ -4,6 +4,8 @@ type MetricsServer struct {
 	//Flag if tool should be deployed
 	//@default: false
 	Deploy bool `json:"deploy" yaml:"deploy"`
-	//Override used image version
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
 	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }

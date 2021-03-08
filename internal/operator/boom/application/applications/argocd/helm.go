@@ -46,12 +46,15 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest
 
 func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
+	image := "argoproj/argocd"
+
 	if toolsetCRDSpec != nil && toolsetCRDSpec.Reconciling != nil {
 		helper.OverwriteExistingValues(imageTags, map[string]string{
-			"argoproj/argocd": toolsetCRDSpec.Reconciling.OverwriteVersion,
+			image: toolsetCRDSpec.Reconciling.OverwriteVersion,
 		})
+		helper.OverwriteExistingKey(imageTags, &image, toolsetCRDSpec.Reconciling.OverwriteImage)
 	}
-	values := helm.DefaultValues(imageTags)
+	values := helm.DefaultValues(imageTags, image)
 
 	spec := toolsetCRDSpec.Reconciling
 	if spec == nil {

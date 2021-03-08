@@ -40,7 +40,9 @@ type Reconciling struct {
 	Controller *CommonComponent `json:"controller,omitempty" yaml:"controller,omitempty"`
 	//Server options
 	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
-	//Override used image version
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
 	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 	//Additional parameters to use in the deployments
 	AdditionalParameters *AdditionalParameters `json:"additionalParameters,omitempty" yaml:"additionalParameters,omitempty"`

@@ -11,12 +11,15 @@ import (
 func (p *PrometheusNodeExporter) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.PrometheusNodeExporter
 	imageTags := p.GetImageTags()
+	image := "quay.io/prometheus/node-exporter"
+
 	if toolset != nil && toolset.NodeMetricsExporter != nil {
 		helper.OverwriteExistingValues(imageTags, map[string]string{
-			"quay.io/prometheus/node-exporter": toolset.NodeMetricsExporter.OverwriteVersion,
+			image: toolset.NodeMetricsExporter.OverwriteVersion,
 		})
+		helper.OverwriteExistingKey(imageTags, &image, toolset.NodeMetricsExporter.OverwriteImage)
 	}
-	values := helm.DefaultValues(imageTags)
+	values := helm.DefaultValues(imageTags, image)
 
 	// if spec.ReplicaCount != 0 {
 	// 	values.ReplicaCount = spec.ReplicaCount
