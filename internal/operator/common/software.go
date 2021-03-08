@@ -55,15 +55,15 @@ func (s *Software) Merge(sw Software) {
 	}
 
 	if !sw.Sysctl.Equals(zeroPkg) && s.Sysctl.Config == nil {
-		s.Sysctl.Config = make(map[string]string)
+		s.Sysctl.Config = make(map[string]*string)
 	}
 	for key, value := range sw.Sysctl.Config {
-		if value == "1" {
+		if value == StringPointer("1") {
 			s.Sysctl.Config[key] = value
 		}
 	}
 	if !sw.Health.Equals(zeroPkg) && s.Health.Config == nil {
-		s.Health.Config = make(map[string]string)
+		s.Health.Config = make(map[string]*string)
 	}
 	for key, value := range sw.Health.Config {
 		s.Health.Config[key] = value
@@ -71,18 +71,28 @@ func (s *Software) Merge(sw Software) {
 }
 
 type Package struct {
-	Version string            `yaml:",omitempty"`
-	Config  map[string]string `yaml:",omitempty"`
+	Version string             `yaml:",omitempty"`
+	Config  map[string]*string `yaml:",omitempty"`
 }
 
 func (p *Package) AddToConfig(k, v string) {
 	if p.Config == nil {
-		p.Config = make(map[string]string, 0)
+		p.Config = make(map[string]*string, 0)
 	}
 
 	if _, ok := p.Config[k]; ok {
-		p.Config[k] = ""
+		p.Config[k] = nil
 		delete(p.Config, k)
 	}
-	p.Config[k] = v
+	p.Config[k] = &v
+}
+
+func StringPointer(s string) *string {
+	return &s
+}
+func CompareStringPointer(one, two *string) bool {
+	if *one == *two {
+		return true
+	}
+	return false
 }

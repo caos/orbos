@@ -109,7 +109,7 @@ module_hotfixes=true`), 0600); err != nil {
 		}
 	}
 
-	if err := ioutil.WriteFile("/etc/nginx/nginx.conf", []byte(ensureCfg), 0600); err != nil {
+	if err := ioutil.WriteFile("/etc/nginx/nginx.conf", []byte(*ensureCfg), 0600); err != nil {
 		return err
 	}
 

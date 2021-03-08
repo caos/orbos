@@ -29,7 +29,7 @@ type NodeAgentCurrent struct {
 
 var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
 
-func configEquals(this, that map[string]string) bool {
+func configEquals(this, that map[string]*string) bool {
 	if this == nil || that == nil {
 		return this == nil && that == nil
 	}
@@ -42,7 +42,7 @@ func configEquals(this, that map[string]string) bool {
 			return false
 		}
 
-		if prune.ReplaceAllString(v, "") != prune.ReplaceAllString(thatv, "") {
+		if prune.ReplaceAllString(*v, "") != prune.ReplaceAllString(*thatv, "") {
 			return false
 		}
 	}
@@ -156,11 +156,11 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 		na = &NodeAgentSpec{
 			Software: &Software{
 				Sysctl: Package{
-					Config: map[string]string{
-						string(IpForward):             "0",
-						string(NonLocalBind):          "0",
-						string(BridgeNfCallIptables):  "0",
-						string(BridgeNfCallIp6tables): "0",
+					Config: map[string]*string{
+						string(IpForward):             StringPointer("0"),
+						string(NonLocalBind):          StringPointer("0"),
+						string(BridgeNfCallIptables):  StringPointer("0"),
+						string(BridgeNfCallIp6tables): StringPointer("0"),
 					},
 				},
 			},

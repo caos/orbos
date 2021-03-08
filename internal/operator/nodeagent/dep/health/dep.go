@@ -59,10 +59,6 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 			return pkg, err
 		}
 
-		if pkg.Config == nil {
-			pkg.Config = make(map[string]string)
-		}
-
 		if s.systemd.Active(file.Name()) {
 			http, checks := extractArguments(content)
 			pkg.AddToConfig(http, unquote(checks))
@@ -111,7 +107,7 @@ CPUAccounting=yes
 
 [Install]
 WantedBy=multi-user.target
-`, location, quote(args))), 0600); err != nil {
+`, location, quote(*args))), 0600); err != nil {
 			return err
 		}
 

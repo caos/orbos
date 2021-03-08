@@ -112,12 +112,12 @@ func getPorts(monitor mntr.Monitor, zone string) ([]string, error) {
 }
 
 func ignoredPorts(ports []string) []*common.Allowed {
-	allowed := make([]*common.Allowed, len(ports))
-	for idx, port := range ports {
-		allowed[idx] = &common.Allowed{
+	allowed := make([]*common.Allowed, 0)
+	for _, port := range ports {
+		allowed = append(allowed, &common.Allowed{
 			Port:     port,
 			Protocol: "tcp",
-		}
+		})
 	}
 	return allowed
 }

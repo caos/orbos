@@ -52,7 +52,7 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 
 func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove common.Package) error {
 
-	if opsys != dep.CentOS || remove.Config["selinux"] == "permissive" {
+	if opsys != dep.CentOS || common.CompareStringPointer(remove.Config["selinux"], common.StringPointer("permissive")) {
 		return nil
 	}
 

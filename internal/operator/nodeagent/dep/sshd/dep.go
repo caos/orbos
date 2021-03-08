@@ -95,7 +95,7 @@ func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	appendLines := []string{"GSSAPIAuthentication no"}
 	listenAddress := ensure.Config[listenaddress]
-	if listenAddress != "" {
+	if *listenAddress != "" {
 		appendLines = append(appendLines, fmt.Sprintf("ListenAddress %s", listenAddress))
 	}
 

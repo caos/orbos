@@ -152,8 +152,8 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					for _, port := range fw.Ports("external") {
 						if portInt, parseErr := strconv.ParseInt(port.Port, 10, 16); parseErr == nil && portInt == 22 {
 
-							if deepNa.Software.SSHD.Config == nil || deepNa.Software.SSHD.Config["listenaddress"] != machine.IP() {
-								deepNa.Software.SSHD.Config = map[string]string{"listenaddress": machine.IP()}
+							if deepNa.Software.SSHD.Config == nil || *deepNa.Software.SSHD.Config["listenaddress"] != machine.IP() {
+								deepNa.Software.SSHD.AddToConfig("listenaddress", machine.IP())
 								machineMonitor.Changed("sshd config desired")
 							}
 
@@ -177,9 +177,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 							done = false
 						}
 						if !sysctl.Contains(deepNa.Software.Sysctl, common.Package{
-							Config: map[string]string{
-								string(common.IpForward):    "1",
-								string(common.NonLocalBind): "1",
+							Config: map[string]*string{
+								string(common.IpForward):    common.StringPointer("1"),
+								string(common.NonLocalBind): common.StringPointer("1"),
 							},
 						}) {
 							machineMonitor.Changed("sysctl desired")
@@ -371,30 +371,30 @@ http {
 						if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
 							return false, err
 						}
-
-						kaPkg := common.Package{Version: keepalivedVersion, Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaPkg := common.Package{Version: keepalivedVersion, Config: map[string]*string{"keepalived.conf": common.StringPointer(kaBuf.String())}}
 						kaBuf.Reset()
 
 						if d.CustomMasterNotifyer {
 							var enforceEnsuring bool
-							kaPkg.Config["notifymaster.sh"], enforceEnsuring = vrrp.NotifyMaster(d.Self)
+							notifyMaster, enforceEnsuring := vrrp.NotifyMaster(d.Self)
+							kaPkg.Config["notifymaster.sh"] = common.StringPointer(notifyMaster)
 							if enforceEnsuring {
-								kaPkg.Config["reensure"] = "true"
+								kaPkg.Config["reensure"] = common.StringPointer("true")
 							}
 						}
 
 						if vrrp.AuthCheck != nil {
 							authCheck, expectedExitCode := vrrp.AuthCheck(d.Self)
 							if authCheck != "" {
-								kaPkg.Config["authcheck.sh"] = authCheck
-								kaPkg.Config["authcheckexitcode"] = strconv.Itoa(expectedExitCode)
+								kaPkg.Config["authcheck.sh"] = common.StringPointer(authCheck)
+								kaPkg.Config["authcheckexitcode"] = common.StringPointer(strconv.Itoa(expectedExitCode))
 							}
 						}
 
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return false, err
 						}
-						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]*string{"nginx.conf": common.StringPointer(ngxBuf.String())}}
 						ngxBuf.Reset()
 
 						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
@@ -488,7 +488,7 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]*string{"nginx.conf": common.StringPointer(ngxBuf.String())}}
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
@@ -632,7 +632,7 @@ func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelis
 					if cfg != nil {
 						authCheckExitCode, ok := cfg["authcheckexitcode"]
 						if ok {
-							authCheckExitCodeInt, err := strconv.Atoi(authCheckExitCode)
+							authCheckExitCodeInt, err := strconv.Atoi(*authCheckExitCode)
 							if err == nil {
 								authCheckResultsCache = append(authCheckResultsCache, AuthCheckResult{
 									Machine:  machine,

@@ -147,18 +147,18 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 		return err
 	}
 
-	if err := ioutil.WriteFile("/etc/keepalived/keepalived.conf", []byte(strings.ReplaceAll(ensureCfg, "[ REDACTED ]", s.peerAuth)), 0600); err != nil {
+	if err := ioutil.WriteFile("/etc/keepalived/keepalived.conf", []byte(strings.ReplaceAll(*ensureCfg, "[ REDACTED ]", s.peerAuth)), 0600); err != nil {
 		return err
 	}
 
 	if notifyMaster, ok := ensure.Config["notifymaster.sh"]; ok {
-		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(notifyMaster), 0777); err != nil {
+		if err := ioutil.WriteFile("/etc/keepalived/notifymaster.sh", []byte(*notifyMaster), 0777); err != nil {
 			return err
 		}
 	}
 
 	if authCheck, ok := ensure.Config["authcheck.sh"]; ok {
-		if err := ioutil.WriteFile("/etc/keepalived/authcheck.sh", []byte(authCheck), 0777); err != nil {
+		if err := ioutil.WriteFile("/etc/keepalived/authcheck.sh", []byte(*authCheck), 0777); err != nil {
 			return err
 		}
 	}

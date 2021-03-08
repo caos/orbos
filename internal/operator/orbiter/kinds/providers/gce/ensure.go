@@ -80,7 +80,7 @@ func query(
 		machineMonitor := svc.context.monitor.WithField("machine", machineID)
 		na, _ := nodeAgentsDesired.Get(machineID)
 		if na.Software.Health.Config == nil {
-			na.Software.Health.Config = make(map[string]string)
+			na.Software.Health.Config = make(map[string]*string)
 		}
 
 		for _, lb := range normalized {
@@ -102,8 +102,8 @@ func query(
 						lb.healthcheck.proxyProtocol,
 					)
 
-					if v := na.Software.Health.Config[key]; v != value {
-						na.Software.Health.Config[key] = value
+					if v := na.Software.Health.Config[key]; *v != value {
+						na.Software.Health.Config[key] = &value
 						machineMonitor.WithFields(map[string]interface{}{
 							"listen": key,
 							"checks": value,

@@ -17,8 +17,8 @@ func desireHostname(poolsSpec map[string][]*Machine, nodeagents *common.DesiredN
 				})
 
 				nodeagent, _ := nodeagents.Get(machineSpec.ID)
-				if nodeagent.Software.Hostname.Config == nil || nodeagent.Software.Hostname.Config["hostname"] != machineSpec.ID {
-					nodeagent.Software.Hostname = common.Package{Config: map[string]string{"hostname": machineSpec.ID}}
+				if nodeagent.Software.Hostname.Config == nil || *nodeagent.Software.Hostname.Config["hostname"] != machineSpec.ID {
+					nodeagent.Software.Hostname = common.Package{Config: map[string]*string{"hostname": common.StringPointer(machineSpec.ID)}}
 					machineMonitor.Changed("Hostname desired")
 				}
 				logWaiting := func() {
@@ -29,7 +29,7 @@ func desireHostname(poolsSpec map[string][]*Machine, nodeagents *common.DesiredN
 					logWaiting()
 					return false, nil
 				}
-				if curr.Software.Hostname.Config == nil || curr.Software.Hostname.Config["hostname"] != machineSpec.ID {
+				if curr.Software.Hostname.Config == nil || *curr.Software.Hostname.Config["hostname"] != machineSpec.ID {
 					logWaiting()
 					return false, nil
 				}
