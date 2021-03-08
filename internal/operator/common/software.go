@@ -58,7 +58,7 @@ func (s *Software) Merge(sw Software) {
 		s.Sysctl.Config = make(map[string]*string)
 	}
 	for key, value := range sw.Sysctl.Config {
-		if value == StringPointer("1") {
+		if StringPointerValue(value) == "1" {
 			s.Sysctl.Config[key] = value
 		}
 	}
@@ -90,6 +90,14 @@ func (p *Package) AddToConfig(k, v string) {
 func StringPointer(s string) *string {
 	return &s
 }
+
+func StringPointerValue(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
+}
+
 func CompareStringPointer(one, two *string) bool {
 	if *one == *two {
 		return true

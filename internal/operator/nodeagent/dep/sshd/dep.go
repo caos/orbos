@@ -96,7 +96,7 @@ func (s *sshdDep) Ensure(remove common.Package, ensure common.Package) error {
 	appendLines := []string{"GSSAPIAuthentication no"}
 	listenAddress := ensure.Config[listenaddress]
 	if *listenAddress != "" {
-		appendLines = append(appendLines, fmt.Sprintf("ListenAddress %s", listenAddress))
+		appendLines = append(appendLines, fmt.Sprintf("ListenAddress %s", common.StringPointerValue(listenAddress)))
 	}
 
 	if err := dep.ManipulateFile("/etc/ssh/sshd_config", []string{"GSSAPIAuthentication"}, appendLines, func(line string) *string {

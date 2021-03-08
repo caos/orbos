@@ -107,7 +107,7 @@ CPUAccounting=yes
 
 [Install]
 WantedBy=multi-user.target
-`, location, quote(*args))), 0600); err != nil {
+`, location, quote(common.StringPointerValue(args)))), 0600); err != nil {
 			return err
 		}
 

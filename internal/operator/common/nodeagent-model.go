@@ -42,7 +42,7 @@ func configEquals(this, that map[string]*string) bool {
 			return false
 		}
 
-		if prune.ReplaceAllString(*v, "") != prune.ReplaceAllString(*thatv, "") {
+		if prune.ReplaceAllString(StringPointerValue(v), "") != prune.ReplaceAllString(StringPointerValue(thatv), "") {
 			return false
 		}
 	}

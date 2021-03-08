@@ -102,7 +102,8 @@ func query(
 						lb.healthcheck.proxyProtocol,
 					)
 
-					if v := na.Software.Health.Config[key]; *v != value {
+					if v := na.Software.Health.Config[key]; common.StringPointerValue(v) != value {
+						na.Software.Health.Config[key] = nil
 						na.Software.Health.Config[key] = &value
 						machineMonitor.WithFields(map[string]interface{}{
 							"listen": key,

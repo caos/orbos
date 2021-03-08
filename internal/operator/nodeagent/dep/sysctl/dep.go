@@ -53,7 +53,7 @@ func Contains(this common.Package, that common.Package) bool {
 		if this.Config == nil {
 			return false
 		}
-		if thisValue, ok := this.Config[thatKey]; !ok || *thatValue == "1" && *thisValue != "1" {
+		if thisValue, ok := this.Config[thatKey]; !ok || common.StringPointerValue(thatValue) == "1" && common.StringPointerValue(thisValue) != "1" {
 			return false
 		}
 	}
@@ -108,8 +108,8 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 
 func oneOrZero(cfg map[string]*string, property common.KernelModule) string {
 	val := cfg[string(property)]
-	if *val == "1" {
-		return *val
+	if common.StringPointerValue(val) == "1" {
+		return common.StringPointerValue(val)
 	}
 	return "0"
 }

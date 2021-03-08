@@ -108,7 +108,7 @@ func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile("/etc/docker/daemon.json", []byte(*install.Config["daemon.json"]), 600); err != nil {
+	if err := ioutil.WriteFile("/etc/docker/daemon.json", []byte(common.StringPointerValue(install.Config["daemon.json"])), 600); err != nil {
 		return err
 	}
 

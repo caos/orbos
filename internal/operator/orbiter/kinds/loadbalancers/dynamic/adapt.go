@@ -632,7 +632,7 @@ func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelis
 					if cfg != nil {
 						authCheckExitCode, ok := cfg["authcheckexitcode"]
 						if ok {
-							authCheckExitCodeInt, err := strconv.Atoi(*authCheckExitCode)
+							authCheckExitCodeInt, err := strconv.Atoi(common.StringPointerValue(authCheckExitCode))
 							if err == nil {
 								authCheckResultsCache = append(authCheckResultsCache, AuthCheckResult{
 									Machine:  machine,
