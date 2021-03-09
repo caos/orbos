@@ -69,7 +69,10 @@ func (s *healthDep) Current() (pkg common.Package, err error) {
 
 func extractArguments(content []byte) (string, string) {
 	match := r.FindStringSubmatch(string(content))
-	return match[1], match[2]
+	first := match[1]
+	second := match[2]
+	match = nil
+	return first, second
 }
 
 func (s *healthDep) Ensure(_ common.Package, ensure common.Package) error {

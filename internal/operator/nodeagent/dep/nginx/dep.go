@@ -58,7 +58,8 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 	if len(installed) == 0 {
 		return pkg, nil
 	}
-	pkg.Version = "v" + s.normalizer.FindString(installed[0].Version)
+	installedSoftwareVersion := installed[0].Version
+	pkg.Version = "v" + s.normalizer.FindString(installedSoftwareVersion)
 
 	config, err := ioutil.ReadFile("/etc/nginx/nginx.conf")
 	if err != nil {
