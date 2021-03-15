@@ -3,7 +3,7 @@ module github.com/caos/orbos
 go 1.14
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.0.8
+	github.com/AlecAivazis/survey/v2 v2.2.9
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.31.12
 	github.com/caos/oidc v0.6.2
