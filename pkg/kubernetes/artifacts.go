@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
+func EnsureCaosSystemNamespace(monitor mntr.Monitor, client ClientInt) error {
 
 	monitor.Debug("Ensuring common artifacts")
 
@@ -26,7 +26,7 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 	})
 }
 
-func EnsureOrbconfigSecret(monitor mntr.Monitor, client *Client, orb *orbcfg.Orb) error {
+func EnsureOrbconfigSecret(monitor mntr.Monitor, client ClientInt, orb *orbcfg.Orb) error {
 	monitor.Debug("Ensuring configuration artifacts")
 
 	orbfile, err := yaml.Marshal(orb)

@@ -93,7 +93,7 @@ func Takeoff(
 	for _, kubeconfig := range allKubeconfigs {
 		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
 		if k8sClient.Available() {
-			if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
+			if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
 				monitor.Info("failed to apply common resources into k8s-cluster")
 				return err
 			}

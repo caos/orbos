@@ -90,7 +90,7 @@ func AdaptFunc(
 		k8sClient := kubernetes.NewK8sClient(monitor, kc)
 
 		if k8sClient.Available() && deployOrbiter {
-			if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
+			if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
