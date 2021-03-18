@@ -173,6 +173,8 @@ status:
 			ReadOnly:  true,
 			MountPath: "/secrets",
 		}}
+	} else {
+		cmd = append(cmd, "--kubeconfig", "")
 	}
 
 	deployment := &apps.Deployment{

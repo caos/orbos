@@ -15,13 +15,15 @@ import (
 )
 
 const (
-	namespace = "caos-system"
-	name      = "networking"
+	namespace  = "caos-system"
+	kind       = "Networking"
+	apiVersion = "caos.ch/v1"
+	name       = "networking"
 )
 
 func ReadCRD(k8sClient kubernetes.ClientInt) (*tree.Tree, error) {
 
-	unstruct, err := k8sClient.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Networking", namespace, name)
+	unstruct, err := k8sClient.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, kind, namespace, name)
 	if err != nil {
 		if macherrs.IsNotFound(err) || meta.IsNoMatchError(err) {
 			return nil, nil
@@ -62,5 +64,10 @@ func WriteCrd(k8sClient kubernetes.ClientInt, t *tree.Tree) error {
 		return err
 	}
 
-	return k8sClient.ApplyNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Networking", namespace, name, unstruct)
+	unstruct.SetName(name)
+	unstruct.SetNamespace(namespace)
+	unstruct.SetKind(kind)
+	unstruct.SetAPIVersion(apiVersion)
+
+	return k8sClient.ApplyNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, kind, namespace, name, unstruct)
 }

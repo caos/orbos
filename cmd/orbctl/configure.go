@@ -149,6 +149,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		k8sClient, fromOrbiter, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
 		if err != nil {
 			// ignore
+			err = nil
 		}
 
 		if fromOrbiter {
