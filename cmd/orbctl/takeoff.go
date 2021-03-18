@@ -141,8 +141,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 			}()
 		}
 
-		_, err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
-		return err
+		return ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient)
 	}
 	return cmd
 }

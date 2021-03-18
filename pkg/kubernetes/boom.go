@@ -18,7 +18,7 @@ import (
 func EnsureBoomArtifacts(
 	monitor mntr.Monitor,
 	apiLabels *labels.API,
-	client *Client,
+	client ClientInt,
 	version string,
 	tolerations k8s.Tolerations,
 	nodeselector map[string]string,

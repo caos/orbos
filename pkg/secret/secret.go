@@ -27,6 +27,8 @@ type Secret struct {
 }
 type secretAlias Secret
 
+const existingSecretsNamespace = "caos-system"
+
 // Existing: Used secret that has to be already existing in the cluster
 type Existing struct {
 	//Name of the Secret
@@ -211,12 +213,19 @@ func InitIfNil(sec *Secret) *Secret {
 	return sec
 }
 
-func AppendSecrets(prefix string, into, add map[string]*Secret) {
-	for key, secret := range add {
+func AppendSecrets(prefix string, intoSecrets, addSecrets map[string]*Secret, intoExisting, addExisting map[string]*Existing) {
+	for key, secret := range addSecrets {
 		name := key
 		if prefix != "" {
 			name = prefix + "." + name
 		}
-		into[name] = secret
+		intoSecrets[name] = secret
+	}
+	for key, existing := range addExisting {
+		name := key
+		if prefix != "" {
+			name = prefix + "." + name
+		}
+		intoExisting[name] = existing
 	}
 }

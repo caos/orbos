@@ -84,16 +84,15 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 		rv.Kubeconfig = helpers.PruneHome(rv.Kubeconfig)
 		rv.GitClient = git.New(ctx, monitor, "orbos", "orbos@caos.ch")
 
+		var err error
 		if rv.Gitops {
 			prunedPath := helpers.PruneHome(orbConfigPath)
-			orbConfig, err := orb.ParseOrbConfig(prunedPath)
+			rv.OrbConfig, err = orb.ParseOrbConfig(prunedPath)
 			if err != nil {
-				orbConfig = &orb.Orb{Path: prunedPath}
-				return nil, err
+				rv.OrbConfig = &orb.Orb{Path: prunedPath}
 			}
-			rv.OrbConfig = orbConfig
 		}
 
-		return rv, nil
+		return rv, err
 	}
 }

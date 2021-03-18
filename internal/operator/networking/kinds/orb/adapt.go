@@ -18,7 +18,16 @@ func OperatorSelector() *labels.Selector {
 func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
+	return func(
+		monitor mntr.Monitor,
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (queryFunc core.QueryFunc,
+		destroyFunc core.DestroyFunc,
+		secrets map[string]*secret.Secret,
+		existing map[string]*secret.Existing,
+		err error,
+	) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -27,7 +36,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -38,9 +47,9 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
+		queryNW, destroyNW, secrets, existing, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, err
 		}
 
 		queriers := []core.QueryFunc{
@@ -70,6 +79,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 				return core.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
 			},
 			secrets,
+			existing,
 			nil
 	}
 }
