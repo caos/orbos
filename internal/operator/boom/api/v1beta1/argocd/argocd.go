@@ -35,6 +35,10 @@ func (r *Argocd) InitSecrets() {
 		r.Auth = &auth.Auth{}
 	}
 	r.Auth.InitSecrets()
+
+	for _, repo := range append(r.Repositories, r.Credentials...) {
+		repo.InitSecrets()
+	}
 }
 
 func (r *Argocd) IsZero() bool {

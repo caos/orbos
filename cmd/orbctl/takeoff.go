@@ -5,13 +5,13 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/cmd/orbctl/cmds"
 	"github.com/caos/orbos/internal/ctrlcrd"
 	"github.com/caos/orbos/internal/ctrlgitops"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -141,8 +141,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 			}()
 		}
 
-		_, err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
-		return err
+		return ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient)
 	}
 	return cmd
 }
@@ -211,15 +210,13 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 		monitor.Info("Takeoff Networking")
 
 		if rv.Gitops {
-			cfg, err := clientgo.GetClusterConfig(monitor, rv.Kubeconfig)
+
+			k8sClient, _, err := cli.Client(monitor, orbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops)
 			if err != nil {
 				return err
 			}
-			k8sClient := kubernetes2.NewK8sClientWithConfig(monitor, cfg)
 
-			if k8sClient.Available() {
-				return ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version)
-			}
+			return ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version)
 		} else {
 			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, rv.Kubeconfig, ctrlcrd.Networking)
 		}

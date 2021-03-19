@@ -36,8 +36,14 @@ func (a *Auth) InitSecrets() {
 	if a.OIDC.ClientID == nil {
 		a.OIDC.ClientID = &secret.Secret{}
 	}
+	if a.OIDC.ExistingClientIDSecret == nil {
+		a.OIDC.ExistingClientIDSecret = &secret.Existing{}
+	}
 	if a.OIDC.ClientSecret == nil {
 		a.OIDC.ClientSecret = &secret.Secret{}
+	}
+	if a.OIDC.ExistingClientSecretSecret == nil {
+		a.OIDC.ExistingClientSecretSecret = &secret.Existing{}
 	}
 
 	if a.GoogleConnector == nil {
@@ -49,11 +55,20 @@ func (a *Auth) InitSecrets() {
 	if a.GoogleConnector.Config.ClientID == nil {
 		a.GoogleConnector.Config.ClientID = &secret.Secret{}
 	}
+	if a.GoogleConnector.Config.ExistingClientIDSecret == nil {
+		a.GoogleConnector.Config.ExistingClientIDSecret = &secret.Existing{}
+	}
 	if a.GoogleConnector.Config.ClientSecret == nil {
 		a.GoogleConnector.Config.ClientSecret = &secret.Secret{}
 	}
+	if a.GoogleConnector.Config.ExistingClientSecretSecret == nil {
+		a.GoogleConnector.Config.ExistingClientSecretSecret = &secret.Existing{}
+	}
 	if a.GoogleConnector.Config.ServiceAccountJSON == nil {
 		a.GoogleConnector.Config.ServiceAccountJSON = &secret.Secret{}
+	}
+	if a.GoogleConnector.Config.ExistingServiceAccountJSONSecret == nil {
+		a.GoogleConnector.Config.ExistingServiceAccountJSONSecret = &secret.Existing{}
 	}
 
 	if a.GithubConnector == nil {
@@ -65,8 +80,14 @@ func (a *Auth) InitSecrets() {
 	if a.GithubConnector.Config.ClientID == nil {
 		a.GithubConnector.Config.ClientID = &secret.Secret{}
 	}
+	if a.GithubConnector.Config.ExistingClientIDSecret == nil {
+		a.GithubConnector.Config.ExistingClientIDSecret = &secret.Existing{}
+	}
 	if a.GithubConnector.Config.ClientSecret == nil {
 		a.GithubConnector.Config.ClientSecret = &secret.Secret{}
+	}
+	if a.GithubConnector.Config.ExistingClientSecretSecret == nil {
+		a.GithubConnector.Config.ExistingClientSecretSecret = &secret.Existing{}
 	}
 
 	if a.GitlabConnector == nil {
@@ -78,7 +99,13 @@ func (a *Auth) InitSecrets() {
 	if a.GitlabConnector.Config.ClientID == nil {
 		a.GitlabConnector.Config.ClientID = &secret.Secret{}
 	}
+	if a.GitlabConnector.Config.ExistingClientIDSecret == nil {
+		a.GitlabConnector.Config.ExistingClientIDSecret = &secret.Existing{}
+	}
 	if a.GitlabConnector.Config.ClientSecret == nil {
 		a.GitlabConnector.Config.ClientSecret = &secret.Secret{}
+	}
+	if a.GitlabConnector.Config.ExistingClientSecretSecret == nil {
+		a.GitlabConnector.Config.ExistingClientSecretSecret = &secret.Existing{}
 	}
 }

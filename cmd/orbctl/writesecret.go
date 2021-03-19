@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 
 	"github.com/caos/orbos/internal/secret/operators"
 
@@ -55,34 +55,26 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		if !rv.Gitops {
-			return errors.New("writesecret command is only supported with the --gitops flag yet")
-		}
-
-		if err := orbcfg.IsComplete(orbConfig); err != nil {
-			return err
-		}
-
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
-			return err
-		}
-
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
 		}
 
+		k8sClient, _, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
+		if err != nil && !rv.Gitops {
+			return err
+		}
+		err = nil
+
 		return secret.Write(
 			monitor,
-			gitClient,
+			k8sClient,
 			path,
 			s,
-			operators.GetAllSecretsFunc(orbConfig),
-			operators.PushFunc())
+			"orbctl",
+			version,
+			operators.GetAllSecretsFunc(monitor, rv.Gitops, gitClient, k8sClient, orbConfig),
+			operators.PushFunc(monitor, rv.Gitops, gitClient, k8sClient))
 	}
 	return cmd
 }

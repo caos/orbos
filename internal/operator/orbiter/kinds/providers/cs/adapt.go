@@ -35,7 +35,7 @@ func AdaptFunc(
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.RebootRequired == nil {
 			desiredKind.Spec.RebootRequired = make([]string, 0)
@@ -60,7 +60,7 @@ func AdaptFunc(
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbSecrets)
+		secret.AppendSecrets("", secrets, lbSecrets, nil, nil)
 
 		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 		if err != nil {

@@ -101,7 +101,7 @@ func AdaptFunc(
 			providerQueriers = append(providerQueriers, query)
 			providerDestroyers = append(providerDestroyers, destroy)
 			providerConfigurers = append(providerConfigurers, configure)
-			secret.AppendSecrets(provID, secrets, providerSecrets)
+			secret.AppendSecrets(provID, secrets, providerSecrets, nil, nil)
 		}
 
 		var provCurr map[string]interface{}
@@ -151,7 +151,7 @@ func AdaptFunc(
 			clusterQueriers = append(clusterQueriers, query)
 			clusterDestroyers = append(clusterDestroyers, destroy)
 			clusterConfigurers = append(clusterConfigurers, configure)
-			secret.AppendSecrets(clusterID, secrets, clusterSecrets)
+			secret.AppendSecrets(clusterID, secrets, clusterSecrets, nil, nil)
 			if migrateLocal {
 				migrate = true
 			}

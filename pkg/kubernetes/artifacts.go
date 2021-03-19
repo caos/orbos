@@ -2,16 +2,14 @@ package kubernetes
 
 import (
 	"github.com/caos/orbos/pkg/labels"
-	orbcfg "github.com/caos/orbos/pkg/orb"
 
-	"gopkg.in/yaml.v2"
 	core "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/caos/orbos/mntr"
 )
 
-func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
+func EnsureCaosSystemNamespace(monitor mntr.Monitor, client ClientInt) error {
 
 	monitor.Debug("Ensuring common artifacts")
 
@@ -26,13 +24,8 @@ func EnsureCommonArtifacts(monitor mntr.Monitor, client *Client) error {
 	})
 }
 
-func EnsureOrbconfigSecret(monitor mntr.Monitor, client *Client, orb *orbcfg.Orb) error {
+func EnsureOrbconfigSecret(monitor mntr.Monitor, client ClientInt, orbconfig []byte) error {
 	monitor.Debug("Ensuring configuration artifacts")
-
-	orbfile, err := yaml.Marshal(orb)
-	if err != nil {
-		return err
-	}
 
 	if err := client.ApplySecret(&core.Secret{
 		ObjectMeta: mach.ObjectMeta{
@@ -43,7 +36,7 @@ func EnsureOrbconfigSecret(monitor mntr.Monitor, client *Client, orb *orbcfg.Orb
 			},
 		},
 		StringData: map[string]string{
-			"orbconfig": string(orbfile),
+			"orbconfig": string(orbconfig),
 		},
 	}); err != nil {
 		return err

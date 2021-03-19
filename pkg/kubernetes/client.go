@@ -180,7 +180,15 @@ func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config) *Client {
 }
 
 func (c *Client) Available() bool {
-	return c.set != nil
+	nodeApi, err := c.nodeApi()
+	if err != nil {
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+	_, err = nodeApi.List(ctx, mach.ListOptions{})
+	return err == nil
 }
 
 func (c *Client) nodeApi() (clgocore.NodeInterface, error) {

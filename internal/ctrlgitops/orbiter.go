@@ -2,25 +2,19 @@ package ctrlgitops
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/ingestion"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/secret/operators"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/secret"
 	"github.com/golang/protobuf/ptypes"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -37,7 +31,7 @@ type OrbiterConfig struct {
 	IngestionAddress string
 }
 
-func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client, orbConfig *orbcfg.Orb, version string) ([]string, error) {
+func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) error {
 
 	go checks(monitor, orbctlGit)
 
@@ -73,8 +67,7 @@ loop:
 			})
 		}
 	}
-
-	return GetKubeconfigs(monitor, orbctlGit, orbConfig)
+	return nil
 }
 
 func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ctx context.Context, monitor mntr.Monitor, finishedChan chan struct{}, healthyChan chan bool, done func(iterated bool)) {
@@ -198,39 +191,4 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		debug.FreeOSMemory()
 		done(true)
 	}()
-}
-
-func GetKubeconfigs(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb) ([]string, error) {
-	kubeconfigs := make([]string, 0)
-
-	orbTree, err := api.ReadOrbiterYml(gitClient)
-	if err != nil {
-		return nil, errors.New("Failed to parse orbiter.yml")
-	}
-
-	orbDef, err := orb.ParseDesiredV0(orbTree)
-	if err != nil {
-		return nil, errors.New("Failed to parse orbiter.yml")
-	}
-
-	for clustername, _ := range orbDef.Clusters {
-		path := strings.Join([]string{"orbiter", clustername, "kubeconfig"}, ".")
-
-		value, err := secret.Read(
-			monitor,
-			gitClient,
-			path,
-			operators.GetAllSecretsFunc(orbConfig))
-		if err != nil || value == "" {
-			if value == "" && err == nil {
-				err = errors.New("no kubeconfig found")
-			}
-			return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
-		}
-		monitor.Info("Read kubeconfigs")
-
-		kubeconfigs = append(kubeconfigs, value)
-	}
-
-	return kubeconfigs, nil
 }

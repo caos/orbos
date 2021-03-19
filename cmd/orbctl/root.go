@@ -52,14 +52,20 @@ func RootCommand() (*cobra.Command, GetRootValues) {
 		Long: `orbctl launches orbiters, booms, database-operators and networking-operators and simplifies common tasks such as updating your kubeconfig.
 Participate in our community on https://github.com/caos/orbos
 and visit our website at https://caos.ch`,
-		Example: `$ mkdir -p ~/.orb
+		Example: `$ # For being able to use the --gitops flag, you need to create an orbconfig and add an SSH deploy key to your github project 
+$ # Create an ssh key pair
+$ ssh-keygen -b 2048 -t rsa -f ~/.ssh/myorbrepo -q -N ""
+$ # Create the orbconfig
+$ mkdir -p ~/.orb
 $ cat > ~/.orb/myorb << EOF
+> # this is the ssh URL to your git repository
 > url: git@github.com:me/my-orb.git
-> masterkey: "$(gopass my-secrets/orbs/myorb/masterkey)"
+> masterkey: "$(openssl rand -base64 21)" # used for encrypting and decrypting secrets
+> # the repokey is used to connect to your git repository
 > repokey: |
 > $(cat ~/.ssh/myorbrepo | sed s/^/\ \ /g)
 > EOF
-$ orbctl -f ~/.orb/myorb [command]
+$ orbctl --gitops -f ~/.orb/myorb [command]
 `,
 	}
 
@@ -78,16 +84,15 @@ $ orbctl -f ~/.orb/myorb [command]
 		rv.Kubeconfig = helpers.PruneHome(rv.Kubeconfig)
 		rv.GitClient = git.New(ctx, monitor, "orbos", "orbos@caos.ch")
 
+		var err error
 		if rv.Gitops {
 			prunedPath := helpers.PruneHome(orbConfigPath)
-			orbConfig, err := orb.ParseOrbConfig(prunedPath)
+			rv.OrbConfig, err = orb.ParseOrbConfig(prunedPath)
 			if err != nil {
-				orbConfig = &orb.Orb{Path: prunedPath}
-				return nil, err
+				rv.OrbConfig = &orb.Orb{Path: prunedPath}
 			}
-			rv.OrbConfig = orbConfig
 		}
 
-		return rv, nil
+		return rv, err
 	}
 }
