@@ -26,7 +26,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt core.AdaptFunc, 
 			return
 		}
 
-		query, _, _, _, err := adapt(internalMonitor, treeDesired, treeCurrent)
+		query, _, _, _, _, err := adapt(internalMonitor, treeDesired, treeCurrent)
 		if err != nil {
 			internalMonitor.Error(err)
 			return

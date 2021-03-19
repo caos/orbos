@@ -26,6 +26,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 		destroyFunc core.DestroyFunc,
 		secrets map[string]*secret.Secret,
 		existing map[string]*secret.Existing,
+		migrate bool,
 		err error,
 	) {
 		defer func() {
@@ -36,7 +37,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -47,9 +48,9 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, existing, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
+		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, false, err
 		}
 
 		queriers := []core.QueryFunc{
@@ -80,6 +81,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 			},
 			secrets,
 			existing,
+			migrate,
 			nil
 	}
 }

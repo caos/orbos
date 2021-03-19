@@ -10,19 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ParseToolset(desiredTree *tree.Tree) (
-	*Toolset,
-	map[string]*secret.Secret,
-	map[string]*secret.Existing,
-	error,
-) {
+func ParseToolset(desiredTree *tree.Tree) (*Toolset, error) {
 	desiredKind := &Toolset{}
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desiredKind
-	secrets, existing := GetSecretsMap(desiredKind)
-	return desiredKind, secrets, existing, nil
+	return desiredKind, nil
 }
 
 func GetSecretsMap(desiredKind *Toolset) (

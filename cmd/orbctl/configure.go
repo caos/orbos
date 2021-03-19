@@ -201,7 +201,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, _, _, _, _, err := boomapi.ParseToolset(tree)
+			toolset, _, _, _, err := boomapi.ParseToolset(tree)
 			if err != nil {
 				return err
 			}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
+
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 
@@ -76,9 +78,13 @@ func getAllSecrets(
 		func() (bool, error) { return api.ExistsBoomYml(gitClient) },
 		func() (*tree.Tree, error) { return api.ReadBoomYml(gitClient) },
 		func() (*tree.Tree, error) { return boomcrd.ReadCRD(k8sClient) },
-		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, error) {
-			_, _, boomSecrets, boomExistingSecrets, _, _, err := boomapi.ParseToolset(t)
-			return boomSecrets, boomExistingSecrets, err
+		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
+			toolset, migrate, _, _, err := boomapi.ParseToolset(t)
+			if err != nil {
+				return nil, nil, false, err
+			}
+			boomSecrets, boomExistingSecrets := latest.GetSecretsMap(toolset)
+			return boomSecrets, boomExistingSecrets, migrate, nil
 		},
 	); err != nil {
 		return nil, nil, nil, err
@@ -95,8 +101,8 @@ func getAllSecrets(
 			func() (bool, error) { return api.ExistsOrbiterYml(gitClient) },
 			func() (*tree.Tree, error) { return api.ReadOrbiterYml(gitClient) },
 			func() (*tree.Tree, error) { return nil, errors.New("ORBITER doesn't support crd mode") },
-			func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, error) {
-				_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(
+			func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
+				_, _, _, migrate, orbiterSecrets, err := orbiterOrb.AdaptFunc(
 					labels.NoopOperator("ORBOS"),
 					orb,
 					"",
@@ -104,7 +110,7 @@ func getAllSecrets(
 					false,
 					gitClient,
 				)(monitor, make(chan struct{}), t, &tree.Tree{})
-				return orbiterSecrets, nil, err
+				return orbiterSecrets, nil, migrate, err
 			},
 		); err != nil {
 			return nil, nil, nil, err
@@ -121,9 +127,9 @@ func getAllSecrets(
 		func() (bool, error) { return api.ExistsNetworkingYml(gitClient) },
 		func() (*tree.Tree, error) { return api.ReadNetworkinglYml(gitClient) },
 		func() (*tree.Tree, error) { return nwcrd.ReadCRD(k8sClient) },
-		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, error) {
-			_, _, nwSecrets, nwExisting, err := nwOrb.AdaptFunc(nil, false)(monitor, t, nil)
-			return nwSecrets, nwExisting, err
+		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
+			_, _, nwSecrets, nwExisting, migrate, err := nwOrb.AdaptFunc(nil, false)(monitor, t, nil)
+			return nwSecrets, nwExisting, migrate, err
 		},
 	); err != nil {
 		return nil, nil, nil, err

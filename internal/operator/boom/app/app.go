@@ -174,7 +174,7 @@ func (a *App) ReconcileCrd(namespacedName string, toolsetCRD *tree.Tree) error {
 		return err
 	}
 
-	desired, _, _, _, _, _, err := api.ParseToolset(toolsetCRD)
+	desired, _, _, _, err := api.ParseToolset(toolsetCRD)
 	if err != nil {
 		return err
 	}

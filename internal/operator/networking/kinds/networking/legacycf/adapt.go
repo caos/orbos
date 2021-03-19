@@ -25,6 +25,7 @@ func AdaptFunc(
 		opcore.DestroyFunc,
 		map[string]*secret.Secret,
 		map[string]*secret.Existing,
+		bool,
 		error,
 	) {
 		internalMonitor := monitor.WithField("kind", "legacycf")
@@ -32,7 +33,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
-			return nil, nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -41,11 +42,11 @@ func AdaptFunc(
 		}
 
 		if desiredKind.Spec == nil {
-			return nil, nil, nil, nil, errors.New("No specs found")
+			return nil, nil, nil, nil, false, errors.New("No specs found")
 		}
 
 		if err := desiredKind.Spec.Validate(); err != nil {
-			return nil, nil, nil, nil, err
+			return nil, nil, nil, nil, false, err
 		}
 
 		internalSpec, current := desiredKind.Spec.Internal(namespace, apiLabels)
@@ -69,6 +70,7 @@ func AdaptFunc(
 			opcore.DestroyersToDestroyFunc(internalMonitor, []opcore.DestroyFunc{legacyDestroyer}),
 			secrets,
 			existing,
+			false,
 			nil
 	}
 }

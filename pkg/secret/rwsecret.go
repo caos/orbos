@@ -186,11 +186,11 @@ func GetOperatorSecrets(
 	allTrees map[string]*tree.Tree,
 	allSecrets map[string]*Secret,
 	allExistingSecrets map[string]*Existing,
-	prefix string,
+	operator string,
 	yamlExistsInGit func() (bool, error),
 	treeFromGit func() (*tree.Tree, error),
 	treeFromCRD func() (*tree.Tree, error),
-	getOperatorSpecifics func(*tree.Tree) (map[string]*Secret, map[string]*Existing, error),
+	getOperatorSpecifics func(*tree.Tree) (map[string]*Secret, map[string]*Existing, bool, error),
 ) error {
 
 	if gitops {
@@ -200,7 +200,7 @@ func GetOperatorSecrets(
 		}
 
 		if !foundGitYAML {
-			monitor.Info(fmt.Sprintf("no file for %s found", prefix))
+			monitor.Info(fmt.Sprintf("no file for %s found", operator))
 			return nil
 		}
 
@@ -208,18 +208,22 @@ func GetOperatorSecrets(
 		if err != nil {
 			return err
 		}
-		allTrees[prefix] = operatorTree
+		allTrees[operator] = operatorTree
 	} else {
 		operatorTree, err := treeFromCRD()
 		if operatorTree == nil {
 			return err
 		}
-		allTrees[prefix] = operatorTree
+		allTrees[operator] = operatorTree
 	}
 
-	secrets, existing, err := getOperatorSpecifics(allTrees[prefix])
+	secrets, existing, migrate, err := getOperatorSpecifics(allTrees[operator])
 	if err != nil {
 		return err
+	}
+
+	if migrate {
+		return fmt.Errorf("please use the api command to migrate to the latest %s api first", operator)
 	}
 
 	if !gitops {
@@ -235,7 +239,7 @@ func GetOperatorSecrets(
 		suffixedExisting[k+".existing"] = v
 	}
 
-	AppendSecrets(prefix, allSecrets, suffixedSecrets, allExistingSecrets, suffixedExisting)
+	AppendSecrets(operator, allSecrets, suffixedSecrets, allExistingSecrets, suffixedExisting)
 
 	return nil
 }

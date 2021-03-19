@@ -29,7 +29,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 		}
 
 		// TODO: Parse toolset in cmdboom.Reconcile function (see deployDatabase, deployNetworking)
-		desiredKind, _, _, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
+		desiredKind, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
 		if err != nil {
 			return err
 		}

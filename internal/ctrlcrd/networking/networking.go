@@ -30,7 +30,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		return res, err
 	}
 
-	query, _, _, _, err := orbnw.AdaptFunc(&r.Version, false)(internalMonitor, desired, &tree.Tree{})
+	query, _, _, _, _, err := orbnw.AdaptFunc(&r.Version, false)(internalMonitor, desired, &tree.Tree{})
 	if err != nil {
 		return res, err
 	}

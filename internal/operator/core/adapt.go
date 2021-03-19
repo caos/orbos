@@ -20,6 +20,7 @@ type AdaptFunc func(
 	DestroyFunc,
 	map[string]*secret.Secret,
 	map[string]*secret.Existing,
+	bool,
 	error,
 )
 
