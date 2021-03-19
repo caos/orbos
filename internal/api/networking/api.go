@@ -3,6 +3,8 @@ package networking
 import (
 	"errors"
 
+	"gopkg.in/yaml.v3"
+
 	v1 "github.com/caos/orbos/internal/api/networking/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -11,7 +13,6 @@ import (
 
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
-	"sigs.k8s.io/yaml"
 )
 
 const (
