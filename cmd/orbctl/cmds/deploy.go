@@ -12,9 +12,7 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, binaryVersion string, gitops bool) error {
-
-	k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops bool) error {
 
 	if gitops {
 		foundBoom, err := api.ExistsBoomYml(gitClient)
@@ -31,7 +29,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 		}
 
 		// TODO: Parse toolset in cmdboom.Reconcile function (see deployDatabase, deployNetworking)
-		desiredKind, _, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
+		desiredKind, _, _, _, apiKind, apiVersion, err := boomapi.ParseToolset(desiredTree)
 		if err != nil {
 			return err
 		}
@@ -73,49 +71,25 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string,
 	return nil
 }
 
-func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *string, version string, gitops bool) error {
+func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops bool) error {
 	if gitops {
 		found, err := api.ExistsNetworkingYml(gitClient)
 		if err != nil {
 			return err
 		}
 		if found {
-			k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
-
-			if k8sClient.Available() {
-				desiredTree, err := api.ReadNetworkinglYml(gitClient)
-				if err != nil {
-					return err
-				}
-				desired, err := orbnw.ParseDesiredV0(desiredTree)
-				if err != nil {
-					return err
-				}
-				spec := desired.Spec
-
-				// at takeoff the artifacts have to be applied
-				spec.SelfReconciling = true
-				if err := orbnw.Reconcile(
-					monitor,
-					spec,
-					gitops,
-				)(k8sClient); err != nil {
-					return err
-				}
-			} else {
-				monitor.Info("Failed to connect to k8s")
+			desiredTree, err := api.ReadNetworkinglYml(gitClient)
+			if err != nil {
+				return err
 			}
-		}
-	} else {
-		k8sClient := kubernetes.NewK8sClient(monitor, kubeconfig)
+			desired, err := orbnw.ParseDesiredV0(desiredTree)
+			if err != nil {
+				return err
+			}
+			spec := desired.Spec
 
-		if k8sClient.Available() {
 			// at takeoff the artifacts have to be applied
-			spec := &orbnw.Spec{
-				Version:         version,
-				SelfReconciling: true,
-			}
-
+			spec.SelfReconciling = true
 			if err := orbnw.Reconcile(
 				monitor,
 				spec,
@@ -123,8 +97,20 @@ func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, kubeconfig *s
 			)(k8sClient); err != nil {
 				return err
 			}
-		} else {
-			monitor.Info("Failed to connect to k8s")
+		}
+	} else {
+		// at takeoff the artifacts have to be applied
+		spec := &orbnw.Spec{
+			Version:         version,
+			SelfReconciling: true,
+		}
+
+		if err := orbnw.Reconcile(
+			monitor,
+			spec,
+			gitops,
+		)(k8sClient); err != nil {
+			return err
 		}
 	}
 	return nil

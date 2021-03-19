@@ -1,10 +1,11 @@
 package app
 
 import (
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/boom/api"
 	crdconfig "github.com/caos/orbos/internal/operator/boom/crd/config"
 	"github.com/caos/orbos/pkg/tree"
-	"strings"
 
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/crd"
@@ -173,7 +174,7 @@ func (a *App) ReconcileCrd(namespacedName string, toolsetCRD *tree.Tree) error {
 		return err
 	}
 
-	desired, _, _, _, _, err := api.ParseToolset(toolsetCRD)
+	desired, _, _, _, _, _, err := api.ParseToolset(toolsetCRD)
 	if err != nil {
 		return err
 	}

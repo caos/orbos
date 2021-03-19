@@ -1,9 +1,10 @@
 package providers
 
 import (
-	"github.com/caos/orbos/pkg/secret"
 	"regexp"
 	"strings"
+
+	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/cs"
 

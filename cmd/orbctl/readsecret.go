@@ -1,10 +1,9 @@
 package main
 
 import (
-	"errors"
 	"os"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -35,32 +34,22 @@ func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient
 
-			if !rv.Gitops {
-				return errors.New("readsecret command is only supported with the --gitops flag yet")
-			}
-
-			if err := orbcfg.IsComplete(orbConfig); err != nil {
-				return err
-			}
-
-			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-				return err
-			}
-
-			if err := gitClient.Clone(); err != nil {
-				return err
-			}
-
 			path := ""
 			if len(args) > 0 {
 				path = args[0]
 			}
 
+			k8sClient, _, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
+			if err != nil && !rv.Gitops {
+				return err
+			}
+			err = nil
+
 			value, err := secret.Read(
-				monitor,
-				gitClient,
+				k8sClient,
 				path,
-				operators.GetAllSecretsFunc(orbConfig))
+				operators.GetAllSecretsFunc(monitor, rv.Gitops, gitClient, k8sClient, orbConfig),
+			)
 			if err != nil {
 				return err
 			}

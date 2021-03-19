@@ -88,7 +88,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, migrate, _, _, _, err := boomapi.ParseToolset(desired)
+			toolset, migrate, _, _, _, _, err := boomapi.ParseToolset(desired)
 			if err != nil {
 				return err
 			}

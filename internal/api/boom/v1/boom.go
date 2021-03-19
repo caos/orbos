@@ -95,7 +95,7 @@ func GetEmpty(namespace, name string) map[string]interface{} {
 				"deploy": false,
 			},
 			"metricsServer": map[string]interface{}{
-				"deploy": true,
+				"deploy": false,
 			},
 		},
 	}

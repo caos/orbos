@@ -33,7 +33,7 @@ func AdaptFunc(
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
@@ -58,7 +58,7 @@ func AdaptFunc(
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbsecrets)
+		secret.AppendSecrets("", secrets, lbsecrets, nil, nil)
 
 		current := &Current{
 			Common: &tree.Common{

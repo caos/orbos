@@ -16,7 +16,7 @@ import (
 func Reconcile(
 	monitor mntr.Monitor,
 	apiLabels *labels.API,
-	k8sClient *kubernetes.Client,
+	k8sClient kubernetes.ClientInt,
 	boomSpec *latest.Boom,
 	binaryVersion string,
 	gitops bool,
@@ -61,11 +61,6 @@ func Reconcile(
 	}
 
 	recMonitor := monitor.WithField("version", boomVersion)
-
-	if !k8sClient.Available() {
-		recMonitor.Info("Failed to connect to k8s")
-		return nil
-	}
 
 	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomVersion, tolerations, nodeselector, &resources, imageRegistry, gitops); err != nil {
 		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))

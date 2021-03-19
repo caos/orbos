@@ -160,7 +160,7 @@ func AdaptFunc(
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if k8sClient.Available() {
+				if k8sClient != nil && k8sClient.Available() {
 					volumes, err := k8sClient.ListPersistentVolumes()
 					if err != nil {
 						return err

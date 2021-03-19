@@ -25,7 +25,19 @@ func AdaptFunc(
 	oneoff bool,
 	pprof bool,
 ) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
+	return func(
+		monitor mntr.Monitor,
+		finishedChan chan struct{},
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (
+		queryFunc orbiter.QueryFunc,
+		destroyFunc orbiter.DestroyFunc,
+		configureFunc orbiter.ConfigureFunc,
+		migrate bool,
+		secrets map[string]*secret.Secret,
+		err error,
+	) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -35,7 +47,7 @@ func AdaptFunc(
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.RebootRequired == nil {
 			desiredKind.Spec.RebootRequired = make([]string, 0)
@@ -67,7 +79,7 @@ func AdaptFunc(
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbSecrets)
+		secret.AppendSecrets("", secrets, lbSecrets, nil, nil)
 
 		svcFunc := func() (*machinesService, error) {
 			return service(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
