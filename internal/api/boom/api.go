@@ -11,12 +11,12 @@ import (
 )
 
 const (
-	namespace = "caos-system"
-	name      = "boom"
+	Namespace = "caos-system"
+	Name      = "boom"
 )
 
 func ReadCRD(k8sClient kubernetes.ClientInt) (*tree.Tree, error) {
-	unstruct, err := k8sClient.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", namespace, name)
+	unstruct, err := k8sClient.GetNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", Namespace, Name)
 	if err != nil && !macherrs.IsNotFound(err) && !meta.IsNoMatchError(err) {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func ReadCRD(k8sClient kubernetes.ClientInt) (*tree.Tree, error) {
 
 	var data []byte
 	if unstruct == nil {
-		unstruct = &unstructured.Unstructured{Object: v1.GetEmpty(namespace, name)}
+		unstruct = &unstructured.Unstructured{Object: v1.GetEmpty(Namespace, Name)}
 		err = nil
 	}
 
@@ -53,5 +53,5 @@ func WriteCrd(k8sClient kubernetes.ClientInt, t *tree.Tree) error {
 		return err
 	}
 
-	return k8sClient.ApplyNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", namespace, name, unstruct)
+	return k8sClient.ApplyNamespacedCRDResource(v1.GroupVersion.Group, v1.GroupVersion.Version, "Boom", Namespace, Name, unstruct)
 }

@@ -2,6 +2,7 @@ package networking
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/caos/orbos/internal/api/networking"
 	v1 "github.com/caos/orbos/internal/api/networking/v1"
@@ -24,6 +25,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 	internalMonitor := r.Monitor.WithFields(map[string]interface{}{
 		"kind": "networking",
 	})
+
+	if req.Namespace != networking.Name || req.Name != networking.Name {
+		return res, fmt.Errorf("resource must be named %s and namespaced in %s", networking.Name, networking.Namespace)
+	}
 
 	desired, err := networking.ReadCRD(r)
 	if desired == nil {

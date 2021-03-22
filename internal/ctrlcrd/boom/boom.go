@@ -2,6 +2,7 @@ package boom
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/api/boom"
@@ -32,6 +33,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 	defer func() {
 		r.Monitor.Error(err)
 	}()
+
+	if req.Namespace != boom.Name || req.Name != boom.Name {
+		return res, fmt.Errorf("resource must be named %s and namespaced in %s", boom.Name, boom.Namespace)
+	}
 
 	desired, err := boom.ReadCRD(r)
 	if err != nil {
