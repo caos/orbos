@@ -182,13 +182,14 @@ func Write(
 
 func GetOperatorSecrets(
 	monitor mntr.Monitor,
+	printLogs,
 	gitops bool,
 	allTrees map[string]*tree.Tree,
 	allSecrets map[string]*Secret,
 	allExistingSecrets map[string]*Existing,
 	operator string,
 	yamlExistsInGit func() (bool, error),
-	treeFromGit func() (*tree.Tree, error),
+	treeFromGit,
 	treeFromCRD func() (*tree.Tree, error),
 	getOperatorSpecifics func(*tree.Tree) (map[string]*Secret, map[string]*Existing, bool, error),
 ) error {
@@ -200,7 +201,9 @@ func GetOperatorSecrets(
 		}
 
 		if !foundGitYAML {
-			monitor.Info(fmt.Sprintf("no file for %s found", operator))
+			if printLogs {
+				monitor.Info(fmt.Sprintf("no file for %s found", operator))
+			}
 			return nil
 		}
 
