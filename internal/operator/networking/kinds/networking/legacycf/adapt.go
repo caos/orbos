@@ -65,6 +65,10 @@ func AdaptFunc(
 		secrets, existing := getSecretsMap(desiredKind)
 
 		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (opcore.EnsureFunc, error) {
+				if err := desiredKind.Spec.ValidateSecrets(); err != nil {
+					return nil, err
+				}
+
 				core.SetQueriedForNetworking(queried, currentTree)
 				internalMonitor.Info("set current state legacycf")
 

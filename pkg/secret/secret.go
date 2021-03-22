@@ -229,3 +229,14 @@ func AppendSecrets(prefix string, intoSecrets, addSecrets map[string]*Secret, in
 		intoExisting[name] = existing
 	}
 }
+
+func ValidateSecret(secret *Secret, existing *Existing) error {
+	if secret == nil || existing == nil {
+		return errors.New("secret not specified")
+	}
+
+	if secret.Value == "" && (existing.Name == "" || existing.Key == "") {
+		return errors.New("secret has no encrypted value or no valid reference")
+	}
+	return nil
+}

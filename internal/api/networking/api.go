@@ -58,10 +58,12 @@ func WriteCrd(k8sClient kubernetes.ClientInt, t *tree.Tree) error {
 	}
 
 	unstruct := &unstructured.Unstructured{
-		Object: make(map[string]interface{}),
+		Object: map[string]interface{}{
+			"spec": make(map[string]interface{}),
+		},
 	}
 
-	if err := yaml.Unmarshal(data, unstruct.Object); err != nil {
+	if err := yaml.Unmarshal(data, unstruct.Object["spec"]); err != nil {
 		return err
 	}
 
