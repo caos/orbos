@@ -66,5 +66,8 @@ func Reconcile(
 		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
 		return err
 	}
+
+	recMonitor.Info("Applied BOOM")
+
 	return nil
 }
