@@ -34,7 +34,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		r.Monitor.Error(err)
 	}()
 
-	if req.Namespace != boom.Name || req.Name != boom.Name {
+	if req.Namespace != boom.Namespace || req.Name != boom.Name {
 		return res, fmt.Errorf("resource must be named %s and namespaced in %s", boom.Name, boom.Namespace)
 	}
 

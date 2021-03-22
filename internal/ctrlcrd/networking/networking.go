@@ -26,7 +26,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		"kind": "networking",
 	})
 
-	if req.Namespace != networking.Name || req.Name != networking.Name {
+	defer func() {
+		r.Monitor.Error(err)
+	}()
+
+	if req.Namespace != networking.Namespace || req.Name != networking.Name {
 		return res, fmt.Errorf("resource must be named %s and namespaced in %s", networking.Name, networking.Namespace)
 	}
 
