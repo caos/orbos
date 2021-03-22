@@ -52,6 +52,9 @@ func AdaptFunc(
 		internalSpec, current := desiredKind.Spec.Internal(namespace, apiLabels)
 
 		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
+		if err != nil {
+			return nil, nil, nil, nil, false, err
+		}
 		current.ReadyCertificate = readyCertificate
 
 		queriers := []opcore.QueryFunc{
