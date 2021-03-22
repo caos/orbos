@@ -61,7 +61,7 @@ func Client(
 				kc, err = secret.Read(
 					nil,
 					path,
-					operators.GetAllSecretsFunc(monitor, gitops, gitClient, nil, orbConfig),
+					operators.GetAllSecretsFunc(monitor, false, gitops, gitClient, nil, orbConfig),
 				)
 				if err != nil || kc == "" {
 					if kc == "" && err == nil {

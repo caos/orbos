@@ -31,6 +31,7 @@ const (
 
 func GetAllSecretsFunc(
 	monitor mntr.Monitor,
+	printLogs,
 	gitops bool,
 	gitClient *git.Client,
 	k8sClient kubernetes.ClientInt,
@@ -47,12 +48,13 @@ func GetAllSecretsFunc(
 		map[string]*tree.Tree,
 		error,
 	) {
-		return getAllSecrets(monitor, gitops, gitClient, k8sClient, orb)
+		return getAllSecrets(monitor, printLogs, gitops, gitClient, k8sClient, orb)
 	}
 }
 
 func getAllSecrets(
 	monitor mntr.Monitor,
+	printLogs,
 	gitops bool,
 	gitClient *git.Client,
 	k8sClient kubernetes.ClientInt,
@@ -70,6 +72,7 @@ func getAllSecrets(
 
 	if err := secret.GetOperatorSecrets(
 		monitor,
+		printLogs,
 		gitops,
 		allTrees,
 		allSecrets,
@@ -93,6 +96,7 @@ func getAllSecrets(
 	if gitops {
 		if err := secret.GetOperatorSecrets(
 			monitor,
+			printLogs,
 			gitops,
 			allTrees,
 			allSecrets,
@@ -119,6 +123,7 @@ func getAllSecrets(
 
 	if err := secret.GetOperatorSecrets(
 		monitor,
+		printLogs,
 		gitops,
 		allTrees,
 		allSecrets,
