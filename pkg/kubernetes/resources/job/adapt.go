@@ -13,7 +13,7 @@ import (
 func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
 
-		jobDef, err := k8sClient.GetJob(job.GetNamespace(), job.GetName())
+		_, err := k8sClient.GetJob(job.GetNamespace(), job.GetName())
 		if err != nil && !macherrs.IsNotFound(err) {
 			return nil, err
 		} else if macherrs.IsNotFound(err) {
@@ -23,12 +23,12 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 		}
 
 		//check if selector or the labels are empty, as this have default values
-		if job.Spec.Selector == nil {
+		/*if job.Spec.Selector == nil {
 			job.Spec.Selector = jobDef.Spec.Selector
 		}
 		if job.Spec.Template.ObjectMeta.Labels == nil {
 			job.Spec.Template.ObjectMeta.Labels = jobDef.Spec.Template.ObjectMeta.Labels
-		}
+		}*/
 
 		return func(k8sClient kubernetes.ClientInt) error {
 			if err := k8sClient.ApplyJob(job); err != nil && strings.Contains(err.Error(), "field is immutable") {
