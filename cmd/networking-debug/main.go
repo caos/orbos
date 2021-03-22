@@ -1,10 +1,14 @@
 package main
 
 import (
+	"context"
 	"flag"
+	"github.com/caos/orbos/internal/ctrlcrd"
+	"github.com/caos/orbos/internal/ctrlgitops"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"os"
 
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -33,32 +37,31 @@ func main() {
 		monitor = monitor.Verbose()
 	}
 
-	if !gitopsmode {
-		_, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
-		if err != nil {
-			panic(err)
-		}
+	prunedPath := helpers.PruneHome(orbconfig)
+	orbConfig, err := orb.ParseOrbConfig(prunedPath)
+	if err != nil {
+		monitor.Error(err)
+		os.Exit(1)
+	}
+	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
+	kubeconfig = helpers.PruneHome(kubeconfig)
+	version := "networking-development"
 
-		if err := crdctrl.Start(monitor, "crdoperators", "./artifacts", metricsAddr, kubeconfig, crdctrl.Networking); err != nil {
-			panic(err)
+	if gitopsmode {
+
+		k8sClient, _, err := cli.Client(monitor, orbConfig, gitClient, kubeconfig, gitopsmode)
+		if err != nil {
+			monitor.Error(err)
+			os.Exit(1)
+		}
+		if err := ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version); err != nil {
+			monitor.Error(err)
+			os.Exit(1)
 		}
 	} else {
-		cfg, err := clientgo.GetClusterConfig(monitor, kubeconfig)
-		if err != nil {
-			panic(err)
-		}
-
-		if err := gitopsctrl.Networking(
-			monitor,
-			helpers.PruneHome(orbconfig),
-			kubernetes.NewK8sClientWithConfig(monitor, cfg),
-			strPtr("networking-development"),
-		); err != nil {
-			panic(err)
+		if err := ctrlcrd.Start(monitor, version, "/boom", metricsAddr, kubeconfig, ctrlcrd.Networking); err != nil {
+			monitor.Error(err)
+			os.Exit(1)
 		}
 	}
-}
-
-func strPtr(str string) *string {
-	return &str
 }
