@@ -1,6 +1,7 @@
 package job
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	batch "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )
 
@@ -34,9 +36,13 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 			return nil, err
 		}
 
-		if reflect.DeepEqual(jobDry.Spec, jobDef.Spec) &&
-			reflect.DeepEqual(jobDry.Labels, jobDef.Labels) &&
-			reflect.DeepEqual(jobDry.Annotations, jobDef.Annotations) {
+		if jobDef.Spec.Template.Spec.SecurityContext != nil && jobDry.Spec.Template.Spec.SecurityContext == nil {
+			jobDry.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+
+		if reflect.DeepEqual(jobDry.Spec.Template.Spec, jobDef.Spec.Template.Spec) &&
+			fmt.Sprint(jobDry.Labels) == fmt.Sprint(jobDef.Labels) &&
+			fmt.Sprint(jobDry.Annotations) == fmt.Sprint(jobDef.Annotations) {
 			return func(k8sClient kubernetes.ClientInt) error {
 				return nil
 			}, nil
