@@ -72,14 +72,14 @@ type ClientInt interface {
 	GetJob(namespace, name string) (*batch.Job, error)
 	ApplyJob(rsc *batch.Job) error
 	DeleteJob(namespace string, name string) error
-	WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error
+	WaitUntilJobCompleted(namespace string, name string, timeout time.Duration) error
 
 	ApplyServiceAccount(rsc *core.ServiceAccount) error
 	DeleteServiceAccount(namespace, name string) error
 
 	ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error
 	DeleteStatefulset(namespace, name string) error
-	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
+	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error
 
 	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
 	ExecInPod(namespace, name, container, command string) error
@@ -87,7 +87,7 @@ type ClientInt interface {
 	ApplyDeployment(rsc *apps.Deployment, force bool) error
 	DeleteDeployment(namespace, name string) error
 	PatchDeployment(namespace, name string, data string) error
-	WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
+	WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error
 	ScaleDeployment(namespace, name string, replicaCount int) error
 	ExecInPodOfDeployment(namespace, name, container, command string) error
 
@@ -102,12 +102,12 @@ type ClientInt interface {
 	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
 	ApplySecret(rsc *core.Secret) error
 	DeleteSecret(namespace, name string) error
-	WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error
+	WaitForSecret(namespace string, name string, timeout time.Duration) error
 
 	GetConfigMap(namespace, name string) (*core.ConfigMap, error)
 	ApplyConfigmap(rsc *core.ConfigMap) error
 	DeleteConfigmap(namespace, name string) error
-	WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error
+	WaitForConfigMap(namespace string, name string, timeout time.Duration) error
 
 	ApplyRole(rsc *rbac.Role) error
 	DeleteRole(namespace, name string) error
@@ -276,7 +276,7 @@ func (c *Client) PatchDeployment(namespace, name string, data string) error {
 	return err
 }
 
-func (c *Client) WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
@@ -304,7 +304,7 @@ func (c *Client) WaitUntilDeploymentReady(namespace string, name string, contain
 	select {
 	case res := <-returnChannel:
 		return res
-	case <-time.After(timeoutSeconds * time.Second):
+	case <-time.After(timeout):
 		return errors.New("timeout while waiting for deployment to be ready")
 	}
 }
@@ -494,7 +494,7 @@ func (c *Client) DeleteStatefulset(namespace, name string) error {
 	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
-func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
@@ -522,7 +522,7 @@ func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, cont
 	select {
 	case res := <-returnChannel:
 		return res
-	case <-time.After(timeoutSeconds * time.Second):
+	case <-time.After(timeout):
 		return errors.New("timeout while waiting for job to complete")
 	}
 }
@@ -538,28 +538,34 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 	})
 }
 
-func (c *Client) WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error {
-	returnChannel := make(chan error, 1)
-	go func() {
-		ctx := context.Background()
-		for i := 0; i < int(timeoutSeconds); i++ {
-			secret, err := c.set.CoreV1().Secrets(namespace).Get(ctx, name, mach.GetOptions{})
-			if err != nil && !macherrs.IsNotFound(err) {
-				returnChannel <- err
-				return
-			} else if secret != nil {
-				returnChannel <- nil
-				return
-			}
-			time.Sleep(1)
-		}
-	}()
+func (c *Client) WaitForSecret(namespace string, name string, timeout time.Duration) error {
+	ctx := context.Background()
+	return await(
+		timeout,
+		func() (interface{}, error) {
+			return c.set.CoreV1().Secrets(namespace).Get(ctx, name, mach.GetOptions{})
+		},
+	)
+}
 
-	select {
-	case res := <-returnChannel:
-		return res
-	case <-time.After(timeoutSeconds * time.Second):
-		return errors.New("timeout while waiting for secret to be created")
+func await(timeout time.Duration, getResource func() (interface{}, error)) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			resource, err := getResource()
+			if err != nil && !macherrs.IsNotFound(err) {
+				return err
+			} else if resource != nil {
+				return nil
+			}
+
+		case <-timer.C:
+			return errors.New("timeout while waiting for secret to be created")
+		}
 	}
 }
 
@@ -584,31 +590,6 @@ func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 
 func (c *Client) DeleteConfigmap(namespace, name string) error {
 	return c.set.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
-}
-
-func (c *Client) WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error {
-	returnChannel := make(chan error, 1)
-	go func() {
-		ctx := context.Background()
-		for i := 0; i < int(timeoutSeconds); i++ {
-			secret, err := c.set.CoreV1().ConfigMaps(namespace).Get(ctx, name, mach.GetOptions{})
-			if err != nil && !macherrs.IsNotFound(err) {
-				returnChannel <- err
-				return
-			} else if secret != nil {
-				returnChannel <- nil
-				return
-			}
-			time.Sleep(1)
-		}
-	}()
-
-	select {
-	case res := <-returnChannel:
-		return res
-	case <-time.After(timeoutSeconds * time.Second):
-		return errors.New("timeout while waiting for configmap to be created")
-	}
 }
 
 func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
@@ -639,6 +620,16 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 		}
 		return nil
 	})
+}
+
+func (c *Client) WaitForConfigMap(namespace string, name string, timeout time.Duration) error {
+	ctx := context.Background()
+	return await(
+		timeout,
+		func() (interface{}, error) {
+			return c.set.CoreV1().ConfigMaps(namespace).Get(ctx, name, mach.GetOptions{})
+		},
+	)
 }
 
 func (c *Client) DeleteServiceAccount(namespace, name string) error {
