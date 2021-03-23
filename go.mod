@@ -31,9 +31,8 @@ require (
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	google.golang.org/api v0.26.0
-	google.golang.org/grpc v1.29.1
-	google.golang.org/protobuf v1.24.0
-	gopkg.in/yaml.v2 v2.3.0
+	google.golang.org/grpc v1.36.0
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 	k8s.io/api v0.19.2
 	k8s.io/apiextensions-apiserver v0.19.2
@@ -42,5 +41,4 @@ require (
 	k8s.io/kubectl v0.18.3
 	sigs.k8s.io/controller-runtime v0.7.0
 	sigs.k8s.io/controller-tools v0.4.1
-	sigs.k8s.io/yaml v1.2.0
 )
