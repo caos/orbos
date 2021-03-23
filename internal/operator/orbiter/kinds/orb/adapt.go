@@ -4,9 +4,9 @@ import (
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/labels"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ func OperatorSelector() *labels.Selector {
 
 func AdaptFunc(
 	operatorLabels *labels.Operator,
-	orbConfig *orb.Orb,
+	orbConfig *orbcfg.Orb,
 	orbiterCommit string,
 	oneoff bool,
 	deployOrbiter bool,
@@ -101,7 +101,7 @@ func AdaptFunc(
 			providerQueriers = append(providerQueriers, query)
 			providerDestroyers = append(providerDestroyers, destroy)
 			providerConfigurers = append(providerConfigurers, configure)
-			secret.AppendSecrets(provID, secrets, providerSecrets)
+			secret.AppendSecrets(provID, secrets, providerSecrets, nil, nil)
 		}
 
 		var provCurr map[string]interface{}
@@ -151,7 +151,7 @@ func AdaptFunc(
 			clusterQueriers = append(clusterQueriers, query)
 			clusterDestroyers = append(clusterDestroyers, destroy)
 			clusterConfigurers = append(clusterConfigurers, configure)
-			secret.AppendSecrets(clusterID, secrets, clusterSecrets)
+			secret.AppendSecrets(clusterID, secrets, clusterSecrets, nil, nil)
 			if migrateLocal {
 				migrate = true
 			}
@@ -222,7 +222,7 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 				defer func() {
 					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
 				}()

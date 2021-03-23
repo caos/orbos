@@ -2,7 +2,7 @@ package customimage
 
 import (
 	"encoding/json"
-	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/secret"
 	"path/filepath"
 	"strings"
 
@@ -10,9 +10,8 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-
 	"github.com/caos/orbos/internal/utils/helper"
+	helper2 "github.com/caos/orbos/pkg/helper"
 	"github.com/pkg/errors"
 )
 
@@ -136,7 +135,7 @@ func FromSpec(spec *reconciling.Reconciling, imageTags map[string]string) *Custo
 	}
 }
 
-func getVolAndVolMount(storeName string, ty string, secret *secret2.Secret, existent *secret2.Existing, foldername string) (*SecretVolume, *VolumeMount) {
+func getVolAndVolMount(storeName string, ty string, secret *secret.Secret, existent *secret.Existing, foldername string) (*SecretVolume, *VolumeMount) {
 	internalName := ""
 	name := ""
 	key := ""

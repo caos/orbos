@@ -6,8 +6,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/mntr"
@@ -35,7 +35,7 @@ func AdaptFunc(
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.RebootRequired == nil {
 			desiredKind.Spec.RebootRequired = make([]string, 0)
@@ -60,7 +60,7 @@ func AdaptFunc(
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbSecrets)
+		secret.AppendSecrets("", secrets, lbSecrets, nil, nil)
 
 		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 		if err != nil {
@@ -105,7 +105,7 @@ func AdaptFunc(
 				}
 
 				return destroy(ctx, current)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 
 				if err := desiredKind.validateAPIToken(); err != nil {
 					return err

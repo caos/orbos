@@ -90,7 +90,7 @@ func AdaptFunc(
 		k8sClient := kubernetes.NewK8sClient(monitor, kc)
 
 		if k8sClient.Available() && deployOrbiter {
-			if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
+			if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
 					"count": deployErrors,
@@ -160,7 +160,7 @@ func AdaptFunc(
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if k8sClient.Available() {
+				if k8sClient != nil && k8sClient.Available() {
 					volumes, err := k8sClient.ListPersistentVolumes()
 					if err != nil {
 						return err

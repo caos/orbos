@@ -4,8 +4,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
@@ -33,7 +33,7 @@ func AdaptFunc(
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
 			monitor = monitor.Verbose()
@@ -58,7 +58,7 @@ func AdaptFunc(
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbsecrets)
+		secret.AppendSecrets("", secrets, lbsecrets, nil, nil)
 
 		current := &Current{
 			Common: &tree.Common{
@@ -97,7 +97,7 @@ func AdaptFunc(
 				}
 
 				return destroy(svc, desiredKind, current)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}

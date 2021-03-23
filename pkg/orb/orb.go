@@ -1,18 +1,87 @@
 package orb
 
-import "github.com/caos/orbos/internal/orb"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
 
-type Orb orb.Orb
+	secret2 "github.com/caos/orbos/pkg/secret"
+
+	"github.com/caos/orbos/internal/helpers"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
+)
+
+type Orb struct {
+	Path      string `yaml:"-"`
+	URL       string
+	Repokey   string
+	Masterkey string
+}
+
+func (o *Orb) IsConnectable() (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("repository is not connectable: %w", err)
+		}
+	}()
+	if o.URL == "" {
+		err = helpers.Concat(err, errors.New("repository url is missing"))
+	}
+
+	if o.Repokey == "" {
+		err = helpers.Concat(err, errors.New("repository key is missing"))
+	}
+	return err
+}
+
+func IsComplete(o *Orb) (err error) {
+
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("orbconfig is incomplete: %w", err)
+		}
+	}()
+
+	if o == nil {
+		return errors.New("path not provided")
+	}
+
+	if o.Masterkey == "" {
+		err = helpers.Concat(err, errors.New("master key is missing"))
+	}
+
+	if o.Path == "" {
+		err = helpers.Concat(err, errors.New("file path is missing"))
+	}
+
+	return helpers.Concat(err, o.IsConnectable())
+}
 
 func ParseOrbConfig(orbConfigPath string) (*Orb, error) {
-	orbConfig, err := orb.ParseOrbConfig(orbConfigPath)
+
+	gitOrbConfig, err := ioutil.ReadFile(orbConfigPath)
+
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "unable to read orbconfig")
 	}
-	return &Orb{
-		Repokey:   orbConfig.Repokey,
-		Masterkey: orbConfig.Masterkey,
-		URL:       orbConfig.URL,
-		Path:      orbConfig.Path,
-	}, nil
+
+	orb := &Orb{}
+	if err := yaml.Unmarshal(gitOrbConfig, orb); err != nil {
+		return nil, errors.Wrap(err, "unable to parse orbconfig")
+	}
+
+	orb.Path = orbConfigPath
+	secret2.Masterkey = orb.Masterkey
+	return orb, nil
+}
+
+func (o *Orb) WriteBackOrbConfig() error {
+	data, err := yaml.Marshal(o)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(o.Path, data, os.ModePerm)
 }

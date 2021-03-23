@@ -24,6 +24,8 @@ func AdaptFunc(
 		opcore.QueryFunc,
 		opcore.DestroyFunc,
 		map[string]*secret.Secret,
+		map[string]*secret.Existing,
+		bool,
 		error,
 	) {
 		internalMonitor := monitor.WithField("kind", "legacycf")
@@ -31,7 +33,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -40,16 +42,19 @@ func AdaptFunc(
 		}
 
 		if desiredKind.Spec == nil {
-			return nil, nil, nil, errors.New("No specs found")
+			return nil, nil, nil, nil, false, errors.New("No specs found")
 		}
 
 		if err := desiredKind.Spec.Validate(); err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, false, err
 		}
 
 		internalSpec, current := desiredKind.Spec.Internal(namespace, apiLabels)
 
 		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
+		if err != nil {
+			return nil, nil, nil, nil, false, err
+		}
 		current.ReadyCertificate = readyCertificate
 
 		queriers := []opcore.QueryFunc{
@@ -57,14 +62,22 @@ func AdaptFunc(
 		}
 		currentTree.Parsed = current
 
+		secrets, existing := getSecretsMap(desiredKind)
+
 		return func(k8sClient kubernetes.ClientInt, queried map[string]interface{}) (opcore.EnsureFunc, error) {
+				if err := desiredKind.Spec.ValidateSecrets(); err != nil {
+					return nil, err
+				}
+
 				core.SetQueriedForNetworking(queried, currentTree)
 				internalMonitor.Info("set current state legacycf")
 
 				return opcore.QueriersToEnsureFunc(internalMonitor, true, queriers, k8sClient, queried)
 			},
 			opcore.DestroyersToDestroyFunc(internalMonitor, []opcore.DestroyFunc{legacyDestroyer}),
-			getSecretsMap(desiredKind),
+			secrets,
+			existing,
+			false,
 			nil
 	}
 }

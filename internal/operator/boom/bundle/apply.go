@@ -62,7 +62,7 @@ func applyWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo
 
 		if deleteResources != nil && len(deleteResources) > 0 {
 			for _, deleteResource := range deleteResources {
-				if err := clientgo.DeleteResource(deleteResource); err != nil {
+				if err := clientgo.DeleteResource(monitor, deleteResource); err != nil {
 					return err
 				}
 			}

@@ -1,12 +1,13 @@
-package start
+package ctrlgitops
 
 import (
 	"context"
 	"time"
 
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/internal/operator/networking"
 	"github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
@@ -21,7 +22,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 	gitClient := git.New(context.Background(), monitor, "orbos", "orbos@caos.ch")
 
 	for range takeoffChan {
-		orbConfig, err := orbconfig.ParseOrbConfig(orbConfigPath)
+		orbConfig, err := orbcfg.ParseOrbConfig(orbConfigPath)
 		if err != nil {
 			monitor.Error(err)
 			return err
@@ -32,7 +33,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 			return err
 		}
 
-		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion), k8sClient)
+		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion, true), k8sClient)
 
 		go func() {
 			started := time.Now()

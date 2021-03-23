@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/orb"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -21,7 +21,7 @@ import (
 
 type IterateNodeAgentFuncs func(currentNodeAgents *common.CurrentNodeAgents) (queryNodeAgent func(machine infra.Machine, orbiterCommit string) (bool, error), install func(machine infra.Machine) error)
 
-func ConfigureNodeAgents(svc MachinesService, monitor mntr.Monitor, orb orb.Orb, pprof bool) error {
+func ConfigureNodeAgents(svc MachinesService, monitor mntr.Monitor, orb orbcfg.Orb, pprof bool) error {
 	configure, _ := NodeAgentFuncs(monitor, orb.URL, orb.Repokey, pprof)
 	return Each(svc, func(pool string, machine infra.Machine) error {
 		err := configure(machine)

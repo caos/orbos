@@ -1,10 +1,11 @@
-package start
+package ctrlgitops
 
 import (
 	"context"
+	"time"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
-	"time"
 )
 
 func gitClient(monitor mntr.Monitor, task string) *git.Client {
