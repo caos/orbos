@@ -71,6 +71,7 @@ type ClientInt interface {
 
 	GetJob(namespace, name string) (*batch.Job, error)
 	ApplyJob(rsc *batch.Job) error
+	ApplyJobDryRun(rsc *batch.Job) error
 	DeleteJob(namespace string, name string) error
 	WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error
 
@@ -352,6 +353,32 @@ func (c *Client) DeleteService(namespace, name string) error {
 
 func (c *Client) GetJob(namespace, name string) (*batch.Job, error) {
 	return c.set.BatchV1().Jobs(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) ApplyJobDryRun(rsc *batch.Job) error {
+	resources := c.set.BatchV1().Jobs(rsc.Namespace)
+	return c.applyResource("job", rsc.GetName(), func() error {
+		res, err := resources.Create(context.Background(), rsc, mach.CreateOptions{DryRun: []string{mach.DryRunAll}})
+		if err != nil {
+			return err
+		}
+		*rsc = *res
+		return nil
+	}, func() error {
+		j, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.GetName() == rsc.GetName() && j.GetNamespace() == rsc.GetNamespace() {
+			res, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{DryRun: []string{mach.DryRunAll}})
+			if err != nil {
+				return err
+			}
+			*rsc = *res
+			return nil
+		}
+		return nil
+	})
 }
 
 func (c *Client) ApplyJob(rsc *batch.Job) error {

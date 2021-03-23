@@ -1,6 +1,7 @@
 package job
 
 import (
+	"reflect"
 	"strings"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
 
-		_, err := k8sClient.GetJob(job.GetNamespace(), job.GetName())
+		jobDef, err := k8sClient.GetJob(job.GetNamespace(), job.GetName())
 		if err != nil && !macherrs.IsNotFound(err) {
 			return nil, err
 		} else if macherrs.IsNotFound(err) {
@@ -22,13 +23,24 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 			}, nil
 		}
 
-		//check if selector or the labels are empty, as this have default values
-		/*if job.Spec.Selector == nil {
-			job.Spec.Selector = jobDef.Spec.Selector
+		jobDry := *job
+		if job.Spec.Selector == nil {
+			jobDry.Spec.Selector = jobDef.Spec.Selector
 		}
-		if job.Spec.Template.ObjectMeta.Labels == nil {
-			job.Spec.Template.ObjectMeta.Labels = jobDef.Spec.Template.ObjectMeta.Labels
-		}*/
+		if job.Spec.Template.Labels == nil {
+			jobDry.Spec.Template.Labels = jobDef.Spec.Template.Labels
+		}
+		if err := k8sClient.ApplyJobDryRun(&jobDry); err != nil && !strings.Contains(err.Error(), "field is immutable") {
+			return nil, err
+		}
+
+		if reflect.DeepEqual(jobDry.Spec, jobDef.Spec) &&
+			reflect.DeepEqual(jobDry.Labels, jobDef.Labels) &&
+			reflect.DeepEqual(jobDry.Annotations, jobDef.Annotations) {
+			return func(k8sClient kubernetes.ClientInt) error {
+				return nil
+			}, nil
+		}
 
 		return func(k8sClient kubernetes.ClientInt) error {
 			if err := k8sClient.ApplyJob(job); err != nil && strings.Contains(err.Error(), "field is immutable") {
