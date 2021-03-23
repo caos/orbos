@@ -138,6 +138,20 @@ func (mr *MockClientIntMockRecorder) ApplyJob(rsc interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyJob", reflect.TypeOf((*MockClientInt)(nil).ApplyJob), rsc)
 }
 
+// ApplyJobDryRun mocks base method
+func (m *MockClientInt) ApplyJobDryRun(rsc *v10.Job) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyJobDryRun", rsc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyJobDryRun indicates an expected call of ApplyJobDryRun
+func (mr *MockClientIntMockRecorder) ApplyJobDryRun(rsc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyJobDryRun", reflect.TypeOf((*MockClientInt)(nil).ApplyJobDryRun), rsc)
+}
+
 // DeleteJob mocks base method
 func (m *MockClientInt) DeleteJob(namespace, name string) error {
 	m.ctrl.T.Helper()
