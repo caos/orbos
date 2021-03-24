@@ -17,8 +17,11 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Tag:        imageTags["k8s.gcr.io/metrics-server-amd64"],
 			PullPolicy: "IfNotPresent",
 		},
-		ImagePullSecrets:  nil,
-		Args:              []string{"--kubelet-insecure-tls"},
+		ImagePullSecrets: nil,
+		Args: []string{
+			"--kubelet-insecure-tls",
+			"--kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP",
+		},
 		Resources:         struct{}{},
 		NodeSelector:      struct{}{},
 		Tolerations:       nil,
