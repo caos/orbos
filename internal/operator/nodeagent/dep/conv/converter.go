@@ -89,9 +89,8 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 	},
 	}
 
-	for key, dependency := range dependencies {
+	for _, dependency := range dependencies {
 		dependency.Installer = middleware.AddLogging(d.monitor, dependency.Installer)
-		dependencies[key] = dependency
 	}
 
 	return dependencies

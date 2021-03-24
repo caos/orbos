@@ -300,6 +300,7 @@ kubectl -n kube-system patch deployment coredns --type='json' \
 	}).Debug("Executed kubeadm init")
 
 	kubeconfigBuf := new(bytes.Buffer)
+	defer kubeconfigBuf.Reset()
 	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfigBuf); err != nil {
 		return nil, err
 	}

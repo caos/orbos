@@ -9,8 +9,8 @@ type Tree struct {
 }
 
 type Common struct {
-	Kind    string
-	Version string `yaml:"version" yaml:"apiVersion"`
+	Kind    string `json:"kind"`
+	Version string `json:"version" yaml:"version" yaml:"apiVersion"`
 }
 
 func (c *Tree) UnmarshalYAML(node *yaml.Node) error {

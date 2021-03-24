@@ -1,6 +1,9 @@
 package static
 
 import (
+	"fmt"
+	"regexp"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
 	secret2 "github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
@@ -78,9 +81,24 @@ type Machine struct {
 	ReplacementRequired bool
 }
 
-func (c *Machine) validate() error {
-	if c.ID == "" {
-		return errors.New("No id provided")
+var internetHosts = regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
+
+func validateName(name string) error {
+	if len(name) > 63 || !internetHosts.MatchString(name) {
+		return errors.Errorf("name must be compatible with https://tools.ietf.org/html/rfc1123#section-2, but %s is not", name)
 	}
+	return nil
+}
+
+func (c *Machine) validate() error {
+
+	if err := validateName(c.ID); err != nil {
+		return fmt.Errorf("validating id failed: %w", err)
+	}
+
+	if err := validateName(c.Hostname); err != nil {
+		return fmt.Errorf("validating hostname failed: %w", err)
+	}
+
 	return c.IP.Validate()
 }

@@ -3,16 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
+
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
 	secret2 "github.com/caos/orbos/pkg/secret"
 
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-
-	"github.com/caos/orbos/internal/start"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 
@@ -25,7 +26,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func ConfigCommand(rv RootValues) *cobra.Command {
+func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		kubeconfig   string
@@ -45,13 +46,20 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
-		if err != nil {
-			return err
-		}
+
+		rv, _ := getRv()
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
+
+		if !rv.Gitops {
+			return errors.New("configure command is only supported with the --gitops flag")
+		}
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+		ctx := rv.Ctx
 
 		if orbConfig.URL == "" && newRepoURL == "" {
 			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
@@ -133,18 +141,18 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		allKubeconfigs := make([]string, 0)
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return err
-		}
-
 		rewriteKey := orbConfig.Masterkey
 		if newMasterKey != "" {
 			rewriteKey = newMasterKey
 		}
 
-		if foundOrbiter {
+		k8sClient, fromOrbiter, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
+		if err != nil {
+			// ignore
+			err = nil
+		}
+
+		if fromOrbiter {
 
 			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
@@ -171,29 +179,20 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				api.PushOrbiterDesiredFunc); err != nil {
 				return err
 			}
-
-			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig, version)
-			if err == nil {
-				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
-			}
-
-		} else {
-			monitor.Info("No orbiter.yml existent, reading kubeconfig from path provided as parameter")
-			if kubeconfig == "" {
-				return errors.New("error to change config as no kubeconfig is provided")
-			}
-			value, err := ioutil.ReadFile(kubeconfig)
-			if err != nil {
-				return err
-			}
-			allKubeconfigs = append(allKubeconfigs, string(value))
+			/*
+				monitor.Info("Reading kubeconfigs from orbiter.yml")
+				kubeconfigs, err := ctrlgitops.GetKubeconfigs(monitor, gitClient, orbConfig)
+				if err == nil {
+					allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
+				}
+			*/
 		}
 
 		foundBoom, err := api.ExistsBoomYml(gitClient)
 		if err != nil {
 			return err
 		}
+
 		if foundBoom {
 			monitor.Info("Repopulating boom secrets")
 
@@ -202,7 +201,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, _, _, _, _, err := boomapi.ParseToolset(tree)
+			toolset, _, _, _, err := boomapi.ParseToolset(tree)
 			if err != nil {
 				return err
 			}
@@ -218,20 +217,24 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 		}
 
-		for _, kubeconfig := range allKubeconfigs {
-			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
-			if k8sClient.Available() {
-				monitor.Info("Ensuring orbconfig in kubernetes cluster")
-				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-					monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
-					return err
-				}
-
-				monitor.Info("Applied configuration resources")
-			} else {
-				monitor.Info("No connection to the k8s-cluster possible")
-			}
+		if k8sClient == nil {
+			monitor.Info("Writing new orbconfig skipped as no kubernetes cluster connection is available")
+			return nil
 		}
+
+		monitor.Info("Ensuring orbconfig in kubernetes cluster")
+
+		orbConfigBytes, err := yaml.Marshal(orbConfig)
+		if err != nil {
+			return err
+		}
+
+		if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfigBytes); err != nil {
+			monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
+			return err
+		}
+
+		monitor.Info("Applied configuration resources")
 
 		return nil
 	}

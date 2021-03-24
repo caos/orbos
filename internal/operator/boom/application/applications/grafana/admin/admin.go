@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"github.com/caos/orbos/pkg/helper"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
@@ -8,7 +9,6 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func getSecretName() string {
@@ -28,7 +28,7 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 
 	secrets := make([]interface{}, 0)
 
-	if !helper2.IsExistentClientSecret(adminSpec.ExistingSecret) {
+	if !helper.IsExistentClientSecret(adminSpec.ExistingSecret) {
 		if adminSpec.Username.Value == "" && adminSpec.Password.Value == "" {
 			return secrets
 		}
@@ -57,7 +57,7 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 }
 
 func GetConfig(adminSpec *admin.Admin) *helm.Admin {
-	if helper2.IsExistentClientSecret(adminSpec.ExistingSecret) {
+	if helper.IsExistentClientSecret(adminSpec.ExistingSecret) {
 		return &helm.Admin{
 			ExistingSecret: adminSpec.ExistingSecret.Name,
 			UserKey:        adminSpec.ExistingSecret.IDKey,

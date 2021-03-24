@@ -2,6 +2,9 @@ package config
 
 import (
 	"errors"
+	"fmt"
+
+	"github.com/caos/orbos/pkg/secret"
 
 	core2 "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
@@ -53,9 +56,26 @@ func (e *ExternalConfig) Validate() error {
 		return errors.New("domain not found")
 	}
 	if e.Domain == "" {
-		return errors.New("No domain configured")
+		return errors.New("no domain configured")
 	}
 	return e.IP.Validate()
+}
+
+func (e *ExternalConfig) ValidateSecrets() error {
+	if e.Credentials == nil {
+		return errors.New("no credentials specified")
+	}
+
+	if err := secret.ValidateSecret(e.Credentials.APIKey, e.Credentials.ExistingAPIKey); err != nil {
+		return fmt.Errorf("validating api key failed: %w", err)
+	}
+	if err := secret.ValidateSecret(e.Credentials.User, e.Credentials.ExistingUser); err != nil {
+		return fmt.Errorf("validating user failed: %w", err)
+	}
+	if err := secret.ValidateSecret(e.Credentials.UserServiceKey, e.Credentials.ExistingUserServiceKey); err != nil {
+		return fmt.Errorf("validating userservice key failed: %w", err)
+	}
+	return nil
 }
 
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {

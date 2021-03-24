@@ -3,6 +3,8 @@ package clientgo
 import (
 	"context"
 	"fmt"
+	"strings"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -10,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"strings"
 )
 
 var (
@@ -84,9 +85,10 @@ func (a ResourceSorter) Less(i, j int) bool {
 		(a[i].Group == a[j].Group && a[i].Version == a[j].Version && a[i].Resource == a[j].Resource && a[i].Kind == a[j].Kind && a[i].Name == a[j].Name && a[i].Namespace < a[j].Namespace))
 }
 
-func GetResource(group, version, resource, namespace, name string) (*Resource, error) {
+func GetResource(monitor mntr.Monitor, group, version, resource, namespace, name string) (*Resource, error) {
 	res := schema.GroupVersionResource{Group: group, Version: version, Resource: resource}
-	conf, err := GetClusterConfig()
+
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return nil, err
 	}
@@ -109,9 +111,9 @@ func GetResource(group, version, resource, namespace, name string) (*Resource, e
 	}, nil
 }
 
-func DeleteResource(resource *Resource) error {
+func DeleteResource(monitor mntr.Monitor, resource *Resource) error {
 	res := schema.GroupVersionResource{Group: resource.Group, Version: resource.Version, Resource: resource.Resource}
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return err
 	}
@@ -141,26 +143,26 @@ func GetGroupVersionsResources(monitor mntr.Monitor, filtersResources []string) 
 		"action": "groupVersionResources",
 	})
 
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting cluster config failed: %w", err)
 	}
 
 	client, err := discovery.NewDiscoveryClientForConfig(conf)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating discovery client failed: %w", err)
 	}
 
 	apiGroups, err := client.ServerGroups()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting supported groups and versions failed: %w", err)
 	}
 	resourceInfoList := make([]*ResourceInfo, 0)
 	for _, apiGroup := range apiGroups.Groups {
 		version := apiGroup.PreferredVersion
 		apiResources, err := client.ServerResourcesForGroupVersion(version.GroupVersion)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting supported resources failed for %s: %w", version.GroupVersion, err)
 		}
 
 		for _, apiResource := range apiResources.APIResources {
@@ -202,7 +204,7 @@ func ListResources(monitor mntr.Monitor, resourceInfoList []*ResourceInfo, label
 	listMonitor := monitor.WithFields(map[string]interface{}{
 		"action": "listResources",
 	})
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(monitor, "")
 	if err != nil {
 		return nil, err
 	}

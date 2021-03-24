@@ -71,15 +71,16 @@ type ClientInt interface {
 
 	GetJob(namespace, name string) (*batch.Job, error)
 	ApplyJob(rsc *batch.Job) error
+	ApplyJobDryRun(rsc *batch.Job) error
 	DeleteJob(namespace string, name string) error
-	WaitUntilJobCompleted(namespace string, name string, timeoutSeconds time.Duration) error
+	WaitUntilJobCompleted(namespace string, name string, timeout time.Duration) error
 
 	ApplyServiceAccount(rsc *core.ServiceAccount) error
 	DeleteServiceAccount(namespace, name string) error
 
 	ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error
 	DeleteStatefulset(namespace, name string) error
-	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
+	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error
 
 	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
 	ExecInPod(namespace, name, container, command string) error
@@ -87,7 +88,7 @@ type ClientInt interface {
 	ApplyDeployment(rsc *apps.Deployment, force bool) error
 	DeleteDeployment(namespace, name string) error
 	PatchDeployment(namespace, name string, data string) error
-	WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error
+	WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error
 	ScaleDeployment(namespace, name string, replicaCount int) error
 	ExecInPodOfDeployment(namespace, name, container, command string) error
 
@@ -95,19 +96,22 @@ type ClientInt interface {
 	GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error)
 	ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error
 	DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error
+	ApplyCRDResource(crd *unstructured.Unstructured) error
+	DeleteCRDResource(group, version, kind, name string) error
 
 	ApplyCronJob(rsc *v1beta1.CronJob) error
 	DeleteCronJob(namespace string, name string) error
 
 	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
+	GetSecret(namespace string, name string) (*core.Secret, error)
 	ApplySecret(rsc *core.Secret) error
 	DeleteSecret(namespace, name string) error
-	WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error
+	WaitForSecret(namespace string, name string, timeout time.Duration) error
 
 	GetConfigMap(namespace, name string) (*core.ConfigMap, error)
 	ApplyConfigmap(rsc *core.ConfigMap) error
 	DeleteConfigmap(namespace, name string) error
-	WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error
+	WaitForConfigMap(namespace string, name string, timeout time.Duration) error
 
 	ApplyRole(rsc *rbac.Role) error
 	DeleteRole(namespace, name string) error
@@ -147,7 +151,7 @@ type Client struct {
 func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
 	kubeconfigStr := ""
 	if kubeconfigPath != "" {
-		value, err := ioutil.ReadFile(kubeconfigPath)
+		value, err := ioutil.ReadFile(helpers.PruneHome(kubeconfigPath))
 		if err != nil {
 			monitor.Error(err)
 			return nil, err
@@ -167,8 +171,25 @@ func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
 	return kc
 }
 
+func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config) *Client {
+	kc := &Client{monitor: monitor}
+	err := kc.RefreshConfig(conf)
+	if err != nil {
+		// do nothing
+	}
+	return kc
+}
+
 func (c *Client) Available() bool {
-	return c.set != nil
+	nodeApi, err := c.nodeApi()
+	if err != nil {
+		return false
+	}
+
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+	_, err = nodeApi.List(ctx, mach.ListOptions{})
+	return err == nil
 }
 
 func (c *Client) nodeApi() (clgocore.NodeInterface, error) {
@@ -276,7 +297,7 @@ func (c *Client) PatchDeployment(namespace, name string, data string) error {
 	return err
 }
 
-func (c *Client) WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilDeploymentReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
@@ -304,7 +325,7 @@ func (c *Client) WaitUntilDeploymentReady(namespace string, name string, contain
 	select {
 	case res := <-returnChannel:
 		return res
-	case <-time.After(timeoutSeconds * time.Second):
+	case <-time.After(timeout):
 		return errors.New("timeout while waiting for deployment to be ready")
 	}
 }
@@ -332,6 +353,32 @@ func (c *Client) DeleteService(namespace, name string) error {
 
 func (c *Client) GetJob(namespace, name string) (*batch.Job, error) {
 	return c.set.BatchV1().Jobs(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
+
+func (c *Client) ApplyJobDryRun(rsc *batch.Job) error {
+	resources := c.set.BatchV1().Jobs(rsc.Namespace)
+	return c.applyResource("job", rsc.GetName(), func() error {
+		res, err := resources.Create(context.Background(), rsc, mach.CreateOptions{DryRun: []string{mach.DryRunAll}})
+		if err != nil {
+			return err
+		}
+		*rsc = *res
+		return nil
+	}, func() error {
+		j, err := resources.Get(context.Background(), rsc.GetName(), mach.GetOptions{})
+		if err != nil {
+			return err
+		}
+		if j.GetName() == rsc.GetName() && j.GetNamespace() == rsc.GetNamespace() {
+			res, err := resources.Update(context.Background(), rsc, mach.UpdateOptions{DryRun: []string{mach.DryRunAll}})
+			if err != nil {
+				return err
+			}
+			*rsc = *res
+			return nil
+		}
+		return nil
+	})
 }
 
 func (c *Client) ApplyJob(rsc *batch.Job) error {
@@ -494,7 +541,7 @@ func (c *Client) DeleteStatefulset(namespace, name string) error {
 	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
-func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	returnChannel := make(chan error, 1)
 	go func() {
 		ctx := context.Background()
@@ -522,7 +569,7 @@ func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, cont
 	select {
 	case res := <-returnChannel:
 		return res
-	case <-time.After(timeoutSeconds * time.Second):
+	case <-time.After(timeout):
 		return errors.New("timeout while waiting for job to complete")
 	}
 }
@@ -537,29 +584,38 @@ func (c *Client) ApplySecret(rsc *core.Secret) error {
 		return err
 	})
 }
+func (c *Client) GetSecret(namespace string, name string) (*core.Secret, error) {
+	return c.set.CoreV1().Secrets(namespace).Get(context.Background(), name, mach.GetOptions{})
+}
 
-func (c *Client) WaitForSecret(namespace string, name string, timeoutSeconds time.Duration) error {
-	returnChannel := make(chan error, 1)
-	go func() {
-		ctx := context.Background()
-		for i := 0; i < int(timeoutSeconds); i++ {
-			secret, err := c.set.CoreV1().Secrets(namespace).Get(ctx, name, mach.GetOptions{})
+func (c *Client) WaitForSecret(namespace string, name string, timeout time.Duration) error {
+	ctx := context.Background()
+	return await(
+		timeout,
+		func() (interface{}, error) {
+			return c.set.CoreV1().Secrets(namespace).Get(ctx, name, mach.GetOptions{})
+		},
+	)
+}
+
+func await(timeout time.Duration, getResource func() (interface{}, error)) error {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			resource, err := getResource()
 			if err != nil && !macherrs.IsNotFound(err) {
-				returnChannel <- err
-				return
-			} else if secret != nil {
-				returnChannel <- nil
-				return
+				return err
+			} else if resource != nil {
+				return nil
 			}
-			time.Sleep(1)
-		}
-	}()
 
-	select {
-	case res := <-returnChannel:
-		return res
-	case <-time.After(timeoutSeconds * time.Second):
-		return errors.New("timeout while waiting for secret to be created")
+		case <-timer.C:
+			return errors.New("timeout while waiting for secret to be created")
+		}
 	}
 }
 
@@ -584,31 +640,6 @@ func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 
 func (c *Client) DeleteConfigmap(namespace, name string) error {
 	return c.set.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
-}
-
-func (c *Client) WaitForConfigMap(namespace string, name string, timeoutSeconds time.Duration) error {
-	returnChannel := make(chan error, 1)
-	go func() {
-		ctx := context.Background()
-		for i := 0; i < int(timeoutSeconds); i++ {
-			secret, err := c.set.CoreV1().ConfigMaps(namespace).Get(ctx, name, mach.GetOptions{})
-			if err != nil && !macherrs.IsNotFound(err) {
-				returnChannel <- err
-				return
-			} else if secret != nil {
-				returnChannel <- nil
-				return
-			}
-			time.Sleep(1)
-		}
-	}()
-
-	select {
-	case res := <-returnChannel:
-		return res
-	case <-time.After(timeoutSeconds * time.Second):
-		return errors.New("timeout while waiting for configmap to be created")
-	}
 }
 
 func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
@@ -639,6 +670,16 @@ func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
 		}
 		return nil
 	})
+}
+
+func (c *Client) WaitForConfigMap(namespace string, name string, timeout time.Duration) error {
+	ctx := context.Background()
+	return await(
+		timeout,
+		func() (interface{}, error) {
+			return c.set.CoreV1().ConfigMaps(namespace).Get(ctx, name, mach.GetOptions{})
+		},
+	)
 }
 
 func (c *Client) DeleteServiceAccount(namespace, name string) error {
@@ -1249,7 +1290,6 @@ func checkReady(containers []containerStatus) bool {
 
 func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error) {
 	crds := c.apixv1beta1client.CustomResourceDefinitions()
-
 	return crds.Get(context.Background(), name, mach.GetOptions{})
 }
 
@@ -1265,6 +1305,7 @@ func (c *Client) GetNamespacedCRDResource(group, version, kind, namespace, name 
 
 	return resource.Get(context.Background(), name, mach.GetOptions{})
 }
+
 func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error {
 	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
 		Group: group,
@@ -1306,6 +1347,51 @@ func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, na
 	}
 
 	return c.dynamic.Resource(mapping.Resource).Namespace(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ApplyCRDResource(crd *unstructured.Unstructured) error {
+	kind := crd.Object["kind"].(string)
+	apiVersion := strings.Split(crd.Object["apiVersion"].(string), "/")
+	metadata := crd.Object["metadata"].(map[string]interface{})
+	name := metadata["name"].(string)
+
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: apiVersion[0],
+		Kind:  kind,
+	}, apiVersion[1])
+	if err != nil {
+		return err
+	}
+
+	resources := c.dynamic.Resource(mapping.Resource)
+	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
+	if err != nil && !macherrs.IsNotFound(err) {
+		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+	}
+	if err == nil {
+		crd.SetResourceVersion(existing.GetResourceVersion())
+	}
+	err = nil
+
+	return c.applyResource("crd", name, func() error {
+		_, err := resources.Create(context.Background(), crd, mach.CreateOptions{})
+		return err
+	}, func() error {
+		_, err := resources.Update(context.Background(), crd, mach.UpdateOptions{})
+		return err
+	})
+}
+
+func (c *Client) DeleteCRDResource(group, version, kind, name string) error {
+	mapping, err := c.mapper.RESTMapping(schema.GroupKind{
+		Group: group,
+		Kind:  kind,
+	}, version)
+	if err != nil {
+		return err
+	}
+
+	return c.dynamic.Resource(mapping.Resource).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ExecInPodOfDeployment(namespace, name, container, command string) error {
