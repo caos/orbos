@@ -1,8 +1,9 @@
 package admin
 
 import (
-	"github.com/caos/orbos/pkg/helper"
 	"strings"
+
+	"github.com/caos/orbos/pkg/helper"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
@@ -27,6 +28,10 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 	namespace := "caos-system"
 
 	secrets := make([]interface{}, 0)
+
+	if adminSpec == nil {
+		return secrets
+	}
 
 	if !helper.IsExistentClientSecret(adminSpec.ExistingSecret) {
 		if adminSpec.Username.Value == "" && adminSpec.Password.Value == "" {
