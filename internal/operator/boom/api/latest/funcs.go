@@ -31,7 +31,8 @@ func GetSecretsMap(desiredKind *Toolset) (
 	}
 	ambassadorSpec := desiredKind.Spec.APIGateway
 	ambassadorSpec.InitSecrets()
-	ret["ambassador.licencekey"] = ambassadorSpec.LicenceKey
+	ambLicKey := "ambassador.licencekey"
+	secrets[ambLicKey] = ambassadorSpec.LicenceKey
 
 	if desiredKind.Spec.Monitoring == nil {
 		desiredKind.Spec.Monitoring = &monitoring.Monitoring{}
