@@ -1,12 +1,16 @@
 package job
 
 import (
+	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	batch "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
-	"reflect"
-	"time"
 )
 
 func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
@@ -21,45 +25,39 @@ func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
 			}, nil
 		}
 
-		//check if any immutable fields were changed
-		changedImmutable := false
-		if !reflect.DeepEqual(job.GetAnnotations(), jobDef.GetAnnotations()) {
-			changedImmutable = true
+		jobDry := *job
+		if job.Spec.Selector == nil {
+			jobDry.Spec.Selector = jobDef.Spec.Selector
 		}
-		if job.Spec.Selector != nil && !reflect.DeepEqual(job.Spec.Selector, jobDef.Spec.Selector) {
-			changedImmutable = true
+		if job.Spec.Template.Labels == nil {
+			jobDry.Spec.Template.Labels = jobDef.Spec.Template.Labels
 		}
-		if job.Spec.Template.ObjectMeta.Labels != nil && !reflect.DeepEqual(job.Spec.Template.ObjectMeta.Labels, jobDef.Spec.Template.ObjectMeta.Labels) {
-			changedImmutable = true
-		}
-		if !reflect.DeepEqual(job.Spec.Template.Spec, jobDef.Spec.Template.Spec) &&
-			//workaround as securitycontext is a pointer to ensure that it only triggers if the values are different
-			!reflect.DeepEqual(*job.Spec.Template.Spec.SecurityContext, *jobDef.Spec.Template.Spec.SecurityContext) {
-			changedImmutable = true
+		if err := k8sClient.ApplyJobDryRun(&jobDry); err != nil && !strings.Contains(err.Error(), "field is immutable") {
+			return nil, err
 		}
 
-		if changedImmutable {
+		if jobDef.Spec.Template.Spec.SecurityContext != nil && jobDry.Spec.Template.Spec.SecurityContext == nil {
+			jobDry.Spec.Template.Spec.SecurityContext = &corev1.PodSecurityContext{}
+		}
+
+		if reflect.DeepEqual(jobDry.Spec.Template.Spec, jobDef.Spec.Template.Spec) &&
+			fmt.Sprint(jobDry.Labels) == fmt.Sprint(jobDef.Labels) &&
+			fmt.Sprint(jobDry.Annotations) == fmt.Sprint(jobDef.Annotations) {
 			return func(k8sClient kubernetes.ClientInt) error {
+				return nil
+			}, nil
+		}
+
+		return func(k8sClient kubernetes.ClientInt) error {
+			if err := k8sClient.ApplyJob(job); err != nil && strings.Contains(err.Error(), "field is immutable") {
 				if err := k8sClient.DeleteJob(job.GetNamespace(), job.GetName()); err != nil {
 					return err
 				}
 				time.Sleep(1 * time.Second)
 				return k8sClient.ApplyJob(job)
-			}, nil
-		}
-
-		//check if selector or the labels are empty, as this have default values
-		if job.Spec.Selector == nil {
-			job.Spec.Selector = jobDef.Spec.Selector
-		}
-		if job.Spec.Template.ObjectMeta.Labels == nil {
-			job.Spec.Template.ObjectMeta.Labels = jobDef.Spec.Template.ObjectMeta.Labels
-		}
-
-		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyJob(job)
+			}
+			return err
 		}, nil
-
 	}, nil
 }
 

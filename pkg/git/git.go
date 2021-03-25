@@ -11,23 +11,24 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/src-d/go-git.v4/config"
+	"github.com/go-git/go-git/v5/config"
 	"gopkg.in/yaml.v3"
 
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/mntr"
+	billy "github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
+	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing/object"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"github.com/go-git/go-git/v5/storage/memory"
 	"golang.org/x/crypto/ssh"
-	"gopkg.in/src-d/go-billy.v4"
-	"gopkg.in/src-d/go-billy.v4/memfs"
-	gogit "gopkg.in/src-d/go-git.v4"
-	"gopkg.in/src-d/go-git.v4/plumbing/object"
-	gitssh "gopkg.in/src-d/go-git.v4/plumbing/transport/ssh"
-	"gopkg.in/src-d/go-git.v4/storage/memory"
 )
 
 const (
 	writeCheckTag = "writecheck"
+	branch        = "master"
 )
 
 type Client struct {
@@ -38,6 +39,7 @@ type Client struct {
 	auth      *gitssh.PublicKeys
 	repo      *gogit.Repository
 	fs        billy.Filesystem
+	storage   *memory.Storage
 	workTree  *gogit.Worktree
 	progress  io.Writer
 	repoURL   string
@@ -50,6 +52,8 @@ func New(ctx context.Context, monitor mntr.Monitor, committer, email string) *Cl
 		committer: committer,
 		email:     email,
 		monitor:   monitor,
+		storage:   memory.NewStorage(),
+		fs:        memfs.New(),
 	}
 
 	if monitor.IsVerbose() {
@@ -68,7 +72,10 @@ func (g *Client) Configure(repoURL string, deploykey []byte) error {
 		return errors.Wrap(err, "parsing deployment key failed")
 	}
 
-	g.repoURL = repoURL
+	if repoURL != g.repoURL {
+		g.repoURL = repoURL
+		g.cloned = false
+	}
 	g.monitor = g.monitor.WithField("repository", repoURL)
 
 	g.auth = &gitssh.PublicKeys{
@@ -94,6 +101,7 @@ func (g *Client) Check() error {
 }
 
 func (g *Client) readCheck() error {
+
 	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
 		Name: "origin",
 		URLs: []string{g.repoURL},
@@ -172,7 +180,6 @@ func (g *Client) Clone() (err error) {
 }
 
 func (g *Client) clone() error {
-
 	g.fs = memfs.New()
 
 	g.monitor.Debug("Cloning")

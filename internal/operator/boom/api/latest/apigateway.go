@@ -33,7 +33,7 @@ type APIGateway struct {
 
 type Caching struct {
 	//Enable specifies, whether a redis instance should be deployed or not
-	Enable bool
+	Enable bool `json:"enable" yaml:"enable"`
 	//Resource requirements
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
 }

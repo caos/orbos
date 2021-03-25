@@ -1,9 +1,12 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/secret/operators"
 	"io/ioutil"
 	"os"
+
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+
+	"github.com/caos/orbos/internal/secret/operators"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -11,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func WriteSecretCommand(rv RootValues) *cobra.Command {
+func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		value string
@@ -40,41 +43,38 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
-		if err := orbConfig.IsComplete(); err != nil {
-			return err
-		}
-
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
-			return err
-		}
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
 		}
 
-		if err := secret.Write(
-			monitor,
-			gitClient,
-			path,
-			s,
-			operators.GetAllSecretsFunc(orbConfig, &version),
-			operators.PushFunc()); err != nil {
+		k8sClient, _, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
+		if err != nil && !rv.Gitops {
 			return err
 		}
-		return nil
+		err = nil
+
+		return secret.Write(
+			monitor,
+			k8sClient,
+			path,
+			s,
+			"orbctl",
+			version,
+			operators.GetAllSecretsFunc(monitor, true, rv.Gitops, gitClient, k8sClient, orbConfig),
+			operators.PushFunc(monitor, rv.Gitops, gitClient, k8sClient))
 	}
 	return cmd
 }

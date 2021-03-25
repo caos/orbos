@@ -36,6 +36,7 @@ func ListMachines(operarorLabels *labels.Operator) MachinesFunc {
 				clusterTree,
 				true,
 				false,
+				false,
 				clusterCurrent,
 				nil,
 				nil,

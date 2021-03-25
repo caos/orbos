@@ -2,7 +2,7 @@ package config
 
 import (
 	"github.com/caos/orbos/pkg/labels"
-	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 type InternalConfig struct {
@@ -18,15 +18,18 @@ type InternalConfig struct {
 }
 
 type Credentials struct {
-	User           *secret2.Secret
-	APIKey         *secret2.Secret
-	UserServiceKey *secret2.Secret
+	User                   *secret.Secret   `json:"user,omitempty" yaml:"user,omitempty"`
+	ExistingUser           *secret.Existing `json:"existinguser,omitempty" yaml:"existinguser,omitempty"`
+	APIKey                 *secret.Secret   `json:"apikey,omitempty" yaml:"apikey,omitempty"`
+	ExistingAPIKey         *secret.Existing `json:"existingapikey,omitempty" yaml:"existingapikey,omitempty"`
+	UserServiceKey         *secret.Secret   `json:"userservicekey,omitempty" yaml:"userservicekey,omitempty"`
+	ExistingUserServiceKey *secret.Existing `json:"existinguserservicekey,omitempty" yaml:"existinguserservicekey,omitempty"`
 }
 
 func (c *Credentials) IsZero() bool {
-	if (c.User == nil || c.User.IsZero()) &&
-		(c.APIKey == nil || c.APIKey.IsZero()) &&
-		(c.UserServiceKey == nil || c.UserServiceKey.IsZero()) {
+	if ((c.User == nil || c.User.IsZero()) && (c.ExistingUser == nil || c.ExistingUser.IsZero())) &&
+		((c.APIKey == nil || c.APIKey.IsZero()) && (c.ExistingAPIKey == nil || c.ExistingAPIKey.IsZero())) &&
+		((c.UserServiceKey == nil || c.UserServiceKey.IsZero()) && (c.ExistingUserServiceKey == nil || c.ExistingUserServiceKey.IsZero())) {
 		return true
 	}
 	return false
@@ -54,8 +57,8 @@ type LoadBalancer struct {
 }
 
 type Origin struct {
-	Key         *secret2.Secret
-	Certificate *secret2.Secret
+	Key         *secret.Secret
+	Certificate *secret.Secret
 }
 
 type Subdomain struct {

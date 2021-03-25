@@ -2,13 +2,15 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
-	core2 "github.com/caos/orbos/internal/operator/core"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/pkg/secret"
 
+	opcore "github.com/caos/orbos/internal/operator/core"
+	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 type ExternalConfig struct {
@@ -53,14 +55,41 @@ func (e *ExternalConfig) Internal(id, namespace string, apiLabels *labels.API) (
 	}, curr
 }
 
-func (e *ExternalConfig) Validate() error {
+var ErrNoLBID = errors.New("no loadbalancer identifier provided")
+
+func (e *ExternalConfig) Validate(lbID string) error {
 	if e == nil {
 		return errors.New("domain not found")
 	}
 	if e.Domain == "" {
-		return errors.New("No domain configured")
+		return errors.New("no domain configured")
 	}
-	return e.IP.Validate()
+	if err := e.IP.Validate(); err != nil {
+		return err
+	}
+
+	if e.LoadBalancer != nil && lbID == "" {
+		return ErrNoLBID
+	}
+
+	return nil
+}
+
+func (e *ExternalConfig) ValidateSecrets() error {
+	if e.Credentials == nil {
+		return errors.New("no credentials specified")
+	}
+
+	if err := secret.ValidateSecret(e.Credentials.APIKey, e.Credentials.ExistingAPIKey); err != nil {
+		return fmt.Errorf("validating api key failed: %w", err)
+	}
+	if err := secret.ValidateSecret(e.Credentials.User, e.Credentials.ExistingUser); err != nil {
+		return fmt.Errorf("validating user failed: %w", err)
+	}
+	if err := secret.ValidateSecret(e.Credentials.UserServiceKey, e.Credentials.ExistingUserServiceKey); err != nil {
+		return fmt.Errorf("validating userservice key failed: %w", err)
+	}
+	return nil
 }
 
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
@@ -133,7 +162,7 @@ type current struct {
 	apiSubdomain      string `yaml:"-"`
 	accountsSubdomain string `yaml:"-"`
 	tlsCertName       string `yaml:"-"`
-	ReadyCertificate  core2.EnsureFunc
+	ReadyCertificate  opcore.EnsureFunc
 }
 
 func (c *current) GetDomain() string {
@@ -151,7 +180,7 @@ func (c *current) GetAPISubDomain() string {
 func (c *current) GetAccountsSubDomain() string {
 	return c.accountsSubdomain
 }
-func (c *current) GetReadyCertificate() core2.EnsureFunc {
+func (c *current) GetReadyCertificate() opcore.EnsureFunc {
 	return c.ReadyCertificate
 }
 func (c *current) GetTlsCertName() string {
