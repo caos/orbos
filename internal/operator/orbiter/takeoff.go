@@ -12,9 +12,9 @@ import (
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	orbconfig "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )

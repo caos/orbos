@@ -6,10 +6,10 @@ import (
 
 	"github.com/caos/orbos/internal/operator/networking"
 	"github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	orbconfig "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	orbconfig "github.com/caos/orbos/pkg/orb"
 )
 
 func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, binaryVersion *string) error {

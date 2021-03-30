@@ -8,9 +8,9 @@ import (
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	cfg "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	cfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/tree"
 )
 

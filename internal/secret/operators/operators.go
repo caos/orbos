@@ -10,9 +10,9 @@ import (
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )

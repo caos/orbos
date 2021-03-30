@@ -6,8 +6,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/ssh"
+	"github.com/caos/orbos/pkg/orb"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/mntr"

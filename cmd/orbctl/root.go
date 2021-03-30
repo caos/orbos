@@ -3,13 +3,14 @@ package main
 import (
 	"context"
 
+	"github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/internal/helpers"
 
 	"github.com/caos/orbos/pkg/git"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 )
 

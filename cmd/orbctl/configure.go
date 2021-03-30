@@ -2,13 +2,13 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
-	"path/filepath"
+
+	"github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
-	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/secret"
 
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 
@@ -16,10 +16,7 @@ import (
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-
-	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/internal/stores/github"
+	orbiterorb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 
 	"github.com/caos/orbos/internal/api"
 	"github.com/spf13/cobra"
@@ -53,83 +50,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			err = errFunc(err)
 		}()
 
-		if orbConfig.URL == "" && newRepoURL == "" {
-			return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
-		}
-
-		// TODO: Remove?
-		if orbConfig.URL != "" && newRepoURL != "" && orbConfig.URL != newRepoURL {
-			return fmt.Errorf("repository url %s is not reconfigurable", orbConfig.URL)
-		}
-
-		if orbConfig.Masterkey == "" && newMasterKey == "" {
-			return errors.New("master key is neighter passed by flag masterkey nor written in orbconfig")
-		}
-
-		var changes bool
-		if newMasterKey != "" {
-			monitor.Info("Changing masterkey in current orbconfig")
-			if orbConfig.Masterkey == "" {
-				secret2.Masterkey = newMasterKey
-			}
-			orbConfig.Masterkey = newMasterKey
-			changes = true
-		}
-		if newRepoURL != "" {
-			monitor.Info("Changing repository url in current orbconfig")
-			orbConfig.URL = newRepoURL
-			changes = true
-		}
-
-		configureGit := func() error {
-			return gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey))
-		}
-
-		// If the repokey already has read/write permissions, don't generate a new one.
-		// This ensures git providers other than github keep being supported
-		if err := configureGit(); err != nil {
-
-			monitor.Info("Starting connection with git-repository")
-
-			dir := filepath.Dir(orbConfig.Path)
-
-			deployKeyPrivLocal, deployKeyPub, err := ssh.Generate()
-			if err != nil {
-				panic(errors.New("failed to generate ssh key for deploy key"))
-			}
-			g := github.New(monitor).LoginOAuth(ctx, dir)
-			if g.GetStatus() != nil {
-				return errors.New("failed github oauth login ")
-			}
-			repo, err := g.GetRepositorySSH(orbConfig.URL)
-			if err != nil {
-				return errors.New("failed to get github repository")
-			}
-
-			if err := g.EnsureNoDeployKey(repo).GetStatus(); err != nil {
-				monitor.Error(errors.New("failed to clear deploy keys in repository"))
-			}
-
-			if err := g.CreateDeployKey(repo, deployKeyPub).GetStatus(); err != nil {
-				return errors.New("failed to create deploy keys in repository")
-			}
-			orbConfig.Repokey = deployKeyPrivLocal
-
-			if err := configureGit(); err != nil {
-				return err
-			}
-			changes = true
-		}
-
-		if changes {
-			monitor.Info("Writing local orbconfig")
-			if err := orbConfig.WriteBackOrbConfig(); err != nil {
-				monitor.Info("Failed to change local configuration")
-				return err
-			}
-		}
-
-		if err := gitClient.Clone(); err != nil {
+		if err := orb.ReconfigureAndClone(ctx, monitor, orbConfig, newRepoURL, newMasterKey, gitClient); err != nil {
 			return err
 		}
 
@@ -146,7 +67,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 
 		if foundOrbiter {
 
-			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbiterorb.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
 				orbConfig,
 				gitCommit,
@@ -163,7 +84,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			monitor.Info("Repopulating orbiter secrets")
-			if err := secret2.Rewrite(
+			if err := secret.Rewrite(
 				monitor,
 				gitClient,
 				rewriteKey,
@@ -208,7 +129,7 @@ func ConfigCommand(rv RootValues) *cobra.Command {
 			}
 
 			tree.Parsed = toolset
-			if err := secret2.Rewrite(
+			if err := secret.Rewrite(
 				monitor,
 				gitClient,
 				rewriteKey,

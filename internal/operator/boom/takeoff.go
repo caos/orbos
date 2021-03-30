@@ -8,7 +8,7 @@ import (
 
 	"github.com/caos/orbos/pkg/git"
 
-	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/internal/operator/boom/app"
 	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"

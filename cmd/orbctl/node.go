@@ -6,9 +6,9 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/spf13/cobra"
 )

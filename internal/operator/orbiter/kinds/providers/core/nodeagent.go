@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/internal/helpers"
 

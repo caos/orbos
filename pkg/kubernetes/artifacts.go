@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/pkg/orb"
 
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 
 	"k8s.io/apimachinery/pkg/util/intstr"

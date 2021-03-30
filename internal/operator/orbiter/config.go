@@ -2,8 +2,8 @@ package orbiter
 
 import (
 	"github.com/caos/orbos/internal/ingestion"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
 )
 
 type Config struct {

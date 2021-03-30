@@ -6,11 +6,11 @@ import (
 	"io/ioutil"
 
 	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/internal/start"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/orb"
 )
 
 func Takeoff(
