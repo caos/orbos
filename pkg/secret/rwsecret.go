@@ -14,15 +14,11 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 
-	"github.com/caos/orbos/internal/api"
-
 	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
 )
 
-type PushFunc func(gitClient *git.Client, desired *tree.Tree) api.PushDesiredFunc
 type PushFuncs func(trees map[string]*tree.Tree, path string) error
 type GetFuncs func() (map[string]*Secret, map[string]*Existing, map[string]*tree.Tree, error)
 
@@ -87,11 +83,8 @@ func Read(
 }
 
 func Rewrite(
-	monitor mntr.Monitor,
-	gitClient *git.Client,
 	newMasterKey string,
-	desired *tree.Tree,
-	pushFunc PushFunc,
+	pushFunc func() error,
 ) error {
 	oldMasterKey := Masterkey
 	Masterkey = newMasterKey
@@ -99,7 +92,7 @@ func Rewrite(
 		Masterkey = oldMasterKey
 	}()
 
-	return pushFunc(gitClient, desired)(monitor)
+	return pushFunc()
 }
 
 func Write(

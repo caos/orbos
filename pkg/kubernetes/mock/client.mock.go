@@ -167,17 +167,17 @@ func (mr *MockClientIntMockRecorder) DeleteJob(namespace, name interface{}) *gom
 }
 
 // WaitUntilJobCompleted mocks base method
-func (m *MockClientInt) WaitUntilJobCompleted(namespace, name string, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitUntilJobCompleted(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilJobCompleted", namespace, name, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitUntilJobCompleted", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitUntilJobCompleted indicates an expected call of WaitUntilJobCompleted
-func (mr *MockClientIntMockRecorder) WaitUntilJobCompleted(namespace, name, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitUntilJobCompleted(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilJobCompleted", reflect.TypeOf((*MockClientInt)(nil).WaitUntilJobCompleted), namespace, name, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilJobCompleted", reflect.TypeOf((*MockClientInt)(nil).WaitUntilJobCompleted), namespace, name, timeout)
 }
 
 // ApplyServiceAccount mocks base method
@@ -237,17 +237,17 @@ func (mr *MockClientIntMockRecorder) DeleteStatefulset(namespace, name interface
 }
 
 // WaitUntilStatefulsetIsReady mocks base method
-func (m *MockClientInt) WaitUntilStatefulsetIsReady(namespace, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitUntilStatefulsetIsReady(namespace, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilStatefulsetIsReady", namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitUntilStatefulsetIsReady", namespace, name, containerCheck, readyCheck, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitUntilStatefulsetIsReady indicates an expected call of WaitUntilStatefulsetIsReady
-func (mr *MockClientIntMockRecorder) WaitUntilStatefulsetIsReady(namespace, name, containerCheck, readyCheck, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitUntilStatefulsetIsReady(namespace, name, containerCheck, readyCheck, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStatefulsetIsReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilStatefulsetIsReady), namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStatefulsetIsReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilStatefulsetIsReady), namespace, name, containerCheck, readyCheck, timeout)
 }
 
 // ExecInPodWithOutput mocks base method
@@ -322,17 +322,17 @@ func (mr *MockClientIntMockRecorder) PatchDeployment(namespace, name, data inter
 }
 
 // WaitUntilDeploymentReady mocks base method
-func (m *MockClientInt) WaitUntilDeploymentReady(namespace, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitUntilDeploymentReady(namespace, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilDeploymentReady", namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitUntilDeploymentReady", namespace, name, containerCheck, readyCheck, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitUntilDeploymentReady indicates an expected call of WaitUntilDeploymentReady
-func (mr *MockClientIntMockRecorder) WaitUntilDeploymentReady(namespace, name, containerCheck, readyCheck, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitUntilDeploymentReady(namespace, name, containerCheck, readyCheck, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilDeploymentReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilDeploymentReady), namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilDeploymentReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilDeploymentReady), namespace, name, containerCheck, readyCheck, timeout)
 }
 
 // ScaleDeployment mocks base method
@@ -536,17 +536,17 @@ func (mr *MockClientIntMockRecorder) DeleteSecret(namespace, name interface{}) *
 }
 
 // WaitForSecret mocks base method
-func (m *MockClientInt) WaitForSecret(namespace, name string, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitForSecret(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForSecret", namespace, name, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitForSecret", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForSecret indicates an expected call of WaitForSecret
-func (mr *MockClientIntMockRecorder) WaitForSecret(namespace, name, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitForSecret(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForSecret", reflect.TypeOf((*MockClientInt)(nil).WaitForSecret), namespace, name, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForSecret", reflect.TypeOf((*MockClientInt)(nil).WaitForSecret), namespace, name, timeout)
 }
 
 // GetConfigMap mocks base method
@@ -593,17 +593,17 @@ func (mr *MockClientIntMockRecorder) DeleteConfigmap(namespace, name interface{}
 }
 
 // WaitForConfigMap mocks base method
-func (m *MockClientInt) WaitForConfigMap(namespace, name string, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitForConfigMap(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForConfigMap", namespace, name, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitForConfigMap", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForConfigMap indicates an expected call of WaitForConfigMap
-func (mr *MockClientIntMockRecorder) WaitForConfigMap(namespace, name, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitForConfigMap(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForConfigMap", reflect.TypeOf((*MockClientInt)(nil).WaitForConfigMap), namespace, name, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForConfigMap", reflect.TypeOf((*MockClientInt)(nil).WaitForConfigMap), namespace, name, timeout)
 }
 
 // ApplyRole mocks base method

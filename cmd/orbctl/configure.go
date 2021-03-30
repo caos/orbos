@@ -88,11 +88,9 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 			monitor.Info("Repopulating orbiter secrets")
 			if err := secret.Rewrite(
-				monitor,
-				gitClient,
 				rewriteKey,
-				desired,
-				api.PushOrbiterDesiredFunc); err != nil {
+				func() error { return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor) },
+			); err != nil {
 				return err
 			}
 			/*
@@ -124,11 +122,9 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 			tree.Parsed = toolset
 			if err := secret.Rewrite(
-				monitor,
-				gitClient,
 				rewriteKey,
-				tree,
-				api.PushBoomDesiredFunc); err != nil {
+				func() error { return api.PushBoomDesiredFunc(gitClient, tree)(monitor) },
+			); err != nil {
 				return err
 			}
 		}
