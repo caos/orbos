@@ -16,8 +16,6 @@ import (
 
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
-
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -939,7 +937,15 @@ func (c *Client) UpdateNode(node *core.Node) (err error) {
 	return err
 }
 
-func (c *Client) cordon(node *core.Node, reason drainreason.DrainReason) (err error) {
+type DrainReason int
+
+const (
+	Updating DrainReason = iota
+	Rebooting
+	Deleting
+)
+
+func (c *Client) cordon(node *core.Node, reason DrainReason) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
 	}()
@@ -971,11 +977,11 @@ type Machine interface {
 	SetJoined(bool)
 }
 
-func (c *Client) Tainted(node *core.Node, reason drainreason.DrainReason) bool {
+func (c *Client) Tainted(node *core.Node, reason DrainReason) bool {
 	return c.tainted(node.Spec.Taints, reason) != -1
 }
 
-func (c *Client) tainted(taints []core.Taint, reason drainreason.DrainReason) int {
+func (c *Client) tainted(taints []core.Taint, reason DrainReason) int {
 
 	for idx, taint := range taints {
 		if taint.Key == TaintKeyPrefix+reason.String() {
@@ -985,7 +991,7 @@ func (c *Client) tainted(taints []core.Taint, reason drainreason.DrainReason) in
 	return -1
 }
 
-func (c *Client) RemoveFromTaints(taints []core.Taint, reason drainreason.DrainReason) (result []core.Taint) {
+func (c *Client) RemoveFromTaints(taints []core.Taint, reason DrainReason) (result []core.Taint) {
 	idx := c.tainted(taints, reason)
 	if idx < 0 {
 		return taints
@@ -993,7 +999,7 @@ func (c *Client) RemoveFromTaints(taints []core.Taint, reason drainreason.DrainR
 	return append(taints[0:idx], taints[idx+1:]...)
 }
 
-func (c *Client) Drain(machine Machine, node *core.Node, reason drainreason.DrainReason) (err error) {
+func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
