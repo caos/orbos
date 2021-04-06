@@ -5,6 +5,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/pkg/git"
+
 	v1 "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -180,15 +183,14 @@ func GetOperatorSecrets(
 	allTrees map[string]*tree.Tree,
 	allSecrets map[string]*Secret,
 	allExistingSecrets map[string]*Existing,
-	operator string,
-	yamlExistsInGit func() (bool, error),
-	treeFromGit,
+	operator,
+	operatorGitFile string,
 	treeFromCRD func() (*tree.Tree, error),
 	getOperatorSpecifics func(*tree.Tree) (map[string]*Secret, map[string]*Existing, bool, error),
 ) error {
 
 	if gitops {
-		foundGitYAML, err := yamlExistsInGit()
+		foundGitYAML, err := api.GitFileExists(&git.Client{}, operatorGitFile)
 		if err != nil {
 			return err
 		}
