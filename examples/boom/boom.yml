@@ -1,5 +1,5 @@
-apiVersion: boom.caos.ch/v1beta2
-kind: Toolset
+apiVersion: caos.ch/v1
+kind: Boom
 metadata:
   name: caos
   namespace: caos-system
