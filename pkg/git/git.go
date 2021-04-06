@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/pkg/tree"
+
 	"github.com/go-git/go-git/v5/config"
 	"gopkg.in/yaml.v3"
 
@@ -392,4 +394,21 @@ func (g *Client) Push() error {
 
 	g.monitor.Info("Repository pushed")
 	return nil
+}
+
+func (g *Client) FileExists(path string) (bool, error) {
+	of := g.Read(path)
+	if of != nil && len(of) > 0 {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (g *Client) ReadTree(path string) (*tree.Tree, error) {
+	tree := &tree.Tree{}
+	if err := yaml.Unmarshal(g.Read(path), tree); err != nil {
+		return nil, err
+	}
+
+	return tree, nil
 }

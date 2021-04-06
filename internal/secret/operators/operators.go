@@ -78,8 +78,8 @@ func getAllSecrets(
 		allSecrets,
 		allExisting,
 		boom,
-		func() (bool, error) { return api.ExistsBoomYml(gitClient) },
-		func() (*tree.Tree, error) { return api.ReadBoomYml(gitClient) },
+		func() (bool, error) { return api.GitFileExists(gitClient, api.BoomFile) },
+		func() (*tree.Tree, error) { return api.ReadGitFile(gitClient, api.BoomFile) },
 		func() (*tree.Tree, error) { return boomcrd.ReadCRD(k8sClient) },
 		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
 			toolset, migrate, _, _, err := boomapi.ParseToolset(t)
@@ -102,8 +102,8 @@ func getAllSecrets(
 			allSecrets,
 			allExisting,
 			orbiter,
-			func() (bool, error) { return api.ExistsOrbiterYml(gitClient) },
-			func() (*tree.Tree, error) { return api.ReadOrbiterYml(gitClient) },
+			func() (bool, error) { return api.GitFileExists(gitClient, api.OrbiterFile) },
+			func() (*tree.Tree, error) { return api.ReadGitFile(gitClient, api.OrbiterFile) },
 			func() (*tree.Tree, error) { return nil, errors.New("ORBITER doesn't support crd mode") },
 			func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
 				_, _, _, migrate, orbiterSecrets, err := orbiterOrb.AdaptFunc(
@@ -129,8 +129,8 @@ func getAllSecrets(
 		allSecrets,
 		allExisting,
 		networking,
-		func() (bool, error) { return api.ExistsNetworkingYml(gitClient) },
-		func() (*tree.Tree, error) { return api.ReadNetworkinglYml(gitClient) },
+		func() (bool, error) { return api.GitFileExists(gitClient, api.NetworkingFile) },
+		func() (*tree.Tree, error) { return api.ReadGitFile(gitClient, api.NetworkingFile) },
 		func() (*tree.Tree, error) { return nwcrd.ReadCRD(k8sClient) },
 		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
 			_, _, nwSecrets, nwExisting, migrate, err := nwOrb.AdaptFunc(nil, false)(monitor, t, nil)
