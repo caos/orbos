@@ -2,7 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
+
 	"github.com/caos/orbos/pkg/kubernetes"
 
 	"github.com/pkg/errors"
@@ -149,8 +149,8 @@ func step(
 	for _, machine := range sortedMachines {
 		if machine.node != nil && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
 			delete(machine.node.Labels, "orbos.ch/updating")
-			if k8sClient.Tainted(machine.node, drainreason.Updating) {
-				machine.node.Spec.Taints = k8sClient.RemoveFromTaints(machine.node.Spec.Taints, drainreason.Updating)
+			if k8sClient.Tainted(machine.node, kubernetes.Updating) {
+				machine.node.Spec.Taints = k8sClient.RemoveFromTaints(machine.node.Spec.Taints, kubernetes.Updating)
 			}
 			if err := k8sClient.UpdateNode(machine.node); err != nil {
 				return false, err
@@ -197,7 +197,7 @@ func plan(
 			return nil
 		}
 		machine.node.Labels["orbos.ch/updating"] = to.Kubelet.Version
-		return k8sClient.Drain(machine.currentMachine, machine.node, drainreason.Updating)
+		return k8sClient.Drain(machine.currentMachine, machine.node, kubernetes.Updating)
 	}
 
 	ensureSoftware := func(packages common.Software, phase string) func() error {

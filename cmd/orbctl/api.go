@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 
+	"github.com/caos/orbos/pkg/git"
+
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/internal/api"
@@ -52,11 +54,12 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
+		foundOrbiter, err := gitClient.Exists(git.OrbiterFile)
 		if err != nil {
 			return err
 		}
 
+		var desireds []api.GitDesiredState
 		if foundOrbiter {
 			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
@@ -71,19 +74,20 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 
 			if migrate {
-				if err := api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired); err != nil {
-					return err
-				}
+				desireds = append(desireds, api.GitDesiredState{
+					Desired: desired,
+					Path:    git.OrbiterFile,
+				})
 			}
 
 		}
-		foundBoom, err := api.ExistsBoomYml(gitClient)
+		foundBoom, err := gitClient.Exists(git.BoomFile)
 		if err != nil {
 			return err
 		}
 		if foundBoom {
 
-			desired, err := api.ReadBoomYml(gitClient)
+			desired, err := gitClient.ReadTree(git.BoomFile)
 			if err != nil {
 				return err
 			}
@@ -94,10 +98,14 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 			if migrate {
 				desired.Parsed = toolset
-				if err := api.PushBoomYml(monitor, "Update boom.yml", gitClient, desired); err != nil {
-					return err
-				}
+				desireds = append(desireds, api.GitDesiredState{
+					Desired: desired,
+					Path:    git.BoomFile,
+				})
 			}
+		}
+		if len(desireds) > 0 {
+			return api.PushGitDesiredStates(monitor, "migrate apis", gitClient, desireds)
 		}
 		return nil
 	}

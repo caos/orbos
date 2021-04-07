@@ -93,7 +93,7 @@ func (o *Orb) writeBackOrbConfig() error {
 	return ioutil.WriteFile(o.Path, data, os.ModePerm)
 }
 
-func ReconfigureAndClone(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newRepoURL, newMasterKey string, gitClient *git.Client) error {
+func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newRepoURL, newMasterKey string, gitClient *git.Client) error {
 	if orbConfig.URL == "" && newRepoURL == "" {
 		return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
 	}
@@ -170,5 +170,5 @@ func ReconfigureAndClone(ctx context.Context, monitor mntr.Monitor, orbConfig *O
 		}
 	}
 
-	return gitClient.Clone()
+	return nil
 }

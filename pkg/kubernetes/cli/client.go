@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/caos/orbos/internal/api"
 	orb2 "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/internal/secret/operators"
 	"github.com/caos/orbos/mntr"
@@ -39,13 +38,13 @@ func Client(
 			return k8sClient, fromOrbiter, err
 		}
 		var err error
-		fromOrbiter, err = api.ExistsOrbiterYml(gitClient)
+		fromOrbiter, err = gitClient.Exists(git.OrbiterFile)
 		if err != nil {
 			return k8sClient, fromOrbiter, err
 		}
 
 		if fromOrbiter {
-			orbTree, err := api.ReadOrbiterYml(gitClient)
+			orbTree, err := gitClient.ReadTree(git.OrbiterFile)
 			if err != nil {
 				return k8sClient, fromOrbiter, errors.New("failed to parse orbiter.yml")
 			}

@@ -55,6 +55,9 @@ func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orb
 			monitor.Info("Nothing changed")
 			return nil
 		}
-		return api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired)
+		return api.PushGitDesiredStates(monitor, fmt.Sprintf("Update %s", git.OrbiterFile), gitClient, []api.GitDesiredState{{
+			Desired: desired,
+			Path:    git.OrbiterFile,
+		}})
 	})
 }

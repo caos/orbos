@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/pkg/git"
 
 	v1 "k8s.io/api/core/v1"
@@ -180,29 +179,31 @@ func GetOperatorSecrets(
 	monitor mntr.Monitor,
 	printLogs,
 	gitops bool,
+	gitClient *git.Client,
+	desiredFile git.DesiredFile,
 	allTrees map[string]*tree.Tree,
 	allSecrets map[string]*Secret,
 	allExistingSecrets map[string]*Existing,
-	operator,
-	operatorGitFile string,
 	treeFromCRD func() (*tree.Tree, error),
 	getOperatorSpecifics func(*tree.Tree) (map[string]*Secret, map[string]*Existing, bool, error),
 ) error {
 
+	operator := strings.Split(string(desiredFile), ".")[0]
+
 	if gitops {
-		foundGitYAML, err := api.GitFileExists(&git.Client{}, operatorGitFile)
+		foundGitYAML, err := gitClient.Exists(desiredFile)
 		if err != nil {
 			return err
 		}
 
 		if !foundGitYAML {
 			if printLogs {
-				monitor.Info(fmt.Sprintf("no file for %s found", operator))
+				monitor.Info(fmt.Sprintf("file %s not found", desiredFile))
 			}
 			return nil
 		}
 
-		operatorTree, err := treeFromGit()
+		operatorTree, err := gitClient.ReadTree(desiredFile)
 		if err != nil {
 			return err
 		}

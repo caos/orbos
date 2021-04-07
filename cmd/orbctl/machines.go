@@ -1,13 +1,12 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/mntr"
@@ -29,18 +28,18 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb
 		return err
 	}
 
-	foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
+	foundOrbiter, err := gitClient.Exists(git.OrbiterFile)
 	if err != nil {
 		return err
 	}
 
 	if !foundOrbiter {
-		return errors.New("Orbiter.yml not found")
+		return fmt.Errorf("%s not found", git.OrbiterFile)
 	}
 
 	monitor.Debug("Reading machines from orbiter.yml")
 
-	desired, err := api.ReadOrbiterYml(gitClient)
+	desired, err := gitClient.ReadTree(git.OrbiterFile)
 	if err != nil {
 		return err
 	}

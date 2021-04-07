@@ -28,9 +28,21 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+type DesiredFile string
+
+func (d DesiredFile) WOExtension() string {
+	return strings.Split(string(d), ".")[0]
+}
+
 const (
 	writeCheckTag = "writecheck"
 	branch        = "master"
+
+	OrbiterFile    DesiredFile = "orbiter.yml"
+	BoomFile       DesiredFile = "boom.yml"
+	NetworkingFile DesiredFile = "networking.yml"
+	DatabaseFile   DesiredFile = "database.yml"
+	ZitadelFile    DesiredFile = "zitadel.yml"
 )
 
 type Client struct {
@@ -396,17 +408,17 @@ func (g *Client) Push() error {
 	return nil
 }
 
-func (g *Client) FileExists(path string) (bool, error) {
-	of := g.Read(path)
+func (g *Client) Exists(path DesiredFile) (bool, error) {
+	of := g.Read(string(path))
 	if of != nil && len(of) > 0 {
 		return true, nil
 	}
 	return false, nil
 }
 
-func (g *Client) ReadTree(path string) (*tree.Tree, error) {
+func (g *Client) ReadTree(path DesiredFile) (*tree.Tree, error) {
 	tree := &tree.Tree{}
-	if err := yaml.Unmarshal(g.Read(path), tree); err != nil {
+	if err := yaml.Unmarshal(g.Read(string(path)), tree); err != nil {
 		return nil, err
 	}
 
