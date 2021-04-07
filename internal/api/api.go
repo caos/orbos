@@ -7,14 +7,6 @@ import (
 	"github.com/caos/orbos/pkg/tree"
 )
 
-type OperatorFile string
-
-const (
-	OrbiterFile    OperatorFile = "orbiter.yml"
-	BoomFile       OperatorFile = "boom.yml"
-	NetworkingFile OperatorFile = "networking.yml"
-)
-
 type PushDesiredFunc func(monitor mntr.Monitor) error
 
 func PushOrbiterDesiredFunc(gitClient *git.Client, desired *tree.Tree) func(mntr.Monitor) error {
@@ -22,7 +14,7 @@ func PushOrbiterDesiredFunc(gitClient *git.Client, desired *tree.Tree) func(mntr
 		monitor.Info("Writing orbiter desired state")
 		return PushGitDesiredStates(monitor, "Orbiter desired state written", gitClient, []GitDesiredState{{
 			Desired: desired,
-			Path:    OrbiterFile,
+			Path:    git.OrbiterFile,
 		}})
 	}
 }
@@ -32,7 +24,7 @@ func PushBoomDesiredFunc(gitClient *git.Client, desired *tree.Tree) func(mntr.Mo
 		monitor.Info("Writing boom desired state")
 		return PushGitDesiredStates(monitor, "Boom desired state written", gitClient, []GitDesiredState{{
 			Desired: desired,
-			Path:    BoomFile,
+			Path:    git.BoomFile,
 		}})
 	}
 }
@@ -42,14 +34,14 @@ func PushNetworkingDesiredFunc(gitClient *git.Client, desired *tree.Tree) func(m
 		monitor.Info("Writing networking desired state")
 		return PushGitDesiredStates(monitor, "Networking desired state written", gitClient, []GitDesiredState{{
 			Desired: desired,
-			Path:    NetworkingFile,
+			Path:    git.NetworkingFile,
 		}})
 	}
 }
 
 type GitDesiredState struct {
 	Desired *tree.Tree
-	Path    OperatorFile
+	Path    git.DesiredFile
 }
 
 func PushGitDesiredStates(monitor mntr.Monitor, msg string, gitClient *git.Client, desireds []GitDesiredState) (err error) {

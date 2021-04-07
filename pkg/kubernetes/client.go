@@ -1048,7 +1048,7 @@ func (c *Client) EnsureDeleted(name string, machine Machine, node NodeWithKubead
 				return errors.Wrapf(err, "getting node %s from kube api failed", name)
 			}
 
-			return c.Drain(machine, nodeStruct, drainreason.Deleting)
+			return c.Drain(machine, nodeStruct, Deleting)
 		}
 		return nil
 	}

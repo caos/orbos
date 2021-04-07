@@ -97,7 +97,7 @@ func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
 
 func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, map[string]*secret.Secret, error) {
 
-	treeDesired, err := api.ReadOrbiterYml(gitClient)
+	treeDesired, err := gitClient.ReadTree(git.OrbiterFile)
 	if err != nil {
 		return nil, nil, nil, false, nil, nil, nil, err
 	}
@@ -147,7 +147,10 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if migrate {
-			if err = api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
+			if err = api.PushGitDesiredStates(monitor, "Desired state migrated", conf.GitClient, []api.GitDesiredState{{
+				Desired: treeDesired,
+				Path:    git.OrbiterFile,
+			}}); err != nil {
 				monitor.Error(err)
 				return
 			}
