@@ -141,7 +141,7 @@ type Client struct {
 	available         bool
 }
 
-func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string, printAvailability bool) (*Client, error) {
+func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
 	kubeconfigStr := ""
 	if kubeconfigPath != "" {
 		value, err := ioutil.ReadFile(helpers.PruneHome(kubeconfigPath))
@@ -152,36 +152,30 @@ func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string, printAvai
 		kubeconfigStr = string(value)
 	}
 
-	return NewK8sClient(monitor, &kubeconfigStr, printAvailability)
+	return NewK8sClient(monitor, &kubeconfigStr)
 }
 
 func newClient(monitor mntr.Monitor) *Client {
 	return &Client{monitor: monitor}
 }
 
-func NewK8sClient(monitor mntr.Monitor, kubeconfig *string, printAvailability bool) (*Client, error) {
+func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) (*Client, error) {
 	kc := newClient(monitor)
-	if err := kc.init(kubeconfig, printAvailability); err != nil {
+	if err := kc.init(kubeconfig); err != nil {
 		return nil, err
 	}
 	return kc, nil
 }
 
-func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config, printAvailability bool) (*Client, error) {
+func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config) (*Client, error) {
 	kc := newClient(monitor)
-	if err := kc.initConfig(conf, printAvailability); err != nil {
+	if err := kc.initConfig(conf); err != nil {
 		return nil, err
 	}
 	return kc, nil
 }
 
-func (c *Client) checkConnectivity(printConnectivity bool) error {
-
-	defer func() {
-		if printConnectivity {
-			c.monitor.WithField("available", c.available).Info("Kubernetes connection checked")
-		}
-	}()
+func (c *Client) checkConnectivity() error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -817,7 +811,7 @@ func (c *Client) applyController(
 	)
 }
 
-func (c *Client) init(kubeconfig *string, printAvailability bool) (err error) {
+func (c *Client) init(kubeconfig *string) (err error) {
 	defer func() {
 		err = errors.Wrap(err, "refreshing Kubernetes client failed")
 	}()
@@ -844,14 +838,14 @@ func (c *Client) init(kubeconfig *string, printAvailability bool) (err error) {
 		}
 	}
 
-	return c.refreshAllClients(restCfg, printAvailability)
+	return c.refreshAllClients(restCfg)
 }
 
-func (c *Client) initConfig(config *rest.Config, printAvailability bool) (err error) {
-	return c.refreshAllClients(config, printAvailability)
+func (c *Client) initConfig(config *rest.Config) (err error) {
+	return c.refreshAllClients(config)
 }
 
-func (c *Client) refreshAllClients(config *rest.Config, printAvailability bool) error {
+func (c *Client) refreshAllClients(config *rest.Config) error {
 	c.restConfig = config
 
 	set, err := kubernetes.NewForConfig(config)
@@ -878,7 +872,7 @@ func (c *Client) refreshAllClients(config *rest.Config, printAvailability bool) 
 	}
 	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
 
-	return c.checkConnectivity(printAvailability)
+	return c.checkConnectivity()
 }
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {

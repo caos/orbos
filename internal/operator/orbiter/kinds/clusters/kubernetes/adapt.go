@@ -87,7 +87,7 @@ func AdaptFunc(
 		if desiredKind.Spec.Kubeconfig != nil && desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
-		k8sClient, err := kubernetes.NewK8sClient(monitor, kc, true)
+		k8sClient, err := kubernetes.NewK8sClient(monitor, kc)
 		if err != nil {
 			// ignore
 			err = nil

@@ -109,7 +109,7 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 			return
 		}
 
-		k8sClient, err := kubernetes.NewK8sClientWithConfig(monitor, conf, true)
+		k8sClient, err := kubernetes.NewK8sClientWithConfig(monitor, conf)
 		if err != nil {
 			c.status = err
 			return

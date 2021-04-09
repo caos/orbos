@@ -75,5 +75,5 @@ func Client(
 		kc = string(value)
 	}
 
-	return kubernetes.NewK8sClient(monitor, &kc, printAvailability)
+	return kubernetes.NewK8sClient(monitor, &kc)
 }
