@@ -55,11 +55,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		unmanagedOperators := []git.DesiredFile{git.DatabaseFile, git.ZitadelFile}
 		for i := range unmanagedOperators {
 			operatorFile := unmanagedOperators[i]
-			exists, err := rv.GitClient.Exists(operatorFile)
-			if err != nil {
-				return err
-			}
-			if exists {
+			if rv.GitClient.Exists(operatorFile) {
 				return fmt.Errorf("found %s in git repository. Please use zitadelctl's configure command", operatorFile)
 			}
 		}

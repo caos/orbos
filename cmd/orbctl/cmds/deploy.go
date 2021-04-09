@@ -14,11 +14,7 @@ import (
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops bool) error {
 
 	if gitops {
-		foundBoom, err := gitClient.Exists(git.BoomFile)
-		if err != nil {
-			return err
-		}
-		if !foundBoom {
+		if !gitClient.Exists(git.BoomFile) {
 			monitor.Info("No BOOM deployed as no boom.yml present")
 			return nil
 		}
@@ -72,11 +68,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 
 func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops bool) error {
 	if gitops {
-		found, err := gitClient.Exists(git.NetworkingFile)
-		if err != nil {
-			return err
-		}
-		if found {
+		if gitClient.Exists(git.NetworkingFile) {
 			desiredTree, err := gitClient.ReadTree(git.NetworkingFile)
 			if err != nil {
 				return err

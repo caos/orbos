@@ -161,12 +161,18 @@ func newClient(monitor mntr.Monitor) *Client {
 
 func NewK8sClient(monitor mntr.Monitor, kubeconfig *string, printAvailability bool) (*Client, error) {
 	kc := newClient(monitor)
-	return kc, kc.refresh(kubeconfig, printAvailability)
+	if err := kc.init(kubeconfig, printAvailability); err != nil {
+		return nil, err
+	}
+	return kc, nil
 }
 
 func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config, printAvailability bool) (*Client, error) {
 	kc := newClient(monitor)
-	return kc, kc.refreshConfig(conf, printAvailability)
+	if err := kc.initConfig(conf, printAvailability); err != nil {
+		return nil, err
+	}
+	return kc, nil
 }
 
 func (c *Client) checkConnectivity(printConnectivity bool) error {
@@ -811,14 +817,14 @@ func (c *Client) applyController(
 	)
 }
 
-func (c *Client) refresh(kubeconfig *string, printAvailability bool) (err error) {
-	if kubeconfig == nil {
-		return
-	}
-
+func (c *Client) init(kubeconfig *string, printAvailability bool) (err error) {
 	defer func() {
 		err = errors.Wrap(err, "refreshing Kubernetes client failed")
 	}()
+
+	if kubeconfig == nil || *kubeconfig == "" {
+		return errors.New("kubeconfig is empty")
+	}
 
 	restCfg := new(rest.Config)
 	if *kubeconfig == "" {
@@ -841,7 +847,7 @@ func (c *Client) refresh(kubeconfig *string, printAvailability bool) (err error)
 	return c.refreshAllClients(restCfg, printAvailability)
 }
 
-func (c *Client) refreshConfig(config *rest.Config, printAvailability bool) (err error) {
+func (c *Client) initConfig(config *rest.Config, printAvailability bool) (err error) {
 	return c.refreshAllClients(config, printAvailability)
 }
 

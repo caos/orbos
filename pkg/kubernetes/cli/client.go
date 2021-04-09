@@ -24,10 +24,7 @@ func Client(
 	printAvailability bool,
 ) (*kubernetes.Client, error) {
 
-	var (
-		kc          string
-		fromOrbiter bool
-	)
+	var kc string
 	orbConfigIsIncompleteErr := orb.IsComplete(orbConfig)
 	if orbConfigIsIncompleteErr != nil && gitops {
 		return nil, orbConfigIsIncompleteErr
@@ -41,13 +38,7 @@ func Client(
 		if err := gitClient.Clone(); err != nil {
 			return nil, err
 		}
-		var err error
-		fromOrbiter, err = gitClient.Exists(git.OrbiterFile)
-		if err != nil {
-			return nil, err
-		}
-
-		if fromOrbiter {
+		if gitClient.Exists(git.OrbiterFile) {
 			orbTree, err := gitClient.ReadTree(git.OrbiterFile)
 			if err != nil {
 				return nil, errors.New("failed to parse orbiter.yml")
