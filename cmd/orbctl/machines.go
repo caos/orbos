@@ -28,12 +28,7 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb
 		return err
 	}
 
-	foundOrbiter, err := gitClient.Exists(git.OrbiterFile)
-	if err != nil {
-		return err
-	}
-
-	if !foundOrbiter {
+	if !gitClient.Exists(git.OrbiterFile) {
 		return fmt.Errorf("%s not found", git.OrbiterFile)
 	}
 

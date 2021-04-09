@@ -410,12 +410,12 @@ func (g *Client) Push() error {
 	return nil
 }
 
-func (g *Client) Exists(path DesiredFile) (bool, error) {
+func (g *Client) Exists(path DesiredFile) bool {
 	of := g.Read(string(path))
 	if of != nil && len(of) > 0 {
-		return true, nil
+		return true
 	}
-	return false, nil
+	return false
 }
 
 func (g *Client) ReadTree(path DesiredFile) (*tree.Tree, error) {

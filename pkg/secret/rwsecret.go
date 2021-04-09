@@ -193,12 +193,7 @@ func GetOperatorSecrets(
 	operator := strings.Split(string(desiredFile), ".")[0]
 
 	if gitops {
-		foundGitYAML, err := gitClient.Exists(desiredFile)
-		if err != nil {
-			return err
-		}
-
-		if !foundGitYAML {
+		if !gitClient.Exists(desiredFile) {
 			if printLogs {
 				monitor.Info(fmt.Sprintf("file %s not found", desiredFile))
 			}

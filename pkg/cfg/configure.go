@@ -163,9 +163,8 @@ func configureOperator(
 	configure func() (desired *tree.Tree, parsed interface{}, err error),
 ) (func() git.File, error) {
 
-	doIt, err := gitClient.Exists(desiredFile)
-	if err != nil || !doIt {
-		return nil, err
+	if !gitClient.Exists(desiredFile) {
+		return nil, nil
 	}
 
 	monitor.WithField("operator", desiredFile.WOExtension()).Info("Reconfiguring")

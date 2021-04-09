@@ -53,13 +53,8 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		foundOrbiter, err := gitClient.Exists(git.OrbiterFile)
-		if err != nil {
-			return err
-		}
-
 		var desireds []git.GitDesiredState
-		if foundOrbiter {
+		if gitClient.Exists(git.OrbiterFile) {
 			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
 				orbConfig,
@@ -80,11 +75,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 
 		}
-		foundBoom, err := gitClient.Exists(git.BoomFile)
-		if err != nil {
-			return err
-		}
-		if foundBoom {
+		if gitClient.Exists(git.BoomFile) {
 
 			desired, err := gitClient.ReadTree(git.BoomFile)
 			if err != nil {

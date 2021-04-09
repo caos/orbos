@@ -78,11 +78,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		foundOrbiter, err := gitClient.Exists(git.OrbiterFile)
-		if err != nil {
-			return err
-		}
-		if foundOrbiter {
+		if gitClient.Exists(git.OrbiterFile) {
 			monitor.WithFields(map[string]interface{}{
 				"version": version,
 				"commit":  gitCommit,

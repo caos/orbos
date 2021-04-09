@@ -38,13 +38,16 @@ func Takeoff(
 		return nil
 	}
 
-	fromOrbiter, err := gitClient.Exists(git.OrbiterFile)
-	if err != nil {
+	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 		return err
 	}
 
-	if fromOrbiter {
-		err = nil
+	if err := gitClient.Clone(); err != nil {
+		return err
+	}
+
+	withORBITER := gitClient.Exists(git.OrbiterFile)
+	if withORBITER {
 		orbiterConfig := &ctrlgitops.OrbiterConfig{
 			Recur:            recur,
 			Destroy:          destroy,
@@ -56,7 +59,7 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		if err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
+		if err := ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
 			return err
 		}
 	}
@@ -69,13 +72,16 @@ func Takeoff(
 		gitOpsBoom || gitOpsNetworking,
 		true,
 	)
+	if err != nil {
+		return err
+	}
 
 	if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
 		monitor.Info("failed to apply common resources into k8s-cluster")
 		return err
 	}
 
-	if fromOrbiter || gitOpsBoom || gitOpsNetworking {
+	if withORBITER || gitOpsBoom || gitOpsNetworking {
 
 		orbConfigBytes, err := yaml.Marshal(orbConfig)
 		if err != nil {
