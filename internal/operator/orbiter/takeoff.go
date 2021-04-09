@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -40,9 +39,9 @@ func NoopConfigure(orb orbcfg.Orb) error {
 
 type QueryFunc func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, queried map[string]interface{}) (EnsureFunc, error)
 
-type EnsureFunc func(pdf api.PushDesiredFunc) *EnsureResult
+type EnsureFunc func(pdf func(monitor mntr.Monitor) error) *EnsureResult
 
-func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
+func NoopEnsure(_ func(monitor mntr.Monitor) error) *EnsureResult {
 	return &EnsureResult{Done: true}
 }
 
@@ -147,7 +146,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if migrate {
-			if err = api.PushGitDesiredStates(monitor, "Desired state migrated", conf.GitClient, []api.GitDesiredState{{
+			if err = conf.GitClient.PushGitDesiredStates(monitor, "Desired state migrated", []git.GitDesiredState{{
 				Desired: treeDesired,
 				Path:    git.OrbiterFile,
 			}}); err != nil {
@@ -196,7 +195,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			}
 		}
 
-		result := ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
+		result := ensure(conf.GitClient.PushDesiredFunc(git.OrbiterFile, treeDesired))
 		if result.Err != nil {
 			handleAdapterError(result.Err)
 			return

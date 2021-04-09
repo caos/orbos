@@ -38,19 +38,8 @@ func Takeoff(
 		return nil
 	}
 
-	getKubeClient := func() (*kubernetes.Client, bool, error) {
-		return cli.Client(
-			monitor,
-			orbConfig,
-			gitClient,
-			kubeconfig,
-			gitOpsBoom || gitOpsNetworking,
-		)
-	}
-
-	k8sClient, fromOrbiter, err := getKubeClient()
-
-	if !fromOrbiter && err != nil {
+	fromOrbiter, err := gitClient.Exists(git.OrbiterFile)
+	if err != nil {
 		return err
 	}
 
@@ -70,12 +59,16 @@ func Takeoff(
 		if err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
 			return err
 		}
-
-		k8sClient, fromOrbiter, err = getKubeClient()
-		if err != nil {
-			return err
-		}
 	}
+
+	k8sClient, err := cli.Client(
+		monitor,
+		orbConfig,
+		gitClient,
+		kubeconfig,
+		gitOpsBoom || gitOpsNetworking,
+		true,
+	)
 
 	if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
 		monitor.Info("failed to apply common resources into k8s-cluster")

@@ -8,7 +8,6 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/secret"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -20,7 +19,7 @@ func ensureUpScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf api.PushDesiredFunc,
+	psf func(mntr.Monitor) error,
 	controlplanePool *initializedPool,
 	workerPools []*initializedPool,
 	kubeAPI *infra.Address,

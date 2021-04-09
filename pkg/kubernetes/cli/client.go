@@ -21,37 +21,41 @@ func Client(
 	gitClient *git.Client,
 	kubeconfig string,
 	gitops bool,
-) (k8sClient *kubernetes.Client, fromOrbiter bool, err error) {
+	printAvailability bool,
+) (*kubernetes.Client, error) {
 
+	var (
+		kc          string
+		fromOrbiter bool
+	)
 	orbConfigIsIncompleteErr := orb.IsComplete(orbConfig)
 	if orbConfigIsIncompleteErr != nil && gitops {
-		return nil, fromOrbiter, orbConfigIsIncompleteErr
+		return nil, orbConfigIsIncompleteErr
 	}
 
-	var kc string
 	if orbConfigIsIncompleteErr == nil && gitops {
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
 		var err error
 		fromOrbiter, err = gitClient.Exists(git.OrbiterFile)
 		if err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
 
 		if fromOrbiter {
 			orbTree, err := gitClient.ReadTree(git.OrbiterFile)
 			if err != nil {
-				return k8sClient, fromOrbiter, errors.New("failed to parse orbiter.yml")
+				return nil, errors.New("failed to parse orbiter.yml")
 			}
 
 			orbDef, err := orb2.ParseDesiredV0(orbTree)
 			if err != nil {
-				return k8sClient, fromOrbiter, errors.New("failed to parse orbiter.yml")
+				return nil, errors.New("failed to parse orbiter.yml")
 			}
 
 			for clustername, _ := range orbDef.Clusters {
@@ -66,7 +70,7 @@ func Client(
 					if kc == "" && err == nil {
 						err = errors.New("no kubeconfig found")
 					}
-					return nil, fromOrbiter, fmt.Errorf("failed to get kubeconfig: %w", err)
+					return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
 				}
 			}
 		}
@@ -75,15 +79,10 @@ func Client(
 	if kc == "" {
 		value, err := ioutil.ReadFile(kubeconfig)
 		if err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
 		kc = string(value)
 	}
 
-	k8sClient = kubernetes.NewK8sClient(monitor, &kc)
-	if !k8sClient.Available() {
-		return nil, fromOrbiter, errors.New("Kubernetes is not connectable")
-	}
-
-	return k8sClient, fromOrbiter, nil
+	return kubernetes.NewK8sClient(monitor, &kc, printAvailability)
 }

@@ -93,7 +93,7 @@ func (o *Orb) writeBackOrbConfig() error {
 	return ioutil.WriteFile(o.Path, data, os.ModePerm)
 }
 
-func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newRepoURL, newMasterKey string, gitClient *git.Client) error {
+func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newRepoURL, newMasterKey string, gitClient *git.Client, clientID, clientSecret string) error {
 	if orbConfig.URL == "" && newRepoURL == "" {
 		return errors.New("repository url is neighter passed by flag repourl nor written in orbconfig")
 	}
@@ -138,9 +138,9 @@ func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newR
 		if err != nil {
 			panic(errors.New("failed to generate ssh key for deploy key"))
 		}
-		g := github.New(monitor).LoginOAuth(ctx, dir)
-		if g.GetStatus() != nil {
-			return errors.New("failed github oauth login ")
+		g := github.New(monitor).LoginOAuth(ctx, dir, clientID, clientSecret)
+		if err := g.GetStatus(); err != nil {
+			return fmt.Errorf("github oauth login failed: %w", err)
 		}
 		repo, err := g.GetRepositorySSH(orbConfig.URL)
 		if err != nil {

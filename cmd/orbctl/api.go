@@ -7,7 +7,6 @@ import (
 
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
-	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
@@ -59,7 +58,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		var desireds []api.GitDesiredState
+		var desireds []git.GitDesiredState
 		if foundOrbiter {
 			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
@@ -74,7 +73,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 
 			if migrate {
-				desireds = append(desireds, api.GitDesiredState{
+				desireds = append(desireds, git.GitDesiredState{
 					Desired: desired,
 					Path:    git.OrbiterFile,
 				})
@@ -98,14 +97,14 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 			if migrate {
 				desired.Parsed = toolset
-				desireds = append(desireds, api.GitDesiredState{
+				desireds = append(desireds, git.GitDesiredState{
 					Desired: desired,
 					Path:    git.BoomFile,
 				})
 			}
 		}
 		if len(desireds) > 0 {
-			return api.PushGitDesiredStates(monitor, "migrate apis", gitClient, desireds)
+			return gitClient.PushGitDesiredStates(monitor, "migrate apis", desireds)
 		}
 		return nil
 	}

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/operator/common"
+
 	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/go-git/go-git/v5/config"
@@ -423,4 +425,36 @@ func (g *Client) ReadTree(path DesiredFile) (*tree.Tree, error) {
 	}
 
 	return tree, nil
+}
+
+type GitDesiredState struct {
+	Desired *tree.Tree
+	Path    DesiredFile
+}
+
+func (g *Client) PushGitDesiredStates(monitor mntr.Monitor, msg string, desireds []GitDesiredState) (err error) {
+	monitor.OnChange = func(_ string, fields map[string]string) {
+		gitFiles := make([]File, len(desireds))
+		for i := range desireds {
+			desired := desireds[i]
+			gitFiles[i] = File{
+				Path:    string(desired.Path),
+				Content: common.MarshalYAML(desired.Desired),
+			}
+		}
+		err = g.UpdateRemote(mntr.SprintCommit(msg, fields), gitFiles...)
+		//		mntr.LogMessage(msg, fields)
+	}
+	monitor.Changed(msg)
+	return err
+}
+
+func (g *Client) PushDesiredFunc(file DesiredFile, desired *tree.Tree) func(mntr.Monitor) error {
+	return func(monitor mntr.Monitor) error {
+		monitor.WithField("file", file).Info("Writing desired state")
+		return g.PushGitDesiredStates(monitor, fmt.Sprintf("Desired state written to %s", file), []GitDesiredState{{
+			Desired: desired,
+			Path:    file,
+		}})
+	}
 }

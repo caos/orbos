@@ -3,6 +3,10 @@ package cfg
 import (
 	"fmt"
 
+	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
+
+	"github.com/caos/orbos/internal/helpers"
+
 	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -23,7 +27,7 @@ func ApplyOrbconfigSecret(
 	monitor mntr.Monitor,
 ) error {
 
-	if k8sClient == nil {
+	if helpers.IsNil(k8sClient) {
 		monitor.Info("Writing new orbconfig skipped as no kubernetes cluster connection is available")
 		return nil
 	}
@@ -86,7 +90,6 @@ func ORBOSConfigurers(
 
 	return []func() (func() git.File, error){
 		OperatorConfigurer(
-			"ORBITER",
 			git.OrbiterFile,
 			monitor,
 			gitClient,
@@ -107,7 +110,6 @@ func ORBOSConfigurers(
 			},
 		),
 		OperatorConfigurer(
-			"BOOM",
 			git.BoomFile,
 			monitor,
 			gitClient,
@@ -121,18 +123,24 @@ func ORBOSConfigurers(
 			},
 		),
 		OperatorConfigurer(
-			"Networking Operator",
 			git.NetworkingFile,
 			monitor,
 			gitClient,
-			nil, // TODO!!!!
+			func() (*tree.Tree, interface{}, error) {
+				desired, err := gitClient.ReadTree(git.NetworkingFile)
+				if err != nil {
+					return nil, nil, err
+				}
+
+				_, _, _, _, _, err = nwOrb.AdaptFunc(nil, true)(monitor, desired, &tree.Tree{})
+				return desired, desired.Parsed, err
+			},
 		),
 	}
 
 }
 
 func OperatorConfigurer(
-	operator string,
 	desiredFile git.DesiredFile,
 	monitor mntr.Monitor,
 	gitClient *git.Client,
@@ -140,7 +148,6 @@ func OperatorConfigurer(
 ) func() (func() git.File, error) {
 	return func() (func() git.File, error) {
 		return configureOperator(
-			operator,
 			desiredFile,
 			monitor,
 			gitClient,
@@ -150,7 +157,6 @@ func OperatorConfigurer(
 }
 
 func configureOperator(
-	operator string,
 	desiredFile git.DesiredFile,
 	monitor mntr.Monitor,
 	gitClient *git.Client,
@@ -162,7 +168,7 @@ func configureOperator(
 		return nil, err
 	}
 
-	monitor.WithField("operator", operator).Info("Reconfiguring")
+	monitor.WithField("operator", desiredFile.WOExtension()).Info("Reconfiguring")
 
 	tree, parsed, err := configure()
 	if err != nil {

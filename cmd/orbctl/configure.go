@@ -22,7 +22,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		cmd          = &cobra.Command{
 			Use:     "configure",
 			Short:   "Configures and reconfigures an orb",
-			Long:    "Configures and reconfigures an orb",
+			Long:    "Generates missing ssh keys and other secrets where it makes sense",
 			Aliases: []string{"reconfigure", "config", "reconfig"},
 		}
 	)
@@ -42,11 +42,11 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			return errors.New("configure command is only supported with the --gitops flag")
 		}
 
-		if err := orb.Reconfigure(rv.Ctx, monitor, rv.OrbConfig, newRepoURL, newMasterKey, rv.GitClient); err != nil {
+		if err := orb.Reconfigure(rv.Ctx, rv.Monitor, rv.OrbConfig, newRepoURL, newMasterKey, rv.GitClient, githubClientID, githubClientSecret); err != nil {
 			return err
 		}
 
-		k8sClient, _, err := cli.Client(monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops)
+		k8sClient, err := cli.Client(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, true)
 		if err != nil {
 			// ignore
 			err = nil

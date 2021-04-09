@@ -153,7 +153,7 @@ func initialize(
 		}
 
 		var node *v1.Node
-		if k8s.Available() {
+		if k8s != nil {
 			var k8sNodeErr error
 			node, k8sNodeErr = k8s.GetNode(machine.ID())
 			if k8sNodeErr != nil {

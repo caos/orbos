@@ -10,7 +10,6 @@ import (
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
 	boomcrd "github.com/caos/orbos/internal/api/boom"
 	nwcrd "github.com/caos/orbos/internal/api/networking"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
@@ -164,31 +163,21 @@ func push(
 	path string,
 ) error {
 	var (
-		pushGitFunc  func(*tree.Tree) error
 		applyCRDFunc func(*tree.Tree) error
-		operator     string
+		desiredFile  git.DesiredFile
 	)
 	if strings.HasPrefix(path, git.OrbiterFile.WOExtension()) {
-		operator = git.OrbiterFile.WOExtension()
-		pushGitFunc = func(desired *tree.Tree) error {
-			return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
-		}
+		desiredFile = git.OrbiterFile
 		applyCRDFunc = func(t *tree.Tree) error {
 			panic(errors.New("ORBITER doesn't support CRD mode"))
 		}
 	} else if strings.HasPrefix(path, git.BoomFile.WOExtension()) {
-		operator = git.BoomFile.WOExtension()
-		pushGitFunc = func(desired *tree.Tree) error {
-			return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
-		}
+		desiredFile = git.BoomFile
 		applyCRDFunc = func(t *tree.Tree) error {
 			return boomcrd.WriteCrd(k8sClient, t)
 		}
 	} else if strings.HasPrefix(path, git.NetworkingFile.WOExtension()) {
-		operator = git.OrbiterFile.WOExtension()
-		pushGitFunc = func(desired *tree.Tree) error {
-			return api.PushNetworkingDesiredFunc(gitClient, desired)(monitor)
-		}
+		desiredFile = git.NetworkingFile
 		applyCRDFunc = func(t *tree.Tree) error {
 			return nwcrd.WriteCrd(k8sClient, t)
 		}
@@ -196,13 +185,13 @@ func push(
 		return errors.New("operator unknown")
 	}
 
-	desired, found := trees[operator]
+	desired, found := trees[desiredFile.WOExtension()]
 	if !found {
-		return fmt.Errorf("desired state for %s not found", operator)
+		return fmt.Errorf("desired state not found for %s", desiredFile.WOExtension())
 	}
 
 	if gitops {
-		return pushGitFunc(desired)
+		return gitClient.PushDesiredFunc(desiredFile, desired)(monitor)
 	}
 	return applyCRDFunc(desired)
 }
