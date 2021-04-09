@@ -46,7 +46,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		k8sClient, err := cli.Client(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, true)
+		k8sClient, err := cli.Client(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops)
 		if err != nil {
 			// ignore
 			err = nil
