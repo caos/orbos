@@ -47,7 +47,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 		return err
 	}
 
-	k8sClient := kubernetes.NewK8sClientWithConfig(monitor, cfg)
+	k8sClient, err := kubernetes.NewK8sClientWithConfig(monitor, cfg, true)
 	if _, err := k8sClient.GetConfigMap("kube-public", "cluster-info"); err != nil {
 		if macherrs.IsNotFound(err) {
 			// This one and other client errors mean that the connection is basically possible
@@ -56,6 +56,7 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 			return err
 		}
 	}
+
 	monitor.Info("successfully connected to kubernetes cluster")
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{

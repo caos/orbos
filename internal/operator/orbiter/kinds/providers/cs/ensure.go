@@ -3,7 +3,6 @@ package cs
 import (
 	"github.com/pkg/errors"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -11,6 +10,7 @@ import (
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 )
 
 func query(
@@ -75,7 +75,7 @@ func query(
 		NotifyMaster:  notifyMaster(hostPools, current, poolsWithUnassignedVIPs),
 		AuthCheck:     checkAuth,
 	}, desiredToCurrentVIP(current))
-	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
 			func() error {

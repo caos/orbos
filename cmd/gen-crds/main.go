@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
+	"path/filepath"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
-	"path/filepath"
 )
 
 const (
@@ -21,12 +22,12 @@ func main() {
 	flag.Parse()
 
 	if kubeconfig != "" {
-		k8sClient, err := kubernetes.NewK8sClientWithPath(mntr.Monitor{}, kubeconfig)
+		k8sClient, err := kubernetes.NewK8sClientWithPath(mntr.Monitor{}, kubeconfig, true)
 		if err != nil {
 			panic(err)
 		}
 
-		if k8sClient.Available() {
+		if k8sClient != nil {
 			if err := kubernetes.ApplyCRDs(boilerplatePath, "./...", k8sClient); err != nil {
 				panic(err)
 			}

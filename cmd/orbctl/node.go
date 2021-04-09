@@ -6,7 +6,6 @@ import (
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -55,9 +54,6 @@ func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orb
 			monitor.Info("Nothing changed")
 			return nil
 		}
-		return api.PushGitDesiredStates(monitor, fmt.Sprintf("Update %s", git.OrbiterFile), gitClient, []api.GitDesiredState{{
-			Desired: desired,
-			Path:    git.OrbiterFile,
-		}})
+		return gitClient.PushDesiredFunc(git.OrbiterFile, desired)(monitor)
 	})
 }

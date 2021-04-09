@@ -21,7 +21,7 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt core.AdaptFunc, 
 		}
 		treeCurrent := &tree.Tree{}
 
-		if !k8sClient.Available() {
+		if k8sClient == nil {
 			internalMonitor.Error(errors.New("kubeclient is not available"))
 			return
 		}

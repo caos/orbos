@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 
 	"github.com/caos/orbos/mntr"
-
-	"github.com/caos/orbos/internal/stores/github"
 )
 
 var (
@@ -27,10 +24,6 @@ var (
 func main() {
 
 	defer monitor.RecoverPanic()
-
-	github.ClientID = githubClientID
-	github.ClientSecret = githubClientSecret
-	github.Key = RandStringBytes(32)
 
 	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
@@ -64,14 +57,4 @@ func main() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }

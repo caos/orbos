@@ -88,7 +88,7 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 		if rv.Gitops {
 			prunedPath := helpers.PruneHome(orbConfigPath)
 			rv.OrbConfig, err = orb.ParseOrbConfig(prunedPath)
-			if err != nil {
+			if rv.OrbConfig == nil {
 				rv.OrbConfig = &orb.Orb{Path: prunedPath}
 			}
 		}

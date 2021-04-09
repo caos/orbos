@@ -5,27 +5,24 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 
-	"github.com/caos/oidc/pkg/cli"
+	"github.com/caos/oidc/pkg/client/rp"
+	"github.com/caos/oidc/pkg/client/rp/cli"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
+	"github.com/caos/oidc/pkg/utils"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-github/v31/github"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
-)
-
-var (
-	ClientID     = ""
-	ClientSecret = ""
-	Key          = ""
 )
 
 type githubAPI struct {
@@ -86,17 +83,33 @@ const (
 	githubToken = "ghtoken"
 )
 
-func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string) *githubAPI {
+func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID, clientSecret string) *githubAPI {
 	filePath := filepath.Join(folderPath, githubToken)
 	port := "9999"
 	callbackPath := "/orbctl/github/callback"
 
-	rpConfig := &rp.Config{
-		ClientID:     ClientID,
-		ClientSecret: ClientSecret,
-		CallbackURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
+	rpConfig := &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
 		Scopes:       []string{"repo", "repo_deployment"},
-		Endpoints:    githubOAuth.Endpoint,
+		Endpoint:     githubOAuth.Endpoint,
+	}
+
+	key := randStringBytes(32)
+	cookieHandler := utils.NewCookieHandler([]byte(key), []byte(key), utils.WithUnsecure())
+	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
+	if err != nil {
+		g.status = fmt.Errorf("error creating relaying party: %w", err)
+		return g
+	}
+
+	makeClient := func(token *oidc.Tokens) {
+		g.client = github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
+		_, _, g.status = g.client.Users.Get(ctx, "")
+		if g.status != nil {
+			g.client = nil
+		}
 	}
 
 	if helper.FileExists(filePath) {
@@ -113,50 +126,36 @@ func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string) *githubAP
 			return g
 		}
 
-		client := github.NewClient(cli.TokenForClient(rpConfig, []byte(Key), token))
-		_, _, g.status = client.Users.Get(ctx, "")
+		makeClient(token)
 		if g.status != nil {
-			if err := os.Remove(filePath); err != nil {
-				g.status = err
+			g.status = os.Remove(filePath)
+			if g.status != nil {
 				return g
 			}
-			g.client = nil
-		} else {
-			g.client = client
 		}
 	}
 
 	if g.client == nil {
 
-		token := cli.CodeFlow(rpConfig, []byte(Key), callbackPath, port)
+		token := cli.CodeFlow(ctx, relyingParty, callbackPath, port, uuid.NewString)
 
-		g.monitor.Info("Finished CodeFlow")
-
-		oauth2Client := cli.TokenForClient(rpConfig, []byte(Key), token)
-
-		client := github.NewClient(oauth2Client)
-
-		_, _, g.status = client.Users.Get(ctx, "")
+		makeClient(token)
 		if g.status != nil {
-			g.monitor.Info("Failed CodeFlow")
+			g.status = fmt.Errorf("CodeFlow failed: %w", g.status)
 			return g
 		}
+		g.monitor.Info("CodeFlow succeeded")
 
 		data, err := yaml.Marshal(token)
 		if err != nil {
 			g.status = err
-			g.monitor.Error(err)
 			return g
 		}
 
 		if err := ioutil.WriteFile(filePath, data, os.ModePerm); err != nil {
 			g.status = err
-			g.monitor.Error(err)
 			return g
 		}
-
-		g.monitor.Info("Successful CodeFlow")
-		g.client = client
 	}
 	return g
 }
@@ -364,3 +363,13 @@ func (g *githubAPI) EnsureNoDeployKey(repo *github.Repository) *githubAPI {
 func strPtr(str string) *string {
 	return &str
 }
+
+func randStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
