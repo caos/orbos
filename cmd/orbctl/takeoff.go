@@ -211,7 +211,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 
 		if rv.Gitops {
 
-			k8sClient, err := cli.Client(monitor, orbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, true)
+			k8sClient, err := cli.Client(monitor, orbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops)
 			if err != nil {
 				return err
 			}

@@ -21,7 +21,6 @@ func Client(
 	gitClient *git.Client,
 	kubeconfig string,
 	gitops bool,
-	printAvailability bool,
 ) (*kubernetes.Client, error) {
 
 	var kc string

@@ -70,7 +70,6 @@ func Takeoff(
 		gitClient,
 		kubeconfig,
 		gitOpsBoom || gitOpsNetworking,
-		true,
 	)
 	if err != nil {
 		return err

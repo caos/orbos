@@ -39,9 +39,7 @@ func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 				path = args[0]
 			}
 
-			printInfoLogs := path == ""
-
-			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, printInfoLogs)
+			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
 			if err != nil && !rv.Gitops {
 				return err
 			}
@@ -50,7 +48,7 @@ func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 			value, err := secret.Read(
 				k8sClient,
 				path,
-				operators.GetAllSecretsFunc(monitor, printInfoLogs, rv.Gitops, gitClient, k8sClient, orbConfig),
+				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, gitClient, k8sClient, orbConfig),
 			)
 			if err != nil {
 				return err
