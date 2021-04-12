@@ -62,7 +62,7 @@ func (p *PackageManager) remSpecificUpdatePackages() error {
 		}
 	}
 
-	cmd := exec.Command("/usr/bin/yum", "--assumeyes", "--errorlevel", "0", "--debuglevel", "3")
+	cmd := exec.Command("/usr/bin/yum", "--assumeyes", "--errorlevel", "0", "--debuglevel", "3", "update")
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 	cmd.Stderr = errBuf
