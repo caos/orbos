@@ -32,7 +32,8 @@ sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 
 # Create an orb file at ${HOME}/.orb/config
-orbctl configure --repourl git@github.com:me/my-orb.git --masterkey "$(openssl rand -base64 21)"
+MY_GIT_REPO="git@github.com:me/my-orb.git"
+orbctl configure --repourl ${MY_GIT_REPO} --masterkey "$(openssl rand -base64 21)"
 ```
 
 ### Configure a billable Google Cloud Platform project of your choice

@@ -38,7 +38,6 @@ func (d DesiredFile) WOExtension() string {
 
 const (
 	writeCheckTag = "writecheck"
-	branch        = "master"
 
 	OrbiterFile    DesiredFile = "orbiter.yml"
 	BoomFile       DesiredFile = "boom.yml"
