@@ -4,8 +4,9 @@ package nodeagent
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"

@@ -23,6 +23,7 @@ import (
 
 type Converter interface {
 	Init() func() error
+	Update() error
 	nodeagent.Converter
 }
 
@@ -49,6 +50,10 @@ func (d *dependencies) Init() func() error {
 		}
 		return d.pm.RefreshInstalled()
 	}
+}
+
+func (d *dependencies) Update() error {
+	return d.pm.Update()
 }
 
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
