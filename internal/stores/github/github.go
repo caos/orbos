@@ -5,11 +5,12 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	helperpkg "github.com/caos/orbos/pkg/helper"
 
 	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/client/rp/cli"
@@ -96,7 +97,7 @@ func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID,
 		Endpoint:     githubOAuth.Endpoint,
 	}
 
-	key := randStringBytes(32)
+	key := helperpkg.RandStringBytes(32)
 	cookieHandler := utils.NewCookieHandler([]byte(key), []byte(key), utils.WithUnsecure())
 	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
@@ -363,13 +364,3 @@ func (g *githubAPI) EnsureNoDeployKey(repo *github.Repository) *githubAPI {
 func strPtr(str string) *string {
 	return &str
 }
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
