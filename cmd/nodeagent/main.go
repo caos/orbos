@@ -108,12 +108,12 @@ func main() {
 		conv,
 		conv.Init())
 
-	daily := time.NewTicker(24 * time.Hour)
+	daily := time.NewTicker(10 * time.Minute)
 	defer daily.Stop()
 	update := make(chan struct{})
 	go func() {
 		for range daily.C {
-			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
+			timer := time.NewTimer(time.Duration(rand.Intn(20)) * time.Minute)
 			<-timer.C
 			update <- struct{}{}
 			timer.Stop()
