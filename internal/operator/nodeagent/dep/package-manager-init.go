@@ -48,7 +48,7 @@ func (p *PackageManager) remSpecificUpdatePackages() error {
 	removeConflictingCronFile := true
 	_, err := os.Stat(conflictingCronFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if os.IsNotExist(err) {
 			removeConflictingCronFile = false
 			err = nil
 		}
