@@ -816,12 +816,8 @@ func (c *Client) init(kubeconfig *string) (err error) {
 		err = errors.Wrap(err, "refreshing Kubernetes client failed")
 	}()
 
-	if kubeconfig == nil || *kubeconfig == "" {
-		return errors.New("kubeconfig is empty")
-	}
-
 	restCfg := new(rest.Config)
-	if *kubeconfig == "" {
+	if kubeconfig == nil || *kubeconfig == "" {
 		restCfg, err = rest.InClusterConfig()
 		if err != nil {
 			return err
