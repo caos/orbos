@@ -40,12 +40,12 @@ func Client(
 		if gitClient.Exists(git.OrbiterFile) {
 			orbTree, err := gitClient.ReadTree(git.OrbiterFile)
 			if err != nil {
-				return nil, errors.New("failed to parse orbiter.yml")
+				return nil, fmt.Errorf("failed to get tree for %s: %w", git.OrbiterFile, err)
 			}
 
 			orbDef, err := orb2.ParseDesiredV0(orbTree)
 			if err != nil {
-				return nil, errors.New("failed to parse orbiter.yml")
+				return nil, fmt.Errorf("failed to parse %s: %w", git.OrbiterFile, err)
 			}
 
 			for clustername, _ := range orbDef.Clusters {
@@ -58,9 +58,9 @@ func Client(
 				)
 				if err != nil || kc == "" {
 					if kc == "" && err == nil {
-						err = errors.New("no kubeconfig found")
+						err = errors.New("kubeconfig from ORBITERs desired state not found")
 					}
-					return nil, fmt.Errorf("failed to get kubeconfig: %w", err)
+					return nil, fmt.Errorf("failed to get ORBITERs kubeconfig: %w", err)
 				}
 			}
 		}
