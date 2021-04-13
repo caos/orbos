@@ -135,8 +135,9 @@ func main() {
 			monitor.Info("Starting update")
 			if err := conv.Update(); err != nil {
 				monitor.Error(fmt.Errorf("updating packages failed: %w", err))
+			} else {
+				monitor.Info("Update done")
 			}
-			monitor.Info("Update done")
 		}
 	}
 }
