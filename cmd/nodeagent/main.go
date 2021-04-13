@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/networking"
@@ -108,12 +107,12 @@ func main() {
 		conv,
 		conv.Init())
 
-	daily := time.NewTicker(10 * time.Minute)
+	daily := time.NewTicker(24 * time.Hour)
 	defer daily.Stop()
 	update := make(chan struct{})
 	go func() {
 		for range daily.C {
-			timer := time.NewTimer(time.Duration(rand.Intn(20)) * time.Minute)
+			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
 			<-timer.C
 			update <- struct{}{}
 			timer.Stop()
@@ -123,24 +122,21 @@ func main() {
 	iterate := make(chan struct{})
 	//trigger first iteration
 	go func() { iterate <- struct{}{} }()
-	// the mutex ensures that iterations and updates are never run simultaneously. E.g. the yum db could crash otherwise.
-	var mutex sync.Mutex
 	for {
 		select {
 		case <-iterate:
-			mutex.Lock()
+			monitor.Info("Starting iteration")
 			itFunc()
 			monitor.Info("Iteration done")
 			time.Sleep(10 * time.Second)
 			//trigger next iteration
-			mutex.Unlock()
 			go func() { iterate <- struct{}{} }()
 		case <-update:
-			mutex.Lock()
+			monitor.Info("Starting update")
 			if err := conv.Update(); err != nil {
 				monitor.Error(fmt.Errorf("updating packages failed: %w", err))
 			}
-			mutex.Unlock()
+			monitor.Info("Update done")
 		}
 	}
 }
