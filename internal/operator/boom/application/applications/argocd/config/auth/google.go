@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"github.com/caos/orbos/pkg/helper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/caos/orbos/pkg/secret/read"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
 	"github.com/pkg/errors"
@@ -22,17 +23,17 @@ type googleConnector struct {
 }
 
 func getGoogle(spec *google.Connector, redirect string) (interface{}, error) {
-	clientID, err := helper.GetSecretValueOnlyIncluster(spec.Config.ClientID, spec.Config.ExistingClientIDSecret)
+	clientID, err := read.GetSecretValueOnlyIncluster(spec.Config.ClientID, spec.Config.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper.GetSecretValueOnlyIncluster(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
+	clientSecret, err := read.GetSecretValueOnlyIncluster(spec.Config.ClientSecret, spec.Config.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceAccountJSON, err := helper.GetSecretValueOnlyIncluster(spec.Config.ServiceAccountJSON, spec.Config.ExistingServiceAccountJSONSecret)
+	serviceAccountJSON, err := read.GetSecretValueOnlyIncluster(spec.Config.ServiceAccountJSON, spec.Config.ExistingServiceAccountJSONSecret)
 	if err != nil {
 		return nil, err
 	}

@@ -3,9 +3,9 @@ package cfg
 import (
 	"fmt"
 
-	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
+	"github.com/caos/orbos/pkg/helper"
 
-	"github.com/caos/orbos/internal/helpers"
+	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
 
 	"github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/common"
@@ -27,7 +27,7 @@ func ApplyOrbconfigSecret(
 	monitor mntr.Monitor,
 ) error {
 
-	if helpers.IsNil(k8sClient) {
+	if helper.IsNil(k8sClient) {
 		monitor.Info("Writing new orbconfig skipped as no kubernetes cluster connection is available")
 		return nil
 	}

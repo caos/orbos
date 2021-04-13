@@ -2,7 +2,7 @@ package auth
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth"
-	"github.com/caos/orbos/pkg/helper"
+	"github.com/caos/orbos/pkg/secret/read"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -25,12 +25,12 @@ func GetOIDC(spec *auth.Auth) (string, error) {
 		return "", nil
 	}
 
-	clientID, err := helper.GetSecretValueOnlyIncluster(spec.OIDC.ClientID, spec.OIDC.ExistingClientIDSecret)
+	clientID, err := read.GetSecretValueOnlyIncluster(spec.OIDC.ClientID, spec.OIDC.ExistingClientIDSecret)
 	if err != nil {
 		return "", err
 	}
 
-	clientSecret, err := helper.GetSecretValueOnlyIncluster(spec.OIDC.ClientSecret, spec.OIDC.ExistingClientSecretSecret)
+	clientSecret, err := read.GetSecretValueOnlyIncluster(spec.OIDC.ClientSecret, spec.OIDC.ExistingClientSecretSecret)
 	if err != nil {
 		return "", err
 	}
