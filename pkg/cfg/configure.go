@@ -40,9 +40,7 @@ func ApplyOrbconfigSecret(
 	}
 
 	if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfigBytes); err != nil {
-		err = fmt.Errorf("writing orbconfig kubernetes secret failed: %w", err)
-		monitor.Error(err)
-		return err
+		return fmt.Errorf("writing orbconfig kubernetes secret failed: %w", err)
 	}
 
 	monitor.Info("Orbconfig kubernetes secret written")
