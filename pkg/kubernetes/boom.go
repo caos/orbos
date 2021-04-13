@@ -154,7 +154,7 @@ status:
 	}
 
 	var (
-		cmd          = []string{"/orbctl", "takeoff", "boom"}
+		cmd          = []string{"/orbctl", "takeoff", "boom", "--kubeconfig", ""}
 		volumes      []core.Volume
 		volumeMounts []core.VolumeMount
 	)
@@ -173,8 +173,6 @@ status:
 			ReadOnly:  true,
 			MountPath: "/secrets",
 		}}
-	} else {
-		cmd = append(cmd, "--kubeconfig", "")
 	}
 
 	deployment := &apps.Deployment{
