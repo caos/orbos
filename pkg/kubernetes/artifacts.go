@@ -27,6 +27,10 @@ func EnsureCaosSystemNamespace(monitor mntr.Monitor, client ClientInt) error {
 func EnsureOrbconfigSecret(monitor mntr.Monitor, client ClientInt, orbconfig []byte) error {
 	monitor.Debug("Ensuring configuration artifacts")
 
+	if err := EnsureCaosSystemNamespace(monitor, client); err != nil {
+		return err
+	}
+
 	if err := client.ApplySecret(&core.Secret{
 		ObjectMeta: mach.ObjectMeta{
 			Name:      "caos",
