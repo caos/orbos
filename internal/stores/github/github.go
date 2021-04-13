@@ -10,13 +10,14 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/caos/orbos/internal/utils/helper"
+
 	helperpkg "github.com/caos/orbos/pkg/helper"
 
 	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/client/rp/cli"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
-	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-github/v31/github"
@@ -105,38 +106,18 @@ func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID,
 		return g
 	}
 
-	makeClient := func(token *oidc.Tokens) {
+	makeClient := func(token *oidc.Tokens) error {
 		g.client = github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
 		_, _, g.status = g.client.Users.Get(ctx, "")
 		if g.status != nil {
 			g.client = nil
 		}
+		return g.status
 	}
 
-	if helper.FileExists(filePath) {
-		token := new(oidc.Tokens)
+	if err := clientFromCache(filePath, makeClient); err != nil {
 
-		data, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			g.status = err
-			return g
-		}
-
-		if err := yaml.Unmarshal(data, token); err != nil {
-			g.status = err
-			return g
-		}
-
-		makeClient(token)
-		if g.status != nil {
-			g.status = os.Remove(filePath)
-			if g.status != nil {
-				return g
-			}
-		}
-	}
-
-	if g.client == nil {
+		g.monitor.WithField("reason", err.Error()).Info("Trying CodeFlow as reusing an existing token failed")
 
 		token := cli.CodeFlow(ctx, relyingParty, callbackPath, port, uuid.NewString)
 
@@ -161,6 +142,29 @@ func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID,
 	return g
 }
 
+func clientFromCache(filePath string, makeClient func(token *oidc.Tokens) error) error {
+	if !helper.FileExists(filePath) {
+		return fmt.Errorf("file %s does not exist", filePath)
+	}
+	token := new(oidc.Tokens)
+
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(data, token); err != nil {
+		return err
+	}
+
+	if err := makeClient(token); err != nil {
+		if rmErr := os.Remove(filePath); rmErr != nil {
+			panic(rmErr)
+		}
+	}
+	return err
+}
+
 func (g *githubAPI) LoginToken(token string) *githubAPI {
 	if g.status != nil {
 		return g
@@ -178,7 +182,7 @@ func (g *githubAPI) LoginToken(token string) *githubAPI {
 		return g
 	}
 
-	g.monitor.Info("Successful PersonalAccessTokenFlow")
+	g.monitor.Info("PersonalAccessTokenFlow succeeded")
 	g.client = client
 	return g
 }
@@ -201,7 +205,7 @@ func (g *githubAPI) LoginBasicAuth(username, password string) *githubAPI {
 		return g
 	}
 
-	g.monitor.Info("Successful BasicAuthFlow")
+	g.monitor.Info("BasicAuthFlow succeeded")
 	g.client = client
 	return g
 }
@@ -225,7 +229,7 @@ func (g *githubAPI) LoginTwoFactor(username, password, twoFactor string) *github
 		return g
 	}
 
-	g.monitor.Info("Successful BasicAuthFlow with OTP")
+	g.monitor.Info("BasicAuthFlow with OTP succeeded")
 	g.client = client
 	return g
 }
