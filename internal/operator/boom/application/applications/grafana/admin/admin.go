@@ -3,7 +3,7 @@ package admin
 import (
 	"strings"
 
-	"github.com/caos/orbos/pkg/helper"
+	"github.com/caos/orbos/pkg/secret/read"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
@@ -29,7 +29,7 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 
 	secrets := make([]interface{}, 0)
 
-	if !helper.IsExistentClientSecret(adminSpec.ExistingSecret) {
+	if !read.IsExistentClientSecret(adminSpec.ExistingSecret) {
 
 		data := make(map[string]string, 0)
 		if adminSpec.Username != nil && adminSpec.Username.Value != "" {
@@ -58,7 +58,7 @@ func GetSecrets(adminSpec *admin.Admin) []interface{} {
 }
 
 func GetConfig(adminSpec *admin.Admin) *helm.Admin {
-	if helper.IsExistentClientSecret(adminSpec.ExistingSecret) {
+	if read.IsExistentClientSecret(adminSpec.ExistingSecret) {
 		return &helm.Admin{
 			ExistingSecret: adminSpec.ExistingSecret.Name,
 			UserKey:        adminSpec.ExistingSecret.IDKey,

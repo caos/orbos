@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/pkg/helper"
 
 	"github.com/caos/orbos/pkg/git"
 
@@ -45,7 +45,7 @@ func Read(
 	if err != nil {
 		return "", err
 	}
-	if helpers.IsNil(k8sClient) {
+	if helper.IsNil(k8sClient) {
 		allExisting = make(map[string]*Existing)
 	}
 
@@ -114,7 +114,7 @@ func Write(
 		return err
 	}
 
-	if helpers.IsNil(k8sClient) {
+	if helper.IsNil(k8sClient) {
 		allExisting = make(map[string]*Existing)
 	}
 
