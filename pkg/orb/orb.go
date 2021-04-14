@@ -123,7 +123,10 @@ func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newR
 	}
 
 	configureGit := func() error {
-		return gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey))
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+			return err
+		}
+		return gitClient.Check()
 	}
 
 	// If the repokey already has read/write permissions, don't generate a new one.
