@@ -52,16 +52,34 @@ func (p *PackageManager) Init() error {
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
+		err = p.debSpecificInit()
+	case REMBased:
+		err = p.remSpecificInit()
+	}
+
+	if err != nil {
+		return fmt.Errorf("initializing packages %s failed: %w", p.os.Packages, err)
+	}
+
+	p.monitor.Debug("Package manager initialized")
+	return nil
+}
+
+func (p *PackageManager) Update() error {
+	p.monitor.Debug("Updating packages")
+	var err error
+	switch p.os.Packages {
+	case DebianBased:
 		err = p.debSpecificUpdatePackages()
 	case REMBased:
 		err = p.remSpecificUpdatePackages()
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
+		return fmt.Errorf("updating packages %s failed: %w", p.os.Packages, err)
 	}
 
-	p.monitor.Debug("Package manager initialized")
+	p.monitor.Info("Packages updated")
 	return nil
 }
 
