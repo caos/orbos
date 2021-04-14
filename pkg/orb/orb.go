@@ -126,6 +126,9 @@ func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newR
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
 		}
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
 		return gitClient.Check()
 	}
 
