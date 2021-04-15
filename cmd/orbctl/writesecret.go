@@ -25,9 +25,11 @@ func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
 			Short: "Encrypt a secret and push it to the repository",
 			Long:  "Encrypt a secret and push it to the repository.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 			Args:  cobra.MaximumNArgs(1),
-			Example: `orbctl writesecret mystaticprovider.bootstrapkey --file ~/.ssh/my-orb-bootstrap
-orbctl writesecret mystaticprovider.bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
-orbctl writesecret mygceprovider.google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
+			Example: `orbctl writesecret --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret --value $(cat ~/.ssh/my-orb-bootstrap)
+orbctl writesecret mystaticprovider.bootstrapkey.encrypted --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret mystaticprovider.bootstrapkey_pub.encrypted --file ~/.ssh/my-orb-bootstrap.pub
+orbctl writesecret mygceprovider.google_application_credentials_value.encrypted --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
 		}
 	)
 
