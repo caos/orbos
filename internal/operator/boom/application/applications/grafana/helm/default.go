@@ -17,6 +17,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 		FullnameOverride:         "grafana",
 		Enabled:                  true,
 		DefaultDashboardsEnabled: true,
+		AdminUser:                "admin",
 		AdminPassword:            "admin",
 		Ingress: &Ingress{
 			Enabled: false,

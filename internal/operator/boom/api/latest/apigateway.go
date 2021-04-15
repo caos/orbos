@@ -66,6 +66,7 @@ func (a *APIGateway) IsZero() bool {
 func (a *APIGateway) InitSecrets() {
 	if a.LicenceKey == nil {
 		a.LicenceKey = &secret.Secret{}
+		a.ExistingLicenceKey = &secret.Existing{}
 	}
 }
 

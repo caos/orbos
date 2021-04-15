@@ -9,6 +9,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
+	helper2 "github.com/caos/orbos/pkg/helper"
 )
 
 func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
@@ -120,7 +121,7 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		}
 	}
 
-	licenceKey, err := helper.GetSecretValue(spec.LicenceKey, spec.ExistingLicenceKey)
+	licenceKey, err := helper2.GetSecretValueOnlyIncluster(spec.LicenceKey, spec.ExistingLicenceKey)
 	if err != nil {
 		monitor.Debug("No licence key found")
 		return values
