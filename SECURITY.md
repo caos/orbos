@@ -8,7 +8,8 @@ The following version support applies
 
 | Version | Supported                               |
 | ------- | ------------------                      |
-| 3.x.x   | :white_check_mark: (not yet available)  |
+| 4.x.x   | :white_check_mark:  |
+| 3.x.x   | :white_check_mark:  |
 | 2.x.x   | :white_check_mark:                      |
 | 1.x.x   | :white_check_mark:                      |
 | 0.x.x   | :x:                                     |
