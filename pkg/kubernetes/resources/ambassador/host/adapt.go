@@ -13,6 +13,12 @@ const (
 )
 
 func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
+	var tlsSec map[string]interface{}
+	if tlsSecret != "" {
+		tlsSec = map[string]interface{}{
+			"name": tlsSecret,
+		}
+	}
 	acme := map[string]interface{}{
 		"authority": authority,
 	}
@@ -47,9 +53,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 				"selector": map[string]interface{}{
 					"matchLabels": selectorInternal,
 				},
-				"tlsSecret": map[string]interface{}{
-					"name": tlsSecret,
-				},
+				"tlsSecret": tlsSec,
 			},
 		}}
 
