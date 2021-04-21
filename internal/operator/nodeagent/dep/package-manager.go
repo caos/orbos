@@ -52,16 +52,34 @@ func (p *PackageManager) Init() error {
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
+		err = p.debSpecificInit()
+	case REMBased:
+		err = p.remSpecificInit()
+	}
+
+	if err != nil {
+		return fmt.Errorf("initializing packages %s failed: %w", p.os.Packages, err)
+	}
+
+	p.monitor.Debug("Package manager initialized")
+	return nil
+}
+
+func (p *PackageManager) Update() error {
+	p.monitor.Debug("Updating packages")
+	var err error
+	switch p.os.Packages {
+	case DebianBased:
 		err = p.debSpecificUpdatePackages()
 	case REMBased:
 		err = p.remSpecificUpdatePackages()
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
+		return fmt.Errorf("updating packages %s failed: %w", p.os.Packages, err)
 	}
 
-	p.monitor.Debug("Package manager initialized")
+	p.monitor.Info("Packages updated")
 	return nil
 }
 
@@ -99,17 +117,13 @@ func (p *PackageManager) Install(installVersion *Software, more ...*Software) er
 	return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
 }
 
-func (p *PackageManager) Add(repo *Repository) {
-	var err error
+func (p *PackageManager) Add(repo *Repository) error {
 	switch p.os.Packages {
 	case DebianBased:
-		err = p.debbasedAdd(repo)
+		return p.debbasedAdd(repo)
 	case REMBased:
-		err = p.rembasedAdd(repo)
+		return p.rembasedAdd(repo)
 	default:
-		err = errors.Errorf("Package manager %s is not implemented", p.os.Packages)
-	}
-	if err != nil {
-		p.monitor.Info(errors.Wrap(err, "Adding repo failed").Error())
+		return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
 	}
 }

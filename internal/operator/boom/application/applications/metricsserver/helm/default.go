@@ -17,8 +17,11 @@ func DefaultValues(imageTags map[string]string, image string) *Values {
 			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
-		ImagePullSecrets:  nil,
-		Args:              []string{"--kubelet-insecure-tls"},
+		ImagePullSecrets: nil,
+		Args: []string{
+			"--kubelet-insecure-tls",
+			"--kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP",
+		},
 		Resources:         struct{}{},
 		NodeSelector:      struct{}{},
 		Tolerations:       nil,
