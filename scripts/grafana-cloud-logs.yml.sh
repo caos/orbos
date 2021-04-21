@@ -11,7 +11,7 @@ data:
 kind: Secret
 metadata:
   name: loki-grafana-cloud
-  namespace: caos-zitadel
+  namespace: caos-system
 type: Opaque
 ---
 EOL
