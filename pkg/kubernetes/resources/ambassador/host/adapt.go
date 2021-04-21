@@ -1,8 +1,11 @@
 package host
 
 import (
+	"reflect"
+
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -13,6 +16,7 @@ const (
 )
 
 func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
+
 	acme := map[string]interface{}{
 		"authority": authority,
 	}
@@ -22,10 +26,26 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 		}
 	}
 
-	selectorInternal := make(map[string]interface{}, 0)
+	selectorInterfaceValues := make(map[string]interface{}, 0)
 	for k, v := range selector {
-		selectorInternal[k] = v
+		selectorInterfaceValues[k] = v
 	}
+
+	spec := map[string]interface{}{
+		"hostname": hostname,
+		"selector": map[string]interface{}{
+			"matchLabels": selectorInterfaceValues,
+		},
+		"ambassador_id": []string{"default"},
+		"acmeProvider":  acme,
+	}
+
+	if tlsSecret != "" {
+		spec["tlsSecret"] = map[string]interface{}{
+			"name": tlsSecret,
+		}
+	}
+
 	crd := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       kind,
@@ -38,26 +58,66 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 					"aes_res_changed": "true",
 				},
 			},
-			"spec": map[string]interface{}{
-				"hostname":     hostname,
-				"acmeProvider": acme,
-				"ambassador_id": []string{
-					"default",
-				},
-				"selector": map[string]interface{}{
-					"matchLabels": selectorInternal,
-				},
-				"tlsSecret": map[string]interface{}{
-					"name": tlsSecret,
-				},
-			},
+			"spec": spec,
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+
+		ensure := func(k8sClient kubernetes.ClientInt) error {
+			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
+		}
+
+		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
+		if err != nil && !macherrs.IsNotFound(err) {
+			return nil, err
+		}
+		err = nil
+
+		if existing == nil {
+			return ensure, nil
+		}
+
+		if contains(existing.Object, crd.Object) {
+			// Noop
+			return func(clientInt kubernetes.ClientInt) error { return nil }, nil
+		}
+
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil
 	}, nil
+}
+
+// The order matters!!
+// TODO: Is this reusable?
+func contains(set, subset map[string]interface{}) bool {
+
+	if len(set) < len(subset) {
+		return false
+	}
+
+	for k, subsetValue := range subset {
+		setValue, ok := set[k]
+		if !ok {
+			return false
+		}
+		setValueMap, setValueIsMap := setValue.(map[string]interface{})
+		subsetValueMap, subsetValueIsMap := subsetValue.(map[string]interface{})
+		if setValueIsMap != subsetValueIsMap {
+			return false
+		}
+		if subsetValueIsMap {
+			if contains(setValueMap, subsetValueMap) {
+				continue
+			}
+			return false
+		}
+		if !reflect.DeepEqual(setValue, subsetValue) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
