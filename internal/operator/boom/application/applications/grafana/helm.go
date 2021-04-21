@@ -1,12 +1,11 @@
 package grafana
 
 import (
+	helper2 "github.com/caos/orbos/pkg/helper"
 	"path/filepath"
 	"sort"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/admin"
-
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/auth"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/helm"
@@ -46,10 +45,6 @@ func (g *Grafana) HelmPreApplySteps(monitor mntr.Monitor, spec *toolsetslatest.T
 	for k, v := range outs {
 		ret[k] = v
 	}
-
-	if spec.Monitoring != nil && spec.Monitoring.Admin != nil {
-		ret = append(ret, admin.GetSecrets(spec.Monitoring.Admin)...)
-	}
 	return ret, nil
 }
 
@@ -71,7 +66,15 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest
 		return nil
 	}
 
-	values := helm.DefaultValues(g.GetImageTags())
+	imageTags := g.GetImageTags()
+	if toolset != nil && toolset.Monitoring != nil {
+		image := "grafana/grafana"
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			image: toolset.Monitoring.OverwriteVersion,
+		})
+		helper.OverwriteExistingKey(imageTags, &image, toolset.Monitoring.OverwriteImage)
+	}
+	values := helm.DefaultValues(imageTags)
 	conf := config.New(toolset)
 
 	values.KubeTargetVersionOverride = version
@@ -127,7 +130,18 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest
 	}
 
 	if spec.Admin != nil {
-		values.Grafana.Admin = admin.GetConfig(spec.Admin)
+		admin := spec.Admin
+		user, err := helper2.GetSecretValueOnlyIncluster(admin.Username, admin.ExistingUsername)
+		if err != nil || user == "" {
+			user = "admin"
+		}
+		values.Grafana.AdminUser = user
+
+		pw, err := helper2.GetSecretValueOnlyIncluster(admin.Password, admin.ExistingPassword)
+		if err != nil || pw == "" {
+			pw = "admin"
+		}
+		values.Grafana.AdminPassword = pw
 	}
 
 	if spec.Storage != nil {

@@ -1,6 +1,7 @@
 package argocd
 
 import (
+	"github.com/caos/orbos/internal/utils/helper"
 	"strings"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
@@ -45,7 +46,15 @@ func (a *Argocd) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest
 
 func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := a.GetImageTags()
-	values := helm.DefaultValues(imageTags)
+	image := "argoproj/argocd"
+
+	if toolsetCRDSpec != nil && toolsetCRDSpec.Reconciling != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			image: toolsetCRDSpec.Reconciling.OverwriteVersion,
+		})
+		helper.OverwriteExistingKey(imageTags, &image, toolsetCRDSpec.Reconciling.OverwriteImage)
+	}
+	values := helm.DefaultValues(imageTags, image)
 
 	spec := toolsetCRDSpec.Reconciling
 	if spec == nil {
@@ -117,6 +126,24 @@ func (a *Argocd) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsets
 				}
 			}
 			values.Server.Config.URL = strings.Join([]string{"https://", spec.Network.Domain}, "")
+		}
+	}
+
+	if spec.AdditionalParameters != nil {
+		if spec.AdditionalParameters.Server != nil {
+			for _, param := range spec.AdditionalParameters.Server {
+				values.Server.ExtraArgs = append(values.Server.ExtraArgs, param)
+			}
+		}
+		if spec.AdditionalParameters.ApplicationController != nil {
+			for _, param := range spec.AdditionalParameters.ApplicationController {
+				values.Controller.ExtraArgs = append(values.Controller.ExtraArgs, param)
+			}
+		}
+		if spec.AdditionalParameters.RepoServer != nil {
+			for _, param := range spec.AdditionalParameters.RepoServer {
+				values.RepoServer.ExtraArgs = append(values.RepoServer.ExtraArgs, param)
+			}
 		}
 	}
 

@@ -95,7 +95,7 @@ type Controller struct {
 	Image              *Image              `yaml:"image"`
 	Args               *Args               `yaml:"args"`
 	LogLevel           string              `yaml:"logLevel"`
-	ExtraArgs          struct{}            `yaml:"extraArgs"`
+	ExtraArgs          []string            `yaml:"extraArgs"`
 	Env                []interface{}       `yaml:"env"`
 	PodAnnotations     map[string]string   `yaml:"podAnnotations"`
 	PodLabels          map[string]string   `yaml:"podLabels"`

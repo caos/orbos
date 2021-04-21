@@ -26,14 +26,26 @@ func GetSecretsMap(desiredKind *Toolset) (
 	secrets := make(map[string]*secret.Secret, 0)
 	existing := make(map[string]*secret.Existing, 0)
 
+	if desiredKind.Spec.APIGateway == nil {
+		desiredKind.Spec.APIGateway = &APIGateway{}
+	}
+	ambassadorSpec := desiredKind.Spec.APIGateway
+	ambassadorSpec.InitSecrets()
+	ambLicKey := "ambassador.licencekey"
+	secrets[ambLicKey] = ambassadorSpec.LicenceKey
+	existing[ambLicKey] = ambassadorSpec.ExistingLicenceKey
+
 	if desiredKind.Spec.Monitoring == nil {
 		desiredKind.Spec.Monitoring = &monitoring.Monitoring{}
 	}
 	grafanaSpec := desiredKind.Spec.Monitoring
 	grafanaSpec.InitSecrets()
-
-	secrets["grafana.admin.username"] = grafanaSpec.Admin.Username
-	secrets["grafana.admin.password"] = grafanaSpec.Admin.Password
+	grafAdminUser := "grafana.admin.username"
+	secrets[grafAdminUser] = grafanaSpec.Admin.Username
+	existing[grafAdminUser] = grafanaSpec.Admin.ExistingUsername
+	grafAdminPW := "grafana.admin.password"
+	secrets[grafAdminPW] = grafanaSpec.Admin.Password
+	existing[grafAdminPW] = grafanaSpec.Admin.ExistingPassword
 	grafoAuthClientIDKey := "grafana.sso.oauth.clientid"
 	secrets[grafoAuthClientIDKey] = grafanaSpec.Auth.GenericOAuth.ClientID
 	existing[grafoAuthClientIDKey] = grafanaSpec.Auth.GenericOAuth.ExistingClientIDSecret

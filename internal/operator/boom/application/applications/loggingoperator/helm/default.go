@@ -6,13 +6,13 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
 		FullnameOverride: "logging-operator",
 		ReplicaCount:     1,
 		Image: Image{
-			Repository: "banzaicloud/logging-operator",
-			Tag:        imageTags["banzaicloud/logging-operator"],
+			Repository: image,
+			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
 		HTTP: HTTP{

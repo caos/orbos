@@ -2,6 +2,7 @@ package prometheus
 
 import (
 	"errors"
+	"github.com/caos/orbos/internal/utils/helper"
 	"strconv"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -36,7 +37,17 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *late
 		return nil
 	}
 
-	values := helm.DefaultValues(p.GetImageTags())
+	imageTags := p.GetImageTags()
+	image := "quay.io/prometheus/prometheus"
+
+	if toolsetCRDSpec != nil && toolsetCRDSpec.MetricsPersisting != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			image: toolsetCRDSpec.MetricsPersisting.OverwriteVersion,
+		})
+		helper.OverwriteExistingKey(imageTags, &image, toolsetCRDSpec.MetricsPersisting.OverwriteImage)
+	}
+
+	values := helm.DefaultValues(imageTags, image)
 	if configResult.StorageSpec != nil {
 		storageSpec := &helm.StorageSpec{
 			VolumeClaimTemplate: &helm.VolumeClaimTemplate{

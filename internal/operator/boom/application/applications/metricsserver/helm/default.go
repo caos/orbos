@@ -1,6 +1,6 @@
 package helm
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
 		Rbac: &Rbac{
 			Create:     true,
@@ -13,8 +13,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 		APIService:  &APIService{Create: true},
 		HostNetwork: &HostNetwork{Enabled: false},
 		Image: &Image{
-			Repository: "k8s.gcr.io/metrics-server-amd64",
-			Tag:        imageTags["k8s.gcr.io/metrics-server-amd64"],
+			Repository: image,
+			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
 		ImagePullSecrets: nil,
