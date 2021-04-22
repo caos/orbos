@@ -17,6 +17,11 @@ const (
 
 func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
 
+	labelInterfaceValues := make(map[string]interface{})
+	for k, v := range labels {
+		labelInterfaceValues[k] = v
+	}
+
 	acme := map[string]interface{}{
 		"authority": authority,
 	}
@@ -53,7 +58,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 			"metadata": map[string]interface{}{
 				"name":      name,
 				"namespace": namespace,
-				"labels":    labels,
+				"labels":    labelInterfaceValues,
 				"annotations": map[string]interface{}{
 					"aes_res_changed": "true",
 				},
@@ -82,9 +87,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 			return func(clientInt kubernetes.ClientInt) error { return nil }, nil
 		}
 
-		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
-		}, nil
+		return ensure, nil
 	}, nil
 }
 
