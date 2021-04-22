@@ -41,7 +41,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 		"selector": map[string]interface{}{
 			"matchLabels": selectorInterfaceValues,
 		},
-		"ambassador_id": []string{"default"},
+		"ambassador_id": []interface{}{"default"},
 		"acmeProvider":  acme,
 	}
 
