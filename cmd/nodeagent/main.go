@@ -5,20 +5,23 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/nodeagent/networking"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/operator/nodeagent/networking"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+
+	_ "net/http/pprof"
 
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/conv"
 	"github.com/caos/orbos/internal/operator/nodeagent/firewall"
-	_ "net/http/pprof"
 )
 
 var gitCommit string
@@ -104,9 +107,37 @@ func main() {
 		conv,
 		conv.Init())
 
+	daily := time.NewTicker(24 * time.Hour)
+	defer daily.Stop()
+	update := make(chan struct{})
+	go func() {
+		for range daily.C {
+			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
+			<-timer.C
+			update <- struct{}{}
+			timer.Stop()
+		}
+	}()
+
+	iterate := make(chan struct{})
+	//trigger first iteration
+	go func() { iterate <- struct{}{} }()
 	for {
-		itFunc()
-		monitor.Info("Iteration done")
-		time.Sleep(10 * time.Second)
+		select {
+		case <-iterate:
+			monitor.Info("Starting iteration")
+			itFunc()
+			monitor.Info("Iteration done")
+			time.Sleep(10 * time.Second)
+			//trigger next iteration
+			go func() { iterate <- struct{}{} }()
+		case <-update:
+			monitor.Info("Starting update")
+			if err := conv.Update(); err != nil {
+				monitor.Error(fmt.Errorf("updating packages failed: %w", err))
+			} else {
+				monitor.Info("Update done")
+			}
+		}
 	}
 }

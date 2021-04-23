@@ -5,6 +5,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/loki/logs"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 )
 
@@ -14,7 +15,16 @@ func (l *LoggingOperator) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec
 
 func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.LoggingOperator
-	values := helm.DefaultValues(l.GetImageTags())
+	imageTags := l.GetImageTags()
+	image := "banzaicloud/logging-operator"
+
+	if toolset != nil && toolset.LogCollection != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			image: toolset.LogCollection.OverwriteVersion,
+		})
+		helper.OverwriteExistingKey(imageTags, &image, toolset.LogCollection.OverwriteImage)
+	}
+	values := helm.DefaultValues(imageTags, image)
 
 	// if spec.ReplicaCount != 0 {
 	// 	values.ReplicaCount = spec.ReplicaCount

@@ -11,6 +11,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/migrate/network"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate/storage"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
@@ -51,9 +52,16 @@ func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
 
 	if grafana.Admin != nil {
 		newSpec.Admin = &admin.Admin{
-			Username:       grafana.Admin.Username,
-			Password:       grafana.Admin.Password,
-			ExistingSecret: grafana.Admin.ExistingSecret,
+			Username: grafana.Admin.Username,
+			Password: grafana.Admin.Password,
+			ExistingUsername: &secret.Existing{
+				Name: grafana.Admin.ExistingSecret.Name,
+				Key:  grafana.Admin.ExistingSecret.IDKey,
+			},
+			ExistingPassword: &secret.Existing{
+				Name: grafana.Admin.ExistingSecret.Name,
+				Key:  grafana.Admin.ExistingSecret.SecretKey,
+			},
 		}
 	}
 

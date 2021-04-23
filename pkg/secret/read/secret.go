@@ -13,13 +13,6 @@ func IsExistentSecret(secret *secret.Secret, existent *secret.Existing) bool {
 	return false
 }
 
-func IsExistentClientSecret(existent *secret.ExistingIDSecret) bool {
-	if existent != nil && (existent.Name != "" && existent.IDKey != "" && existent.SecretKey != "") {
-		return true
-	}
-	return false
-}
-
 func IsCrdSecret(secret *secret.Secret, existent *secret.Existing) bool {
 	if (secret != nil && secret.Value != "") && (existent == nil || (existent.Name == "" || existent.Key == "")) {
 		return true

@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
 		FullnameOverride: "prometheus",
 		DefaultRules: &DefaultRules{
@@ -130,8 +130,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 				RunAsUser:    65534,
 			},
 			Image: &Image{
-				Repository: "quay.io/coreos/prometheus-operator",
-				Tag:        imageTags["quay.io/coreos/prometheus-operator"],
+				Repository: image,
+				Tag:        imageTags[image],
 				PullPolicy: "IfNotPresent",
 			},
 			ConfigmapReloadImage: &Image{

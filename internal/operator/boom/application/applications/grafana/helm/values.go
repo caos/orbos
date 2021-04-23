@@ -109,6 +109,7 @@ type GrafanaValues struct {
 	FullnameOverride         string              `yaml:"fullnameOverride,omitempty"`
 	Enabled                  bool                `yaml:"enabled"`
 	DefaultDashboardsEnabled bool                `yaml:"defaultDashboardsEnabled"`
+	AdminUser                string              `yaml:"adminUser"`
 	AdminPassword            string              `yaml:"adminPassword"`
 	Admin                    *Admin              `yaml:"admin"`
 	Ingress                  *Ingress            `yaml:"ingress"`

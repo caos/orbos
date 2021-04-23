@@ -6,12 +6,12 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
 		FullnameOverride: "node-exporter",
 		Image: &Image{
-			Repository: "quay.io/prometheus/node-exporter",
-			Tag:        imageTags["quay.io/prometheus/node-exporter"],
+			Repository: image,
+			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
 		Service: &Service{
