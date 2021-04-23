@@ -87,9 +87,13 @@ func AdaptFunc(
 		if desiredKind.Spec.Kubeconfig != nil && desiredKind.Spec.Kubeconfig.Value != "" {
 			kc = &desiredKind.Spec.Kubeconfig.Value
 		}
-		k8sClient := kubernetes.NewK8sClient(monitor, kc)
+		k8sClient, err := kubernetes.NewK8sClient(monitor, kc)
+		if err != nil {
+			// ignore
+			err = nil
+		}
 
-		if k8sClient.Available() && deployOrbiter {
+		if k8sClient != nil && deployOrbiter {
 			if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{
@@ -160,7 +164,7 @@ func AdaptFunc(
 					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
 				}()
 
-				if k8sClient != nil && k8sClient.Available() {
+				if k8sClient != nil {
 					volumes, err := k8sClient.ListPersistentVolumes()
 					if err != nil {
 						return err

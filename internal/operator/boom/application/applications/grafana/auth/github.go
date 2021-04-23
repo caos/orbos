@@ -1,19 +1,20 @@
 package auth
 
 import (
-	"github.com/caos/orbos/pkg/helper"
 	"strings"
+
+	"github.com/caos/orbos/pkg/secret/read"
 
 	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
 )
 
 func GetGithubAuthConfig(spec *github.Auth) (map[string]string, error) {
-	clientID, err := helper.GetSecretValueOnlyIncluster(spec.ClientID, spec.ExistingClientIDSecret)
+	clientID, err := read.GetSecretValueOnlyIncluster(spec.ClientID, spec.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper.GetSecretValueOnlyIncluster(spec.ClientSecret, spec.ExistingClientSecretSecret)
+	clientSecret, err := read.GetSecretValueOnlyIncluster(spec.ClientSecret, spec.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}

@@ -11,6 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/operator/common"
+
+	"github.com/caos/orbos/pkg/tree"
+
 	"github.com/go-git/go-git/v5/config"
 	"gopkg.in/yaml.v3"
 
@@ -26,9 +30,20 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+type DesiredFile string
+
+func (d DesiredFile) WOExtension() string {
+	return strings.Split(string(d), ".")[0]
+}
+
 const (
 	writeCheckTag = "writecheck"
-	branch        = "master"
+
+	OrbiterFile    DesiredFile = "orbiter.yml"
+	BoomFile       DesiredFile = "boom.yml"
+	NetworkingFile DesiredFile = "networking.yml"
+	DatabaseFile   DesiredFile = "database.yml"
+	ZitadelFile    DesiredFile = "zitadel.yml"
 )
 
 type Client struct {
@@ -392,4 +407,53 @@ func (g *Client) Push() error {
 
 	g.monitor.Info("Repository pushed")
 	return nil
+}
+
+func (g *Client) Exists(path DesiredFile) bool {
+	of := g.Read(string(path))
+	if of != nil && len(of) > 0 {
+		return true
+	}
+	return false
+}
+
+func (g *Client) ReadTree(path DesiredFile) (*tree.Tree, error) {
+	tree := &tree.Tree{}
+	if err := yaml.Unmarshal(g.Read(string(path)), tree); err != nil {
+		return nil, err
+	}
+
+	return tree, nil
+}
+
+type GitDesiredState struct {
+	Desired *tree.Tree
+	Path    DesiredFile
+}
+
+func (g *Client) PushGitDesiredStates(monitor mntr.Monitor, msg string, desireds []GitDesiredState) (err error) {
+	monitor.OnChange = func(_ string, fields map[string]string) {
+		gitFiles := make([]File, len(desireds))
+		for i := range desireds {
+			desired := desireds[i]
+			gitFiles[i] = File{
+				Path:    string(desired.Path),
+				Content: common.MarshalYAML(desired.Desired),
+			}
+		}
+		err = g.UpdateRemote(mntr.SprintCommit(msg, fields), gitFiles...)
+		//		mntr.LogMessage(msg, fields)
+	}
+	monitor.Changed(msg)
+	return err
+}
+
+func (g *Client) PushDesiredFunc(file DesiredFile, desired *tree.Tree) func(mntr.Monitor) error {
+	return func(monitor mntr.Monitor) error {
+		monitor.WithField("file", file).Info("Writing desired state")
+		return g.PushGitDesiredStates(monitor, fmt.Sprintf("Desired state written to %s", file), []GitDesiredState{{
+			Desired: desired,
+			Path:    file,
+		}})
+	}
 }

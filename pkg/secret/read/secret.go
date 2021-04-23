@@ -1,4 +1,4 @@
-package helper
+package read
 
 import (
 	"github.com/caos/orbos/internal/utils/clientgo"

@@ -38,24 +38,16 @@ func Takeoff(
 		return nil
 	}
 
-	getKubeClient := func() (*kubernetes.Client, bool, error) {
-		return cli.Client(
-			monitor,
-			orbConfig,
-			gitClient,
-			kubeconfig,
-			gitOpsBoom || gitOpsNetworking,
-		)
-	}
-
-	k8sClient, fromOrbiter, err := getKubeClient()
-
-	if !fromOrbiter && err != nil {
+	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 		return err
 	}
 
-	if fromOrbiter {
-		err = nil
+	if err := gitClient.Clone(); err != nil {
+		return err
+	}
+
+	withORBITER := gitClient.Exists(git.OrbiterFile)
+	if withORBITER {
 		orbiterConfig := &ctrlgitops.OrbiterConfig{
 			Recur:            recur,
 			Destroy:          destroy,
@@ -67,14 +59,20 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		if err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
+		if err := ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
 			return err
 		}
+	}
 
-		k8sClient, fromOrbiter, err = getKubeClient()
-		if err != nil {
-			return err
-		}
+	k8sClient, err := cli.Client(
+		monitor,
+		orbConfig,
+		gitClient,
+		kubeconfig,
+		gitOpsBoom || gitOpsNetworking,
+	)
+	if err != nil {
+		return err
 	}
 
 	if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
@@ -82,7 +80,7 @@ func Takeoff(
 		return err
 	}
 
-	if fromOrbiter || gitOpsBoom || gitOpsNetworking {
+	if withORBITER || gitOpsBoom || gitOpsNetworking {
 
 		orbConfigBytes, err := yaml.Marshal(orbConfig)
 		if err != nil {

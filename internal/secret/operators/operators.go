@@ -10,7 +10,6 @@ import (
 	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
 	boomcrd "github.com/caos/orbos/internal/api/boom"
 	nwcrd "github.com/caos/orbos/internal/api/networking"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
@@ -21,12 +20,6 @@ import (
 	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-)
-
-const (
-	boom       string = "boom"
-	orbiter    string = "orbiter"
-	networking string = "networking"
 )
 
 func GetAllSecretsFunc(
@@ -74,12 +67,11 @@ func getAllSecrets(
 		monitor,
 		printLogs,
 		gitops,
+		gitClient,
+		git.BoomFile,
 		allTrees,
 		allSecrets,
 		allExisting,
-		boom,
-		func() (bool, error) { return api.ExistsBoomYml(gitClient) },
-		func() (*tree.Tree, error) { return api.ReadBoomYml(gitClient) },
 		func() (*tree.Tree, error) { return boomcrd.ReadCRD(k8sClient) },
 		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
 			toolset, migrate, _, _, err := boomapi.ParseToolset(t)
@@ -98,12 +90,11 @@ func getAllSecrets(
 			monitor,
 			printLogs,
 			gitops,
+			gitClient,
+			git.OrbiterFile,
 			allTrees,
 			allSecrets,
 			allExisting,
-			orbiter,
-			func() (bool, error) { return api.ExistsOrbiterYml(gitClient) },
-			func() (*tree.Tree, error) { return api.ReadOrbiterYml(gitClient) },
 			func() (*tree.Tree, error) { return nil, errors.New("ORBITER doesn't support crd mode") },
 			func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
 				_, _, _, migrate, orbiterSecrets, err := orbiterOrb.AdaptFunc(
@@ -125,12 +116,11 @@ func getAllSecrets(
 		monitor,
 		printLogs,
 		gitops,
+		gitClient,
+		git.NetworkingFile,
 		allTrees,
 		allSecrets,
 		allExisting,
-		networking,
-		func() (bool, error) { return api.ExistsNetworkingYml(gitClient) },
-		func() (*tree.Tree, error) { return api.ReadNetworkinglYml(gitClient) },
 		func() (*tree.Tree, error) { return nwcrd.ReadCRD(k8sClient) },
 		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
 			_, _, nwSecrets, nwExisting, migrate, err := nwOrb.AdaptFunc(nil, false)(monitor, t, nil)
@@ -173,31 +163,21 @@ func push(
 	path string,
 ) error {
 	var (
-		pushGitFunc  func(*tree.Tree) error
 		applyCRDFunc func(*tree.Tree) error
-		operator     string
+		desiredFile  git.DesiredFile
 	)
-	if strings.HasPrefix(path, orbiter) {
-		operator = orbiter
-		pushGitFunc = func(desired *tree.Tree) error {
-			return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
-		}
+	if strings.HasPrefix(path, git.OrbiterFile.WOExtension()) {
+		desiredFile = git.OrbiterFile
 		applyCRDFunc = func(t *tree.Tree) error {
 			panic(errors.New("ORBITER doesn't support CRD mode"))
 		}
-	} else if strings.HasPrefix(path, boom) {
-		operator = boom
-		pushGitFunc = func(desired *tree.Tree) error {
-			return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
-		}
+	} else if strings.HasPrefix(path, git.BoomFile.WOExtension()) {
+		desiredFile = git.BoomFile
 		applyCRDFunc = func(t *tree.Tree) error {
 			return boomcrd.WriteCrd(k8sClient, t)
 		}
-	} else if strings.HasPrefix(path, networking) {
-		operator = networking
-		pushGitFunc = func(desired *tree.Tree) error {
-			return api.PushNetworkingDesiredFunc(gitClient, desired)(monitor)
-		}
+	} else if strings.HasPrefix(path, git.NetworkingFile.WOExtension()) {
+		desiredFile = git.NetworkingFile
 		applyCRDFunc = func(t *tree.Tree) error {
 			return nwcrd.WriteCrd(k8sClient, t)
 		}
@@ -205,13 +185,13 @@ func push(
 		return errors.New("operator unknown")
 	}
 
-	desired, found := trees[operator]
+	desired, found := trees[desiredFile.WOExtension()]
 	if !found {
-		return fmt.Errorf("desired state for %s not found", operator)
+		return fmt.Errorf("desired state not found for %s", desiredFile.WOExtension())
 	}
 
 	if gitops {
-		return pushGitFunc(desired)
+		return gitClient.PushDesiredFunc(desiredFile, desired)(monitor)
 	}
 	return applyCRDFunc(desired)
 }

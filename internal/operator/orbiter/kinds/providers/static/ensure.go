@@ -3,8 +3,6 @@ package static
 import (
 	"sync"
 
-	"github.com/caos/orbos/internal/api"
-
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -105,7 +103,7 @@ func query(
 		return nil, errors.Errorf("Unknown load balancer of type %T", lb)
 	}
 
-	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {
 		var wg sync.WaitGroup
 		for _, pool := range pools {
 			machines, listErr := internalMachinesService.List(pool)

@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caos/orbos/pkg/git"
+
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -77,11 +78,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if foundOrbiter {
+		if gitClient.Exists(git.OrbiterFile) {
 			monitor.WithFields(map[string]interface{}{
 				"version": version,
 				"commit":  gitCommit,

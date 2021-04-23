@@ -49,7 +49,7 @@ func RootCommand() (*cobra.Command, GetRootValues) {
 	cmd := &cobra.Command{
 		Use:   "orbctl [flags]",
 		Short: "Interact with your orbs",
-		Long: `orbctl launches orbiters, booms, database-operators and networking-operators and simplifies common tasks such as updating your kubeconfig.
+		Long: `orbctl launches orbiters, booms networking-operators and simplifies common tasks such as updating your kubeconfig.
 Participate in our community on https://github.com/caos/orbos
 and visit our website at https://caos.ch`,
 		Example: `$ # For being able to use the --gitops flag, you need to create an orbconfig and add an SSH deploy key to your github project 
@@ -88,7 +88,7 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 		if rv.Gitops {
 			prunedPath := helpers.PruneHome(orbConfigPath)
 			rv.OrbConfig, err = orb.ParseOrbConfig(prunedPath)
-			if err != nil {
+			if rv.OrbConfig == nil {
 				rv.OrbConfig = &orb.Orb{Path: prunedPath}
 			}
 		}

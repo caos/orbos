@@ -16,8 +16,6 @@ import (
 
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
-
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
 	"github.com/pkg/errors"
@@ -57,12 +55,6 @@ type IDFunc func() string
 
 func (i IDFunc) ID() string {
 	return i()
-}
-
-type NotAvailableError struct{}
-
-func (n *NotAvailableError) Error() string {
-	return "Kubernetes is not available"
 }
 
 type ClientInt interface {
@@ -146,6 +138,7 @@ type Client struct {
 	apixv1beta1client *apixv1beta1client.ApiextensionsV1beta1Client
 	mapper            *restmapper.DeferredDiscoveryRESTMapper
 	restConfig        *rest.Config
+	available         bool
 }
 
 func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
@@ -159,44 +152,42 @@ func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client,
 		kubeconfigStr = string(value)
 	}
 
-	return NewK8sClient(monitor, &kubeconfigStr), nil
+	return NewK8sClient(monitor, &kubeconfigStr)
 }
 
-func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) *Client {
-	kc := &Client{monitor: monitor}
-	err := kc.Refresh(kubeconfig)
-	if err != nil {
-		// do nothing
-	}
-	return kc
+func newClient(monitor mntr.Monitor) *Client {
+	return &Client{monitor: monitor}
 }
 
-func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config) *Client {
-	kc := &Client{monitor: monitor}
-	err := kc.RefreshConfig(conf)
-	if err != nil {
-		// do nothing
+func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) (*Client, error) {
+	kc := newClient(monitor)
+	if err := kc.init(kubeconfig); err != nil {
+		return nil, err
 	}
-	return kc
+	return kc, nil
 }
 
-func (c *Client) Available() bool {
-	nodeApi, err := c.nodeApi()
-	if err != nil {
-		return false
+func NewK8sClientWithConfig(monitor mntr.Monitor, conf *rest.Config) (*Client, error) {
+	kc := newClient(monitor)
+	if err := kc.initConfig(conf); err != nil {
+		return nil, err
 	}
+	return kc, nil
+}
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+func (c *Client) checkConnectivity() error {
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	_, err = nodeApi.List(ctx, mach.ListOptions{})
-	return err == nil
+	_, err := c.set.CoreV1().Nodes().Get(ctx, "<<<-impo$$ible->>>", mach.GetOptions{})
+	if err == nil || macherrs.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
-func (c *Client) nodeApi() (clgocore.NodeInterface, error) {
-	if c.set == nil {
-		return nil, &NotAvailableError{}
-	}
-	return c.set.CoreV1().Nodes(), nil
+func (c *Client) nodeApi() clgocore.NodeInterface {
+	return c.set.CoreV1().Nodes()
 }
 
 type File struct {
@@ -775,10 +766,6 @@ func (c *Client) applyResource(object, name string, create func() error, update 
 		err = errors.Wrapf(err, "applying %s %s failed", object, name)
 	}()
 
-	if c.set == nil {
-		return &NotAvailableError{}
-	}
-
 	err = update()
 	_, recreate := err.(*recreateErr)
 	if err == nil || (!macherrs.IsNotFound(err) && !recreate) {
@@ -824,17 +811,13 @@ func (c *Client) applyController(
 	)
 }
 
-func (c *Client) Refresh(kubeconfig *string) (err error) {
-	if kubeconfig == nil {
-		return
-	}
-
+func (c *Client) init(kubeconfig *string) (err error) {
 	defer func() {
 		err = errors.Wrap(err, "refreshing Kubernetes client failed")
 	}()
 
 	restCfg := new(rest.Config)
-	if *kubeconfig == "" {
+	if kubeconfig == nil || *kubeconfig == "" {
 		restCfg, err = rest.InClusterConfig()
 		if err != nil {
 			return err
@@ -854,7 +837,7 @@ func (c *Client) Refresh(kubeconfig *string) (err error) {
 	return c.refreshAllClients(restCfg)
 }
 
-func (c *Client) RefreshConfig(config *rest.Config) (err error) {
+func (c *Client) initConfig(config *rest.Config) (err error) {
 	return c.refreshAllClients(config)
 }
 
@@ -884,27 +867,18 @@ func (c *Client) refreshAllClients(config *rest.Config) error {
 		return err
 	}
 	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
-	return nil
+
+	return c.checkConnectivity()
 }
 
 func (c *Client) GetNode(id string) (node *core.Node, err error) {
-
-	api, err := c.nodeApi()
-	if err != nil {
-		return nil, err
-	}
-	return api.Get(context.Background(), id, mach.GetOptions{})
+	return c.nodeApi().Get(context.Background(), id, mach.GetOptions{})
 }
 
 func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 	defer func() {
 		err = errors.Wrapf(err, "listing nodes %s failed", strings.Join(filterID, ", "))
 	}()
-
-	api, err := c.nodeApi()
-	if err != nil {
-		return nil, err
-	}
 
 	labelSelector := ""
 	for _, id := range filterID {
@@ -914,7 +888,7 @@ func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 		labelSelector = labelSelector[1:]
 	}
 
-	nodeList, err := api.List(context.Background(), mach.ListOptions{
+	nodeList, err := c.nodeApi().List(context.Background(), mach.ListOptions{
 		LabelSelector: labelSelector,
 	})
 
@@ -930,16 +904,20 @@ func (c *Client) UpdateNode(node *core.Node) (err error) {
 		err = errors.Wrapf(err, "updating node %s failed", node.GetName())
 	}()
 
-	api, err := c.nodeApi()
-	if err != nil {
-		return err
-	}
 	node.ResourceVersion = ""
-	_, err = api.Update(context.Background(), node, mach.UpdateOptions{})
+	_, err = c.nodeApi().Update(context.Background(), node, mach.UpdateOptions{})
 	return err
 }
 
-func (c *Client) cordon(node *core.Node, reason drainreason.DrainReason) (err error) {
+type DrainReason int
+
+const (
+	Updating DrainReason = iota
+	Rebooting
+	Deleting
+)
+
+func (c *Client) cordon(node *core.Node, reason DrainReason) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
 	}()
@@ -971,11 +949,11 @@ type Machine interface {
 	SetJoined(bool)
 }
 
-func (c *Client) Tainted(node *core.Node, reason drainreason.DrainReason) bool {
+func (c *Client) Tainted(node *core.Node, reason DrainReason) bool {
 	return c.tainted(node.Spec.Taints, reason) != -1
 }
 
-func (c *Client) tainted(taints []core.Taint, reason drainreason.DrainReason) int {
+func (c *Client) tainted(taints []core.Taint, reason DrainReason) int {
 
 	for idx, taint := range taints {
 		if taint.Key == TaintKeyPrefix+reason.String() {
@@ -985,7 +963,7 @@ func (c *Client) tainted(taints []core.Taint, reason drainreason.DrainReason) in
 	return -1
 }
 
-func (c *Client) RemoveFromTaints(taints []core.Taint, reason drainreason.DrainReason) (result []core.Taint) {
+func (c *Client) RemoveFromTaints(taints []core.Taint, reason DrainReason) (result []core.Taint) {
 	idx := c.tainted(taints, reason)
 	if idx < 0 {
 		return taints
@@ -993,7 +971,7 @@ func (c *Client) RemoveFromTaints(taints []core.Taint, reason drainreason.DrainR
 	return append(taints[0:idx], taints[idx+1:]...)
 }
 
-func (c *Client) Drain(machine Machine, node *core.Node, reason drainreason.DrainReason) (err error) {
+func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason) (err error) {
 	defer func() {
 		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
 	}()
@@ -1017,62 +995,12 @@ func (c *Client) Drain(machine Machine, node *core.Node, reason drainreason.Drai
 	return nil
 }
 
-func (c *Client) EnsureDeleted(name string, machine Machine, node NodeWithKubeadm) (err error) {
-
-	defer func() {
-		err = errors.Wrapf(err, "deleting node %s failed", name)
-	}()
-
-	monitor := c.monitor.WithFields(map[string]interface{}{
-		"machine": name,
-	})
-	monitor.Info("Ensuring node is deleted")
-
-	api, apiErr := c.nodeApi()
-	apiErr = errors.Wrap(apiErr, "getting node api failed")
-
-	drain := func() error {
-		// Cordon node
-		if apiErr == nil {
-			nodeStruct, err := api.Get(context.Background(), name, mach.GetOptions{})
-			if err != nil {
-				if macherrs.IsNotFound(err) {
-					return nil
-				}
-				return errors.Wrapf(err, "getting node %s from kube api failed", name)
-			}
-
-			return c.Drain(machine, nodeStruct, drainreason.Deleting)
-		}
+func (c *Client) DeleteNode(name string) error {
+	err := c.set.CoreV1().Nodes().Delete(context.Background(), name, mach.DeleteOptions{})
+	if macherrs.IsNotFound(err) {
 		return nil
 	}
-
-	if err := drain(); err != nil {
-		return err
-	}
-
-	monitor.Info("Resetting kubeadm")
-	if _, resetErr := node.Execute(nil, "sudo kubeadm reset --force"); resetErr != nil {
-		if !strings.Contains(resetErr.Error(), "command not found") {
-			return resetErr
-		}
-	}
-
-	if apiErr != nil {
-		return nil
-	}
-	monitor.Info("Deleting node")
-	if err := api.Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
-		if !macherrs.IsNotFound(err) {
-			return err
-		}
-	}
-	if !machine.GetUpdating() || machine.GetJoined() {
-		machine.SetUpdating(true)
-		machine.SetJoined(false)
-		monitor.Changed("Node deleted")
-	}
-	return nil
+	return err
 }
 
 func (c *Client) evictPods(node *core.Node) (err error) {

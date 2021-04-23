@@ -6,7 +6,6 @@ import (
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -55,6 +54,6 @@ func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orb
 			monitor.Info("Nothing changed")
 			return nil
 		}
-		return api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired)
+		return gitClient.PushDesiredFunc(git.OrbiterFile, desired)(monitor)
 	})
 }

@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
+
 	"github.com/caos/orbos/internal/ctrlcrd"
 	"github.com/caos/orbos/internal/ctrlgitops"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes/cli"
-	"os"
 
 	"github.com/caos/orbos/pkg/orb"
 
@@ -49,7 +50,7 @@ func main() {
 
 	if gitopsmode {
 
-		k8sClient, _, err := cli.Client(monitor, orbConfig, gitClient, kubeconfig, gitopsmode)
+		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, kubeconfig, gitopsmode)
 		if err != nil {
 			monitor.Error(err)
 			os.Exit(1)

@@ -1,7 +1,6 @@
 package cmds
 
 import (
-	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
@@ -15,15 +14,11 @@ import (
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops bool) error {
 
 	if gitops {
-		foundBoom, err := api.ExistsBoomYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if !foundBoom {
+		if !gitClient.Exists(git.BoomFile) {
 			monitor.Info("No BOOM deployed as no boom.yml present")
 			return nil
 		}
-		desiredTree, err := api.ReadBoomYml(gitClient)
+		desiredTree, err := gitClient.ReadTree(git.BoomFile)
 		if err != nil {
 			return err
 		}
@@ -73,12 +68,8 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 
 func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops bool) error {
 	if gitops {
-		found, err := api.ExistsNetworkingYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if found {
-			desiredTree, err := api.ReadNetworkinglYml(gitClient)
+		if gitClient.Exists(git.NetworkingFile) {
+			desiredTree, err := gitClient.ReadTree(git.NetworkingFile)
 			if err != nil {
 				return err
 			}

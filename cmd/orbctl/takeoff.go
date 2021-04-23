@@ -5,7 +5,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/kubernetes"
 
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
@@ -211,11 +211,10 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 
 		if rv.Gitops {
 
-			k8sClient, _, err := cli.Client(monitor, orbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops)
+			k8sClient, err := kubernetes.NewK8sClientWithPath(monitor, rv.Kubeconfig)
 			if err != nil {
 				return err
 			}
-
 			return ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version)
 		} else {
 			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, rv.Kubeconfig, ctrlcrd.Networking)

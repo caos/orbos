@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/caos/orbos/internal/api"
 	orb2 "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/internal/secret/operators"
 	"github.com/caos/orbos/mntr"
@@ -22,37 +21,31 @@ func Client(
 	gitClient *git.Client,
 	kubeconfig string,
 	gitops bool,
-) (k8sClient *kubernetes.Client, fromOrbiter bool, err error) {
-
-	orbConfigIsIncompleteErr := orb.IsComplete(orbConfig)
-	if orbConfigIsIncompleteErr != nil && gitops {
-		return nil, fromOrbiter, orbConfigIsIncompleteErr
-	}
+) (*kubernetes.Client, error) {
 
 	var kc string
+	orbConfigIsIncompleteErr := orb.IsComplete(orbConfig)
+	if orbConfigIsIncompleteErr != nil && gitops {
+		return nil, orbConfigIsIncompleteErr
+	}
+
 	if orbConfigIsIncompleteErr == nil && gitops {
 		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
 
 		if err := gitClient.Clone(); err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
-		var err error
-		fromOrbiter, err = api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return k8sClient, fromOrbiter, err
-		}
-
-		if fromOrbiter {
-			orbTree, err := api.ReadOrbiterYml(gitClient)
+		if gitClient.Exists(git.OrbiterFile) {
+			orbTree, err := gitClient.ReadTree(git.OrbiterFile)
 			if err != nil {
-				return k8sClient, fromOrbiter, errors.New("failed to parse orbiter.yml")
+				return nil, fmt.Errorf("failed to get tree for %s: %w", git.OrbiterFile, err)
 			}
 
 			orbDef, err := orb2.ParseDesiredV0(orbTree)
 			if err != nil {
-				return k8sClient, fromOrbiter, errors.New("failed to parse orbiter.yml")
+				return nil, fmt.Errorf("failed to parse %s: %w", git.OrbiterFile, err)
 			}
 
 			for clustername, _ := range orbDef.Clusters {
@@ -65,9 +58,9 @@ func Client(
 				)
 				if err != nil || kc == "" {
 					if kc == "" && err == nil {
-						err = errors.New("no kubeconfig found")
+						err = errors.New("kubeconfig from ORBITERs desired state not found")
 					}
-					return nil, fromOrbiter, fmt.Errorf("failed to get kubeconfig: %w", err)
+					return nil, fmt.Errorf("failed to get ORBITERs kubeconfig: %w", err)
 				}
 			}
 		}
@@ -76,15 +69,10 @@ func Client(
 	if kc == "" {
 		value, err := ioutil.ReadFile(kubeconfig)
 		if err != nil {
-			return k8sClient, fromOrbiter, err
+			return nil, err
 		}
 		kc = string(value)
 	}
 
-	k8sClient = kubernetes.NewK8sClient(monitor, &kc)
-	if !k8sClient.Available() {
-		return nil, fromOrbiter, errors.New("Kubernetes is not connectable")
-	}
-
-	return k8sClient, fromOrbiter, nil
+	return kubernetes.NewK8sClient(monitor, &kc)
 }

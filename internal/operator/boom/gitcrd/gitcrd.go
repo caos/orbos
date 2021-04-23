@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	orbosapi "github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
@@ -179,7 +178,7 @@ func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
 }
 
 func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
-	desiredTree, err := orbosapi.ReadBoomYml(c.git)
+	desiredTree, err := c.git.ReadTree(git.BoomFile)
 	if err != nil {
 		return nil, err
 	}

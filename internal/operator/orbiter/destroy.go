@@ -1,7 +1,6 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -15,7 +14,7 @@ func NoopDestroy(map[string]interface{}) error {
 }
 
 func Destroy(monitor mntr.Monitor, gitClient *git.Client, adapt AdaptFunc, finishedChan chan struct{}) error {
-	treeDesired, err := api.ReadOrbiterYml(gitClient)
+	treeDesired, err := gitClient.ReadTree(git.OrbiterFile)
 	if err != nil {
 		return err
 	}

@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 
-	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -143,7 +143,7 @@ func query(
 		}
 		panic(fmt.Errorf("external address for %v is not ensured", vip))
 	})
-	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {
 
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{

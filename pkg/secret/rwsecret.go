@@ -5,6 +5,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/caos/orbos/pkg/helper"
+
+	"github.com/caos/orbos/pkg/git"
+
 	v1 "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -14,15 +18,11 @@ import (
 
 	"github.com/AlecAivazis/survey/v2"
 
-	"github.com/caos/orbos/internal/api"
-
 	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
 )
 
-type PushFunc func(gitClient *git.Client, desired *tree.Tree) api.PushDesiredFunc
 type PushFuncs func(trees map[string]*tree.Tree, path string) error
 type GetFuncs func() (map[string]*Secret, map[string]*Existing, map[string]*tree.Tree, error)
 
@@ -45,7 +45,7 @@ func Read(
 	if err != nil {
 		return "", err
 	}
-	if k8sClient == nil {
+	if helper.IsNil(k8sClient) {
 		allExisting = make(map[string]*Existing)
 	}
 
@@ -87,11 +87,8 @@ func Read(
 }
 
 func Rewrite(
-	monitor mntr.Monitor,
-	gitClient *git.Client,
 	newMasterKey string,
-	desired *tree.Tree,
-	pushFunc PushFunc,
+	pushFunc func() error,
 ) error {
 	oldMasterKey := Masterkey
 	Masterkey = newMasterKey
@@ -99,7 +96,7 @@ func Rewrite(
 		Masterkey = oldMasterKey
 	}()
 
-	return pushFunc(gitClient, desired)(monitor)
+	return pushFunc()
 }
 
 func Write(
@@ -117,7 +114,7 @@ func Write(
 		return err
 	}
 
-	if k8sClient == nil {
+	if helper.IsNil(k8sClient) {
 		allExisting = make(map[string]*Existing)
 	}
 
@@ -184,30 +181,26 @@ func GetOperatorSecrets(
 	monitor mntr.Monitor,
 	printLogs,
 	gitops bool,
+	gitClient *git.Client,
+	desiredFile git.DesiredFile,
 	allTrees map[string]*tree.Tree,
 	allSecrets map[string]*Secret,
 	allExistingSecrets map[string]*Existing,
-	operator string,
-	yamlExistsInGit func() (bool, error),
-	treeFromGit,
 	treeFromCRD func() (*tree.Tree, error),
 	getOperatorSpecifics func(*tree.Tree) (map[string]*Secret, map[string]*Existing, bool, error),
 ) error {
 
-	if gitops {
-		foundGitYAML, err := yamlExistsInGit()
-		if err != nil {
-			return err
-		}
+	operator := strings.Split(string(desiredFile), ".")[0]
 
-		if !foundGitYAML {
+	if gitops {
+		if !gitClient.Exists(desiredFile) {
 			if printLogs {
-				monitor.Info(fmt.Sprintf("no file for %s found", operator))
+				monitor.Info(fmt.Sprintf("file %s not found", desiredFile))
 			}
 			return nil
 		}
 
-		operatorTree, err := treeFromGit()
+		operatorTree, err := gitClient.ReadTree(desiredFile)
 		if err != nil {
 			return err
 		}

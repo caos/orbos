@@ -12,7 +12,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -40,9 +39,9 @@ func NoopConfigure(orb orbcfg.Orb) error {
 
 type QueryFunc func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, queried map[string]interface{}) (EnsureFunc, error)
 
-type EnsureFunc func(pdf api.PushDesiredFunc) *EnsureResult
+type EnsureFunc func(pdf func(monitor mntr.Monitor) error) *EnsureResult
 
-func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
+func NoopEnsure(_ func(monitor mntr.Monitor) error) *EnsureResult {
 	return &EnsureResult{Done: true}
 }
 
@@ -97,7 +96,7 @@ func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
 
 func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, map[string]*secret.Secret, error) {
 
-	treeDesired, err := api.ReadOrbiterYml(gitClient)
+	treeDesired, err := gitClient.ReadTree(git.OrbiterFile)
 	if err != nil {
 		return nil, nil, nil, false, nil, nil, nil, err
 	}
@@ -147,7 +146,10 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if migrate {
-			if err = api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
+			if err = conf.GitClient.PushGitDesiredStates(monitor, "Desired state migrated", []git.GitDesiredState{{
+				Desired: treeDesired,
+				Path:    git.OrbiterFile,
+			}}); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -193,7 +195,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 			}
 		}
 
-		result := ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
+		result := ensure(conf.GitClient.PushDesiredFunc(git.OrbiterFile, treeDesired))
 		if result.Err != nil {
 			handleAdapterError(result.Err)
 			return

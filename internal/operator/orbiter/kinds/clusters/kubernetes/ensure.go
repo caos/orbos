@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -13,7 +12,7 @@ func ensure(
 	clusterID string,
 	desired *DesiredV0,
 	kubeAPIAddress *infra.Address,
-	pdf api.PushDesiredFunc,
+	pdf func(mntr.Monitor) error,
 	k8sClient *kubernetes.Client,
 	oneoff bool,
 	controlplane *initializedPool,

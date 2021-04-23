@@ -1,9 +1,10 @@
 package grafana
 
 import (
-	helper2 "github.com/caos/orbos/pkg/helper"
 	"path/filepath"
 	"sort"
+
+	"github.com/caos/orbos/pkg/secret/read"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/grafana/auth"
@@ -131,13 +132,13 @@ func (g *Grafana) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest
 
 	if spec.Admin != nil {
 		admin := spec.Admin
-		user, err := helper2.GetSecretValueOnlyIncluster(admin.Username, admin.ExistingUsername)
+		user, err := read.GetSecretValueOnlyIncluster(admin.Username, admin.ExistingUsername)
 		if err != nil || user == "" {
 			user = "admin"
 		}
 		values.Grafana.AdminUser = user
 
-		pw, err := helper2.GetSecretValueOnlyIncluster(admin.Password, admin.ExistingPassword)
+		pw, err := read.GetSecretValueOnlyIncluster(admin.Password, admin.ExistingPassword)
 		if err != nil || pw == "" {
 			pw = "admin"
 		}

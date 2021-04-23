@@ -1,8 +1,9 @@
 package credential
 
 import (
-	"github.com/caos/orbos/pkg/helper"
 	"strings"
+
+	"github.com/caos/orbos/pkg/secret/read"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
@@ -42,7 +43,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 	namespace := "caos-system"
 
 	for _, v := range spec.Credentials {
-		if helper.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
+		if read.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
 			data := map[string]string{
 				getSecretKey(user): v.Username.Value,
 			}
@@ -56,7 +57,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 			secretRes := resources.NewSecret(conf)
 			secrets = append(secrets, secretRes)
 		}
-		if helper.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
+		if read.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
 
 			data := map[string]string{
 				getSecretKey(pw): v.Password.Value,
@@ -71,7 +72,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 			secretRes := resources.NewSecret(conf)
 			secrets = append(secrets, secretRes)
 		}
-		if helper.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
+		if read.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
 			data := map[string]string{
 				getSecretKey(cert): v.Certificate.Value,
 			}
@@ -99,36 +100,36 @@ func GetFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) []*Credent
 
 	for _, v := range spec.Credentials {
 		var us, ps, ssh *secret
-		if helper.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
+		if read.IsCrdSecret(v.Username, v.ExistingUsernameSecret) {
 			us = &secret{
 				Name: getSecretName(v.Name, user),
 				Key:  getSecretKey(user),
 			}
-		} else if helper.IsExistentSecret(v.Username, v.ExistingUsernameSecret) {
+		} else if read.IsExistentSecret(v.Username, v.ExistingUsernameSecret) {
 			us = &secret{
 				Name: v.ExistingUsernameSecret.Name,
 				Key:  v.ExistingUsernameSecret.Key,
 			}
 		}
 
-		if helper.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
+		if read.IsCrdSecret(v.Password, v.ExistingPasswordSecret) {
 			ps = &secret{
 				Name: getSecretName(v.Name, pw),
 				Key:  getSecretKey(pw),
 			}
-		} else if helper.IsExistentSecret(v.Password, v.ExistingPasswordSecret) {
+		} else if read.IsExistentSecret(v.Password, v.ExistingPasswordSecret) {
 			ps = &secret{
 				Name: v.ExistingPasswordSecret.Name,
 				Key:  v.ExistingPasswordSecret.Key,
 			}
 		}
 
-		if helper.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
+		if read.IsCrdSecret(v.Certificate, v.ExistingCertificateSecret) {
 			ssh = &secret{
 				Name: getSecretName(v.Name, cert),
 				Key:  getSecretKey(cert),
 			}
-		} else if helper.IsExistentSecret(v.Certificate, v.ExistingCertificateSecret) {
+		} else if read.IsExistentSecret(v.Certificate, v.ExistingCertificateSecret) {
 			ssh = &secret{
 				Name: v.ExistingCertificateSecret.Name,
 				Key:  v.ExistingCertificateSecret.Key,
