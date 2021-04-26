@@ -817,6 +817,35 @@ func (mr *MockClientIntMockRecorder) ListPersistentVolumes() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumes", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumes))
 }
 
+// ListPersistentVolumeClaims mocks base method
+func (m *MockClientInt) ListPersistentVolumeClaims(namespace string) (*v11.PersistentVolumeClaimList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPersistentVolumeClaims", namespace)
+	ret0, _ := ret[0].(*v11.PersistentVolumeClaimList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPersistentVolumeClaims indicates an expected call of ListPersistentVolumeClaims
+func (mr *MockClientIntMockRecorder) ListPersistentVolumeClaims(namespace interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumeClaims", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumeClaims), namespace)
+}
+
+// DeletePersistentVolumeClaim mocks base method
+func (m *MockClientInt) DeletePersistentVolumeClaim(namespace, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePersistentVolumeClaim", namespace, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePersistentVolumeClaim indicates an expected call of DeletePersistentVolumeClaim
+func (mr *MockClientIntMockRecorder) DeletePersistentVolumeClaim(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePersistentVolumeClaim", reflect.TypeOf((*MockClientInt)(nil).DeletePersistentVolumeClaim), namespace, name)
+}
+
 // MockMachine is a mock of Machine interface
 type MockMachine struct {
 	ctrl     *gomock.Controller

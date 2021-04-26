@@ -127,6 +127,9 @@ type ClientInt interface {
 	DeleteNamespace(name string) error
 
 	ListPersistentVolumes() (*core.PersistentVolumeList, error)
+
+	ListPersistentVolumeClaims(namespace string) (*core.PersistentVolumeClaimList, error)
+	DeletePersistentVolumeClaim(namespace, name string) error
 }
 
 var _ ClientInt = (*Client)(nil)
@@ -229,6 +232,14 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 
 func (c *Client) ListPersistentVolumes() (*core.PersistentVolumeList, error) {
 	return c.set.CoreV1().PersistentVolumes().List(context.Background(), mach.ListOptions{})
+}
+
+func (c *Client) ListPersistentVolumeClaims(namespace string) (*core.PersistentVolumeClaimList, error) {
+	return c.set.CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), mach.ListOptions{})
+}
+
+func (c *Client) DeletePersistentVolumeClaim(namespace, name string) error {
+	return c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
 }
 
 func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
