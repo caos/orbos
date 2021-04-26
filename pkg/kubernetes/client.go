@@ -72,6 +72,7 @@ type ClientInt interface {
 
 	ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error
 	DeleteStatefulset(namespace, name string) error
+	ScaleStatefulset(namespace, name string, replicaCount int) error
 	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error
 
 	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
@@ -541,6 +542,12 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error {
 
 func (c *Client) DeleteStatefulset(namespace, name string) error {
 	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ScaleStatefulset(namespace, name string, replicaCount int) error {
+	patch := []byte(`{"spec":{"replicas":` + strconv.Itoa(replicaCount) + `}}`)
+	_, err := c.set.AppsV1().StatefulSets(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, patch, mach.PatchOptions{})
+	return err
 }
 
 func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error {

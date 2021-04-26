@@ -236,6 +236,20 @@ func (mr *MockClientIntMockRecorder) DeleteStatefulset(namespace, name interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStatefulset", reflect.TypeOf((*MockClientInt)(nil).DeleteStatefulset), namespace, name)
 }
 
+// ScaleStatefulset mocks base method
+func (m *MockClientInt) ScaleStatefulset(namespace, name string, replicaCount int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScaleStatefulset", namespace, name, replicaCount)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ScaleStatefulset indicates an expected call of ScaleStatefulset
+func (mr *MockClientIntMockRecorder) ScaleStatefulset(namespace, name, replicaCount interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScaleStatefulset", reflect.TypeOf((*MockClientInt)(nil).ScaleStatefulset), namespace, name, replicaCount)
+}
+
 // WaitUntilStatefulsetIsReady mocks base method
 func (m *MockClientInt) WaitUntilStatefulsetIsReady(namespace, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	m.ctrl.T.Helper()
