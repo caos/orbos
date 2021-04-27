@@ -847,17 +847,17 @@ func (mr *MockClientIntMockRecorder) ListPersistentVolumeClaims(namespace interf
 }
 
 // DeletePersistentVolumeClaim mocks base method
-func (m *MockClientInt) DeletePersistentVolumeClaim(namespace, name string) error {
+func (m *MockClientInt) DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DeletePersistentVolumeClaim", namespace, name)
+	ret := m.ctrl.Call(m, "DeletePersistentVolumeClaim", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // DeletePersistentVolumeClaim indicates an expected call of DeletePersistentVolumeClaim
-func (mr *MockClientIntMockRecorder) DeletePersistentVolumeClaim(namespace, name interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) DeletePersistentVolumeClaim(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePersistentVolumeClaim", reflect.TypeOf((*MockClientInt)(nil).DeletePersistentVolumeClaim), namespace, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePersistentVolumeClaim", reflect.TypeOf((*MockClientInt)(nil).DeletePersistentVolumeClaim), namespace, name, timeout)
 }
 
 // MockMachine is a mock of Machine interface

@@ -130,7 +130,7 @@ type ClientInt interface {
 	ListPersistentVolumes() (*core.PersistentVolumeList, error)
 
 	ListPersistentVolumeClaims(namespace string) (*core.PersistentVolumeClaimList, error)
-	DeletePersistentVolumeClaim(namespace, name string) error
+	DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error
 }
 
 var _ ClientInt = (*Client)(nil)
@@ -239,8 +239,40 @@ func (c *Client) ListPersistentVolumeClaims(namespace string) (*core.PersistentV
 	return c.set.CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), mach.ListOptions{})
 }
 
-func (c *Client) DeletePersistentVolumeClaim(namespace, name string) error {
-	return c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+func (c *Client) DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error {
+	ctx := context.Background()
+
+	returnChannel := make(chan error, 1)
+	go func() {
+		ctx := context.Background()
+		interval := time.Second * 1
+		times := timeout / interval
+		for i := 0; i < int(times.Seconds()); i++ {
+			_, err := c.set.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, mach.GetOptions{})
+			if err != nil && !macherrs.IsNotFound(err) {
+				returnChannel <- err
+				return
+			}
+
+			if macherrs.IsNotFound(err) {
+				returnChannel <- nil
+				return
+			}
+			time.Sleep(interval)
+		}
+		returnChannel <- errors.New("delete pvc timeout")
+	}()
+
+	if err := c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, mach.DeleteOptions{}); err != nil {
+		return err
+	}
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeout):
+		return errors.New("timeout while waiting for job to complete")
+	}
 }
 
 func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
