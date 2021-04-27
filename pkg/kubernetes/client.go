@@ -243,11 +243,12 @@ func (c *Client) DeletePersistentVolumeClaim(namespace, name string, timeout tim
 	ctx := context.Background()
 
 	returnChannel := make(chan error, 1)
+	interval := time.Second * 1
+	timesS := (timeout / interval) * time.Second
+
 	go func() {
 		ctx := context.Background()
-		interval := time.Second * 1
-		times := timeout / interval
-		for i := 0; i < int(times.Seconds()); i++ {
+		for i := 0; i < int(timesS.Seconds()); i++ {
 			_, err := c.set.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, mach.GetOptions{})
 			if err != nil && !macherrs.IsNotFound(err) {
 				returnChannel <- err
@@ -261,6 +262,7 @@ func (c *Client) DeletePersistentVolumeClaim(namespace, name string, timeout tim
 			time.Sleep(interval)
 		}
 		returnChannel <- errors.New("delete pvc timeout")
+		return
 	}()
 
 	if err := c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, mach.DeleteOptions{}); err != nil {
