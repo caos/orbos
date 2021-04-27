@@ -1,6 +1,8 @@
 package cmds
 
 import (
+	"fmt"
+
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
@@ -15,7 +17,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 
 	if gitops {
 		if !gitClient.Exists(git.BoomFile) {
-			monitor.Info("No BOOM deployed as no boom.yml present")
+			monitor.Info(fmt.Sprintf("Deployment of BOOM skipped as %s not found in git repo", git.BoomFile))
 			return nil
 		}
 		desiredTree, err := gitClient.ReadTree(git.BoomFile)
@@ -68,26 +70,29 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 
 func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops bool) error {
 	if gitops {
-		if gitClient.Exists(git.NetworkingFile) {
-			desiredTree, err := gitClient.ReadTree(git.NetworkingFile)
-			if err != nil {
-				return err
-			}
-			desired, err := orbnw.ParseDesiredV0(desiredTree)
-			if err != nil {
-				return err
-			}
-			spec := desired.Spec
+		if !gitClient.Exists(git.NetworkingFile) {
+			monitor.Info(fmt.Sprintf("Deployment of networking operator skipped as %s not found in git repo", git.NetworkingFile))
+			return nil
+		}
 
-			// at takeoff the artifacts have to be applied
-			spec.SelfReconciling = true
-			if err := orbnw.Reconcile(
-				monitor,
-				spec,
-				gitops,
-			)(k8sClient); err != nil {
-				return err
-			}
+		desiredTree, err := gitClient.ReadTree(git.NetworkingFile)
+		if err != nil {
+			return err
+		}
+		desired, err := orbnw.ParseDesiredV0(desiredTree)
+		if err != nil {
+			return err
+		}
+		spec := desired.Spec
+
+		// at takeoff the artifacts have to be applied
+		spec.SelfReconciling = true
+		if err := orbnw.Reconcile(
+			monitor,
+			spec,
+			gitops,
+		)(k8sClient); err != nil {
+			return err
 		}
 	} else {
 		// at takeoff the artifacts have to be applied
