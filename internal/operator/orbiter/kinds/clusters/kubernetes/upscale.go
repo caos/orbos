@@ -146,6 +146,13 @@ nodes:
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
 		}).Debug("Scale is ensured")
+
+		for _, pool := range append(workerPools, controlplanePool) {
+			if err := pool.infra.EnsureMembers(); err != nil {
+				return false, err
+			}
+		}
+
 		return true, nil
 	}
 
@@ -241,12 +248,6 @@ nodes:
 			providerK8sSpec,
 		); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
-		}
-	}
-
-	for _, pool := range append(workerPools, controlplanePool) {
-		if err := pool.infra.EnsureMembers(); err != nil {
-			return false, err
 		}
 	}
 

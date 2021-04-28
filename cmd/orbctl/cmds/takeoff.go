@@ -33,11 +33,6 @@ func Takeoff(
 	gitOpsNetworking bool,
 ) error {
 
-	if !deploy {
-		monitor.Info("Skipping operator deployments")
-		return nil
-	}
-
 	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 		return err
 	}
@@ -64,12 +59,18 @@ func Takeoff(
 		}
 	}
 
+	if !deploy {
+		monitor.Info("Skipping operator deployments")
+		return nil
+	}
+
 	k8sClient, err := cli.Client(
 		monitor,
 		orbConfig,
 		gitClient,
 		kubeconfig,
 		gitOpsBoom || gitOpsNetworking,
+		false,
 	)
 	if err != nil {
 		return err
