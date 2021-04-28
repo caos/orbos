@@ -87,7 +87,7 @@ func NewPackageManager(monitor mntr.Monitor, os OperatingSystem, systemd *System
 	return &PackageManager{monitor, os, nil, systemd}
 }
 
-func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Software, error) {
+func (p *PackageManager) CurrentVersions(possiblePackages ...string) []*Software {
 
 	software := make([]*Software, 0)
 	for _, pkg := range possiblePackages {
@@ -104,7 +104,7 @@ func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Softwar
 		}
 	}
 
-	return software, nil
+	return software
 }
 
 func (p *PackageManager) Install(installVersion *Software, more ...*Software) error {

@@ -1,8 +1,13 @@
 package conv
 
 import (
+	"bytes"
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/health"
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -48,7 +53,25 @@ func (d *dependencies) Init() func() error {
 		if err := d.pm.Init(); err != nil {
 			return err
 		}
-		return d.pm.RefreshInstalled()
+		if err := d.pm.RefreshInstalled(); err != nil {
+			return err
+		}
+		sw := d.pm.CurrentVersions("yum-cron")
+		if len(sw) == 0 {
+			return nil
+		}
+		errBuf := new(bytes.Buffer)
+		defer errBuf.Reset()
+		cmd := exec.Command("yum", "--assumeyes", "remove", "yum-cron")
+		cmd.Stderr = errBuf
+		if d.monitor.IsVerbose() {
+			fmt.Println(strings.Join(cmd.Args, " "))
+			cmd.Stdout = os.Stdout
+		}
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("removing yum-cron failed with stderr %s: %w", errBuf.String(), err)
+		}
+		return nil
 	}
 }
 
@@ -128,7 +151,7 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 		case sshd.Installer:
 			sw.SSHD = pkg(*dependency)
 		default:
-			panic(errors.Errorf("No installer type for dependency %s found", i))
+			panic(fmt.Errorf("no installer type for dependency %s found", i))
 		}
 	}
 

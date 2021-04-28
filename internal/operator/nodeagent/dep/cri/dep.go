@@ -57,15 +57,11 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	installed, err := c.manager.CurrentVersions("docker-ce", "containerd.io")
-	if err != nil {
-		return pkg, err
-	}
 	var (
 		dockerVersion     string
 		containerdVersion string
 	)
-	for _, installedPkg := range installed {
+	for _, installedPkg := range c.manager.CurrentVersions("docker-ce", "containerd.io") {
 		switch installedPkg.Package {
 		case "docker-ce":
 			dockerVersion = fmt.Sprintf("%s %s %s", dockerVersion, installedPkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(installedPkg.Version))
