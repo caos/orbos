@@ -65,7 +65,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package, leave
 	}
 
 	if k.os != dep.CentOS {
-		return k.ensurePackage(remove, install)
+		return k.ensurePackage(remove, install, leaveOSRepositories)
 	}
 
 	errBuf := new(bytes.Buffer)
