@@ -17,10 +17,11 @@ type DesiredV0 struct {
 }
 
 type Spec struct {
-	Verbose            bool
-	Pools              map[string][]*Machine
-	Keys               *Keys
-	ExternalInterfaces []string
+	Verbose             bool
+	Pools               map[string][]*Machine
+	Keys                *Keys
+	ExternalInterfaces  []string
+	LeaveOSRepositories bool
 }
 
 type Keys struct {

@@ -1,6 +1,7 @@
 package static
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -35,6 +36,15 @@ func query(
 	queryNA, installNA := naFuncs(nodeAgentsCurrent)
 
 	ensureNodeFunc := func(machine infra.Machine, pool string) error {
+
+		if desired.Spec.LeaveOSRepositories {
+			na, ok := nodeAgentsDesired.Get(machine.ID())
+			if !ok {
+				return fmt.Errorf("can't tell node agent on machine %s to leave os repositories as its desired state wasn't found", machine.ID())
+			}
+			na.LeaveOSRepositories = true
+		}
+
 		running, err := queryNA(machine, orbiterCommit)
 		if err != nil {
 			return err
