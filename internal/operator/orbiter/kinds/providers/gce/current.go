@@ -40,10 +40,10 @@ func (c *Current) Cleanupped() <-chan error {
 func (c *Current) Kubernetes() infra.Kubernetes {
 	return infra.Kubernetes{
 		CleanupAndApply: func(k8sClient kubernetes.ClientInt) (io.Reader, error) {
-			var exists bool
+			var create bool
 			deployment, err := k8sClient.GetDeployment("gce-pd-csi-driver", "csi-gce-pd-controller")
 			if macherrs.IsNotFound(err) {
-				exists = true
+				create = true
 				err = nil
 			}
 			if err != nil {
@@ -54,7 +54,7 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 				return bytes.NewReader(executables.PreBuilt("kubernetes_gce.yaml"))
 			}
 
-			if !exists {
+			if create {
 				return apply(), nil
 			}
 
