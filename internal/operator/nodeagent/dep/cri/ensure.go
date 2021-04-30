@@ -120,11 +120,12 @@ func (c *criDep) run(runtime, version, repoURL, keyURL, keyFingerprint string, l
 		return err
 	}
 
-	err := c.manager.Install(&dep.Software{
+	if err := c.manager.Install(&dep.Software{
 		Package: runtime,
 		Version: version,
-	})
-	return err
+	}); err != nil {
+		return err
+	}
 
 	if err := c.systemd.Enable("docker"); err != nil {
 		return err
