@@ -5,6 +5,7 @@
 package kubernetesmock
 
 import (
+	mntr "github.com/caos/orbos/mntr"
 	gomock "github.com/golang/mock/gomock"
 	io "io"
 	v1 "k8s.io/api/apps/v1"
@@ -833,17 +834,17 @@ func (mr *MockClientIntMockRecorder) ListPersistentVolumes() *gomock.Call {
 }
 
 // ApplyPlainYAML mocks base method
-func (m *MockClientInt) ApplyPlainYAML(data []byte) error {
+func (m *MockClientInt) ApplyPlainYAML(arg0 mntr.Monitor, arg1 []byte) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyPlainYAML", data)
+	ret := m.ctrl.Call(m, "ApplyPlainYAML", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ApplyPlainYAML indicates an expected call of ApplyPlainYAML
-func (mr *MockClientIntMockRecorder) ApplyPlainYAML(data interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) ApplyPlainYAML(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPlainYAML", reflect.TypeOf((*MockClientInt)(nil).ApplyPlainYAML), data)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPlainYAML", reflect.TypeOf((*MockClientInt)(nil).ApplyPlainYAML), arg0, arg1)
 }
 
 // MockMachine is a mock of Machine interface
