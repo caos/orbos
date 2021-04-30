@@ -36,10 +36,8 @@ func query(
 
 	ensureNodeFunc := func(machine infra.Machine, pool string) error {
 
-		if desired.Spec.LeaveOSRepositories {
-			na, _ := nodeAgentsDesired.Get(machine.ID())
-			na.LeaveOSRepositories = true
-		}
+		na, _ := nodeAgentsDesired.Get(machine.ID())
+		na.LeaveOSRepositories = desired.Spec.LeaveOSRepositories
 
 		running, err := queryNA(machine, orbiterCommit)
 		if err != nil {
