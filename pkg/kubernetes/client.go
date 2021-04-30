@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -12,7 +13,11 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	extensions "k8s.io/api/extensions/v1beta1"
+	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	k8syaml "sigs.k8s.io/yaml"
 
 	"github.com/caos/orbos/pkg/labels"
 
@@ -77,6 +82,7 @@ type ClientInt interface {
 	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
 	ExecInPod(namespace, name, container, command string) error
 
+	GetDeployment(namespace, name string) (*apps.Deployment, error)
 	ApplyDeployment(rsc *apps.Deployment, force bool) error
 	DeleteDeployment(namespace, name string) error
 	PatchDeployment(namespace, name string, data string) error
@@ -127,6 +133,8 @@ type ClientInt interface {
 	DeleteNamespace(name string) error
 
 	ListPersistentVolumes() (*core.PersistentVolumeList, error)
+
+	ApplyPlainYAML(data []byte) error
 }
 
 var _ ClientInt = (*Client)(nil)
@@ -1449,4 +1457,101 @@ func (c *Client) execInPodWithOutput(cmd []string, container string, req *rest.R
 
 	outData := stdout.Bytes()
 	return string(outData), nil
+}
+
+func (c *Client) ApplyPlainYAML(data []byte) error {
+	return forEachObjectInYAML(data, c.ApplyCRDResource)
+}
+
+// ForEachObjectInYAMLActionFunc is a function that is executed against each
+// object found in a YAML document.
+// When a non-empty namespace is provided then the object is assigned the
+// namespace prior to any other actions being performed with or to the object.
+// this is heavily ispired by https://github.com/kubernetes/client-go/issues/216#issuecomment-718813670
+type forEachObjectInYAMLActionFunc func(*unstructured.Unstructured) error
+
+// ForEachObjectInYAML excutes actionFn for each object in the provided YAML.
+// If an error is returned then no further objects are processed.
+// The data may be a single YAML document or multidoc YAML.
+// When a non-empty namespace is provided then all objects are assigned the
+// the namespace prior to any other actions being performed with or to the
+// object.
+// this is heavily ispired by https://github.com/kubernetes/client-go/issues/216#issuecomment-718813670
+func forEachObjectInYAML(
+	data []byte,
+	actionFn forEachObjectInYAMLActionFunc) error {
+
+	chanObj, chanErr := decodeYAML(data)
+	for {
+		select {
+		case obj := <-chanObj:
+			if obj == nil {
+				return nil
+			}
+			if err := actionFn(obj); err != nil {
+				return err
+			}
+		case err := <-chanErr:
+			if err == nil {
+				return nil
+			}
+			return fmt.Errorf("received error while decoding yaml: %w", err)
+		}
+	}
+}
+
+// DecodeYAML unmarshals a YAML document or multidoc YAML as unstructured
+// objects, placing each decoded object into a channel.
+// this is heavily ispired by https://github.com/kubernetes/client-go/issues/216#issuecomment-718813670
+func decodeYAML(data []byte) (<-chan *unstructured.Unstructured, <-chan error) {
+
+	var (
+		chanErr        = make(chan error)
+		chanObj        = make(chan *unstructured.Unstructured)
+		multidocReader = utilyaml.NewYAMLReader(bufio.NewReader(bytes.NewReader(data)))
+	)
+
+	go func() {
+		defer close(chanErr)
+		defer close(chanObj)
+
+		// Iterate over the data until Read returns io.EOF. Every successful
+		// read returns a complete YAML document.
+		for {
+			buf, err := multidocReader.Read()
+			if err != nil {
+				if err == io.EOF {
+					return
+				}
+				chanErr <- fmt.Errorf("failed to read yaml data: %w", err)
+				return
+			}
+
+			// Do not use this YAML doc if it is unkind.
+			var typeMeta runtime.TypeMeta
+			if err := k8syaml.Unmarshal(buf, &typeMeta); err != nil {
+				continue
+			}
+			if typeMeta.Kind == "" {
+				continue
+			}
+
+			// Define the unstructured object into which the YAML document will be
+			// unmarshaled.
+			obj := &unstructured.Unstructured{
+				Object: map[string]interface{}{},
+			}
+
+			// Unmarshal the YAML document into the unstructured object.
+			if err := k8syaml.Unmarshal(buf, &obj.Object); err != nil {
+				chanErr <- fmt.Errorf("failed to unmarshal yaml data: %w", err)
+				return
+			}
+
+			// Place the unstructured object into the channel.
+			chanObj <- obj
+		}
+	}()
+
+	return chanObj, chanErr
 }

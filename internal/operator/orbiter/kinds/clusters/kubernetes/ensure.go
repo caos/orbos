@@ -70,11 +70,17 @@ func ensure(
 			machine.desiredNodeagent.Software.Merge(target)
 			return *machine
 		},
-		gitClient,
 		providerK8sSpec,
 	)
-	if !scalingDone {
+	if err != nil || !scalingDone {
 		monitor.Info("Scaling is not done yet")
+		return scalingDone, err
 	}
+
+	if err = ensureK8sPlugins(monitor, gitClient, k8sClient, *desired, providerK8sSpec); err != nil {
+		done = false
+		return
+	}
+
 	return scalingDone, err
 }

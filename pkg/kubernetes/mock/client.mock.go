@@ -279,6 +279,21 @@ func (mr *MockClientIntMockRecorder) ExecInPod(namespace, name, container, comma
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecInPod", reflect.TypeOf((*MockClientInt)(nil).ExecInPod), namespace, name, container, command)
 }
 
+// GetDeployment mocks base method
+func (m *MockClientInt) GetDeployment(namespace, name string) (*v1.Deployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeployment", namespace, name)
+	ret0, _ := ret[0].(*v1.Deployment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeployment indicates an expected call of GetDeployment
+func (mr *MockClientIntMockRecorder) GetDeployment(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployment", reflect.TypeOf((*MockClientInt)(nil).GetDeployment), namespace, name)
+}
+
 // ApplyDeployment mocks base method
 func (m *MockClientInt) ApplyDeployment(rsc *v1.Deployment, force bool) error {
 	m.ctrl.T.Helper()
@@ -815,6 +830,20 @@ func (m *MockClientInt) ListPersistentVolumes() (*v11.PersistentVolumeList, erro
 func (mr *MockClientIntMockRecorder) ListPersistentVolumes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumes", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumes))
+}
+
+// ApplyPlainYAML mocks base method
+func (m *MockClientInt) ApplyPlainYAML(data []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyPlainYAML", data)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyPlainYAML indicates an expected call of ApplyPlainYAML
+func (mr *MockClientIntMockRecorder) ApplyPlainYAML(data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPlainYAML", reflect.TypeOf((*MockClientInt)(nil).ApplyPlainYAML), data)
 }
 
 // MockMachine is a mock of Machine interface

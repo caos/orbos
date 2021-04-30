@@ -4,46 +4,64 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 	"text/template"
 	"time"
 
-	"github.com/caos/orbos/pkg/git"
-
-	"github.com/caos/orbos/internal/executables"
-	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/pkg/errors"
 
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
+
+	"github.com/caos/orbos/internal/executables"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 type CloudIntegration int
 
-func join(
+func ensureK8sPlugins(
 	monitor mntr.Monitor,
-	clusterID string,
-	joining *initializedMachine,
-	joinAt infra.Machine,
-	desired DesiredV0,
-	kubeAPI *infra.Address,
-	joinToken string,
-	kubernetesVersion KubernetesVersion,
-	certKey string,
-	client *kubernetes.Client,
-	imageRepository string,
 	gitClient *git.Client,
-	providerK8sSpec infra.Kubernetes) (*string, error) {
+	k8sClient kubernetes.ClientInt,
+	desired DesiredV0,
+	providerK8sSpec infra.Kubernetes,
+) (err error) {
 
-	monitor = monitor.WithFields(map[string]interface{}{
-		"machine": joining.infra.ID(),
-		"tier":    joining.pool.tier,
-	})
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("ensuring kubernetes plugin resources failed: %w", err)
+		}
+	}()
 
-	applyResources := providerK8sSpec.Apply
+	applyResources, err := providerK8sSpec.CleanupAndApply(k8sClient)
+	if err != nil {
+		return err
+	}
 
 	switch desired.Spec.Networking.Network {
 	case "cilium":
+
+		var exists bool
+		deployment, err := k8sClient.GetDeployment("kube-system", "cilium-operator")
+		if macherrs.IsNotFound(err) {
+			exists = true
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+
+		expectVersion := "v1.6.3"
+		if exists && strings.Split(deployment.Spec.Template.Spec.Containers[0].Image, ":")[1] == expectVersion {
+			monitor.WithField("version", expectVersion).Debug("Calico is already ensured")
+			break
+		}
+
+		monitor = monitor.WithField("cilium", expectVersion)
+
 		buf := new(bytes.Buffer)
 		defer buf.Reset()
 
@@ -65,7 +83,26 @@ func join(
 			CiliumImageRegistry:     ciliumReg,
 		})
 		applyResources = concatYAML(applyResources, buf)
+
 	case "calico":
+
+		var exists bool
+		deployment, err := k8sClient.GetDeployment("kube-system", "calico-kube-controllers")
+		if macherrs.IsNotFound(err) {
+			exists = true
+			err = nil
+		}
+		if err != nil {
+			return err
+		}
+
+		expectVersion := "v3.18.2"
+		if exists && strings.Split(deployment.Spec.Template.Spec.Containers[0].Image, ":")[1] == expectVersion {
+			monitor.WithField("version", expectVersion).Debug("Calico is already ensured")
+			break
+		}
+
+		monitor = monitor.WithField("calico", expectVersion)
 
 		reg := desired.Spec.CustomImageRegistry
 		if reg != "" && !strings.HasSuffix(reg, "/") {
@@ -84,11 +121,43 @@ func join(
 	default:
 		networkFile := gitClient.Read(desired.Spec.Networking.Network)
 		if len(networkFile) == 0 {
-			return nil, fmt.Errorf("network file %s is empty or not found in git repository", desired.Spec.Networking.Network)
+			return fmt.Errorf("network file %s is empty or not found in git repository", desired.Spec.Networking.Network)
 		}
 
 		applyResources = concatYAML(applyResources, bytes.NewReader(networkFile))
 	}
+	if applyResources == nil {
+		return nil
+	}
+	data, err := ioutil.ReadAll(applyResources)
+	if err != nil {
+		return err
+	}
+	if err := k8sClient.ApplyPlainYAML(data); err != nil {
+		return err
+	}
+	monitor.Info("Kubernetes plugins successfully reconciled")
+	return nil
+}
+
+func join(
+	monitor mntr.Monitor,
+	clusterID string,
+	joining *initializedMachine,
+	joinAt infra.Machine,
+	desired DesiredV0,
+	kubeAPI *infra.Address,
+	joinToken string,
+	kubernetesVersion KubernetesVersion,
+	certKey string,
+	client *kubernetes.Client,
+	imageRepository string,
+	providerK8sSpec infra.Kubernetes) (*string, error) {
+
+	monitor = monitor.WithFields(map[string]interface{}{
+		"machine": joining.infra.ID(),
+		"tier":    joining.pool.tier,
+	})
 
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
 	cloudCfgPath := "/var/orbiter/cloud-config"
@@ -309,12 +378,6 @@ kubectl -n kube-system patch deployment coredns --type='json' \
 	monitor.Changed("Cluster initialized")
 
 	kc := strings.ReplaceAll(kubeconfigBuf.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
-
-	if applyResources != nil {
-		if out, err := joining.infra.Execute(applyResources, "kubectl create -f -"); err != nil {
-			return nil, fmt.Errorf("error applying initial resources: %w: %s", err, string(out))
-		}
-	}
 
 	return &kc, nil
 }
