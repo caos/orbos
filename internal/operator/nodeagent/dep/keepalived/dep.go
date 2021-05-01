@@ -9,8 +9,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
@@ -62,10 +60,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	installed, err := s.manager.CurrentVersions("keepalived")
-	if err != nil {
-		return pkg, errors.Wrapf(err, "getting current nginx version failed")
-	}
+	installed := s.manager.CurrentVersions("keepalived")
 	if len(installed) == 0 {
 		return pkg, nil
 	}

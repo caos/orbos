@@ -13,12 +13,22 @@ import (
 )
 
 type FirewallEnsurer interface {
-	Query(desired common.Firewall) (current common.Current, ensure func() error, err error)
+	Query(desired common.Firewall) (current common.FirewallCurrent, ensure func() error, err error)
 }
 
-type FirewallEnsurerFunc func(desired common.Firewall) (current common.Current, ensure func() error, err error)
+type FirewallEnsurerFunc func(desired common.Firewall) (current common.FirewallCurrent, ensure func() error, err error)
 
-func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current common.Current, ensure func() error, err error) {
+func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current common.FirewallCurrent, ensure func() error, err error) {
+	return f(desired)
+}
+
+type NetworkingEnsurer interface {
+	Query(desired common.Networking) (current common.NetworkingCurrent, ensure func() error, err error)
+}
+
+type NetworkingEnsurerFunc func(desired common.Networking) (current common.NetworkingCurrent, ensure func() error, err error)
+
+func (f NetworkingEnsurerFunc) Query(desired common.Networking) (current common.NetworkingCurrent, ensure func() error, err error) {
 	return f(desired)
 }
 
@@ -41,7 +51,13 @@ type Installer interface {
 	fmt.Stringer
 }
 
-func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
+func prepareQuery(
+	monitor mntr.Monitor,
+	commit string,
+	firewallEnsurer FirewallEnsurer,
+	networkingEnsurer NetworkingEnsurer,
+	conv Converter,
+) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
 
 	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
 		panic(err)
@@ -83,6 +99,13 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 			}, nil
 		}
 
+		var ensureNetworking func() error
+		curr.Networking, ensureNetworking, err = networkingEnsurer.Query(*desired.Networking)
+		if err != nil {
+			return noop, err
+		}
+		curr.Networking.Sort()
+
 		var ensureFirewall func() error
 		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
 		if err != nil {
@@ -100,7 +123,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		})
 
 		divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-		if len(divergentSw) == 0 && ensureFirewall == nil {
+		if len(divergentSw) == 0 && ensureFirewall == nil && ensureNetworking == nil {
 			curr.NodeIsReady = true
 			return noop, nil
 		}
@@ -118,11 +141,20 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 				return nil
 			}
 
+			if ensureNetworking != nil {
+				if err := ensureNetworking(); err != nil {
+					return err
+				}
+				curr.Networking = desired.Networking.ToCurrent()
+				monitor.Changed("networking changed")
+				curr.Networking.Sort()
+			}
+
 			if ensureFirewall != nil {
 				if err := ensureFirewall(); err != nil {
 					return err
 				}
-				curr.Open = desired.Firewall.AllZones()
+				curr.Open = desired.Firewall.ToCurrent()
 				monitor.Changed("firewall changed")
 				curr.Open.Sort()
 			}

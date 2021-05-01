@@ -1,8 +1,8 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperatorhelm "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type Ingress struct {
@@ -109,6 +109,7 @@ type GrafanaValues struct {
 	FullnameOverride         string              `yaml:"fullnameOverride,omitempty"`
 	Enabled                  bool                `yaml:"enabled"`
 	DefaultDashboardsEnabled bool                `yaml:"defaultDashboardsEnabled"`
+	AdminUser                string              `yaml:"adminUser"`
 	AdminPassword            string              `yaml:"adminPassword"`
 	Admin                    *Admin              `yaml:"admin"`
 	Ingress                  *Ingress            `yaml:"ingress"`

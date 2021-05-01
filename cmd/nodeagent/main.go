@@ -5,12 +5,18 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
+	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/internal/operator/nodeagent/networking"
+
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+
+	_ "net/http/pprof"
 
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
@@ -35,6 +41,7 @@ func main() {
 	printVersion := flag.Bool("version", false, "Print build information")
 	ignorePorts := flag.String("ignore-ports", "", "Comma separated list of firewall ports that are ignored")
 	nodeAgentID := flag.String("id", "", "The managed machines ID")
+	pprof := flag.Bool("pprof", false, "start pprof as port 6060")
 
 	flag.Parse()
 
@@ -63,6 +70,12 @@ func main() {
 		"nodeAgentID": *nodeAgentID,
 	}).Info("Node Agent is starting")
 
+	if *pprof {
+		go func() {
+			monitor.Info(http.ListenAndServe("localhost:6060", nil).Error())
+		}()
+	}
+
 	os, err := dep.GetOperatingSystem()
 	if err != nil {
 		panic(err)
@@ -90,12 +103,41 @@ func main() {
 		gitCommit,
 		*nodeAgentID,
 		firewall.Ensurer(monitor, os.OperatingSystem, portsSlice),
+		networking.Ensurer(monitor, os.OperatingSystem),
 		conv,
 		conv.Init())
 
+	daily := time.NewTicker(24 * time.Hour)
+	defer daily.Stop()
+	update := make(chan struct{})
+	go func() {
+		for range daily.C {
+			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
+			<-timer.C
+			update <- struct{}{}
+			timer.Stop()
+		}
+	}()
+
+	iterate := make(chan struct{})
+	//trigger first iteration
+	go func() { iterate <- struct{}{} }()
 	for {
-		itFunc()
-		monitor.Info("Iteration done")
-		time.Sleep(10 * time.Second)
+		select {
+		case <-iterate:
+			monitor.Info("Starting iteration")
+			itFunc()
+			monitor.Info("Iteration done")
+			time.Sleep(10 * time.Second)
+			//trigger next iteration
+			go func() { iterate <- struct{}{} }()
+		case <-update:
+			monitor.Info("Starting update")
+			if err := conv.Update(); err != nil {
+				monitor.Error(fmt.Errorf("updating packages failed: %w", err))
+			} else {
+				monitor.Info("Update done")
+			}
+		}
 	}
 }

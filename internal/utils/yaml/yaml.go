@@ -22,7 +22,7 @@ func New(path string) *yamlFile {
 func readFile(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error while reading yaml %s", path)
+		return nil, errors.Wrapf(err, "error while reading yaml %s", path)
 	}
 
 	return data, nil

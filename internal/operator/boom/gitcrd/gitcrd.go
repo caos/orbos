@@ -6,14 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-
-	orbosapi "github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
-	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/boom/crd"
 	crdconfig "github.com/caos/orbos/internal/operator/boom/crd/config"
 	"github.com/caos/orbos/internal/operator/boom/current"
@@ -24,6 +19,7 @@ import (
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -34,7 +30,6 @@ type GitCrd struct {
 	crdDirectoryPath string
 	status           error
 	monitor          mntr.Monitor
-	deploy           bool
 }
 
 func New(conf *config.Config) *GitCrd {
@@ -49,7 +44,6 @@ func New(conf *config.Config) *GitCrd {
 		crdDirectoryPath: conf.CrdDirectoryPath,
 		git:              conf.Git,
 		monitor:          monitor,
-		deploy:           conf.Deploy,
 	}
 
 	crdConf := &crdconfig.Config{
@@ -142,27 +136,6 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		return
 	}
 
-	boomSpec := toolsetCRD.Spec.Boom
-	if boomSpec != nil && boomSpec.Version != "" {
-		conf, err := clientgo.GetClusterConfig()
-		if err != nil {
-			c.status = err
-			return
-		}
-
-		dummyKubeconfig := ""
-		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
-		if err := k8sClient.RefreshConfig(conf); err != nil {
-			c.status = err
-			return
-		}
-
-		if err := cmd.Reconcile(monitor, k8sClient, "", c.deploy, boomSpec); err != nil {
-			c.status = err
-			return
-		}
-	}
-
 	// pre-steps
 	if toolsetCRD.Spec.PreApply != nil {
 		preapplymonitor := monitor.WithField("application", "preapply")
@@ -174,7 +147,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		preapplymonitor.Info("Done")
 	}
 
-	c.crd.Reconcile(currentResourceList, toolsetCRD)
+	c.crd.Reconcile(currentResourceList, toolsetCRD, true)
 	err = c.crd.GetStatus()
 	if err != nil {
 		c.status = err
@@ -205,12 +178,12 @@ func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
 }
 
 func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
-	desiredTree, err := orbosapi.ReadBoomYml(c.git)
+	desiredTree, err := c.git.ReadTree(git.BoomFile)
 	if err != nil {
 		return nil, err
 	}
 
-	desiredKind, _, _, err := api.ParseToolset(desiredTree)
+	desiredKind, _, _, _, err := api.ParseToolset(desiredTree)
 	if err != nil {
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}

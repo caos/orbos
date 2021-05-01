@@ -5,10 +5,9 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/caos/orbos/internal/secret"
-
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -255,7 +254,15 @@ func (m *machinesService) machines() (map[string][]*machine, error) {
 		return nil, err
 	}
 
-	m.cache.instances = make(map[string][]*machine)
+	if m.cache.instances == nil {
+		m.cache.instances = make(map[string][]*machine)
+	} else {
+		for k := range m.cache.instances {
+			m.cache.instances[k] = nil
+			delete(m.cache.instances, k)
+		}
+	}
+
 	for idx := range servers {
 		server := servers[idx]
 		pool := server.Tags["pool"]

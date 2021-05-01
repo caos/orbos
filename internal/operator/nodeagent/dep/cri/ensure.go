@@ -7,15 +7,13 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
-	cmd := exec.Command("yum", "remove", "docker",
+	cmd := exec.Command("yum", "--assumeyes", "remove", "docker",
 		"docker-client",
 		"docker-client-latest",
 		"docker-common",
@@ -29,40 +27,16 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "removing older docker versions failed with stderr %s", errBuf.String())
+		return fmt.Errorf("removing older docker versions failed with stderr %s: %w", errBuf.String(), err)
 	}
 
 	for _, pkg := range []string{"device-mapper-persistent-data", "lvm2"} {
 		if err := c.manager.Install(&dep.Software{Package: pkg}); err != nil {
-			c.monitor.Error(errors.Wrap(err, "installing docker dependency failed"))
+			c.monitor.Error(fmt.Errorf("installing docker dependency failed: %w", err))
 		}
 	}
 
-	// Obviously, docker doesn't care about the exact containerd version, so neighter should ORBITER
-	// https://docs.docker.com/engine/install/centos/
-	// https://docs.docker.com/engine/install/ubuntu/
-	if err := c.manager.Install(&dep.Software{
-		Package: "containerd.io",
-		Version: containerdVersion,
-	}); err != nil {
-		c.monitor.Error(err)
-	}
-
-	if err := c.manager.Install(&dep.Software{
-		Package: runtime,
-		Version: version,
-	}); err != nil {
-		c.monitor.Error(errors.Wrap(err, "installing container runtime failed"))
-	}
-
-	c.manager.Add(&dep.Repository{
-		Repository: "https://download.docker.com/linux/centos/docker-ce.repo",
-	})
-
-	if err := c.systemd.Enable("docker"); err != nil {
-		return err
-	}
-	return c.systemd.Start("docker")
+	return c.run(runtime, version, "https://download.docker.com/linux/centos/docker-ce.repo", "", "")
 }
 
 func (c *criDep) ensureUbuntu(runtime string, version string) error {
@@ -77,7 +51,7 @@ func (c *criDep) ensureUbuntu(runtime string, version string) error {
 	cmd.Stderr = errBuf
 	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running apt-cache madison %s failed with stderr %s", runtime, errBuf.String())
+		return fmt.Errorf("running apt-cache madison %s failed with stderr %s: %w", runtime, errBuf.String(), err)
 	}
 	errBuf.Reset()
 
@@ -98,25 +72,56 @@ func (c *criDep) ensureUbuntu(runtime string, version string) error {
 	buf.Reset()
 
 	if err != nil && versionLine == "" {
-		return errors.Wrapf(err, "finding line containing desired container runtime version \"%s\" failed", version)
+		return fmt.Errorf("finding line containing desired container runtime version \"%s\" failed: %w", version, err)
 	}
 
-	if err := c.manager.Install(&dep.Software{Package: "containerd.io"}); err != nil {
+	return c.run(
+		runtime,
+		strings.TrimSpace(strings.Split(versionLine, "|")[1]),
+		fmt.Sprintf("deb [arch=amd64] https://download.docker.com/linux/ubuntu %s stable", c.os.Version),
+		"https://download.docker.com/linux/ubuntu/gpg",
+		"0EBFCD88",
+	)
+}
+
+func (c *criDep) run(runtime, version, repoURL, keyURL, keyFingerprint string) error {
+
+	try := func() error {
+		// Obviously, docker doesn't care about the exact containerd version, so neighter should ORBITER
+		// https://docs.docker.com/engine/install/centos/
+		// https://docs.docker.com/engine/install/ubuntu/
+		if err := c.manager.Install(&dep.Software{
+			Package: "containerd.io",
+			Version: containerdVersion,
+		}); err != nil {
+			return err
+		}
+
+		err := c.manager.Install(&dep.Software{
+			Package: runtime,
+			Version: version,
+		})
 		return err
 	}
 
-	if err := c.manager.Install(&dep.Software{
-		Package: runtime,
-		Version: strings.TrimSpace(strings.Split(versionLine, "|")[1]),
-	}); err != nil {
-		c.monitor.Error(errors.Wrap(err, "installing container runtime failed"))
-	}
+	if err := try(); err != nil {
+		swmonitor := c.monitor.WithField("software", "docker")
+		swmonitor.Error(fmt.Errorf("installing software from existing repo failed, trying again after adding repo: %w", err))
 
-	c.manager.Add(&dep.Repository{
-		Repository:     fmt.Sprintf("deb [arch=amd64] https://download.docker.com/linux/ubuntu %s stable", c.os.Version),
-		KeyURL:         "https://download.docker.com/linux/ubuntu/gpg",
-		KeyFingerprint: "0EBFCD88",
-	})
+		if err := c.manager.Add(&dep.Repository{
+			Repository:     repoURL,
+			KeyURL:         keyURL,
+			KeyFingerprint: keyFingerprint,
+		}); err != nil {
+			return err
+		}
+		swmonitor.WithField("url", repoURL).Info("repo added")
+
+		if err := try(); err != nil {
+			swmonitor.Error(fmt.Errorf("installing software from %s failed: %w", repoURL, err))
+			return err
+		}
+	}
 
 	if err := c.systemd.Enable("docker"); err != nil {
 		return err

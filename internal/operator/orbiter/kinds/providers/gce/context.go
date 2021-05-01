@@ -13,20 +13,20 @@ import (
 )
 
 type context struct {
-	monitor         mntr.Monitor
-	networkName     string
-	networkURL      string
-	orbID           string
-	providerID      string
-	projectID       string
-	desired         *Spec
-	client          *compute.Service
-	machinesService *machinesService
-	ctx             ctxpkg.Context
-	auth            *option.ClientOption
+	monitor     mntr.Monitor
+	networkName string
+	networkURL  string
+	orbID       string
+	providerID  string
+	projectID   string
+	desired     *Spec
+	client      *compute.Service
+	//	machinesService *machinesService
+	ctx  ctxpkg.Context
+	auth *option.ClientOption
 }
 
-func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*context, error) {
+func service(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
 	ctx := ctxpkg.Background()
@@ -47,8 +47,10 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 	h := fnv.New32()
 	h.Write([]byte(orbID))
 	networkName := fmt.Sprintf("orbos-network-%d", h.Sum32())
+	h.Reset()
 	networkURL := fmt.Sprintf("projects/%s/global/networks/%s", key.ProjectID, networkName)
-	newContext := &context{
+
+	return newMachinesService(&context{
 		monitor:     monitor,
 		orbID:       orbID,
 		providerID:  providerID,
@@ -59,10 +61,5 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 		auth:        &opt,
 		networkName: networkName,
 		networkURL:  networkURL,
-	}
-	h.Reset()
-
-	newContext.machinesService = newMachinesService(newContext, oneoff)
-
-	return newContext, nil
+	}, oneoff), nil
 }

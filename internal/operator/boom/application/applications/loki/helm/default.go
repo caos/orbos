@@ -1,12 +1,12 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
 		NodeSelector: map[string]string{},
 		Tolerations:  nil,
@@ -73,8 +73,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			},
 		},
 		Image: &Image{
-			Repository: "grafana/loki",
-			Tag:        imageTags["grafana/loki"],
+			Repository: image,
+			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
 		LivenessProbe: &LivenessProbe{

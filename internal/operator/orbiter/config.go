@@ -1,9 +1,9 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/ingestion"
-	"github.com/caos/orbos/internal/orb"
+	"github.com/caos/orbos/pkg/git"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 )
 
 type Config struct {
@@ -12,5 +12,5 @@ type Config struct {
 	Adapt         AdaptFunc
 	FinishedChan  chan struct{}
 	PushEvents    func(events []*ingestion.EventRequest) error
-	OrbConfig     orb.Orb
+	OrbConfig     orbcfg.Orb
 }

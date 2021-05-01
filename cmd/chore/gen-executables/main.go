@@ -15,8 +15,8 @@ import (
 
 func main() {
 
-	version := flag.String("version", "none", "Path to the git repositorys path to the file containing orbiters current state")
-	commit := flag.String("commit", "none", "Path to the git repositorys path to the file containing orbiters current state")
+	version := flag.String("version", "none", "Value shown by orbctl --version")
+	commit := flag.String("commit", "none", "Commit SHA shown by orbctl --version")
 	githubClientID := flag.String("githubclientid", "none", "ClientID used for OAuth with github as store")
 	githubClientSecret := flag.String("githubclientsecret", "none", "ClientSecret used for OAuth with github as store")
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
@@ -60,6 +60,7 @@ func main() {
 	packableFiles := executables.PackableFiles(toChan([]string{
 		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/calico.yaml"),
 		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/clusters/kubernetes/networks/cilium.yaml"),
+		filepath.Join(cmdPath, "../internal/operator/orbiter/kinds/providers/gce/kubernetes_gce.yaml"),
 	}))
 
 	if err := executables.PreBuild(deriveJoinPackables(packableExecutables, packableFiles)); err != nil {

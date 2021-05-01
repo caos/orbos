@@ -1,18 +1,18 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
 		FullnameOverride: "kube-state-metrics",
 		PrometheusScrape: true,
 		Image: &Image{
-			Repository: "quay.io/coreos/kube-state-metrics",
-			Tag:        imageTags["quay.io/coreos/kube-state-metrics"],
+			Repository: image,
+			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
 		Replicas: 1,

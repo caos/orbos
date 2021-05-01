@@ -2,9 +2,9 @@ package gce
 
 import (
 	"fmt"
+	secret2 "github.com/caos/orbos/pkg/secret"
 
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
@@ -49,13 +49,13 @@ func (p Pool) validate() error {
 }
 
 type SSHKey struct {
-	Private *secret.Secret `yaml:",omitempty"`
-	Public  *secret.Secret `yaml:",omitempty"`
+	Private *secret2.Secret `yaml:",omitempty"`
+	Public  *secret2.Secret `yaml:",omitempty"`
 }
 
 type Spec struct {
 	Verbose             bool
-	JSONKey             *secret.Secret `yaml:",omitempty"`
+	JSONKey             *secret2.Secret `yaml:",omitempty"`
 	Region              string
 	Zone                string
 	Pools               map[string]*Pool

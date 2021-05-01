@@ -1,17 +1,23 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/pkg/git"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
+	"github.com/caos/orbos/pkg/labels"
+
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 )
 
-func TeardownCommand(rv RootValues) *cobra.Command {
+func TeardownCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		cmd = &cobra.Command{
@@ -43,15 +49,24 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 	)
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
-		if err := orbConfig.IsComplete(); err != nil {
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+
+		if !rv.Gitops {
+			return errors.New("teardown command is only supported with the --gitops flag and a committed orbiter.yml")
+		}
+
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 
@@ -63,11 +78,7 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			return err
 		}
 
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if foundOrbiter {
+		if gitClient.Exists(git.OrbiterFile) {
 			monitor.WithFields(map[string]interface{}{
 				"version": version,
 				"commit":  gitCommit,
@@ -86,7 +97,8 @@ func TeardownCommand(rv RootValues) *cobra.Command {
 			return orbiter.Destroy(
 				monitor,
 				gitClient,
-				orb.AdaptFunc(
+				orbadapter.AdaptFunc(
+					labels.NoopOperator("ORBOS"),
 					orbConfig,
 					gitCommit,
 					true,

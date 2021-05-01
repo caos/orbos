@@ -8,7 +8,7 @@ import (
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -139,10 +139,10 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 		return nil, err
 	}
 
-	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
+	svc, err := service(monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return core.ListMachines(ctx.machinesService)
+	return core.ListMachines(svc)
 }

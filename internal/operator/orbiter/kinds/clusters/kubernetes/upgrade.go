@@ -3,6 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
+	"github.com/caos/orbos/pkg/kubernetes"
+
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -18,7 +20,7 @@ func (c initializedMachines) Less(i, j int) bool { return c[i].infra.ID() < c[j]
 func ensureSoftware(
 	monitor mntr.Monitor,
 	target KubernetesVersion,
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	controlplane []*initializedMachine,
 	workers []*initializedMachine) (bool, error) {
 
@@ -137,7 +139,7 @@ func findPath(
 }
 
 func step(
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	monitor mntr.Monitor,
 	sortedMachines initializedMachines,
 	from common.Software,
@@ -147,10 +149,10 @@ func step(
 	for _, machine := range sortedMachines {
 		if machine.node != nil && machine.node.Labels["orbos.ch/updating"] == machine.node.Status.NodeInfo.KubeletVersion {
 			delete(machine.node.Labels, "orbos.ch/updating")
-			if k8sClient.Tainted(machine.node, updating) {
-				machine.node.Spec.Taints = k8sClient.RemoveFromTaints(machine.node.Spec.Taints, updating)
+			if k8sClient.Tainted(machine.node, kubernetes.Updating) {
+				machine.node.Spec.Taints = k8sClient.RemoveFromTaints(machine.node.Spec.Taints, kubernetes.Updating)
 			}
-			if err := k8sClient.updateNode(machine.node); err != nil {
+			if err := k8sClient.UpdateNode(machine.node); err != nil {
 				return false, err
 			}
 		}
@@ -171,7 +173,7 @@ func step(
 }
 
 func plan(
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	monitor mntr.Monitor,
 	machine *initializedMachine,
 	isFirstControlplane bool,
@@ -195,7 +197,7 @@ func plan(
 			return nil
 		}
 		machine.node.Labels["orbos.ch/updating"] = to.Kubelet.Version
-		return k8sClient.Drain(machine.currentMachine, machine.node, updating)
+		return k8sClient.Drain(machine.currentMachine, machine.node, kubernetes.Updating)
 	}
 
 	ensureSoftware := func(packages common.Software, phase string) func() error {
@@ -243,7 +245,7 @@ func plan(
 		}
 
 		machine.node.Labels["orbos.ch/kubeadm-upgraded"] = to.Kubelet.Version
-		return k8sClient.updateNode(machine.node)
+		return k8sClient.UpdateNode(machine.node)
 	}
 
 	nodeIsReady := machine.currentNodeagent.NodeIsReady

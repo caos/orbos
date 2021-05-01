@@ -3,17 +3,18 @@ package auth
 import (
 	"strings"
 
+	"github.com/caos/orbos/pkg/secret/read"
+
 	gitlab "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 )
 
 func GetGitlabAuthConfig(spec *gitlab.Auth) (map[string]string, error) {
-	clientID, err := helper2.GetSecretValue(spec.ClientID, spec.ExistingClientIDSecret)
+	clientID, err := read.GetSecretValueOnlyIncluster(spec.ClientID, spec.ExistingClientIDSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	clientSecret, err := helper2.GetSecretValue(spec.ClientSecret, spec.ExistingClientSecretSecret)
+	clientSecret, err := read.GetSecretValueOnlyIncluster(spec.ClientSecret, spec.ExistingClientSecretSecret)
 	if err != nil {
 		return nil, err
 	}

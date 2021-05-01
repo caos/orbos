@@ -32,6 +32,7 @@ createLoop:
 			if gceTp.Description == lb.targetPool.gce.Description {
 				lb.targetPool.gce.SelfLink = gceTp.SelfLink
 				lb.targetPool.gce.Name = gceTp.Name
+				lb.targetPool.gce.Instances = gceTp.Instances
 				assignRefs(lb)
 				if len(gceTp.HealthChecks) > 0 && gceTp.HealthChecks[0] != lb.targetPool.gce.HealthChecks[0] {
 					ensure = append(ensure, operateFunc(

@@ -4,12 +4,22 @@ import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/helm"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
 )
 
 func (p *PrometheusNodeExporter) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
 	// spec := toolset.PrometheusNodeExporter
-	values := helm.DefaultValues(p.GetImageTags())
+	imageTags := p.GetImageTags()
+	image := "quay.io/prometheus/node-exporter"
+
+	if toolset != nil && toolset.NodeMetricsExporter != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			image: toolset.NodeMetricsExporter.OverwriteVersion,
+		})
+		helper.OverwriteExistingKey(imageTags, &image, toolset.NodeMetricsExporter.OverwriteImage)
+	}
+	values := helm.DefaultValues(imageTags, image)
 
 	// if spec.ReplicaCount != 0 {
 	// 	values.ReplicaCount = spec.ReplicaCount

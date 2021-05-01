@@ -1,7 +1,7 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func getSecretsMap(desiredKind *DesiredV0) map[string]*secret.Secret {

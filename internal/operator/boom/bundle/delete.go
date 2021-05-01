@@ -19,7 +19,7 @@ func deleteWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientg
 	resultFunc := func(resultFilePath, namespace string) error {
 
 		for _, resource := range currentResourceList {
-			if err := clientgo.DeleteResource(resource); err != nil {
+			if err := clientgo.DeleteResource(monitor, resource); err != nil {
 				err := errors.Wrap(err, "Failed to delete resource")
 				delMonitor.Error(err)
 				return err

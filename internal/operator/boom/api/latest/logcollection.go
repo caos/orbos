@@ -1,8 +1,8 @@
 package latest
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/storage"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type LogCollection struct {
@@ -21,6 +21,10 @@ type LogCollection struct {
 	Outputs []string `json:"outputs,omitempty" yaml:"outputs,omitempty"`
 	//Watch these namespaces
 	WatchNamespaces []string `json:"watchNamespaces,omitempty" yaml:"watchNamespaces,omitempty"`
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }
 
 type Component struct {

@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,11 +14,10 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
-	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/pkg/git"
 )
 
-func EditCommand(rv RootValues) *cobra.Command {
-
+func EditCommand(getRv GetRootValues) *cobra.Command {
 	return &cobra.Command{
 		Use:     "edit <path>",
 		Short:   "Edit the file in your favorite text editor",
@@ -25,13 +25,20 @@ func EditCommand(rv RootValues) *cobra.Command {
 		Example: `orbctl file edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			_, _, orbConfig, gitClient, errFunc, err := rv()
+			rv, err := getRv()
 			if err != nil {
 				return err
 			}
 			defer func() {
-				err = errFunc(err)
+				err = rv.ErrFunc(err)
 			}()
+
+			orbConfig := rv.OrbConfig
+			gitClient := rv.GitClient
+
+			if !rv.Gitops {
+				return errors.New("edit command is only supported with the --gitops flag")
+			}
 
 			if err := orbConfig.IsConnectable(); err != nil {
 				return err

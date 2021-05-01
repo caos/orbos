@@ -1,11 +1,11 @@
 package monitoring
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/network"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/storage"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type Monitoring struct {
@@ -32,6 +32,10 @@ type Monitoring struct {
 	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }
 
 func (m *Monitoring) InitSecrets() {

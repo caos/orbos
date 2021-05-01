@@ -1,8 +1,8 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -17,6 +17,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 		FullnameOverride:         "grafana",
 		Enabled:                  true,
 		DefaultDashboardsEnabled: true,
+		AdminUser:                "admin",
 		AdminPassword:            "admin",
 		Ingress: &Ingress{
 			Enabled: false,
@@ -46,7 +47,7 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Image:   "dduportal/bats",
 			Tag:     imageTags["dduportal/bats"],
 		},
-		Plugins: []string{"grafana-piechart-panel"},
+		Plugins: []string{},
 		Ini: &Ini{
 			Paths: map[string]string{
 				"data":         "/var/lib/grafana/data",

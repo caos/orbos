@@ -3,7 +3,7 @@ package helm
 import (
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -41,7 +41,7 @@ func DefaultDexValues(imageTags map[string]string) *Dex {
 	}
 }
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	knownHosts := []string{
 		"bitbucket.org ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAubiN81eDcafrgMeLzaFPsw2kNvEcqTKl/VqLat/MaB33pZy0y3rJZtnqwR2qOOvbwKZYKiEO1O6VqNEBxKvJJelCq0dTXWT5pbO2gDXC6h6QDXCaHo6pOHGPUy+YBaGQRGuSusMEASYiWunYN0vCAI8QaXnWMXNMdFP3jHAJH0eDsoiGnLPBlBp4TNm6rYI74nMzgz3B9IikW4WVK+dc8KZJZWYjAuORU3jc1c/NPskD2ASinf8v3xnfXeukU0sJ5N6m5E8VLjObPEO+mN2t/FZTMZLiFqPWc/ALSqnMnnhwrNi2rbfg/rd/IpL8Le3pSBne8+seeFVBoGqzHM9yXw==",
 		"github.com ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ==",
@@ -66,15 +66,15 @@ func DefaultValues(imageTags map[string]string) *Values {
 		InstallCRDs:      true,
 		Global: &Global{
 			Image: &Image{
-				Repository:      "argoproj/argocd",
-				Tag:             imageTags["argoproj/argocd"],
+				Repository:      image,
+				Tag:             imageTags[image],
 				ImagePullPolicy: "IfNotPresent",
 			},
 		},
 		Controller: &Controller{
 			Image: &Image{
-				Repository:      "argoproj/argocd",
-				Tag:             imageTags["argoproj/argocd"],
+				Repository:      image,
+				Tag:             imageTags[image],
 				ImagePullPolicy: "IfNotPresent",
 			},
 			Name: "application-controller",
@@ -187,8 +187,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		Server: &Server{
 			Image: &Image{
-				Repository:      "argoproj/argocd",
-				Tag:             imageTags["argoproj/argocd"],
+				Repository:      image,
+				Tag:             imageTags[image],
 				ImagePullPolicy: "IfNotPresent",
 			},
 			Name:          "server",
@@ -253,8 +253,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 		},
 		RepoServer: &RepoServer{
 			Image: &Image{
-				Repository:      "argoproj/argocd",
-				Tag:             imageTags["argoproj/argocd"],
+				Repository:      image,
+				Tag:             imageTags[image],
 				ImagePullPolicy: "IfNotPresent",
 			},
 			Name:          "repo-server",

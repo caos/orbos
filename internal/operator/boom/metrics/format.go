@@ -2,51 +2,38 @@ package metrics
 
 import "github.com/prometheus/client_golang/prometheus"
 
-func WrongCRDFormat(url string, path string) {
+func WrongCRDFormat() {
 	labels := prometheus.Labels{
-		"url":    url,
-		"path":   path,
 		"reason": "structure",
+		"result": "failure",
 	}
 	metrics.gyrFormat.Set(failed)
-
-	labels["reason"] = "structure"
-	labels["result"] = "failure"
 	metrics.crdFormat.With(labels).Inc()
 }
 
-func UnsupportedAPIGroup(url string, path string) {
+func UnsupportedAPIGroup() {
 	labels := prometheus.Labels{
-		"url":  url,
-		"path": path,
+		"reason": "apiGroup",
+		"result": "failure",
 	}
 	metrics.gyrFormat.Set(failed)
-
-	labels["result"] = "failure"
-	labels["reason"] = "apiGroup"
 	metrics.crdFormat.With(labels).Inc()
 }
 
-func UnsupportedVersion(url string, path string) {
+func UnsupportedVersion() {
 	labels := prometheus.Labels{
-		"url":  url,
-		"path": path,
+		"reason": "version",
+		"result": "failure",
 	}
 	metrics.gyrFormat.Set(failed)
-
-	labels["result"] = "failure"
-	labels["reason"] = "version"
 	metrics.crdFormat.With(labels).Inc()
 }
 
-func SuccessfulUnmarshalCRD(url string, path string) {
+func SuccessfulUnmarshalCRD() {
 	labels := prometheus.Labels{
-		"url":  url,
-		"path": path,
+		"reason": "unmarshal",
+		"result": "success",
 	}
 	metrics.gyrFormat.Set(success)
-
-	labels["result"] = "success"
-	labels["reason"] = "unmarshal"
 	metrics.crdFormat.With(labels).Inc()
 }

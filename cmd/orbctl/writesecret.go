@@ -1,18 +1,18 @@
 package main
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/internal/secret/operators"
-
-	"github.com/caos/orbos/internal/secret"
-
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/caos/orbos/internal/secret/operators"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/secret"
 )
 
-func WriteSecretCommand(rv RootValues) *cobra.Command {
+func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
 		value string
@@ -23,9 +23,11 @@ func WriteSecretCommand(rv RootValues) *cobra.Command {
 			Short: "Encrypt a secret and push it to the repository",
 			Long:  "Encrypt a secret and push it to the repository.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 			Args:  cobra.MaximumNArgs(1),
-			Example: `orbctl writesecret mystaticprovider.bootstrapkey --file ~/.ssh/my-orb-bootstrap
-orbctl writesecret mystaticprovider.bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
-orbctl writesecret mygceprovider.google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
+			Example: `orbctl writesecret --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret --value $(cat ~/.ssh/my-orb-bootstrap)
+orbctl writesecret mystaticprovider.bootstrapkey.encrypted --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret mystaticprovider.bootstrapkey_pub.encrypted --file ~/.ssh/my-orb-bootstrap.pub
+orbctl writesecret mygceprovider.google_application_credentials_value.encrypted --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
 		}
 	)
 
@@ -41,41 +43,38 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 			return err
 		}
 
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
-		if err := orbConfig.IsComplete(); err != nil {
-			return err
-		}
-
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
-			return err
-		}
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
 		}
 
-		if err := secret.Write(
-			monitor,
-			gitClient,
-			path,
-			s,
-			operators.GetAllSecretsFunc(orbConfig),
-			operators.PushFunc()); err != nil {
+		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
+		if err != nil && !rv.Gitops {
 			return err
 		}
-		return nil
+		err = nil
+
+		return secret.Write(
+			monitor,
+			k8sClient,
+			path,
+			s,
+			"orbctl",
+			version,
+			operators.GetAllSecretsFunc(monitor, true, rv.Gitops, gitClient, k8sClient, orbConfig),
+			operators.PushFunc(monitor, rv.Gitops, gitClient, k8sClient))
 	}
 	return cmd
 }
@@ -94,7 +93,7 @@ func content(value string, file string, stdin bool) (string, error) {
 	}
 
 	if channels != 1 {
-		return "", errors.New("Content must be provided eighter by value or by file path or by standard input")
+		return "", errors.New("content must be provided eighter by value or by file path or by standard input")
 	}
 
 	if value != "" {

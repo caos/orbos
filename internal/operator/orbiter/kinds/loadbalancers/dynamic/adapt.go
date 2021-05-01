@@ -8,11 +8,11 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/prometheus/client_golang/prometheus"
@@ -142,11 +142,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
-						machineMonitor.WithField("open", fw.AllZones()).Debug("Loadbalancing firewall desired")
+						machineMonitor.WithField("open", fw.ToCurrent()).Debug("Loadbalancing firewall desired")
 					}
 					deepNa.Firewall.Merge(fw)
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						machineMonitor.WithField("ports", deepNa.Firewall.AllZones()).Info("Awaiting firewalld config")
+						machineMonitor.WithField("ports", deepNa.Firewall.ToCurrent()).Info("Awaiting firewalld config")
 						done = false
 					}
 					for _, port := range fw.Ports("external") {
@@ -178,14 +178,14 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}
 						if !sysctl.Contains(deepNa.Software.Sysctl, common.Package{
 							Config: map[string]string{
-								string(sysctl.IpForward):    "1",
-								string(sysctl.NonLocalBind): "1",
+								string(common.IpForward):    "1",
+								string(common.NonLocalBind): "1",
 							},
 						}) {
 							machineMonitor.Changed("sysctl desired")
 						}
-						sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
-						sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
+						sysctl.Enable(&deepNa.Software.Sysctl, common.IpForward)
+						sysctl.Enable(&deepNa.Software.Sysctl, common.NonLocalBind)
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
 							done = false
@@ -222,7 +222,14 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}).Debug("Executed command")
 						return user, nil
 					},
-					"vip":       mapVIP,
+					"vip": mapVIP,
+					"routerID": func(vip *VIP) string {
+						vipParts := strings.Split(mapVIP(vip), ".")
+						if len(vipParts) != 4 || vipParts[3] == "0" {
+							return "55"
+						}
+						return vipParts[3]
+					},
 					"derefBool": func(in *bool) bool { return in != nil && *in },
 				})
 
@@ -310,7 +317,7 @@ vrrp_instance VI_{{ $idx }} {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
 	interface {{ $root.Interface }}
-	virtual_router_id {{ add 55 $idx }}
+	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
 		auth_type PASS

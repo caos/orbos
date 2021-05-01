@@ -45,7 +45,7 @@ func (m *machinesService) use(key *SSHKey) error {
 }
 
 func (m *machinesService) restartPreemptibleMachines() error {
-	pools, err := m.instances()
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return err
 	}
@@ -123,11 +123,12 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 	}
 
 	name := newName()
+	nwTags := networkTags(m.context.orbID, m.context.providerID, poolName)
 	sshKey := fmt.Sprintf("orbiter:%s", m.key.Public.Value)
 	createInstance := &compute.Instance{
 		Name:        name,
 		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", m.context.desired.Zone, cores, int(memory)),
-		Tags:        &compute.Tags{Items: networkTags(m.context.orbID, m.context.providerID, poolName)},
+		Tags:        &compute.Tags{Items: nwTags},
 		NetworkInterfaces: []*compute.NetworkInterface{{
 			Network: m.context.networkURL,
 		}},
@@ -140,6 +141,9 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 				Value: &sshKey,
 			}},
 		},
+		ServiceAccounts: []*compute.ServiceAccount{{
+			Scopes: []string{"https://www.googleapis.com/auth/compute"},
+		}},
 	}
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
@@ -226,21 +230,21 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 }
 
 func (m *machinesService) ListPools() ([]string, error) {
-
-	pools, err := m.instances()
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return nil, err
 	}
 
 	var poolNames []string
 	for poolName := range pools {
-		poolNames = append(poolNames, poolName)
+		copyPoolName := poolName
+		poolNames = append(poolNames, copyPoolName)
 	}
 	return poolNames, nil
 }
 
 func (m *machinesService) List(poolName string) (infra.Machines, error) {
-	pools, err := m.instances()
+	pools, err := getAllInstances(m)
 	if err != nil {
 		return nil, err
 	}
@@ -248,15 +252,18 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 	pool := pools[poolName]
 	machines := make([]infra.Machine, len(pool))
 	for idx, machine := range pool {
-		machines[idx] = machine
+		copyInstance := *machine
+		machines[idx] = &copyInstance
 	}
 
 	return machines, nil
 }
 
-func (m *machinesService) instances() (map[string][]*instance, error) {
+func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 	if m.cache.instances != nil {
 		return m.cache.instances, nil
+	} else {
+		m.cache.instances = make(map[string][]*instance)
 	}
 
 	instances, err := m.context.client.Instances.
@@ -268,8 +275,8 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 		return nil, err
 	}
 
-	m.cache.instances = make(map[string][]*instance)
 	for _, inst := range instances.Items {
+
 		if inst.Labels["orb"] != m.context.orbID || inst.Labels["provider"] != m.context.providerID {
 			continue
 		}
@@ -294,7 +301,9 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 				rebootRequired = true
 				unrequireReboot = func(pos int) func() {
 					return func() {
-						m.context.desired.RebootRequired = append(m.context.desired.RebootRequired[0:pos], m.context.desired.RebootRequired[pos+1:]...)
+						copy(m.context.desired.RebootRequired[pos:], m.context.desired.RebootRequired[pos+1:])
+						m.context.desired.RebootRequired[len(m.context.desired.RebootRequired)-1] = ""
+						m.context.desired.RebootRequired = m.context.desired.RebootRequired[:len(m.context.desired.RebootRequired)-1]
 					}
 				}(idx)
 				break
@@ -308,7 +317,9 @@ func (m *machinesService) instances() (map[string][]*instance, error) {
 				replacementRequired = true
 				unrequireReplacement = func(pos int) func() {
 					return func() {
-						m.context.desired.ReplacementRequired = append(m.context.desired.ReplacementRequired[0:pos], m.context.desired.ReplacementRequired[pos+1:]...)
+						copy(m.context.desired.ReplacementRequired[pos:], m.context.desired.ReplacementRequired[pos+1:])
+						m.context.desired.ReplacementRequired[len(m.context.desired.ReplacementRequired)-1] = ""
+						m.context.desired.ReplacementRequired = m.context.desired.ReplacementRequired[:len(m.context.desired.ReplacementRequired)-1]
 					}
 				}(idx)
 				break
@@ -378,11 +389,15 @@ func (m *machinesService) removeMachineFunc(pool, id string) func() error {
 
 func networkTags(orbID, providerID string, poolName ...string) []string {
 	tags := []string{
-		fmt.Sprintf("orb-%s", orbID),
+		orbNetworkTag(orbID),
 		fmt.Sprintf("provider-%s", providerID),
 	}
 	for _, pool := range poolName {
 		tags = append(tags, fmt.Sprintf("pool-%s", pool))
 	}
 	return tags
+}
+
+func orbNetworkTag(orbID string) string {
+	return fmt.Sprintf("orb-%s", orbID)
 }

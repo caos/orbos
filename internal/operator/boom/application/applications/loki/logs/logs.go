@@ -1,6 +1,11 @@
 package logs
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/application/applications/boom"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/database"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/networking"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/orbiter"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/zitadel"
 	"strings"
 
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
@@ -56,6 +61,10 @@ func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {
 
 func getAllFlows(toolsetCRDSpec *toolsetslatest.ToolsetSpec, outputNames []string, clusterOutputs []string) []*logging.Flow {
 
+	if toolsetCRDSpec.LogsPersisting == nil || !toolsetCRDSpec.LogsPersisting.Deploy {
+		return []*logging.Flow{}
+	}
+
 	flows := make([]*logging.Flow, 0)
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
 		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Ambassador) {
@@ -96,11 +105,6 @@ func getAllFlows(toolsetCRDSpec *toolsetslatest.ToolsetSpec, outputNames []strin
 		flows = append(flows, logging.NewFlow(plogs.GetFlow(outputNames, clusterOutputs)))
 	}
 
-	if toolsetCRDSpec.LogsPersisting != nil && toolsetCRDSpec.LogsPersisting.Deploy &&
-		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Loki) {
-		flows = append(flows, logging.NewFlow(getLokiFlow(outputNames, clusterOutputs)))
-	}
-
 	if toolsetCRDSpec.MetricsServer != nil && toolsetCRDSpec.MetricsServer.Deploy &&
 		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.MetricsServer) {
 		flows = append(flows, logging.NewFlow(mslogs.GetFlow(outputNames, clusterOutputs)))
@@ -109,6 +113,34 @@ func getAllFlows(toolsetCRDSpec *toolsetslatest.ToolsetSpec, outputNames []strin
 	if toolsetCRDSpec.SystemdMetricsExporter != nil && toolsetCRDSpec.SystemdMetricsExporter.Deploy &&
 		(toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.PrometheusSystemdExporter) {
 		flows = append(flows, logging.NewFlow(pselogs.GetFlow(outputNames, clusterOutputs)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Loki {
+		flows = append(flows, logging.NewFlow(getLokiFlow(outputNames, clusterOutputs)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Boom {
+		flows = append(flows, logging.NewFlow(boom.GetFlow(outputNames, clusterOutputs)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Orbiter {
+		flows = append(flows, logging.NewFlow(orbiter.GetFlow(outputNames, clusterOutputs)))
+	}
+
+	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Zitadel {
+		for _, flow := range zitadel.GetFlows(outputNames, clusterOutputs) {
+			flows = append(flows, logging.NewFlow(flow))
+		}
+	}
+
+	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Database {
+		for _, flow := range database.GetFlows(outputNames, clusterOutputs) {
+			flows = append(flows, logging.NewFlow(flow))
+		}
+	}
+
+	if toolsetCRDSpec.LogsPersisting.Logs == nil || toolsetCRDSpec.LogsPersisting.Logs.Networking {
+		flows = append(flows, logging.NewFlow(networking.GetFlow(outputNames, clusterOutputs)))
 	}
 
 	return flows

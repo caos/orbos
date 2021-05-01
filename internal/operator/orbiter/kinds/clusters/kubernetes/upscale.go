@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/caos/orbos/internal/git"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 
-	"github.com/caos/orbos/internal/secret"
-
-	"github.com/caos/orbos/internal/api"
 	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/helpers"
@@ -20,15 +19,16 @@ func ensureUpScale(
 	monitor mntr.Monitor,
 	clusterID string,
 	desired *DesiredV0,
-	psf api.PushDesiredFunc,
+	psf func(mntr.Monitor) error,
 	controlplanePool *initializedPool,
 	workerPools []*initializedPool,
 	kubeAPI *infra.Address,
 	k8sVersion KubernetesVersion,
-	k8sClient *Client,
+	k8sClient *kubernetes.Client,
 	oneoff bool,
 	initializeMachine func(infra.Machine, *initializedPool) initializedMachine,
 	gitClient *git.Client,
+	providerK8sSpec infra.Kubernetes,
 ) (changed bool, err error) {
 
 	wCount := 0
@@ -146,6 +146,13 @@ nodes:
 			"controlplane": ensuredControlplane,
 			"workers":      ensuredWorkers,
 		}).Debug("Scale is ensured")
+
+		for _, pool := range append(workerPools, controlplanePool) {
+			if err := pool.infra.EnsureMembers(); err != nil {
+				return false, err
+			}
+		}
+
 		return true, nil
 	}
 
@@ -202,7 +209,9 @@ nodes:
 			string(certKey),
 			k8sClient,
 			imageRepository,
-			gitClient)
+			gitClient,
+			providerK8sSpec,
+		)
 
 		if err != nil {
 			return false, err
@@ -235,14 +244,10 @@ nodes:
 			"",
 			k8sClient,
 			imageRepository,
-			gitClient); err != nil {
+			gitClient,
+			providerK8sSpec,
+		); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
-		}
-	}
-
-	for _, pool := range append(workerPools, controlplanePool) {
-		if err := pool.infra.EnsureMembers(); err != nil {
-			return false, err
 		}
 	}
 

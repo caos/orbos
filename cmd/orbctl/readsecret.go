@@ -4,52 +4,52 @@ import (
 	"os"
 
 	"github.com/caos/orbos/internal/secret/operators"
-
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/secret"
 
 	"github.com/spf13/cobra"
 )
 
-func ReadSecretCommand(rv RootValues) *cobra.Command {
+func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 
 	return &cobra.Command{
-		Use:     "readsecret [path]",
-		Short:   "Print a secrets decrypted value to stdout",
-		Long:    "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
-		Args:    cobra.MaximumNArgs(1),
-		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
+		Use:   "readsecret [path]",
+		Short: "Print a secrets decrypted value to stdout",
+		Long:  "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
+		Args:  cobra.MaximumNArgs(1),
+		Example: `orbctl readsecret
+orbctl readsecret orbiter.k8s.kubeconfig.encrypted
+orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			_, monitor, orbConfig, gitClient, errFunc, err := rv()
+			rv, err := getRv()
 			if err != nil {
 				return err
 			}
 			defer func() {
-				err = errFunc(err)
+				err = rv.ErrFunc(err)
 			}()
 
-			if err := orbConfig.IsComplete(); err != nil {
-				return err
-			}
-
-			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-				return err
-			}
-
-			if err := gitClient.Clone(); err != nil {
-				return err
-			}
+			monitor := rv.Monitor
+			orbConfig := rv.OrbConfig
+			gitClient := rv.GitClient
 
 			path := ""
 			if len(args) > 0 {
 				path = args[0]
 			}
 
+			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
+			if err != nil && !rv.Gitops {
+				return err
+			}
+			err = nil
+
 			value, err := secret.Read(
-				monitor,
-				gitClient,
+				k8sClient,
 				path,
-				operators.GetAllSecretsFunc(orbConfig))
+				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, gitClient, k8sClient, orbConfig),
+			)
 			if err != nil {
 				return err
 			}

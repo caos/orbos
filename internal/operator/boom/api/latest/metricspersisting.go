@@ -1,8 +1,8 @@
 package latest
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/storage"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 )
 
 type MetricsPersisting struct {
@@ -25,6 +25,10 @@ type MetricsPersisting struct {
 	Tolerations k8s.Tolerations `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 	//Resource requirements
 	Resources *k8s.Resources `json:"resources,omitempty" yaml:"resources,omitempty"`
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.
@@ -35,6 +39,8 @@ type Metrics struct {
 	Argocd bool `json:"argocd"`
 	//Bool if metrics should get scraped from kube-state-metrics
 	KubeStateMetrics bool `json:"kube-state-metrics" yaml:"kube-state-metrics"`
+	//Bool if metrics should get scraped from prometheus
+	Prometheus bool `json:"prometheus" yaml:"prometheus"`
 	//Bool if metrics should get scraped from prometheus-node-exporter
 	PrometheusNodeExporter bool `json:"prometheus-node-exporter" yaml:"prometheus-node-exporter"`
 	//Bool if metrics should get scraped from prometheus-systemd-exporter
@@ -47,12 +53,16 @@ type Metrics struct {
 	LoggingOperator bool `json:"logging-operator" yaml:"logging-operator"`
 	//Bool if metrics should get scraped from loki
 	Loki bool `json:"loki"`
-	//Bool if metrics should get scraped from boom
+	//Bool if metrics should get scraped from BOOM
 	Boom bool `json:"boom" yaml:"boom"`
-	//Bool if metrics should get scraped from orbiter
+	//Bool if metrics should get scraped from ORBITER
 	Orbiter bool `json:"orbiter" yaml:"orbiter"`
-	//Bool if metrics should get scraped from zitadel
+	//Bool if metrics should get scraped from ZITADEL
 	Zitadel bool `json:"zitadel" yaml:"zitadel"`
+	//Bool if metrics should get scraped from database
+	Database bool `json:"database" yaml:"database"`
+	//Bool if metrics should get scraped from networking
+	Networking bool `json:"networking" yaml:"networking"`
 }
 
 type RemoteWrite struct {

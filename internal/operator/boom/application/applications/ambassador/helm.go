@@ -2,27 +2,27 @@ package ambassador
 
 import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
-	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/mntr"
-
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/crds"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/ambassador/helm"
+	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/argocd/network"
+	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/network"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret/read"
 )
 
 func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
 
 	ret := make([]interface{}, 0)
-	if toolsetCRDSpec.Reconciling.Network != nil {
+	if toolsetCRDSpec.Reconciling != nil && toolsetCRDSpec.Reconciling.Network != nil {
 		host := crds.GetHostFromConfig(argocdnet.GetHostConfig(toolsetCRDSpec.Reconciling.Network))
 		ret = append(ret, host)
 		mapping := crds.GetMappingFromConfig(argocdnet.GetMappingConfig(toolsetCRDSpec.Reconciling.Network))
 		ret = append(ret, mapping)
 	}
 
-	if toolsetCRDSpec.Monitoring.Network != nil {
+	if toolsetCRDSpec.Monitoring != nil && toolsetCRDSpec.Monitoring.Network != nil {
 		host := crds.GetHostFromConfig(grafananet.GetHostConfig(toolsetCRDSpec.Monitoring.Network))
 		ret = append(ret, host)
 		mapping := crds.GetMappingFromConfig(grafananet.GetMappingConfig(toolsetCRDSpec.Monitoring.Network))
@@ -43,8 +43,16 @@ func (a *Ambassador) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetsla
 
 func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) interface{} {
 	imageTags := helm.GetImageTags()
+	image := "quay.io/datawire/aes"
 
-	values := helm.DefaultValues(imageTags)
+	if toolsetCRDSpec != nil && toolsetCRDSpec.APIGateway != nil {
+		helper.OverwriteExistingValues(imageTags, map[string]string{
+			image: toolsetCRDSpec.APIGateway.OverwriteVersion,
+		})
+		helper.OverwriteExistingKey(imageTags, &image, toolsetCRDSpec.APIGateway.OverwriteImage)
+	}
+
+	values := helm.DefaultValues(imageTags, image)
 
 	spec := toolsetCRDSpec.APIGateway
 
@@ -103,16 +111,23 @@ func (a *Ambassador) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *tool
 		values.Service.Annotations.Module.Config.UseProxyProto = *spec.ProxyProtocol
 	}
 
-	if spec.Caching == nil {
+	if spec.Caching != nil {
+		if spec.Caching.Enable {
+			values.Redis.Create = true
+		}
+
+		if spec.Caching.Resources != nil {
+			values.Redis.Resources = spec.Caching.Resources
+		}
+	}
+
+	licenceKey, err := read.GetSecretValueOnlyIncluster(spec.LicenceKey, spec.ExistingLicenceKey)
+	if err != nil {
+		monitor.Debug("No licence key found")
 		return values
 	}
-
-	if spec.Caching.Enable {
-		values.Redis.Create = true
-	}
-
-	if spec.Caching.Resources != nil {
-		values.Redis.Resources = spec.Caching.Resources
+	if licenceKey != "" {
+		values.LicenseKey.Value = licenceKey
 	}
 
 	return values

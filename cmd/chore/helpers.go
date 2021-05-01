@@ -26,14 +26,14 @@ func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 		return runOrbctlCmd(debug), nil
 	}
 
-	cmd := exec.Command("git", "branch", "--show-current")
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	outBuf := new(bytes.Buffer)
 	cmd.Stdout = outBuf
 	if err := Run(cmd); err != nil {
 		return noop, err
 	}
 
-	version := strings.TrimSpace(strings.Replace(outBuf.String(), "heads/", "", 1))
+	version := strings.TrimSpace(strings.Replace(outBuf.String(), "heads/", "", 1)) + "-dev"
 
 	cmd = exec.Command("git", "rev-parse", "HEAD")
 	outBuf = new(bytes.Buffer)
@@ -63,6 +63,7 @@ func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 	}
 	cmd = exec.Command("go", args...)
 	cmd.Stdout = os.Stderr
+	// gen-executables
 	if err := Run(cmd); err != nil {
 		return noop, err
 	}
@@ -76,6 +77,7 @@ func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 	cmd = exec.Command("go", args...)
 	cmd.Stdout = os.Stderr
 	cmd.Env = []string{"CGO_ENABLED=0", "GOOS=linux"}
+	// gen-charts
 	if err := Run(cmd); err != nil {
 		return noop, err
 	}
@@ -84,10 +86,11 @@ func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 }
 
 func runOrbctlCmd(debug bool) func() *exec.Cmd {
+	bin := "./artifacts/orbctl-Linux-x86_64"
 	return func() *exec.Cmd {
 		if debug {
-			return exec.Command("dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "./artifacts/orbctl-Linux-x86_64", "--")
+			return exec.Command("dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", bin, "--")
 		}
-		return exec.Command("./artifacts/orbctl-Linux-x86_64")
+		return exec.Command(bin)
 	}
 }

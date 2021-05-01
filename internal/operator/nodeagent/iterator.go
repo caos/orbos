@@ -5,13 +5,12 @@ package nodeagent
 import (
 	"fmt"
 	"io/ioutil"
-	"runtime/debug"
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 )
 
 type Rebooter interface {
@@ -34,9 +33,18 @@ func RepoKey() ([]byte, error) {
 	return key, err
 }
 
-func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
+func Iterator(
+	monitor mntr.Monitor,
+	gitClient *git.Client,
+	nodeAgentCommit string,
+	id string,
+	firewallEnsurer FirewallEnsurer,
+	networkingEnsurer NetworkingEnsurer,
+	conv Converter,
+	before func() error,
+) func() {
 
-	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, conv)
+	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, networkingEnsurer, conv)
 
 	return func() {
 
@@ -74,7 +82,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			return
 		}
 
-		if desired.Spec.Commit != nodeAgentCommit {
+		if nodeAgentCommit != "debug" && desired.Spec.Commit != nodeAgentCommit {
 			monitor.WithFields(map[string]interface{}{
 				"desired": desired.Spec.Commit,
 				"current": nodeAgentCommit,
@@ -97,12 +105,17 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			panic(err)
 		}
 
+		/*query := func() (func() error, error) {
+			return doQuery(*naDesired, curr)
+		}
+
+		ensure, err := QueryFuncGoroutine(query)*/
 		ensure, err := doQuery(*naDesired, curr)
 		if err != nil {
 			monitor.Error(err)
 			return
-		}
 
+		}
 		readCurrent := func() common.NodeAgentsCurrentKind {
 			if err := gitClient.Clone(); err != nil {
 				panic(err)
@@ -131,34 +144,30 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			monitor.Error(gitClient.Push())
 		}
 
-		events = make([]*event, 0)
 		if err := ensure(); err != nil {
 			monitor.Error(err)
 			return
 		}
 
-		current = readCurrent()
+		if events != nil && len(events) > 0 {
+			current := readCurrent()
 
-		for _, event := range events {
-			current.Current.Set(id, event.current)
-			changed, err := gitClient.StageAndCommit(event.commit, git.File{
-				Path:    "caos-internal/orbiter/node-agents-current.yml",
-				Content: common.MarshalYAML(current),
-			})
-			if err != nil {
-				monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", event.commit, err.Error()))
-				return
+			for _, event := range events {
+				current.Current.Set(id, event.current)
+				changed, err := gitClient.StageAndCommit(event.commit, git.File{
+					Path:    "caos-internal/orbiter/node-agents-current.yml",
+					Content: common.MarshalYAML(current),
+				})
+				if err != nil {
+					monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", event.commit, err.Error()))
+					return
+				}
+				if !changed {
+					monitor.Error(fmt.Errorf("event has no effect:", event.commit))
+					return
+				}
 			}
-			if !changed {
-				monitor.Error(fmt.Errorf("event has no effect:", event.commit))
-				return
-			}
-		}
-
-		if len(events) > 0 {
 			monitor.Error(gitClient.Push())
 		}
-
-		debug.FreeOSMemory()
 	}
 }

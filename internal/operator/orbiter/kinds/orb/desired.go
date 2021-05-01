@@ -1,7 +1,7 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 )
 
@@ -9,6 +9,7 @@ type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
 	Spec   struct {
 		Verbose bool
+		PProf   bool
 	}
 	Clusters  map[string]*tree.Tree
 	Providers map[string]*tree.Tree

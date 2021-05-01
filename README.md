@@ -32,7 +32,8 @@ sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 
 # Create an orb file at ${HOME}/.orb/config
-orbctl configure --repourl git@github.com:me/my-orb.git --masterkey "$(openssl rand -base64 21)"
+MY_GIT_REPO="git@github.com:me/my-orb.git"
+orbctl --gitops configure --repourl ${MY_GIT_REPO} --masterkey "$(openssl rand -base64 21)"
 ```
 
 ### Configure a billable Google Cloud Platform project of your choice
@@ -57,6 +58,9 @@ gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
 gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
     --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
     --role=roles/serviceusage.serviceUsageAdmin
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iam.serviceAccountUser
 
 
 # Create a JSON key for the service account
@@ -64,21 +68,21 @@ gcloud iam service-accounts keys create /tmp/key.json \
   --iam-account ${ORBOS_SERVICE_ACCOUNT}
 
 # Encrypt and write the created JSON key to the orbiter.yml
-orbctl writesecret orbiter.gce.jsonkey --file /tmp/key.json
+orbctl --gitops writesecret orbiter.gce.jsonkey --file /tmp/key.json
 rm -f /tmp/key.json
 ```
 
 ### Bootstrap your Kubernetes cluster on GCE
 
 ```bash
-orbctl takeoff
+orbctl --gitops takeoff
 ```
 
 As soon as the Orbiter has deployed itself to the cluster, you can decrypt the generated admin kubeconfig
 
 ```bash
 mkdir -p ~/.kube
-orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config
+orbctl --gitops readsecret orbiter.k8s.kubeconfig > ~/.kube/config
 ```
 
 Wait for grafana to become running
@@ -97,7 +101,7 @@ Delete everything created by Orbiter
 
 ```bash
 # Remove all GCE compute resources
-orbctl destroy
+orbctl --gitops destroy
 
 # Unassign all service account roles
 gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \

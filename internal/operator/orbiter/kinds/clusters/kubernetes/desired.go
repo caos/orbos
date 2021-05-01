@@ -3,8 +3,9 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
+	secret2 "github.com/caos/orbos/pkg/secret"
+
+	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 
@@ -24,7 +25,7 @@ type DesiredV0 struct {
 
 type Spec struct {
 	ControlPlane Pool
-	Kubeconfig   *secret.Secret `yaml:",omitempty"`
+	Kubeconfig   *secret2.Secret `yaml:",omitempty"`
 	Networking   struct {
 		DNSDomain   string
 		Network     string
@@ -73,7 +74,7 @@ func (d *DesiredV0) validate() error {
 	}
 
 	seenPools := map[string][]string{
-		d.Spec.ControlPlane.Provider: []string{d.Spec.ControlPlane.Pool},
+		d.Spec.ControlPlane.Provider: {d.Spec.ControlPlane.Pool},
 	}
 
 	for _, worker := range d.Spec.Workers {

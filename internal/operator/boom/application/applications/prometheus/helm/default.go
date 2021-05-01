@@ -1,13 +1,13 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/helm"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func DefaultValues(imageTags map[string]string) *Values {
+func DefaultValues(imageTags map[string]string, image string) *Values {
 	promValues := &PrometheusValues{
 		Enabled: true,
 		ServiceAccount: &ServiceAccount{
@@ -43,8 +43,8 @@ func DefaultValues(imageTags map[string]string) *Values {
 			Tolerations:  nil,
 			NodeSelector: map[string]string{},
 			Image: &Image{
-				Repository: "quay.io/prometheus/prometheus",
-				Tag:        imageTags["quay.io/prometheus/prometheus"],
+				Repository: image,
+				Tag:        imageTags[image],
 			},
 			RuleSelectorNilUsesHelmValues:           true,
 			ServiceMonitorSelectorNilUsesHelmValues: true,

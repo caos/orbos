@@ -2,9 +2,9 @@ package prometheussystemdexporter
 
 import (
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/k8s"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheussystemdexporter/yaml"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

@@ -61,6 +61,6 @@ func firewallFunc(monitor mntr.Monitor, desired DesiredV0) (desire func(machine 
 		}
 
 		machine.currentMachine.FirewallIsReady = false
-		monitor.WithField("open", firewall.AllZones()).Info("firewall desired")
+		monitor.WithField("open", firewall.ToCurrent()).Info("firewall desired")
 	}
 }

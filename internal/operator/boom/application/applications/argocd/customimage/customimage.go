@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/secret/read"
+
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/argocd/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/internal/secret"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/pkg/errors"
 )
@@ -72,7 +72,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 	}
 
 	for _, store := range spec.CustomImage.GopassStores {
-		if helper2.IsCrdSecret(store.GPGKey, store.ExistingGPGKeySecret) {
+		if read.IsCrdSecret(store.GPGKey, store.ExistingGPGKeySecret) {
 			ty := "gpg"
 			data := map[string]string{
 				getSecretKey(store.StoreName, ty): store.GPGKey.Value,
@@ -88,7 +88,7 @@ func GetSecrets(spec *reconciling.Reconciling) []interface{} {
 			secrets = append(secrets, secretRes)
 		}
 
-		if helper2.IsCrdSecret(store.SSHKey, store.ExistingSSHKeySecret) {
+		if read.IsCrdSecret(store.SSHKey, store.ExistingSSHKeySecret) {
 			ty := "ssh"
 			data := map[string]string{
 				getSecretKey(store.StoreName, ty): store.SSHKey.Value,
@@ -141,11 +141,11 @@ func getVolAndVolMount(storeName string, ty string, secret *secret.Secret, exist
 	name := ""
 	key := ""
 
-	if helper2.IsCrdSecret(secret, existent) {
+	if read.IsCrdSecret(secret, existent) {
 		internalName = getInternalName(storeName, ty)
 		name = getSecretName(storeName, ty)
 		key = getSecretKey(storeName, ty)
-	} else if helper2.IsExistentSecret(secret, existent) {
+	} else if read.IsExistentSecret(secret, existent) {
 		internalName = existent.InternalName
 		name = existent.Name
 		key = existent.Key

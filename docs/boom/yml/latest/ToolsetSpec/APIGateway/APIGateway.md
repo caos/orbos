@@ -17,3 +17,4 @@
 | caching           | Caching options , [here](Caching/Caching.md)                                       |         |            |      |
 | grpcWeb           | Enable gRPC Web                                                                    |  false  |            |      |
 | proxyProtocol     | Enable proxy protocol                                                              |  true   |            |      |
+| overwriteVersion  | Override used image version                                                        |         |            |      |
