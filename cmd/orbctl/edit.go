@@ -40,15 +40,7 @@ func EditCommand(getRv GetRootValues) *cobra.Command {
 				return errors.New("edit command is only supported with the --gitops flag")
 			}
 
-			if err := orbConfig.IsConnectable(); err != nil {
-				return err
-			}
-
-			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-				return err
-			}
-
-			if err := gitClient.Clone(); err != nil {
+			if err := initRepo(orbConfig, gitClient); err != nil {
 				return err
 			}
 

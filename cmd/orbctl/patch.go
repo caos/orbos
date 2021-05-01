@@ -3,20 +3,21 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/pkg/git"
 
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
-func PatchCommand(rv RootValues) *cobra.Command {
+func PatchCommand(getRv GetRootValues) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "patch <filepath> [yamlpath]",
@@ -38,15 +39,19 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
-		_, _, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
-		if err := initRepo(orbConfig, gitClient); err != nil {
+		if !rv.Gitops {
+			return errors.New("patch command is only supported with the --gitops flag")
+		}
+
+		if err := initRepo(rv.OrbConfig, rv.GitClient); err != nil {
 			return err
 		}
 
@@ -67,7 +72,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 			result = contentYaml
 		} else {
 			structure := map[string]interface{}{}
-			if err := yaml.Unmarshal(gitClient.Read(args[0]), structure); err != nil {
+			if err := yaml.Unmarshal(rv.GitClient.Read(args[0]), structure); err != nil {
 				return err
 			}
 			if err := updateMap(structure, path, contentYaml, exact); err != nil {
@@ -76,7 +81,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 			result = structure
 		}
 
-		return gitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), git.File{
+		return rv.GitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), git.File{
 			Path:    args[0],
 			Content: common.MarshalYAML(result),
 		})

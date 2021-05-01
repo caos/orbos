@@ -53,8 +53,8 @@ func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 	args = append(args,
 		"--version", version,
 		"--commit", commit,
-		"--githubclientid", os.Getenv("ORBOS_GITHUBOAUTHCLIENTID"),
-		"--githubclientsecret", os.Getenv("ORBOS_GITHUBOAUTHCLIENTSECRET"),
+		"--githubclientid", os.Getenv("GITHUBOAUTHCLIENTID"),
+		"--githubclientsecret", os.Getenv("GITHUBOAUTHCLIENTSECRET"),
 		"--orbctl", "./artifacts",
 		"--dev",
 	)

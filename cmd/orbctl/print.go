@@ -3,12 +3,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func PrintCommand(rv RootValues) *cobra.Command {
+func PrintCommand(getRv GetRootValues) *cobra.Command {
 
 	return &cobra.Command{
 		Use:     "print <path>",
@@ -16,19 +17,23 @@ func PrintCommand(rv RootValues) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Example: `orbctl file print orbiter.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			_, _, orbConfig, gitClient, errFunc, err := rv()
+			rv, err := getRv()
 			if err != nil {
 				return err
 			}
 			defer func() {
-				err = errFunc(err)
+				err = rv.ErrFunc(err)
 			}()
 
-			if err := initRepo(orbConfig, gitClient); err != nil {
+			if !rv.Gitops {
+				return errors.New("print command is only supported with the --gitops flag")
+			}
+
+			if err := initRepo(rv.OrbConfig, rv.GitClient); err != nil {
 				return err
 			}
 
-			fmt.Print(string(gitClient.Read(args[0])))
+			fmt.Print(string(rv.GitClient.Read(args[0])))
 			return nil
 		},
 	}
