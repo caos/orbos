@@ -18,10 +18,12 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 	}
 
 	buf := &bytes.Buffer{}
-	cmd.Args = append(cmd.Args, "file", "print", "caos-internal/orbiter/current.yml")
+	errBuf := &bytes.Buffer{}
+	cmd.Args = append(cmd.Args, "--gitops", "file", "print", "caos-internal/orbiter/current.yml")
 	cmd.Stdout = buf
+	cmd.Stderr = errBuf
 	if err := cmd.Run(); err != nil {
-		return err
+		return fmt.Errorf("reading orbiters current state failed: %w: %s", err, errBuf.String())
 	}
 
 	currentBytes, err := ioutil.ReadAll(buf)
@@ -34,7 +36,7 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 			ProviderUnderTest struct {
 				Current struct {
 					Ingresses struct {
-						Httpingress struct {
+						Httpsingress struct {
 							Location     string
 							Frontendport uint16
 						}
@@ -48,9 +50,9 @@ func ambassadorReadyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) e
 		return err
 	}
 
-	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpingress
+	ep := current.Providers.ProviderUnderTest.Current.Ingresses.Httpsingress
 
-	msg, err := helpers.Check("https", ep.Location, ep.Frontendport, "/ambassador/v0/check_ready", 200, true)
+	msg, err := helpers.Check("https", ep.Location, ep.Frontendport, "/ambassador/v0/check_ready", 200, false)
 	fmt.Println(msg)
 	return err
 }

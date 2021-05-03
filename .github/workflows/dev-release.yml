@@ -105,9 +105,12 @@ jobs:
           asset_path: ./artifacts/orbctl-Windows-x86_64.exe
           asset_name: orbctl Windows x86_64
           asset_content_type: application/octet-stream
-#      - name: Trigger E2E Test On StaticProvider
-#        if: steps.dev-release.outputs.relbranch != null
-#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --testcase staticprovider --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.E2E_TOKEN }}"
-#     - name: Trigger E2E Test On GCEProvider
+#     - name: Trigger E2E Test On StaticProvider
 #       if: steps.dev-release.outputs.relbranch != null
-#       run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --testcase gceprovider --organization caos --repository ORBOS-Test-GCEProvider --access-token "${{ secrets.E2E_TOKEN }}"
+#       run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --testcase staticprovider --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.E2E_TOKEN }}"
+      - name: Trigger E2E Test On GCEProvider
+        if: steps.dev-release.outputs.relbranch != null
+        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --testcase gceprovider --organization caos --repository ORBOS-Test-GCEProvider --access-token "${{ secrets.E2E_TOKEN }}"
+#     - name: Trigger E2E Test On CloudscaleProvider
+#       if: steps.dev-release.outputs.relbranch != null
+#       run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --testcase csprovider --organization caos --repository ORBOS-Test-CloudscaleProvider --access-token "${{ secrets.E2E_TOKEN }}"

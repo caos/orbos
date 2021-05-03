@@ -44,14 +44,15 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 			/*  2 */ retry(3, destroyTest),
 			/*  3 */ retry(3, initBOOMTest(branch)),
 			/*  4 */ retry(3, bootstrapTest),
-			/*  5 */ ensureORBITERTest(5*time.Minute),
-			/*  6 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
-			/*  7 */ waitTest(30*time.Second),
-			/*  8 */ ensureORBITERTest(20*time.Minute),
-			/*  9 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v1.20.2")),
-			/* 10 */ waitTest(30*time.Second),
-			/* 11 */ ensureORBITERTest(60*time.Minute),
-			/* 12 */ retry(3, ambassadorReadyTest),
+			/*  5 */ waitTest(30*time.Second), // Wait for container to start
+			/*  6 */ ensureORBITERTest(5*time.Minute),
+			/*  7 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
+			/*  8 */ waitTest(30*time.Second), // Wait for maintenance state
+			/*  9 */ ensureORBITERTest(20*time.Minute),
+			/* 10 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v1.20.2")),
+			/* 11 */ waitTest(30*time.Second), // Wait for maintenance state
+			/* 12 */ ensureORBITERTest(60*time.Minute),
+			/* 13 */ retry(3, ambassadorReadyTest),
 		); err != nil {
 			return err
 		}
