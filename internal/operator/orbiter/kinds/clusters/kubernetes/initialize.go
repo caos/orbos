@@ -122,14 +122,24 @@ func initialize(
 			}
 		}
 
-		upscale := desired.Nodes + len(replace) - len(machines)
+		machinesPerDesired := 1
+		if desired.Nodes > 0 {
+			machinesPerDesired = pool.infra.DesiredMembers(desired.Nodes) / desired.Nodes
+		}
+
+		currentNodes := 0
+		if machines != nil && len(machines) > 0 && machinesPerDesired > 0 {
+			currentNodes = len(machines) / machinesPerDesired
+		}
+
+		upscale := desired.Nodes + len(replace) - currentNodes
 		if upscale > 0 {
 			pool.upscaling = upscale
 			return pool, nil
 		}
 
 		if len(replace) > 0 {
-			for backReplacement >= desired.Nodes && len(replace) > 0 {
+			for backReplacement >= pool.infra.DesiredMembers(desired.Nodes) && len(replace) > 0 {
 				backReplacement--
 				pool.downscaling = append(pool.downscaling, replace[0])
 				replace = replace[1:]
@@ -137,7 +147,7 @@ func initialize(
 			return pool, nil
 		}
 
-		pool.downscaling = machines[desired.Nodes:]
+		pool.downscaling = machines[pool.infra.DesiredMembers(desired.Nodes):]
 
 		return pool, nil
 	}

@@ -11,7 +11,8 @@ import (
 type MachinesService interface {
 	ListPools() ([]string, error)
 	List(poolName string) (infra.Machines, error)
-	Create(poolName string) (infra.Machine, error)
+	Create(poolName string) (infra.Machines, error)
+	DesiredMachines(poolName string, instances int) int
 }
 
 func Each(svc MachinesService, do func(pool string, machine infra.Machine) error) error {
