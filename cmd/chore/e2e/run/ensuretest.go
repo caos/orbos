@@ -81,6 +81,9 @@ func checkORBITERRunning(kubectl newKubectlCommandFunc) error {
 		pod := pods.Items[i]
 		for j := range pod.Status.ContainerStatuses {
 			status := pod.Status.ContainerStatuses[j]
+			if _, ok := status.State["waiting"]; ok {
+				return nil
+			}
 			if _, ok := status.State["running"]; ok {
 				return nil
 			}
