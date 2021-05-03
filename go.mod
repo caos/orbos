@@ -25,6 +25,7 @@ require (
 	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
+	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pires/go-proxyproto v0.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1

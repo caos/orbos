@@ -12,7 +12,7 @@ func readKubeconfigFunc(to string) (func(orbctl newOrbctlCommandFunc) (err error
 				return err
 			}
 
-			readsecret.Args = append(readsecret.Args, "readsecret", "orbiter.k8s.kubeconfig")
+			readsecret.Args = append(readsecret.Args, "--gitops", "readsecret", "orbiter.k8s.kubeconfig.encrypted")
 			readsecret.Stderr = os.Stderr
 
 			file, err := os.Create(to)

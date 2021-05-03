@@ -14,7 +14,7 @@ func initORBITERTest(branch string) func(orbctl newOrbctlCommandFunc, _ newKubec
 			return err
 		}
 
-		print.Args = append(print.Args, "file", "print", "provider.yml")
+		print.Args = append(print.Args, "--gitops", "file", "print", "provider.yml")
 		print.Stderr = os.Stderr
 
 		var orbiterYml string
@@ -119,7 +119,7 @@ providers:
 
 		overwrite.Stderr = os.Stderr
 		overwrite.Stderr = os.Stdout
-		overwrite.Args = append(overwrite.Args, "file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml)
+		overwrite.Args = append(overwrite.Args, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml)
 
 		return overwrite.Run()
 	}

@@ -14,7 +14,7 @@ func patchTestFunc(path, value string) func(newOrbctlCommandFunc, newKubectlComm
 			return err
 		}
 
-		cmd.Args = append(cmd.Args, "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
+		cmd.Args = append(cmd.Args, "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
 		cmd.Stderr = os.Stderr
 
 		return simpleRunCommand(cmd, time.NewTimer(15*time.Second), func(line string) bool {

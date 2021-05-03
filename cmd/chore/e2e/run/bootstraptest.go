@@ -13,7 +13,7 @@ func bootstrapTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err er
 		return err
 	}
 
-	cmd.Args = append(cmd.Args, "takeoff")
+	cmd.Args = append(cmd.Args, "--gitops", "takeoff")
 	cmd.Stderr = os.Stderr
 
 	return simpleRunCommand(cmd, time.NewTimer(20*time.Minute), func(line string) bool {

@@ -6,9 +6,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/internal/orb"
-
 	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/pkg/orb"
 )
 
 func main() {
@@ -85,17 +84,17 @@ func main() {
 	*/
 	if graphiteURL != "" {
 
-		orb, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
+		orbCfg, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
 		if err != nil {
 			panic(err)
 		}
 
-		if err := orb.IsComplete(); err != nil {
+		if err := orb.IsComplete(orbCfg); err != nil {
 			panic(err)
 		}
 
 		testFunc = graphite(
-			strings.ToLower(strings.Split(strings.Split(orb.URL, "/")[1], ".")[0]),
+			strings.ToLower(strings.Split(strings.Split(orbCfg.URL, "/")[1], ".")[0]),
 			graphiteURL,
 			graphiteKey,
 			trimBranch(branch),

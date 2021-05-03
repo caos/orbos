@@ -9,8 +9,8 @@ func initBOOMTest(branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlC
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		boomYml := fmt.Sprintf(`
-apiVersion: boom.caos.ch/v1beta2
-kind: Toolset
+apiVersion: caos.ch/v1
+kind: Boom
 metadata:
   name: caos
   namespace: caos-system
@@ -49,7 +49,7 @@ spec:
 
 		overwrite.Stderr = os.Stderr
 		overwrite.Stderr = os.Stdout
-		overwrite.Args = append(overwrite.Args, "file", "patch", "boom.yml", "--exact", "--value", boomYml)
+		overwrite.Args = append(overwrite.Args, "--gitops", "file", "patch", "boom.yml", "--exact", "--value", boomYml)
 
 		return overwrite.Run()
 	}

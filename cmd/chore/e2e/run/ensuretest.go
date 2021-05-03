@@ -16,7 +16,7 @@ func ensureORBITERTest(timeout time.Duration) func(newOrbctlCommandFunc, newKube
 
 func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
 	cmd := kubectl()
-	cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "--follow", "--selector", "app=orbiter", "--since", "0s")
+	cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "--follow", "--selector", "app.kubernetes.io/name=orbiter", "--since", "0s")
 	cmd.Stderr = os.Stderr
 
 	err := simpleRunCommand(cmd, timer, func(line string) (goon bool) {

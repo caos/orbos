@@ -14,7 +14,7 @@ func destroyTest(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 		return err
 	}
 
-	cmd.Args = append(cmd.Args, "destroy")
+	cmd.Args = append(cmd.Args, "--gitops", "destroy")
 	cmd.Stderr = os.Stderr
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
