@@ -118,8 +118,8 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 	creates := make([]func() error, 0)
 	infraMachines := make([]infra.Machine, 0)
 	for zoneI := range zones {
+		zone := zones[zoneI]
 		creates = append(creates, func() error {
-			zone := zones[zoneI]
 			disks := []*compute.AttachedDisk{{
 				Type:       "PERSISTENT",
 				AutoDelete: true,
