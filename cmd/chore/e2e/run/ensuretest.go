@@ -34,17 +34,26 @@ func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
 	if success {
 		return nil
 	}
-	if err != nil && !errors.Is(err, errTimeout) && !success {
 
-		time.Sleep(10 * time.Second)
-
-		if err := checkORBITERRunning(kubectl); err != nil {
-			return err
-		}
-
-		return watchLogs(kubectl, timer)
+	if err == nil || errors.Is(err, errTimeout) {
+		return err
 	}
-	return err
+
+	// give orbiter a minute to become waiting or running
+	minute := time.NewTimer(time.Second)
+	for {
+		select {
+		case <-minute.C:
+			return errors.New("orbiter wasn't running for a minute")
+		default:
+			if err := checkORBITERRunning(kubectl); err != nil {
+				fmt.Println(err.Error())
+				continue
+			}
+			break
+		}
+	}
+	return watchLogs(kubectl, timer)
 }
 
 func checkORBITERRunning(kubectl newKubectlCommandFunc) error {
