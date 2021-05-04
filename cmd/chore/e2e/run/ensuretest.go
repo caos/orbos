@@ -39,8 +39,8 @@ func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
 		return err
 	}
 
-	// give orbiter a minute to become waiting or running
-	minute := time.NewTimer(time.Second)
+	// give orbiter two minutes to become waiting or running
+	minute := time.NewTimer(2 * time.Minute)
 	for {
 		select {
 		case <-minute.C:
