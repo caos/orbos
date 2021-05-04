@@ -36,6 +36,8 @@ func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
 	}
 	if err != nil && !errors.Is(err, errTimeout) && !success {
 
+		time.Sleep(10 * time.Second)
+
 		if err := checkORBITERRunning(kubectl); err != nil {
 			return err
 		}
