@@ -118,6 +118,17 @@ gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
 gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 ```
 
+## Offerings
+
+The usage of our open source code is and stays completely free. If you'd like to operate ORBOS in production we recommend you to get in touch with us to arrange a Service Level Agreement. These are our base offerings. For further information or if you need something else, contact us now at hi@caos.ch.
+
+### Support
+
+You run an maintain your Orbs yourself. Your incidents are treated with a high priority. In return, we charge you with a price from CHF 250 per Orb and Month, decreasing to CHF 100.
+
+### Dedicated Orbs
+
+We run and maintain your Orbs on a supported provider of your choice. Your incidents are treated with a high priority. In return, we charge you with a price from CHF 500 per Orb and Month, decreasing to CHF 100.
 
 ## License
 
