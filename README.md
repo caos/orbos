@@ -120,7 +120,7 @@ gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 
 ## Offerings
 
-The usage of our open source code is and stays completely free. If you'd like to operate ORBOS in production we recommend you to get in touch with us to arrange a Service Level Agreement. These are our base offerings. For further information or if you need something else, contact us now at hi@caos.ch.
+The usage of our open source code is and stays completely free. If you'd like to operate ORBOS in production we recommend you to get in touch with us to arrange a Service Level Agreement. These are our base offerings. For further information or if you need something else, contact us now at orbos@caos.ch.
 
 ### Support
 
