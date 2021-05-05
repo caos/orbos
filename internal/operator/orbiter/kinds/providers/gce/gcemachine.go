@@ -35,6 +35,10 @@ func resetBuffer(buffer *bytes.Buffer) {
 	}
 }
 
+func (c *gceMachine) Zone() string {
+	return c.zone
+}
+
 func (c *gceMachine) Execute(stdin io.Reader, command string) ([]byte, error) {
 	buf, err := c.execute(stdin, command)
 	defer resetBuffer(buf)

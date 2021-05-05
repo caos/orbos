@@ -209,6 +209,7 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 				newInstance.NetworkInterfaces[0].NetworkIP,
 				newInstance.SelfLink,
 				poolName,
+				zone,
 				m.removeMachineFunc(
 					poolName,
 					createInstance.Name,
@@ -378,6 +379,7 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 				inst.NetworkInterfaces[0].NetworkIP,
 				inst.SelfLink,
 				pool,
+				zone,
 				m.removeMachineFunc(pool, inst.Name, zone),
 				inst.Status == "TERMINATED" && inst.Scheduling.Preemptible,
 				machine,
