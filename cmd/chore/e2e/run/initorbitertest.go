@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/afiskon/promtail-client/promtail"
 )
 
-func initORBITERTest(branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+func initORBITERTest(logger promtail.Client, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		print, err := orbctl()
@@ -110,15 +112,19 @@ providers:
               path: /healthz
               code: 200`, branch, orbiterYml)
 
-		fmt.Println(orbiterYml)
-
 		overwrite, err := orbctl()
 		if err != nil {
 			return err
 		}
 
-		overwrite.Stderr = os.Stderr
-		overwrite.Stderr = os.Stdout
+		outWriter, outWrite := logWriter(logger.Infof)
+		defer outWrite()
+		overwrite.Stdout = outWriter
+
+		errWriter, errWrite := logWriter(logger.Errorf)
+		defer errWrite()
+		overwrite.Stderr = errWriter
+
 		overwrite.Args = append(overwrite.Args, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml)
 
 		return overwrite.Run()

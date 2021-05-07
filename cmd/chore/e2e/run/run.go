@@ -7,20 +7,30 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/afiskon/promtail-client/promtail"
 )
 
-func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
-	return func() error {
+func runFunc(logger promtail.Client, branch, orbconfig string, from int, cleanup bool) func() error {
+	return func() (err error) {
 
-		newOrbctl, err := buildOrbctl(orbconfig)
+		newOrbctl, err := buildOrbctl(logger, orbconfig)
 		if err != nil {
 			return err
 		}
 
+		destroyTest := destroyTestFunc(logger)
+
 		if cleanup {
 			defer func() {
 				if cuErr := destroyTest(newOrbctl, nil); cuErr != nil {
-					panic(cuErr)
+
+					original := ""
+					if err != nil {
+						original = fmt.Sprintf(": %s", err.Error())
+					}
+
+					err = fmt.Errorf("cleaning up after end-to-end test failed: %w%s", cuErr, original)
 				}
 			}()
 		}
@@ -33,34 +43,33 @@ func runFunc(branch, orbconfig string, from int, cleanup bool) func() error {
 			return err
 		}
 
-		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(kubeconfig.Name())
+		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(logger, kubeconfig.Name())
 		defer deleteKubeconfig()
 
 		branchParts := strings.Split(branch, "/")
 		branch = branchParts[len(branchParts)-1:][0]
 
-		if err := seq(newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
-			/*  1 */ retry(3, initORBITERTest(branch)),
+		return seq(logger, newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
+			/*  1 */ retry(3, initORBITERTest(logger, branch)),
 			/*  2 */ retry(3, destroyTest),
-			/*  3 */ retry(3, initBOOMTest(branch)),
-			/*  4 */ retry(3, bootstrapTest),
+			/*  3 */ retry(3, initBOOMTest(logger, branch)),
+			/*  4 */ retry(3, bootstrapTestFunc(logger)),
 			/*  5 */ waitTest(30*time.Second), // Wait for container to start
-			/*  6 */ ensureORBITERTest(5*time.Minute),
-			/*  7 */ retry(3, patchTestFunc("clusters.k8s.spec.controlplane.nodes", "3")),
+			/*  6 */ ensureORBITERTest(logger, 5*time.Minute),
+			/*  7 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "3")),
 			/*  8 */ waitTest(30*time.Second), // Wait for maintenance state
-			/*  9 */ ensureORBITERTest(20*time.Minute),
-			/* 10 */ retry(3, patchTestFunc("clusters.k8s.spec.versions.kubernetes", "v1.20.2")),
+			/*  9 */ ensureORBITERTest(logger, 20*time.Minute),
+			/* 10 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.20.2")),
 			/* 11 */ waitTest(30*time.Second), // Wait for maintenance state
-			/* 12 */ ensureORBITERTest(60*time.Minute),
-			/* 13 */ retry(3, ambassadorReadyTest),
-		); err != nil {
-			return err
-		}
-		return nil
+			/* 12 */ ensureORBITERTest(logger, 60*time.Minute),
+			/* 13 */ retry(3, ambassadorReadyTestFunc(logger)),
+		)
 	}
 }
 
-func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...func(newOrbctlCommandFunc, newKubectlCommandFunc) error) error {
+type testFunc func(newOrbctlCommandFunc, newKubectlCommandFunc) error
+
+func seq(logger promtail.Client, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...testFunc) error {
 
 	var kcRead bool
 
@@ -68,7 +77,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 	for _, fn := range fns {
 		at++
 		if at < from {
-			fmt.Printf("\033[1;32mSkipping step %d\033[0m\n", at)
+			logger.Infof("\033[1;32mSkipping step %d\033[0m\n", at)
 			continue
 		}
 
@@ -84,7 +93,7 @@ func seq(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, r
 		if err := fn(orbctl, kubectl); err != nil {
 			return fmt.Errorf("%s failed: %w", fnName, err)
 		}
-		fmt.Printf("\033[1;32m%s succeeded\033[0m\n", fnName)
+		logger.Infof("\033[1;32m%s succeeded\033[0m\n", fnName)
 	}
 	return nil
 }

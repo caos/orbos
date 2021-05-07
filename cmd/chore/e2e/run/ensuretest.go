@@ -5,29 +5,33 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 	"time"
+
+	"github.com/afiskon/promtail-client/promtail"
 
 	"gopkg.in/yaml.v3"
 )
 
-func ensureORBITERTest(timeout time.Duration) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func ensureORBITERTest(logger promtail.Client, timeout time.Duration) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(_ newOrbctlCommandFunc, kubectl newKubectlCommandFunc) error {
-		return watchLogs(kubectl, time.NewTimer(timeout))
+		return watchLogs(logger, kubectl, time.NewTimer(timeout))
 	}
 }
 
-func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
+func watchLogs(logger promtail.Client, kubectl newKubectlCommandFunc, timer *time.Timer) error {
 	cmd := kubectl()
 	cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "--follow", "--selector", "app.kubernetes.io/name=orbiter", "--since", "0s")
-	cmd.Stderr = os.Stderr
+
+	errWriter, errWrite := logWriter(logger.Warnf)
+	defer errWrite()
+	cmd.Stderr = errWriter
 
 	var success bool
 	ensuredLog := "Desired state is ensured"
 
 	err := simpleRunCommand(cmd, timer, func(line string) (goon bool) {
-		fmt.Println(line)
+		logger.Infof(line)
 		success = strings.Contains(line, ensuredLog)
 		return !success
 	})
@@ -47,13 +51,13 @@ func watchLogs(kubectl newKubectlCommandFunc, timer *time.Timer) error {
 			return errors.New("orbiter wasn't running for a minute")
 		default:
 			if err := checkORBITERRunning(kubectl); err != nil {
-				fmt.Println(err.Error())
+				logger.Warnf(err.Error())
 				continue
 			}
 			break
 		}
 	}
-	return watchLogs(kubectl, timer)
+	return watchLogs(logger, kubectl, timer)
 }
 
 func checkORBITERRunning(kubectl newKubectlCommandFunc) error {

@@ -2,9 +2,11 @@ package main
 
 import (
 	"os"
+
+	"github.com/afiskon/promtail-client/promtail"
 )
 
-func readKubeconfigFunc(to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
+func readKubeconfigFunc(logger promtail.Client, to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
 	return func(orbctl newOrbctlCommandFunc) (err error) {
 
 			readsecret, err := orbctl()

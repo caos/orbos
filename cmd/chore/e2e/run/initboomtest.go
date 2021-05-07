@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"os"
+
+	"github.com/afiskon/promtail-client/promtail"
 )
 
-func initBOOMTest(branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+func initBOOMTest(logger promtail.Client, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		boomYml := fmt.Sprintf(`
@@ -40,17 +41,21 @@ spec:
   logsPersisting:
     deploy: true`, branch)
 
-		fmt.Println(boomYml)
-
-		overwrite, err := orbctl()
+		cmd, err := orbctl()
 		if err != nil {
 			return err
 		}
 
-		overwrite.Stderr = os.Stderr
-		overwrite.Stderr = os.Stdout
-		overwrite.Args = append(overwrite.Args, "--gitops", "file", "patch", "boom.yml", "--exact", "--value", boomYml)
+		outWriter, outWrite := logWriter(logger.Infof)
+		defer outWrite()
+		cmd.Stdout = outWriter
 
-		return overwrite.Run()
+		errWriter, errWrite := logWriter(logger.Errorf)
+		defer errWrite()
+		cmd.Stderr = errWriter
+
+		cmd.Args = append(cmd.Args, "--gitops", "file", "patch", "boom.yml", "--exact", "--value", boomYml)
+
+		return cmd.Run()
 	}
 }

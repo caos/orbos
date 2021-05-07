@@ -7,10 +7,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/afiskon/promtail-client/promtail"
+
 	"gopkg.in/raintank/schema.v1"
 )
 
-func graphite(orbID, cloudURL, cloudKey, branch string, test func(string, string, int, bool) func() error) func(string, string, int, bool) func() error {
+func graphite(orbID, cloudURL, cloudKey, branch string, test func(promtail.Client, string, string, int, bool) func() error) func(promtail.Client, string, string, int, bool) func() error {
 
 	send := func(value float64, ts time.Time) {
 		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value, ts); err != nil {
@@ -18,11 +20,11 @@ func graphite(orbID, cloudURL, cloudKey, branch string, test func(string, string
 		}
 	}
 
-	return func(branch, orbconfig string, from int, cleanup bool) func() error {
+	return func(logger promtail.Client, branch, orbconfig string, from int, cleanup bool) func() error {
 		return func() error {
 			start := time.Now()
 			send(0.5, start)
-			err := test(branch, orbconfig, from, cleanup)()
+			err := test(logger, branch, orbconfig, from, cleanup)()
 			var value float64 = 0
 			if err == nil {
 				value = 1

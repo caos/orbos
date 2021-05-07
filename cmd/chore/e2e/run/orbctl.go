@@ -1,15 +1,16 @@
 package main
 
 import (
-	"os"
 	"os/exec"
+
+	"github.com/afiskon/promtail-client/promtail"
 
 	"github.com/caos/orbos/cmd/chore"
 )
 
 type newOrbctlCommandFunc func() (*exec.Cmd, error)
 
-func buildOrbctl(orbconfig string) (newOrbctlCommandFunc, error) {
+func buildOrbctl(logger promtail.Client, orbconfig string) (newOrbctlCommandFunc, error) {
 	newCmd, err := chore.Orbctl(false, false)
 	if err != nil {
 		return nil, err
@@ -17,8 +18,14 @@ func buildOrbctl(orbconfig string) (newOrbctlCommandFunc, error) {
 
 	version := newCmd()
 	version.Args = append(version.Args, "--version")
-	version.Stdout = os.Stdout
-	version.Stderr = os.Stderr
+
+	outWriter, outWrite := logWriter(logger.Infof)
+	defer outWrite()
+	version.Stdout = outWriter
+
+	errWriter, errWrite := logWriter(logger.Errorf)
+	defer errWrite()
+	version.Stderr = errWriter
 
 	if err := version.Run(); err != nil {
 		return nil, err

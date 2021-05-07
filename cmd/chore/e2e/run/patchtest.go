@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/afiskon/promtail-client/promtail"
 )
 
-func patchTestFunc(path, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func patchTestFunc(logger promtail.Client, path, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		cmd, err := orbctl()
