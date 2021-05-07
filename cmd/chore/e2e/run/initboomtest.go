@@ -20,26 +20,26 @@ spec:
   postApply:
     deploy: false
   metricCollection:
-    deploy: true
+    deploy: false
   logCollection:
-    deploy: true
+    deploy: false
   nodeMetricsExporter:
-    deploy: true
+    deploy: false
   systemdMetricsExporter:
-    deploy: true
+    deploy: false
   monitoring:
-    deploy: true
+    deploy: false
   apiGateway:
     deploy: true
-    replicaCount: 3
+    replicaCount: 1
   kubeMetricsExporter:
-    deploy: true
+    deploy: false
   reconciling:
-    deploy: true
+    deploy: false
   metricsPersisting:
-    deploy: true
+    deploy: false
   logsPersisting:
-    deploy: true`, branch)
+    deploy: false`, branch)
 
 		cmd, err := orbctl()
 		if err != nil {

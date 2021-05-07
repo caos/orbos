@@ -127,7 +127,7 @@ func main() {
 	}
 
 	if err := testFunc(logger, strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, from, cleanup)(); err != nil {
-		logger.Errorf("End-to-end test failed: %w", err)
+		logger.Errorf("End-to-end test failed: %s", err.Error())
 		panic(err)
 	}
 	return
