@@ -43,12 +43,12 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 		project-id = "%s"
 		network-name = "%s"
 		node-instance-prefix = "orbos-"
-		zone = "%s"
+		multizone = true
 		container-api-endpoint = "Don't use container API'"
 		`,
 					ctx.projectID,
 					ctx.networkName,
-					instance.Zone(),
+					//instance.Zone(),
 				))
 			},
 			ProviderName: "external",
