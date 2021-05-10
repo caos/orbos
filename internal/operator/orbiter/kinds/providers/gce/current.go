@@ -1,6 +1,10 @@
 package gce
 
 import (
+	"fmt"
+	"io"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/pkg/tree"
@@ -28,15 +32,14 @@ func (c *Current) Cleanupped() <-chan error {
 }
 
 func (c *Current) Kubernetes() infra.Kubernetes {
-	return infra.Kubernetes{}
-	/*	return infra.Kubernetes{
-				Apply: bytes.NewReader(executables.PreBuilt("kubernetes_gce.yaml")),
-				CloudController: infra.CloudControllerManager{
-					Supported: true,
-					CloudConfig: func(machine infra.Machine) io.Reader {
-						instance := machine.(*instance)
-						ctx := instance.context
-						return strings.NewReader(fmt.Sprintf(`[Global]
+	return infra.Kubernetes{
+		//		Apply: bytes.NewReader(executables.PreBuilt("kubernetes_gce.yaml")),
+		CloudController: infra.CloudControllerManager{
+			Supported: true,
+			CloudConfig: func(machine infra.Machine) io.Reader {
+				instance := machine.(*instance)
+				ctx := instance.context
+				return strings.NewReader(fmt.Sprintf(`[Global]
 		project-id = "%s"
 		network-name = "%s"
 		node-instance-prefix = "orbos-"
@@ -44,14 +47,14 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 		local-zone = "%s"
 		container-api-endpoint = "Don't use container API'"
 		`,
-							ctx.projectID,
-							ctx.networkName,
-							instance.Zone(),
-						))
-					},
-					ProviderName: "external",
-				},
-			}*/
+					ctx.projectID,
+					ctx.networkName,
+					instance.Zone(),
+				))
+			},
+			ProviderName: "external",
+		},
+	}
 }
 
 func initPools(current *Current, desired *Spec, svc *machinesService, normalized []*normalizedLoadbalancer, machines core.MachinesService) error {
