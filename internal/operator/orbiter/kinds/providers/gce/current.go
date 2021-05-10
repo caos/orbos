@@ -44,6 +44,7 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 		network-name = "%s"
 		node-instance-prefix = "orbos-"
 		multizone = true
+		regional = true
 		container-api-endpoint = "Don't use container API'"
 		`,
 					ctx.projectID,
