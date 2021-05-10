@@ -69,7 +69,7 @@ func (m *machinesService) restartPreemptibleMachines() error {
 			if instance.start {
 				if err := operateFunc(
 					func() { instance.Monitor.Debug("Restarting preemptible instance") },
-					computeOpCall(m.context.client.Instances.Start(m.context.projectID, m.context.desired.Zone, instance.ID()).RequestId(uuid.NewV1().String()).Do),
+					computeOpCall(m.context.client.Instances.Start(m.context.projectID, instance.zone, instance.ID()).RequestId(uuid.NewV1().String()).Do),
 					func() error { instance.Monitor.Info("Preemptible instance restarted"); return nil },
 				)(); err != nil {
 					return err
