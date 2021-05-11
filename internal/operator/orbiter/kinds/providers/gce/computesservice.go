@@ -3,6 +3,7 @@ package gce
 import (
 	"fmt"
 	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
 	"strings"
 	"sync"
 	"time"
@@ -80,18 +81,23 @@ func (m *machinesService) restartPreemptibleMachines() error {
 	return nil
 }
 
+func getDesiredZones(defaultZone string, multizonal []string) []string {
+	zones := make([]string, 0)
+	if multizonal != nil && len(multizonal) > 0 {
+		zones = multizonal
+	} else {
+		zones = append(zones, defaultZone)
+	}
+	return zones
+}
+
 func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 
 	desired, ok := m.context.desired.Pools[poolName]
 	if !ok {
 		return nil, fmt.Errorf("Pool %s is not configured", poolName)
 	}
-	zones := make([]string, 0)
-	if desired.Multizonal != nil && len(desired.Multizonal) > 0 {
-		zones = desired.Multizonal
-	} else {
-		zones = append(zones, m.context.desired.Zone)
-	}
+	zones := getDesiredZones(m.context.desired.Zone, desired.Multizonal)
 
 	// Calculate minimum cpu and memory according to the gce specs:
 	// https://cloud.google.com/machine/docs/instances/creating-instance-with-custom-machine-type#specifications
@@ -117,128 +123,45 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 
 	creates := make([]func() error, 0)
 	infraMachines := make([]infra.Machine, 0)
+	currentInfraMachines := make([]infra.Machine, 0)
+	if len(zones) > 1 {
+		currentInfraMachinesT, err := m.List(poolName)
+		if err != nil {
+			return nil, err
+		}
+		currentInfraMachines = currentInfraMachinesT
+	}
+
 	for zoneI := range zones {
 		zone := zones[zoneI]
+		zoneCovered := false
+		for _, currentInfraMachine := range currentInfraMachines {
+			currentGCEMachine, ok := currentInfraMachine.(machine)
+			if ok && zone == currentGCEMachine.Zone() {
+				zoneCovered = true
+			}
+		}
+		if zoneCovered {
+			continue
+		}
+
 		creates = append(creates, func() error {
-			disks := []*compute.AttachedDisk{{
-				Type:       "PERSISTENT",
-				AutoDelete: true,
-				Boot:       true,
-				InitializeParams: &compute.AttachedDiskInitializeParams{
-					DiskSizeGb:  int64(desired.StorageGB),
-					SourceImage: desired.OSImage,
-					DiskType:    fmt.Sprintf("zones/%s/diskTypes/%s", zone, desired.StorageDiskType),
-				}},
-			}
-
-			diskNames := make([]string, desired.LocalSSDs)
-			for i := 0; i < int(desired.LocalSSDs); i++ {
-				name := fmt.Sprintf("nvme0n%d", i+1)
-				disks = append(disks, &compute.AttachedDisk{
-					Type:       "SCRATCH",
-					AutoDelete: true,
-					Boot:       false,
-					Interface:  "NVME",
-					InitializeParams: &compute.AttachedDiskInitializeParams{
-						DiskType: fmt.Sprintf("zones/%s/diskTypes/local-ssd", zone),
-					},
-					DeviceName: name,
-				})
-				diskNames[i] = name
-			}
-
 			name := newName()
-			nwTags := networkTags(m.context.orbID, m.context.providerID, poolName)
-			sshKey := fmt.Sprintf("orbiter:%s", m.key.Public.Value)
-			createInstance := &compute.Instance{
-				Name:        name,
-				MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", zone, cores, int(memory)),
-				Tags:        &compute.Tags{Items: nwTags},
-				NetworkInterfaces: []*compute.NetworkInterface{{
-					Network: m.context.networkURL,
-				}},
-				Labels:     map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
-				Disks:      disks,
-				Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
-				Metadata: &compute.Metadata{
-					Items: []*compute.MetadataItems{{
-						Key:   "ssh-keys",
-						Value: &sshKey,
-					}},
-				},
-				ServiceAccounts: []*compute.ServiceAccount{{
-					Scopes: []string{"https://www.googleapis.com/auth/compute"},
-				}},
-			}
-
 			monitor := m.context.monitor.WithFields(map[string]interface{}{
 				"machine": name,
 				"pool":    poolName,
 			})
-
-			if err := operateFunc(
-				func() { monitor.Debug("Creating instance") },
-				computeOpCall(m.context.client.Instances.Insert(m.context.projectID, zone, createInstance).RequestId(uuid.NewV1().String()).Do),
-				func() error { monitor.Info("Instance created"); return nil },
-			)(); err != nil {
-				return err
-			}
-
-			newInstance, err := m.context.client.Instances.Get(m.context.projectID, zone, createInstance.Name).
-				Fields("selfLink,networkInterfaces(networkIP)").
-				Do()
+			infraMachine, err := m.getCreatableMachine(
+				monitor,
+				poolName,
+				desired,
+				name,
+				zone,
+				cores,
+				memory,
+			)
 			if err != nil {
 				return err
-			}
-
-			var machine machine
-			if m.oneoff {
-				machine = newGCEMachine(m.context, monitor, createInstance.Name, zone)
-			} else {
-				sshMachine := ssh.NewMachine(monitor, "orbiter", newInstance.NetworkInterfaces[0].NetworkIP)
-				if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
-					return err
-				}
-				machine = sshMachine
-			}
-
-			infraMachine := newMachine(
-				m.context,
-				monitor,
-				createInstance.Name,
-				newInstance.NetworkInterfaces[0].NetworkIP,
-				newInstance.SelfLink,
-				poolName,
-				zone,
-				m.removeMachineFunc(
-					poolName,
-					createInstance.Name,
-					zone,
-				),
-				false,
-				machine,
-				false,
-				func() {},
-				func() {},
-				false,
-				func() {},
-				func() {},
-			)
-
-			for idx, name := range diskNames {
-				mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
-				if err := infra.Try(monitor, time.NewTimer(time.Minute), 10*time.Second, infraMachine, func(m infra.Machine) error {
-					_, formatErr := m.Execute(nil,
-						fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount -o discard,defaults,nobarrier /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-local-nvme-ssd-%d` %s ext4 discard,defaults,nofail,nobarrier 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, idx, mountPoint),
-					)
-					return formatErr
-				}); err != nil {
-					if cleanupErr := infraMachine.Remove(); cleanupErr != nil {
-						panic(cleanupErr)
-					}
-					return err
-				}
-				monitor.WithField("mountpoint", mountPoint).Info("Disk formatted")
 			}
 
 			if m.cache.instances != nil {
@@ -252,7 +175,6 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 				return err
 			}
 			monitor.Info("Machine created")
-
 			infraMachines = append(infraMachines, infraMachine)
 			return nil
 		})
@@ -263,6 +185,125 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 	}
 
 	return infraMachines, nil
+}
+
+func (m *machinesService) getCreatableMachine(monitor mntr.Monitor, poolName string, desired *Pool, name string, zone string, cores int, memory float64) (*instance, error) {
+	disks := []*compute.AttachedDisk{{
+		Type:       "PERSISTENT",
+		AutoDelete: true,
+		Boot:       true,
+		InitializeParams: &compute.AttachedDiskInitializeParams{
+			DiskSizeGb:  int64(desired.StorageGB),
+			SourceImage: desired.OSImage,
+			DiskType:    fmt.Sprintf("zones/%s/diskTypes/%s", zone, desired.StorageDiskType),
+		}},
+	}
+
+	diskNames := make([]string, desired.LocalSSDs)
+	for i := 0; i < int(desired.LocalSSDs); i++ {
+		name := fmt.Sprintf("nvme0n%d", i+1)
+		disks = append(disks, &compute.AttachedDisk{
+			Type:       "SCRATCH",
+			AutoDelete: true,
+			Boot:       false,
+			Interface:  "NVME",
+			InitializeParams: &compute.AttachedDiskInitializeParams{
+				DiskType: fmt.Sprintf("zones/%s/diskTypes/local-ssd", zone),
+			},
+			DeviceName: name,
+		})
+		diskNames[i] = name
+	}
+
+	nwTags := networkTags(m.context.orbID, m.context.providerID, poolName)
+	sshKey := fmt.Sprintf("orbiter:%s", m.key.Public.Value)
+	createInstance := &compute.Instance{
+		Name:        name,
+		MachineType: fmt.Sprintf("zones/%s/machineTypes/custom-%d-%d", zone, cores, int(memory)),
+		Tags:        &compute.Tags{Items: nwTags},
+		NetworkInterfaces: []*compute.NetworkInterface{{
+			Network: m.context.networkURL,
+		}},
+		Labels:     map[string]string{"orb": m.context.orbID, "provider": m.context.providerID, "pool": poolName},
+		Disks:      disks,
+		Scheduling: &compute.Scheduling{Preemptible: desired.Preemptible},
+		Metadata: &compute.Metadata{
+			Items: []*compute.MetadataItems{{
+				Key:   "ssh-keys",
+				Value: &sshKey,
+			}},
+		},
+		ServiceAccounts: []*compute.ServiceAccount{{
+			Scopes: []string{"https://www.googleapis.com/auth/compute"},
+		}},
+	}
+
+	if err := operateFunc(
+		func() { monitor.Debug("Creating instance") },
+		computeOpCall(m.context.client.Instances.Insert(m.context.projectID, zone, createInstance).RequestId(uuid.NewV1().String()).Do),
+		func() error { monitor.Info("Instance created"); return nil },
+	)(); err != nil {
+		return nil, err
+	}
+
+	newInstance, err := m.context.client.Instances.Get(m.context.projectID, zone, createInstance.Name).
+		Fields("selfLink,networkInterfaces(networkIP)").
+		Do()
+	if err != nil {
+		return nil, err
+	}
+
+	var machine machine
+	if m.oneoff {
+		machine = newGCEMachine(m.context, monitor, createInstance.Name, zone)
+	} else {
+		sshMachine := ssh.NewMachine(monitor, "orbiter", newInstance.NetworkInterfaces[0].NetworkIP)
+		if err := sshMachine.UseKey([]byte(m.key.Private.Value)); err != nil {
+			return nil, err
+		}
+		machine = sshMachine
+	}
+
+	infraMachine := newMachine(
+		m.context,
+		monitor,
+		createInstance.Name,
+		newInstance.NetworkInterfaces[0].NetworkIP,
+		newInstance.SelfLink,
+		poolName,
+		zone,
+		m.removeMachineFunc(
+			poolName,
+			createInstance.Name,
+			zone,
+		),
+		false,
+		machine,
+		false,
+		func() {},
+		func() {},
+		false,
+		func() {},
+		func() {},
+	)
+
+	for idx, name := range diskNames {
+		mountPoint := fmt.Sprintf("/mnt/disks/%s", name)
+		if err := infra.Try(monitor, time.NewTimer(time.Minute), 10*time.Second, infraMachine, func(m infra.Machine) error {
+			_, formatErr := m.Execute(nil,
+				fmt.Sprintf("sudo mkfs.ext4 -F /dev/%s && sudo mkdir -p /mnt/disks/%s && sudo mount -o discard,defaults,nobarrier /dev/%s %s && sudo chmod a+w %s && echo UUID=`sudo blkid -s UUID -o value /dev/disk/by-id/google-local-nvme-ssd-%d` %s ext4 discard,defaults,nofail,nobarrier 0 2 | sudo tee -a /etc/fstab", name, name, name, mountPoint, mountPoint, idx, mountPoint),
+			)
+			return formatErr
+		}); err != nil {
+			if cleanupErr := infraMachine.Remove(); cleanupErr != nil {
+				panic(cleanupErr)
+			}
+			return nil, err
+		}
+		monitor.WithField("mountpoint", mountPoint).Info("Disk formatted")
+	}
+
+	return infraMachine, nil
 }
 
 func (m *machinesService) ListPools() ([]string, error) {

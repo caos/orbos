@@ -40,13 +40,28 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 					var deleteDisks []func() error
 
 					deleteMonitor := svc.context.monitor.WithField("type", "persistent disk")
+					currentVolumesList, err := svc.context.client.Disks.AggregatedList(svc.context.projectID).Do()
+					if err != nil {
+						return err
+					}
+					diskList := currentVolumesList.Items["test"]
 
-					for kind, delegate := range delegates {
+					for _, delegate := range delegates {
 						volumes, ok := delegate.([]infra.Volume)
 						if ok {
 							for idx := range volumes {
 								diskName := volumes[idx].Name
-								deleteDisks = append(deleteDisks, deleteDiskFunc(svc.context, deleteMonitor.WithField("id", diskName), kind, diskName))
+								found := false
+								zone := ""
+								for _, currentVolume := range diskList.Disks {
+									if currentVolume.Name == diskName {
+										found = true
+										zone = currentVolume.Zone
+									}
+								}
+								if found {
+									deleteDisks = append(deleteDisks, deleteDiskFunc(svc.context, deleteMonitor.WithField("id", diskName), zone, diskName))
+								}
 							}
 						}
 					}
@@ -64,11 +79,11 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 	})()
 }
 
-func deleteDiskFunc(context *context, monitor mntr.Monitor, kind, id string) func() error {
+func deleteDiskFunc(context *context, monitor mntr.Monitor, zone, id string) func() error {
 	return func() error {
 		return operateFunc(
 			func() { monitor.Debug("Removing resource") },
-			computeOpCall(context.client.Disks.Delete(context.projectID, context.desired.Zone, id).RequestId(uuid.NewV1().String()).Do),
+			computeOpCall(context.client.Disks.Delete(context.projectID, zone, id).RequestId(uuid.NewV1().String()).Do),
 			func() error { monitor.Info("Resource removed"); return nil },
 		)()
 	}
