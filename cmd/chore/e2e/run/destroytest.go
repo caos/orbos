@@ -28,7 +28,7 @@ func destroyTestFunc(logger promtail.Client) testFunc {
 
 		var confirmed bool
 		return simpleRunCommand(cmd, time.NewTimer(5*time.Minute), func(line string) bool {
-			logger.Infof(line)
+			logORBITERStdout(logger, line)
 			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 				confirmed = true
 				if _, err := stdin.Write([]byte("y\n")); err != nil {

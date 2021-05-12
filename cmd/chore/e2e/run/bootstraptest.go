@@ -21,7 +21,7 @@ func bootstrapTestFunc(logger promtail.Client) testFunc {
 		cmd.Stderr = errWriter
 
 		return simpleRunCommand(cmd, time.NewTimer(20*time.Minute), func(line string) bool {
-			logger.Infof(line)
+			logORBITERStdout(logger, line)
 			return true
 		})
 	}

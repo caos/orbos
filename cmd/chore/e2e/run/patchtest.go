@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"os"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
@@ -17,10 +15,12 @@ func patchTestFunc(logger promtail.Client, path, value string) func(newOrbctlCom
 		}
 
 		cmd.Args = append(cmd.Args, "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
-		cmd.Stderr = os.Stderr
+		errWriter, errWrite := logWriter(logger.Errorf)
+		defer errWrite()
+		cmd.Stderr = errWriter
 
 		return simpleRunCommand(cmd, time.NewTimer(15*time.Second), func(line string) bool {
-			fmt.Println(line)
+			logORBITERStdout(logger, line)
 			return true
 		})
 	}

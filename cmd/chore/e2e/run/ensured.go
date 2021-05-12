@@ -73,11 +73,7 @@ func watchLogs(logger promtail.Client, kubectl newKubectlCommandFunc, timer *tim
 		if strings.Contains(line, "Desired state is ensured") {
 			go func() { trigger <- struct{}{} }()
 		}
-		log := logger.Infof
-		if strings.Contains(line, ` err=`) {
-			log = logger.Warnf
-		}
-		log(line)
+		logORBITERStdout(logger, line)
 		return goon
 	})
 

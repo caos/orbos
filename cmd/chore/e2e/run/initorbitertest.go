@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
@@ -17,7 +16,10 @@ func initORBITERTest(logger promtail.Client, branch string) func(orbctl newOrbct
 		}
 
 		print.Args = append(print.Args, "--gitops", "file", "print", "provider.yml")
-		print.Stderr = os.Stderr
+
+		printErrWriter, printErrWrite := logWriter(logger.Errorf)
+		defer printErrWrite()
+		print.Stderr = printErrWriter
 
 		var orbiterYml string
 		if err := simpleRunCommand(print, time.NewTimer(30*time.Second), func(line string) (goon bool) {
@@ -121,9 +123,9 @@ providers:
 		defer outWrite()
 		overwrite.Stdout = outWriter
 
-		errWriter, errWrite := logWriter(logger.Errorf)
-		defer errWrite()
-		overwrite.Stderr = errWriter
+		overwriteErrWriter, overwriteErrWrite := logWriter(logger.Errorf)
+		defer overwriteErrWrite()
+		overwrite.Stderr = overwriteErrWriter
 
 		overwrite.Args = append(overwrite.Args, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml)
 
