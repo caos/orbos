@@ -54,12 +54,12 @@ func runFunc(logger promtail.Client, branch, orbconfig string, from int, cleanup
 			/*  2 */ retry(3, destroyTest),
 			/*  3 */ retry(3, initBOOMTest(logger, branch)),
 			/*  4 */ retry(3, bootstrapTestFunc(logger)),
-			/*  5 */ ensureORBITERTest(logger, 5*time.Minute, isEnsured(3, 3, "v1.18.8")),
+			/*  5 */ ensureORBITERTest(logger, 10*time.Minute, isEnsured(3, 3, "v1.18.8")),
 			/*  6 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "1")),
 			/*  7 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.workers.0.nodes", "2")),
-			/*  8 */ ensureORBITERTest(logger, 20*time.Minute, isEnsured(1, 2, "v1.18.8")),
+			/*  8 */ ensureORBITERTest(logger, 5*time.Minute, isEnsured(1, 2, "v1.18.8")),
 			/*  9 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.21.0")),
-			/* 10 */ ensureORBITERTest(logger, 60*time.Minute, isEnsured(1, 2, "v1.21.0")),
+			/* 10 */ ensureORBITERTest(logger, 30*time.Minute, isEnsured(1, 2, "v1.21.0")),
 		)
 	}
 }
