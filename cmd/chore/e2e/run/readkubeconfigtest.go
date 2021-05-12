@@ -15,7 +15,9 @@ func readKubeconfigFunc(logger promtail.Client, to string) (func(orbctl newOrbct
 			}
 
 			readsecret.Args = append(readsecret.Args, "--gitops", "readsecret", "orbiter.k8s.kubeconfig.encrypted")
-			readsecret.Stderr = os.Stderr
+			readsecretErrWriter, readsecretErrWrite := logWriter(logger.Errorf)
+			defer readsecretErrWrite()
+			readsecret.Stderr = readsecretErrWriter
 
 			file, err := os.Create(to)
 			if err != nil {

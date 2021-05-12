@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ensureORBITERTest(logger promtail.Client, timeout time.Duration, condition func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func ensureORBITERTest(logger promtail.Client, step uint8, timeout time.Duration, condition func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc) error {
 
 		triggerCheck := make(chan struct{})
@@ -26,6 +26,8 @@ func ensureORBITERTest(logger promtail.Client, timeout time.Duration, condition 
 		defer timer.Stop()
 
 		go watchLogs(logger, kubectl, time.NewTimer(timeout), triggerCheck, stopLogs)
+
+		started := time.Now()
 
 		// Check each minute if the desired state is ensured
 		ticker := time.NewTicker(time.Minute)
@@ -37,10 +39,13 @@ func ensureORBITERTest(logger promtail.Client, timeout time.Duration, condition 
 				case <-timer.C:
 					done <- fmt.Errorf("timed out after %s", timeout)
 				case <-triggerCheck:
+
 					if err := condition(logger, orbctl, kubectl); err != nil {
+						printProgress(logger, step, started, timeout)
 						logger.Warnf("desired state is not yet ensured: %s", err.Error())
 						continue
 					}
+
 					done <- nil
 				case <-ticker.C:
 					go func() { triggerCheck <- struct{}{} }()
@@ -50,6 +55,7 @@ func ensureORBITERTest(logger promtail.Client, timeout time.Duration, condition 
 
 		err := <-done
 		stopLogs <- struct{}{}
+		close(stopLogs)
 		return err
 	}
 }
@@ -145,8 +151,10 @@ func isEnsured(masters, workers uint8, k8sVersion string) func(promtail.Client, 
 		}
 
 		for nodeagentID, nodeagent := range nodeagents.Current.NA {
-			if !nodeagent.NodeIsReady ||
-				nodeagent.Software.Kubelet.Version != k8sVersion ||
+			if !nodeagent.NodeIsReady {
+				return fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID)
+			}
+			if nodeagent.Software.Kubelet.Version != k8sVersion ||
 				nodeagent.Software.Kubeadm.Version != k8sVersion ||
 				nodeagent.Software.Kubectl.Version != k8sVersion {
 				return fmt.Errorf("nodeagent %s has current states kubelet=%s, kubeadm=%s, kubectl=%s instead of %s",

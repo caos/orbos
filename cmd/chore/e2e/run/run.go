@@ -11,7 +11,7 @@ import (
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func runFunc(logger promtail.Client, branch, orbconfig string, from int, cleanup bool) func() error {
+func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
 	return func() (err error) {
 
 		newOrbctl, err := buildOrbctl(logger, orbconfig)
@@ -49,28 +49,26 @@ func runFunc(logger promtail.Client, branch, orbconfig string, from int, cleanup
 		branchParts := strings.Split(branch, "/")
 		branch = branchParts[len(branchParts)-1:][0]
 
-		return seq(logger, newOrbctl, configureKubectl(kubeconfig.Name()), from, readKubeconfig,
-			/*  1 */ retry(3, initORBITERTest(logger, branch)),
+		return seq(logger, newOrbctl, configureKubectl(kubeconfig.Name()), from, 5, readKubeconfig,
+			/*  1 */ retry(3, initORBITERTest(logger, orb, branch)),
 			/*  2 */ retry(3, destroyTest),
 			/*  3 */ retry(3, initBOOMTest(logger, branch)),
-			/*  4 */ retry(3, bootstrapTestFunc(logger)),
-			/*  5 */ ensureORBITERTest(logger, 10*time.Minute, isEnsured(3, 3, "v1.18.8")),
+			/*  4 */ retry(3, bootstrapTestFunc(logger, 15*time.Minute, 4)),
+			/*  5 */ ensureORBITERTest(logger, 5, 15*time.Minute, isEnsured(3, 3, "v1.18.8")),
 			/*  6 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "1")),
 			/*  7 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.workers.0.nodes", "2")),
-			/*  8 */ ensureORBITERTest(logger, 5*time.Minute, isEnsured(1, 2, "v1.18.8")),
+			/*  8 */ ensureORBITERTest(logger, 8, 5*time.Minute, isEnsured(1, 2, "v1.18.8")),
 			/*  9 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.21.0")),
-			/* 10 */ ensureORBITERTest(logger, 30*time.Minute, isEnsured(1, 2, "v1.21.0")),
+			/* 10 */ ensureORBITERTest(logger, 10, 30*time.Minute, isEnsured(1, 2, "v1.21.0")),
 		)
 	}
 }
 
 type testFunc func(newOrbctlCommandFunc, newKubectlCommandFunc) error
 
-func seq(logger promtail.Client, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from int, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...testFunc) error {
+func seq(logger promtail.Client, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from, readKubeconfigFrom uint8, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...testFunc) error {
 
-	var kcRead bool
-
-	var at int
+	var at uint8
 	for _, fn := range fns {
 		at++
 		if at < from {
@@ -78,8 +76,7 @@ func seq(logger promtail.Client, orbctl newOrbctlCommandFunc, kubectl newKubectl
 			continue
 		}
 
-		if at >= 5 && !kcRead {
-			kcRead = true
+		if at >= readKubeconfigFrom {
 			if err := readKubeconfigFunc(orbctl); err != nil {
 				return err
 			}

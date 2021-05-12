@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"math"
 	"os/exec"
 	"strings"
 	"time"
@@ -70,6 +71,10 @@ func main() {
 	fmt.Printf("cleanup=%t\n", cleanup)
 	fmt.Printf("from=%d\n", from)
 
+	if from > math.MaxUint8 {
+		panic(fmt.Errorf("maximum from value is %d", math.MaxUint8))
+	}
+
 	out, err := exec.Command("git", "branch", "--show-current").Output()
 	if err != nil {
 		panic(err)
@@ -126,7 +131,7 @@ func main() {
 			runFunc)
 	}
 
-	if err := testFunc(logger, strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, from, cleanup)(); err != nil {
+	if err := testFunc(logger, orb, strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, uint8(from), cleanup)(); err != nil {
 		logger.Errorf("End-to-end test failed: %s", err.Error())
 		panic(err)
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func initORBITERTest(logger promtail.Client, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+func initORBITERTest(logger promtail.Client, orb, branch string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		print, err := orbctl()
@@ -34,13 +34,13 @@ version: v0
 spec:
   verbose: false
 clusters:
-  k8s:
+  %s:
     kind: orbiter.caos.ch/KubernetesCluster
     version: v0
     spec:
       controlplane:
         updatesdisabled: false
-        provider: provider-under-test
+        provider: %s
         nodes: 3
         pool: management
         taints:
@@ -58,15 +58,15 @@ clusters:
         orbiter: %s-dev
       workers:
       - updatesdisabled: false
-        provider: provider-under-test
+        provider: %s
         nodes: 3
         pool: application
       - updatesdisabled: false
-        provider: provider-under-test
+        provider: %s
         nodes: 0
         pool: storage
 providers:
-  provider-under-test:
+  %s:
 %s
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
@@ -112,7 +112,7 @@ providers:
             healthchecks:
               protocol: https
               path: /healthz
-              code: 200`, branch, orbiterYml)
+              code: 200`, orb, orb, branch, orb, orb, orb, orbiterYml)
 
 		overwrite, err := orbctl()
 		if err != nil {
