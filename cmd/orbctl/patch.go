@@ -179,12 +179,12 @@ func updateSlice(slice []interface{}, path []string, value interface{}, exact bo
 
 	idx, err := pos(nextStep)
 
-	drilled, err := drillContent(slice[idx-1], path, value, exact)
+	drilled, err := drillContent(slice[idx], path, value, exact)
 	if err != nil {
 		return err
 	}
 	if !drilled {
-		slice[idx-1] = value
+		slice[idx] = value
 	}
 
 	return nil
