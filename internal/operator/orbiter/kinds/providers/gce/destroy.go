@@ -5,6 +5,8 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	uuid "github.com/satori/go.uuid"
+	"google.golang.org/api/compute/v1"
+	"strings"
 )
 
 func destroy(svc *machinesService, delegates map[string]interface{}) error {
@@ -44,7 +46,28 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 					if err != nil {
 						return err
 					}
-					diskList := currentVolumesList.Items["test"]
+					disks := make([]*compute.Disk, 0)
+					region, err := svc.context.client.Regions.Get(svc.context.projectID, svc.context.desired.Region).Do()
+					if err != nil {
+						return err
+					}
+					diskList, ok := currentVolumesList.Items["regions/"+svc.context.desired.Region]
+					if ok {
+						for _, disk := range diskList.Disks {
+							disks = append(disks, disk)
+						}
+					}
+					for zoneURLI := range region.Zones {
+						zoneURL := region.Zones[zoneURLI]
+						zoneURLParts := strings.Split(zoneURL, "/")
+						zone := zoneURLParts[(len(zoneURLParts) - 1)]
+						diskList, ok := currentVolumesList.Items["zones/"+zone]
+						if ok {
+							for _, disk := range diskList.Disks {
+								disks = append(disks, disk)
+							}
+						}
+					}
 
 					for _, delegate := range delegates {
 						volumes, ok := delegate.([]infra.Volume)
@@ -56,7 +79,9 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 								for _, currentVolume := range diskList.Disks {
 									if currentVolume.Name == diskName {
 										found = true
-										zone = currentVolume.Zone
+										zoneURLParts := strings.Split(currentVolume.Zone, "/")
+										zone = zoneURLParts[(len(zoneURLParts) - 1)]
+										break
 									}
 								}
 								if found {
