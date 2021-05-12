@@ -6,7 +6,7 @@ import (
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func bootstrapTestFunc(logger promtail.Client, timeout time.Duration, step uint8) testFunc {
+func bootstrapTestFunc(logger promtail.Client, orb string, timeout time.Duration, step uint8) testFunc {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error) {
 
 		cmd, err := orbctl()
@@ -31,7 +31,7 @@ func bootstrapTestFunc(logger promtail.Client, timeout time.Duration, step uint8
 			for {
 				select {
 				case <-ticker.C:
-					printProgress(logger, step, started, timeout)
+					printProgress(logger, orb, step, started, timeout)
 				case <-timer.C:
 					goon = false
 				}

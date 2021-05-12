@@ -53,13 +53,13 @@ func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, 
 			/*  1 */ retry(3, initORBITERTest(logger, orb, branch)),
 			/*  2 */ retry(3, destroyTest),
 			/*  3 */ retry(3, initBOOMTest(logger, branch)),
-			/*  4 */ retry(3, bootstrapTestFunc(logger, 15*time.Minute, 4)),
-			/*  5 */ ensureORBITERTest(logger, 5, 15*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
+			/*  4 */ retry(3, bootstrapTestFunc(logger, orb, 15*time.Minute, 4)),
+			/*  5 */ ensureORBITERTest(logger, orb, 5, 15*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
 			/*  6 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
 			/*  7 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
-			/*  8 */ ensureORBITERTest(logger, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
+			/*  8 */ ensureORBITERTest(logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
 			/*  9 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
-			/* 10 */ ensureORBITERTest(logger, 10, 60*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
+			/* 10 */ ensureORBITERTest(logger, orb, 10, 60*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
 		)
 	}
 }

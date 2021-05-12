@@ -16,7 +16,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ensureORBITERTest(logger promtail.Client, step uint8, timeout time.Duration, condition func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func ensureORBITERTest(logger promtail.Client, orb string, step uint8, timeout time.Duration, condition func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc) error {
 
 		triggerCheck := make(chan struct{})
@@ -41,7 +41,7 @@ func ensureORBITERTest(logger promtail.Client, step uint8, timeout time.Duration
 				case <-triggerCheck:
 
 					if err := condition(logger, orbctl, kubectl); err != nil {
-						printProgress(logger, step, started, timeout)
+						printProgress(logger, orb, step, started, timeout)
 						logger.Warnf("desired state is not yet ensured: %s", err.Error())
 						continue
 					}
