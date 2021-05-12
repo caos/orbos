@@ -222,6 +222,11 @@ func plan(
 		}
 	}
 
+	label := func() error {
+		machine.node.Labels["orbos.ch/kubeadm-upgraded"] = to.Kubelet.Version
+		return k8sClient.UpdateNode(machine.node)
+	}
+
 	migrate := func() (err error) {
 
 		defer func() {
@@ -244,8 +249,7 @@ func plan(
 			return err
 		}
 
-		machine.node.Labels["orbos.ch/kubeadm-upgraded"] = to.Kubelet.Version
-		return k8sClient.UpdateNode(machine.node)
+		return label()
 	}
 
 	nodeIsReady := machine.currentNodeagent.NodeIsReady
@@ -269,7 +273,14 @@ func plan(
 
 		return ensureSoftware(common.Software{Kubeadm: to.Kubeadm}, "Update kubeadm"), nil
 	}
-	if machine.node.Labels["orbos.ch/kubeadm-upgraded"] != to.Kubelet.Version {
+
+	kubadmUpgraded := machine.node.Labels["orbos.ch/kubeadm-upgraded"]
+	if kubadmUpgraded != to.Kubelet.Version {
+
+		if kubadmUpgraded == "" {
+			return label, nil
+		}
+
 		return migrate, nil
 	}
 
