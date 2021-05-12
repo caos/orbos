@@ -94,7 +94,7 @@ func watchLogs(logger promtail.Client, kubectl newKubectlCommandFunc, timer *tim
 	watchLogs(logger, kubectl, timer, trigger, stop)
 }
 
-func isEnsured(masters, workers uint8, k8sVersion string) func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(logger promtail.Client, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error {
 
 		if err := checkPodsAreRunning(logger, newKubectl, "caos-system", "app.kubernetes.io/name=orbiter", 1); err != nil {
@@ -102,21 +102,17 @@ func isEnsured(masters, workers uint8, k8sVersion string) func(promtail.Client, 
 		}
 
 		orbiter := &struct {
-			Clusters struct {
-				K8s struct {
-					Current kubernetes.CurrentCluster
-				}
+			Clusters map[string]struct {
+				Current kubernetes.CurrentCluster
 			}
-			Providers struct {
-				ProviderUnderTest struct {
-					Current struct {
-						Ingresses struct {
-							Httpsingress infra.Address
-							Httpingress  infra.Address
-							Kubeapi      infra.Address
-						}
+			Providers map[string]struct {
+				Current struct {
+					Ingresses struct {
+						Httpsingress infra.Address
+						Httpingress  infra.Address
+						Kubeapi      infra.Address
 					}
-				} `yaml:"provider-under-test"`
+				}
 			}
 		}{}
 		if err := readYaml(logger, newOrbctl, "caos-internal/orbiter/current.yml", orbiter); err != nil {
@@ -128,8 +124,11 @@ func isEnsured(masters, workers uint8, k8sVersion string) func(promtail.Client, 
 			return err
 		}
 
-		cluster := orbiter.Clusters.K8s.Current
-		currentMachinesLen := uint8(len(cluster.Machines.M))
+		cluster, ok := orbiter.Clusters[orb]
+		if !ok {
+			return fmt.Errorf("cluster %s not found in current state", orb)
+		}
+		currentMachinesLen := uint8(len(cluster.Current.Machines.M))
 
 		machines := masters + workers
 
@@ -137,7 +136,7 @@ func isEnsured(masters, workers uint8, k8sVersion string) func(promtail.Client, 
 			return fmt.Errorf("current state has %d machines instead of %d", currentMachinesLen, machines)
 		}
 
-		for nodeagentID, nodeagent := range cluster.Machines.M {
+		for nodeagentID, nodeagent := range cluster.Current.Machines.M {
 			if !nodeagent.Ready ||
 				!nodeagent.FirewallIsReady ||
 				!nodeagent.Joined {
@@ -167,15 +166,20 @@ func isEnsured(masters, workers uint8, k8sVersion string) func(promtail.Client, 
 			}
 		}
 
-		if cluster.Status != "running" {
-			return fmt.Errorf("cluster status is %s", cluster.Status)
+		if cluster.Current.Status != "running" {
+			return fmt.Errorf("cluster status is %s", cluster.Current.Status)
 		}
 
 		if err := checkPodsAreRunning(logger, newKubectl, "kube-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", masters*4); err != nil {
 			return err
 		}
 
-		ep := orbiter.Providers.ProviderUnderTest.Current.Ingresses.Httpsingress
+		provider, ok := orbiter.Providers[orb]
+		if !ok {
+			return fmt.Errorf("provider %s not found in current state", orb)
+		}
+
+		ep := provider.Current.Ingresses.Httpsingress
 
 		msg, err := helpers.Check("https", ep.Location, ep.FrontendPort, "/ambassador/v0/check_ready", 200, false)
 		if err != nil {

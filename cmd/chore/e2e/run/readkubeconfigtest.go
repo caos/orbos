@@ -1,12 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func readKubeconfigFunc(logger promtail.Client, to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
+func readKubeconfigFunc(logger promtail.Client, orb, to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
 	return func(orbctl newOrbctlCommandFunc) (err error) {
 
 			readsecret, err := orbctl()
@@ -14,7 +15,7 @@ func readKubeconfigFunc(logger promtail.Client, to string) (func(orbctl newOrbct
 				return err
 			}
 
-			readsecret.Args = append(readsecret.Args, "--gitops", "readsecret", "orbiter.k8s.kubeconfig.encrypted")
+			readsecret.Args = append(readsecret.Args, "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", orb))
 			readsecretErrWriter, readsecretErrWrite := logWriter(logger.Errorf)
 			defer readsecretErrWrite()
 			readsecret.Stderr = readsecretErrWriter

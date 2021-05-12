@@ -43,7 +43,7 @@ func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, 
 			return err
 		}
 
-		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(logger, kubeconfig.Name())
+		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(logger, orb, kubeconfig.Name())
 		defer deleteKubeconfig()
 
 		branchParts := strings.Split(branch, "/")
@@ -54,12 +54,12 @@ func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, 
 			/*  2 */ retry(3, destroyTest),
 			/*  3 */ retry(3, initBOOMTest(logger, branch)),
 			/*  4 */ retry(3, bootstrapTestFunc(logger, 15*time.Minute, 4)),
-			/*  5 */ ensureORBITERTest(logger, 5, 15*time.Minute, isEnsured(3, 3, "v1.18.8")),
-			/*  6 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "1")),
-			/*  7 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.workers.0.nodes", "2")),
-			/*  8 */ ensureORBITERTest(logger, 8, 5*time.Minute, isEnsured(1, 2, "v1.18.8")),
-			/*  9 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.21.0")),
-			/* 10 */ ensureORBITERTest(logger, 10, 30*time.Minute, isEnsured(1, 2, "v1.21.0")),
+			/*  5 */ ensureORBITERTest(logger, 5, 15*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
+			/*  6 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
+			/*  7 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
+			/*  8 */ ensureORBITERTest(logger, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
+			/*  9 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
+			/* 10 */ ensureORBITERTest(logger, 10, 60*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
 		)
 	}
 }
