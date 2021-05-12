@@ -54,14 +54,17 @@ func runFunc(logger promtail.Client, branch, orbconfig string, from int, cleanup
 			/*  2 */ retry(3, destroyTest),
 			/*  3 */ retry(3, initBOOMTest(logger, branch)),
 			/*  4 */ retry(3, bootstrapTestFunc(logger)),
-			/*  5 */ waitTest(30*time.Second), // Wait for container to start
-			/*  6 */ ensureORBITERTest(logger, 5*time.Minute, isEnsured(2, "v1.18.8")),
-			/*  7 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "3")),
-			/*  8 */ waitTest(30*time.Second), // Wait for maintenance state
-			/*  9 */ ensureORBITERTest(logger, 20*time.Minute, isEnsured(4, "v1.18.8")),
-			/* 10 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.20.2")),
-			/* 11 */ waitTest(30*time.Second), // Wait for maintenance state
-			/* 12 */ ensureORBITERTest(logger, 60*time.Minute, isEnsured(4, "v1.20.2")),
+			/*  5 */ ensureORBITERTest(logger, 5*time.Minute, isEnsured(1, 1, "v1.18.8")),
+			/*  6 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "3")),
+			/*  7 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.workers.0.nodes", "3")),
+			/*  8 */ ensureORBITERTest(logger, 20*time.Minute, isEnsured(3, 3, "v1.18.8")),
+			/*  9 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.19.7")),
+			/* 10 */ ensureORBITERTest(logger, 60*time.Minute, isEnsured(3, 3, "v1.19.7")),
+			/* 11 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.controlplane.nodes", "1")),
+			/* 12 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.workers.0.nodes", "1")),
+			/* 13 */ ensureORBITERTest(logger, 60*time.Minute, isEnsured(1, 1, "v1.19.7")),
+			/* 14 */ retry(3, patchTestFunc(logger, "clusters.k8s.spec.versions.kubernetes", "v1.20.2")),
+			/* 15 */ ensureORBITERTest(logger, 60*time.Minute, isEnsured(1, 1, "v1.20.2")),
 		)
 	}
 }
