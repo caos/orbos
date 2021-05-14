@@ -208,11 +208,10 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		if result.Done {
 			if clearCount < clearEachEnsuredIteration {
 				clearCount++
-			} else {
-				clearCount = 0
 			}
 			monitor.Info("Desired state is ensured")
 		} else {
+			clearCount = 0
 			monitor.Info("Desired state is not yet ensured")
 		}
 
@@ -222,7 +221,9 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		pushFiles := marshalCurrentFiles()
-		if len(currentNodeAgents.Current.NA) != len(desiredNodeAgents.Spec.NodeAgents.NA) || clearCount == clearEachEnsuredIteration {
+		if result.Done &&
+			(len(currentNodeAgents.Current.NA) != len(desiredNodeAgents.Spec.NodeAgents.NA) || clearCount == clearEachEnsuredIteration) {
+			clearCount = 0
 			monitor.Info("Clearing node agents current states")
 			pushFiles = append(pushFiles, git.File{
 				Path:    "caos-internal/orbiter/node-agents-current.yml",
