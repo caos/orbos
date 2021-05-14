@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -16,16 +17,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func ensureORBITERTest(logger promtail.Client, orb string, step uint8, timeout time.Duration, condition func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func ensureORBITERTest(ctx context.Context, logger promtail.Client, orb string, step uint8, timeout time.Duration, condition func(context.Context, promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc) error {
 
-		triggerCheck := make(chan struct{})
-		stopLogs := make(chan struct{})
-		done := make(chan error)
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
+		ensureCtx, ensureCancel := context.WithTimeout(ctx, timeout)
+		defer ensureCancel()
 
-		go watchLogs(logger, kubectl, time.NewTimer(timeout), triggerCheck, stopLogs)
+		triggerCheck := make(chan struct{})
+		done := make(chan error)
+
+		go watchLogs(ensureCtx, logger, kubectl, triggerCheck)
 
 		started := time.Now()
 
@@ -36,11 +37,11 @@ func ensureORBITERTest(logger promtail.Client, orb string, step uint8, timeout t
 		go func() {
 			for {
 				select {
-				case <-timer.C:
-					done <- fmt.Errorf("timed out after %s", timeout)
+				case <-ensureCtx.Done():
+					done <- ensureCtx.Err()
 				case <-triggerCheck:
 
-					if err := condition(logger, orbctl, kubectl); err != nil {
+					if err := condition(ensureCtx, logger, orbctl, kubectl); err != nil {
 						printProgress(logger, orb, step, started, timeout)
 						logger.Warnf("desired state is not yet ensured: %s", err.Error())
 						continue
@@ -53,51 +54,37 @@ func ensureORBITERTest(logger promtail.Client, orb string, step uint8, timeout t
 			}
 		}()
 
-		err := <-done
-		stopLogs <- struct{}{}
-		close(stopLogs)
-		return err
+		return <-done
 	}
 }
 
-func watchLogs(logger promtail.Client, kubectl newKubectlCommandFunc, timer *time.Timer, trigger chan<- struct{}, stop <-chan struct{}) {
-	cmd := kubectl()
+func watchLogs(ctx context.Context, logger promtail.Client, kubectl newKubectlCommandFunc, trigger chan<- struct{}) {
+	cmd := kubectl(ctx)
 	cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "--follow", "--selector", "app.kubernetes.io/name=orbiter", "--since", "10s")
 
 	errWriter, errWrite := logWriter(logger.Warnf)
 	defer errWrite()
 	cmd.Stderr = errWriter
 
-	goon := true
-	go func() {
-		<-stop
-		goon = false
-	}()
-
-	err := simpleRunCommand(cmd, timer, func(line string) bool {
+	err := simpleRunCommand(cmd, func(line string) {
 		// Check if the desired state is ensured when orbiter prints so
 		if strings.Contains(line, "Desired state is ensured") {
 			go func() { trigger <- struct{}{} }()
 		}
 		logORBITERStdout(logger, line)
-		return goon
 	})
-
-	if !goon {
-		return
-	}
 
 	if err != nil {
 		logger.Warnf("watching logs failed: %s. trying again", err.Error())
 	}
 
-	watchLogs(logger, kubectl, timer, trigger, stop)
+	watchLogs(ctx, logger, kubectl, trigger)
 }
 
-func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error {
-	return func(logger promtail.Client, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error {
+func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(context.Context, promtail.Client, newOrbctlCommandFunc, newKubectlCommandFunc) error {
+	return func(ctx context.Context, logger promtail.Client, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error {
 
-		if err := checkPodsAreRunning(logger, newKubectl, "caos-system", "app.kubernetes.io/name=orbiter", 1); err != nil {
+		if err := checkPodsAreRunning(ctx, logger, newKubectl, "caos-system", "app.kubernetes.io/name=orbiter", 1); err != nil {
 			return err
 		}
 
@@ -115,12 +102,12 @@ func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(promt
 				}
 			}
 		}{}
-		if err := readYaml(logger, newOrbctl, "caos-internal/orbiter/current.yml", orbiter); err != nil {
+		if err := readYaml(ctx, logger, newOrbctl, "caos-internal/orbiter/current.yml", orbiter); err != nil {
 			return err
 		}
 
 		nodeagents := &common.NodeAgentsCurrentKind{}
-		if err := readYaml(logger, newOrbctl, "caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
+		if err := readYaml(ctx, logger, newOrbctl, "caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
 			return err
 		}
 
@@ -170,7 +157,7 @@ func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(promt
 			return fmt.Errorf("cluster status is %s", cluster.Current.Status)
 		}
 
-		if err := checkPodsAreRunning(logger, newKubectl, "kube-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", masters*4); err != nil {
+		if err := checkPodsAreRunning(ctx, logger, newKubectl, "kube-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", masters*4); err != nil {
 			return err
 		}
 
@@ -191,9 +178,12 @@ func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(promt
 	}
 }
 
-func readYaml(logger promtail.Client, newOrbctl newOrbctlCommandFunc, path string, into interface{}) error {
+func readYaml(ctx context.Context, logger promtail.Client, newOrbctl newOrbctlCommandFunc, path string, into interface{}) error {
 
-	orbctl, err := newOrbctl()
+	orbctlCtx, orbctlCancel := context.WithTimeout(ctx, 15*time.Second)
+	defer orbctlCancel()
+
+	orbctl, err := newOrbctl(orbctlCtx)
 	if err != nil {
 		return err
 	}
@@ -218,7 +208,7 @@ func readYaml(logger promtail.Client, newOrbctl newOrbctlCommandFunc, path strin
 	return yaml.Unmarshal(currentBytes, into)
 }
 
-func checkPodsAreRunning(logger promtail.Client, kubectl newKubectlCommandFunc, namespace, selector string, expectedPodsCount uint8) (err error) {
+func checkPodsAreRunning(ctx context.Context, logger promtail.Client, kubectl newKubectlCommandFunc, namespace, selector string, expectedPodsCount uint8) (err error) {
 
 	defer func() {
 		if err != nil {
@@ -229,7 +219,10 @@ func checkPodsAreRunning(logger promtail.Client, kubectl newKubectlCommandFunc, 
 	buf := new(bytes.Buffer)
 	defer buf.Reset()
 
-	cmd := kubectl()
+	cmdCtx, cmdCancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cmdCancel()
+
+	cmd := kubectl(cmdCtx)
 	cmd.Args = append(cmd.Args,
 		"get", "pods",
 		"--namespace", namespace,

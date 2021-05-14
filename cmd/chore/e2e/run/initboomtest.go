@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func initBOOMTest(logger promtail.Client, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+func initBOOMTest(ctx context.Context, logger promtail.Client, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+
+		initCtx, initCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer initCancel()
 
 		boomYml := fmt.Sprintf(`
 apiVersion: caos.ch/v1
@@ -41,7 +46,7 @@ spec:
   logsPersisting:
     deploy: false`, branch)
 
-		cmd, err := orbctl()
+		cmd, err := orbctl(initCtx)
 		if err != nil {
 			return err
 		}

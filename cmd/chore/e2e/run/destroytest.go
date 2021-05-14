@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"strings"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func destroyTestFunc(logger promtail.Client) testFunc {
+func destroyTestFunc(ctx context.Context, logger promtail.Client) testFunc {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
-		cmd, err := orbctl()
+		destroyCtx, destroyCtxCancel := context.WithTimeout(ctx, 5*time.Minute)
+		defer destroyCtxCancel()
+
+		cmd, err := orbctl(destroyCtx)
 		if err != nil {
 			return err
 		}
@@ -27,7 +31,8 @@ func destroyTestFunc(logger promtail.Client) testFunc {
 		}
 
 		var confirmed bool
-		return simpleRunCommand(cmd, time.NewTimer(5*time.Minute), func(line string) bool {
+
+		return simpleRunCommand(cmd, func(line string) {
 			logORBITERStdout(logger, line)
 			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 				confirmed = true
@@ -35,7 +40,6 @@ func destroyTestFunc(logger promtail.Client) testFunc {
 					panic(err)
 				}
 			}
-			return true
 		})
 	}
 }

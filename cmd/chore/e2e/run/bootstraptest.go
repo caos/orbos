@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func bootstrapTestFunc(logger promtail.Client, orb string, timeout time.Duration, step uint8) testFunc {
+func bootstrapTestFunc(ctx context.Context, logger promtail.Client, orb string, step uint8) testFunc {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error) {
 
-		cmd, err := orbctl()
+		timeout := 20 * time.Minute
+		bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(ctx, timeout)
+		defer bootstrapCtxCancel()
+
+		cmd, err := orbctl(bootstrapCtx)
 		if err != nil {
 			return err
 		}
@@ -22,25 +27,21 @@ func bootstrapTestFunc(logger promtail.Client, orb string, timeout time.Duration
 
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
-		timer := time.NewTimer(timeout)
-		defer timer.Stop()
 
 		started := time.Now()
-		goon := true
 		go func() {
 			for {
 				select {
 				case <-ticker.C:
 					printProgress(logger, orb, step, started, timeout)
-				case <-timer.C:
-					goon = false
+				case <-bootstrapCtx.Done():
+					return
 				}
 			}
 		}()
 
-		return simpleRunCommand(cmd, time.NewTimer(20*time.Minute), func(line string) bool {
+		return simpleRunCommand(cmd, func(line string) {
 			logORBITERStdout(logger, line)
-			return goon
 		})
 	}
 }

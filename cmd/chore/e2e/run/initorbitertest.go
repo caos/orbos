@@ -1,16 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func initORBITERTest(logger promtail.Client, orb, branch string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func initORBITERTest(ctx context.Context, logger promtail.Client, orb, branch string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
-		print, err := orbctl()
+		initCtx, initCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer initCancel()
+
+		print, err := orbctl(initCtx)
 		if err != nil {
 			return err
 		}
@@ -22,9 +26,8 @@ func initORBITERTest(logger promtail.Client, orb, branch string) func(newOrbctlC
 		print.Stderr = printErrWriter
 
 		var orbiterYml string
-		if err := simpleRunCommand(print, time.NewTimer(30*time.Second), func(line string) (goon bool) {
+		if err := simpleRunCommand(print, func(line string) {
 			orbiterYml += fmt.Sprintf("    %s\n", line)
-			return true
 		}); err != nil {
 			return err
 		}
@@ -114,7 +117,7 @@ providers:
               path: /healthz
               code: 200`, orb, orb, branch, orb, orb, orb, orbiterYml)
 
-		overwrite, err := orbctl()
+		overwrite, err := orbctl(initCtx)
 		if err != nil {
 			return err
 		}

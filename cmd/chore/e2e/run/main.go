@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"math"
+	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/caos/orbos/pkg/orb"
@@ -131,11 +135,25 @@ func main() {
 			runFunc)
 	}
 
-	if err := testFunc(logger, orb, strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, uint8(from), cleanup)(); err != nil {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	signalChannel := make(chan os.Signal)
+	signal.Notify(signalChannel,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+	)
+
+	go func() {
+		<-signalChannel
+		cancel()
+	}()
+
+	if err := testFunc(ctx, logger, orb, strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, uint8(from), cleanup)(); err != nil {
 		logger.Errorf("End-to-end test failed: %s", err.Error())
-		panic(err)
+		os.Exit(1)
 	}
-	return
 }
 
 func trimBranch(ref string) string {

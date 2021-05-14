@@ -2,6 +2,7 @@ package chore
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,9 +19,9 @@ func Run(cmd *exec.Cmd) error {
 	return nil
 }
 
-func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
+func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 
-	noop := func() *exec.Cmd { return nil }
+	noop := func(context.Context) *exec.Cmd { return nil }
 
 	if skipRebuild {
 		return runOrbctlCmd(debug), nil
@@ -85,12 +86,12 @@ func Orbctl(debug, skipRebuild bool) (func() *exec.Cmd, error) {
 	return runOrbctlCmd(debug), nil
 }
 
-func runOrbctlCmd(debug bool) func() *exec.Cmd {
+func runOrbctlCmd(debug bool) func(context.Context) *exec.Cmd {
 	bin := "./artifacts/orbctl-Linux-x86_64"
-	return func() *exec.Cmd {
+	return func(ctx context.Context) *exec.Cmd {
 		if debug {
-			return exec.Command("dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", bin, "--")
+			return exec.CommandContext(ctx, "dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", bin, "--")
 		}
-		return exec.Command(bin)
+		return exec.CommandContext(ctx, bin)
 	}
 }

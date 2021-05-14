@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func patchTestFunc(logger promtail.Client, path, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func patchTestFunc(ctx context.Context, logger promtail.Client, path, value string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
-		cmd, err := orbctl()
+		patchCtx, patchCancel := context.WithTimeout(ctx, 30*time.Second)
+		defer patchCancel()
+
+		cmd, err := orbctl(patchCtx)
 		if err != nil {
 			return err
 		}
@@ -19,9 +23,8 @@ func patchTestFunc(logger promtail.Client, path, value string) func(newOrbctlCom
 		defer errWrite()
 		cmd.Stderr = errWriter
 
-		return simpleRunCommand(cmd, time.NewTimer(15*time.Second), func(line string) bool {
+		return simpleRunCommand(cmd, func(line string) {
 			logORBITERStdout(logger, line)
-			return true
 		})
 	}
 }

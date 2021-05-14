@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -12,7 +13,7 @@ import (
 	"gopkg.in/raintank/schema.v1"
 )
 
-func graphite(orbID, cloudURL, cloudKey, branch string, test func(promtail.Client, string, string, string, uint8, bool) func() error) func(promtail.Client, string, string, string, uint8, bool) func() error {
+func graphite(orbID, cloudURL, cloudKey, branch string, test func(context.Context, promtail.Client, string, string, string, uint8, bool) func() error) func(context.Context, promtail.Client, string, string, string, uint8, bool) func() error {
 
 	send := func(value float64, ts time.Time) {
 		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value, ts); err != nil {
@@ -20,11 +21,11 @@ func graphite(orbID, cloudURL, cloudKey, branch string, test func(promtail.Clien
 		}
 	}
 
-	return func(logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
+	return func(ctx context.Context, logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
 		return func() error {
 			start := time.Now()
 			send(0.5, start)
-			err := test(logger, orb, branch, orbconfig, from, cleanup)()
+			err := test(ctx, logger, orb, branch, orbconfig, from, cleanup)()
 			var value float64 = 0
 			if err == nil {
 				value = 1

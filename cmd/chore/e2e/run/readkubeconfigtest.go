@@ -1,16 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func readKubeconfigFunc(logger promtail.Client, orb, to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
+func readKubeconfigFunc(ctx context.Context, logger promtail.Client, orb, to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
 	return func(orbctl newOrbctlCommandFunc) (err error) {
 
-			readsecret, err := orbctl()
+			readsecretCtx, readsecretCancel := context.WithTimeout(ctx, 30*time.Second)
+			defer readsecretCancel()
+
+			readsecret, err := orbctl(readsecretCtx)
 			if err != nil {
 				return err
 			}

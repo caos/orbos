@@ -2,15 +2,10 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"os/exec"
-	"time"
 )
 
-var errTimeout = errors.New("timed out")
-
-func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) (goon bool)) error {
-	defer timer.Stop()
+func simpleRunCommand(cmd *exec.Cmd, scan func(line string)) error {
 	out, err := cmd.StdoutPipe()
 	if err != nil {
 		panic(err)
@@ -20,15 +15,7 @@ func simpleRunCommand(cmd *exec.Cmd, timer *time.Timer, scan func(line string) (
 	}
 	scanner := bufio.NewScanner(out)
 	for scanner.Scan() {
-		select {
-		case <-timer.C:
-			return errTimeout
-		default:
-			if !scan(scanner.Text()) {
-				cmd.Process.Kill()
-				return scanner.Err()
-			}
-		}
+		scan(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
 		return err

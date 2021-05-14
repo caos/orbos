@@ -1,13 +1,14 @@
 package main
 
 import (
+	"context"
 	"os/exec"
 )
 
-type newKubectlCommandFunc func() *exec.Cmd
+type newKubectlCommandFunc func(context.Context) *exec.Cmd
 
 func configureKubectl(kubeconfig string) newKubectlCommandFunc {
-	return func() *exec.Cmd {
-		return exec.Command("kubectl", "--kubeconfig", kubeconfig)
+	return func(ctx context.Context) *exec.Cmd {
+		return exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig)
 	}
 }

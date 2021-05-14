@@ -1,29 +1,32 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
+	"os/exec"
 	"reflect"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
+func runFunc(ctx context.Context, logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
 	return func() (err error) {
 
-		newOrbctl, err := buildOrbctl(logger, orbconfig)
+		newOrbctl, err := buildOrbctl(ctx, logger, orbconfig)
 		if err != nil {
 			return err
 		}
 
-		destroyTest := destroyTestFunc(logger)
-
 		if cleanup {
 			defer func() {
-				if cuErr := destroyTest(newOrbctl, nil); cuErr != nil {
+				// context is probably cancelled as program is terminating so we create a new one here
+				if cuErr := destroyTestFunc(context.Background(), logger)(newOrbctl, nil); cuErr != nil {
 
 					original := ""
 					if err != nil {
@@ -43,25 +46,25 @@ func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, 
 			return err
 		}
 
-		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(logger, orb, kubeconfig.Name())
+		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(ctx, logger, orb, kubeconfig.Name())
 		defer deleteKubeconfig()
 
 		branchParts := strings.Split(branch, "/")
 		branch = branchParts[len(branchParts)-1:][0]
 
 		return seq(logger, newOrbctl, configureKubectl(kubeconfig.Name()), from, 5, readKubeconfig,
-			/*  1 */ retry(3, initORBITERTest(logger, orb, branch)),
-			/*  2 */ retry(3, destroyTest),
-			/*  3 */ retry(3, initBOOMTest(logger, branch)),
-			/*  4 */ retry(3, bootstrapTestFunc(logger, orb, 15*time.Minute, 4)),
-			/*  5 */ ensureORBITERTest(logger, orb, 5, 15*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
-			/*  6 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
-			/*  7 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
-			/*  8 */ ensureORBITERTest(logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
-			/*  9 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
-			/* 10 */ ensureORBITERTest(logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.19.10")),
-			/* 11 */ ensureORBITERTest(logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.20.6")),
-			/* 12 */ ensureORBITERTest(logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
+			/*  1 */ retry(3, initORBITERTest(ctx, logger, orb, branch)),
+			/*  2 */ retry(3, destroyTestFunc(ctx, logger)),
+			/*  3 */ retry(3, initBOOMTest(ctx, logger, branch)),
+			/*  4 */ retry(3, bootstrapTestFunc(ctx, logger, orb, 4)),
+			/*  5 */ ensureORBITERTest(ctx, logger, orb, 5, 15*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
+			/*  6 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
+			/*  7 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
+			/*  8 */ ensureORBITERTest(ctx, logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
+			/*  9 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
+			/* 10 */ ensureORBITERTest(ctx, logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.19.10")),
+			/* 11 */ ensureORBITERTest(ctx, logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.20.6")),
+			/* 12 */ ensureORBITERTest(ctx, logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
 		)
 	}
 }
@@ -102,7 +105,15 @@ func retry(count uint8, fn func(newOrbctlCommandFunc, newKubectlCommandFunc) err
 
 func try(count uint8, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, fn func(newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error) error {
 	err := fn(newOrbctl, newKubectl)
-	if err != nil && count > 0 {
+	exitErr := &exec.ExitError{}
+	if err != nil &&
+		// Don't retry if context timed out or was cancelled
+		!errors.Is(err, context.Canceled) &&
+		!errors.Is(err, context.DeadlineExceeded) &&
+		// Don't retry if commands context timed out or was cancelled
+		(!errors.As(err, &exitErr) ||
+			!exitErr.Sys().(syscall.WaitStatus).Signaled()) &&
+		count > 0 {
 		return try(count-1, newOrbctl, newKubectl, fn)
 	}
 	return err
