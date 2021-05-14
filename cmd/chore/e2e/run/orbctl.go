@@ -9,7 +9,7 @@ import (
 	"github.com/caos/orbos/cmd/chore"
 )
 
-type newOrbctlCommandFunc func(context.Context) (*exec.Cmd, error)
+type newOrbctlCommandFunc func(context.Context) *exec.Cmd
 
 func buildOrbctl(ctx context.Context, logger promtail.Client, orbconfig string) (newOrbctlCommandFunc, error) {
 	newCmd, err := chore.Orbctl(false, false)
@@ -17,24 +17,13 @@ func buildOrbctl(ctx context.Context, logger promtail.Client, orbconfig string) 
 		return nil, err
 	}
 
-	version := newCmd(ctx)
-	version.Args = append(version.Args, "--version")
-
-	outWriter, outWrite := logWriter(logger.Infof)
-	defer outWrite()
-	version.Stdout = outWriter
-
-	errWriter, errWrite := logWriter(logger.Errorf)
-	defer errWrite()
-	version.Stderr = errWriter
-
-	if err := version.Run(); err != nil {
+	if err := runCommand(logger, newCmd(ctx), "--version", true, nil, nil); err != nil {
 		return nil, err
 	}
 
-	return func(ctx context.Context) (*exec.Cmd, error) {
+	return func(ctx context.Context) *exec.Cmd {
 		cmd := newCmd(ctx)
 		cmd.Args = append(cmd.Args, "--orbconfig", orbconfig)
-		return cmd, nil
+		return cmd
 	}, nil
 }

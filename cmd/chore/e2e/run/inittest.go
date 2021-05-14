@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -8,31 +9,20 @@ import (
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func initORBITERTest(ctx context.Context, logger promtail.Client, orb, branch string) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
+func writeInitialDesiredStateTest(ctx context.Context, logger promtail.Client, orb, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
 
 		initCtx, initCancel := context.WithTimeout(ctx, 30*time.Second)
 		defer initCancel()
 
-		print, err := orbctl(initCtx)
-		if err != nil {
+		buf := new(bytes.Buffer)
+		defer buf.Reset()
+
+		if err := runCommand(logger, orbctl(initCtx), "--gitops file print provider.yml", false, buf, nil); err != nil {
 			return err
 		}
 
-		print.Args = append(print.Args, "--gitops", "file", "print", "provider.yml")
-
-		printErrWriter, printErrWrite := logWriter(logger.Errorf)
-		defer printErrWrite()
-		print.Stderr = printErrWriter
-
-		var orbiterYml string
-		if err := simpleRunCommand(print, func(line string) {
-			orbiterYml += fmt.Sprintf("    %s\n", line)
-		}); err != nil {
-			return err
-		}
-
-		orbiterYml = fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+		orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
 version: v0
 spec:
   verbose: false
@@ -115,23 +105,44 @@ providers:
             healthchecks:
               protocol: https
               path: /healthz
-              code: 200`, orb, orb, branch, orb, orb, orb, orbiterYml)
+              code: 200`, orb, orb, branch, orb, orb, orb, buf.String())
 
-		overwrite, err := orbctl(initCtx)
-		if err != nil {
+		if err := runCommand(logger, orbctl(initCtx), fmt.Sprintf(`--gitops file patch orbiter.yml --exact --value "%s"`, orbiterYml), true, nil, nil); err != nil {
 			return err
 		}
 
-		outWriter, outWrite := logWriter(logger.Infof)
-		defer outWrite()
-		overwrite.Stdout = outWriter
+		boomYml := fmt.Sprintf(`
+apiVersion: caos.ch/v1
+kind: Boom
+metadata:
+  name: caos
+  namespace: caos-system
+spec:
+  boomVersion: %s-dev
+  postApply:
+    deploy: false
+  metricCollection:
+    deploy: false
+  logCollection:
+    deploy: false
+  nodeMetricsExporter:
+    deploy: false
+  systemdMetricsExporter:
+    deploy: false
+  monitoring:
+    deploy: false
+  apiGateway:
+    deploy: true
+    replicaCount: 1
+  kubeMetricsExporter:
+    deploy: false
+  reconciling:
+    deploy: false
+  metricsPersisting:
+    deploy: false
+  logsPersisting:
+    deploy: false`, branch)
 
-		overwriteErrWriter, overwriteErrWrite := logWriter(logger.Errorf)
-		defer overwriteErrWrite()
-		overwrite.Stderr = overwriteErrWriter
-
-		overwrite.Args = append(overwrite.Args, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml)
-
-		return overwrite.Run()
+		return runCommand(logger, orbctl(initCtx), fmt.Sprintf(`--gitops file patch boom.yml --exact --value "%s"`, boomYml), true, nil, nil)
 	}
 }

@@ -14,17 +14,6 @@ func bootstrapTestFunc(ctx context.Context, logger promtail.Client, orb string, 
 		bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(ctx, timeout)
 		defer bootstrapCtxCancel()
 
-		cmd, err := orbctl(bootstrapCtx)
-		if err != nil {
-			return err
-		}
-
-		cmd.Args = append(cmd.Args, "--gitops", "takeoff")
-
-		errWriter, errWrite := logWriter(logger.Errorf)
-		defer errWrite()
-		cmd.Stderr = errWriter
-
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 
@@ -40,8 +29,6 @@ func bootstrapTestFunc(ctx context.Context, logger promtail.Client, orb string, 
 			}
 		}()
 
-		return simpleRunCommand(cmd, func(line string) {
-			logORBITERStdout(logger, line)
-		})
+		return runCommand(logger, orbctl(bootstrapCtx), "--gitops takeoff", true, nil, nil)
 	}
 }

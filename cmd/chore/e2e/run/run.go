@@ -53,18 +53,15 @@ func runFunc(ctx context.Context, logger promtail.Client, orb, branch, orbconfig
 		branch = branchParts[len(branchParts)-1:][0]
 
 		return seq(logger, newOrbctl, configureKubectl(kubeconfig.Name()), from, 5, readKubeconfig,
-			/*  1 */ retry(3, initORBITERTest(ctx, logger, orb, branch)),
+			/*  1 */ retry(3, writeInitialDesiredStateTest(ctx, logger, orb, branch)),
 			/*  2 */ retry(3, destroyTestFunc(ctx, logger)),
-			/*  3 */ retry(3, initBOOMTest(ctx, logger, branch)),
-			/*  4 */ retry(3, bootstrapTestFunc(ctx, logger, orb, 4)),
-			/*  5 */ ensureORBITERTest(ctx, logger, orb, 5, 15*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
-			/*  6 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
-			/*  7 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
-			/*  8 */ ensureORBITERTest(ctx, logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
-			/*  9 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
-			/* 10 */ ensureORBITERTest(ctx, logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.19.10")),
-			/* 11 */ ensureORBITERTest(ctx, logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.20.6")),
-			/* 12 */ ensureORBITERTest(ctx, logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
+			/*  3 */ retry(3, bootstrapTestFunc(ctx, logger, orb, 4)),
+			/*  4 */ ensureORBITERTest(ctx, logger, orb, 5, 10*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
+			/*  5 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
+			/*  6 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
+			/*  7 */ ensureORBITERTest(ctx, logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
+			/*  8 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
+			/*  9 */ ensureORBITERTest(ctx, logger, orb, 10, 45*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
 		)
 	}
 }

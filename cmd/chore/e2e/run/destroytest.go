@@ -14,17 +14,7 @@ func destroyTestFunc(ctx context.Context, logger promtail.Client) testFunc {
 		destroyCtx, destroyCtxCancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer destroyCtxCancel()
 
-		cmd, err := orbctl(destroyCtx)
-		if err != nil {
-			return err
-		}
-
-		cmd.Args = append(cmd.Args, "--gitops", "destroy")
-
-		errWriter, errWrite := logWriter(logger.Errorf)
-		defer errWrite()
-		cmd.Stderr = errWriter
-
+		cmd := orbctl(destroyCtx)
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			panic(err)
@@ -32,8 +22,7 @@ func destroyTestFunc(ctx context.Context, logger promtail.Client) testFunc {
 
 		var confirmed bool
 
-		return simpleRunCommand(cmd, func(line string) {
-			logORBITERStdout(logger, line)
+		return runCommand(logger, cmd, "--gitops destroy", true, nil, func(line string) {
 			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 				confirmed = true
 				if _, err := stdin.Write([]byte("y\n")); err != nil {

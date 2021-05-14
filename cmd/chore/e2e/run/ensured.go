@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -39,6 +40,7 @@ func ensureORBITERTest(ctx context.Context, logger promtail.Client, orb string, 
 				select {
 				case <-ensureCtx.Done():
 					done <- ensureCtx.Err()
+					return
 				case <-triggerCheck:
 
 					if err := condition(ensureCtx, logger, orbctl, kubectl); err != nil {
@@ -48,6 +50,7 @@ func ensureORBITERTest(ctx context.Context, logger promtail.Client, orb string, 
 					}
 
 					done <- nil
+					return
 				case <-ticker.C:
 					go func() { triggerCheck <- struct{}{} }()
 				}
@@ -59,19 +62,19 @@ func ensureORBITERTest(ctx context.Context, logger promtail.Client, orb string, 
 }
 
 func watchLogs(ctx context.Context, logger promtail.Client, kubectl newKubectlCommandFunc, trigger chan<- struct{}) {
-	cmd := kubectl(ctx)
-	cmd.Args = append(cmd.Args, "--namespace", "caos-system", "logs", "--follow", "--selector", "app.kubernetes.io/name=orbiter", "--since", "10s")
 
-	errWriter, errWrite := logWriter(logger.Warnf)
-	defer errWrite()
-	cmd.Stderr = errWriter
+	select {
+	case <-ctx.Done():
+		return
+	default:
+		// goon
+	}
 
-	err := simpleRunCommand(cmd, func(line string) {
+	err := runCommand(logger, kubectl(ctx), "logs --namespace caos-system --selector app.kubernetes.io/name=orbiter --since 10s --follow", true, nil, func(line string) {
 		// Check if the desired state is ensured when orbiter prints so
 		if strings.Contains(line, "Desired state is ensured") {
 			go func() { trigger <- struct{}{} }()
 		}
-		logORBITERStdout(logger, line)
 	})
 
 	if err != nil {
@@ -102,12 +105,12 @@ func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(conte
 				}
 			}
 		}{}
-		if err := readYaml(ctx, logger, newOrbctl, "caos-internal/orbiter/current.yml", orbiter); err != nil {
+		if err := readYaml(ctx, logger, newOrbctl, "--gitops file print caos-internal/orbiter/current.yml", orbiter); err != nil {
 			return err
 		}
 
 		nodeagents := &common.NodeAgentsCurrentKind{}
-		if err := readYaml(ctx, logger, newOrbctl, "caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
+		if err := readYaml(ctx, logger, newOrbctl, "--gitops file print caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
 			return err
 		}
 
@@ -178,25 +181,15 @@ func isEnsured(orb string, masters, workers uint8, k8sVersion string) func(conte
 	}
 }
 
-func readYaml(ctx context.Context, logger promtail.Client, newOrbctl newOrbctlCommandFunc, path string, into interface{}) error {
+func readYaml(ctx context.Context, logger promtail.Client, binFunc func(context.Context) *exec.Cmd, args string, into interface{}) error {
 
 	orbctlCtx, orbctlCancel := context.WithTimeout(ctx, 15*time.Second)
 	defer orbctlCancel()
 
-	orbctl, err := newOrbctl(orbctlCtx)
-	if err != nil {
-		return err
-	}
+	buf := new(bytes.Buffer)
+	defer buf.Reset()
 
-	buf := &bytes.Buffer{}
-	orbctl.Args = append(orbctl.Args, "--gitops", "file", "print", path)
-	orbctl.Stdout = buf
-
-	errWriter, errWrite := logWriter(logger.Warnf)
-	defer errWrite()
-	orbctl.Stderr = errWriter
-
-	if err := orbctl.Run(); err != nil {
+	if err := runCommand(logger, binFunc(orbctlCtx), args, false, buf, nil); err != nil {
 		return fmt.Errorf("reading orbiters current state failed: %w", err)
 	}
 
@@ -216,33 +209,6 @@ func checkPodsAreRunning(ctx context.Context, logger promtail.Client, kubectl ne
 		}
 	}()
 
-	buf := new(bytes.Buffer)
-	defer buf.Reset()
-
-	cmdCtx, cmdCancel := context.WithTimeout(ctx, 15*time.Second)
-	defer cmdCancel()
-
-	cmd := kubectl(cmdCtx)
-	cmd.Args = append(cmd.Args,
-		"get", "pods",
-		"--namespace", namespace,
-		"--selector", selector,
-		"--output", "yaml")
-	cmd.Stdout = buf
-
-	errWriter, errWrite := logWriter(logger.Warnf)
-	defer errWrite()
-	cmd.Stderr = errWriter
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("getting container status failed: %w", err)
-	}
-
-	data, err := ioutil.ReadAll(buf)
-	if err != nil {
-		return fmt.Errorf("reading container status failed: %w", err)
-	}
-
 	pods := struct {
 		Items []struct {
 			Metadata struct {
@@ -257,8 +223,8 @@ func checkPodsAreRunning(ctx context.Context, logger promtail.Client, kubectl ne
 		}
 	}{}
 
-	if err := yaml.Unmarshal(data, &pods); err != nil {
-		return fmt.Errorf("unmarshalling container status failed: %w", err)
+	if err := readYaml(ctx, logger, kubectl, fmt.Sprintf("get pods --namespace %s --selector %s --output yaml", namespace, selector), &pods); err != nil {
+		return err
 	}
 
 	podsCount := uint8(len(pods.Items))
