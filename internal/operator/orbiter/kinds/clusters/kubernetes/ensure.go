@@ -52,8 +52,7 @@ func ensure(
 		return upgradingDone, err
 	}
 
-	var scalingDone bool
-	scalingDone, err = ensureUpScale(
+	if scalingDone, err := ensureUpScale(
 		monitor,
 		clusterID,
 		desired,
@@ -72,9 +71,10 @@ func ensure(
 		},
 		gitClient,
 		providerK8sSpec,
-	)
-	if !scalingDone {
+	); err != nil || !scalingDone {
 		monitor.Info("Scaling is not done yet")
+		return scalingDone, err
 	}
-	return scalingDone, err
+
+	return true, nil
 }

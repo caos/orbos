@@ -222,7 +222,7 @@ func plan(
 		}
 	}
 
-	label := func() error {
+	labelUpgradeState := func() error {
 		machine.node.Labels["orbos.ch/kubeadm-upgraded"] = to.Kubelet.Version
 		return k8sClient.UpdateNode(machine.node)
 	}
@@ -249,7 +249,7 @@ func plan(
 			return err
 		}
 
-		return label()
+		return labelUpgradeState()
 	}
 
 	nodeIsReady := machine.currentNodeagent.NodeIsReady
@@ -278,7 +278,7 @@ func plan(
 	if kubadmUpgraded != to.Kubelet.Version {
 
 		if kubadmUpgraded == "" {
-			return label, nil
+			return labelUpgradeState, nil
 		}
 
 		return migrate, nil

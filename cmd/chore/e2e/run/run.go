@@ -59,7 +59,9 @@ func runFunc(logger promtail.Client, orb, branch, orbconfig string, from uint8, 
 			/*  7 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
 			/*  8 */ ensureORBITERTest(logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
 			/*  9 */ retry(3, patchTestFunc(logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
-			/* 10 */ ensureORBITERTest(logger, orb, 10, 60*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
+			/* 10 */ ensureORBITERTest(logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.19.10")),
+			/* 11 */ ensureORBITERTest(logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.20.6")),
+			/* 12 */ ensureORBITERTest(logger, orb, 10, 15*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
 		)
 	}
 }
