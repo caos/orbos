@@ -31,10 +31,12 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 	var (
 		value string
 		file  string
+		stdin bool
 		exact bool
 	)
 	flags.StringVar(&value, "value", "", "Content value")
-	flags.StringVarP(&file, "file", "s", "", "File containing the content value")
+	flags.StringVar(&file, "file", "", "File containing the content value")
+	flags.BoolVar(&stdin, "stdin", false, "Read content value by stdin")
 	flags.BoolVar(&exact, "exact", false, "Write the content exactly at the path given without further prompting")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -60,7 +62,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 			path = strings.Split(args[1], ".")
 		}
 
-		contentStr, err := content(value, file, false)
+		contentStr, err := content(value, file, stdin)
 		if err != nil {
 			return err
 		}
