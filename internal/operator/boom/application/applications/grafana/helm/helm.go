@@ -6,6 +6,10 @@ func GetChartInfo() *chart.Chart {
 	return &chart.Chart{
 		Name:    "prometheus-operator",
 		Version: "9.3.1",
+		Index: &chart.Index{
+			Name: "prometheus-community",
+			URL:  "prometheus-community.github.io/helm-charts",
+		},
 	}
 }
 

@@ -149,6 +149,10 @@ func DefaultValues(imageTags map[string]string, image string) *Values {
 					corev1.ResourceMemory: resource.MustParse("128Mi"),
 				},
 			},
+			Metrics: &Metrics{
+				Enabled:        false,
+				ServiceMonitor: &ServiceMonitor{Enabled: false},
+			},
 		},
 		Redis: &Redis{
 			Enabled: true,

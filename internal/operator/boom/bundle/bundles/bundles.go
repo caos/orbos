@@ -8,6 +8,7 @@ import (
 	loggingoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/info"
 	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/loki/info"
 	metricsserverinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/info"
+	miniooperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/miniooperator/info"
 	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/info"
 	prometheusnodeexporterinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusnodeexporter/info"
 	prometheusoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/prometheusoperator/info"
@@ -51,6 +52,7 @@ func GetCaos() []name.Application {
 	apps = append(apps, loggingoperatorinfo.GetName())
 	apps = append(apps, lokiinfo.GetName())
 	apps = append(apps, metricsserverinfo.GetName())
+	apps = append(apps, miniooperatorinfo.GetName())
 
 	return apps
 }

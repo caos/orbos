@@ -132,6 +132,7 @@ type Dex struct {
 	Affinity          struct{}          `yaml:"affinity"`
 	PriorityClassName string            `yaml:"priorityClassName"`
 	Resources         *k8s.Resources    `yaml:"resources"`
+	Metrics           *Metrics          `yaml:"metrics"`
 }
 
 type Redis struct {

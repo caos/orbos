@@ -47,6 +47,8 @@ type ToolsetSpec struct {
 	LogsPersisting *LogsPersisting `json:"logsPersisting,omitempty" yaml:"logsPersisting,omitempty"`
 	//Spec for Metrics-Server
 	MetricsServer *MetricsServer `json:"metricsServer,omitempty" yaml:"metricsServer,omitempty"`
+	//Spec for Minio-Operator
+	S3StorageOperator *S3StorageOperator `json:"s3StorageOperator,omitempty" yaml:"s3StorageOperator,omitempty"`
 }
 
 type Boom struct {

@@ -2,70 +2,88 @@ package helm
 
 func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
-		Rbac: &Rbac{
-			Create:     true,
-			PspEnabled: false,
-		},
-		ServiceAccount: &ServiceAccount{
-			Create: true,
-			Name:   "",
-		},
-		APIService:  &APIService{Create: true},
-		HostNetwork: &HostNetwork{Enabled: false},
-		Image: &Image{
+		TestImage: &Image{
+			Registry:   "docker.io",
 			Repository: image,
 			Tag:        imageTags[image],
 			PullPolicy: "IfNotPresent",
 		},
-		ImagePullSecrets: nil,
-		Args: []string{
+		Image: &Image{
+			Registry:   "docker.io",
+			Repository: image,
+			Tag:        imageTags[image],
+			PullPolicy: "IfNotPresent",
+		},
+		HostAliases: []string{},
+		Replicas:    1,
+		Rbac: &Rbac{
+			Create: true,
+		},
+		ServiceAccount: &ServiceAccount{
+			Create:                       true,
+			Name:                         "",
+			AutomountServiceAccountToken: true,
+		},
+		APIService:  &APIService{Create: false},
+		SecurePort:  "8443",
+		HostNetwork: &HostNetwork{Enabled: false},
+		Command:     []string{"metrics-server"},
+		ExtraArgs: []string{
 			"--kubelet-insecure-tls",
 			"--kubelet-preferred-address-types=InternalIP,Hostname,InternalDNS,ExternalDNS,ExternalIP",
 		},
-		Resources:         struct{}{},
-		NodeSelector:      struct{}{},
-		Tolerations:       nil,
-		Affinity:          struct{}{},
-		Replicas:          1,
-		ExtraContainers:   nil,
-		PodLabels:         map[string]string{},
-		PodAnnotations:    map[string]string{},
-		ExtraVolumeMounts: nil,
-		ExtraVolumes:      nil,
-		LivenessProbe: &LivenessProbe{
-			HTTPGet: &HTTPGet{
-				Path:   "/healthz",
-				Port:   "https",
-				Scheme: "HTTPS",
-			},
-			InitialDelaySeconds: 20,
+		PodLabels:             map[string]string{},
+		PodAnnotations:        map[string]string{},
+		PodAffinityPreset:     "",
+		PodAntiAffinityPreset: "soft",
+		PodDisruptionBudget: &PodDisruptionBudget{
+			Enabled:        false,
+			MinAvailable:   nil,
+			MaxUnavailable: nil,
 		},
-		ReadinessProbe: &ReadinessProbe{
-			HTTPGet: &HTTPGet{
-				Path:   "/healthz",
-				Port:   "https",
-				Scheme: "HTTPS",
-			},
-			InitialDelaySeconds: 20,
+		NodeAffinityPreset: &NodeAffinityPreset{
+			Type:   "",
+			Key:    "",
+			Values: []string{},
 		},
-		SecurityContext: &SecurityContext{
-			AllowPrivilegeEscalation: false,
-			Capabilities:             &Capabilities{Drop: []string{"all"}},
-			ReadOnlyRootFilesystem:   true,
-			RunAsGroup:               10001,
-			RunAsNonRoot:             true,
-			RunAsUser:                10001,
-		},
+		Affinity:                  struct{}{},
+		TopologySpreadConstraints: []string{},
+		NodeSelector:              struct{}{},
+		Tolerations:               nil,
 		Service: &Service{
 			Annotations: map[string]string{},
 			Labels:      map[string]string{},
 			Port:        443,
 			Type:        "ClusterIP",
 		},
-		PodDisruptionBudget: &PodDisruptionBudget{
-			Enabled:        false,
-			MinAvailable:   nil,
-			MaxUnavailable: nil,
+		Resources: struct{}{},
+		LivenessProbe: &Probe{
+			Enabled:          true,
+			FailureThreshold: 3,
+			HTTPGet: &HTTPGet{
+				Path:   "/livez",
+				Port:   "https",
+				Scheme: "HTTPS",
+			},
+			PeriodSeconds: 10,
+		},
+		ReadinessProbe: &Probe{
+			Enabled:          true,
+			FailureThreshold: 3,
+			HTTPGet: &HTTPGet{
+				Path:   "/readyz",
+				Port:   "https",
+				Scheme: "HTTPS",
+			},
+			PeriodSeconds: 10,
+		},
+		ContainerSecurityContext: &ContainerSecurityContext{
+			Enabled:                true,
+			ReadOnlyRootFilesystem: false,
+			RunAsNonRoot:           true,
+		},
+		PodSecurityContext: &PodSecurityContext{
+			Enabled: false,
 		},
 	}
 }

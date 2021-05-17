@@ -8,6 +8,7 @@ import (
 
 func DefaultValues(imageTags map[string]string, image string) *Values {
 	return &Values{
+		Namespace:        "",
 		FullnameOverride: "kube-state-metrics",
 		PrometheusScrape: true,
 		Image: &Image{
@@ -26,7 +27,8 @@ func DefaultValues(imageTags map[string]string, image string) *Values {
 		CustomLabels: map[string]string{},
 		HostNetwork:  false,
 		Rbac: &Rbac{
-			Create: true,
+			Create:         true,
+			UseClusterRole: false,
 		},
 		ServiceAccount: &ServiceAccount{
 			Create: true,

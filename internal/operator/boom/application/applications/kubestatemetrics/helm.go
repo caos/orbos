@@ -3,6 +3,7 @@ package kubestatemetrics
 import (
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/kubestatemetrics/helm"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/kubestatemetrics/info"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
@@ -21,6 +22,7 @@ func (k *KubeStateMetrics) SpecToHelmValues(monitor mntr.Monitor, toolset *tools
 	values := helm.DefaultValues(imageTags, image)
 
 	spec := toolset.KubeMetricsExporter
+	values.Namespace = info.GetNamespace()
 
 	if spec == nil {
 		return values

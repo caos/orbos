@@ -19,7 +19,8 @@ type Service struct {
 }
 
 type Rbac struct {
-	Create bool `yaml:"create"`
+	Create         bool `yaml:"create"`
+	UseClusterRole bool `yaml:"useClusterRole"`
 }
 
 type ServiceAccount struct {
@@ -86,6 +87,7 @@ type PodDisruptionBudget struct {
 }
 
 type Values struct {
+	Namespace           string               `yaml:"namespace"`
 	FullnameOverride    string               `yaml:"fullnameOverride,omitempty"`
 	PrometheusScrape    bool                 `yaml:"prometheusScrape"`
 	Image               *Image               `yaml:"image"`
