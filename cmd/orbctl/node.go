@@ -40,7 +40,7 @@ func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orb
 		for _, arg := range args {
 			machine, found := machines[arg]
 			if !found {
-				panic(fmt.Sprintf("Machine with ID %s unknown", arg))
+				panic(fmt.Sprintf("machine with context and ID %s not found", arg))
 			}
 
 			required, require, _ := method(machine)
