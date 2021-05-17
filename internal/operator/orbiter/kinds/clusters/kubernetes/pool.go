@@ -15,12 +15,14 @@ func newMachines(pool infra.Pool, number int) (machines []infra.Machine, err err
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			machine, addErr := pool.AddMachine()
+			infraMachines, addErr := pool.AddMachine()
 			if addErr != nil {
 				err = helpers.Concat(err, addErr)
 				return
 			}
-			machines = append(machines, machine)
+			for _, machine := range infraMachines {
+				machines = append(machines, machine)
+			}
 		}()
 	}
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -87,7 +88,14 @@ func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 }
 
 func runOrbctlCmd(debug bool) func(context.Context) *exec.Cmd {
-	bin := "./artifacts/orbctl-Linux-x86_64"
+
+	var extension string
+
+	if runtime.GOOS == "windows" {
+		extension = ".exe"
+	}
+
+	bin := fmt.Sprintf("./artifacts/orbctl-%s-x86_64%s", strings.ToUpper(runtime.GOOS[0:1])+runtime.GOOS[1:], extension)
 	return func(ctx context.Context) *exec.Cmd {
 		if debug {
 			return exec.CommandContext(ctx, "dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", bin, "--")
