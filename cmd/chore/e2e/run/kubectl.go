@@ -16,7 +16,9 @@ func configureKubectl(kubeconfig string) newKubectlCommandFunc {
 	}
 }
 
-func readKubeconfigFunc(settings programSettings, to string) (func(orbctl newOrbctlCommandFunc) (err error), func() error) {
+type downloadKubeconfig func(orbctl newOrbctlCommandFunc) (err error)
+
+func downloadKubeconfigFunc(settings programSettings, to string) (downloadKubeconfig, func() error) {
 	return func(orbctl newOrbctlCommandFunc) (err error) {
 
 			readsecretCtx, readsecretCancel := context.WithTimeout(settings.ctx, 30*time.Second)

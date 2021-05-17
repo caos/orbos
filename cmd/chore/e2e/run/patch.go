@@ -6,8 +6,13 @@ import (
 	"time"
 )
 
-func patchTestFunc(path, value string) testFunc {
-	return func(settings programSettings, orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc, _ uint8) error {
+func patchTestFunc() {
+
+}
+
+func patch(settings programSettings, orbctl newOrbctlCommandFunc, path, value string) error {
+
+	try := func() error {
 
 		patchCtx, patchCancel := context.WithTimeout(settings.ctx, 30*time.Second)
 		defer patchCancel()
@@ -21,4 +26,6 @@ func patchTestFunc(path, value string) testFunc {
 
 		return runCommand(settings, orbctl(patchCtx), fmt.Sprintf("--gitops file patch orbiter.yml %s --value %s --exact", path, value), true, nil, nil)
 	}
+
+	return retry(3, try)
 }

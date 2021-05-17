@@ -6,35 +6,19 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"gopkg.in/yaml.v3"
 )
 
-var _ testFunc = writeInitialDesiredStateTest
+var _ testFunc = writeInitialDesiredState
 
-func writeInitialDesiredStateTest(settings programSettings, orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc, _ uint8) error {
-
-	initCtx, initCancel := context.WithTimeout(settings.ctx, 30*time.Second)
-	defer initCancel()
-
-	var providerYml string
-	if err := runCommand(settings, orbctl(initCtx), "--gitops file print provider.yml", false, nil, func(line string) {
-		providerYml += fmt.Sprintf("    %s\n", line)
-	}); err != nil {
-		return err
-	}
+func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec) interactFunc {
 
 	branchParts := strings.Split(settings.branch, "/")
 	version := branchParts[len(branchParts)-1:][0] + "-dev"
 
-	orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
-version: v0
-spec:
-  verbose: false
-clusters:
-  %s:
-    kind: orbiter.caos.ch/KubernetesCluster
-    version: v0
-    spec:
-      controlplane:
+	clusterSpec := fmt.Sprintf(`      controlplane:
         updatesdisabled: false
         provider: %s
         nodes: 3
@@ -56,11 +40,36 @@ clusters:
       - updatesdisabled: false
         provider: %s
         nodes: 3
-        pool: application
-      - updatesdisabled: false
-        provider: %s
-        nodes: 0
-        pool: storage
+        pool: application`, settings.orbID, version, settings.orbID)
+
+	if err := yaml.Unmarshal([]byte(clusterSpec), expect); err != nil {
+		panic(err)
+	}
+
+	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, error) {
+
+		try := func() error {
+
+			initCtx, initCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+			defer initCancel()
+
+			var providerYml string
+			if err := runCommand(settings, orbctl(initCtx), "--gitops file print provider.yml", false, nil, func(line string) {
+				providerYml += fmt.Sprintf("    %s\n", line)
+			}); err != nil {
+				return err
+			}
+
+			orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+version: v0
+spec:
+  verbose: false
+clusters:
+  %s:
+    kind: orbiter.caos.ch/KubernetesCluster
+    version: v0
+    spec:
+%s
 providers:
   %s:
 %s
@@ -109,15 +118,15 @@ providers:
               protocol: https
               path: /healthz
               code: 200
-`, settings.orbID, settings.orbID, version, settings.orbID, settings.orbID, settings.orbID, providerYml)
-	orbiterCmd := orbctl(initCtx)
-	orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
+`, settings.orbID, clusterSpec, settings.orbID, providerYml)
+			orbiterCmd := orbctl(initCtx)
+			orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
 
-	if err := runCommand(settings, orbiterCmd, "--gitops file patch orbiter.yml --exact --stdin", true, nil, nil); err != nil {
-		return err
-	}
+			if err := runCommand(settings, orbiterCmd, "--gitops file patch orbiter.yml --exact --stdin", true, nil, nil); err != nil {
+				return err
+			}
 
-	boomYml := fmt.Sprintf(`
+			boomYml := fmt.Sprintf(`
 apiVersion: caos.ch/v1
 kind: Boom
 metadata:
@@ -149,7 +158,12 @@ spec:
   logsPersisting:
     deploy: false
 `, version)
-	boomCmd := orbctl(initCtx)
-	boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
-	return runCommand(settings, boomCmd, "--gitops file patch boom.yml --exact --stdin", true, nil, nil)
+			boomCmd := orbctl(initCtx)
+			boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
+
+			return runCommand(settings, boomCmd, "--gitops file patch boom.yml --exact --stdin", true, nil, nil)
+		}
+
+		return 0, retry(3, try)
+	}
 }

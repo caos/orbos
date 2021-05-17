@@ -17,49 +17,49 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type conditionFunc func(context.Context, programSettings, newOrbctlCommandFunc, newKubectlCommandFunc) error
+func awaitORBITER(settings programSettings, timeout time.Duration, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, downloadKubeconfigFunc downloadKubeconfig, step uint8, desired *kubernetes.Spec) error {
 
-func ensureORBITERTest(timeout time.Duration, condition conditionFunc) testFunc {
-	return func(settings programSettings, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, step uint8) error {
+	ensureCtx, ensureCancel := context.WithTimeout(settings.ctx, timeout)
+	defer ensureCancel()
 
-		ensureCtx, ensureCancel := context.WithTimeout(settings.ctx, timeout)
-		defer ensureCancel()
-
-		triggerCheck := make(chan struct{})
-		done := make(chan error)
-
-		go watchLogs(ensureCtx, settings, kubectl, triggerCheck)
-
-		started := time.Now()
-
-		// Check each minute if the desired state is ensured
-		ticker := time.NewTicker(time.Minute)
-		defer ticker.Stop()
-
-		go func() {
-			for {
-				select {
-				case <-ensureCtx.Done():
-					done <- ensureCtx.Err()
-					return
-				case <-triggerCheck:
-
-					if err := condition(ensureCtx, settings, orbctl, kubectl); err != nil {
-						printProgress(settings, step, started, timeout)
-						settings.logger.Warnf("desired state is not yet ensured: %s", err.Error())
-						continue
-					}
-
-					done <- nil
-					return
-				case <-ticker.C:
-					go func() { triggerCheck <- struct{}{} }()
-				}
-			}
-		}()
-
-		return <-done
+	if err := downloadKubeconfigFunc(orbctl); err != nil {
+		return err
 	}
+
+	triggerCheck := make(chan struct{})
+	done := make(chan error)
+
+	go watchLogs(ensureCtx, settings, kubectl, triggerCheck)
+
+	started := time.Now()
+
+	// Check each minute if the desired state is ensured
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	go func() {
+		for {
+			select {
+			case <-ensureCtx.Done():
+				done <- ensureCtx.Err()
+				return
+			case <-triggerCheck:
+
+				if err := isEnsured(ensureCtx, settings, orbctl, kubectl, desired); err != nil {
+					printProgress(settings, step, started, timeout)
+					settings.logger.Warnf("desired state is not yet ensured: %s", err.Error())
+					continue
+				}
+
+				done <- nil
+				return
+			case <-ticker.C:
+				go func() { triggerCheck <- struct{}{} }()
+			}
+		}
+	}()
+
+	return <-done
 }
 
 func watchLogs(ctx context.Context, settings programSettings, kubectl newKubectlCommandFunc, trigger chan<- struct{}) {
@@ -85,101 +85,102 @@ func watchLogs(ctx context.Context, settings programSettings, kubectl newKubectl
 	watchLogs(ctx, settings, kubectl, trigger)
 }
 
-func isEnsured(masters, workers uint8, k8sVersion string) conditionFunc {
-	return func(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error {
+func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, desired *kubernetes.Spec) error {
 
-		if err := checkPodsAreRunning(ctx, settings, newKubectl, "caos-system", "app.kubernetes.io/name=orbiter", 1); err != nil {
-			return err
+	if err := checkPodsAreRunning(ctx, settings, newKubectl, "caos-system", "app.kubernetes.io/name=orbiter", 1); err != nil {
+		return err
+	}
+
+	orbiter := &struct {
+		Clusters map[string]struct {
+			Current kubernetes.CurrentCluster
 		}
-
-		orbiter := &struct {
-			Clusters map[string]struct {
-				Current kubernetes.CurrentCluster
-			}
-			Providers map[string]struct {
-				Current struct {
-					Ingresses struct {
-						Httpsingress infra.Address
-						Httpingress  infra.Address
-						Kubeapi      infra.Address
-					}
+		Providers map[string]struct {
+			Current struct {
+				Ingresses struct {
+					Httpsingress infra.Address
+					Httpingress  infra.Address
+					Kubeapi      infra.Address
 				}
 			}
-		}{}
-		if err := readYaml(ctx, settings, newOrbctl, "--gitops file print caos-internal/orbiter/current.yml", orbiter); err != nil {
-			return err
 		}
-
-		nodeagents := &common.NodeAgentsCurrentKind{}
-		if err := readYaml(ctx, settings, newOrbctl, "--gitops file print caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
-			return err
-		}
-
-		cluster, ok := orbiter.Clusters[settings.orbID]
-		if !ok {
-			return fmt.Errorf("cluster %s not found in current state", settings.orbID)
-		}
-		currentMachinesLen := uint8(len(cluster.Current.Machines.M))
-
-		machines := masters + workers
-
-		if currentMachinesLen != machines {
-			return fmt.Errorf("current state has %d machines instead of %d", currentMachinesLen, machines)
-		}
-
-		for nodeagentID, nodeagent := range cluster.Current.Machines.M {
-			if !nodeagent.Ready ||
-				!nodeagent.FirewallIsReady ||
-				!nodeagent.Joined {
-				return fmt.Errorf("nodeagent %s has current states joined=%t, firewallIsReady=%t, ready=%t",
-					nodeagentID,
-					nodeagent.Ready,
-					nodeagent.FirewallIsReady,
-					nodeagent.Joined,
-				)
-			}
-		}
-
-		for nodeagentID, nodeagent := range nodeagents.Current.NA {
-			if !nodeagent.NodeIsReady {
-				return fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID)
-			}
-			if nodeagent.Software.Kubelet.Version != k8sVersion ||
-				nodeagent.Software.Kubeadm.Version != k8sVersion ||
-				nodeagent.Software.Kubectl.Version != k8sVersion {
-				return fmt.Errorf("nodeagent %s has current states kubelet=%s, kubeadm=%s, kubectl=%s instead of %s",
-					nodeagentID,
-					nodeagent.Software.Kubelet.Version,
-					nodeagent.Software.Kubeadm.Version,
-					nodeagent.Software.Kubectl.Version,
-					k8sVersion,
-				)
-			}
-		}
-
-		if cluster.Current.Status != "running" {
-			return fmt.Errorf("cluster status is %s", cluster.Current.Status)
-		}
-
-		if err := checkPodsAreRunning(ctx, settings, newKubectl, "kube-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", masters*4); err != nil {
-			return err
-		}
-
-		provider, ok := orbiter.Providers[settings.orbID]
-		if !ok {
-			return fmt.Errorf("provider %s not found in current state", settings.orbID)
-		}
-
-		ep := provider.Current.Ingresses.Httpsingress
-
-		msg, err := helpers.Check("https", ep.Location, ep.FrontendPort, "/ambassador/v0/check_ready", 200, false)
-		if err != nil {
-			return fmt.Errorf("ambassador ready check failed with message: %s: %w", msg, err)
-		}
-		settings.logger.Infof(msg)
-
-		return nil
+	}{}
+	if err := readYaml(ctx, settings, newOrbctl, "--gitops file print caos-internal/orbiter/current.yml", orbiter); err != nil {
+		return err
 	}
+
+	nodeagents := &common.NodeAgentsCurrentKind{}
+	if err := readYaml(ctx, settings, newOrbctl, "--gitops file print caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
+		return err
+	}
+
+	cluster, ok := orbiter.Clusters[settings.orbID]
+	if !ok {
+		return fmt.Errorf("cluster %s not found in current state", settings.orbID)
+	}
+	currentMachinesLen := uint8(len(cluster.Current.Machines.M))
+
+	machines := uint8(desired.ControlPlane.Nodes)
+	for i := range desired.Workers {
+		machines += uint8(desired.Workers[i].Nodes)
+	}
+
+	if currentMachinesLen != machines {
+		return fmt.Errorf("current state has %d machines instead of %d", currentMachinesLen, machines)
+	}
+
+	for nodeagentID, nodeagent := range cluster.Current.Machines.M {
+		if !nodeagent.Ready ||
+			!nodeagent.FirewallIsReady ||
+			!nodeagent.Joined {
+			return fmt.Errorf("nodeagent %s has current states joined=%t, firewallIsReady=%t, ready=%t",
+				nodeagentID,
+				nodeagent.Ready,
+				nodeagent.FirewallIsReady,
+				nodeagent.Joined,
+			)
+		}
+	}
+
+	for nodeagentID, nodeagent := range nodeagents.Current.NA {
+		if !nodeagent.NodeIsReady {
+			return fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID)
+		}
+		if nodeagent.Software.Kubelet.Version != desired.Versions.Kubernetes ||
+			nodeagent.Software.Kubeadm.Version != desired.Versions.Kubernetes ||
+			nodeagent.Software.Kubectl.Version != desired.Versions.Kubernetes {
+			return fmt.Errorf("nodeagent %s has current states kubelet=%s, kubeadm=%s, kubectl=%s instead of %s",
+				nodeagentID,
+				nodeagent.Software.Kubelet.Version,
+				nodeagent.Software.Kubeadm.Version,
+				nodeagent.Software.Kubectl.Version,
+				desired.Versions.Kubernetes,
+			)
+		}
+	}
+
+	if cluster.Current.Status != "running" {
+		return fmt.Errorf("cluster status is %s", cluster.Current.Status)
+	}
+
+	if err := checkPodsAreRunning(ctx, settings, newKubectl, "kube-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", uint8(desired.ControlPlane.Nodes*4)); err != nil {
+		return err
+	}
+
+	provider, ok := orbiter.Providers[settings.orbID]
+	if !ok {
+		return fmt.Errorf("provider %s not found in current state", settings.orbID)
+	}
+
+	ep := provider.Current.Ingresses.Httpsingress
+
+	msg, err := helpers.Check("https", ep.Location, ep.FrontendPort, "/ambassador/v0/check_ready", 200, false)
+	if err != nil {
+		return fmt.Errorf("ambassador ready check failed with message: %s: %w", msg, err)
+	}
+	settings.logger.Infof(msg)
+
+	return nil
 }
 
 func readYaml(ctx context.Context, settings programSettings, binFunc func(context.Context) *exec.Cmd, args string, into interface{}) error {
