@@ -8,9 +8,9 @@ import (
 	"strings"
 )
 
-func runCommand(settings programSettings, cmd *exec.Cmd, args string, log bool, write io.Writer, scan func(line string)) error {
+func runCommand(settings programSettings, log bool, write io.Writer, scan func(line string), cmd *exec.Cmd, args ...string) error {
 
-	cmd.Args = append(cmd.Args, strings.Fields(args)...)
+	cmd.Args = append(cmd.Args, args...)
 
 	errWriter, errWrite := logWriter(settings.logger.Errorf)
 	defer errWrite()

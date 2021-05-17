@@ -30,7 +30,7 @@ func downloadKubeconfigFunc(settings programSettings, to string) (downloadKubeco
 			}
 			defer file.Close()
 
-			return runCommand(settings, orbctl(readsecretCtx), fmt.Sprintf("--gitops readsecret orbiter.%s.kubeconfig.encrypted", settings.orbID), false, file, nil)
+			return runCommand(settings, false, file, nil, orbctl(readsecretCtx), "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID))
 
 		}, func() error {
 			return os.Remove(to)

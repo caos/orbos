@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"time"
 )
 
@@ -24,7 +23,7 @@ func patch(settings programSettings, orbctl newOrbctlCommandFunc, path, value st
 		defer errWrite()
 		cmd.Stderr = errWriter
 
-		return runCommand(settings, orbctl(patchCtx), fmt.Sprintf("--gitops file patch orbiter.yml %s --value %s --exact", path, value), true, nil, nil)
+		return runCommand(settings, true, nil, nil, orbctl(patchCtx), "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
 	}
 
 	return retry(3, try)

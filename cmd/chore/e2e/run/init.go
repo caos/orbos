@@ -46,7 +46,7 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
 		panic(err)
 	}
 
-	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, error) {
+	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
 		try := func() error {
 
@@ -54,9 +54,9 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
 			defer initCancel()
 
 			var providerYml string
-			if err := runCommand(settings, orbctl(initCtx), "--gitops file print provider.yml", false, nil, func(line string) {
+			if err := runCommand(settings, false, nil, func(line string) {
 				providerYml += fmt.Sprintf("    %s\n", line)
-			}); err != nil {
+			}, orbctl(initCtx), "--gitops", "file", "print", "provider.yml"); err != nil {
 				return err
 			}
 
@@ -122,7 +122,7 @@ providers:
 			orbiterCmd := orbctl(initCtx)
 			orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
 
-			if err := runCommand(settings, orbiterCmd, "--gitops file patch orbiter.yml --exact --stdin", true, nil, nil); err != nil {
+			if err := runCommand(settings, true, nil, nil, orbiterCmd, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--stdin"); err != nil {
 				return err
 			}
 
@@ -161,9 +161,9 @@ spec:
 			boomCmd := orbctl(initCtx)
 			boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
 
-			return runCommand(settings, boomCmd, "--gitops file patch boom.yml --exact --stdin", true, nil, nil)
+			return runCommand(settings, true, nil, nil, boomCmd, "--gitops", "file", "patch", "boom.yml", "--exact", "--stdin")
 		}
 
-		return 0, retry(3, try)
+		return 0, nil, retry(3, try)
 	}
 }

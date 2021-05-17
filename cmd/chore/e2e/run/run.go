@@ -30,7 +30,7 @@ func run(settings programSettings) error {
 			// context is probably cancelled as program is terminating so we create a new one here
 			destroySettings := settings
 			destroySettings.ctx = context.Background()
-			if _, cuErr := destroyTestFunc(destroySettings, nil)(99, newOrbctl); cuErr != nil {
+			if _, _, cuErr := destroy(destroySettings, nil)(99, newOrbctl); cuErr != nil {
 
 				original := ""
 				if err != nil {
@@ -54,11 +54,12 @@ func run(settings programSettings) error {
 	defer deleteKubeconfig()
 
 	return seq(settings, newOrbctl, configureKubectl(kubeconfig.Name()), readKubeconfig,
-		/*  1 */ writeInitialDesiredStateTest,
-		/*  2 */ destroyTestFunc,
-		/*  3 */ bootstrapTestFunc,
-		/*  4 */ downscaleTestFunc,
-		/*  5 */ upgradeTestFunc,
+		/*  1 */ writeInitialDesiredState,
+		/*  2 */ destroy,
+		/*  3 */ bootstrap,
+		/*  4 */ downscale,
+		/*  5 */ reboot,
+		/*  6 */ upgrade,
 	)
 }
 
@@ -88,7 +89,7 @@ cleanup=%t`,
 
 type testFunc func(programSettings, *kubernetes.Spec) interactFunc
 
-type interactFunc func(uint8, newOrbctlCommandFunc) (time.Duration, error)
+type interactFunc func(uint8, newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error)
 
 func seq(settings programSettings, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, downloadKubeconfigFunc downloadKubeconfig, fns ...testFunc) error {
 
@@ -124,12 +125,12 @@ func runTest(settings programSettings, fn interactFunc, orbctl newOrbctlCommandF
 		}
 	}()
 
-	timeout, err := fn(step, orbctl)
+	timeout, furtherCurrentChecks, err := fn(step, orbctl)
 	if err != nil || timeout == 0 {
 		return err
 	}
 
-	return awaitORBITER(settings, timeout, orbctl, kubectl, downloadKubeconfigFunc, step, expect)
+	return awaitORBITER(settings, timeout, orbctl, kubectl, downloadKubeconfigFunc, step, expect, furtherCurrentChecks)
 }
 
 func retry(count uint8, fn func() error) error {

@@ -10,7 +10,7 @@ import (
 var _ testFunc = bootstrap
 
 func bootstrap(settings programSettings, _ *kubernetes.Spec) interactFunc {
-	return func(step uint8, orbctl newOrbctlCommandFunc) (time.Duration, error) {
+	return func(step uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
 		timeout := 30 * time.Minute
 		bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(settings.ctx, timeout)
@@ -31,6 +31,6 @@ func bootstrap(settings programSettings, _ *kubernetes.Spec) interactFunc {
 			}
 		}()
 
-		return 15 * time.Minute, runCommand(settings, orbctl(bootstrapCtx), "--gitops takeoff", true, nil, nil)
+		return 15 * time.Minute, nil, runCommand(settings, true, nil, nil, orbctl(bootstrapCtx), "--gitops", "takeoff")
 	}
 }

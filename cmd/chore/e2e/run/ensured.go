@@ -17,7 +17,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func awaitORBITER(settings programSettings, timeout time.Duration, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, downloadKubeconfigFunc downloadKubeconfig, step uint8, desired *kubernetes.Spec) error {
+func awaitORBITER(
+	settings programSettings,
+	timeout time.Duration,
+	orbctl newOrbctlCommandFunc,
+	kubectl newKubectlCommandFunc,
+	downloadKubeconfigFunc downloadKubeconfig,
+	step uint8,
+	desired *kubernetes.Spec,
+	furtherCurrentChecks checkCurrentFunc,
+) error {
 
 	ensureCtx, ensureCancel := context.WithTimeout(settings.ctx, timeout)
 	defer ensureCancel()
@@ -45,7 +54,7 @@ func awaitORBITER(settings programSettings, timeout time.Duration, orbctl newOrb
 				return
 			case <-triggerCheck:
 
-				if err := isEnsured(ensureCtx, settings, orbctl, kubectl, desired); err != nil {
+				if err := isEnsured(ensureCtx, settings, orbctl, kubectl, desired, furtherCurrentChecks); err != nil {
 					printProgress(settings, step, started, timeout)
 					settings.logger.Warnf("desired state is not yet ensured: %s", err.Error())
 					continue
@@ -71,21 +80,25 @@ func watchLogs(ctx context.Context, settings programSettings, kubectl newKubectl
 		// goon
 	}
 
-	err := runCommand(settings, kubectl(ctx), "logs --namespace caos-system --selector app.kubernetes.io/name=orbiter --since 10s --follow", true, nil, func(line string) {
+	err := runCommand(settings, true, nil, func(line string) {
 		// Check if the desired state is ensured when orbiter prints so
 		if strings.Contains(line, "Desired state is ensured") {
 			go func() { trigger <- struct{}{} }()
 		}
-	})
+	}, kubectl(ctx), "logs", "--namespace", "caos-system", "--selector", "app.kubernetes.io/name=orbiter", "--since", "10s", "--follow")
 
 	if err != nil {
 		settings.logger.Warnf("watching logs failed: %s. trying again", err.Error())
 	}
 
+	time.Sleep(1 * time.Second)
+
 	watchLogs(ctx, settings, kubectl, trigger)
 }
 
-func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, desired *kubernetes.Spec) error {
+type checkCurrentFunc func(current common.NodeAgentsCurrentKind) error
+
+func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, desired *kubernetes.Spec, furtherChecks checkCurrentFunc) error {
 
 	if err := checkPodsAreRunning(ctx, settings, newKubectl, "caos-system", "app.kubernetes.io/name=orbiter", 1); err != nil {
 		return err
@@ -105,12 +118,12 @@ func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbct
 			}
 		}
 	}{}
-	if err := readYaml(ctx, settings, newOrbctl, "--gitops file print caos-internal/orbiter/current.yml", orbiter); err != nil {
+	if err := readYaml(ctx, settings, newOrbctl, orbiter, "--gitops", "file", "print", "caos-internal/orbiter/current.yml"); err != nil {
 		return err
 	}
 
 	nodeagents := &common.NodeAgentsCurrentKind{}
-	if err := readYaml(ctx, settings, newOrbctl, "--gitops file print caos-internal/orbiter/node-agents-current.yml", nodeagents); err != nil {
+	if err := readYaml(ctx, settings, newOrbctl, nodeagents, "--gitops", "file", "print", "caos-internal/orbiter/node-agents-current.yml"); err != nil {
 		return err
 	}
 
@@ -178,12 +191,19 @@ func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbct
 	if err != nil {
 		return fmt.Errorf("ambassador ready check failed with message: %s: %w", msg, err)
 	}
+
+	if furtherChecks != nil {
+		if err := furtherChecks(*nodeagents); err != nil {
+			return err
+		}
+	}
+
 	settings.logger.Infof(msg)
 
 	return nil
 }
 
-func readYaml(ctx context.Context, settings programSettings, binFunc func(context.Context) *exec.Cmd, args string, into interface{}) error {
+func readYaml(ctx context.Context, settings programSettings, binFunc func(context.Context) *exec.Cmd, into interface{}, args ...string) error {
 
 	orbctlCtx, orbctlCancel := context.WithTimeout(ctx, 15*time.Second)
 	defer orbctlCancel()
@@ -191,7 +211,7 @@ func readYaml(ctx context.Context, settings programSettings, binFunc func(contex
 	buf := new(bytes.Buffer)
 	defer buf.Reset()
 
-	if err := runCommand(settings, binFunc(orbctlCtx), args, false, buf, nil); err != nil {
+	if err := runCommand(settings, false, buf, nil, binFunc(orbctlCtx), args...); err != nil {
 		return fmt.Errorf("reading orbiters current state failed: %w", err)
 	}
 
@@ -225,7 +245,7 @@ func checkPodsAreRunning(ctx context.Context, settings programSettings, kubectl 
 		}
 	}{}
 
-	if err := readYaml(ctx, settings, kubectl, fmt.Sprintf("get pods --namespace %s --selector %s --output yaml", namespace, selector), &pods); err != nil {
+	if err := readYaml(ctx, settings, kubectl, &pods, "get", "pods", "--namespace", namespace, "--selector", selector, "--output", "yaml"); err != nil {
 		return err
 	}
 

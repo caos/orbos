@@ -15,7 +15,7 @@ func buildOrbctl(settings programSettings) (newOrbctlCommandFunc, error) {
 		return nil, err
 	}
 
-	if err := runCommand(settings, newCmd(settings.ctx), "--version", true, nil, nil); err != nil {
+	if err := runCommand(settings, true, nil, nil, newCmd(settings.ctx), "--version"); err != nil {
 		return nil, err
 	}
 

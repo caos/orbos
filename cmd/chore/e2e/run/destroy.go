@@ -12,7 +12,7 @@ var _ testFunc = destroy
 
 func destroy(settings programSettings, _ *kubernetes.Spec) interactFunc {
 
-	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, error) {
+	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
 		try := func() error {
 
@@ -27,16 +27,16 @@ func destroy(settings programSettings, _ *kubernetes.Spec) interactFunc {
 
 			var confirmed bool
 
-			return runCommand(settings, cmd, "--gitops destroy", true, nil, func(line string) {
+			return runCommand(settings, true, nil, func(line string) {
 				if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 					confirmed = true
 					if _, err := stdin.Write([]byte("y\n")); err != nil {
 						panic(err)
 					}
 				}
-			})
+			}, cmd, "--gitops", "destroy")
 		}
 
-		return 0, retry(3, try)
+		return 0, nil, retry(3, try)
 	}
 }
