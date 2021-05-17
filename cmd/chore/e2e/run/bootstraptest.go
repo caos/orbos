@@ -3,32 +3,30 @@ package main
 import (
 	"context"
 	"time"
-
-	"github.com/afiskon/promtail-client/promtail"
 )
 
-func bootstrapTestFunc(ctx context.Context, logger promtail.Client, orb string, step uint8) testFunc {
-	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) (err error) {
+var _ testFunc = bootstrapTestFunc
 
-		timeout := 20 * time.Minute
-		bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(ctx, timeout)
-		defer bootstrapCtxCancel()
+func bootstrapTestFunc(settings programSettings, orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc, step uint8) (err error) {
 
-		ticker := time.NewTicker(time.Minute)
-		defer ticker.Stop()
+	timeout := 20 * time.Minute
+	bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(settings.ctx, timeout)
+	defer bootstrapCtxCancel()
 
-		started := time.Now()
-		go func() {
-			for {
-				select {
-				case <-ticker.C:
-					printProgress(logger, orb, step, started, timeout)
-				case <-bootstrapCtx.Done():
-					return
-				}
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	started := time.Now()
+	go func() {
+		for {
+			select {
+			case <-ticker.C:
+				printProgress(settings, step, started, timeout)
+			case <-bootstrapCtx.Done():
+				return
 			}
-		}()
+		}
+	}()
 
-		return runCommand(logger, orbctl(bootstrapCtx), "--gitops takeoff", true, nil, nil)
-	}
+	return runCommand(settings, orbctl(bootstrapCtx), "--gitops takeoff", true, nil, nil)
 }

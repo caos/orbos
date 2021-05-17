@@ -6,42 +6,44 @@ import (
 	"io"
 	"os/exec"
 	"strings"
-
-	"github.com/afiskon/promtail-client/promtail"
 )
 
-func runCommand(logger promtail.Client, cmd *exec.Cmd, args string, log bool, write io.Writer, scan func(line string)) error {
+func runCommand(settings programSettings, cmd *exec.Cmd, args string, log bool, write io.Writer, scan func(line string)) error {
 
 	cmd.Args = append(cmd.Args, strings.Fields(args)...)
 
-	errWriter, errWrite := logWriter(logger.Errorf)
+	errWriter, errWrite := logWriter(settings.logger.Errorf)
 	defer errWrite()
 	cmd.Stderr = errWriter
 
-	out, err := cmd.StdoutPipe()
+	stdoutReader, err := cmd.StdoutPipe()
 	if err != nil {
 		panic(err)
 	}
+
+	var scanReader io.Reader = stdoutReader
+
+	if write != nil {
+		scanReader = io.TeeReader(stdoutReader, write)
+	}
+
+	settings.logger.Infof(fmt.Sprintf(`'%s'`, strings.Join(cmd.Args, `' '`)))
+
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
-	scanner := bufio.NewScanner(out)
+	scanner := bufio.NewScanner(scanReader)
 	for scanner.Scan() {
 		line := scanner.Text()
+		if line == "" {
+			continue
+		}
 		if scan != nil {
 			scan(line)
 		}
 
 		if log {
-			logFunc := logger.Infof
-			if strings.Contains(line, ` err=`) {
-				logFunc = logger.Warnf
-			}
-			logFunc(line)
-		}
-
-		if write != nil {
-			write.Write([]byte(fmt.Sprintf("%s\n", line)))
+			logORBITERStdout(settings, line)
 		}
 	}
 	if err := scanner.Err(); err != nil {

@@ -21,23 +21,14 @@ import (
 func main() {
 
 	var (
-		unpublished bool
-		orbconfig   string
-		//		ghToken     string
-		graphiteURL string
-		graphiteKey string
-		lokiURL     string
-		from        int
-		cleanup     bool
+		settings                          programSettings
+		from                              int
+		graphiteURL, graphiteKey, lokiURL string
 	)
 
 	const (
-		unpublishedDefault = false
-		unpublishedUsage   = "Test all unpublished branches"
 		orbDefault         = "~/.orb/config"
 		orbUsage           = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
-		//		githubTokenDefault  = ""
-		//		githubTokenKeyUsage = "Personal access token with repo scope for github.com/caos/orbos"
 		graphiteURLDefault = ""
 		graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
 		graphiteKeyDefault = ""
@@ -50,44 +41,35 @@ func main() {
 		cleanupUsage       = "destroy orb after tests are done"
 	)
 
-	flag.BoolVar(&unpublished, "unpublished", unpublishedDefault, unpublishedUsage)
-	flag.BoolVar(&unpublished, "u", unpublishedDefault, unpublishedUsage+" (shorthand)")
-	flag.StringVar(&orbconfig, "orbconfig", orbDefault, orbUsage)
-	flag.StringVar(&orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
-	//	flag.StringVar(&ghToken, "github-access-token", githubTokenDefault, githubTokenKeyUsage)
-	//	flag.StringVar(&ghToken, "t", githubTokenDefault, githubTokenKeyUsage+" (shorthand)")
+	flag.StringVar(&settings.orbconfig, "orbconfig", orbDefault, orbUsage)
+	flag.StringVar(&settings.orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
 	flag.StringVar(&graphiteURL, "graphiteurl", graphiteURLDefault, graphiteURLUsage)
 	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
 	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
 	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
 	flag.StringVar(&lokiURL, "lokiurl", lokiURLDefault, lokiURLUsage)
 	flag.StringVar(&lokiURL, "l", lokiURLDefault, lokiURLUsage+" (shorthand)")
-	flag.BoolVar(&cleanup, "cleanup", cleanupDefault, cleanupUsage)
-	flag.BoolVar(&cleanup, "c", cleanupDefault, cleanupUsage+" (shorthand)")
+	flag.BoolVar(&settings.cleanup, "cleanup", cleanupDefault, cleanupUsage)
+	flag.BoolVar(&settings.cleanup, "c", cleanupDefault, cleanupUsage+" (shorthand)")
 	flag.IntVar(&from, "from", fromDefault, fromUsage)
 	flag.IntVar(&from, "s", fromDefault, fromUsage)
 
 	flag.Parse()
 
-	fmt.Printf("unpublished=%t\n", unpublished)
-	fmt.Printf("orbconfig=%s\n", orbconfig)
-	fmt.Printf("graphiteurl=%s\n", graphiteURL)
-	fmt.Printf("cleanup=%t\n", cleanup)
-	fmt.Printf("from=%d\n", from)
-
 	if from > math.MaxUint8 {
 		panic(fmt.Errorf("maximum from value is %d", math.MaxUint8))
 	}
+
+	settings.from = uint8(from)
 
 	out, err := exec.Command("git", "branch", "--show-current").Output()
 	if err != nil {
 		panic(err)
 	}
 
-	branch := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/")
-	fmt.Printf("branch=%s\n", branch)
+	settings.branch = strings.ReplaceAll(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/"), "origin/"), ".", "-")
 
-	orbCfg, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
+	orbCfg, err := orb.ParseOrbConfig(helpers.PruneHome(settings.orbconfig))
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +78,7 @@ func main() {
 		panic(err)
 	}
 
-	orb := strings.ToLower(strings.Split(strings.Split(orbCfg.URL, "/")[1], ".")[0])
+	settings.orbID = strings.ToLower(strings.Split(strings.Split(orbCfg.URL, "/")[1], ".")[0])
 
 	sendLevel := promtail.DISABLE
 	if lokiURL != "" {
@@ -104,9 +86,9 @@ func main() {
 		sendLevel = promtail.INFO
 	}
 
-	logger, err := promtail.NewClientProto(promtail.ClientConfig{
+	settings.logger, err = promtail.NewClientProto(promtail.ClientConfig{
 		PushURL:            lokiURL,
-		Labels:             fmt.Sprintf(`{e2e_test="true", branch="%s", orb="%s"}`, branch, orb),
+		Labels:             fmt.Sprintf(`{e2e_test="true", branch="%s", orb="%s"}`, settings.branch, settings.orbID),
 		BatchWait:          1 * time.Second,
 		BatchEntriesNumber: 0,
 		SendLevel:          sendLevel,
@@ -115,28 +97,11 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	defer logger.Shutdown()
-
-	testFunc := runFunc
-	/*
-		if ghToken != "" {
-			testFunc = func(branch string) error {
-				return github(trimBranch(branch), ghToken, strings.ToLower(testcase), runFunc)(orbconfig)
-			}
-		}
-	*/
-	if graphiteURL != "" {
-		fmt.Println("Sending status to Graphite")
-		testFunc = graphite(
-			orb,
-			graphiteURL,
-			graphiteKey,
-			trimBranch(branch),
-			runFunc)
-	}
+	defer settings.logger.Shutdown()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	settings.ctx = ctx
 
 	signalChannel := make(chan os.Signal)
 	signal.Notify(signalChannel,
@@ -150,12 +115,21 @@ func main() {
 		cancel()
 	}()
 
-	if err := testFunc(ctx, logger, orb, strings.ReplaceAll(strings.TrimPrefix(branch, "origin/"), ".", "-"), orbconfig, uint8(from), cleanup)(); err != nil {
-		logger.Errorf("End-to-end test failed: %s", err.Error())
+	testFunc := run
+
+	if graphiteURL != "" {
+		fmt.Println("Sending status to Graphite")
+		testFunc = graphite(
+			graphiteURL,
+			graphiteKey,
+			run)
+	}
+
+	fmt.Println("Starting end-to-end test")
+	fmt.Println(settings.String())
+
+	if err := testFunc(settings); err != nil {
+		settings.logger.Errorf("End-to-end test failed: %s", err.Error())
 		os.Exit(1)
 	}
-}
-
-func trimBranch(ref string) string {
-	return strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(ref), "refs/"), "heads/")
 }

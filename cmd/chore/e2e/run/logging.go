@@ -5,8 +5,6 @@ import (
 	"bytes"
 	"io"
 	"strings"
-
-	"github.com/afiskon/promtail-client/promtail"
 )
 
 func logWriter(log func(format string, args ...interface{})) (io.Writer, func()) {
@@ -20,10 +18,10 @@ func logWriter(log func(format string, args ...interface{})) (io.Writer, func())
 	}
 }
 
-func logORBITERStdout(logger promtail.Client, line string) {
-	log := logger.Infof
+func logORBITERStdout(settings programSettings, line string) {
+	log := settings.logger.Infof
 	if strings.Contains(line, ` err=`) {
-		log = logger.Warnf
+		log = settings.logger.Warnf
 	}
 	log(line)
 }

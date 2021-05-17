@@ -8,73 +8,95 @@ import (
 	"os/exec"
 	"reflect"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-func runFunc(ctx context.Context, logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
-	return func() (err error) {
+var _ runFunc = run
 
-		newOrbctl, err := buildOrbctl(ctx, logger, orbconfig)
-		if err != nil {
-			return err
-		}
+func run(settings programSettings) error {
 
-		if cleanup {
-			defer func() {
-				// context is probably cancelled as program is terminating so we create a new one here
-				if cuErr := destroyTestFunc(context.Background(), logger)(newOrbctl, nil); cuErr != nil {
-
-					original := ""
-					if err != nil {
-						original = fmt.Sprintf(": %s", err.Error())
-					}
-
-					err = fmt.Errorf("cleaning up after end-to-end test failed: %w%s", cuErr, original)
-				}
-			}()
-		}
-
-		kubeconfig, err := ioutil.TempFile("", "kubeconfig-*")
-		if err != nil {
-			return err
-		}
-		if err := kubeconfig.Close(); err != nil {
-			return err
-		}
-
-		readKubeconfig, deleteKubeconfig := readKubeconfigFunc(ctx, logger, orb, kubeconfig.Name())
-		defer deleteKubeconfig()
-
-		branchParts := strings.Split(branch, "/")
-		branch = branchParts[len(branchParts)-1:][0]
-
-		return seq(logger, newOrbctl, configureKubectl(kubeconfig.Name()), from, 5, readKubeconfig,
-			/*  1 */ retry(3, writeInitialDesiredStateTest(ctx, logger, orb, branch)),
-			/*  2 */ retry(3, destroyTestFunc(ctx, logger)),
-			/*  3 */ retry(3, bootstrapTestFunc(ctx, logger, orb, 4)),
-			/*  4 */ ensureORBITERTest(ctx, logger, orb, 5, 10*time.Minute, isEnsured(orb, 3, 3, "v1.18.8")),
-			/*  5 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.controlplane.nodes", orb), "1")),
-			/*  6 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", orb), "2")),
-			/*  7 */ ensureORBITERTest(ctx, logger, orb, 8, 5*time.Minute, isEnsured(orb, 1, 2, "v1.18.8")),
-			/*  8 */ retry(3, patchTestFunc(ctx, logger, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", orb), "v1.21.0")),
-			/*  9 */ ensureORBITERTest(ctx, logger, orb, 10, 45*time.Minute, isEnsured(orb, 1, 2, "v1.21.0")),
-		)
+	newOrbctl, err := buildOrbctl(settings)
+	if err != nil {
+		return err
 	}
+
+	if settings.cleanup {
+		defer func() {
+			// context is probably cancelled as program is terminating so we create a new one here
+			destroySettings := settings
+			destroySettings.ctx = context.Background()
+			if cuErr := destroyTestFunc(destroySettings, newOrbctl, nil, 99); cuErr != nil {
+
+				original := ""
+				if err != nil {
+					original = fmt.Sprintf(": %s", err.Error())
+				}
+
+				err = fmt.Errorf("cleaning up after end-to-end test failed: %w%s", cuErr, original)
+			}
+		}()
+	}
+
+	kubeconfig, err := ioutil.TempFile("", "kubeconfig-*")
+	if err != nil {
+		return err
+	}
+	if err := kubeconfig.Close(); err != nil {
+		return err
+	}
+
+	readKubeconfig, deleteKubeconfig := readKubeconfigFunc(settings, kubeconfig.Name())
+	defer deleteKubeconfig()
+
+	return seq(settings, newOrbctl, configureKubectl(kubeconfig.Name()), 4, readKubeconfig,
+		/*  1 */ retry(3, writeInitialDesiredStateTest),
+		/*  2 */ retry(3, destroyTestFunc),
+		/*  3 */ retry(3, bootstrapTestFunc),
+		/*  4 */ ensureORBITERTest(10*time.Minute, isEnsured(3, 3, "v1.18.8")),
+		/*  5 */ retry(3, patchTestFunc(fmt.Sprintf("clusters.%s.spec.controlplane.nodes", settings.orbID), "1")),
+		/*  6 */ retry(3, patchTestFunc(fmt.Sprintf("clusters.%s.spec.workers.0.nodes", settings.orbID), "2")),
+		/*  7 */ ensureORBITERTest(5*time.Minute, isEnsured(1, 2, "v1.18.8")),
+		/*  8 */ retry(3, patchTestFunc(fmt.Sprintf("clusters.%s.spec.versions.kubernetes", settings.orbID), "v1.21.0")),
+		/*  9 */ ensureORBITERTest(45*time.Minute, isEnsured(1, 2, "v1.21.0")),
+	)
 }
 
-type testFunc func(newOrbctlCommandFunc, newKubectlCommandFunc) error
+var _ fmt.Stringer = (*programSettings)(nil)
 
-func seq(logger promtail.Client, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, from, readKubeconfigFrom uint8, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...testFunc) error {
+type programSettings struct {
+	ctx                          context.Context
+	logger                       promtail.Client
+	orbID, branch, orbconfig     string
+	from                         uint8
+	cleanup, debugOrbctlCommands bool
+}
+
+func (p *programSettings) String() string {
+	return fmt.Sprintf(`orbconfig=%s
+orb=%s
+branch=%s
+from=%d
+cleanup=%t`,
+		p.orbconfig,
+		p.orbID,
+		p.branch,
+		p.from,
+		p.cleanup,
+	)
+}
+
+type testFunc func(programSettings, newOrbctlCommandFunc, newKubectlCommandFunc, uint8) error
+
+func seq(settings programSettings, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, readKubeconfigFrom uint8, readKubeconfigFunc func(orbctl newOrbctlCommandFunc) (err error), fns ...testFunc) error {
 
 	var at uint8
 	for _, fn := range fns {
 		at++
-		if at < from {
-			logger.Infof("\033[1;32mSkipping step %d\033[0m\n", at)
+		if at < settings.from {
+			settings.logger.Infof("\033[1;32mSkipping step %d\033[0m\n", at)
 			continue
 		}
 
@@ -86,22 +108,22 @@ func seq(logger promtail.Client, orbctl newOrbctlCommandFunc, kubectl newKubectl
 
 		fnName := fmt.Sprintf("%s (%d. in stack)", runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), at)
 
-		if err := fn(orbctl, kubectl); err != nil {
+		if err := fn(settings, orbctl, kubectl, at); err != nil {
 			return fmt.Errorf("%s failed: %w", fnName, err)
 		}
-		logger.Infof("\033[1;32m%s succeeded\033[0m\n", fnName)
+		settings.logger.Infof("\033[1;32m%s succeeded\033[0m\n", fnName)
 	}
 	return nil
 }
 
-func retry(count uint8, fn func(newOrbctlCommandFunc, newKubectlCommandFunc) error) func(newOrbctlCommandFunc, newKubectlCommandFunc) error {
-	return func(newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error {
-		return try(count, newOrbctl, newKubectl, fn)
+func retry(count uint8, fn testFunc) testFunc {
+	return func(settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, step uint8) error {
+		return try(count, settings, step, newOrbctl, newKubectl, fn)
 	}
 }
 
-func try(count uint8, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, fn func(newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc) error) error {
-	err := fn(newOrbctl, newKubectl)
+func try(count uint8, settings programSettings, step uint8, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, fn testFunc) error {
+	err := fn(settings, newOrbctl, newKubectl, step)
 	exitErr := &exec.ExitError{}
 	if err != nil &&
 		// Don't retry if context timed out or was cancelled
@@ -111,7 +133,7 @@ func try(count uint8, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlComma
 		(!errors.As(err, &exitErr) ||
 			!exitErr.Sys().(syscall.WaitStatus).Signaled()) &&
 		count > 0 {
-		return try(count-1, newOrbctl, newKubectl, fn)
+		return try(count-1, settings, step, newOrbctl, newKubectl, fn)
 	}
 	return err
 }

@@ -2,42 +2,39 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/afiskon/promtail-client/promtail"
-
 	"gopkg.in/raintank/schema.v1"
 )
 
-func graphite(orbID, cloudURL, cloudKey, branch string, test func(context.Context, promtail.Client, string, string, string, uint8, bool) func() error) func(context.Context, promtail.Client, string, string, string, uint8, bool) func() error {
+type runFunc func(programSettings) error
 
-	send := func(value float64, ts time.Time) {
-		if err := sendGraphiteStatus(orbID, cloudURL, cloudKey, branch, value, ts); err != nil {
-			panic(err)
-		}
-	}
+func graphite(cloudURL, cloudKey string, test func(programSettings) error) runFunc {
 
-	return func(ctx context.Context, logger promtail.Client, orb, branch, orbconfig string, from uint8, cleanup bool) func() error {
-		return func() error {
-			start := time.Now()
-			send(0.5, start)
-			err := test(ctx, logger, orb, branch, orbconfig, from, cleanup)()
-			var value float64 = 0
-			if err == nil {
-				value = 1
+	return func(settings programSettings) error {
+		send := func(value float64, ts time.Time) {
+			if err := sendGraphiteStatus(settings.orbID, cloudURL, cloudKey, settings.branch, value, ts); err != nil {
+				panic(err)
 			}
-			stop := time.Now()
-			minStop := start.Add(2 * time.Minute)
-			if minStop.After(stop) {
-				stop = minStop
-			}
-			send(value, stop)
-			return err
 		}
+
+		start := time.Now()
+		send(0.5, start)
+		err := test(settings)
+		var value float64 = 0
+		if err == nil {
+			value = 1
+		}
+		stop := time.Now()
+		minStop := start.Add(2 * time.Minute)
+		if minStop.After(stop) {
+			stop = minStop
+		}
+		send(value, stop)
+		return err
 	}
 }
 

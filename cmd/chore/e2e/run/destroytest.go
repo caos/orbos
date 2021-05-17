@@ -4,31 +4,29 @@ import (
 	"context"
 	"strings"
 	"time"
-
-	"github.com/afiskon/promtail-client/promtail"
 )
 
-func destroyTestFunc(ctx context.Context, logger promtail.Client) testFunc {
-	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+var _ testFunc = destroyTestFunc
 
-		destroyCtx, destroyCtxCancel := context.WithTimeout(ctx, 5*time.Minute)
-		defer destroyCtxCancel()
+func destroyTestFunc(settings programSettings, orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc, _ uint8) error {
 
-		cmd := orbctl(destroyCtx)
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			panic(err)
-		}
+	destroyCtx, destroyCtxCancel := context.WithTimeout(settings.ctx, 5*time.Minute)
+	defer destroyCtxCancel()
 
-		var confirmed bool
-
-		return runCommand(logger, cmd, "--gitops destroy", true, nil, func(line string) {
-			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
-				confirmed = true
-				if _, err := stdin.Write([]byte("y\n")); err != nil {
-					panic(err)
-				}
-			}
-		})
+	cmd := orbctl(destroyCtx)
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		panic(err)
 	}
+
+	var confirmed bool
+
+	return runCommand(settings, cmd, "--gitops destroy", true, nil, func(line string) {
+		if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
+			confirmed = true
+			if _, err := stdin.Write([]byte("y\n")); err != nil {
+				panic(err)
+			}
+		}
+	})
 }

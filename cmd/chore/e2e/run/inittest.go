@@ -4,25 +4,28 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"time"
-
-	"github.com/afiskon/promtail-client/promtail"
 )
 
-func writeInitialDesiredStateTest(ctx context.Context, logger promtail.Client, orb, branch string) func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
-	return func(orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc) error {
+var _ testFunc = writeInitialDesiredStateTest
 
-		initCtx, initCancel := context.WithTimeout(ctx, 30*time.Second)
-		defer initCancel()
+func writeInitialDesiredStateTest(settings programSettings, orbctl newOrbctlCommandFunc, _ newKubectlCommandFunc, _ uint8) error {
 
-		buf := new(bytes.Buffer)
-		defer buf.Reset()
+	initCtx, initCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+	defer initCancel()
 
-		if err := runCommand(logger, orbctl(initCtx), "--gitops file print provider.yml", false, buf, nil); err != nil {
-			return err
-		}
+	var providerYml string
+	if err := runCommand(settings, orbctl(initCtx), "--gitops file print provider.yml", false, nil, func(line string) {
+		providerYml += fmt.Sprintf("    %s\n", line)
+	}); err != nil {
+		return err
+	}
 
-		orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+	branchParts := strings.Split(settings.branch, "/")
+	version := branchParts[len(branchParts)-1:][0] + "-dev"
+
+	orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
 version: v0
 spec:
   verbose: false
@@ -48,7 +51,7 @@ clusters:
       verbose: false
       versions:
         kubernetes: v1.18.8
-        orbiter: %s-dev
+        orbiter: %s
       workers:
       - updatesdisabled: false
         provider: %s
@@ -105,20 +108,23 @@ providers:
             healthchecks:
               protocol: https
               path: /healthz
-              code: 200`, orb, orb, branch, orb, orb, orb, buf.String())
+              code: 200
+`, settings.orbID, settings.orbID, version, settings.orbID, settings.orbID, settings.orbID, providerYml)
+	orbiterCmd := orbctl(initCtx)
+	orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
 
-		if err := runCommand(logger, orbctl(initCtx), fmt.Sprintf(`--gitops file patch orbiter.yml --exact --value "%s"`, orbiterYml), true, nil, nil); err != nil {
-			return err
-		}
+	if err := runCommand(settings, orbiterCmd, "--gitops file patch orbiter.yml --exact --stdin", true, nil, nil); err != nil {
+		return err
+	}
 
-		boomYml := fmt.Sprintf(`
+	boomYml := fmt.Sprintf(`
 apiVersion: caos.ch/v1
 kind: Boom
 metadata:
   name: caos
   namespace: caos-system
 spec:
-  boomVersion: %s-dev
+  boomVersion: %s
   postApply:
     deploy: false
   metricCollection:
@@ -141,8 +147,9 @@ spec:
   metricsPersisting:
     deploy: false
   logsPersisting:
-    deploy: false`, branch)
-
-		return runCommand(logger, orbctl(initCtx), fmt.Sprintf(`--gitops file patch boom.yml --exact --value "%s"`, boomYml), true, nil, nil)
-	}
+    deploy: false
+`, version)
+	boomCmd := orbctl(initCtx)
+	boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
+	return runCommand(settings, boomCmd, "--gitops file patch boom.yml --exact --stdin", true, nil, nil)
 }
