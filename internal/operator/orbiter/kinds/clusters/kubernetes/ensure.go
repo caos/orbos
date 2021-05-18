@@ -41,6 +41,22 @@ func ensure(
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
 
+	machinesDone, initializedMachines, err := alineMachines(
+		monitor,
+		controlplane,
+		workers,
+		func(created infra.Machine, pool *initializedPool) initializedMachine {
+			machine := initializeMachine(created, pool)
+			target := targetVersion.DefineSoftware()
+			machine.desiredNodeagent.Software.Merge(target)
+			return *machine
+		},
+	)
+	if err != nil || !machinesDone {
+		monitor.Info("Aligning machines is not done yet")
+		return machinesDone, err
+	}
+
 	upgradingDone, err := ensureSoftware(
 		monitor,
 		targetVersion,
@@ -52,28 +68,27 @@ func ensure(
 		return upgradingDone, err
 	}
 
-	if scalingDone, err := ensureUpScale(
+	if scalingDone, err := ensureNodes(
 		monitor,
 		clusterID,
 		desired,
 		pdf,
-		controlplane,
-		workers,
 		kubeAPIAddress,
 		targetVersion,
 		k8sClient,
 		oneoff,
-		func(created infra.Machine, pool *initializedPool) initializedMachine {
-			machine := initializeMachine(created, pool)
-			target := targetVersion.DefineSoftware()
-			machine.desiredNodeagent.Software.Merge(target)
-			return *machine
-		},
 		gitClient,
 		providerK8sSpec,
+		initializedMachines,
 	); err != nil || !scalingDone {
 		monitor.Info("Scaling is not done yet")
 		return scalingDone, err
+	}
+
+	for _, pool := range append(workers, controlplane) {
+		if err := pool.infra.EnsureMembers(); err != nil {
+			return false, err
+		}
 	}
 
 	return true, nil
