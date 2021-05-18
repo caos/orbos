@@ -34,7 +34,7 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
         podcidr: 100.127.224.0/20
       verbose: false
       versions:
-        kubernetes: v1.18.8
+        kubernetes: v1.19.9
         orbiter: %s
       workers:
       - updatesdisabled: false

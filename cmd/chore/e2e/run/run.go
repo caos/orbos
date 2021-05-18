@@ -59,7 +59,8 @@ func run(settings programSettings) error {
 		/*  3 */ bootstrap,
 		/*  4 */ downscale,
 		/*  5 */ reboot,
-		/*  6 */ upgrade,
+		/*  6 */ replace,
+		/*  7 */ upgrade,
 	)
 }
 

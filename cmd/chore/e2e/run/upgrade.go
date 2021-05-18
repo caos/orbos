@@ -15,6 +15,6 @@ func upgrade(settings programSettings, spec *kubernetes.Spec) interactFunc {
 
 	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
-		return 5 * time.Minute, nil, patch(settings, orbctl, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", settings.orbID), "v1.21.0")
+		return 45 * time.Minute, nil, patch(settings, orbctl, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", settings.orbID), "v1.21.0")
 	}
 }
