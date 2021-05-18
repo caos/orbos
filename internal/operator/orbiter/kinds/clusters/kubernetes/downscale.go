@@ -27,7 +27,7 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 			}
 
 			if existingK8sNode != nil {
-				if err := k8sClient.Drain(machine.currentMachine, existingK8sNode, kubernetes.Deleting); err != nil {
+				if err := k8sClient.Drain(machine.currentMachine, existingK8sNode, kubernetes.Deleting, true); err != nil {
 					return err
 				}
 			}

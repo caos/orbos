@@ -197,7 +197,7 @@ func plan(
 			return nil
 		}
 		machine.node.Labels["orbos.ch/updating"] = to.Kubelet.Version
-		return k8sClient.Drain(machine.currentMachine, machine.node, kubernetes.Updating)
+		return k8sClient.Drain(machine.currentMachine, machine.node, kubernetes.Updating, false)
 	}
 
 	ensureSoftware := func(packages common.Software, phase string) func() error {

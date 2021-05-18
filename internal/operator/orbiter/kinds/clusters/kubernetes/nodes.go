@@ -26,7 +26,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 			return true
 		}
 		if k8sClient != nil {
-			if err = k8sClient.Drain(machine.currentMachine, machine.node, kubernetes.Rebooting); err != nil {
+			if err = k8sClient.Drain(machine.currentMachine, machine.node, kubernetes.Rebooting, false); err != nil {
 				return false
 			}
 		}
