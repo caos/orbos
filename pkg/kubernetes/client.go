@@ -1015,12 +1015,14 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 
 	monitor.Info("Evicting pods")
 
-	selector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name)
+	labelSelector := "app.kubernetes.io/name!=orbiter" // don't evict self
 	podItems, err := c.set.CoreV1().Pods("").List(context.Background(), mach.ListOptions{
-		FieldSelector: selector,
+		FieldSelector: fieldSelector,
+		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "listing pods with selector %s failed", selector)
+		return errors.Wrapf(err, "listing pods with field-selector %s and label-selector %s failed", fieldSelector, labelSelector)
 	}
 
 	// --ignore-daemonsets

@@ -37,6 +37,9 @@ func awaitORBITER(
 	}
 
 	triggerCheck := make(chan struct{})
+	trigger := func() { triggerCheck <- struct{}{} }
+	// show initial state and tracking progress begins
+	go trigger()
 	done := make(chan error)
 
 	go watchLogs(ensureCtx, settings, kubectl, triggerCheck)
@@ -64,7 +67,7 @@ func awaitORBITER(
 				done <- nil
 				return
 			case <-ticker.C:
-				go func() { triggerCheck <- struct{}{} }()
+				go trigger()
 			}
 		}
 	}()
