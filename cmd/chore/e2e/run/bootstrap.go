@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -24,7 +25,7 @@ func bootstrap(settings programSettings, _ *kubernetes.Spec) interactFunc {
 			for {
 				select {
 				case <-ticker.C:
-					printProgress(settings, step, started, timeout)
+					printProgress(settings, fmt.Sprintf("%d (takeoff)", step), started, timeout)
 				case <-bootstrapCtx.Done():
 					return
 				}

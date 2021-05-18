@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,7 +56,7 @@ func awaitORBITER(
 			case <-triggerCheck:
 
 				if err := isEnsured(ensureCtx, settings, orbctl, kubectl, desired, furtherCurrentChecks); err != nil {
-					printProgress(settings, step, started, timeout)
+					printProgress(settings, strconv.Itoa(int(step)), started, timeout)
 					settings.logger.Warnf("desired state is not yet ensured: %s", err.Error())
 					continue
 				}

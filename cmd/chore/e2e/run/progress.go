@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func printProgress(settings programSettings, step uint8, started time.Time, timeout time.Duration) {
+func printProgress(settings programSettings, step string, started time.Time, timeout time.Duration) {
 	elapsed := int(math.Round(float64(time.Now().Sub(started)) / float64(timeout) * 100))
 	left := 100 - elapsed
 
@@ -14,7 +14,7 @@ func printProgress(settings programSettings, step uint8, started time.Time, time
 	if elapsed > 85 {
 		logProgress = settings.logger.Warnf
 	}
-	logProgress("%s step %d timeout status %s [%s%s] %s (%d%%)\n",
+	logProgress("%s step %s timeout status %s [%s%s] %s (%d%%)\n",
 		settings.orbID,
 		step,
 		started.Format("15:04:05"),
