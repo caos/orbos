@@ -14,29 +14,24 @@ func destroy(settings programSettings, _ *kubernetes.Spec) interactFunc {
 
 	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
-		try := func() error {
+		destroyCtx, destroyCtxCancel := context.WithTimeout(settings.ctx, 5*time.Minute)
+		defer destroyCtxCancel()
 
-			destroyCtx, destroyCtxCancel := context.WithTimeout(settings.ctx, 5*time.Minute)
-			defer destroyCtxCancel()
-
-			cmd := orbctl(destroyCtx)
-			stdin, err := cmd.StdinPipe()
-			if err != nil {
-				panic(err)
-			}
-
-			var confirmed bool
-
-			return runCommand(settings, true, nil, func(line string) {
-				if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
-					confirmed = true
-					if _, err := stdin.Write([]byte("y\n")); err != nil {
-						panic(err)
-					}
-				}
-			}, cmd, "--gitops", "destroy")
+		cmd := orbctl(destroyCtx)
+		stdin, err := cmd.StdinPipe()
+		if err != nil {
+			panic(err)
 		}
 
-		return 0, nil, retry(3, try)
+		var confirmed bool
+
+		return 0, nil, runCommand(settings, true, nil, func(line string) {
+			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
+				confirmed = true
+				if _, err := stdin.Write([]byte("y\n")); err != nil {
+					panic(err)
+				}
+			}
+		}, cmd, "--gitops", "destroy")
 	}
 }

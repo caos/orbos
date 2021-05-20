@@ -49,9 +49,11 @@ func EditCommand(getRv GetRootValues) *cobra.Command {
 				panic(err)
 			}
 
-			return gitClient.UpdateRemote("File written by orbctl", git.File{
-				Path:    args[0],
-				Content: edited,
+			return gitClient.UpdateRemote("File written by orbctl", func() []git.File {
+				return []git.File{{
+					Path:    args[0],
+					Content: edited,
+				}}
 			})
 		},
 	}

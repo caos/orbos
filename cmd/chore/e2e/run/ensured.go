@@ -183,7 +183,11 @@ func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbct
 	if err := checkPodsAreRunning(ctx, settings, newKubectl, "kube-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", uint8(desired.ControlPlane.Nodes*4)); err != nil {
 		return err
 	}
-
+	/*
+		if err := checkPodsAreRunning(ctx, settings, newKubectl, "caos-system", "component in (etcd, kube-apiserver, kube-controller-manager, kube-scheduler)", uint8(desired.ControlPlane.Nodes*4)); err != nil {
+			return err
+		}
+	*/
 	provider, ok := orbiter.Providers[settings.orbID]
 	if !ok {
 		return fmt.Errorf("provider %s not found in current state", settings.orbID)

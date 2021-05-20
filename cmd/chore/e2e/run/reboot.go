@@ -25,7 +25,7 @@ func reboot(settings programSettings, _ *kubernetes.Spec) interactFunc {
 			return 0, nil, err
 		}
 
-		return 5 * time.Minute, func(current common.NodeAgentsCurrentKind) error {
+		return 10 * time.Minute, func(current common.NodeAgentsCurrentKind) error {
 			nodeagent, ok := current.Current.Get(nodeID)
 			if !ok {
 				return fmt.Errorf("nodeagent %s not found", nodeID)

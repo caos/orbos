@@ -83,9 +83,11 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 			result = structure
 		}
 
-		return rv.GitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), git.File{
-			Path:    args[0],
-			Content: common.MarshalYAML(result),
+		return rv.GitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), func() []git.File {
+			return []git.File{{
+				Path:    args[0],
+				Content: common.MarshalYAML(result),
+			}}
 		})
 	}
 

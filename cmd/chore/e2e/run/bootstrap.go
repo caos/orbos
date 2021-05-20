@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -32,6 +33,24 @@ func bootstrap(settings programSettings, _ *kubernetes.Spec) interactFunc {
 			}
 		}()
 
-		return 15 * time.Minute, nil, runCommand(settings, true, nil, nil, orbctl(bootstrapCtx), "--gitops", "takeoff")
+		if err := runCommand(settings, true, nil, nil, orbctl(bootstrapCtx), "--gitops", "takeoff"); err != nil {
+			return 0, nil, err
+		}
+
+		buf := new(bytes.Buffer)
+		defer buf.Reset()
+
+		if err := runCommand(settings, false, buf, nil, orbctl(bootstrapCtx), "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID)); err != nil {
+			return 0, nil, err
+		}
+
+		if err := runCommand(settings, true, nil, nil, orbctl(bootstrapCtx), "--gitops", "writesecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID), "--value", "dummy"); err != nil {
+			return 0, nil, err
+		}
+
+		writeSecretCmd := orbctl(bootstrapCtx)
+		writeSecretCmd.Stdin = buf
+
+		return 15 * time.Minute, nil, runCommand(settings, true, nil, nil, writeSecretCmd, "--gitops", "writesecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID), "--stdin")
 	}
 }

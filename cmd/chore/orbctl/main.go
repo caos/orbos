@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -50,7 +51,7 @@ func main() {
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
-		panic(err)
+		os.Exit(err.(*exec.ExitError).ExitCode())
 	}
 }
 

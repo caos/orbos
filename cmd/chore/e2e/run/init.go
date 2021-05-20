@@ -48,19 +48,17 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
 
 	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
-		try := func() error {
+		initCtx, initCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+		defer initCancel()
 
-			initCtx, initCancel := context.WithTimeout(settings.ctx, 30*time.Second)
-			defer initCancel()
+		var providerYml string
+		if err := runCommand(settings, false, nil, func(line string) {
+			providerYml += fmt.Sprintf("    %s\n", line)
+		}, orbctl(initCtx), "--gitops", "file", "print", "provider.yml"); err != nil {
+			return 0, nil, err
+		}
 
-			var providerYml string
-			if err := runCommand(settings, false, nil, func(line string) {
-				providerYml += fmt.Sprintf("    %s\n", line)
-			}, orbctl(initCtx), "--gitops", "file", "print", "provider.yml"); err != nil {
-				return err
-			}
-
-			orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+		orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
 version: v0
 spec:
   verbose: false
@@ -119,14 +117,14 @@ providers:
               path: /healthz
               code: 200
 `, settings.orbID, clusterSpec, settings.orbID, providerYml)
-			orbiterCmd := orbctl(initCtx)
-			orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
+		orbiterCmd := orbctl(initCtx)
+		orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
 
-			if err := runCommand(settings, true, nil, nil, orbiterCmd, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--stdin"); err != nil {
-				return err
-			}
+		if err := runCommand(settings, true, nil, nil, orbiterCmd, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--stdin"); err != nil {
+			return 0, nil, err
+		}
 
-			boomYml := fmt.Sprintf(`
+		boomYml := fmt.Sprintf(`
 apiVersion: caos.ch/v1
 kind: Boom
 metadata:
@@ -137,33 +135,30 @@ spec:
   postApply:
     deploy: false
   metricCollection:
-    deploy: false
+    deploy: true
   logCollection:
-    deploy: false
+    deploy: true
   nodeMetricsExporter:
-    deploy: false
+    deploy: true
   systemdMetricsExporter:
-    deploy: false
+    deploy: true
   monitoring:
-    deploy: false
+    deploy: true
   apiGateway:
     deploy: true
     replicaCount: 1
   kubeMetricsExporter:
-    deploy: false
+    deploy: true
   reconciling:
-    deploy: false
+    deploy: true
   metricsPersisting:
-    deploy: false
+    deploy: true
   logsPersisting:
-    deploy: false
+    deploy: true
 `, version)
-			boomCmd := orbctl(initCtx)
-			boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
+		boomCmd := orbctl(initCtx)
+		boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
 
-			return runCommand(settings, true, nil, nil, boomCmd, "--gitops", "file", "patch", "boom.yml", "--exact", "--stdin")
-		}
-
-		return 0, nil, retry(3, try)
+		return 0, nil, runCommand(settings, true, nil, nil, boomCmd, "--gitops", "file", "patch", "boom.yml", "--exact", "--stdin")
 	}
 }
