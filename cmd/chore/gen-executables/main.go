@@ -23,7 +23,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
 	containeronly := flag.Bool("containeronly", false, "Compile orbctl binaries only for in-container usage")
-	hostBinsOnly := flag.Bool("host-bins-only", false, "Build only this binary")
+	hostBinsOnly := flag.Bool("host-bins-only", false, "Build only daemon binaries running on host machines")
 
 	flag.Parse()
 

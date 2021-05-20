@@ -14,7 +14,7 @@ var _ testFunc = bootstrap
 func bootstrap(settings programSettings, _ *kubernetes.Spec) interactFunc {
 	return func(step uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
-		timeout := 15 * time.Minute
+		timeout := 20 * time.Minute
 		bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(settings.ctx, timeout)
 		defer bootstrapCtxCancel()
 

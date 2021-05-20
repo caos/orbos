@@ -12,7 +12,7 @@ func runCommand(settings programSettings, log bool, write io.Writer, scan func(l
 
 	cmd.Args = append(cmd.Args, args...)
 
-	errWriter, errWrite := logWriter(settings.logger.Errorf)
+	errWriter, errWrite := logWriter(settings.logger.Warnf)
 	defer errWrite()
 	cmd.Stderr = errWriter
 

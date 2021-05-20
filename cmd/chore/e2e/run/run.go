@@ -2,13 +2,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
-	"os/exec"
 	"reflect"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -132,20 +129,4 @@ func runTest(settings programSettings, fn interactFunc, orbctl newOrbctlCommandF
 	}
 
 	return awaitORBITER(settings, timeout, orbctl, kubectl, downloadKubeconfigFunc, step, expect, furtherCurrentChecks)
-}
-
-func retry(count uint8, fn func() error) error {
-	err := fn()
-	exitErr := &exec.ExitError{}
-	if err != nil &&
-		// Don't retry if context timed out or was cancelled
-		!errors.Is(err, context.Canceled) &&
-		!errors.Is(err, context.DeadlineExceeded) &&
-		// Don't retry if commands context timed out or was cancelled
-		(!errors.As(err, &exitErr) ||
-			!exitErr.Sys().(syscall.WaitStatus).Signaled()) &&
-		count > 0 {
-		return retry(count-1, fn)
-	}
-	return err
 }

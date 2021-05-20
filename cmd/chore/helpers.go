@@ -28,11 +28,20 @@ func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 		return runOrbctlCmd(debug), nil
 	}
 
+	if err := BuildExecutables(debug, false); err != nil {
+		return noop, err
+	}
+
+	return runOrbctlCmd(debug), nil
+}
+
+func BuildExecutables(debug, hostBinsOnly bool) error {
+
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	outBuf := new(bytes.Buffer)
 	cmd.Stdout = outBuf
 	if err := Run(cmd); err != nil {
-		return noop, err
+		return err
 	}
 
 	version := strings.TrimSpace(strings.Replace(outBuf.String(), "heads/", "", 1)) + "-dev"
@@ -41,7 +50,7 @@ func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 	outBuf = new(bytes.Buffer)
 	cmd.Stdout = outBuf
 	if err := Run(cmd); err != nil {
-		return noop, err
+		return err
 	}
 
 	commit := strings.TrimSpace(outBuf.String())
@@ -63,11 +72,14 @@ func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 	if debug {
 		args = append(args, "--debug")
 	}
+	if hostBinsOnly {
+		args = append(args, "--host-bins-only")
+	}
 	cmd = exec.Command("go", args...)
 	cmd.Stdout = os.Stderr
 	// gen-executables
-	if err := Run(cmd); err != nil {
-		return noop, err
+	if err := Run(cmd); err != nil || hostBinsOnly {
+		return err
 	}
 
 	files, err = filepath.Glob("./cmd/chore/gen-charts/*.go")
@@ -80,11 +92,7 @@ func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 	cmd.Stdout = os.Stderr
 	cmd.Env = []string{"CGO_ENABLED=0", "GOOS=linux"}
 	// gen-charts
-	if err := Run(cmd); err != nil {
-		return noop, err
-	}
-
-	return runOrbctlCmd(debug), nil
+	return Run(cmd)
 }
 
 func runOrbctlCmd(debug bool) func(context.Context) *exec.Cmd {
