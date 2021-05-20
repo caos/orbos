@@ -3,6 +3,8 @@ package static
 import (
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/pkg/tree"
@@ -91,6 +93,11 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID strin
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desired
+
+	_, _, _, _, _, err = loadbalancers.GetQueryAndDestroyFunc(monitor, nil, desired.Loadbalancing, &tree.Tree{}, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	machinesSvc := NewMachinesService(monitor,
 		desired,

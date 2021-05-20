@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
@@ -28,6 +30,11 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 		return nil, errors.Wrap(err, "parsing desired state failed")
 	}
 	desiredTree.Parsed = desired
+
+	_, _, _, _, _, err = loadbalancers.GetQueryAndDestroyFunc(monitor, nil, desired.Loadbalancing, &tree.Tree{}, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
 	if err != nil {
