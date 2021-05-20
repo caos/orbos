@@ -76,7 +76,7 @@ func (m *machine) initAction(a *action, getSlice func() []string, setSlice func(
 		unrequire: func() {},
 		require: func() {
 			s := getSlice()
-			s = append(s, m.server.UUID)
+			s = append(s, m.server.Name)
 			setSlice(s)
 		},
 	}
