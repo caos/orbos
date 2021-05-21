@@ -1,4 +1,4 @@
 #!/bin/bash
 
-exec go run cmd/chore/orbctl/main.go --debug "$@"
+exec go run cmd/chore/dev/orbctl/main.go --debug "$@"
 

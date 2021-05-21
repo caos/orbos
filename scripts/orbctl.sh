@@ -1,3 +1,3 @@
 #!/bin/bash
 
-exec go run cmd/chore/orbctl/main.go "$@"
+exec go run cmd/chore/dev/orbctl/main.go "$@"

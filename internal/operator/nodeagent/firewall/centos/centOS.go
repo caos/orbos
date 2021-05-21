@@ -183,7 +183,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) error {
 		return nil
 	}
 
-	_, err := runFirewallCommand(monitor, append([]string{"--zone", zone}, changes...)...)
+	_, err := runFirewallCommand(monitor.Verbose(), append([]string{"--zone", zone}, changes...)...)
 	return err
 }
 
