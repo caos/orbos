@@ -24,7 +24,10 @@ func main() {
 		settings                          programSettings
 		from                              int
 		graphiteURL, graphiteKey, lokiURL string
+		returnCode                        int
 	)
+
+	defer func() { os.Exit(returnCode) }()
 
 	const (
 		orbDefault         = "~/.orb/config"
@@ -130,6 +133,6 @@ func main() {
 
 	if err := testFunc(settings); err != nil {
 		settings.logger.Errorf("End-to-end test failed: %s", err.Error())
-		os.Exit(1)
+		returnCode = 1
 	}
 }

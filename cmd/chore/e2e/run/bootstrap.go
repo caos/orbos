@@ -15,8 +15,8 @@ func bootstrap(settings programSettings, _ *kubernetes.Spec) interactFunc {
 	return func(step uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
 
 		timeout := 20 * time.Minute
-		bootstrapCtx, bootstrapCtxCancel := context.WithTimeout(settings.ctx, timeout)
-		defer bootstrapCtxCancel()
+		bootstrapCtx, bootstrapCancel := context.WithTimeout(settings.ctx, timeout)
+		defer bootstrapCancel()
 
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
