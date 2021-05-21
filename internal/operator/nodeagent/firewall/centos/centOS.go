@@ -26,6 +26,11 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 			return current, nil, err
 		}
 
+		// Also ensure that all config that was permanent only before becomes runtime config.
+		if _, err := runFirewallCommand(monitor, "--reload"); err != nil {
+			return current, nil, err
+		}
+
 		for name, _ := range desired.Zones {
 			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, open)
 			if err != nil {
