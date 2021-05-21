@@ -20,12 +20,6 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 			desired.Zones = make(map[string]*common.Zone, 0)
 		}
 
-		// Persists current firewall configuration as node agent doesn't differenciate between runtime and persistent config.
-		// Its current state evaluations should yet be deterministic.
-		if _, err := runFirewallCommand(monitor, "--runtime-to-permanent"); err != nil {
-			return current, nil, err
-		}
-
 		// Also ensure that all config that was permanent only before becomes runtime config.
 		if _, err := runFirewallCommand(monitor, "--reload"); err != nil {
 			return current, nil, err
@@ -188,7 +182,7 @@ func changeFirewall(monitor mntr.Monitor, changes []string, zone string) error {
 		return nil
 	}
 
-	_, err := runFirewallCommand(monitor.Verbose(), append([]string{"--zone", zone}, changes...)...)
+	_, err := runFirewallCommand(monitor.Verbose(), append([]string{"--permanent", "--zone", zone}, changes...)...)
 	return err
 }
 
