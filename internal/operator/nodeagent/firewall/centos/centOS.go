@@ -119,6 +119,18 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 	zoneNameCopy := zoneName
 	return current, func() (err error) {
 
+		if len(ensureTarget) > 0 {
+
+			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
+			if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
+				return err
+			}
+
+			// this is the only property that needs a firewall reload
+			_, err := runFirewallCommand(monitor, "--reload")
+			return err
+		}
+
 		if ensureMasquerade != "" {
 			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureMasquerade, zoneNameCopy))
 			if err := ensure(monitor, []string{ensureMasquerade}, zoneNameCopy); err != nil {
@@ -133,11 +145,6 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneNameCopy))
 		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
-			return err
-		}
-
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
-		if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
 			return err
 		}
 
