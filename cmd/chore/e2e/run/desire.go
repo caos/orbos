@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
@@ -14,9 +13,6 @@ import (
 var _ testFunc = writeInitialDesiredState
 
 func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec) interactFunc {
-
-	branchParts := strings.Split(settings.branch, "/")
-	version := branchParts[len(branchParts)-1:][0] + "-dev"
 
 	clusterSpec := fmt.Sprintf(`      controlplane:
         updatesdisabled: false
@@ -40,7 +36,7 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
       - updatesdisabled: false
         provider: %s
         nodes: 3
-        pool: application`, settings.orbID, version, settings.orbID)
+        pool: application`, settings.orbID, settings.artifactsVersion(), settings.orbID)
 
 	if err := yaml.Unmarshal([]byte(clusterSpec), expect); err != nil {
 		panic(err)
@@ -124,7 +120,13 @@ providers:
 			return 0, nil, err
 		}
 
-		boomYml := fmt.Sprintf(`
+		return 0, nil, desireBOOMPlatform(settings, initCtx, orbctl, true)
+	}
+}
+
+func desireBOOMPlatform(settings programSettings, ctx context.Context, orbctl newOrbctlCommandFunc, deploy bool) error {
+
+	boomYml := fmt.Sprintf(`
 apiVersion: caos.ch/v1
 kind: Boom
 metadata:
@@ -135,30 +137,42 @@ spec:
   postApply:
     deploy: false
   metricCollection:
-    deploy: true
+    deploy: %t
   logCollection:
-    deploy: true
+    deploy: %t
   nodeMetricsExporter:
-    deploy: true
+    deploy: %t
   systemdMetricsExporter:
-    deploy: true
+    deploy: %t
   monitoring:
-    deploy: true
+    deploy: %t
   apiGateway:
-    deploy: true
+    deploy: %t
     replicaCount: 1
   kubeMetricsExporter:
-    deploy: true
+    deploy: %t
   reconciling:
-    deploy: true
+    deploy: %t
   metricsPersisting:
-    deploy: true
+    deploy: %t
   logsPersisting:
-    deploy: true
-`, version)
-		boomCmd := orbctl(initCtx)
-		boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
+    deploy: %t
+`,
+		settings.artifactsVersion(),
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+		deploy,
+	)
+	boomCmd := orbctl(ctx)
+	boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
 
-		return 0, nil, runCommand(settings, true, nil, nil, boomCmd, "--gitops", "file", "patch", "boom.yml", "--exact", "--stdin")
-	}
+	return runCommand(settings, true, nil, nil, boomCmd, "--gitops", "file", "patch", "boom.yml", "--exact", "--stdin")
+
 }
