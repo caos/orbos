@@ -48,7 +48,7 @@ func bootstrap(settings programSettings, conditions *conditions) interactFunc {
 
 			for nodeagentID, nodeagent := range nodeagents.Current.NA {
 				if !nodeagent.NodeIsReady {
-					return fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID)
+					helpers.Concat(err, fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID))
 				}
 				if nodeagent.Software.Kubelet.Version != conditions.kubernetes.Versions.Kubernetes ||
 					nodeagent.Software.Kubeadm.Version != conditions.kubernetes.Versions.Kubernetes ||
@@ -67,7 +67,7 @@ func bootstrap(settings programSettings, conditions *conditions) interactFunc {
 				helpers.Concat(err, fmt.Errorf("cluster status is %s", cluster.Status))
 			}
 
-			return helpers.Fanout([]func() error{
+			return helpers.Concat(err, helpers.Fanout([]func() error{
 				func() error {
 					return checkPodsAreReady(
 						checkCtx,
@@ -118,7 +118,7 @@ func bootstrap(settings programSettings, conditions *conditions) interactFunc {
 						machines,
 					)
 				},
-			})()
+			})())
 		},
 	}
 
