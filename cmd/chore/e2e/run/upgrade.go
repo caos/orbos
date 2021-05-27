@@ -1,20 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 )
 
-var _ testFunc = upgrade
+func upgrade(k8sVersion string) testFunc {
+	return func(settings programSettings, conditions *conditions) interactFunc {
 
-func upgrade(settings programSettings, spec *kubernetes.Spec) interactFunc {
+		conditions.kubernetes.Versions.Kubernetes = k8sVersion
+		conditions.orbiter.watcher = watch(30*time.Minute, orbiter)
+		conditions.testCase = nil
 
-	spec.Versions.Kubernetes = "v1.21.0"
+		return func(ctx context.Context, _ uint8, orbctl newOrbctlCommandFunc) error {
 
-	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
-
-		return 45 * time.Minute, nil, patch(settings, orbctl, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", settings.orbID), "v1.21.0")
+			return patch(ctx, settings, orbctl, fmt.Sprintf("clusters.%s.spec.versions.kubernetes", settings.orbID), k8sVersion)
+		}
 	}
 }

@@ -6,34 +6,39 @@ import (
 	"time"
 
 	"github.com/caos/orbos/internal/operator/common"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 )
 
 var _ testFunc = reboot
 
-func reboot(settings programSettings, _ *kubernetes.Spec) interactFunc {
-	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
+func reboot(settings programSettings, conditions *conditions) interactFunc {
 
-		rebootCtx, rebootCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+	return func(ctx context.Context, _ uint8, orbctl newOrbctlCommandFunc) error {
+
+		rebootCtx, rebootCancel := context.WithTimeout(ctx, 1*time.Minute)
 		defer rebootCancel()
 
 		since := time.Now()
 
-		context, nodeID, err := someMasterNodeContextAndID(rebootCtx, settings, orbctl)
+		nodeContext, nodeID, err := someMasterNodeContextAndID(rebootCtx, settings, orbctl)
 		if err != nil {
-			return 0, nil, err
+			return err
 		}
 
-		return 10 * time.Minute, func(current common.NodeAgentsCurrentKind) error {
-			nodeagent, ok := current.Current.Get(nodeID)
-			if !ok {
-				return fmt.Errorf("nodeagent %s not found", nodeID)
-			}
-			if nodeagent.Booted.Before(since) {
-				return fmt.Errorf("nodeagent %s has latest boot at %s which is before %s", nodeID, nodeagent.Booted.Format(time.RFC822), since.Format(time.RFC822))
-			}
-			return nil
-		}, runCommand(settings, true, nil, nil, orbctl(rebootCtx), "--gitops", "node", "reboot", fmt.Sprintf("%s.%s", context, nodeID))
+		// as we don't know the time when a skipped test was run originally (variable "since"), we can't check this anymore in downstream tests.
+		conditions.testCase = &condition{
+			watcher: watch(10*time.Minute, orbiter),
+			checks: func(_ context.Context, _ newKubectlCommandFunc, _ currentOrbiter, current common.NodeAgentsCurrentKind) error {
+				nodeagent, ok := current.Current.Get(nodeID)
+				if !ok {
+					return fmt.Errorf("nodeagent %s not found", nodeID)
+				}
+				if nodeagent.Booted.Before(since) {
+					return fmt.Errorf("nodeagent %s has latest boot at %s which is before %s", nodeID, nodeagent.Booted.Format(time.RFC822), since.Format(time.RFC822))
+				}
+				return nil
+			},
+		}
+
+		return runCommand(settings, orbiter.strPtr(), nil, nil, orbctl(rebootCtx), "--gitops", "node", "reboot", fmt.Sprintf("%s.%s", nodeContext, nodeID))
 	}
 }

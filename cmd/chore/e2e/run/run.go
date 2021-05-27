@@ -6,18 +6,16 @@ import (
 	"io/ioutil"
 	"reflect"
 	"runtime"
-	"time"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"strings"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
 
 var _ runFunc = run
 
-func run(settings programSettings) error {
+func run(ctx context.Context, settings programSettings) error {
 
-	newOrbctl, err := buildOrbctl(settings)
+	newOrbctl, err := buildOrbctl(ctx, settings)
 	if err != nil {
 		return err
 	}
@@ -25,9 +23,7 @@ func run(settings programSettings) error {
 	if settings.cleanup {
 		defer func() {
 			// context is probably cancelled as program is terminating so we create a new one here
-			destroySettings := settings
-			destroySettings.ctx = context.Background()
-			if _, _, cuErr := destroy(destroySettings, nil)(99, newOrbctl); cuErr != nil {
+			if cuErr := destroy(settings, zeroConditions())(context.Background(), 99, newOrbctl); cuErr != nil {
 
 				original := ""
 				if err != nil {
@@ -50,14 +46,24 @@ func run(settings programSettings) error {
 	readKubeconfig, deleteKubeconfig := downloadKubeconfigFunc(settings, kubeconfig.Name())
 	defer deleteKubeconfig()
 
-	return seq(settings, newOrbctl, configureKubectl(kubeconfig.Name()), readKubeconfig,
-		/*  1 */ writeInitialDesiredState,
+	return seq(ctx, settings, newOrbctl, configureKubectl(kubeconfig.Name()), readKubeconfig,
+		/*  1 */ desireORBITERState,
 		/*  2 */ destroy,
-		/*  3 */ bootstrap,
-		/*  4 */ downscale,
-		/*  5 */ reboot,
-		/*  6 */ replace,
-		/*  7 */ upgrade,
+		/*  3 */ desireORBITERState,
+		/*  4 */ bootstrap,
+		/*  5 */ desireBOOMState(true),
+		/*  6 */ downscale,
+		/*  7 */ reboot,
+		/*  8 */ replace,
+		/*  9 */ upgrade("v1.19.10"),
+		/* 10 */ desireBOOMState(false),
+		/* 12 */ desireBOOMState(true),
+		/* 13 */ upgrade("v1.20.6"),
+		/* 14 */ desireBOOMState(false),
+		/* 15 */ desireBOOMState(true),
+		/* 16 */ upgrade("v1.21.0"),
+		/* 17 */ desireBOOMState(false),
+		/* 18 */ desireBOOMState(true),
 	)
 }
 
@@ -69,6 +75,18 @@ type programSettings struct {
 	orbID, branch, orbconfig     string
 	from                         uint8
 	cleanup, debugOrbctlCommands bool
+	cache                        struct {
+		artifactsVersion string
+	}
+}
+
+func (s programSettings) artifactsVersion() string {
+	if s.cache.artifactsVersion != "" {
+		return s.cache.artifactsVersion
+	}
+	branchParts := strings.Split(s.branch, "/")
+	s.cache.artifactsVersion = branchParts[len(branchParts)-1:][0] + "-dev"
+	return s.cache.artifactsVersion
 }
 
 func (p *programSettings) String() string {
@@ -85,34 +103,50 @@ cleanup=%t`,
 	)
 }
 
-type testFunc func(programSettings, *kubernetes.Spec) interactFunc
+type testFunc func(programSettings, *conditions) interactFunc
 
-type interactFunc func(uint8, newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error)
+type interactFunc func(context.Context, uint8, newOrbctlCommandFunc) (err error)
 
-func seq(settings programSettings, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, downloadKubeconfigFunc downloadKubeconfig, fns ...testFunc) error {
+func seq(
+	ctx context.Context,
+	settings programSettings,
+	orbctl newOrbctlCommandFunc,
+	kubectl newKubectlCommandFunc,
+	downloadKubeconfigFunc downloadKubeconfig,
+	fns ...testFunc,
+) error {
 
-	expect := &kubernetes.Spec{}
+	conditions := zeroConditions()
 
 	var at uint8
 	for _, fn := range fns {
 		at++
 
-		// must be called before continue, then we keep having an idempotent desired state
-		interactFn := fn(settings, expect)
+		// must be called before continue so we keep having an idempotent desired state
+		interactFn := fn(settings, conditions)
 
 		if at < settings.from {
 			settings.logger.Infof("\033[1;32m%s: Skipping step %d\033[0m\n", settings.orbID, at)
 			continue
 		}
 
-		if err := runTest(settings, interactFn, orbctl, kubectl, downloadKubeconfigFunc, at, expect); err != nil {
+		if err := runTest(ctx, settings, interactFn, orbctl, kubectl, downloadKubeconfigFunc, at, conditions); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func runTest(settings programSettings, fn interactFunc, orbctl newOrbctlCommandFunc, kubectl newKubectlCommandFunc, downloadKubeconfigFunc downloadKubeconfig, step uint8, expect *kubernetes.Spec) (err error) {
+func runTest(
+	ctx context.Context,
+	settings programSettings,
+	fn interactFunc,
+	orbctl newOrbctlCommandFunc,
+	kubectl newKubectlCommandFunc,
+	downloadKubeconfigFunc downloadKubeconfig,
+	step uint8,
+	conditions *conditions,
+) (err error) {
 	fnName := fmt.Sprintf("%s (%d. in stack)", runtime.FuncForPC(reflect.ValueOf(fn).Pointer()).Name(), step)
 
 	defer func() {
@@ -123,10 +157,32 @@ func runTest(settings programSettings, fn interactFunc, orbctl newOrbctlCommandF
 		}
 	}()
 
-	timeout, furtherCurrentChecks, err := fn(step, orbctl)
-	if err != nil || timeout == 0 {
+	testContext, testCancel := context.WithCancel(ctx)
+	defer testCancel()
+
+	if err := fn(testContext, step, orbctl); err != nil {
 		return err
 	}
 
-	return awaitORBITER(settings, timeout, orbctl, kubectl, downloadKubeconfigFunc, step, expect, furtherCurrentChecks)
+	var awaitFuncs []func() error
+
+	appendAwaitFunc := func(condition *condition) {
+		if condition != nil {
+			awaitFuncs = append(awaitFuncs, func() error {
+				return awaitCondition(testContext, settings, orbctl, kubectl, downloadKubeconfigFunc, step, conditions.kubernetes, condition)
+			})
+		}
+	}
+
+	appendAwaitFunc(conditions.testCase)
+	appendAwaitFunc(conditions.orbiter)
+	appendAwaitFunc(conditions.boom)
+
+	for _, awaitFunc := range awaitFuncs {
+		if err := awaitFunc(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

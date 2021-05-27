@@ -16,12 +16,12 @@ func configureKubectl(kubeconfig string) newKubectlCommandFunc {
 	}
 }
 
-type downloadKubeconfig func(orbctl newOrbctlCommandFunc) (err error)
+type downloadKubeconfig func(context.Context, newOrbctlCommandFunc) (err error)
 
 func downloadKubeconfigFunc(settings programSettings, to string) (downloadKubeconfig, func() error) {
-	return func(orbctl newOrbctlCommandFunc) (err error) {
+	return func(ctx context.Context, orbctl newOrbctlCommandFunc) (err error) {
 
-			readsecretCtx, readsecretCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+			readsecretCtx, readsecretCancel := context.WithTimeout(ctx, 10*time.Second)
 			defer readsecretCancel()
 
 			file, err := os.Create(to)
@@ -30,7 +30,7 @@ func downloadKubeconfigFunc(settings programSettings, to string) (downloadKubeco
 			}
 			defer file.Close()
 
-			return runCommand(settings, false, file, nil, orbctl(readsecretCtx), "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID))
+			return runCommand(settings, nil, file, nil, orbctl(readsecretCtx), "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID))
 
 		}, func() error {
 			return os.Remove(to)

@@ -4,20 +4,18 @@ import (
 	"context"
 	"strings"
 	"time"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 )
 
 var _ testFunc = destroy
 
-func destroy(settings programSettings, _ *kubernetes.Spec) interactFunc {
+func destroy(settings programSettings, conditions *conditions) interactFunc {
 
-	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
+	return func(ctx context.Context, _ uint8, newOrbctl newOrbctlCommandFunc) error {
 
-		destroyCtx, destroyCtxCancel := context.WithTimeout(settings.ctx, 5*time.Minute)
+		destroyCtx, destroyCtxCancel := context.WithTimeout(ctx, 5*time.Minute)
 		defer destroyCtxCancel()
 
-		cmd := orbctl(destroyCtx)
+		cmd := newOrbctl(destroyCtx)
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
 			panic(err)
@@ -25,7 +23,9 @@ func destroy(settings programSettings, _ *kubernetes.Spec) interactFunc {
 
 		var confirmed bool
 
-		return 0, nil, runCommand(settings, true, nil, func(line string) {
+		conditions.testCase = nil
+
+		return runCommand(settings, orbctl.strPtr(), nil, func(line string) {
 			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 				confirmed = true
 				if _, err := stdin.Write([]byte("y\n")); err != nil {

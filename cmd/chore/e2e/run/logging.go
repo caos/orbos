@@ -18,7 +18,7 @@ func logWriter(log func(format string, args ...interface{})) (io.Writer, func())
 	}
 }
 
-func logORBITERStdout(settings programSettings, line string) {
+func logStdout(settings programSettings, line string) {
 	log := settings.logger.Infof
 	if strings.Contains(line, ` err=`) {
 		log = settings.logger.Warnf

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,11 +11,11 @@ import (
 	"gopkg.in/raintank/schema.v1"
 )
 
-type runFunc func(programSettings) error
+type runFunc func(context.Context, programSettings) error
 
-func graphite(cloudURL, cloudKey string, test func(programSettings) error) runFunc {
+func graphite(cloudURL, cloudKey string, test runFunc) runFunc {
 
-	return func(settings programSettings) error {
+	return func(ctx context.Context, settings programSettings) error {
 		send := func(value float64, ts time.Time) {
 			if err := sendGraphiteStatus(settings.orbID, cloudURL, cloudKey, settings.branch, value, ts); err != nil {
 				panic(err)
@@ -23,7 +24,7 @@ func graphite(cloudURL, cloudKey string, test func(programSettings) error) runFu
 
 		start := time.Now()
 		send(0.5, start)
-		err := test(settings)
+		err := test(ctx, settings)
 		var value float64 = 0
 		if err == nil {
 			value = 1

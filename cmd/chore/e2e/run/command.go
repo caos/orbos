@@ -2,13 +2,16 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"io"
 	"os/exec"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
-func runCommand(settings programSettings, log bool, write io.Writer, scan func(line string), cmd *exec.Cmd, args ...string) error {
+func runCommand(settings programSettings, logPrefix *string, write io.Writer, scan func(line string), cmd *exec.Cmd, args ...string) error {
 
 	cmd.Args = append(cmd.Args, args...)
 
@@ -27,9 +30,12 @@ func runCommand(settings programSettings, log bool, write io.Writer, scan func(l
 		scanReader = io.TeeReader(stdoutReader, write)
 	}
 
-	settings.logger.Infof(fmt.Sprintf(`'%s'`, strings.Join(cmd.Args, `' '`)))
+	settings.logger.Debugf(fmt.Sprintf(`'%s'`, strings.Join(cmd.Args, `' '`)))
 
 	if err := cmd.Start(); err != nil {
+		if errors.Is(err, context.Canceled) {
+			return nil
+		}
 		panic(err)
 	}
 	scanner := bufio.NewScanner(scanReader)
@@ -42,8 +48,8 @@ func runCommand(settings programSettings, log bool, write io.Writer, scan func(l
 			scan(line)
 		}
 
-		if log {
-			logORBITERStdout(settings, line)
+		if logPrefix != nil {
+			logStdout(settings, *logPrefix+line)
 		}
 	}
 	if err := scanner.Err(); err != nil {

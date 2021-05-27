@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/helpers"
+
+	"github.com/caos/orbos/internal/operator/common"
+
 	"gopkg.in/yaml.v3"
 )
 
-var _ testFunc = writeInitialDesiredState
+var _ testFunc = desireORBITERState
 
-func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec) interactFunc {
+func desireORBITERState(settings programSettings, conditions *conditions) interactFunc {
 
 	clusterSpec := fmt.Sprintf(`      controlplane:
         updatesdisabled: false
@@ -30,7 +33,7 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
         podcidr: 100.127.224.0/20
       verbose: false
       versions:
-        kubernetes: v1.19.9
+        kubernetes: v1.18.8
         orbiter: %s
       workers:
       - updatesdisabled: false
@@ -38,23 +41,25 @@ func writeInitialDesiredState(settings programSettings, expect *kubernetes.Spec)
         nodes: 3
         pool: application`, settings.orbID, settings.artifactsVersion(), settings.orbID)
 
-	if err := yaml.Unmarshal([]byte(clusterSpec), expect); err != nil {
+	if err := yaml.Unmarshal([]byte(clusterSpec), conditions.kubernetes); err != nil {
 		panic(err)
 	}
 
-	return func(_ uint8, orbctl newOrbctlCommandFunc) (time.Duration, checkCurrentFunc, error) {
+	return func(ctx context.Context, _ uint8, newOrbctl newOrbctlCommandFunc) error {
 
-		initCtx, initCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+		initCtx, initCancel := context.WithTimeout(ctx, 1*time.Minute)
 		defer initCancel()
 
 		var providerYml string
-		if err := runCommand(settings, false, nil, func(line string) {
+		if err := runCommand(settings, nil, nil, func(line string) {
 			providerYml += fmt.Sprintf("    %s\n", line)
-		}, orbctl(initCtx), "--gitops", "file", "print", "provider.yml"); err != nil {
-			return 0, nil, err
+		}, newOrbctl(initCtx), "--gitops", "file", "print", "provider.yml"); err != nil {
+			return err
 		}
 
-		orbiterYml := fmt.Sprintf(`kind: orbiter.caos.ch/Orb
+		conditions.testCase = nil
+
+		return desireState(initCtx, settings, newOrbctl, "orbiter.yml", fmt.Sprintf(`kind: orbiter.caos.ch/Orb
 version: v0
 spec:
   verbose: false
@@ -112,21 +117,74 @@ providers:
               protocol: https
               path: /healthz
               code: 200
-`, settings.orbID, clusterSpec, settings.orbID, providerYml)
-		orbiterCmd := orbctl(initCtx)
-		orbiterCmd.Stdin = bytes.NewReader([]byte(orbiterYml))
-
-		if err := runCommand(settings, true, nil, nil, orbiterCmd, "--gitops", "file", "patch", "orbiter.yml", "--exact", "--stdin"); err != nil {
-			return 0, nil, err
-		}
-
-		return 0, nil, desireBOOMPlatform(settings, initCtx, orbctl, true)
+`, settings.orbID, clusterSpec, settings.orbID, providerYml))
 	}
 }
 
-func desireBOOMPlatform(settings programSettings, ctx context.Context, orbctl newOrbctlCommandFunc, deploy bool) error {
+func desireBOOMState(deploy bool) testFunc {
+	return func(settings programSettings, conditions *conditions) interactFunc {
 
-	boomYml := fmt.Sprintf(`
+		// needs to be assigned also when test is skipped
+		conditions.boom = &condition{
+			watcher: watch(10*time.Minute, boom),
+			checks: func(ctx context.Context, newKubectl newKubectlCommandFunc, orbiter currentOrbiter, current common.NodeAgentsCurrentKind) error {
+
+				checkCtx, checkCancel := context.WithTimeout(ctx, 1*time.Minute)
+				defer checkCancel()
+
+				var expectTotal uint8
+				checkPodsAreReadyFunc := func(selector string, expectPods uint8) func() error {
+					expectTotal += expectPods
+					return func() error {
+						return checkPodsAreReady(checkCtx, settings, newKubectl, "caos-system", selector, expectPods)
+					}
+				}
+
+				if !deploy {
+					// only orbiter and boom should be running in caos-system
+					return checkPodsAreReadyFunc("", 2)()
+				}
+
+				allNodes := conditions.desiredMasters() + conditions.desiredWorkers()
+
+				return helpers.Fanout([]func() error{
+					checkPodsAreReadyFunc("app.kubernetes.io/instance=ambassador", 2),
+					checkPodsAreReadyFunc("app.kubernetes.io/instance=argocd", 4),
+					checkPodsAreReadyFunc("app.kubernetes.io/instance=grafana", 1),
+					checkPodsAreReadyFunc("app.kubernetes.io/instance=kube-state-metrics", 1),
+					checkPodsAreReadyFunc("app.kubernetes.io/name=fluentbit", allNodes),
+					checkPodsAreReadyFunc("app.kubernetes.io/name=fluentd", 1),
+					checkPodsAreReadyFunc("app.kubernetes.io/instance=logging-operator", 1),
+					checkPodsAreReadyFunc("app=loki", 1),
+					checkPodsAreReadyFunc("app=prometheus-node-exporter", allNodes),
+					checkPodsAreReadyFunc("app=prometheus", 1),
+					checkPodsAreReadyFunc("app=prometheus-operator-operator", 1),
+					checkPodsAreReadyFunc("app=systemd-exporter", allNodes),
+					checkPodsAreReadyFunc("app.kubernetes.io/name notin (orbiter, boom)", expectTotal),
+					func() error {
+						provider, ok := orbiter.Providers[settings.orbID]
+						if !ok {
+							return fmt.Errorf("provider %s not found in current state", settings.orbID)
+						}
+
+						ep := provider.Current.Ingresses.Httpsingress
+
+						msg, err := helpers.Check("https", ep.Location, ep.FrontendPort, "/ambassador/v0/check_ready", 200, false)
+						if err != nil {
+							return fmt.Errorf("ambassador ready check failed with message: %s: %w", msg, err)
+						}
+
+						settings.logger.Infof(msg)
+
+						return nil
+					},
+				})()
+			},
+		}
+
+		return func(ctx context.Context, step uint8, orbctl newOrbctlCommandFunc) (err error) {
+
+			return desireState(ctx, settings, orbctl, "boom.yml", fmt.Sprintf(`
 apiVersion: caos.ch/v1
 kind: Boom
 metadata:
@@ -140,15 +198,27 @@ spec:
     deploy: %t
   logCollection:
     deploy: %t
+    fluentbit:
+      tolerations:
+          - key: node-role.kubernetes.io/master
+            operator: Exists
   nodeMetricsExporter:
     deploy: %t
+    tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
   systemdMetricsExporter:
     deploy: %t
+    tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
   monitoring:
     deploy: %t
   apiGateway:
     deploy: %t
     replicaCount: 1
+    service:
+      type: NodePort
   kubeMetricsExporter:
     deploy: %t
   reconciling:
@@ -157,22 +227,32 @@ spec:
     deploy: %t
   logsPersisting:
     deploy: %t
+  metricsServer:
+    deploy: false
 `,
-		settings.artifactsVersion(),
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-		deploy,
-	)
-	boomCmd := orbctl(ctx)
-	boomCmd.Stdin = bytes.NewReader([]byte(boomYml))
+				settings.artifactsVersion(),
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+				deploy,
+			))
+		}
+	}
+}
 
-	return runCommand(settings, true, nil, nil, boomCmd, "--gitops", "file", "patch", "boom.yml", "--exact", "--stdin")
+func desireState(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, path, yml string) error {
 
+	desireCtx, desireCancel := context.WithTimeout(ctx, 1*time.Minute)
+	defer desireCancel()
+
+	cmd := newOrbctl(desireCtx)
+	cmd.Stdin = bytes.NewReader([]byte(yml))
+
+	return runCommand(settings, orbctl.strPtr(), nil, nil, cmd, "--gitops", "file", "patch", path, "--exact", "--stdin")
 }

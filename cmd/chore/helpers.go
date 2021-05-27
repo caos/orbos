@@ -3,6 +3,7 @@ package chore
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -79,7 +80,8 @@ func BuildExecutables(debug, hostBinsOnly bool) error {
 	cmd.Stdout = os.Stderr
 	// gen-executables
 	if err := Run(cmd); err != nil || hostBinsOnly {
-		return err
+		// error contains --githubclientid and --githubclientsecret values
+		return errors.New("building executables failed")
 	}
 
 	files, err = filepath.Glob("./cmd/chore/gen-charts/*.go")

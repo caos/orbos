@@ -95,7 +95,7 @@ func main() {
 		BatchWait:          1 * time.Second,
 		BatchEntriesNumber: 0,
 		SendLevel:          sendLevel,
-		PrintLevel:         promtail.DEBUG,
+		PrintLevel:         promtail.INFO,
 	})
 	if err != nil {
 		panic(err)
@@ -104,7 +104,6 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	settings.ctx = ctx
 
 	signalChannel := make(chan os.Signal)
 	signal.Notify(signalChannel,
@@ -131,7 +130,7 @@ func main() {
 	fmt.Println("Starting end-to-end test")
 	fmt.Println(settings.String())
 
-	if err := testFunc(settings); err != nil {
+	if err := testFunc(ctx, settings); err != nil {
 		settings.logger.Errorf("End-to-end test failed: %s", err.Error())
 		returnCode = 1
 	}

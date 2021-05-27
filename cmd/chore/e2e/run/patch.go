@@ -5,13 +5,10 @@ import (
 	"time"
 )
 
-func patch(settings programSettings, orbctl newOrbctlCommandFunc, path, value string) error {
+func patch(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, path, value string) error {
 
-	patchCtx, patchCancel := context.WithTimeout(settings.ctx, 30*time.Second)
+	patchCtx, patchCancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer patchCancel()
 
-	cmd := orbctl(patchCtx)
-	cmd.Args = append(cmd.Args, "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
-
-	return runCommand(settings, true, nil, nil, orbctl(patchCtx), "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
+	return runCommand(settings, orbctl.strPtr(), nil, nil, newOrbctl(patchCtx), "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
 }
