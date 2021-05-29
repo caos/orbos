@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
@@ -23,7 +24,9 @@ func run(ctx context.Context, settings programSettings) error {
 	if settings.cleanup {
 		defer func() {
 			// context is probably cancelled as program is terminating so we create a new one here
-			if cuErr := destroy(settings, zeroConditions())(context.Background(), 99, newOrbctl); cuErr != nil {
+			destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 10*time.Minute)
+			defer destroyCancel()
+			if cuErr := destroy(settings, zeroConditions())(destroyCtx, 99, newOrbctl); cuErr != nil {
 
 				original := ""
 				if err != nil {
