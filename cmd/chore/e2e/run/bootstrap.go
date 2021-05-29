@@ -30,14 +30,14 @@ func bootstrap(settings programSettings, conditions *conditions) interactFunc {
 			currentMachinesLen := uint8(len(cluster.Machines.M))
 
 			if currentMachinesLen != machines {
-				helpers.Concat(err, fmt.Errorf("current state has %d machines instead of %d", currentMachinesLen, machines))
+				err = helpers.Concat(err, fmt.Errorf("current state has %d machines instead of %d", currentMachinesLen, machines))
 			}
 
 			for nodeagentID, nodeagent := range cluster.Machines.M {
 				if !nodeagent.Ready ||
 					!nodeagent.FirewallIsReady ||
 					!nodeagent.Joined {
-					helpers.Concat(err, fmt.Errorf("nodeagent %s has current states joined=%t, firewallIsReady=%t, ready=%t",
+					err = helpers.Concat(err, fmt.Errorf("nodeagent %s has current states joined=%t, firewallIsReady=%t, ready=%t",
 						nodeagentID,
 						nodeagent.Ready,
 						nodeagent.FirewallIsReady,
@@ -48,12 +48,12 @@ func bootstrap(settings programSettings, conditions *conditions) interactFunc {
 
 			for nodeagentID, nodeagent := range nodeagents.Current.NA {
 				if !nodeagent.NodeIsReady {
-					helpers.Concat(err, fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID))
+					err = helpers.Concat(err, fmt.Errorf("nodeagent %s has not reported readiness yet", nodeagentID))
 				}
 				if nodeagent.Software.Kubelet.Version != conditions.kubernetes.Versions.Kubernetes ||
 					nodeagent.Software.Kubeadm.Version != conditions.kubernetes.Versions.Kubernetes ||
 					nodeagent.Software.Kubectl.Version != conditions.kubernetes.Versions.Kubernetes {
-					helpers.Concat(err, fmt.Errorf("nodeagent %s has current states kubelet=%s, kubeadm=%s, kubectl=%s instead of %s",
+					err = helpers.Concat(err, fmt.Errorf("nodeagent %s has current states kubelet=%s, kubeadm=%s, kubectl=%s instead of %s",
 						nodeagentID,
 						nodeagent.Software.Kubelet.Version,
 						nodeagent.Software.Kubeadm.Version,
@@ -64,7 +64,7 @@ func bootstrap(settings programSettings, conditions *conditions) interactFunc {
 			}
 
 			if cluster.Status != "running" {
-				helpers.Concat(err, fmt.Errorf("cluster status is %s", cluster.Status))
+				err = helpers.Concat(err, fmt.Errorf("cluster status is %s", cluster.Status))
 			}
 
 			return helpers.Concat(err, helpers.Fanout([]func() error{
