@@ -26,6 +26,7 @@ func ensureNodes(
 	gitClient *git.Client,
 	providerK8sSpec infra.Kubernetes,
 	machines []*initializedMachine,
+	privateInterface string,
 ) (changed bool, err error) {
 
 	var joinCP *initializedMachine
@@ -134,6 +135,7 @@ nodes:
 			imageRepository,
 			gitClient,
 			providerK8sSpec,
+			privateInterface,
 		)
 
 		if err != nil {
@@ -169,6 +171,7 @@ nodes:
 			imageRepository,
 			gitClient,
 			providerK8sSpec,
+			privateInterface,
 		); err != nil {
 			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
 		}

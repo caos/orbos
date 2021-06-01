@@ -30,6 +30,7 @@ func (c *Current) Ingresses() map[string]*infra.Address {
 func (c *Current) Cleanupped() <-chan error {
 	return c.Current.cleanupped
 }
+func (c *Current) PrivateInterface() string { return "eth0" }
 
 func (c *Current) Kubernetes() infra.Kubernetes {
 	return infra.Kubernetes{

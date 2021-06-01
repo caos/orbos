@@ -20,6 +20,7 @@ type ProviderCurrent interface {
 	Pools() map[string]Pool
 	Ingresses() map[string]*Address
 	Kubernetes() Kubernetes
+	PrivateInterface() string
 }
 
 type Kubernetes struct {
