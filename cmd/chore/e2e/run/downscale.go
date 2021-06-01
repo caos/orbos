@@ -12,7 +12,7 @@ func downscale(settings programSettings, conditions *conditions) interactFunc {
 
 	// assignments must be done also when test is skipped
 	conditions.kubernetes.ControlPlane.Nodes = 1
-	conditions.kubernetes.Workers[0].Nodes = 2
+	conditions.kubernetes.Workers[0].Nodes = 1
 	conditions.orbiter.watcher = watch(10*time.Minute, orbiter)
 	conditions.testCase = nil
 
@@ -22,6 +22,6 @@ func downscale(settings programSettings, conditions *conditions) interactFunc {
 			return err
 		}
 
-		return patch(ctx, settings, orbctl, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", settings.orbID), "2")
+		return patch(ctx, settings, orbctl, fmt.Sprintf("clusters.%s.spec.workers.0.nodes", settings.orbID), "1")
 	}
 }
