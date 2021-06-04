@@ -52,7 +52,7 @@ func main() {
 		"",
 		version,
 		gitCommit,
-		kubeconfig,
+		*kubeconfig,
 		*gitops,
 		*gitops,
 	); err != nil {
