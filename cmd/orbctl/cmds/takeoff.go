@@ -2,12 +2,15 @@ package cmds
 
 import (
 	"context"
-	"errors"
-	"io/ioutil"
 
-	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/start"
+	"gopkg.in/yaml.v3"
+
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
+	"github.com/caos/orbos/internal/ctrlgitops"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -16,7 +19,7 @@ import (
 func Takeoff(
 	monitor mntr.Monitor,
 	ctx context.Context,
-	orbConfig *orb.Orb,
+	orbConfig *orbcfg.Orb,
 	gitClient *git.Client,
 	recur bool,
 	destroy bool,
@@ -26,26 +29,34 @@ func Takeoff(
 	version string,
 	gitCommit string,
 	kubeconfig string,
+	gitOpsBoom bool,
+	gitOpsNetworking bool,
 ) error {
-	if err := orbConfig.IsComplete(); err != nil {
+
+	if !deploy {
+		monitor.Info("Skipping operator deployments")
+		return nil
+	}
+
+	getKubeClient := func() (*kubernetes.Client, bool, error) {
+		return cli.Client(
+			monitor,
+			orbConfig,
+			gitClient,
+			kubeconfig,
+			gitOpsBoom || gitOpsNetworking,
+		)
+	}
+
+	k8sClient, fromOrbiter, err := getKubeClient()
+
+	if !fromOrbiter && err != nil {
 		return err
 	}
 
-	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-		return err
-	}
-
-	if err := gitClient.Clone(); err != nil {
-		return err
-	}
-
-	allKubeconfigs := make([]string, 0)
-	foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-	if err != nil {
-		return err
-	}
-	if foundOrbiter {
-		orbiterConfig := &start.OrbiterConfig{
+	if fromOrbiter {
+		err = nil
+		orbiterConfig := &ctrlgitops.OrbiterConfig{
 			Recur:            recur,
 			Destroy:          destroy,
 			Deploy:           deploy,
@@ -56,52 +67,36 @@ func Takeoff(
 			IngestionAddress: ingestionAddress,
 		}
 
-		kubeconfigs, err := start.Orbiter(ctx, monitor, orbiterConfig, gitClient, orbConfig, version)
+		if err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
+			return err
+		}
+
+		k8sClient, fromOrbiter, err = getKubeClient()
 		if err != nil {
 			return err
 		}
-		allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
-	} else {
-		if kubeconfig == "" {
-			return errors.New("Error to deploy BOOM as no kubeconfig is provided")
-		}
-		value, err := ioutil.ReadFile(kubeconfig)
+	}
+
+	if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
+		monitor.Info("failed to apply common resources into k8s-cluster")
+		return err
+	}
+
+	if fromOrbiter || gitOpsBoom || gitOpsNetworking {
+
+		orbConfigBytes, err := yaml.Marshal(orbConfig)
 		if err != nil {
 			return err
 		}
-		allKubeconfigs = append(allKubeconfigs, string(value))
-	}
 
-	if !deploy {
-		monitor.Info("Skipping operator deployments")
-		return nil
-	}
-
-	for _, kubeconfig := range allKubeconfigs {
-		k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
-		if k8sClient.Available() {
-			if err := kubernetes.EnsureCommonArtifacts(monitor, k8sClient); err != nil {
-				monitor.Info("failed to apply common resources into k8s-cluster")
-				return err
-			}
-			monitor.Info("Applied common resources")
-
-			if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-				monitor.Info("failed to apply configuration resources into k8s-cluster")
-				return err
-			}
-			monitor.Info("Applied configuration resources")
-		} else {
-			monitor.Info("Failed to connect to k8s")
-		}
-
-		if err := deployBoom(monitor, gitClient, &kubeconfig, version); err != nil {
-			return err
-		}
-
-		if err := deployNetworking(monitor, gitClient, &kubeconfig); err != nil {
+		if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfigBytes); err != nil {
+			monitor.Info("failed to apply configuration resources into k8s-cluster")
 			return err
 		}
 	}
-	return nil
+
+	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOpsBoom); err != nil {
+		return err
+	}
+	return deployNetworking(monitor, gitClient, k8sClient, version, gitOpsNetworking)
 }

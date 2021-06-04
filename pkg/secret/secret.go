@@ -27,6 +27,8 @@ type Secret struct {
 }
 type secretAlias Secret
 
+const existingSecretsNamespace = "caos-system"
+
 // Existing: Used secret that has to be already existing in the cluster
 type Existing struct {
 	//Name of the Secret
@@ -35,6 +37,13 @@ type Existing struct {
 	Key string `json:"key" yaml:"key"`
 	//Name which should be used internally, should be unique for the volume and volumemounts
 	InternalName string `json:"internalName,omitempty" yaml:"internalName,omitempty"`
+}
+
+func (s *Existing) IsZero() bool {
+	if s.Name == "" && s.Key == "" {
+		return true
+	}
+	return false
 }
 
 // Existing: Used secret that has to be already existing in the cluster and should contain id/username and secret/password
@@ -204,12 +213,30 @@ func InitIfNil(sec *Secret) *Secret {
 	return sec
 }
 
-func AppendSecrets(prefix string, into, add map[string]*Secret) {
-	for key, secret := range add {
+func AppendSecrets(prefix string, intoSecrets, addSecrets map[string]*Secret, intoExisting, addExisting map[string]*Existing) {
+	for key, secret := range addSecrets {
 		name := key
 		if prefix != "" {
 			name = prefix + "." + name
 		}
-		into[name] = secret
+		intoSecrets[name] = secret
 	}
+	for key, existing := range addExisting {
+		name := key
+		if prefix != "" {
+			name = prefix + "." + name
+		}
+		intoExisting[name] = existing
+	}
+}
+
+func ValidateSecret(secret *Secret, existing *Existing) error {
+	if secret == nil || existing == nil {
+		return errors.New("secret not specified")
+	}
+
+	if secret.Value == "" && (existing.Name == "" || existing.Key == "") {
+		return errors.New("secret has no encrypted value or no valid reference")
+	}
+	return nil
 }

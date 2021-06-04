@@ -84,6 +84,11 @@ func (n *CurrentNodeAgents) Set(id string, na *NodeAgentCurrent) {
 	if n.NA == nil {
 		n.NA = make(map[string]*NodeAgentCurrent)
 	}
+
+	if _, ok := n.NA[id]; ok {
+		n.NA[id] = nil
+	}
+
 	n.NA[id] = na
 }
 
@@ -121,6 +126,10 @@ type DesiredNodeAgents struct {
 func (n *DesiredNodeAgents) Delete(id string) {
 	n.mux.Lock()
 	defer n.mux.Unlock()
+
+	if _, ok := n.NA[id]; ok {
+		n.NA[id] = nil
+	}
 	delete(n.NA, id)
 }
 

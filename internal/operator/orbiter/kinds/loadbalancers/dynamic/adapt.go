@@ -222,7 +222,14 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}).Debug("Executed command")
 						return user, nil
 					},
-					"vip":       mapVIP,
+					"vip": mapVIP,
+					"routerID": func(vip *VIP) string {
+						vipParts := strings.Split(mapVIP(vip), ".")
+						if len(vipParts) != 4 || vipParts[3] == "0" {
+							return "55"
+						}
+						return vipParts[3]
+					},
 					"derefBool": func(in *bool) bool { return in != nil && *in },
 				})
 
@@ -310,7 +317,7 @@ vrrp_instance VI_{{ $idx }} {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
 	interface {{ $root.Interface }}
-	virtual_router_id {{ add 55 $idx }}
+	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
 		auth_type PASS

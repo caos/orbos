@@ -15,10 +15,20 @@ func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("ORBOS", "networking.caos.ch")
 }
 
-func AdaptFunc(ID string, binaryVersion *string) core.AdaptFunc {
+func AdaptFunc(ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc core.QueryFunc, destroyFunc core.DestroyFunc, secrets map[string]*secret.Secret, err error) {
+	return func(
+		monitor mntr.Monitor,
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (queryFunc core.QueryFunc,
+		destroyFunc core.DestroyFunc,
+		secrets map[string]*secret.Secret,
+		existing map[string]*secret.Existing,
+		migrate bool,
+		err error,
+	) {
 		defer func() {
 			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
 		}()
@@ -27,7 +37,7 @@ func AdaptFunc(ID string, binaryVersion *string) core.AdaptFunc {
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -38,18 +48,14 @@ func AdaptFunc(ID string, binaryVersion *string) core.AdaptFunc {
 
 		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, err := networking.GetQueryAndDestroyFuncs(orbMonitor, ID, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
+		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(orbMonitor, ID, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, nil, nil, nil, false, err
 		}
 
 		queriers := []core.QueryFunc{
 			queryNW,
-		}
-		if desiredKind.Spec.SelfReconciling {
-			queriers = append(queriers,
-				core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredTree)),
-			)
+			core.EnsureFuncToQueryFunc(Reconcile(monitor, desiredKind.Spec, gitops)),
 		}
 
 		destroyers := []core.DestroyFunc{
@@ -74,6 +80,8 @@ func AdaptFunc(ID string, binaryVersion *string) core.AdaptFunc {
 				return core.DestroyersToDestroyFunc(monitor, destroyers)(k8sClient)
 			},
 			secrets,
+			existing,
+			migrate,
 			nil
 	}
 }

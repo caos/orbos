@@ -11,9 +11,10 @@ import (
 	v10 "k8s.io/api/batch/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
 	v11 "k8s.io/api/core/v1"
-	v1beta10 "k8s.io/api/policy/v1beta1"
+	v1beta10 "k8s.io/api/extensions/v1beta1"
+	v1beta11 "k8s.io/api/policy/v1beta1"
 	v12 "k8s.io/api/rbac/v1"
-	v1beta11 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	v1beta12 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	reflect "reflect"
 	time "time"
@@ -135,6 +136,20 @@ func (m *MockClientInt) ApplyJob(rsc *v10.Job) error {
 func (mr *MockClientIntMockRecorder) ApplyJob(rsc interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyJob", reflect.TypeOf((*MockClientInt)(nil).ApplyJob), rsc)
+}
+
+// ApplyJobDryRun mocks base method
+func (m *MockClientInt) ApplyJobDryRun(rsc *v10.Job) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyJobDryRun", rsc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyJobDryRun indicates an expected call of ApplyJobDryRun
+func (mr *MockClientIntMockRecorder) ApplyJobDryRun(rsc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyJobDryRun", reflect.TypeOf((*MockClientInt)(nil).ApplyJobDryRun), rsc)
 }
 
 // DeleteJob mocks base method
@@ -349,10 +364,10 @@ func (mr *MockClientIntMockRecorder) ExecInPodOfDeployment(namespace, name, cont
 }
 
 // CheckCRD mocks base method
-func (m *MockClientInt) CheckCRD(name string) (*v1beta11.CustomResourceDefinition, error) {
+func (m *MockClientInt) CheckCRD(name string) (*v1beta12.CustomResourceDefinition, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckCRD", name)
-	ret0, _ := ret[0].(*v1beta11.CustomResourceDefinition)
+	ret0, _ := ret[0].(*v1beta12.CustomResourceDefinition)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -406,6 +421,34 @@ func (mr *MockClientIntMockRecorder) DeleteNamespacedCRDResource(group, version,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNamespacedCRDResource", reflect.TypeOf((*MockClientInt)(nil).DeleteNamespacedCRDResource), group, version, kind, namespace, name)
 }
 
+// ApplyCRDResource mocks base method
+func (m *MockClientInt) ApplyCRDResource(crd *unstructured.Unstructured) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyCRDResource", crd)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyCRDResource indicates an expected call of ApplyCRDResource
+func (mr *MockClientIntMockRecorder) ApplyCRDResource(crd interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCRDResource", reflect.TypeOf((*MockClientInt)(nil).ApplyCRDResource), crd)
+}
+
+// DeleteCRDResource mocks base method
+func (m *MockClientInt) DeleteCRDResource(group, version, kind, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCRDResource", group, version, kind, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCRDResource indicates an expected call of DeleteCRDResource
+func (mr *MockClientIntMockRecorder) DeleteCRDResource(group, version, kind, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCRDResource", reflect.TypeOf((*MockClientInt)(nil).DeleteCRDResource), group, version, kind, name)
+}
+
 // ApplyCronJob mocks base method
 func (m *MockClientInt) ApplyCronJob(rsc *v1beta1.CronJob) error {
 	m.ctrl.T.Helper()
@@ -447,6 +490,21 @@ func (m *MockClientInt) ListSecrets(namespace string, labels map[string]string) 
 func (mr *MockClientIntMockRecorder) ListSecrets(namespace, labels interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSecrets", reflect.TypeOf((*MockClientInt)(nil).ListSecrets), namespace, labels)
+}
+
+// GetSecret mocks base method
+func (m *MockClientInt) GetSecret(namespace, name string) (*v11.Secret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecret", namespace, name)
+	ret0, _ := ret[0].(*v11.Secret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecret indicates an expected call of GetSecret
+func (mr *MockClientIntMockRecorder) GetSecret(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockClientInt)(nil).GetSecret), namespace, name)
 }
 
 // ApplySecret mocks base method
@@ -604,6 +662,34 @@ func (mr *MockClientIntMockRecorder) DeleteClusterRole(name interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteClusterRole", reflect.TypeOf((*MockClientInt)(nil).DeleteClusterRole), name)
 }
 
+// ApplyIngress mocks base method
+func (m *MockClientInt) ApplyIngress(rsc *v1beta10.Ingress) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyIngress", rsc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyIngress indicates an expected call of ApplyIngress
+func (mr *MockClientIntMockRecorder) ApplyIngress(rsc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyIngress", reflect.TypeOf((*MockClientInt)(nil).ApplyIngress), rsc)
+}
+
+// DeleteIngress mocks base method
+func (m *MockClientInt) DeleteIngress(namespace, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteIngress", namespace, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteIngress indicates an expected call of DeleteIngress
+func (mr *MockClientIntMockRecorder) DeleteIngress(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteIngress", reflect.TypeOf((*MockClientInt)(nil).DeleteIngress), namespace, name)
+}
+
 // ApplyRoleBinding mocks base method
 func (m *MockClientInt) ApplyRoleBinding(rsc *v12.RoleBinding) error {
 	m.ctrl.T.Helper()
@@ -661,7 +747,7 @@ func (mr *MockClientIntMockRecorder) DeleteClusterRoleBinding(name interface{}) 
 }
 
 // ApplyPodDisruptionBudget mocks base method
-func (m *MockClientInt) ApplyPodDisruptionBudget(rsc *v1beta10.PodDisruptionBudget) error {
+func (m *MockClientInt) ApplyPodDisruptionBudget(rsc *v1beta11.PodDisruptionBudget) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyPodDisruptionBudget", rsc)
 	ret0, _ := ret[0].(error)

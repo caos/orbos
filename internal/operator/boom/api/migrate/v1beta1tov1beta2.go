@@ -7,10 +7,9 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/migrate/storage"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/pkg/secret"
 )
 
-func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) (*v1beta2.Toolset, map[string]*secret.Secret) {
+func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {
 	newToolset := &v1beta2.Toolset{
 		APIVersion: "boom.caos.ch/v1beta2",
 		Metadata: &latest.Metadata{
@@ -188,5 +187,5 @@ func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) (*v1beta2.Toolset, map[string
 		newToolset.Spec = newSpec
 	}
 
-	return newToolset, v1beta2.GetSecretsMap(newToolset)
+	return newToolset
 }

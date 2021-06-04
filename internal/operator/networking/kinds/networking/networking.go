@@ -21,12 +21,14 @@ func GetQueryAndDestroyFuncs(
 	query core.QueryFunc,
 	destroy core.DestroyFunc,
 	secrets map[string]*secret.Secret,
+	existing map[string]*secret.Existing,
+	migrate bool,
 	err error,
 ) {
 	switch desiredTree.Common.Kind {
 	case "networking.caos.ch/LegacyCloudflare":
 		return legacycf.AdaptFunc(namespace, ID, operatorLabels)(monitor, desiredTree, currentTree)
 	default:
-		return nil, nil, nil, errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
+		return nil, nil, nil, nil, false, errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/caos/orbos/internal/operator/nodeagent/networking"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/conv"
 	"github.com/caos/orbos/internal/operator/nodeagent/firewall"
+	_ "net/http/pprof"
 )
 
 var gitCommit string
@@ -36,6 +38,7 @@ func main() {
 	printVersion := flag.Bool("version", false, "Print build information")
 	ignorePorts := flag.String("ignore-ports", "", "Comma separated list of firewall ports that are ignored")
 	nodeAgentID := flag.String("id", "", "The managed machines ID")
+	pprof := flag.Bool("pprof", false, "start pprof as port 6060")
 
 	flag.Parse()
 
@@ -63,6 +66,12 @@ func main() {
 		"verbose":     *verbose,
 		"nodeAgentID": *nodeAgentID,
 	}).Info("Node Agent is starting")
+
+	if *pprof {
+		go func() {
+			monitor.Info(http.ListenAndServe("localhost:6060", nil).Error())
+		}()
+	}
 
 	os, err := dep.GetOperatingSystem()
 	if err != nil {

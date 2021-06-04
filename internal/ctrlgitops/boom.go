@@ -1,13 +1,14 @@
-package start
+package ctrlgitops
 
 import (
-	"github.com/caos/orbos/internal/operator/boom"
-	"github.com/caos/orbos/mntr"
 	"runtime/debug"
 	"time"
+
+	"github.com/caos/orbos/internal/operator/boom"
+	"github.com/caos/orbos/mntr"
 )
 
-func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version string) error {
+func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {
 
 	ensureClient := gitClient(monitor, "ensure")
 	queryClient := gitClient(monitor, "query")
@@ -30,7 +31,6 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 		ensure, query := boom.Takeoff(
 			monitor,
 			"/boom",
-			localmode,
 			orbConfigPath,
 			ensureClient,
 			queryClient,
@@ -62,6 +62,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, localmode bool, version st
 			<-queryChan
 			<-ensureChan
 
+			time.Sleep(time.Second * 30)
 			takeoffChan <- struct{}{}
 		}()
 	}

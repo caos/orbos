@@ -1,15 +1,19 @@
 package main
 
 import (
+	"errors"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
+
 	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/spf13/cobra"
 )
 
-func APICommand(rv RootValues) *cobra.Command {
+func APICommand(getRv GetRootValues) *cobra.Command {
 	var (
 		cmd = &cobra.Command{
 			Use:   "api",
@@ -20,15 +24,23 @@ func APICommand(rv RootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+		rv, err := getRv()
 		if err != nil {
 			return err
 		}
 		defer func() {
-			err = errFunc(err)
+			err = rv.ErrFunc(err)
 		}()
 
-		if err := orbConfig.IsComplete(); err != nil {
+		if !rv.Gitops {
+			return errors.New("api command is only supported with the --gitops flag")
+		}
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
 		}
 
@@ -46,7 +58,7 @@ func APICommand(rv RootValues) *cobra.Command {
 		}
 
 		if foundOrbiter {
-			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orb.AdaptFunc(
+			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
 				orbConfig,
 				gitCommit,
@@ -76,7 +88,7 @@ func APICommand(rv RootValues) *cobra.Command {
 				return err
 			}
 
-			toolset, migrate, _, _, _, err := boomapi.ParseToolset(desired)
+			toolset, migrate, _, _, err := boomapi.ParseToolset(desired)
 			if err != nil {
 				return err
 			}

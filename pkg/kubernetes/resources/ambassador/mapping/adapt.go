@@ -1,11 +1,16 @@
 package mapping
 
 import (
-	"strconv"
-
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/pkg/labels"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+)
+
+const (
+	group   = "getambassador.io"
+	version = "v2"
+	kind    = "Mapping"
 )
 
 type CORS struct {
@@ -17,13 +22,17 @@ type CORS struct {
 	MaxAge         string
 }
 
-const (
-	group   = "getambassador.io"
-	version = "v2"
-	kind    = "Mapping"
-)
-
-func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bool, host, prefix, rewrite, service, timeoutMS, connectTimeoutMS string, cors *CORS) (resources.QueryFunc, error) {
+func AdaptFuncToEnsure(
+	namespace string,
+	id labels.IDLabels,
+	grpc bool,
+	host,
+	prefix,
+	rewrite,
+	service string,
+	timeoutMS,
+	connectTimeoutMS int,
+	cors *CORS) (resources.QueryFunc, error) {
 
 	spec := map[string]interface{}{
 		"host":    host,
@@ -34,23 +43,11 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bo
 		spec["prefix"] = prefix
 	}
 
-	if timeoutMS != "" {
-		toMSint, err := strconv.Atoi(timeoutMS)
-		if err != nil {
-			return nil, err
-		}
-		if timeoutMS != "" {
-			spec["timeout_ms"] = toMSint
-		}
+	if timeoutMS != 0 {
+		spec["timeout_ms"] = timeoutMS
 	}
-	if connectTimeoutMS != "" {
-		ctoMSint, err := strconv.Atoi(connectTimeoutMS)
-		if err != nil {
-			return nil, err
-		}
-		if connectTimeoutMS != "" {
-			spec["connect_timeout_ms"] = ctoMSint
-		}
+	if connectTimeoutMS != 0 {
+		spec["connect_timeout_ms"] = connectTimeoutMS
 	}
 	if grpc {
 		spec["grpc"] = grpc
@@ -73,16 +70,16 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, grpc bo
 			"kind":       kind,
 			"apiVersion": group + "/" + version,
 			"metadata": map[string]interface{}{
-				"name":      name,
+				"name":      id.Name(),
 				"namespace": namespace,
-				"labels":    labels,
+				"labels":    labels.MustK8sMap(id),
 			},
 			"spec": spec,
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
+			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
 		}, nil
 	}, nil
 }

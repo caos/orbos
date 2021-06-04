@@ -47,19 +47,24 @@ func Generate() (private string, public string, err error) {
 func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error) {
 
 	var signers []sshlib.Signer
-	for _, key := range privKey {
+	for _, copyKey := range privKey {
+		key := copyKey
+		cached := false
 		for _, cachedKey := range cachedKeys {
 			if string(cachedKey.private) == string(key) {
+				cached = true
 				signers = append(signers, cachedKey.signer)
 				break
 			}
 		}
-		signer, err := sshlib.ParsePrivateKey(key)
-		if err != nil {
-			return nil, errors.Wrap(err, "parsing private key failed")
+		if !cached {
+			signer, err := sshlib.ParsePrivateKey(key)
+			if err != nil {
+				return nil, errors.Wrap(err, "parsing private key failed")
+			}
+			cachedKeys = append(cachedKeys, pair{key, signer})
+			signers = append(signers, signer)
 		}
-		cachedKeys = append(cachedKeys, pair{key, signer})
-		signers = append(signers, signer)
 	}
 
 	return sshlib.PublicKeys(signers...), nil
