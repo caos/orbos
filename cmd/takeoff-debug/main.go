@@ -19,7 +19,6 @@ func main() {
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
 
 	flag.Parse()
-	kubeconfig := "~/.kube/elio-orbos-gce"
 
 	prunedPath := helpers.PruneHome(*orbConfigPath)
 	orbConfig, err := orb.ParseOrbConfig(prunedPath)
