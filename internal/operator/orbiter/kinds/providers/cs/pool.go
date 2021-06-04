@@ -3,7 +3,7 @@ package cs
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/pkg/errors"
+	"errors"
 )
 
 var _ infra.Pool = (*infraPool)(nil)
