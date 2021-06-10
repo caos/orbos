@@ -29,8 +29,8 @@ func desireORBITERState(settings programSettings, conditions *conditions) intera
       networking:
         dnsdomain: cluster.orbitertest
         network: calico
-        servicecidr: 100.126.4.0/22
-        podcidr: 100.127.224.0/20
+        podcidr: 10.246.0.0/16
+        servicecidr: 10.247.0.0/16
       verbose: false
       versions:
         kubernetes: v1.18.8
@@ -77,7 +77,7 @@ providers:
       version: v2
       spec:
         application:
-        - ip: 192.168.122.11
+        - ip: 10.244.0.11
           transport:
           - name: httpsingress
             frontendport: 443
@@ -104,7 +104,7 @@ providers:
               code: 200
             proxyprotocol: true
         management:
-        - ip: 192.168.122.10
+        - ip: 10.244.0.10
           transport:
           - name: kubeapi
             frontendport: 6443
