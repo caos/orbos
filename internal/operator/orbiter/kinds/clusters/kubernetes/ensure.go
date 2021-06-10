@@ -23,6 +23,7 @@ func ensure(
 	uninitializeMachine uninitializeMachineFunc,
 	gitClient *git.Client,
 	providerK8sSpec infra.Kubernetes,
+	privateInterface string,
 ) (done bool, err error) {
 
 	desireFW := firewallFunc(monitor, *desired)
@@ -80,6 +81,7 @@ func ensure(
 		gitClient,
 		providerK8sSpec,
 		initializedMachines,
+		privateInterface,
 	); err != nil || !scalingDone {
 		monitor.Info("Scaling is not done yet")
 		return scalingDone, err

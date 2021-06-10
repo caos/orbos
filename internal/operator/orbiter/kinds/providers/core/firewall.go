@@ -24,7 +24,7 @@ func DesireInternalOSFirewall(
 		deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 		deepNa.Firewall.Merge(fw)
-		machineMonitor.WithField("ports", fw.ToCurrent()).Debug("Desired Cloudscale Firewall")
+		machineMonitor.WithField("ports", fw.ToCurrent()).Debug("Desired Firewall")
 		if !fw.IsContainedIn(deepNaCurr.Open) {
 			machineMonitor.WithField("ports", deepNa.Firewall.ToCurrent()).Info("Awaiting firewalld config")
 			done = false

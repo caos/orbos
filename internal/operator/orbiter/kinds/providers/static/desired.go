@@ -21,6 +21,7 @@ type Spec struct {
 	Pools              map[string][]*Machine
 	Keys               *Keys
 	ExternalInterfaces []string
+	PrivateInterface   string
 }
 
 type Keys struct {

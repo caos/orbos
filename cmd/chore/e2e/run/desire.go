@@ -20,7 +20,7 @@ func desireORBITERState(settings programSettings, conditions *conditions) intera
 	clusterSpec := fmt.Sprintf(`      controlplane:
         updatesdisabled: false
         provider: %s
-        nodes: 3
+        nodes: 1
         pool: management
         taints:
         - key: node-role.kubernetes.io/master
@@ -38,7 +38,7 @@ func desireORBITERState(settings programSettings, conditions *conditions) intera
       workers:
       - updatesdisabled: false
         provider: %s
-        nodes: 3
+        nodes: 1
         pool: application`, settings.orbID, settings.artifactsVersion(), settings.orbID)
 
 	if err := yaml.Unmarshal([]byte(clusterSpec), conditions.kubernetes); err != nil {
