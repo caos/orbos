@@ -105,6 +105,7 @@ apiServer:
   extraArgs:
     cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
     cloud-config: "{{ .CloudConfigPath }}"
+    bind-address: "{{ .Node.IP }}"
   extraVolumes:
   - name: cloud
     hostPath: "{{ .CloudConfigPath }}"
