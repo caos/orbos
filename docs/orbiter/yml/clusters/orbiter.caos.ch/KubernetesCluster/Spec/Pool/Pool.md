@@ -10,4 +10,4 @@
 | provider        | Provider which should be used to ensure this pool            |         |            |      |
 | nodes           | Count of nodes                                               |         |            |      |
 | pool            | Name of the pool                                             |         |            |      |
-| taints          | Taints for the nodes in this pool , [here](Taints/Taints.md) |         |            |      |
+| taints          | Taints for the nodes in this pool , [here](Taints/Taints.md) |         | X          |      |

@@ -4,7 +4,8 @@
 ## Structure 
  
 
-| Attribute | Description         | Default | Collection | Map  |
-| --------- | ------------------- | ------- | ---------- | ---  |
-| key       | Key of the taint    |         |            |      |
-| value     | Value of the taint  |         |            |      |
+| Attribute | Description          | Default | Collection | Map  |
+| --------- | -------------------- | ------- | ---------- | ---  |
+| key       | Key of the taint     |         |            |      |
+| value     | Value of the taint   |         |            |      |
+| effect    | Effect of the taint  |         |            |      |

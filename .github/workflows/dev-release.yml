@@ -4,7 +4,50 @@ on:
     branches-ignore:
       - master
 jobs:
+  documentation:
+    name: Documentation generation
+    runs-on: ubuntu-18.04
+    outputs:
+      docuchanged: ${{ steps.docuchangedcheck.outputs.docuchanged }}
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - run: |
+          go get -d ./...
+
+          CGO_ENABLED=0 GOOS=linux go run cmd/gen-documentation/*.go
+      - id: docuchangedcheck
+        run: |
+          if [[ $(git status --porcelain | wc -c) -ne 0 ]]; then
+            echo "::set-output name=docuchanged::${{ true }}"
+          else
+            echo "::set-output name=docuchanged::${{ false }}"
+          fi
+      - name: Commit files
+        if: steps.docuchangedcheck.outputs.docuchanged == 'true'
+        id: commit
+        run: |
+          export BRANCH=${GITHUB_REF##*/}
+          echo "::set-output name=branch::${BRANCH}"
+
+          git config --local user.email "hi@caos.ch"
+          git config --local user.name "Automated Documentation Generation"
+
+          git add .
+          git stash
+          git checkout ${BRANCH}
+
+          git stash apply
+          git commit -m "docs: generated documentation changes" -a
+      - name: Push changes
+        if: steps.docuchangedcheck.outputs.docuchanged == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ steps.commit.outputs.branch }}
   dev-release:
+    needs: documentation
     name: Dev-Release ORBOS
     runs-on: ubuntu-18.04
     steps:
