@@ -8,5 +8,5 @@
 | ----------- | --------------------------------------- | ------- | ---------- | ---  |
 | dNSDomain   | Used Domain for the kube-dns            |         |            |      |
 | network     | Used networking solution in kubernetes  |         |            |      |
-| serviceCidr | CIDR used for services                  |         | X          |      |
-| podCidr     | CIDR used for pods                      |         | X          |      |
+| serviceCidr | CIDR used for services                  |         |            |      |
+| podCidr     | CIDR used for pods                      |         |            |      |

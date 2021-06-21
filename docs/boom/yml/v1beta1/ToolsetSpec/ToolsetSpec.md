@@ -18,10 +18,10 @@
 | logging-operator            | Spec for the Banzaicloud Logging-Operator , [here](LoggingOperator/LoggingOperator.md)                                            |         |            |      |
 | prometheus-node-exporter    | Spec for the Prometheus-Node-Exporter , [here](PrometheusNodeExporter/PrometheusNodeExporter.md)                                  |         |            |      |
 | prometheus-systemd-exporter | Spec for the Prometheus-Systemd-Exporter , [here](PrometheusSystemdExporter/PrometheusSystemdExporter.md)                         |         |            |      |
-| grafana                     | Spec for the Grafana , [here](grafana/Grafana/Grafana.md)                                                                         |         |            |      |
+| grafana                     | Spec for the Grafana                                                                                                              |         |            |      |
 | ambassador                  | Spec for the Ambassador , [here](Ambassador/Ambassador.md)                                                                        |         |            |      |
 | kube-state-metrics          | Spec for the Kube-State-Metrics , [here](KubeStateMetrics/KubeStateMetrics.md)                                                    |         |            |      |
-| argocd                      | Spec for the Argo-CD , [here](argocd/Argocd/Argocd.md)                                                                            |         |            |      |
+| argocd                      | Spec for the Argo-CD                                                                                                              |         |            |      |
 | prometheus                  | Spec for the Prometheus instance , [here](Prometheus/Prometheus.md)                                                               |         |            |      |
 | loki                        | Spec for the Loki instance , [here](Loki/Loki.md)                                                                                 |         |            |      |
 | metrics-server              | Spec for Metrics-Server , [here](MetricsServer/MetricsServer.md)                                                                  |         |            |      |
