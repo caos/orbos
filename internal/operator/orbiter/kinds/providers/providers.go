@@ -1,6 +1,8 @@
 package providers
 
 import (
+	"github.com/caos/orbos/internal/docu"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"regexp"
 	"strings"
 
@@ -19,6 +21,12 @@ import (
 )
 
 var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
+
+const (
+	staticKind     = "orbiter.caos.ch/StaticProvider"
+	gceKind        = "orbiter.caos.ch/GCEProvider"
+	cloudscaleKind = "orbiter.caos.ch/CloudScaleProvider"
+)
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -48,7 +56,7 @@ func GetQueryAndDestroyFuncs(
 	}
 
 	switch providerTree.Common.Kind {
-	case "orbiter.caos.ch/GCEProvider":
+	case gceKind:
 		return gce.AdaptFunc(
 			provID,
 			orbID(repoURL),
@@ -62,7 +70,7 @@ func GetQueryAndDestroyFuncs(
 			providerTree,
 			providerCurrent,
 		)
-	case "orbiter.caos.ch/CloudScaleProvider":
+	case cloudscaleKind:
 		return cs.AdaptFunc(
 			provID,
 			orbID(repoURL),
@@ -76,7 +84,7 @@ func GetQueryAndDestroyFuncs(
 			providerTree,
 			providerCurrent,
 		)
-	case "orbiter.caos.ch/StaticProvider":
+	case staticKind:
 		return static.AdaptFunc(
 			provID,
 			wlFunc,
@@ -94,6 +102,30 @@ func GetQueryAndDestroyFuncs(
 	}
 }
 
+func GetDocuInfo() []*docu.Type {
+	kinds := []*docu.Info{}
+	gcepath, gceVersions := gce.GetDocuInfo()
+
+	kinds = append(kinds, &docu.Info{
+		Path:     gcepath,
+		Kind:     gceKind,
+		Versions: gceVersions,
+	})
+
+	staticpath, staticVersions := static.GetDocuInfo()
+	kinds = append(kinds, &docu.Info{
+		Path:     staticpath,
+		Kind:     staticKind,
+		Versions: staticVersions,
+	})
+
+	typeList := []*docu.Type{{
+		Name:  "providers",
+		Kinds: kinds,
+	}}
+	return append(loadbalancers.GetDocuInfo(), typeList...)
+}
+
 func ListMachines(
 	monitor mntr.Monitor,
 	providerTree *tree.Tree,
@@ -105,21 +137,21 @@ func ListMachines(
 ) {
 
 	switch providerTree.Common.Kind {
-	case "orbiter.caos.ch/GCEProvider":
+	case gceKind:
 		return gce.ListMachines(
 			monitor,
 			providerTree,
 			orbID(repoURL),
 			provID,
 		)
-	case "orbiter.caos.ch/CloudScaleProvider":
+	case cloudscaleKind:
 		return cs.ListMachines(
 			monitor,
 			providerTree,
 			orbID(repoURL),
 			provID,
 		)
-	case "orbiter.caos.ch/StaticProvider":
+	case staticKind:
 		return static.ListMachines(
 			monitor,
 			providerTree,

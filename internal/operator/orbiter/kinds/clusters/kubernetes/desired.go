@@ -20,27 +20,44 @@ var cidrRegex = fmt.Sprintf(`%s/([1-2][0-9]|3[0-2]|[0-9])`, ipRegex)
 
 type DesiredV0 struct {
 	Common tree.Common `yaml:",inline"`
-	Spec   Spec
+	//Configuration for Kubernetes
+	Spec Spec
 }
 
 type Spec struct {
+	//Configuration for the control plane for Kubernetes
 	ControlPlane Pool
-	Kubeconfig   *secret2.Secret `yaml:",omitempty"`
-	Networking   struct {
-		DNSDomain   string
-		Network     string
-		ServiceCidr orbiter.CIDR
-		PodCidr     orbiter.CIDR
-	}
-	Verbose  bool
-	Versions struct {
-		Kubernetes string
-		Orbiter    string
-	}
+	//Admin-kubeconfig
+	Kubeconfig *secret2.Secret `yaml:",omitempty"`
+	//Configuration for the networking in kubernetes
+	Networking Networking
+	//Flag to set log-level to debug
+	Verbose bool
+	//Versions to ensure for the components
+	Versions CompVersions
 	// Use this registry to pull all kubernetes and ORBITER container images from
 	//@default: ghcr.io
 	CustomImageRegistry string
-	Workers             []*Pool
+	//List of configurations for the worker pools
+	Workers []*Pool
+}
+
+type Networking struct {
+	//Used Domain for the kube-dns
+	DNSDomain string
+	//Used networking solution in kubernetes
+	Network string
+	//CIDR used for services
+	ServiceCidr orbiter.CIDR
+	//CIDR used for pods
+	PodCidr orbiter.CIDR
+}
+
+type CompVersions struct {
+	//Ensured version ofKubernetes
+	Kubernetes string
+	//Self-reconciling version of the Orbiter
+	Orbiter string
 }
 
 func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
@@ -95,16 +112,24 @@ func (d *DesiredV0) validate() error {
 }
 
 type Pool struct {
+	//Flag to disable updates on the nodes of the pool
 	UpdatesDisabled bool
-	Provider        string
-	Nodes           int
-	Pool            string
-	Taints          *Taints `yaml:"taints,omitempty"`
+	//Provider which should be used to ensure this pool
+	Provider string
+	//Count of nodes
+	Nodes int
+	//Name of the pool
+	Pool string
+	//Taints for the nodes in this pool
+	Taints *Taints `yaml:"taints,omitempty"`
 }
 
 type Taint struct {
-	Key    string           `yaml:"key"`
-	Value  string           `yaml:"value,omitempty"`
+	//Key of the taint
+	Key string `yaml:"key"`
+	//Value of the taint
+	Value string `yaml:"value,omitempty"`
+	//Effect of the taint
 	Effect core.TaintEffect `yaml:"effect"`
 }
 

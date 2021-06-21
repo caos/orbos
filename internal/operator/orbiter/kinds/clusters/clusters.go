@@ -1,14 +1,20 @@
 package clusters
 
 import (
+	"github.com/caos/orbos/internal/docu"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
+)
+
+const (
+	kKind = "orbiter.caos.ch/KubernetesCluster"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -34,7 +40,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 
 	switch clusterTree.Common.Kind {
-	case "orbiter.caos.ch/KubernetesCluster":
+	case kKind:
 		return kubernetes.AdaptFunc(
 			labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version),
 			clusterID,
@@ -62,4 +68,19 @@ func GetQueryAndDestroyFuncs(
 	default:
 		return nil, nil, nil, false, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
 	}
+}
+
+func GetDocuInfo() []*docu.Type {
+	path, kVersions := kubernetes.GetDocuInfo()
+	typeList := []*docu.Type{{
+		Name: "clusters",
+		Kinds: []*docu.Info{
+			{
+				Path:     path,
+				Kind:     kKind,
+				Versions: kVersions,
+			},
+		},
+	}}
+	return append(loadbalancers.GetDocuInfo(), typeList...)
 }

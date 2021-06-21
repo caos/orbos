@@ -14,13 +14,21 @@ import (
 )
 
 type ExternalConfig struct {
-	Verbose       bool
-	Domain        string
-	IP            orbiter.IPAddress
-	Rules         []*Rule
-	Groups        []*Group     `yaml:"groups"`
-	Credentials   *Credentials `yaml:"credentials"`
-	Prefix        string       `yaml:"prefix"`
+	//Verbose flag to set debug-level to debug
+	Verbose bool
+	//Domain used on cloudflare
+	Domain string
+	//IP used for all DNS entries
+	IP orbiter.IPAddress
+	//List of firewall rules
+	Rules []*Rule
+	//List of group definition which can be used in firewall rules
+	Groups []*Group `yaml:"groups"`
+	//Credentials used for all actions with cloudflare
+	Credentials *Credentials `yaml:"credentials"`
+	//Prefix given to firewall rules descriptions
+	Prefix string `yaml:"prefix"`
+	//Additional DNS entries besides the ones for zitadel
 	AdditionalDNS []*Subdomain `yaml:"additionalSubdomains,omitempty"`
 }
 

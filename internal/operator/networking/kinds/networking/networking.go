@@ -1,6 +1,7 @@
 package networking
 
 import (
+	"github.com/caos/orbos/internal/docu"
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf"
 	"github.com/caos/orbos/mntr"
@@ -8,6 +9,10 @@ import (
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/pkg/errors"
+)
+
+const (
+	legacyKind = "zitadel.caos.ch/LegacyCloudflare"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -25,9 +30,27 @@ func GetQueryAndDestroyFuncs(
 	err error,
 ) {
 	switch desiredTree.Common.Kind {
-	case "networking.caos.ch/LegacyCloudflare":
+	case legacyKind:
 		return legacycf.AdaptFunc(namespace, operatorLabels)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, nil, false, errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}
+}
+
+func GetDocuInfo() []*docu.Type {
+	infos := []*docu.Info{}
+
+	path, versions := legacycf.GetDocuInfo()
+	infos = append(infos,
+		&docu.Info{
+			Path:     path,
+			Kind:     legacyKind,
+			Versions: versions,
+		},
+	)
+
+	return []*docu.Type{{
+		Name:  "networking",
+		Kinds: infos,
+	}}
 }
