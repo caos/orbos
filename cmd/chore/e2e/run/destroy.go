@@ -8,7 +8,7 @@ import (
 
 var _ testFunc = destroy
 
-func destroy(settings programSettings, conditions *conditions) interactFunc {
+func destroy(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 	return func(ctx context.Context, _ uint8, newOrbctl newOrbctlCommandFunc) error {
 

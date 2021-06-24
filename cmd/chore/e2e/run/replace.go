@@ -10,7 +10,7 @@ import (
 
 var _ testFunc = replace
 
-func replace(settings programSettings, conditions *conditions) interactFunc {
+func replace(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 	return func(ctx context.Context, _ uint8, newOrbctl newOrbctlCommandFunc) error {
 
 		replaceCtx, replaceCancel := context.WithTimeout(ctx, 1*time.Minute)

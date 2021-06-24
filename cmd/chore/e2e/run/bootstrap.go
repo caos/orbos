@@ -12,7 +12,7 @@ import (
 
 var _ testFunc = bootstrap
 
-func bootstrap(settings programSettings, conditions *conditions) interactFunc {
+func bootstrap(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 	conditions.testCase = nil
 	conditions.orbiter = &condition{

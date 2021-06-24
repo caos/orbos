@@ -15,12 +15,12 @@ import (
 
 var _ testFunc = desireORBITERState
 
-func desireORBITERState(settings programSettings, conditions *conditions) interactFunc {
+func desireORBITERState(specs *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 	clusterSpec := fmt.Sprintf(`      controlplane:
         updatesdisabled: false
         provider: %s
-        nodes: 1
+        nodes: %d
         pool: management
         taints: []
 #        taints:
@@ -39,8 +39,14 @@ func desireORBITERState(settings programSettings, conditions *conditions) intera
       workers:
       - updatesdisabled: false
         provider: %s
-        nodes: 1
-        pool: application`, settings.orbID, settings.artifactsVersion(), settings.orbID)
+        nodes: %d
+        pool: application`,
+		settings.orbID,
+		specs.DesireORBITERState.InitialMasters,
+		settings.artifactsVersion(),
+		settings.orbID,
+		specs.DesireORBITERState.InitialWorkers,
+	)
 
 	if err := yaml.Unmarshal([]byte(clusterSpec), conditions.kubernetes); err != nil {
 		panic(err)

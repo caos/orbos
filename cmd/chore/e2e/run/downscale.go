@@ -8,7 +8,7 @@ import (
 
 var _ testFunc = downscale
 
-func downscale(settings programSettings, conditions *conditions) interactFunc {
+func downscale(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 	// assignments must be done also when test is skipped
 	conditions.kubernetes.ControlPlane.Nodes = 1

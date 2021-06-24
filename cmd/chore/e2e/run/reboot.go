@@ -10,7 +10,7 @@ import (
 
 var _ testFunc = reboot
 
-func reboot(settings programSettings, conditions *conditions) interactFunc {
+func reboot(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 	return func(ctx context.Context, _ uint8, orbctl newOrbctlCommandFunc) error {
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io/ioutil"
@@ -8,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/afiskon/promtail-client/promtail"
 )
@@ -49,7 +52,15 @@ func run(ctx context.Context, settings programSettings) error {
 	readKubeconfig, deleteKubeconfig := downloadKubeconfigFunc(settings, kubeconfig.Name())
 	defer deleteKubeconfig()
 
-	return seq(ctx, settings, newOrbctl, configureKubectl(kubeconfig.Name()), readKubeconfig,
+	return seq(ctx, testSpecs{
+		DesireORBITERState: struct {
+			InitialMasters int
+			InitialWorkers int
+		}{
+			InitialMasters: 3,
+			InitialWorkers: 3,
+		},
+	}, settings, newOrbctl, configureKubectl(kubeconfig.Name()), readKubeconfig,
 		/*  1 */ desireORBITERState,
 		/*  2 */ destroy,
 		/*  3 */ desireORBITERState,
@@ -106,34 +117,53 @@ cleanup=%t`,
 	)
 }
 
-type testFunc func(programSettings, *conditions) interactFunc
+type testSpecs struct {
+	DesireORBITERState struct {
+		InitialMasters int
+		InitialWorkers int
+	}
+}
+
+type testFunc func(*testSpecs, programSettings, *conditions) interactFunc
 
 type interactFunc func(context.Context, uint8, newOrbctlCommandFunc) (err error)
 
 func seq(
 	ctx context.Context,
+	defaultSpecs testSpecs,
 	settings programSettings,
-	orbctl newOrbctlCommandFunc,
-	kubectl newKubectlCommandFunc,
+	newOrbctl newOrbctlCommandFunc,
+	newKubectl newKubectlCommandFunc,
 	downloadKubeconfigFunc downloadKubeconfig,
 	fns ...testFunc,
 ) error {
 
 	conditions := zeroConditions()
 
+	e2eSpecBuf := new(bytes.Buffer)
+	defer e2eSpecBuf.Reset()
+
+	if err := runCommand(settings, nil, e2eSpecBuf, nil, newOrbctl(ctx), "--gitops", "file", "print", "e2e.yml"); err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(e2eSpecBuf.Bytes(), &defaultSpecs); err != nil {
+		return err
+	}
+
 	var at uint8
 	for _, fn := range fns {
 		at++
 
 		// must be called before continue so we keep having an idempotent desired state
-		interactFn := fn(settings, conditions)
+		interactFn := fn(&defaultSpecs, settings, conditions)
 
 		if at < settings.from {
 			settings.logger.Infof("\033[1;32m%s: Skipping step %d\033[0m\n", settings.orbID, at)
 			continue
 		}
 
-		if err := runTest(ctx, settings, interactFn, orbctl, kubectl, downloadKubeconfigFunc, at, conditions); err != nil {
+		if err := runTest(ctx, settings, interactFn, newOrbctl, newKubectl, downloadKubeconfigFunc, at, conditions); err != nil {
 			return err
 		}
 	}
