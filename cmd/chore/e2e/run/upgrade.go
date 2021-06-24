@@ -7,7 +7,7 @@ import (
 )
 
 func upgrade(k8sVersion string) testFunc {
-	return func(settings programSettings, conditions *conditions) interactFunc {
+	return func(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 		conditions.kubernetes.Versions.Kubernetes = k8sVersion
 		conditions.orbiter.watcher = watch(30*time.Minute, orbiter)
