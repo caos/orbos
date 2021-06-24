@@ -206,24 +206,28 @@ spec:
     folder: postapply
     deploy: true
   metricCollection:
+    resources:
+      requests: {}
     deploy: %t
   logCollection:
     deploy: %t
     fluentbit:
-      tolerations:
-          - key: node-role.kubernetes.io/master
-            operator: Exists
+      resources:
+        requests: {}
+    fluentd:
+      resources:
+        requests: {}
   nodeMetricsExporter:
+    resources:
+      requests: {}
     deploy: %t
-    tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: Exists
   systemdMetricsExporter:
+    resources:
+      requests: {}
     deploy: %t
-    tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: Exists
   monitoring:
+    resources:
+      requests: {}
     deploy: %t
   apiGateway:
     deploy: %t
@@ -232,12 +236,20 @@ spec:
       type: NodePort
   kubeMetricsExporter:
     deploy: %t
+    resources:
+      requests: {}
   reconciling:
     deploy: %t
+    resources:
+      requests: {}
   metricsPersisting:
     deploy: %t
+    resources:
+      requests: {}
   logsPersisting:
     deploy: %t
+    resources:
+      requests: {}
   metricsServer:
     deploy: false
 `,
