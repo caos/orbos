@@ -22,9 +22,10 @@ func desireORBITERState(settings programSettings, conditions *conditions) intera
         provider: %s
         nodes: 1
         pool: management
-        taints:
-        - key: node-role.kubernetes.io/master
-          effect: NoSchedule
+        taints: []
+#        taints:
+#        - key: node-role.kubernetes.io/master
+#          effect: NoSchedule
       kubeconfig: null
       networking:
         dnsdomain: cluster.orbitertest
