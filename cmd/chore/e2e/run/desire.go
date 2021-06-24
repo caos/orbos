@@ -192,8 +192,12 @@ metadata:
   namespace: caos-system
 spec:
   boomVersion: %s
+  preApply:
+    folder: preapply
+    deploy: true
   postApply:
-    deploy: false
+    folder: postapply
+    deploy: true
   metricCollection:
     deploy: %t
   logCollection:
