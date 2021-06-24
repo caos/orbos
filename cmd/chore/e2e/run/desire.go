@@ -129,7 +129,7 @@ providers:
 }
 
 func desireBOOMState(deploy bool) testFunc {
-	return func(settings programSettings, conditions *conditions) interactFunc {
+	return func(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 		// needs to be assigned also when test is skipped
 		conditions.boom = &condition{

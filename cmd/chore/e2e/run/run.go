@@ -29,7 +29,7 @@ func run(ctx context.Context, settings programSettings) error {
 			// context is probably cancelled as program is terminating so we create a new one here
 			destroyCtx, destroyCancel := context.WithTimeout(context.Background(), 10*time.Minute)
 			defer destroyCancel()
-			if cuErr := destroy(settings, zeroConditions())(destroyCtx, 99, newOrbctl); cuErr != nil {
+			if cuErr := destroy(&testSpecs{}, settings, zeroConditions())(destroyCtx, 99, newOrbctl); cuErr != nil {
 
 				original := ""
 				if err != nil {
