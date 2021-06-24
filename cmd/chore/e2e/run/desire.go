@@ -77,7 +77,7 @@ providers:
       version: v2
       spec:
         management:
-        - ip: 192.168.122.1
+        - ip: 192.168.122.2
           transport:
           - name: kubeapi
             frontendport: 6443
@@ -91,7 +91,7 @@ providers:
               path: /healthz
               code: 200
         application:
-        - ip: 192.168.122.2
+        - ip: 192.168.122.3
           transport:
           - name: httpsingress
             frontendport: 443
