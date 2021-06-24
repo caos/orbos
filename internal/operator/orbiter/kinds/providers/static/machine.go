@@ -72,8 +72,8 @@ func (c *machine) Remove() error {
 		return err
 	}
 	c.X_active = false
-	c.Execute(nil, "sudo systemctl stop node-agentd")
-	c.Execute(nil, "sudo systemctl disable node-agentd")
+	c.Execute(nil, "sudo systemctl stop node-agentd keepalived nginx")
+	c.Execute(nil, "sudo systemctl disable node-agentd keepalived nginx")
 	c.Execute(nil, "sudo kubeadm reset -f")
 	c.Execute(nil, "sudo rm -rf /var/lib/etcd")
 	return nil
