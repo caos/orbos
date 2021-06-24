@@ -2,11 +2,12 @@ package gce
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/mntr"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/pkg/errors"
@@ -295,8 +296,12 @@ func (m *machinesService) getCreatableMachine(monitor mntr.Monitor, poolName str
 			)
 			return formatErr
 		}); err != nil {
-			if cleanupErr := infraMachine.Remove(); cleanupErr != nil {
+			remove, cleanupErr := infraMachine.Destroy()
+			if cleanupErr != nil {
 				panic(cleanupErr)
+			}
+			if rmErr := remove(); rmErr != nil {
+				panic(rmErr)
 			}
 			return nil, err
 		}

@@ -32,6 +32,11 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 				}
 			}
 
+			remove, err := machine.infra.Destroy()
+			if err != nil {
+				return err
+			}
+
 			monitor.Info("Resetting kubeadm")
 			if _, resetErr := machine.infra.Execute(nil, "sudo kubeadm reset --force"); resetErr != nil {
 				if !strings.Contains(resetErr.Error(), "command not found") {
@@ -58,7 +63,7 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 					"replaced": id,
 				}))
 			}
-			if err := machine.infra.Remove(); err != nil {
+			if err := remove(); err != nil {
 				return err
 			}
 			monitor.WithFields(map[string]interface{}{

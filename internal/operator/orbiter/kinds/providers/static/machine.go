@@ -67,16 +67,15 @@ func (c *machine) IP() string {
 	return c.X_IP
 }
 
-func (c *machine) Remove() error {
-	if err := c.Machine.WriteFile(c.poolFile, strings.NewReader(""), 600); err != nil {
-		return err
-	}
-	c.X_active = false
+func (c *machine) Destroy() (func() error, error) {
 	c.Execute(nil, "sudo systemctl stop node-agentd keepalived nginx")
 	c.Execute(nil, "sudo systemctl disable node-agentd keepalived nginx")
-	c.Execute(nil, "sudo kubeadm reset -f")
-	c.Execute(nil, "sudo rm -rf /var/lib/etcd")
-	return nil
+	c.X_active = false
+	return func() error {
+		c.Execute(nil, "sudo kubeadm reset -f")
+		c.Execute(nil, "sudo rm -rf /var/lib/etcd")
+		return nil
+	}, c.Machine.WriteFile(c.poolFile, strings.NewReader(""), 600)
 }
 
 func (c *machine) RebootRequired() (bool, func(), func()) {

@@ -33,7 +33,14 @@ func newMachines(pool infra.Pool, number int) (machines []infra.Machine, err err
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				err = helpers.Concat(err, machine.Remove())
+
+				remove, destroyErr := machine.Destroy()
+				err = helpers.Concat(err, destroyErr)
+				if destroyErr != nil {
+					return
+				}
+
+				err = helpers.Concat(err, remove())
 			}()
 		}
 		wg.Wait()
