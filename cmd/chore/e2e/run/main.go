@@ -27,7 +27,13 @@ func main() {
 		returnCode                        int
 	)
 
-	defer func() { os.Exit(returnCode) }()
+	defer func() {
+		if err := recover(); err != nil {
+			panic(err)
+		}
+
+		os.Exit(returnCode)
+	}()
 
 	const (
 		orbDefault         = "~/.orb/config"
@@ -67,7 +73,7 @@ func main() {
 
 	out, err := exec.Command("git", "branch", "--show-current").Output()
 	if err != nil {
-		panic(err)
+		panic(fmt.Errorf("%s: %w", string(out), err))
 	}
 
 	settings.branch = strings.ReplaceAll(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/"), "origin/"), ".", "-")

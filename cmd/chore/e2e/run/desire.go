@@ -76,8 +76,22 @@ providers:
       kind: orbiter.caos.ch/DynamicLoadBalancer
       version: v2
       spec:
+        management:
+        - ip: 192.168.122.1
+          transport:
+          - name: kubeapi
+            frontendport: 6443
+            backendport: 6666
+            backendpools:
+            - management
+            whitelist:
+            - 0.0.0.0/0
+            healthchecks:
+              protocol: https
+              path: /healthz
+              code: 200
         application:
-        - ip: 10.244.0.11
+        - ip: 192.168.122.2
           transport:
           - name: httpsingress
             frontendport: 443
@@ -103,20 +117,6 @@ providers:
               path: /ambassador/v0/check_ready
               code: 200
             proxyprotocol: true
-        management:
-        - ip: 10.244.0.10
-          transport:
-          - name: kubeapi
-            frontendport: 6443
-            backendport: 6666
-            backendpools:
-            - management
-            whitelist:
-            - 0.0.0.0/0
-            healthchecks:
-              protocol: https
-              path: /healthz
-              code: 200
 `, settings.orbID, clusterSpec, settings.orbID, providerYml))
 	}
 }
