@@ -103,7 +103,7 @@ func join(
 	if err := template.Must(template.New("").Parse(`kind: ClusterConfiguration
 apiVersion: kubeadm.k8s.io/v1beta2
 apiServer:
-  timeoutForControlPlane: 10m0s
+  timeoutForControlPlane: 4m0s
   certSANs:
   - "{{ .CertSAN }}"
   extraArgs:

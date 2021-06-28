@@ -344,7 +344,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 		server {{ $machine.IP }}:{{ $src.BackendPort }}; # {{ $dest }}{{end}}{{ end }}
 	}
 	server {
-		listen 0.0.0.0:{{ $src.FrontendPort }};
+		listen {{ vip $vip }}:{{ $src.FrontendPort }};
 {{ range $white := $src.Whitelist }}		allow {{ $white }};
 {{ end }}
 		deny all;
