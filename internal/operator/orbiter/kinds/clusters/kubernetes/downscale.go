@@ -11,6 +11,7 @@ import (
 )
 
 func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitializeMachine uninitializeMachineFunc, monitor mntr.Monitor, pdf func(mntr.Monitor) error) error {
+
 	for _, pool := range pools {
 		for _, machine := range pool.downscaling {
 			id := machine.infra.ID()
@@ -46,6 +47,7 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 
 			if existingK8sNode != nil {
 				if err := k8sClient.DeleteNode(id); err != nil {
+					return err
 				}
 			}
 
