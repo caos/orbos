@@ -151,14 +151,15 @@ func desireBOOMState(deploy bool) testFunc {
 					return checkPodsAreReadyFunc("", 2)()
 				}
 
-				allNodes := conditions.desiredMasters() + conditions.desiredWorkers()
+				workers := conditions.desiredWorkers()
+				allNodes := conditions.desiredMasters() + workers
 
 				return helpers.Fanout([]func() error{
 					checkPodsAreReadyFunc("app.kubernetes.io/instance=ambassador", 2),
 					checkPodsAreReadyFunc("app.kubernetes.io/instance=argocd", 4),
 					checkPodsAreReadyFunc("app.kubernetes.io/instance=grafana", 1),
 					checkPodsAreReadyFunc("app.kubernetes.io/instance=kube-state-metrics", 1),
-					checkPodsAreReadyFunc("app.kubernetes.io/name=fluentbit", allNodes),
+					checkPodsAreReadyFunc("app.kubernetes.io/name=fluentbit", workers),
 					checkPodsAreReadyFunc("app.kubernetes.io/name=fluentd", 1),
 					checkPodsAreReadyFunc("app.kubernetes.io/instance=logging-operator", 1),
 					checkPodsAreReadyFunc("app=loki", 1),
