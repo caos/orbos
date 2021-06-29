@@ -2,6 +2,7 @@ package hostname
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -53,12 +54,12 @@ func (s *hostnameDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (s *hostnameDep) Ensure(remove common.Package, ensure common.Package) error {
+func (s *hostnameDep) Ensure(_ common.Package, ensure common.Package) error {
 
-	oldHostname := remove.Config["hostname"]
 	newHostname := ensure.Config["hostname"]
-	if oldHostname == newHostname {
-		return nil
+
+	if newHostname == "" {
+		return errors.New("no hostname specified")
 	}
 
 	buf := new(bytes.Buffer)
