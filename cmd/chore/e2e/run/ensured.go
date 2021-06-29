@@ -14,7 +14,6 @@ import (
 
 	"github.com/caos/orbos/internal/operator/common"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,7 +24,6 @@ func awaitCondition(
 	kubectl newKubectlCommandFunc,
 	downloadKubeconfigFunc downloadKubeconfig,
 	step uint8,
-	desired *kubernetes.Spec,
 	condition *condition,
 ) error {
 
@@ -40,7 +38,6 @@ func awaitCondition(
 	trigger := func() { triggerCheck <- struct{}{} }
 	// show initial state and tracking progress begins
 	go trigger()
-	done := make(chan error)
 
 	go watchLogs(awaitCtx, settings, kubectl, condition.watcher, triggerCheck)
 
@@ -52,29 +49,22 @@ func awaitCondition(
 
 	var err error
 
-	go func() {
-		for {
-			select {
-			case <-awaitCtx.Done():
-				done <- helpers.Concat(awaitCtx.Err(), err)
-				return
-			case <-triggerCheck:
+	for {
+		select {
+		case <-ticker.C:
+			go trigger()
+		case <-awaitCtx.Done():
+			return helpers.Concat(awaitCtx.Err(), err)
+		case <-triggerCheck:
 
-				if err = isEnsured(awaitCtx, settings, orbctl, kubectl, desired, condition); err != nil {
-					printProgress(condition.watcher.logPrefix, settings, strconv.Itoa(int(step)), started, condition.watcher.timeout)
-					settings.logger.Warnf("desired state is not yet ensured: %s", err.Error())
-					continue
-				}
-
-				done <- nil
-				return
-			case <-ticker.C:
-				go trigger()
+			if err = isEnsured(awaitCtx, settings, orbctl, kubectl, condition); err != nil {
+				printProgress(condition.watcher.logPrefix, settings, strconv.Itoa(int(step)), started, condition.watcher.timeout)
+				settings.logger.Warnf("desired state is not yet ensured: %s", err.Error())
+				continue
 			}
+			return nil
 		}
-	}()
-
-	return <-done
+	}
 }
 
 func watchLogs(ctx context.Context, settings programSettings, kubectl newKubectlCommandFunc, watcher watcher, lineFound chan<- struct{}) {
@@ -102,7 +92,7 @@ func watchLogs(ctx context.Context, settings programSettings, kubectl newKubectl
 	watchLogs(ctx, settings, kubectl, watcher, lineFound)
 }
 
-func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, desired *kubernetes.Spec, condition *condition) error {
+func isEnsured(ctx context.Context, settings programSettings, newOrbctl newOrbctlCommandFunc, newKubectl newKubectlCommandFunc, condition *condition) error {
 
 	if condition.checks == nil {
 		return nil

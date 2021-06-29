@@ -202,7 +202,7 @@ func runTest(
 	appendAwaitFunc := func(condition *condition) {
 		if condition != nil {
 			awaitFuncs = append(awaitFuncs, func() error {
-				return awaitCondition(testContext, settings, orbctl, kubectl, downloadKubeconfigFunc, step, conditions.kubernetes, condition)
+				return awaitCondition(testContext, settings, orbctl, kubectl, downloadKubeconfigFunc, step, condition)
 			})
 		}
 	}
