@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 	"github.com/caos/orbos/mntr"
@@ -72,7 +70,7 @@ func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove co
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "disabling SELinux while installing kubelet so that containers can access the host filesystem failed with stderr %s", errBuf.String())
+		return fmt.Errorf("disabling SELinux failed with stderr %s: %w", errBuf.String(), err)
 	}
 	errBuf.Reset()
 
@@ -83,7 +81,7 @@ func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove co
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "disabling SELinux while installing kubelet so that containers can access the host filesystem failed with stderr %s", errBuf.String())
+		return fmt.Errorf("disabling SELinux failed with stderr %s: %w", errBuf.String(), err)
 	}
 	return nil
 }
