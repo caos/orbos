@@ -29,8 +29,8 @@ func desireORBITERState(specs *testSpecs, settings programSettings, conditions *
       networking:
         dnsdomain: cluster.orbitertest
         network: calico
-        podcidr: 10.246.0.0/16
-        servicecidr: 10.247.0.0/16
+        podcidr: 100.126.4.0/22
+        servicecidr: 100.127.224.0/20
       verbose: false
       versions:
         kubernetes: v1.18.8
