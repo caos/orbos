@@ -69,15 +69,7 @@ func run(ctx context.Context, settings programSettings) error {
 		/*  6 */ downscale,
 		/*  7 */ reboot,
 		/*  8 */ replace,
-		/*  9 */ upgrade("v1.19.10"),
-		/* 10 */ desireBOOMState(false),
-		/* 12 */ desireBOOMState(true),
-		/* 13 */ upgrade("v1.20.6"),
-		/* 14 */ desireBOOMState(false),
-		/* 15 */ desireBOOMState(true),
-		/* 16 */ upgrade("v1.21.0"),
-		/* 17 */ desireBOOMState(false),
-		/* 18 */ desireBOOMState(true),
+		/*  9 */ upgrade("v1.21.0"),
 	)
 }
 
