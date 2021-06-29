@@ -246,6 +246,10 @@ spec:
     deploy: %t
     resources:
       requests: {}
+    storage:
+      accessModes:
+        - ReadWriteOnce
+      size: 1G
   logsPersisting:
     deploy: %t
     resources:
