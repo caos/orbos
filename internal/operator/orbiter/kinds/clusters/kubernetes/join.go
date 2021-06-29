@@ -105,10 +105,8 @@ apiVersion: kubeadm.k8s.io/v1beta2
 apiServer:
   timeoutForControlPlane: 4m0s
   certSANs:
-  - "{{ .CertSAN }}"
-  - "{{ .Node.IP }}"
+  - "{{ .CertSAN }}"{{if and .ProviderK8sSpec.CloudController.Supported (ne .ProviderK8sSpec.CloudController.ProviderName "external") }}
   extraArgs:
-    bind-address: "{{ .Node.IP }}"{{if and .ProviderK8sSpec.CloudController.Supported (ne .ProviderK8sSpec.CloudController.ProviderName "external") }}
     cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
     cloud-config: "{{ .CloudConfigPath }}"
   extraVolumes:
