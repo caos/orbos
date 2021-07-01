@@ -84,7 +84,7 @@ func (m *machinesService) use(key *SSHKey) error {
 	return nil
 }
 
-func (m *machinesService) Create(poolName string) (infra.Machines, error) {
+func (m *machinesService) Create(poolName string, _ int) (infra.Machines, error) {
 
 	desired, ok := m.context.desired.Pools[poolName]
 	if !ok {

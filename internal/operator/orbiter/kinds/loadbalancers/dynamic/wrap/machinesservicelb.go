@@ -43,8 +43,8 @@ func (i *CmpSvcLB) InitializeDesiredNodeAgents() (bool, error) {
 	return done, nil
 }
 
-func (i *CmpSvcLB) Create(poolName string) (infra.Machines, error) {
-	cmp, err := i.MachinesService.Create(poolName)
+func (i *CmpSvcLB) Create(poolName string, desiredInstances int) (infra.Machines, error) {
+	cmp, err := i.MachinesService.Create(poolName, desiredInstances)
 	if err != nil {
 		return nil, err
 	}

@@ -43,7 +43,7 @@ type Pool interface {
 	EnsureMembers() error
 	EnsureMember(Machine) error
 	GetMachines() (Machines, error)
-	AddMachine() (Machines, error)
+	AddMachine(desiredInstances int) (Machines, error)
 }
 
 type Machine interface {

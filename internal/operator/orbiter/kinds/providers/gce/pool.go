@@ -94,6 +94,6 @@ func (i *infraPool) GetMachines() (infra.Machines, error) {
 	return i.machines.List(i.pool)
 }
 
-func (i *infraPool) AddMachine() (infra.Machines, error) {
-	return i.machines.Create(i.pool)
+func (i *infraPool) AddMachine(desiredInstances int) (infra.Machines, error) {
+	return i.machines.Create(i.pool, desiredInstances)
 }
