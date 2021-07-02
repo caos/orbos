@@ -23,7 +23,7 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 			nodeName := node.GetName()
 			for idx := range node.Status.Conditions {
 				condition := node.Status.Conditions[idx]
-				if condition.Type == v1.NodeReady {
+				if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
 					return false, fmt.Errorf("there is no infrastructure machine corresponding to Kubernetes node %s, yet the node is still ready", nodeName)
 				}
 			}
