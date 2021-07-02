@@ -33,11 +33,6 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 				}
 			}
 
-			remove, err := machine.infra.Destroy()
-			if err != nil {
-				return err
-			}
-
 			monitor.Info("Resetting kubeadm")
 			if _, resetErr := machine.infra.Execute(nil, "sudo kubeadm reset --force"); resetErr != nil {
 				if !strings.Contains(resetErr.Error(), "command not found") {
@@ -45,16 +40,14 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 				}
 			}
 
-			if existingK8sNode != nil {
-				if err := k8sClient.DeleteNode(id); err != nil {
-					return err
-				}
+			remove, err := machine.infra.Destroy()
+			if err != nil {
+				return err
 			}
 
-			if !machine.currentMachine.GetUpdating() || machine.currentMachine.GetJoined() {
+			if !machine.currentMachine.GetUpdating() {
 				machine.currentMachine.SetUpdating(true)
-				machine.currentMachine.SetJoined(false)
-				monitor.Changed("Node deleted")
+				monitor.WithField("node", machine.infra.ID()).Changed("Node is ready to be deleted")
 			}
 
 			uninitializeMachine(id)
