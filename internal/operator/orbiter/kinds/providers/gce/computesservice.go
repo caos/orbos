@@ -20,12 +20,18 @@ import (
 
 var _ core.MachinesService = (*machinesService)(nil)
 
+type creatingInstance struct {
+	zone string
+	id   string
+}
+
 type machinesService struct {
 	context *context
 	oneoff  bool
 	key     *SSHKey
 	cache   struct {
-		instances map[string][]*instance
+		instances         map[string][]*instance
+		creatingInstances map[string][]*creatingInstance
 		sync.Mutex
 	}
 	onCreate func(pool string, machine infra.Machine) error
@@ -144,6 +150,11 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 					zoneCovered++
 				}
 			}
+			for _, currentCreating := range m.cache.creatingInstances[poolName] {
+				if currentCreating.zone == zone {
+					zoneCovered++
+				}
+			}
 			if zoneCovered >= desiredInstances {
 				continue
 			}
@@ -158,6 +169,17 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 	}
 
 	name := newName()
+	if m.cache.creatingInstances == nil {
+		m.cache.creatingInstances = map[string][]*creatingInstance{}
+	}
+	if m.cache.creatingInstances[poolName] == nil {
+		m.cache.creatingInstances[poolName] = make([]*creatingInstance, 0)
+	}
+	m.cache.creatingInstances[poolName] = append(m.cache.creatingInstances[poolName], &creatingInstance{
+		zone: usableZone,
+		id:   name,
+	})
+
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
 		"machine": name,
 		"pool":    poolName,
@@ -187,6 +209,11 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 	}
 	monitor.Info("Machine created")
 	infraMachines = append(infraMachines, infraMachine)
+	for i, instance := range m.cache.creatingInstances[poolName] {
+		if instance.id == infraMachine.ID() {
+			m.cache.creatingInstances[poolName] = append(m.cache.creatingInstances[poolName][:i], m.cache.creatingInstances[poolName][i+1:]...)
+		}
+	}
 	return infraMachines, nil
 }
 
