@@ -21,12 +21,6 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 		for nodeIdx := range nodes {
 			node := nodes[nodeIdx]
 			nodeName := node.GetName()
-			for idx := range node.Status.Conditions {
-				condition := node.Status.Conditions[idx]
-				if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
-					return false, fmt.Errorf("there is no infrastructure machine corresponding to Kubernetes node %s, yet the node is still ready", nodeName)
-				}
-			}
 
 			leave := false
 			for idx := range allInitializedMachines {
@@ -37,6 +31,13 @@ func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Moni
 				}
 			}
 			if !leave {
+				for idx := range node.Status.Conditions {
+					condition := node.Status.Conditions[idx]
+					if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
+						return false, fmt.Errorf("there is no infrastructure machine corresponding to Kubernetes node %s, yet the node is still ready", nodeName)
+					}
+				}
+
 				if err := k8sClient.DeleteNode(nodeName); err != nil {
 					return false, err
 				}
