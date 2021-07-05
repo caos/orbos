@@ -128,7 +128,7 @@ providers:
 }
 
 func desireBOOMState(deploy bool) testFunc {
-	return func(_ *testSpecs, settings programSettings, conditions *conditions) interactFunc {
+	return func(specs *testSpecs, settings programSettings, conditions *conditions) interactFunc {
 
 		// needs to be assigned also when test is skipped
 		conditions.boom = &condition{
@@ -191,6 +191,16 @@ func desireBOOMState(deploy bool) testFunc {
 
 		return func(ctx context.Context, step uint8, orbctl newOrbctlCommandFunc) (err error) {
 
+			storage := `
+    storage:
+      accessModes:
+        - ReadWriteOnce
+      size: 1G`
+
+			if specs.DesireBOOMState.Stateless {
+				storage = ""
+			}
+
 			return desireState(ctx, settings, orbctl, "boom.yml", fmt.Sprintf(`
 apiVersion: caos.ch/v1
 kind: Boom
@@ -245,11 +255,7 @@ spec:
   metricsPersisting:
     deploy: %t
     resources:
-      requests: {}
-    storage:
-      accessModes:
-        - ReadWriteOnce
-      size: 1G
+      requests: {}%s
   logsPersisting:
     deploy: %t
     resources:
@@ -267,6 +273,7 @@ spec:
 				deploy,
 				deploy,
 				deploy,
+				storage,
 				deploy,
 			))
 		}

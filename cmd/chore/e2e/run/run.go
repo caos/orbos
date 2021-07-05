@@ -114,6 +114,9 @@ type testSpecs struct {
 		InitialMasters int
 		InitialWorkers int
 	}
+	DesireBOOMState struct {
+		Stateless bool
+	}
 }
 
 type testFunc func(*testSpecs, programSettings, *conditions) interactFunc
