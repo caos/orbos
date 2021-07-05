@@ -1,12 +1,13 @@
 package gce
 
 import (
+	"strings"
+
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/compute/v1"
-	"strings"
 )
 
 func destroy(svc *machinesService, delegates map[string]interface{}) error {
@@ -29,8 +30,8 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 				if err != nil {
 					return err
 				}
-				for _, machine := range machines {
-					delFuncs = append(delFuncs, machine.Remove)
+				for idx := range machines {
+					delFuncs = append(delFuncs, machines[idx].Remove)
 				}
 			}
 			if err := helpers.Fanout(delFuncs)(); err != nil {
