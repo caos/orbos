@@ -31,13 +31,15 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 					return err
 				}
 				for _, machine := range machines {
-					delFuncs = append(delFuncs, func() error {
-						remove, err := machine.Destroy()
-						if err != nil {
-							return err
+					delFuncs = append(delFuncs, func(machine infra.Machine) func() error {
+						return func() error {
+							remove, err := machine.Destroy()
+							if err != nil {
+								return err
+							}
+							return remove()
 						}
-						return remove()
-					})
+					}(machine))
 				}
 			}
 			if err := helpers.Fanout(delFuncs)(); err != nil {
