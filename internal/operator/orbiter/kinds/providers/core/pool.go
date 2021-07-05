@@ -11,7 +11,7 @@ import (
 type MachinesService interface {
 	ListPools() ([]string, error)
 	List(poolName string) (infra.Machines, error)
-	Create(poolName string) (infra.Machines, error)
+	Create(poolName string, desiredInstances int) (infra.Machines, error)
 	DesiredMachines(poolName string, instances int) int
 }
 

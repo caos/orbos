@@ -89,7 +89,7 @@ func (c *machinesService) DesiredMachines(poolName string, instances int) int {
 	return instances
 }
 
-func (c *machinesService) Create(poolName string) (infra.Machines, error) {
+func (c *machinesService) Create(poolName string, _ int) (infra.Machines, error) {
 	pool, err := c.cachedPool(poolName)
 	if err != nil {
 		return nil, err

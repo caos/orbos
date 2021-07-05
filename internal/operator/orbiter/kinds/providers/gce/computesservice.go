@@ -6,7 +6,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
@@ -22,12 +21,18 @@ import (
 
 var _ core.MachinesService = (*machinesService)(nil)
 
+type creatingInstance struct {
+	zone string
+	id   string
+}
+
 type machinesService struct {
 	context *context
 	oneoff  bool
 	key     *SSHKey
 	cache   struct {
-		instances map[string][]*instance
+		instances         map[string][]*instance
+		creatingInstances map[string][]*creatingInstance
 		sync.Mutex
 	}
 	onCreate func(pool string, machine infra.Machine) error
@@ -92,12 +97,12 @@ func getDesiredZones(defaultZone string, multizonal []string) []string {
 	return zones
 }
 
-func (m *machinesService) Create(poolName string) (infra.Machines, error) {
-
+func (m *machinesService) Create(poolName string, desiredInstances int) (infra.Machines, error) {
 	desired, ok := m.context.desired.Pools[poolName]
 	if !ok {
 		return nil, fmt.Errorf("Pool %s is not configured", poolName)
 	}
+	usableZone := m.context.desired.Zone
 	zones := getDesiredZones(m.context.desired.Zone, desired.Multizonal)
 
 	// Calculate minimum cpu and memory according to the gce specs:
@@ -122,7 +127,6 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 		memoryPerCore = float64(memory) / float64(cores)
 	}
 
-	creates := make([]func() error, 0)
 	infraMachines := make([]infra.Machine, 0)
 	currentInfraMachines := make([]infra.Machine, 0)
 	if len(zones) > 1 {
@@ -131,60 +135,86 @@ func (m *machinesService) Create(poolName string) (infra.Machines, error) {
 			return nil, err
 		}
 		currentInfraMachines = currentInfraMachinesT
-	}
-
-	for zoneI := range zones {
-		zone := zones[zoneI]
-		zoneCovered := false
-		for _, currentInfraMachine := range currentInfraMachines {
-			currentGCEMachine, ok := currentInfraMachine.(machine)
-			if ok && zone == currentGCEMachine.Zone() {
-				zoneCovered = true
-			}
-		}
-		if zoneCovered {
-			continue
-		}
-
-		creates = append(creates, func() error {
-			name := newName()
-			monitor := m.context.monitor.WithFields(map[string]interface{}{
-				"machine": name,
-				"pool":    poolName,
-			})
-			infraMachine, err := m.getCreatableMachine(
-				monitor,
-				poolName,
-				desired,
-				name,
-				zone,
-				cores,
-				memory,
-			)
-			if err != nil {
-				return err
-			}
-
-			if m.cache.instances != nil {
-				if _, ok := m.cache.instances[poolName]; !ok {
-					m.cache.instances[poolName] = make([]*instance, 0)
+		usableZone = ""
+		for zoneI := range zones {
+			zone := zones[zoneI]
+			zoneCovered := 0
+			for _, currentInfraMachine := range currentInfraMachines {
+				currentGCEMachine, ok := currentInfraMachine.(machine)
+				replaceRequired := false
+				for _, replaceRequiredID := range m.context.desired.ReplacementRequired {
+					if currentInfraMachine.ID() == replaceRequiredID {
+						replaceRequired = true
+					}
 				}
-				m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
+				if ok && zone == currentGCEMachine.Zone() && !replaceRequired {
+					zoneCovered++
+				}
 			}
+			for _, currentCreating := range m.cache.creatingInstances[poolName] {
+				if currentCreating.zone == zone {
+					zoneCovered++
+				}
+			}
+			if zoneCovered >= desiredInstances {
+				continue
+			}
+			// find first usable zone to add machine to then leave loop
+			usableZone = zone
+			break
+		}
 
-			if err := m.onCreate(poolName, infraMachine); err != nil {
-				return err
-			}
-			monitor.Info("Machine created")
-			infraMachines = append(infraMachines, infraMachine)
-			return nil
-		})
+		if usableZone == "" {
+			return nil, errors.New("error while creating all zones already covered")
+		}
 	}
 
-	if err := helpers.Fanout(creates)(); err != nil {
+	name := newName()
+	if m.cache.creatingInstances == nil {
+		m.cache.creatingInstances = map[string][]*creatingInstance{}
+	}
+	if m.cache.creatingInstances[poolName] == nil {
+		m.cache.creatingInstances[poolName] = make([]*creatingInstance, 0)
+	}
+	m.cache.creatingInstances[poolName] = append(m.cache.creatingInstances[poolName], &creatingInstance{
+		zone: usableZone,
+		id:   name,
+	})
+
+	monitor := m.context.monitor.WithFields(map[string]interface{}{
+		"machine": name,
+		"pool":    poolName,
+	})
+	infraMachine, err := m.getCreatableMachine(
+		monitor,
+		poolName,
+		desired,
+		name,
+		usableZone,
+		cores,
+		memory,
+	)
+	if err != nil {
 		return nil, err
 	}
 
+	if m.cache.instances != nil {
+		if _, ok := m.cache.instances[poolName]; !ok {
+			m.cache.instances[poolName] = make([]*instance, 0)
+		}
+		m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
+	}
+
+	if err := m.onCreate(poolName, infraMachine); err != nil {
+		return nil, err
+	}
+	monitor.Info("Machine created")
+	infraMachines = append(infraMachines, infraMachine)
+	for i, instance := range m.cache.creatingInstances[poolName] {
+		if instance.id == infraMachine.ID() {
+			m.cache.creatingInstances[poolName] = append(m.cache.creatingInstances[poolName][:i], m.cache.creatingInstances[poolName][i+1:]...)
+		}
+	}
 	return infraMachines, nil
 }
 

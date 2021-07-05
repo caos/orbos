@@ -42,7 +42,7 @@ func ensure(
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
 
-	machinesDone, initializedMachines, err := alineMachines(
+	machinesDone, initializedMachines, err := alignMachines(
 		monitor,
 		controlplane,
 		workers,

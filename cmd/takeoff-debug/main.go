@@ -14,12 +14,11 @@ import (
 
 func main() {
 	orbConfigPath := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
-	//kubeconfig := flag.String("kubeconfig", "~/.kube/config", "The kubeconfig file to use")
+	kubeconfig := flag.String("kubeconfig", "~/.kube/config", "The kubeconfig file to use")
 	gitops := flag.Bool("gitops", false, "Use gitops mode")
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
 
 	flag.Parse()
-	kubeconfig := "~/.kube/elio-orbos-gce"
 
 	prunedPath := helpers.PruneHome(*orbConfigPath)
 	orbConfig, err := orb.ParseOrbConfig(prunedPath)
@@ -53,7 +52,7 @@ func main() {
 		"",
 		version,
 		gitCommit,
-		kubeconfig,
+		*kubeconfig,
 		*gitops,
 		*gitops,
 	); err != nil {

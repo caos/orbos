@@ -20,11 +20,12 @@ func scaleDown(pools []*initializedPool, k8sClient *kubernetes.Client, uninitial
 				foundK8sNode, err := k8sClient.GetNode(id)
 				if macherrs.IsNotFound(err) {
 					err = nil
+				} else {
+					existingK8sNode = foundK8sNode
 				}
 				if err != nil {
 					return fmt.Errorf("getting node %s from kube api failed: %w", id, err)
 				}
-				existingK8sNode = foundK8sNode
 			}
 
 			if existingK8sNode != nil {
