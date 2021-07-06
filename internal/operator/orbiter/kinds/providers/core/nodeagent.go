@@ -191,7 +191,7 @@ WantedBy=multi-user.target
 					}
 
 					stopSystemd := fmt.Sprintf("sudo systemctl stop %s orbos.health* || true", systemdEntry)
-					if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+					if err := infra.Try(machineMonitor, time.NewTimer(60*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
 						_, cbErr := cmp.Execute(nil, stopSystemd)
 						return errors.Wrapf(cbErr, "running command %s remotely failed", stopSystemd)
 					}); err != nil {
