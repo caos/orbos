@@ -86,11 +86,13 @@ func main() {
 		panic(err)
 	}
 
+	ctx := context.Background()
+
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-	conv := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
+	conv := conv.New(ctx, monitor, os, fmt.Sprintf("%x", hashed[:]))
 
-	gitClient := git.New(context.Background(), monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
+	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
 
 	var portsSlice []string
 	if len(*ignorePorts) > 0 {
@@ -98,12 +100,13 @@ func main() {
 	}
 
 	itFunc := nodeagent.Iterator(
+		ctx,
 		monitor,
 		gitClient,
 		gitCommit,
 		*nodeAgentID,
-		firewall.Ensurer(monitor, os.OperatingSystem, portsSlice),
-		networking.Ensurer(monitor, os.OperatingSystem),
+		firewall.Ensurer(ctx, monitor, os.OperatingSystem, portsSlice),
+		networking.Ensurer(ctx, monitor, os.OperatingSystem),
 		conv,
 		conv.Init())
 
