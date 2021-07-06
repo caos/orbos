@@ -8,7 +8,9 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/networking"
@@ -70,6 +72,21 @@ func main() {
 		"nodeAgentID": *nodeAgentID,
 	}).Info("Node Agent is starting")
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	signalChannel := make(chan os.Signal)
+	signal.Notify(signalChannel,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+	)
+
+	go func() {
+		<-signalChannel
+		cancel()
+	}()
+
 	if *pprof {
 		go func() {
 			monitor.Info(http.ListenAndServe("localhost:6060", nil).Error())
@@ -85,8 +102,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	ctx := context.Background()
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
