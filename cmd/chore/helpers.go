@@ -12,15 +12,6 @@ import (
 	"strings"
 )
 
-func Run(cmd *exec.Cmd) error {
-	cmd.Stderr = os.Stderr
-	cmd.Env = append(cmd.Env, os.Environ()...)
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("executing %s failed: %s", strings.Join(cmd.Args, " "), err.Error())
-	}
-	return nil
-}
-
 func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
 
 	noop := func(context.Context) *exec.Cmd { return nil }
@@ -41,7 +32,7 @@ func BuildExecutables(debug, hostBinsOnly bool) error {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	outBuf := new(bytes.Buffer)
 	cmd.Stdout = outBuf
-	if err := Run(cmd); err != nil {
+	if err := run(cmd); err != nil {
 		return err
 	}
 
@@ -50,7 +41,7 @@ func BuildExecutables(debug, hostBinsOnly bool) error {
 	cmd = exec.Command("git", "rev-parse", "HEAD")
 	outBuf = new(bytes.Buffer)
 	cmd.Stdout = outBuf
-	if err := Run(cmd); err != nil {
+	if err := run(cmd); err != nil {
 		return err
 	}
 
@@ -79,7 +70,7 @@ func BuildExecutables(debug, hostBinsOnly bool) error {
 	cmd = exec.Command("go", args...)
 	cmd.Stdout = os.Stderr
 	// gen-executables
-	if err := Run(cmd); err != nil || hostBinsOnly {
+	if err := run(cmd); err != nil || hostBinsOnly {
 		// error contains --githubclientid and --githubclientsecret values
 		return errors.New("building executables failed")
 	}
@@ -94,7 +85,7 @@ func BuildExecutables(debug, hostBinsOnly bool) error {
 	cmd.Stdout = os.Stderr
 	cmd.Env = []string{"CGO_ENABLED=0", "GOOS=linux"}
 	// gen-charts
-	return Run(cmd)
+	return run(cmd)
 }
 
 func runOrbctlCmd(debug bool) func(context.Context) *exec.Cmd {
@@ -112,4 +103,13 @@ func runOrbctlCmd(debug bool) func(context.Context) *exec.Cmd {
 		}
 		return exec.CommandContext(ctx, bin)
 	}
+}
+
+func run(cmd *exec.Cmd) error {
+	cmd.Stderr = os.Stderr
+	cmd.Env = append(cmd.Env, os.Environ()...)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("executing %s failed: %s", strings.Join(cmd.Args, " "), err.Error())
+	}
+	return nil
 }
