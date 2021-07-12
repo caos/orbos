@@ -33,12 +33,7 @@ func ExecCommand(getRv GetRootValues) *cobra.Command {
 			machineID = args[0]
 		}
 
-		sentryMachineID := machineID
-		if sentryMachineID == "" {
-			sentryMachineID = "none"
-		}
-
-		rv, err := getRv("exec", "", map[string]interface{}{"machine": sentryMachineID})
+		rv, err := getRv("exec", "", map[string]interface{}{"machine": machineID, "command": command != ""})
 		if err != nil {
 			return err
 		}

@@ -33,11 +33,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		sentryRepoURL := newRepoURL
-		if sentryRepoURL == "" {
-			sentryRepoURL = "none"
-		}
-		rv, _ := getRv("configure", "", map[string]interface{}{"masterkey": newMasterKey != "", "newRepoURL": sentryRepoURL})
+		rv, _ := getRv("configure", "", map[string]interface{}{"masterkey": newMasterKey != "", "newRepoURL": newRepoURL})
 		defer func() {
 			err = rv.ErrFunc(err)
 		}()

@@ -64,7 +64,15 @@ func (m Monitor) captureWithFields(capture func(client *sentry.Client, scope sen
 	if sentryClient == nil || sentryClient.Options().Dsn == "" {
 		return
 	}
+
+	fields := normalize(m.Fields)
+	for k, v := range fields {
+		if v == "" {
+			fields[k] = "none"
+		}
+	}
+
 	scope := sentry.NewScope()
-	scope.SetTags(normalize(m.Fields))
+	scope.SetTags(fields)
 	capture(sentryClient, scope)
 }

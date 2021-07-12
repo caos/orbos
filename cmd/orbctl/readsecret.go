@@ -29,12 +29,7 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 				path = args[0]
 			}
 
-			sentryPath := path
-			if sentryPath == "" {
-				sentryPath = "none"
-			}
-
-			rv, err := getRv("readsecret", "", map[string]interface{}{"path": sentryPath})
+			rv, err := getRv("readsecret", "", map[string]interface{}{"path": path})
 			if err != nil {
 				return err
 			}
