@@ -23,6 +23,7 @@ func EnsureNetworkingArtifacts(
 	tolerations []core.Toleration,
 	imageRegistry string,
 	gitops bool,
+	disableIngestion bool,
 ) error {
 
 	monitor.WithFields(map[string]interface{}{
@@ -236,6 +237,9 @@ status:
 			ReadOnly:  true,
 			MountPath: "/secrets",
 		}}
+	}
+	if disableIngestion {
+		cmd = append(cmd, "--disable-ingestion")
 	}
 
 	deployment := &apps.Deployment{

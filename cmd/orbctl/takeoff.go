@@ -63,6 +63,7 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 			rv.Kubeconfig,
 			rv.Gitops || gitOpsBoom,
 			rv.Gitops || gitOpsNetworking,
+			rv.DisableIngestion,
 		)
 	}
 	return cmd

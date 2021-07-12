@@ -13,7 +13,7 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 )
 
-func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops bool) error {
+func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops, disableIngestion bool) error {
 
 	if gitops {
 		if !gitClient.Exists(git.BoomFile) {
@@ -68,7 +68,7 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 	return nil
 }
 
-func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops bool) error {
+func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops, disableIngestion bool) error {
 	if gitops {
 		if !gitClient.Exists(git.NetworkingFile) {
 			monitor.Info(fmt.Sprintf("Deployment of networking operator skipped as %s not found in git repo", git.NetworkingFile))

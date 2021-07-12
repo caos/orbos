@@ -24,6 +24,7 @@ func GetQueryAndDestroyFuncs(
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan struct{},
 	gitClient *git.Client,
+	disableIngestion bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -51,6 +52,7 @@ func GetQueryAndDestroyFuncs(
 				monitor.Debug("Whitelist sent")
 			},
 			gitClient,
+			disableIngestion,
 		)(
 			monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
 			finishedChan,

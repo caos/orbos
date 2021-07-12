@@ -75,7 +75,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 			s,
 			"orbctl",
 			version,
-			operators.GetAllSecretsFunc(monitor, true, rv.Gitops, gitClient, k8sClient, orbConfig),
+			operators.GetAllSecretsFunc(monitor, true, rv.Gitops, gitClient, k8sClient, orbConfig, rv.DisableIngestion),
 			operators.PushFunc(monitor, rv.Gitops, gitClient, k8sClient))
 	}
 	return cmd

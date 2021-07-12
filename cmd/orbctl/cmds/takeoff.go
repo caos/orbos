@@ -29,6 +29,7 @@ func Takeoff(
 	kubeconfig string,
 	gitOpsBoom bool,
 	gitOpsNetworking bool,
+	disableIngestion bool,
 ) error {
 
 	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
@@ -90,8 +91,8 @@ func Takeoff(
 		}
 	}
 
-	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOpsBoom); err != nil {
+	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOpsBoom, disableIngestion); err != nil {
 		return err
 	}
-	return deployNetworking(monitor, gitClient, k8sClient, version, gitOpsNetworking)
+	return deployNetworking(monitor, gitClient, k8sClient, version, gitOpsNetworking, disableIngestion)
 }
