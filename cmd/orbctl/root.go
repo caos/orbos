@@ -15,16 +15,17 @@ import (
 )
 
 type RootValues struct {
-	Ctx        context.Context
-	Monitor    mntr.Monitor
-	Gitops     bool
-	OrbConfig  *orbcfg.Orb
-	Kubeconfig string
-	GitClient  *git.Client
-	ErrFunc    errFunc
+	Ctx              context.Context
+	Monitor          mntr.Monitor
+	Gitops           bool
+	OrbConfig        *orbcfg.Orb
+	Kubeconfig       string
+	GitClient        *git.Client
+	ErrFunc          errFunc
+	DisableIngestion bool
 }
 
-type GetRootValues func() (*RootValues, error)
+type GetRootValues func(command, component string, tags map[string]interface{}) (*RootValues, error)
 
 type errFunc func(err error) error
 
@@ -74,8 +75,9 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 	flags.StringVarP(&rv.Kubeconfig, "kubeconfig", "k", "~/.kube/config", "Path to the kubeconfig file to the cluster orbctl should target")
 	flags.BoolVar(&rv.Gitops, "gitops", false, "Run orbctl in gitops mode. Not specifying this flag is only supported for BOOM and Networking Operator")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
+	flags.BoolVar(&rv.DisableIngestion, "disable-ingestion", false, "Don't help CAOS AG to improve ORBOS by sending them errors and usage data")
 
-	return cmd, func() (*RootValues, error) {
+	return cmd, func(command, component string, tags map[string]interface{}) (*RootValues, error) {
 
 		if verbose {
 			monitor = monitor.Verbose()
@@ -92,6 +94,25 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 				rv.OrbConfig = &orb.Orb{Path: prunedPath}
 			}
 		}
+
+		caosDsn := ""
+		if !rv.DisableIngestion && caosSentryDsn != "none" {
+			caosDsn = caosSentryDsn
+		}
+
+		if component == "" {
+			component = "orbctl"
+		}
+
+		env := "unknown"
+		if orbID, err := rv.OrbConfig.ID(); err == nil {
+			env = orbID
+		}
+		err = nil
+
+		mntr.SetContext(version, gitCommit, caosDsn, component, env)
+
+		rv.Monitor.WithField("command", command).WithFields(tags).CaptureMessage("orbctl invoked")
 
 		return rv, err
 	}

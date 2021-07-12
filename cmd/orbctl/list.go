@@ -31,7 +31,7 @@ func ListCommand(getRv GetRootValues) *cobra.Command {
 	flags.StringVar(&context, "context", "", "Print machines from this context only")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		rv, err := getRv()
+		rv, err := getRv("")
 		if err != nil {
 			return err
 		}

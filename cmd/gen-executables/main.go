@@ -19,6 +19,7 @@ func main() {
 	commit := flag.String("commit", "none", "Commit SHA shown by orbctl --version")
 	githubClientID := flag.String("githubclientid", "none", "ClientID used for OAuth with github as store")
 	githubClientSecret := flag.String("githubclientsecret", "none", "ClientSecret used for OAuth with github as store")
+	sentryDsnCAOS := flag.String("sentry-dsn-caos", "none", "Sentry Ingestion DSN for ORBOS")
 	orbctldir := flag.String("orbctl", "", "Build orbctl binaries to this directory")
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
@@ -44,7 +45,7 @@ func main() {
 	path := curryJoinPath(cmdPath)
 
 	builtExecutables := executables.Build(
-		*debug, *commit, *version, *githubClientID, *githubClientSecret,
+		*debug, *commit, *version, *githubClientID, *githubClientSecret, *sentryDsnCAOS,
 		executables.Buildable{OutDir: filepath.Join(*orbctldir, "nodeagent"), MainDir: path("nodeagent"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
 		executables.Buildable{OutDir: filepath.Join(*orbctldir, "health"), MainDir: path("health"), Env: map[string]string{"GOOS": "linux", "GOARCH": "amd64", "CGO_ENABLED": "0"}},
 	)
@@ -88,7 +89,7 @@ func main() {
 	}
 
 	var hasErr bool
-	for orbctl := range executables.Build(*debug, *commit, *version, *githubClientID, *githubClientSecret, orbctls...) {
+	for orbctl := range executables.Build(*debug, *commit, *version, *githubClientID, *githubClientSecret, *sentryDsnCAOS, orbctls...) {
 		if _, err := orbctl(); err != nil {
 			hasErr = true
 		}

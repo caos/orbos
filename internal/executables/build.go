@@ -24,8 +24,8 @@ type Buildable struct {
 
 type BuiltTuple func() (bin Buildable, err error)
 
-func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bins ...Buildable) <-chan BuiltTuple {
-	return deriveFmapBuild(curryBuild(debug, gitCommit, version, githubClientID, githubClientSecret), toBuildableChan(bins))
+func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret, sentryDsn string, bins ...Buildable) <-chan BuiltTuple {
+	return deriveFmapBuild(curryBuild(debug, gitCommit, version, githubClientID, githubClientSecret, sentryDsn), toBuildableChan(bins))
 }
 
 func PackableBuilds(builds <-chan BuiltTuple) <-chan PackableTuple {
@@ -57,13 +57,14 @@ func packableBuild(built BuiltTuple) PackableTuple {
 	}, err)
 }
 
-func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecret string) func(bin Buildable) BuiltTuple {
+func curryBuild(debug bool, gitCommit, version, githubClientID, githubClientSecret, sentryDsn string) func(bin Buildable) BuiltTuple {
 	debugCurried := deriveCurryDebug(build)(debug)
 	commitCurried := deriveCurryCommit(debugCurried)(gitCommit)
 	tagCurried := deriveCurryTag(commitCurried)(version)
 	githubClientIDCurried := deriveCurryGithubClientID(tagCurried)(githubClientID)
 	githubClientSecretCurried := deriveCurryGithubClientSecret(githubClientIDCurried)(githubClientSecret)
-	return githubClientSecretCurried
+	sentryDsnCurried := deriveCurrySentryDSN(githubClientSecretCurried)(sentryDsn)
+	return sentryDsnCurried
 }
 
 func toBuildableChan(bins []Buildable) <-chan Buildable {
@@ -77,7 +78,7 @@ func toBuildableChan(bins []Buildable) <-chan Buildable {
 	return binChan
 }
 
-func build(debug bool, gitCommit, version, githubClientID, githubClientSecret string, bin Buildable) (bt BuiltTuple) {
+func build(debug bool, gitCommit, version, githubClientID, githubClientSecret, sentryDsn string, bin Buildable) (bt BuiltTuple) {
 
 	defer func() {
 		if _, err := bt(); err != nil {
@@ -103,7 +104,7 @@ func build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 			"all=-N -l")
 	}
 
-	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s -X main.githubClientID=%s -X main.githubClientSecret=%s", gitCommit, version, githubClientID, githubClientSecret)
+	ldflags = ldflags + fmt.Sprintf("-X main.gitCommit=%s -X main.version=%s -X main.githubClientID=%s -X main.githubClientSecret=%s -X main.caosSentryDsn=%s", gitCommit, version, githubClientID, githubClientSecret, sentryDsn)
 
 	cmdEnv := os.Environ()
 	for k, v := range bin.Env {

@@ -130,6 +130,10 @@ You run an maintain your Orbs yourself. Your incidents are treated with a high p
 
 We run and maintain your Orbs on a supported provider of your choice. Your incidents are treated with a high priority. In return, we charge you with a price from CHF 500 per Orb and Month, decreasing to CHF 100.
 
+## Usage Data
+
+For being able to indentify code improvement potential, the ORBOS components send errors and usage data to CAOS AG. In order to disable this behaviour, pass the global flag --disable-ingestion when using orbctl.
+
 ## License
 
 The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using ORBOS for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
