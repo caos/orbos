@@ -26,7 +26,6 @@ func AdaptFunc(
 	oneoff bool,
 	deployOrbiter bool,
 	gitClient *git.Client,
-	disableIngestion bool,
 ) orbiter.AdaptFunc {
 	return func(
 		monitor mntr.Monitor,
@@ -150,7 +149,6 @@ func AdaptFunc(
 				whitelistChan,
 				finishedChan,
 				gitClient,
-				disableIngestion,
 			)
 			if err != nil {
 				return nil, nil, nil, migrate, nil, err

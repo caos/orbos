@@ -27,7 +27,6 @@ func AdaptFunc(
 	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
 	whitelist func(whitelist []*orbiter.CIDR),
 	gitClient *git.Client,
-	disableIngestion bool,
 ) orbiter.AdaptFunc {
 
 	return func(
@@ -118,7 +117,6 @@ func AdaptFunc(
 				pprof,
 				desiredKind.Spec.Versions.Orbiter,
 				imageRegistry,
-				disableIngestion,
 			); err != nil {
 				deployErrors++
 				monitor.WithFields(map[string]interface{}{

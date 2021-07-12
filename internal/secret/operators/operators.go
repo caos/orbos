@@ -105,7 +105,6 @@ func getAllSecrets(
 					true,
 					false,
 					gitClient,
-					disableIngestion,
 				)(monitor, make(chan struct{}), t, &tree.Tree{})
 				return orbiterSecrets, nil, migrate, err
 			},

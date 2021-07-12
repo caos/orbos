@@ -19,7 +19,6 @@ func EnsureOrbiterArtifacts(
 	pprof bool,
 	orbiterversion string,
 	imageRegistry string,
-	disableIngestion bool,
 ) error {
 
 	monitor.WithFields(map[string]interface{}{
@@ -38,7 +37,8 @@ func EnsureOrbiterArtifacts(
 	if pprof {
 		cmd = append(cmd, "--pprof")
 	}
-	if disableIngestion {
+
+	if _, ingestionEnabled := mntr.Environment(); !ingestionEnabled {
 		cmd = append(cmd, "--disable-ingestion")
 	}
 

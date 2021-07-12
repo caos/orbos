@@ -17,12 +17,14 @@ import (
 )
 
 type OrbiterConfig struct {
-	Recur         bool
-	Deploy        bool
-	Verbose       bool
-	Version       string
-	OrbConfigPath string
-	GitCommit     string
+	Recur            bool
+	Destroy          bool
+	Deploy           bool
+	Verbose          bool
+	Version          string
+	OrbConfigPath    string
+	GitCommit        string
+	IngestionAddress string
 }
 
 func Orbiter(ctx context.Context, monitor mntr.Monitor, conf *OrbiterConfig, orbctlGit *git.Client) error {
@@ -96,9 +98,10 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	}
 
 	if firstIteration {
-		go func() {
-			started := time.Now().UTC()
 
+		started := float64(time.Now().UTC().Unix())
+
+		go func() {
 			for range time.Tick(30 * time.Minute) {
 				monitor.WithField("since", started).CaptureMessage("ORBITER is running")
 			}
@@ -109,6 +112,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 		monitor.WithFields(map[string]interface{}{
 			"version": conf.Version,
 			"commit":  conf.GitCommit,
+			"destroy": conf.Destroy,
 			"verbose": conf.Verbose,
 			"repoURL": orbFile.URL,
 		}).Info("Orbiter took off")

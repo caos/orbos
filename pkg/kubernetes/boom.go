@@ -25,7 +25,6 @@ func EnsureBoomArtifacts(
 	resources *k8s.Resources,
 	imageRegistry string,
 	gitops bool,
-	disableIngestion bool,
 ) error {
 
 	monitor.WithFields(map[string]interface{}{
@@ -175,7 +174,8 @@ status:
 			MountPath: "/secrets",
 		}}
 	}
-	if disableIngestion {
+
+	if _, ingestionEnabled := mntr.Environment(); !ingestionEnabled {
 		cmd = append(cmd, "--disable-ingestion")
 	}
 

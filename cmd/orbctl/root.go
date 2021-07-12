@@ -112,7 +112,7 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 
 		mntr.SetContext(version, gitCommit, caosDsn, component, env)
 
-		rv.Monitor.WithField("command", command).WithFields(tags).CaptureMessage("orbctl invoked")
+		rv.Monitor.WithFields(map[string]interface{}{"command": command, "gitops": rv.Gitops}).WithFields(tags).CaptureMessage("orbctl invoked")
 
 		return rv, err
 	}

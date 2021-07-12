@@ -50,7 +50,7 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 			value, err := secret.Read(
 				k8sClient,
 				path,
-				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, gitClient, k8sClient, orbConfig, rv.DisableIngestion),
+				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, gitClient, k8sClient, orbConfig),
 			)
 			if err != nil {
 				return err

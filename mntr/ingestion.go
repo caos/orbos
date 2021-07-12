@@ -38,6 +38,16 @@ func SwitchEnvironment(environment string) {
 	ingest()
 }
 
+func Environment() (string, bool) {
+
+	var enabled bool
+	if sentryClient != nil && sentryClient.Options().Dsn != "" {
+		enabled = true
+	}
+
+	return env, enabled
+}
+
 func ingest() {
 
 	if sentryClient != nil {
