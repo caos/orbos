@@ -95,22 +95,19 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 			}
 		}
 
-		caosDsn := ""
-		if !rv.DisableIngestion && caosSentryDsn != "none" {
-			caosDsn = caosSentryDsn
-		}
-
-		if component == "" {
-			component = "orbctl"
-		}
-
 		env := "unknown"
 		if orbID, err := rv.OrbConfig.ID(); err == nil {
 			env = orbID
 		}
 		err = nil
 
-		mntr.SetContext(version, gitCommit, caosDsn, component, env)
+		if component == "" {
+			component = "orbctl"
+		}
+
+		if !rv.DisableIngestion {
+			mntr.Ingest(rv.Monitor, version, gitCommit, component, env)
+		}
 
 		rv.Monitor.WithFields(map[string]interface{}{"command": command, "gitops": rv.Gitops}).WithFields(tags).CaptureMessage("orbctl invoked")
 

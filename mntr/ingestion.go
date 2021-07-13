@@ -3,6 +3,8 @@ package mntr
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -12,21 +14,47 @@ import (
 var (
 	sentryClient        *sentry.Client
 	env, dsn, comp, rel string
+	doIngest            bool
 )
 
-func SetContext(version, commit, caosDsn, component, environment string) {
+func Ingest(monitor Monitor, version, commit, component, environment string) error {
 	if rel != "" || dsn != "" {
-		panic("SetContext was already called")
+		panic("Ingest was already called")
 	}
 	if version == "" || commit == "" {
 		panic("version, commit and dsn must not be empty")
 	}
 	rel = fmt.Sprintf("%s-%s", version, commit)
-	dsn = caosDsn
 	comp = component
 	env = environment
+	doIngest = true
 
-	ingest()
+	go func() {
+		for range time.NewTicker(15 * time.Minute).C {
+			monitor.Error(fetchDSN())
+		}
+	}()
+
+	return fetchDSN()
+}
+
+func fetchDSN() error {
+
+	resp, err := http.Get("https://raw.githubusercontent.com/caos/sentry-dsns/main/" + comp)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	dsn = string(body)
+	configure()
+	return nil
 }
 
 func SwitchEnvironment(environment string) {
@@ -35,33 +63,27 @@ func SwitchEnvironment(environment string) {
 	}
 	env = environment
 
-	ingest()
+	configure()
 }
 
 func Environment() (string, bool) {
-
-	var enabled bool
-	if sentryClient != nil && sentryClient.Options().Dsn != "" {
-		enabled = true
-	}
-
-	return env, enabled
+	return env, doIngest
 }
 
-func ingest() {
+func configure() {
 
 	if sentryClient != nil {
 		sentryClient.Flush(time.Second * 2)
 	}
 
-	if comp == "" || env == "" || rel == "" {
-		panic(errors.New("call mntr.SetContext first"))
+	if env == "" || rel == "" {
+		panic(errors.New("call mntr.Ingest first"))
 	}
 
 	var err error
 	sentryClient, err = sentry.NewClient(sentry.ClientOptions{
 		Dsn:         dsn,
-		Environment: fmt.Sprintf("%s-%s", comp, env),
+		Environment: env,
 		Release:     rel,
 		Debug:       false,
 	})
@@ -71,7 +93,7 @@ func ingest() {
 }
 
 func (m Monitor) captureWithFields(capture func(client *sentry.Client, scope sentry.EventModifier)) {
-	if sentryClient == nil || sentryClient.Options().Dsn == "" {
+	if !doIngest {
 		return
 	}
 
@@ -81,6 +103,7 @@ func (m Monitor) captureWithFields(capture func(client *sentry.Client, scope sen
 			fields[k] = "none"
 		}
 	}
+	fields["component"] = comp
 
 	scope := sentry.NewScope()
 	scope.SetTags(fields)

@@ -179,7 +179,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 	flags.StringVar(&metricsAddr, "metrics-addr", "", "The address the metric endpoint binds to.")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		rv, err := getRv("networking", "Networking Operator", map[string]interface{}{"metrics-addr": metricsAddr != ""})
+		rv, err := getRv("networking-operator", "Networking Operator", map[string]interface{}{"metrics-addr": metricsAddr != ""})
 		if err != nil {
 			return err
 		}

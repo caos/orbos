@@ -25,9 +25,8 @@ import (
 )
 
 var (
-	gitCommit     string
-	version       string
-	caosSentryDsn string
+	gitCommit string
+	version   string
 )
 
 func main() {
@@ -54,12 +53,12 @@ func main() {
 		os.Exit(0)
 	}
 
-	caosDsn := ""
 	if *sentryEnvironment != "" {
-		caosDsn = caosSentryDsn
+		if err := mntr.Ingest(monitor, version, gitCommit, "node-agent", *sentryEnvironment); err != nil {
+			panic(err)
+		}
 	}
 
-	mntr.SetContext(version, gitCommit, caosDsn, "nodeagent", *sentryEnvironment)
 	monitor.WithField("id", nodeAgentID).CaptureMessage("nodeagent invoked")
 
 	if *verbose {
