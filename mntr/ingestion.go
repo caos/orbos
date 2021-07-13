@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/getsentry/sentry-go"
@@ -52,7 +53,7 @@ func fetchDSN() error {
 		return err
 	}
 
-	dsn = string(body)
+	dsn = strings.TrimSuffix(string(body), "\n")
 	configure()
 	return nil
 }
