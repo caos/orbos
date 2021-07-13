@@ -7,7 +7,6 @@ go run -race ./cmd/gen-executables/*.go \
   --commit $(git rev-parse HEAD) \
   --githubclientid "${ORBOS_GITHUBOAUTHCLIENTID}" \
   --githubclientsecret "${ORBOS_GITHUBOAUTHCLIENTSECRET}" \
-  --sentry-dsn-caos "${ORBOS_SENTRY_DSN_CAOS}" \
   --orbctl ./artifacts \
   --dev 1>&2
 CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/gen-charts/*.go
