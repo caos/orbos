@@ -14,18 +14,19 @@ import (
 
 // need to be global variables so that clients can be removed too
 var (
-	sentryClient        *sentry.Client
-	env, dsn, comp, rel string
-	doIngest            bool
-	semrel              = regexp.MustCompile("^v?[0-9]+.[0-9]+.[0-9]$")
+	sentryClient   *sentry.Client
+	env, comp, rel string
+	dsns           map[string]string
+	doIngest       bool
+	semrel         = regexp.MustCompile("^v?[0-9]+.[0-9]+.[0-9]$")
 )
 
-func Ingest(monitor Monitor, codebase, version, component, environment string) error {
-	if rel != "" || dsn != "" {
+func Ingest(monitor Monitor, codebase, version, environment, component string, moreComponents ...string) error {
+	if rel != "" {
 		panic("Ingest was already called")
 	}
-	if version == "" {
-		panic("version must not be empty")
+	if codebase == "" || version == "" || environment == "" || component == "" {
+		panic("codebase, version, environment and component must not be empty")
 	}
 
 	if !semrel.Match([]byte(version)) {
@@ -36,18 +37,35 @@ func Ingest(monitor Monitor, codebase, version, component, environment string) e
 	env = strings.ToLower(environment)
 	doIngest = true
 
+	components := append([]string{component}, moreComponents...)
+
 	go func() {
 		for range time.NewTicker(15 * time.Minute).C {
-			monitor.Error(fetchDSN())
+			monitor.Error(fetchDSNs(components))
 		}
 	}()
 
-	return fetchDSN()
+	return fetchDSNs(components)
 }
 
-func fetchDSN() error {
+func fetchDSNs(keys []string) error {
 
-	resp, err := http.Get("https://raw.githubusercontent.com/caos/sentry-dsns/main/" + comp)
+	for idx := range keys {
+		if err := fetchDSN(keys[idx]); err != nil {
+			return err
+		}
+	}
+
+	configure()
+	return nil
+}
+
+func fetchDSN(key string) error {
+	if dsns == nil {
+		dsns = make(map[string]string)
+	}
+
+	resp, err := http.Get("https://raw.githubusercontent.com/caos/sentry-dsns/main/" + key)
 	if err != nil {
 		return err
 	}
@@ -59,8 +77,7 @@ func fetchDSN() error {
 		return err
 	}
 
-	dsn = strings.TrimSuffix(string(body), "\n")
-	configure()
+	dsns[key] = strings.TrimSuffix(string(body), "\n")
 	return nil
 }
 
@@ -73,8 +90,8 @@ func SwitchEnvironment(environment string) {
 	configure()
 }
 
-func Environment() (string, bool) {
-	return env, doIngest
+func Environment() (string, map[string]string, bool) {
+	return env, dsns, doIngest
 }
 
 func configure() {
@@ -89,7 +106,7 @@ func configure() {
 
 	var err error
 	sentryClient, err = sentry.NewClient(sentry.ClientOptions{
-		Dsn:         dsn,
+		Dsn:         dsns[comp],
 		Environment: env,
 		Release:     rel,
 		Debug:       false,

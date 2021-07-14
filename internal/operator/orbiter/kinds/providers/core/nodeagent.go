@@ -162,7 +162,7 @@ func NodeAgentFuncs(
 									pprofStr = "--pprof"
 								}
 
-								sentryEnvironment, enabled := mntr.Environment()
+								sentryEnvironment, _, enabled := mntr.Environment()
 								if !enabled {
 									sentryEnvironment = ""
 								}

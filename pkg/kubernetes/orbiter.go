@@ -38,7 +38,7 @@ func EnsureOrbiterArtifacts(
 		cmd = append(cmd, "--pprof")
 	}
 
-	if _, ingestionEnabled := mntr.Environment(); !ingestionEnabled {
+	if _, _, ingestionEnabled := mntr.Environment(); !ingestionEnabled {
 		cmd = append(cmd, "--disable-ingestion")
 	}
 
