@@ -111,5 +111,5 @@ jobs:
           SENTRY_ORG: caos
           SENTRY_PROJECT: orbctl
         with:
-          version: orbos-${{ steps.semantic.outputs.new_release_version }}-${{ github.sha }}
+          version: orbos-${{ steps.semantic.outputs.version }}-${{ github.sha }}
           projects: "orbctl boom orbiter networking-operator node-agent"
