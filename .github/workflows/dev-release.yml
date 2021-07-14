@@ -104,12 +104,3 @@ jobs:
           asset_path: ./artifacts/orbctl-Windows-x86_64.exe
           asset_name: orbctl Windows x86_64
           asset_content_type: application/octet-stream
-      - name: Create Sentry release
-        uses: getsentry/action-release@v1
-        env:
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          SENTRY_ORG: caos
-          SENTRY_PROJECT: orbctl
-        with:
-          version: orbos-${{ steps.dev-release.outputs.version }}-${{ github.sha }}
-          projects: "orbctl boom orbiter networking-operator node-agent"
