@@ -106,7 +106,9 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 		}
 
 		if !disableIngestion {
-			mntr.Ingest(rv.Monitor, "orbos", version, env, component)
+			if err := mntr.Ingest(rv.Monitor, "orbos", version, env, component); err != nil {
+				panic(err)
+			}
 		}
 
 		rv.Monitor.WithFields(map[string]interface{}{"command": command, "gitops": rv.Gitops}).WithFields(tags).CaptureMessage("orbctl invoked")

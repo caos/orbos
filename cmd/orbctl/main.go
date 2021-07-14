@@ -13,7 +13,6 @@ var (
 	version            = "none"
 	githubClientID     = "none"
 	githubClientSecret = "none"
-	caosSentryDsn      = "none"
 	monitor            = mntr.Monitor{
 		OnInfo:         mntr.LogMessage,
 		OnChange:       mntr.LogMessage,
