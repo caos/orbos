@@ -54,7 +54,7 @@ func main() {
 	}
 
 	if *sentryEnvironment != "" {
-		if err := mntr.Ingest(monitor, version, gitCommit, "node-agent", *sentryEnvironment); err != nil {
+		if err := mntr.Ingest(monitor, "orbos", version, gitCommit, "node-agent", *sentryEnvironment); err != nil {
 			panic(err)
 		}
 	}

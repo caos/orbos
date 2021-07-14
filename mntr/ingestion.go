@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,16 +17,21 @@ var (
 	sentryClient        *sentry.Client
 	env, dsn, comp, rel string
 	doIngest            bool
+	semrel              = regexp.MustCompile("^v?[0-9]+.[0-9]+.[0-9]$")
 )
 
-func Ingest(monitor Monitor, version, commit, component, environment string) error {
+func Ingest(monitor Monitor, codebase, version, commit, component, environment string) error {
 	if rel != "" || dsn != "" {
 		panic("Ingest was already called")
 	}
-	if version == "" || commit == "" {
-		panic("version, commit and dsn must not be empty")
+	if version == "" {
+		panic("version must not be empty")
 	}
-	rel = fmt.Sprintf("%s-%s", version, commit)
+
+	rel = fmt.Sprintf("%s-%s", codebase, version)
+	if !semrel.Match([]byte(version)) {
+		rel = fmt.Sprintf("%s-%s", rel, commit)
+	}
 	comp = component
 	env = environment
 	doIngest = true
