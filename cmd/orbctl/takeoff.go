@@ -88,7 +88,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, err := getRv("orbiter", "ORBITER", map[string]interface{}{"recur": recur, "depoy": deploy, "pprof": pprof})
+		rv, err := getRv("orbiter", "orbiter", map[string]interface{}{"recur": recur, "depoy": deploy, "pprof": pprof})
 		if err != nil {
 			return err
 		}
@@ -144,7 +144,7 @@ func StartBoom(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, err := getRv("boom", "BOOM", map[string]interface{}{"metrics-addr": metricsAddr != ""})
+		rv, err := getRv("boom", "boom", map[string]interface{}{"metrics-addr": metricsAddr != ""})
 		if err != nil {
 			return err
 		}
@@ -179,7 +179,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 	flags.StringVar(&metricsAddr, "metrics-addr", "", "The address the metric endpoint binds to.")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
-		rv, err := getRv("networking-operator", "Networking Operator", map[string]interface{}{"metrics-addr": metricsAddr != ""})
+		rv, err := getRv("networking-operator", "networking-operator", map[string]interface{}{"metrics-addr": metricsAddr != ""})
 		if err != nil {
 			return err
 		}

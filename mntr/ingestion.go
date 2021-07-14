@@ -32,8 +32,8 @@ func Ingest(monitor Monitor, codebase, version, commit, component, environment s
 	if !semrel.Match([]byte(version)) {
 		rel = fmt.Sprintf("%s-%s", rel, commit)
 	}
-	comp = component
-	env = environment
+	comp = strings.ToLower(component)
+	env = strings.ToLower(environment)
 	doIngest = true
 
 	go func() {
