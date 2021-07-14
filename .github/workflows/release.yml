@@ -53,6 +53,6 @@ jobs:
           SENTRY_ORG: caos
           SENTRY_PROJECT: orbctl
         with:
-          version: orbos-${{ steps.semantic.outputs.version }}
+          version: orbos-${{ steps.release.outputs.version }}
           projects: "orbctl boom orbiter networking-operator node-agent"
         if: steps.release.outputs.version != null
