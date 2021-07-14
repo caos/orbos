@@ -15,14 +15,13 @@ import (
 )
 
 type RootValues struct {
-	Ctx              context.Context
-	Monitor          mntr.Monitor
-	Gitops           bool
-	OrbConfig        *orbcfg.Orb
-	Kubeconfig       string
-	GitClient        *git.Client
-	ErrFunc          errFunc
-	DisableIngestion bool
+	Ctx        context.Context
+	Monitor    mntr.Monitor
+	Gitops     bool
+	OrbConfig  *orbcfg.Orb
+	Kubeconfig string
+	GitClient  *git.Client
+	ErrFunc    errFunc
 }
 
 type GetRootValues func(command, component string, tags map[string]interface{}) (*RootValues, error)
@@ -43,8 +42,9 @@ func RootCommand() (*cobra.Command, GetRootValues) {
 	}
 
 	var (
-		orbConfigPath string
-		verbose       bool
+		orbConfigPath    string
+		verbose          bool
+		disableIngestion bool
 	)
 
 	cmd := &cobra.Command{
@@ -75,7 +75,7 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 	flags.StringVarP(&rv.Kubeconfig, "kubeconfig", "k", "~/.kube/config", "Path to the kubeconfig file to the cluster orbctl should target")
 	flags.BoolVar(&rv.Gitops, "gitops", false, "Run orbctl in gitops mode. Not specifying this flag is only supported for BOOM and Networking Operator")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
-	flags.BoolVar(&rv.DisableIngestion, "disable-ingestion", false, "Don't help CAOS AG to improve ORBOS by sending them errors and usage data")
+	flags.BoolVar(&disableIngestion, "disable-ingestion", false, "Don't help CAOS AG to improve ORBOS by sending them errors and usage data")
 
 	return cmd, func(command, component string, tags map[string]interface{}) (*RootValues, error) {
 
@@ -105,7 +105,7 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 			component = "orbctl"
 		}
 
-		if !rv.DisableIngestion {
+		if !disableIngestion {
 			mntr.Ingest(rv.Monitor, "orbos", version, component, env)
 		}
 
