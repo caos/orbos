@@ -50,7 +50,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 			path = args[0]
 		}
 
-		rv, err := getRv("writesecret", "", map[string]interface{}{"path": path})
+		rv, err := getRv("writesecret", "", map[string]interface{}{"path": path, "value": value != "", "file": file, "stdin": stdin})
 		if err != nil {
 			return err
 		}
