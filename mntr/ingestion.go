@@ -81,13 +81,17 @@ func fetchDSN(key string) error {
 	return nil
 }
 
-func SwitchEnvironment(environment string) {
+func (m Monitor) SwitchEnvironment(environment string) {
 	if environment == "" {
 		panic("environment must not be empty")
 	}
+
+	m.WithFields(map[string]interface{}{"from": env, "to": environment}).CaptureMessage("Environment changed")
+
 	env = environment
 
 	configure()
+
 }
 
 func Environment() (string, map[string]string, bool) {
