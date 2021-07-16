@@ -2,16 +2,17 @@ package centos
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/nodeagent"
-	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 	"text/template"
+
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/mntr"
 )
 
 const (
@@ -290,7 +291,12 @@ func ensureIP(monitor mntr.Monitor, changes []string) (err error) {
 		cmd.Stdout = os.Stdout
 	}
 
-	return errors.Wrapf(cmd.Run(), "running %s failed with stderr %s", cmdStr, errBuf.String())
+	err = cmd.Run()
+	if err != nil {
+		err = fmt.Errorf("running %s failed with stderr %s: %w", cmdStr, errBuf.String(), err)
+	}
+
+	return err
 }
 
 func getNetworkScriptPath(interfaceName string) string {

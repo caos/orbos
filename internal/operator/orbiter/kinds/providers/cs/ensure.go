@@ -1,7 +1,7 @@
 package cs
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/common"
@@ -26,7 +26,7 @@ func query(
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
+		panic(fmt.Errorf("unknown or unsupported load balancing of type %T", lb))
 	}
 
 	hostPools, authChecks, err := lbCurrent.Current.Spec(context.machinesService)

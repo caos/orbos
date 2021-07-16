@@ -8,14 +8,11 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/caos/orbos/pkg/git"
-
 	"github.com/caos/orbos/internal/executables"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 type CloudIntegration int
@@ -246,7 +243,7 @@ nodeRegistration:
 	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
 	resetStdout, err := joining.infra.Execute(nil, cmd)
 	if err != nil {
-		return nil, errors.Wrapf(err, "executing %s failed", cmd)
+		return nil, fmt.Errorf("executing %s failed: %w", cmd, err)
 	}
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(resetStdout),
@@ -256,7 +253,7 @@ nodeRegistration:
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.BackendPort, joinAt.IP(), kubeAPI.FrontendPort, kubeadmCfgPath)
 		joinStdout, err := joining.infra.Execute(nil, cmd)
 		if err != nil {
-			return nil, errors.Wrapf(err, "executing %s failed", cmd)
+			return nil, fmt.Errorf("executing %s failed: %w", cmd, err)
 		}
 
 		monitor.WithFields(map[string]interface{}{

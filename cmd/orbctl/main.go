@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/caos/orbos/mntr"
 )
@@ -55,6 +54,6 @@ func main() {
 	)
 
 	if err := rootCmd.Execute(); err != nil {
-		os.Exit(1)
+		monitor.Error(err)
 	}
 }

@@ -1,17 +1,18 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/pkg/labels"
-	core "k8s.io/api/core/v1"
+	"errors"
+	"fmt"
 
-	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )
@@ -43,7 +44,9 @@ func AdaptFunc(
 		err error,
 	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = mntr.ToUserError(fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err))
+			}
 		}()
 
 		if desiredTree.Common.Version != "v0" {
@@ -52,7 +55,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 

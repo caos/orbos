@@ -2,8 +2,9 @@ package clientgo
 
 import (
 	"context"
+	"fmt"
+
 	"github.com/caos/orbos/mntr"
-	pkgerrors "github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -24,7 +25,7 @@ func GetSecret(name, namespace string) (*v1.Secret, error) {
 		return nil, err
 	}
 	if secret == nil {
-		return nil, pkgerrors.New("Secret not found")
+		return nil, fmt.Errorf("secret %s not found in namespace %s", name, namespace)
 	}
 
 	return secret, nil

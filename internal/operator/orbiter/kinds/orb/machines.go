@@ -1,13 +1,14 @@
 package orb
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error)
@@ -15,12 +16,14 @@ type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID strin
 func ListMachines(operarorLabels *labels.Operator) MachinesFunc {
 	return func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 

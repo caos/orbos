@@ -7,7 +7,6 @@ import (
 	"hash/fnv"
 
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 )
@@ -33,14 +32,14 @@ func service(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneo
 	opt := option.WithCredentialsJSON(jsonKey)
 	computeClient, err := compute.NewService(ctx, opt)
 	if err != nil {
-		return nil, err
+		return nil, mntr.ToUserError(err)
 	}
 
 	key := struct {
 		ProjectID string `json:"project_id"`
 	}{}
-	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
-		return nil, err
+	if err := json.Unmarshal(jsonKey, &key); err != nil {
+		panic("extracting project id from jsonkey failed")
 	}
 
 	monitor = monitor.WithField("projectID", key.ProjectID)

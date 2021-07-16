@@ -1,12 +1,11 @@
 package auth
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
-
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 type Connectors struct {
@@ -51,7 +50,7 @@ func GetDexConfigFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) *
 				Config: github,
 			})
 		} else {
-			monitor.WithFields(logFields).Error(errors.Wrap(err, "Error while creating configuration for github connector"))
+			monitor.WithFields(logFields).Error(fmt.Errorf("error while creating configuration for github connector: %w", err))
 		}
 	}
 
@@ -65,7 +64,7 @@ func GetDexConfigFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) *
 				Config: gitlab,
 			})
 		} else {
-			monitor.WithFields(logFields).Error(errors.Wrap(err, "Error while creating configuration for gitlab connector"))
+			monitor.WithFields(logFields).Error(fmt.Errorf("error while creating configuration for gitlab connector: %w", err))
 		}
 	}
 
@@ -79,7 +78,7 @@ func GetDexConfigFromSpec(monitor mntr.Monitor, spec *reconciling.Reconciling) *
 				Config: google,
 			})
 		} else {
-			monitor.WithFields(logFields).Error(errors.Wrap(err, "Error while creating configuration for google connector"))
+			monitor.WithFields(logFields).Error(fmt.Errorf("error while creating configuration for google connector: %w", err))
 		}
 	}
 

@@ -113,7 +113,7 @@ func configure() {
 		Dsn:         dsns[comp],
 		Environment: env,
 		Release:     rel,
-		Debug:       false,
+		Debug:       true,
 	})
 	if err != nil {
 		panic(err)

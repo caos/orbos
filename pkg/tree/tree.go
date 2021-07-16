@@ -1,6 +1,12 @@
 package tree
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+
+	"github.com/caos/orbos/mntr"
+
+	"gopkg.in/yaml.v3"
+)
 
 type Tree struct {
 	Common   *Common `yaml:",inline"`
@@ -18,8 +24,10 @@ func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
 	*c.Original = *node
 
 	c.Common = new(Common)
-	err := c.Original.Decode(c.Common)
-	return err
+	if err := c.Original.Decode(c.Common); err != nil || c.Common.Version == "" || c.Common.Kind == "" {
+		return mntr.ToUserError(fmt.Errorf("decoding version or kind failed: kind \"%s\", version \"%s\", err %w", c.Common.Version, c.Common.Kind, err))
+	}
+	return nil
 }
 
 func (c *Tree) MarshalYAML() (interface{}, error) {

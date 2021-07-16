@@ -1,10 +1,12 @@
 package auth
 
 import (
+	"fmt"
+
+	"gopkg.in/yaml.v3"
+
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth"
 	"github.com/caos/orbos/pkg/secret/read"
-	"github.com/pkg/errors"
-	"gopkg.in/yaml.v3"
 )
 
 type oidc struct {
@@ -60,5 +62,8 @@ func GetOIDC(spec *auth.Auth) (string, error) {
 	}
 
 	data, err := yaml.Marshal(oidc)
-	return string(data), errors.Wrap(err, "Error while generating argocd oidc configuration")
+	if err != nil {
+		return "", fmt.Errorf("error while generating argocd oidc configuration: %w", err)
+	}
+	return string(data), nil
 }

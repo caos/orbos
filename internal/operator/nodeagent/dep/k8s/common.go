@@ -1,12 +1,11 @@
 package k8s
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"

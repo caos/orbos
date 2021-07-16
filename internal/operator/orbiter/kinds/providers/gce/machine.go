@@ -1,19 +1,17 @@
 package gce
 
 import (
+	"fmt"
 	"io"
 	"sort"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-
-	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
+	"google.golang.org/api/compute/v1"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/mntr"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 var _ infra.Machine = (*instance)(nil)
@@ -130,7 +128,7 @@ func (i instances) refs() []*compute.InstanceReference {
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerID string) (map[string]infra.Machine, error) {
 	desired, err := parseDesiredV0(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desired
 

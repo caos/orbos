@@ -1,13 +1,15 @@
 package static
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
+
+	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 	secret2 "github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 type DesiredV0 struct {
@@ -30,19 +32,25 @@ type Keys struct {
 	MaintenanceKeyPublic  *secret2.Secret `yaml:",omitempty"`
 }
 
-func (d DesiredV0) validateAdapt() error {
+func (d DesiredV0) validateAdapt() (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 
 	for pool, machines := range d.Spec.Pools {
 		for _, machine := range machines {
 			if err := machine.validate(); err != nil {
-				return errors.Wrapf(err, "Validating machine %s in pool %s failed", machine.ID, pool)
+				return fmt.Errorf("validating machine %s in pool %s failed: %w", machine.ID, pool, err)
 			}
 		}
 	}
 	return nil
 }
 
-func (d DesiredV0) validateQuery() error {
+func (d DesiredV0) validateQuery() (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 
 	if d.Spec.Keys == nil ||
 		d.Spec.Keys.BootstrapKeyPrivate == nil ||
@@ -60,14 +68,18 @@ func (d DesiredV0) validateQuery() error {
 	return nil
 }
 
-func parseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
-	desiredKind := &DesiredV0{
+func parseDesiredV0(desiredTree *tree.Tree) (desiredKind *DesiredV0, err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
+	desiredKind = &DesiredV0{
 		Common: desiredTree.Common,
 		Spec:   Spec{},
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 
 	return desiredKind, nil
@@ -83,9 +95,13 @@ type Machine struct {
 
 var internetHosts = regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?$")
 
-func validateName(name string) error {
+func validateName(name string) (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
 	if len(name) > 63 || !internetHosts.MatchString(name) {
-		return errors.Errorf("name must be compatible with https://tools.ietf.org/html/rfc1123#section-2, but %s is not", name)
+		return fmt.Errorf("name must be compatible with https://tools.ietf.org/html/rfc1123#section-2, but %s is not", name)
 	}
 	return nil
 }

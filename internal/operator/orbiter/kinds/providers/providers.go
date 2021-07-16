@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"regexp"
+	"fmt"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -14,10 +14,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
-
-var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -89,7 +86,7 @@ func GetQueryAndDestroyFuncs(
 			providerTree,
 			providerCurrent)
 	default:
-		return nil, nil, nil, false, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown provider kind %s", providerTree.Common.Kind))
 	}
 }
 
@@ -125,6 +122,6 @@ func ListMachines(
 			provID,
 		)
 	default:
-		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, mntr.ToUserError(fmt.Errorf("unknown provider kind %s", providerTree.Common.Kind))
 	}
 }
