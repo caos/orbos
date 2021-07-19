@@ -16,9 +16,9 @@ type Tree struct {
 
 type Common struct {
 	Kind    string `json:"kind" yaml:"kind"`
-	Version string `json:"version, omitempty" yaml:"version, omitempty"`
+	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 	// Don't access X_ApiVersion, it is only exported for (de-)serialization. Access the Version property only.
-	X_ApiVersion     string `json:"apiVersion, omitempty" yaml:"apiVersion, omitempty"`
+	X_ApiVersion     string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
 	parsedApiVersion bool   `json: "-" yaml: "-"`
 }
 
