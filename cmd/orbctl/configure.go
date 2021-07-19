@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/cfg"
 
 	"github.com/caos/orbos/pkg/kubernetes/cli"
@@ -39,7 +41,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		}()
 
 		if !rv.Gitops {
-			return errors.New("configure command is only supported with the --gitops flag")
+			return mntr.ToUserError(errors.New("configure command is only supported with the --gitops flag"))
 		}
 
 		if err := orb.Reconfigure(rv.Ctx, rv.Monitor, rv.OrbConfig, newRepoURL, newMasterKey, rv.GitClient, githubClientID, githubClientSecret); err != nil {
@@ -56,7 +58,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 		for i := range unmanagedOperators {
 			operatorFile := unmanagedOperators[i]
 			if rv.GitClient.Exists(operatorFile) {
-				return fmt.Errorf("found %s in git repository. Please use zitadelctl's configure command", operatorFile)
+				return mntr.ToUserError(fmt.Errorf("found %s in git repository. Please use zitadelctl's configure command", operatorFile))
 			}
 		}
 

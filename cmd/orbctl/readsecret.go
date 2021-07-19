@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/kubernetes/cli"
 
 	"github.com/caos/orbos/pkg/secret"
@@ -43,7 +45,7 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 
 			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
 			if err != nil && !rv.Gitops {
-				return err
+				return mntr.ToUserError(err)
 			}
 			err = nil
 

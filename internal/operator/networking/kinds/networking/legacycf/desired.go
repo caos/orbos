@@ -3,6 +3,8 @@ package legacycf
 import (
 	"fmt"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
 	"github.com/caos/orbos/pkg/tree"
 )
@@ -19,7 +21,7 @@ func parseDesired(desiredTree *tree.Tree) (*Desired, error) {
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, fmt.Errorf("parsing desired state failed: %w", err)
+		return nil, mntr.ToUserError(fmt.Errorf("parsing desired state failed: %w", err))
 	}
 
 	return desiredKind, nil

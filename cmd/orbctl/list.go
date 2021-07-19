@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/kataras/tablewriter"
 	"github.com/landoop/tableprinter"
 	"github.com/spf13/cobra"
@@ -45,7 +47,7 @@ func ListCommand(getRv GetRootValues) *cobra.Command {
 		gitClient := rv.GitClient
 
 		if !rv.Gitops {
-			return errors.New("list command is only supported with the --gitops flag and a committed orbiter.yml")
+			return mntr.ToUserError(errors.New("list command is only supported with the --gitops flag and a committed orbiter.yml"))
 		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {

@@ -29,7 +29,7 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb
 	}
 
 	if !gitClient.Exists(git.OrbiterFile) {
-		return fmt.Errorf("%s not found", git.OrbiterFile)
+		return mntr.ToUserError(fmt.Errorf("%s not found", git.OrbiterFile))
 	}
 
 	monitor.Debug("Reading machines from orbiter.yml")
@@ -51,6 +51,10 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb
 		desired,
 		orbID,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	return do(machineIDs, machines, desired)
 }

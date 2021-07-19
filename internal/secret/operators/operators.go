@@ -41,7 +41,7 @@ func GetAllSecretsFunc(
 		map[string]*tree.Tree,
 		error,
 	) {
-		return getAllSecrets(monitor, printLogs, gitops, gitClient, k8sClient, orb, true)
+		return getAllSecrets(monitor, printLogs, gitops, gitClient, k8sClient, orb)
 	}
 }
 
@@ -52,7 +52,6 @@ func getAllSecrets(
 	gitClient *git.Client,
 	k8sClient kubernetes.ClientInt,
 	orb *orbcfg.Orb,
-	disableIngestion bool,
 ) (
 	map[string]*secret.Secret,
 	map[string]*secret.Existing,
@@ -132,7 +131,7 @@ func getAllSecrets(
 	}
 
 	if len(allSecrets) == 0 && len(allExisting) == 0 {
-		return nil, nil, nil, errors.New("couldn't find any secrets")
+		return nil, nil, nil, mntr.ToUserError(errors.New("couldn't find any secrets"))
 	}
 
 	return allSecrets, allExisting, allTrees, nil
@@ -188,7 +187,7 @@ func push(
 
 	desired, found := trees[desiredFile.WOExtension()]
 	if !found {
-		return fmt.Errorf("desired state not found for %s", desiredFile.WOExtension())
+		return mntr.ToUserError(fmt.Errorf("desired state not found for %s", desiredFile.WOExtension()))
 	}
 
 	if gitops {

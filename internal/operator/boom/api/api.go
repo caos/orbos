@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/internal/operator/boom/api/common"
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate"
@@ -18,14 +20,21 @@ const (
 	boomPrefix = "caos.ch"
 )
 
-func ParseToolset(desiredTree *tree.Tree) (*latest.Toolset, bool, string, string, error) {
+func ParseToolset(desiredTree *tree.Tree) (ts *latest.Toolset, mig bool, kind string, vers string, err error) {
+
+	defer func() {
+		if err != nil {
+			err = mntr.ToUserError(err)
+		}
+	}()
+
 	desiredKindCommon := common.New()
 	if err := desiredTree.Original.Decode(desiredKindCommon); err != nil {
 		metrics.WrongCRDFormat()
 		return nil, false, "", "", fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	if desiredKindCommon.Kind != "Boom" {
-		return nil, false, "", "", errors.New("Kind unknown")
+		return nil, false, "", "", errors.New("kind unknown")
 	}
 
 	if !strings.HasPrefix(desiredKindCommon.APIVersion, boomPrefix) {

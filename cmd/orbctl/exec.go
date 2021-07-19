@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -46,7 +48,7 @@ func ExecCommand(getRv GetRootValues) *cobra.Command {
 		gitClient := rv.GitClient
 
 		if !rv.Gitops {
-			return errors.New("exec command is only supported with the --gitops flag and a committed orbiter.yml")
+			return mntr.ToUserError(errors.New("exec command is only supported with the --gitops flag and a committed orbiter.yml"))
 		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
@@ -62,13 +64,13 @@ func ExecCommand(getRv GetRootValues) *cobra.Command {
 
 			machine, found := machines[machineID]
 			if !found {
-				return errors.New(fmt.Sprintf("Machine with ID %s unknown", machineID))
+				return mntr.ToUserError(errors.New(fmt.Sprintf("Machine with ID %s unknown", machineID)))
 			}
 
 			if command != "" {
 				output, err := machine.Execute(nil, command)
 				if err != nil {
-					return err
+					return mntr.ToUserError(err)
 				}
 				fmt.Print(string(output))
 			} else {

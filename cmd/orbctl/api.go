@@ -75,7 +75,6 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 					Path:    git.OrbiterFile,
 				})
 			}
-
 		}
 		if gitClient.Exists(git.BoomFile) {
 
