@@ -15,8 +15,8 @@ type Tree struct {
 }
 
 type Common struct {
-	Kind    string `json:"kind"`
-	Version string `json:"version" yaml:"version" yaml:"apiVersion"`
+	Kind    string `json:"kind" yaml:"kind"`
+	Version string `json:"apiVersion" yaml:"apiVersion"`
 }
 
 func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
@@ -25,7 +25,7 @@ func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
 
 	c.Common = new(Common)
 	if err := c.Original.Decode(c.Common); err != nil || c.Common.Version == "" || c.Common.Kind == "" {
-		return mntr.ToUserError(fmt.Errorf("decoding version or kind failed: kind \"%s\", version \"%s\", err %w", c.Common.Version, c.Common.Kind, err))
+		return mntr.ToUserError(fmt.Errorf("decoding version or kind failed: kind \"%s\", version \"%s\", err %w", c.Common.Kind, c.Common.Version, err))
 	}
 	return nil
 }
