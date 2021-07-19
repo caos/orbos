@@ -31,6 +31,10 @@ func Takeoff(
 	gitOpsNetworking bool,
 ) error {
 
+	if err := orbcfg.IsComplete(orbConfig); err != nil {
+		return err
+	}
+
 	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 		return err
 	}

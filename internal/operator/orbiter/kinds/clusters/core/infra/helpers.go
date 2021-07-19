@@ -26,8 +26,8 @@ func Try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machin
 		monitor := monitor.WithFields(map[string]interface{}{
 			"cause": fmt.Sprintf("%#+v\n", err),
 		})
-		exitErr := &exec.ExitError{}
-		if errors.As(err, exitErr) {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
 			monitor.WithFields(map[string]interface{}{
 				"machine": machine.ID(),
 			}).Debug("retrying failed severely")

@@ -209,6 +209,7 @@ WantedBy=multi-user.target
 								if cbErr := cmp.WriteFile(nodeAgentPath, bytes.NewReader(executables.PreBuilt("nodeagent")), 700); cbErr != nil {
 									return fmt.Errorf("creating remote file %s failed: %w", nodeAgentPath, cbErr)
 								}
+								return nil
 							}); err != nil {
 								return fmt.Errorf("remotely installing Node Agent failed: %w", err)
 							}

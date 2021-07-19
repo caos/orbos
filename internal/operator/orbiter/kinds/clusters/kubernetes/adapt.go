@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"errors"
 	"fmt"
 
 	core "k8s.io/api/core/v1"
@@ -161,10 +160,15 @@ func AdaptFunc(
 					oneoff,
 					gitClient,
 				)
-				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
+				if err != nil {
+					err = fmt.Errorf("querying %s failed: %w", desiredKind.Common.Kind, err)
+				}
+				return ensureFunc, err
 			}, func(delegate map[string]interface{}) error {
 				defer func() {
-					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("destroying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				if k8sClient != nil {
