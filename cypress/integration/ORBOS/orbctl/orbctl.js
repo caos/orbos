@@ -16,10 +16,18 @@ describe('install orbctl', { execTimeout: 90000 }, () => {
 })  
 
 describe('orbctl tests', { execTimeout: 90000 }, () => {
+    // basic orbctl operations
     it('orbctl help', () => {
-        cy.exec('orbctl help').its('stderr').should('be.empty')
+        cy.exec('./orbctl help').its('code').should('eq', 0)
     })
     it('orbctl read gpg key from git repository', () => {
-        cy.exec('orbctl readsecret --gitops boom.argocd.gopass.secrets-demo.gpg.encrypted').its('stderr').should('be.empty')
+        cy.exec('./orbctl readsecret --gitops boom.argocd.gopass.secrets-demo.gpg.encrypted').its('code').should('eq', 0)
+    })
+})
+
+describe('orbctl takeoff', { execTimeout: 900000 }, () => {
+    // orbctl takeoff
+    it('orbctl --gitops takeoff', () => {
+        cy.exec('./orbctl takeoff --gitops').its('code').its('code').should('eq', 0)
     })
 })
