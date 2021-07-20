@@ -138,6 +138,7 @@ func iterate(conf *OrbiterConfig, gitClient *git.Client, firstIteration bool, ct
 	takeoff := orbiter.Takeoff(monitor, takeoffConf, healthyChan)
 
 	go func() {
+		defer func() { monitor.RecoverPanic(recover()) }()
 		started := time.Now()
 		takeoff()
 

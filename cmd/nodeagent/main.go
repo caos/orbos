@@ -37,7 +37,7 @@ func main() {
 		OnError:  mntr.LogError,
 	}
 
-	defer monitor.RecoverPanic()
+	defer func() { monitor.RecoverPanic(recover()) }()
 
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")

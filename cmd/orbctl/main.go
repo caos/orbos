@@ -22,7 +22,7 @@ var (
 
 func main() {
 
-	defer monitor.RecoverPanic()
+	defer func() { monitor.RecoverPanic(recover()) }()
 
 	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)

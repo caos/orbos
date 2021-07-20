@@ -109,16 +109,15 @@ func (m Monitor) CaptureMessage(msg string) {
 	})
 }
 
-func (m Monitor) RecoverPanic() {
+func (m Monitor) RecoverPanic(r interface{}) {
 	if m.OnRecoverPanic == nil {
 		return
 	}
 
-	r := recover()
 	if sentryClient != nil {
 		sentryClient.Recover(r, nil, nil)
+		sentryClient.Flush(time.Second * 2)
 	}
-	sentryClient.Flush(time.Second * 2)
 	if r == nil {
 		return
 	}

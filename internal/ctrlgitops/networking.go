@@ -36,6 +36,7 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion, true), k8sClient)
 
 		go func() {
+			defer func() { monitor.RecoverPanic(recover()) }()
 			started := time.Now()
 			takeoff()
 
