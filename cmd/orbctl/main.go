@@ -28,7 +28,9 @@ func main() {
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
 	takeoff := TakeoffCommand(getRootValues)
-	takeoff.AddCommand(
+
+	start := StartCommand()
+	start.AddCommand(
 		StartBoom(getRootValues),
 		StartOrbiter(getRootValues),
 		StartNetworking(getRootValues),

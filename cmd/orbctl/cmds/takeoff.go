@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"context"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -28,9 +29,9 @@ func Takeoff(
 	gitCommit string,
 	kubeconfig string,
 	gitOps bool,
+	operators []string,
 ) error {
 
-	withORBITER := false
 	if gitOps {
 		if err := orbcfg.IsComplete(orbConfig); err != nil {
 			return err
@@ -44,8 +45,7 @@ func Takeoff(
 			return err
 		}
 
-		withORBITER = gitClient.Exists(git.OrbiterFile)
-		if withORBITER {
+		if gitClient.Exists(git.OrbiterFile) && deployOperator(operators, "orbiter") {
 			orbiterConfig := &ctrlgitops.OrbiterConfig{
 				Recur:         recur,
 				Deploy:        deploy,
@@ -82,7 +82,7 @@ func Takeoff(
 		return err
 	}
 
-	if withORBITER || gitOps {
+	if gitOps {
 
 		orbConfigBytes, err := yaml.Marshal(orbConfig)
 		if err != nil {
@@ -95,8 +95,26 @@ func Takeoff(
 		}
 	}
 
-	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOps); err != nil {
-		return err
+	if deployOperator(operators, "boom") {
+		if err := deployBoom(monitor, gitClient, k8sClient, version, gitOps); err != nil {
+			return err
+		}
 	}
-	return deployNetworking(monitor, gitClient, k8sClient, version, gitOps)
+	if deployOperator(operators, "networking") {
+		return deployNetworking(monitor, gitClient, k8sClient, version, gitOps)
+	}
+	return nil
+}
+
+func deployOperator(arguments []string, operator string) bool {
+	if len(arguments) == 0 {
+		return true
+	}
+
+	for idx := range arguments {
+		if strings.ToLower(arguments[idx]) == strings.ToLower(operator) {
+			return true
+		}
+	}
+	return false
 }
