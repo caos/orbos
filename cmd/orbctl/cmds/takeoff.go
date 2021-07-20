@@ -27,35 +27,36 @@ func Takeoff(
 	version string,
 	gitCommit string,
 	kubeconfig string,
-	gitOpsBoom bool,
-	gitOpsNetworking bool,
+	gitOps bool,
 ) error {
 
-	if err := orbcfg.IsComplete(orbConfig); err != nil {
-		return err
-	}
-
-	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-		return err
-	}
-
-	if err := gitClient.Clone(); err != nil {
-		return err
-	}
-
-	withORBITER := gitClient.Exists(git.OrbiterFile)
-	if withORBITER {
-		orbiterConfig := &ctrlgitops.OrbiterConfig{
-			Recur:         recur,
-			Deploy:        deploy,
-			Verbose:       verbose,
-			Version:       version,
-			OrbConfigPath: orbConfig.Path,
-			GitCommit:     gitCommit,
+	withORBITER := false
+	if gitOps {
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
+			return err
 		}
 
-		if err := ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
 			return err
+		}
+
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
+		withORBITER = gitClient.Exists(git.OrbiterFile)
+		if withORBITER {
+			orbiterConfig := &ctrlgitops.OrbiterConfig{
+				Recur:         recur,
+				Deploy:        deploy,
+				Verbose:       verbose,
+				Version:       version,
+				OrbConfigPath: orbConfig.Path,
+				GitCommit:     gitCommit,
+			}
+			if err := ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -69,7 +70,7 @@ func Takeoff(
 		orbConfig,
 		gitClient,
 		kubeconfig,
-		gitOpsBoom || gitOpsNetworking,
+		gitOps,
 		false,
 	)
 	if err != nil {
@@ -81,7 +82,7 @@ func Takeoff(
 		return err
 	}
 
-	if withORBITER || gitOpsBoom || gitOpsNetworking {
+	if withORBITER || gitOps {
 
 		orbConfigBytes, err := yaml.Marshal(orbConfig)
 		if err != nil {
@@ -94,8 +95,8 @@ func Takeoff(
 		}
 	}
 
-	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOpsBoom); err != nil {
+	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOps); err != nil {
 		return err
 	}
-	return deployNetworking(monitor, gitClient, k8sClient, version, gitOpsNetworking)
+	return deployNetworking(monitor, gitClient, k8sClient, version, gitOps)
 }

@@ -18,12 +18,10 @@ import (
 
 func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 	var (
-		verbose          bool
-		recur            bool
-		deploy           bool
-		gitOpsBoom       bool
-		gitOpsNetworking bool
-		cmd              = &cobra.Command{
+		verbose bool
+		recur   bool
+		deploy  bool
+		cmd     = &cobra.Command{
 			Use:   "takeoff",
 			Short: "Launch an orbiter",
 			Long:  "Ensures a desired state",
@@ -33,8 +31,6 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 	flags := cmd.Flags()
 	flags.BoolVar(&recur, "recur", false, "Ensure the desired state continously")
 	flags.BoolVar(&deploy, "deploy", true, "Ensure Orbiter and Boom deployments continously")
-	flags.BoolVar(&gitOpsBoom, "gitops-boom", false, "Ensure Boom runs in gitops mode")
-	flags.BoolVar(&gitOpsNetworking, "gitops-networking", false, "Ensure Networking-operator runs in gitops mode")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
@@ -61,8 +57,7 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 			version,
 			gitCommit,
 			rv.Kubeconfig,
-			rv.Gitops || gitOpsBoom,
-			rv.Gitops || gitOpsNetworking,
+			rv.Gitops,
 		)
 	}
 	return cmd
