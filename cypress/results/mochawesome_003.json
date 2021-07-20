@@ -1,0 +1,244 @@
+{
+  "stats": {
+    "suites": 3,
+    "tests": 6,
+    "passes": 5,
+    "pending": 0,
+    "failures": 1,
+    "start": "2021-07-20T14:28:31.458Z",
+    "end": "2021-07-20T14:29:12.300Z",
+    "duration": 40842,
+    "testsRegistered": 6,
+    "passPercent": 83.33333333333334,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "2038b1dc-257c-49eb-97c9-af56d54837fc",
+      "title": "",
+      "fullFile": "cypress/integration/ORBOS/orbctl/orbctl.js",
+      "file": "cypress/integration/ORBOS/orbctl/orbctl.js",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "b1e5a38e-8d70-45bc-b7e8-b7613ffc8d1c",
+          "title": "install orbctl",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "download orbctl",
+              "fullTitle": "install orbctl download orbctl",
+              "timedOut": null,
+              "duration": 4614,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "//cy.exec('if [ -f \"./orbctl\" ]; then rm ./orbctl fi').its('code').should('eq', 0)\ncy.exec('curl -s https://api.github.com/repos/caos/orbos/releases/latest | grep \"browser_download_url.*orbctl-$(uname)-$(uname -m)\" | cut -d \\'\\\"\\' -f 4 | wget -i - -O ./orbctl ').its('code').should('eq', 0);\ncy.exec('ls ./orbctl').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "80b60ef3-b539-462a-a0c5-16d2be4d0a41",
+              "parentUUID": "b1e5a38e-8d70-45bc-b7e8-b7613ffc8d1c",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "chmod orbctl",
+              "fullTitle": "install orbctl chmod orbctl",
+              "timedOut": null,
+              "duration": 472,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('chmod +x ./orbctl ').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "e89e8bf6-c4d3-4273-9094-8d696dfb893b",
+              "parentUUID": "b1e5a38e-8d70-45bc-b7e8-b7613ffc8d1c",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "create orbfile",
+              "fullTitle": "install orbctl create orbfile",
+              "timedOut": null,
+              "duration": 15778,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "//cy.exec('if [[ -f \"~/.orb/config\" ]]; then rm ~/.orb/config fi').its('code').should('eq', 0)\ncy.exec('./orbctl --gitops configure --repourl \"git@github.com:caos/cypress-ops.git\" --masterkey \"$(openssl rand -base64 21)\"').its('code').should('eq', 0);\ncy.exec('ls ~/.orb/config').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "71698c1c-81a4-41e3-a513-fd0d9010ca7f",
+              "parentUUID": "b1e5a38e-8d70-45bc-b7e8-b7613ffc8d1c",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "80b60ef3-b539-462a-a0c5-16d2be4d0a41",
+            "e89e8bf6-c4d3-4273-9094-8d696dfb893b",
+            "71698c1c-81a4-41e3-a513-fd0d9010ca7f"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 20864,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        },
+        {
+          "uuid": "892d3f39-8022-4ca9-ad88-6e63d959105e",
+          "title": "orbctl tests",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "orbctl help",
+              "fullTitle": "orbctl tests orbctl help",
+              "timedOut": null,
+              "duration": 457,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('./orbctl help').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "7cfd1196-3a6b-4c1e-b530-e4247794bda4",
+              "parentUUID": "892d3f39-8022-4ca9-ad88-6e63d959105e",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "orbctl read gpg key from git repository",
+              "fullTitle": "orbctl tests orbctl read gpg key from git repository",
+              "timedOut": null,
+              "duration": 7094,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('./orbctl readsecret --gitops boom.argocd.gopass.secrets-demo.gpg.encrypted').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "4f74f159-5952-4e0a-b54e-9a11ec67f876",
+              "parentUUID": "892d3f39-8022-4ca9-ad88-6e63d959105e",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "7cfd1196-3a6b-4c1e-b530-e4247794bda4",
+            "4f74f159-5952-4e0a-b54e-9a11ec67f876"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 7551,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        },
+        {
+          "uuid": "59948a06-6e68-49ba-9aff-ab5f8247dad0",
+          "title": "orbctl takeoff",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "orbctl --gitops takeoff",
+              "fullTitle": "orbctl takeoff orbctl --gitops takeoff",
+              "timedOut": null,
+              "duration": 12334,
+              "state": "failed",
+              "speed": null,
+              "pass": false,
+              "fail": true,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('./orbctl takeoff --gitops').its('code').its('code').should('eq', 0);",
+              "err": {
+                "message": "CypressError: Timed out retrying after 4000ms: `cy.its()` errored because the property: `code` does not exist on your subject.\n\n`cy.its()` waited for the specified property `code` to exist, but it never did.\n\nIf you do not expect the property `code` to exist, then add an assertion such as:\n\n`cy.wrap({ foo: 'bar' }).its('quux').should('not.exist')`\n\nhttps://on.cypress.io/its",
+                "estack": "CypressError: Timed out retrying after 4000ms: `cy.its()` errored because the property: `code` does not exist on your subject.\n\n`cy.its()` waited for the specified property `code` to exist, but it never did.\n\nIf you do not expect the property `code` to exist, then add an assertion such as:\n\n`cy.wrap({ foo: 'bar' }).its('quux').should('not.exist')`\n\nhttps://on.cypress.io/its\n    at cypressErr (http://localhost:54730/__cypress/runner/cypress_runner.js:156075:18)\n    at Object.cypressErrByPath (http://localhost:54730/__cypress/runner/cypress_runner.js:156081:10)\n    at propertyNotOnSubjectErr (http://localhost:54730/__cypress/runner/cypress_runner.js:137910:24)\n    at traverseObjectAtPath (http://localhost:54730/__cypress/runner/cypress_runner.js:137997:24)\n    at getValue (http://localhost:54730/__cypress/runner/cypress_runner.js:138051:11)\n    at tryCatcher (http://localhost:54730/__cypress/runner/cypress_runner.js:10798:23)\n    at Function.Promise.attempt.Promise.try (http://localhost:54730/__cypress/runner/cypress_runner.js:8072:29)\n    at retryValue (http://localhost:54730/__cypress/runner/cypress_runner.js:138091:25)\n    at tryCatcher (http://localhost:54730/__cypress/runner/cypress_runner.js:10798:23)\n    at Function.Promise.attempt.Promise.try (http://localhost:54730/__cypress/runner/cypress_runner.js:8072:29)\n    at resolveValue (http://localhost:54730/__cypress/runner/cypress_runner.js:138098:25)\n    at tryCatcher (http://localhost:54730/__cypress/runner/cypress_runner.js:10798:23)\n    at Function.Promise.attempt.Promise.try (http://localhost:54730/__cypress/runner/cypress_runner.js:8072:29)\n    at tryFn (http://localhost:54730/__cypress/runner/cypress_runner.js:148863:21)\n    at whenStable (http://localhost:54730/__cypress/runner/cypress_runner.js:148901:12)\n    at http://localhost:54730/__cypress/runner/cypress_runner.js:148393:16\nFrom Your Spec Code:\n    at Context.eval (http://localhost:54730/__cypress/tests?p=cypress/integration/ORBOS/orbctl/orbctl.js:133:66)",
+                "diff": null
+              },
+              "uuid": "e6327edf-739c-41cf-a279-eca32a5c4b33",
+              "parentUUID": "59948a06-6e68-49ba-9aff-ab5f8247dad0",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [],
+          "failures": [
+            "e6327edf-739c-41cf-a279-eca32a5c4b33"
+          ],
+          "pending": [],
+          "skipped": [],
+          "duration": 12334,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.0.1"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "6.2.2"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/results",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "5.2.0"
+    }
+  }
+}
