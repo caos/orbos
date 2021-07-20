@@ -27,8 +27,6 @@ func main() {
 	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
-	takeoff := TakeoffCommand(getRootValues)
-
 	start := StartCommand()
 	start.AddCommand(
 		StartBoom(getRootValues),
@@ -51,7 +49,8 @@ func main() {
 		TeardownCommand(getRootValues),
 		ConfigCommand(getRootValues),
 		APICommand(getRootValues),
-		takeoff,
+		TakeoffCommand(getRootValues),
+		start,
 		nodes,
 	)
 
