@@ -28,6 +28,6 @@ describe('orbctl tests', { execTimeout: 90000 }, () => {
 describe('orbctl takeoff', { execTimeout: 900000 }, () => {
     // orbctl takeoff
     it('orbctl --gitops takeoff', () => {
-        cy.exec('./orbctl takeoff --gitops').its('code').its('code').should('eq', 0)
+        cy.exec('./orbctl takeoff --gitops').its('code').should('eq', 0)
     })
 })

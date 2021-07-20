@@ -1,0 +1,240 @@
+{
+  "stats": {
+    "suites": 3,
+    "tests": 6,
+    "passes": 6,
+    "pending": 0,
+    "failures": 0,
+    "start": "2021-07-20T14:30:11.175Z",
+    "end": "2021-07-20T14:30:48.403Z",
+    "duration": 37228,
+    "testsRegistered": 6,
+    "passPercent": 100,
+    "pendingPercent": 0,
+    "other": 0,
+    "hasOther": false,
+    "skipped": 0,
+    "hasSkipped": false
+  },
+  "results": [
+    {
+      "uuid": "10a94ca2-7c7c-4c7b-b3dd-dcd537352252",
+      "title": "",
+      "fullFile": "cypress/integration/ORBOS/orbctl/orbctl.js",
+      "file": "cypress/integration/ORBOS/orbctl/orbctl.js",
+      "beforeHooks": [],
+      "afterHooks": [],
+      "tests": [],
+      "suites": [
+        {
+          "uuid": "77d6c5d7-49f7-4b3b-86d4-5d6e6855eca7",
+          "title": "install orbctl",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "download orbctl",
+              "fullTitle": "install orbctl download orbctl",
+              "timedOut": null,
+              "duration": 6852,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "//cy.exec('if [ -f \"./orbctl\" ]; then rm ./orbctl fi').its('code').should('eq', 0)\ncy.exec('curl -s https://api.github.com/repos/caos/orbos/releases/latest | grep \"browser_download_url.*orbctl-$(uname)-$(uname -m)\" | cut -d \\'\\\"\\' -f 4 | wget -i - -O ./orbctl ').its('code').should('eq', 0);\ncy.exec('ls ./orbctl').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "7b488630-2e1a-42f0-8945-eac5ecda973a",
+              "parentUUID": "77d6c5d7-49f7-4b3b-86d4-5d6e6855eca7",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "chmod orbctl",
+              "fullTitle": "install orbctl chmod orbctl",
+              "timedOut": null,
+              "duration": 522,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('chmod +x ./orbctl ').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "ebf25247-9ab4-41b6-84a5-db4c4d9c3458",
+              "parentUUID": "77d6c5d7-49f7-4b3b-86d4-5d6e6855eca7",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "create orbfile",
+              "fullTitle": "install orbctl create orbfile",
+              "timedOut": null,
+              "duration": 16127,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "//cy.exec('if [[ -f \"~/.orb/config\" ]]; then rm ~/.orb/config fi').its('code').should('eq', 0)\ncy.exec('./orbctl --gitops configure --repourl \"git@github.com:caos/cypress-ops.git\" --masterkey \"$(openssl rand -base64 21)\"').its('code').should('eq', 0);\ncy.exec('ls ~/.orb/config').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "2c5977eb-c0e4-45d3-ad6b-a5b0c51edb22",
+              "parentUUID": "77d6c5d7-49f7-4b3b-86d4-5d6e6855eca7",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "7b488630-2e1a-42f0-8945-eac5ecda973a",
+            "ebf25247-9ab4-41b6-84a5-db4c4d9c3458",
+            "2c5977eb-c0e4-45d3-ad6b-a5b0c51edb22"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 23501,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        },
+        {
+          "uuid": "9f963241-dc34-4cd8-b69f-219fecfa741a",
+          "title": "orbctl tests",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "orbctl help",
+              "fullTitle": "orbctl tests orbctl help",
+              "timedOut": null,
+              "duration": 488,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('./orbctl help').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "723d47f8-06ea-42cd-83f9-880ac0bbfd32",
+              "parentUUID": "9f963241-dc34-4cd8-b69f-219fecfa741a",
+              "isHook": false,
+              "skipped": false
+            },
+            {
+              "title": "orbctl read gpg key from git repository",
+              "fullTitle": "orbctl tests orbctl read gpg key from git repository",
+              "timedOut": null,
+              "duration": 6591,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('./orbctl readsecret --gitops boom.argocd.gopass.secrets-demo.gpg.encrypted').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "8ccdb218-3abf-4a44-bbcf-77685a12f543",
+              "parentUUID": "9f963241-dc34-4cd8-b69f-219fecfa741a",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "723d47f8-06ea-42cd-83f9-880ac0bbfd32",
+            "8ccdb218-3abf-4a44-bbcf-77685a12f543"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 7079,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        },
+        {
+          "uuid": "1105e0f8-8e09-4c70-afda-acb9393a423f",
+          "title": "orbctl takeoff",
+          "fullFile": "",
+          "file": "",
+          "beforeHooks": [],
+          "afterHooks": [],
+          "tests": [
+            {
+              "title": "orbctl --gitops takeoff",
+              "fullTitle": "orbctl takeoff orbctl --gitops takeoff",
+              "timedOut": null,
+              "duration": 6610,
+              "state": "passed",
+              "speed": "slow",
+              "pass": true,
+              "fail": false,
+              "pending": false,
+              "context": null,
+              "code": "cy.exec('./orbctl takeoff --gitops').its('code').should('eq', 0);",
+              "err": {},
+              "uuid": "b4a4d2eb-b331-4f36-a47e-622d43d77de3",
+              "parentUUID": "1105e0f8-8e09-4c70-afda-acb9393a423f",
+              "isHook": false,
+              "skipped": false
+            }
+          ],
+          "suites": [],
+          "passes": [
+            "b4a4d2eb-b331-4f36-a47e-622d43d77de3"
+          ],
+          "failures": [],
+          "pending": [],
+          "skipped": [],
+          "duration": 6610,
+          "root": false,
+          "rootEmpty": false,
+          "_timeout": 2000
+        }
+      ],
+      "passes": [],
+      "failures": [],
+      "pending": [],
+      "skipped": [],
+      "duration": 0,
+      "root": true,
+      "rootEmpty": true,
+      "_timeout": 2000
+    }
+  ],
+  "meta": {
+    "mocha": {
+      "version": "7.0.1"
+    },
+    "mochawesome": {
+      "options": {
+        "quiet": false,
+        "reportFilename": "mochawesome",
+        "saveHtml": false,
+        "saveJson": true,
+        "consoleReporter": "spec",
+        "useInlineDiffs": false,
+        "code": true
+      },
+      "version": "6.2.2"
+    },
+    "marge": {
+      "options": {
+        "reportDir": "cypress/results",
+        "overwrite": false,
+        "html": false,
+        "json": true
+      },
+      "version": "5.2.0"
+    }
+  }
+}
