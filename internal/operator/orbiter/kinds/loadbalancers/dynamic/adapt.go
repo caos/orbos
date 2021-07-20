@@ -51,7 +51,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 		defer func() {
 			if err != nil {
-				err = mntr.ToUserError(fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err))
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
 			}
 		}()
 		if desiredTree.Common.Version != "v2" {
