@@ -12,5 +12,6 @@
 | clusterOutput    | Flag if loki-output should be a clusteroutput instead a output crd                  |  false  |            |      |
 | nodeSelector     | NodeSelector for statefulset                                                        |         |            | X    |
 | tolerations      | Tolerations to run loki on nodes , [here](k8s/Tolerations/Tolerations.md)           |         | X          |      |
-| resources        | Resource requirements , [here](k8s/Resources/Resources.md)                          |         |            |      |
-| overwriteVersion | Override used image version                                                         |         |            |      |
+| resources        | Resource requirements , [here](k8s/Resources/Resources.md)                          |         | X          |      |
+| overwriteImage   | Overwrite used image                                                                |         |            |      |
+| overwriteVersion | Overwrite used image version                                                        |         |            |      |
