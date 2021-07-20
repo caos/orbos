@@ -154,7 +154,7 @@ status:
 	}
 
 	var (
-		cmd          = []string{"/orbctl", "takeoff", "boom", "--kubeconfig", ""}
+		cmd          = []string{"/orbctl", "start", "boom", "--kubeconfig", ""}
 		volumes      []core.Volume
 		volumeMounts []core.VolumeMount
 	)

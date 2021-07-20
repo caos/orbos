@@ -31,7 +31,9 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 		err error,
 	) {
 		defer func() {
-			err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		orbMonitor := monitor.WithField("kind", "orb")
