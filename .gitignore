@@ -21,4 +21,8 @@ orbctl
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
 
+# cypress results and videos
+cypress/results
+cypress/videos
+
 /local
