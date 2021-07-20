@@ -1,6 +1,9 @@
 # Existing 
  
 
+ Used secret that has to be already existing in the cluster and should contain id/username and secret/password
+
+
 ## Structure 
  
 

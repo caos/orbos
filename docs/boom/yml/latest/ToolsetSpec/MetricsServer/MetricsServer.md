@@ -7,4 +7,5 @@
 | Attribute        | Description                      | Default | Collection | Map  |
 | ---------------- | -------------------------------- | ------- | ---------- | ---  |
 | deploy           | Flag if tool should be deployed  |  false  |            |      |
-| overwriteVersion | Override used image version      |         |            |      |
+| overwriteImage   | Overwrite used image             |         |            |      |
+| overwriteVersion | Overwrite used image version     |         |            |      |

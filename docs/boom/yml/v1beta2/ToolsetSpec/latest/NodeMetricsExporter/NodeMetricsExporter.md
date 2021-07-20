@@ -4,7 +4,9 @@
 ## Structure 
  
 
-| Attribute | Description                                                | Default | Collection | Map  |
-| --------- | ---------------------------------------------------------- | ------- | ---------- | ---  |
-| deploy    | Flag if tool should be deployed                            |  false  |            |      |
-| resources | Resource requirements , [here](k8s/Resources/Resources.md) |         |            |      |
+| Attribute        | Description                                                | Default | Collection | Map  |
+| ---------------- | ---------------------------------------------------------- | ------- | ---------- | ---  |
+| deploy           | Flag if tool should be deployed                            |  false  |            |      |
+| resources        | Resource requirements , [here](k8s/Resources/Resources.md) |         | X          |      |
+| overwriteImage   | Overwrite used image                                       |         |            |      |
+| overwriteVersion | Overwrite used image version                               |         |            |      |

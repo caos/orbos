@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
 	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/operator/boom/name"
 )

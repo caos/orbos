@@ -1,7 +1,7 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/logging"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 )

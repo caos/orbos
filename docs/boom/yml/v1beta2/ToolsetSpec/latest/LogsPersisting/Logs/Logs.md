@@ -20,3 +20,8 @@
 | loki                        | Bool if logs will get persisted for loki                         |         |            |      |
 | prometheus                  | Bool if logs will get persisted for prometheus                   |         |            |      |
 | metrics-server              | Bool if logs will get persisted for the metrics-secret           |         |            |      |
+| orbiter                     | Bool if logs will get persisted for ORBITER                      |         |            |      |
+| boom                        | Bool if logs will get persisted for BOOM                         |         |            |      |
+| zitadel                     | Bool if logs will get persisted for ZITADEL                      |         |            |      |
+| database                    | Bool if logs will get persisted for Database                     |         |            |      |
+| networking                  | Bool if logs will get persisted for Networking                   |         |            |      |

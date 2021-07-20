@@ -7,8 +7,9 @@
 ## Structure 
  
 
-| Attribute      | Description                                                                                            | Default | Collection | Map  |
-| -------------- | ------------------------------------------------------------------------------------------------------ | ------- | ---------- | ---  |
-| username       | [here](secret/Secret/Secret.md)                                                                        |         |            |      |
-| password       | [here](secret/Secret/Secret.md)                                                                        |         |            |      |
-| existingSecret | Existing Secret containing username and password , [here](secret/ExistingIDSecret/ExistingIDSecret.md) |         |            |      |
+| Attribute        | Description                                                                            | Default | Collection | Map  |
+| ---------------- | -------------------------------------------------------------------------------------- | ------- | ---------- | ---  |
+| username         | [here](secret/Secret/Secret.md)                                                        |         |            |      |
+| password         | [here](secret/Secret/Secret.md)                                                        |         |            |      |
+| existingUsername | Existing Secret containing username and password , [here](secret/Existing/Existing.md) |         |            |      |
+| existingPassword | [here](secret/Existing/Existing.md)                                                    |         |            |      |
