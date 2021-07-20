@@ -19,7 +19,7 @@ type Common struct {
 	Version string `json:"version,omitempty" yaml:"version,omitempty"`
 	// Don't access X_ApiVersion, it is only exported for (de-)serialization. Access the Version property only.
 	X_ApiVersion     string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	parsedApiVersion bool   `json: "-" yaml: "-"`
+	parsedApiVersion bool   `json:"-" yaml:"-"`
 }
 
 func (c *Common) UnmarshalYAML(node *yaml.Node) error {
