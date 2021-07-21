@@ -1,9 +1,6 @@
 # Secret 
  
 
- Secret handled with orbctl so no manual changes are required
-
-
 ## Structure 
  
 

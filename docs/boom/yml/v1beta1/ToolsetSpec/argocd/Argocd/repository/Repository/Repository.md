@@ -1,9 +1,6 @@
 # Repository 
  
 
- For a repository there are two types, with ssh-connection where an url and a certificate have to be provided and an https-connection where an URL, username and password have to be provided.
-
-
 ## Structure 
  
 
