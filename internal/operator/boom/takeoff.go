@@ -10,7 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/caos/orbos/internal/operator/boom/app"
-	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/grafana/config"
+	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/config"
 	gitcrdconfig "github.com/caos/orbos/internal/operator/boom/gitcrd/config"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
