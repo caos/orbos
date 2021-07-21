@@ -132,8 +132,11 @@ We run and maintain your Orbs on a supported provider of your choice. Your incid
 
 ## Usage Data
 
-ORBOS components send errors and usage data to CAOS AG, so that we are able to identify code improvement potential. If you'd rather be anonymous or don't have an internet connection, pass the global flag `--disable-ingestion` when using orbctl. For disabling ingestion for already-running components, execute the takeoff command again with the `--disable-ingestion` flag.
+ORBOS components send errors and usage data to CAOS AG, so that we are able to identify code improvement potential. If you don't want to send this data or don't have an internet connection, pass the global flag `--disable-ingestion` when using orbctl. For disabling ingestion for already-running components, execute the takeoff command again with the `--disable-ingestion` flag.
 
+We try to distinguishing the environments from which events come from. As environment identifier, we defer the environment identifier from your git repository URL if the --gitops flag is passed.
+
+Besides from errors that don't clearly come from misconfiguration or cli misuage, we send an inital event when any binary is started. This is a "<component> invoked" event along with the flags that are passed to it, except secret values of course.
 ## License
 
 The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using ORBOS for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
