@@ -1,7 +1,7 @@
 package networking
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/logging"
 	"github.com/caos/orbos/internal/operator/networking/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 )

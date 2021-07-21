@@ -14,4 +14,5 @@
 | nodeSelector     | NodeSelector for statefulset                                                        |         |            | X    |
 | tolerations      | Tolerations to run prometheus on nodes , [here](k8s/Tolerations/Tolerations.md)     |         | X          |      |
 | resources        | Resource requirements , [here](k8s/Resources/Resources.md)                          |         |            |      |
-| overwriteVersion | Override used image version                                                         |         |            |      |
+| overwriteImage   | Overwrite used image                                                                |         |            |      |
+| overwriteVersion | Overwrite used image version                                                        |         |            |      |

@@ -1,7 +1,7 @@
 package apiserver
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/prometheus/servicemonitor"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
