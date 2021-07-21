@@ -54,7 +54,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
 			}
 		}()
-		if desiredTree.Common.Version != "v2" {
+		if desiredTree.Common.Version() != "v2" {
 			migrate = true
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
@@ -101,10 +101,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/DynamicLoadBalancer", "v0", false),
 		}
 		currentTree.Parsed = current
 

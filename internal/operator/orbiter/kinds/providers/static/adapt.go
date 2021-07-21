@@ -63,10 +63,7 @@ func AdaptFunc(
 		secret.AppendSecrets("", secrets, lbsecrets, nil, nil)
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/StaticProvider",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/StaticProvider", "v0", false),
 		}
 		currentTree.Parsed = current
 

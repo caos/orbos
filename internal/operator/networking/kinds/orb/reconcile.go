@@ -32,10 +32,7 @@ func Reconcile(
 
 		if spec.SelfReconciling {
 			desiredTree := &tree.Tree{
-				Common: &tree.Common{
-					Kind:    "networking.caos.ch/Orb",
-					Version: "v0",
-				},
+				Common: tree.NewCommon("networking.caos.ch/Orb", "v0", false),
 			}
 
 			if err := kubernetes.EnsureNetworkingArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&spec.Version)), k8sClient, spec.Version, spec.NodeSelector, spec.Tolerations, imageRegistry, gitops); err != nil {

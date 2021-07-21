@@ -48,7 +48,7 @@ func AdaptFunc(
 			}
 		}()
 
-		if desiredTree.Common.Version != "v0" {
+		if desiredTree.Common.Version() != "v0" {
 			migrate = true
 		}
 
@@ -140,10 +140,7 @@ func AdaptFunc(
 		currentKind := "orbiter.caos.ch/KubernetesCluster"
 		current := &CurrentCluster{}
 		currentTree.Parsed = &Current{
-			Common: tree.Common{
-				Kind:    currentKind,
-				Version: "v0",
-			},
+			Common:  *(tree.NewCommon(currentKind, "v0", false)),
 			Current: current,
 		}
 

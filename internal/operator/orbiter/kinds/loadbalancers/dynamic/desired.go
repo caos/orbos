@@ -21,9 +21,9 @@ type Desired struct {
 func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
 	defer func() {
 		err = mntr.ToUserError(err)
-		d.Common.Version = "v2"
+		d.Common.OverwriteVersion("v2")
 	}()
-	switch d.Common.Version {
+	switch d.Common.Version() {
 	case "v2":
 		type latest Desired
 		l := latest{}

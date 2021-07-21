@@ -165,10 +165,7 @@ func AdaptFunc(
 		}
 
 		currentTree.Parsed = &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/Orb",
-				Version: "v0",
-			},
+			Common:    tree.NewCommon("orbiter.caos.ch/Orb", "v0", false),
 			Clusters:  clusterCurrents,
 			Providers: providerCurrents,
 		}

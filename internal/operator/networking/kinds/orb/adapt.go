@@ -66,10 +66,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 		}
 
 		currentTree.Parsed = &DesiredV0{
-			Common: &tree.Common{
-				Kind:    "networking.caos.ch/Orb",
-				Version: "v0",
-			},
+			Common:     tree.NewCommon("networking.caos.ch/Orb", "v0", false),
 			Networking: networkingCurrent,
 		}
 

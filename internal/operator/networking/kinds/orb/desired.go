@@ -33,7 +33,7 @@ func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
 		return nil, mntr.ToUserError(fmt.Errorf("parsing desired state failed: %w", err))
 	}
-	desiredKind.Common.Version = "v0"
+	desiredKind.Common.OverwriteVersion("v0")
 
 	return desiredKind, nil
 }

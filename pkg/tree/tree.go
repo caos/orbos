@@ -8,6 +8,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var (
+	_ yaml.Marshaler   = (*Tree)(nil)
+	_ yaml.Unmarshaler = (*Tree)(nil)
+)
+
 type Tree struct {
 	Common   *Common `yaml:",inline"`
 	Original *yaml.Node
@@ -15,52 +20,45 @@ type Tree struct {
 }
 
 type Common struct {
-	Kind    string `json:"kind" yaml:"kind"`
-	Version string `json:"version,omitempty" yaml:"version,omitempty"`
-	// Don't access X_ApiVersion, it is only exported for (de-)serialization. Access the Version property only.
-	X_ApiVersion     string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
-	parsedApiVersion bool   `json:"-" yaml:"-"`
+	Kind string `json:"kind" yaml:"kind"`
+	// Don't access X_Version, it is only exported for (de-)serialization. Use Version and OverwriteVersion methods instead.
+	X_Version string `json:"version,omitempty" yaml:"version,omitempty"`
+	// Don't access X_ApiVersion, it is only exported for (de-)serialization. Use Version and OverwriteVersion methods instead.
+	X_ApiVersion string `json:"apiVersion,omitempty" yaml:"apiVersion,omitempty"`
 }
 
-func (c *Common) UnmarshalYAML(node *yaml.Node) error {
-	type proxy Common
-	p := proxy{}
-	if err := node.Decode(&p); err != nil {
-		return err
+func NewCommon(kind, version string, isKubernetesResource bool) *Common {
+	c := new(Common)
+	c.Kind = kind
+	if isKubernetesResource {
+		c.X_ApiVersion = version
+		return c
 	}
-	c.Kind = p.Kind
-	c.Version = p.Version
-	c.X_ApiVersion = p.X_ApiVersion
-	if c.Version == "" && c.X_ApiVersion != "" {
-		c.Version = c.X_ApiVersion
-		c.parsedApiVersion = true
-	}
-	return nil
+	c.X_Version = version
+	return c
 }
 
-func (c *Common) MarshalYAML() (interface{}, error) {
-	type proxy Common
-	clone := proxy{
-		Kind:             c.Kind,
-		Version:          c.Version,
-		X_ApiVersion:     c.X_ApiVersion,
-		parsedApiVersion: c.parsedApiVersion,
+func (c *Common) OverwriteVersion(v string) {
+	if c.X_ApiVersion != "" {
+		c.X_ApiVersion = v
+		return
 	}
-	if c.parsedApiVersion {
-		clone.Version = ""
-		clone.X_ApiVersion = c.Version
-		return clone, nil
+	c.X_Version = v
+}
+
+func (c *Common) Version() string {
+	if c.X_ApiVersion != "" {
+		return c.X_ApiVersion
 	}
-	return clone, nil
+	return c.X_Version
 }
 
 func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
 	c.Original = new(yaml.Node)
 	*c.Original = *node
 
-	c.Common = new(Common)
-	if err := c.Original.Decode(c.Common); err != nil {
-		return mntr.ToUserError(fmt.Errorf("decoding version or kind failed: kind \"%s\", version \"%s\", err %w", c.Common.Kind, c.Common.Version, err))
+	if err := c.Original.Decode(&c.Common); err != nil {
+		return mntr.ToUserError(fmt.Errorf("decoding version or kind failed: kind \"%s\", err %w", c.Common.Kind, err))
 	}
 
 	return nil

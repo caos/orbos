@@ -67,10 +67,7 @@ func AdaptFunc(
 		ctx := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/CloudScaleProvider",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/CloudScaleProvider", "v0", false),
 		}
 		currentTree.Parsed = current
 

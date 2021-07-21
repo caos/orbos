@@ -88,10 +88,7 @@ func AdaptFunc(
 		}
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/GCEProvider",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/GCEProvider", "v0", false),
 		}
 		currentTree.Parsed = current
 

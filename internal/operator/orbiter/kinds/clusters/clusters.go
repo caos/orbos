@@ -37,7 +37,7 @@ func GetQueryAndDestroyFuncs(
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
 		return kubernetes.AdaptFunc(
-			labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version),
+			labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version()),
 			clusterID,
 			oneoff,
 			deployOrbiter,
