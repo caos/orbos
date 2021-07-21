@@ -3,6 +3,8 @@ package networking
 import (
 	"errors"
 
+	"github.com/caos/orbos/mntr"
+
 	"gopkg.in/yaml.v3"
 
 	v1 "github.com/caos/orbos/internal/api/networking/v1"
@@ -34,11 +36,11 @@ func ReadCRD(k8sClient kubernetes.ClientInt) (*tree.Tree, error) {
 
 	spec, found := unstruct.Object["spec"]
 	if !found {
-		return nil, errors.New("no spec in crd")
+		return nil, mntr.ToUserError(errors.New("no spec in crd"))
 	}
 	specMap, ok := spec.(map[string]interface{})
 	if !ok {
-		return nil, errors.New("no spec in crd")
+		return nil, mntr.ToUserError(errors.New("no spec in crd"))
 	}
 
 	data, err := yaml.Marshal(specMap)

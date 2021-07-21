@@ -8,7 +8,6 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	"github.com/caos/orbos/pkg/labels"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -63,8 +62,7 @@ func Reconcile(
 	recMonitor := monitor.WithField("version", boomVersion)
 
 	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomVersion, tolerations, nodeselector, &resources, imageRegistry, gitops); err != nil {
-		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
-		return err
+		return fmt.Errorf("failed to deploy boom into k8s-cluster: %w", err)
 	}
 
 	recMonitor.Info("Applied BOOM")

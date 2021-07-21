@@ -1,19 +1,19 @@
 package v1beta2
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func ParseToolset(desiredTree *tree.Tree) (*Toolset, error) {
 	desiredKind := &Toolset{}
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desiredKind
 

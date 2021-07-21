@@ -1,12 +1,13 @@
 package loadbalancers
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func GetQueryAndDestroyFunc(
@@ -30,6 +31,6 @@ func GetQueryAndDestroyFunc(
 	case "orbiter.caos.ch/DynamicLoadBalancer":
 		return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
 	default:
-		return nil, nil, nil, false, nil, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind))
 	}
 }

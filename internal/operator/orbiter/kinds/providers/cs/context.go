@@ -22,7 +22,7 @@ type context struct {
 	ctx             ctxpkg.Context
 }
 
-func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*context, error) {
+func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) *context {
 
 	ctx := ctxpkg.Background()
 
@@ -46,5 +46,5 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 
 	newContext.machinesService = newMachinesService(newContext, oneoff)
 
-	return newContext, nil
+	return newContext
 }

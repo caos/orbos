@@ -1,10 +1,10 @@
 package kubectl
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 type KubectlLabel struct {
@@ -33,7 +33,7 @@ func (k *KubectlLabel) Apply(monitor mntr.Monitor, labels map[string]string) err
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		err = errors.Wrap(err, "Error while executing command")
+		err = fmt.Errorf("error while executing command: %w", err)
 		kubectlMonitor.Debug(string(out))
 		kubectlMonitor.Error(err)
 	}

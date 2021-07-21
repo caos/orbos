@@ -1,18 +1,16 @@
 package kubernetes
 
 import (
+	"errors"
 	"fmt"
 	"sync"
-
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/secret"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func ensureUpScale(
@@ -162,14 +160,14 @@ nodes:
 		runes := []rune("abcdefghijklmnopqrstuvwxyz0123456789")
 		jointoken = fmt.Sprintf("%s.%s", helpers.RandomStringRunes(6, runes), helpers.RandomStringRunes(16, runes))
 		if _, err := certsCP.Execute(nil, "sudo kubeadm token create "+jointoken); err != nil {
-			return false, errors.Wrap(err, "creating new join token failed")
+			return false, fmt.Errorf("creating new join token failed: %w", err)
 		}
 
 		defer certsCP.Execute(nil, "sudo kubeadm token delete "+jointoken)
 
 		if k8sVersion.equals(V1x18x0) {
 			if _, err := certsCP.Execute(nil, "sudo kubeadm init phase bootstrap-token"); err != nil {
-				return false, errors.Wrap(err, "Working around kubeadm bug failed, see https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#not-possible-to-join-a-v1-18-node-to-a-v1-17-cluster-due-to-missing-rbac")
+				return false, fmt.Errorf("working around kubeadm bug failed, see https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/troubleshooting-kubeadm/#not-possible-to-join-a-v1-18-node-to-a-v1-17-cluster-due-to-missing-rbac: %w", err)
 			}
 		}
 	}
@@ -191,7 +189,7 @@ nodes:
 			var err error
 			certKey, err = certsCP.Execute(nil, "sudo kubeadm init phase upload-certs --upload-certs | tail -1")
 			if err != nil {
-				return false, errors.Wrap(err, "uploading certs failed")
+				return false, fmt.Errorf("uploading certs failed: %w", err)
 			}
 			monitor.Info("Refreshed certs")
 		}
@@ -247,7 +245,7 @@ nodes:
 			gitClient,
 			providerK8sSpec,
 		); err != nil {
-			return false, errors.Wrapf(err, "joining worker %s failed", worker.infra.ID())
+			return false, fmt.Errorf("joining worker %s failed: %w", worker.infra.ID(), err)
 		}
 	}
 

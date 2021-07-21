@@ -1,12 +1,12 @@
 package yaml
 
 import (
+	"errors"
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -46,8 +46,7 @@ func (y *YAML) CleanUp() error {
 func checkTemplatorInterface(templatorInterface interface{}) (templator.YamlApplication, error) {
 	app, isTemplator := templatorInterface.(templator.YamlApplication)
 	if !isTemplator {
-		err := errors.Errorf("YAML templating interface not implemented")
-		return nil, err
+		return nil, errors.New("YAML templating interface not implemented")
 	}
 
 	return app, nil

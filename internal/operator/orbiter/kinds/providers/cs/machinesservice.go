@@ -1,38 +1,31 @@
 package cs
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
 
+	"github.com/cloudscale-ch/cloudscale-go-sdk"
+
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	sshgen "github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-
-	"github.com/caos/orbos/internal/helpers"
-
-	"github.com/cloudscale-ch/cloudscale-go-sdk"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-	sshgen "github.com/caos/orbos/internal/ssh"
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerID string) (map[string]infra.Machine, error) {
 	desired, err := parseDesired(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desired
 
-	ctx, err := buildContext(monitor, &desired.Spec, orbID, providerID, true)
-	if err != nil {
-		return nil, err
-	}
+	ctx := buildContext(monitor, &desired.Spec, orbID, providerID, true)
 
 	if err := ctx.machinesService.use(desired.Spec.SSHKey); err != nil {
 		invalidKey := &secret.Secret{Value: "invalid"}
@@ -69,7 +62,7 @@ func newMachinesService(context *context, oneoff bool) *machinesService {
 
 func (m *machinesService) use(key *SSHKey) error {
 	if key == nil || key.Private == nil || key.Public == nil || key.Private.Value == "" || key.Public.Value == "" {
-		return errors.New("machines are not connectable. have you configured the orb by running orbctl configure?")
+		return mntr.ToUserError(errors.New("machines are not connectable. have you configured the orb by running orbctl configure?"))
 	}
 	m.key = key
 	return nil
@@ -106,7 +99,8 @@ func (m *machinesService) Create(poolName string) (infra.Machine, error) {
 		return nil, err
 	}
 
-	_, pub, err := sshgen.Generate()
+	// TODO: How do we connect to the VM if we ignore the private key???
+	_, pub := sshgen.Generate()
 	if err != nil {
 		return nil, err
 	}

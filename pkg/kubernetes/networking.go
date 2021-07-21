@@ -217,7 +217,7 @@ status:
 	}
 
 	var (
-		cmd          = []string{"/orbctl", "takeoff", "networking", "--kubeconfig", ""}
+		cmd          = []string{"/orbctl", "start", "networking", "--kubeconfig", ""}
 		volumes      []core.Volume
 		volumeMounts []core.VolumeMount
 	)
@@ -236,6 +236,10 @@ status:
 			ReadOnly:  true,
 			MountPath: "/secrets",
 		}}
+	}
+
+	if _, _, ingestionEnabled := mntr.Environment(); !ingestionEnabled {
+		cmd = append(cmd, "--disable-ingestion")
 	}
 
 	deployment := &apps.Deployment{

@@ -1,15 +1,32 @@
 package mntr
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type OnMessage func(string, map[string]string)
 type OnError func(error, map[string]string)
 type OnRecoverPanic func(interface{}, map[string]string)
+
+var _ error = UserError{}
+
+type UserError struct{ Err error }
+
+func (e UserError) Error() string { return e.Err.Error() }
+
+func ToUserError(err error) error {
+	if err == nil {
+		return nil
+	}
+	return UserError{Err: err}
+}
 
 type Monitor struct {
 	Fields         map[string]interface{}
@@ -62,7 +79,18 @@ func (m Monitor) Changed(evt string) {
 }
 
 func (m Monitor) Error(err error) {
-	if err == nil || m.OnError == nil {
+
+	if err == nil {
+		return
+	}
+
+	if !errors.As(err, &UserError{}) {
+		m.captureWithFields(func(client *sentry.Client, scope sentry.EventModifier) {
+			client.CaptureException(err, nil, scope)
+		})
+	}
+
+	if m.OnError == nil {
 		return
 	}
 
@@ -75,22 +103,47 @@ func (m Monitor) Error(err error) {
 	m.OnError(err, normalize(m.Fields))
 }
 
-func (m Monitor) RecoverPanic() {
+func (m Monitor) CaptureMessage(msg string) {
+	m.captureWithFields(func(client *sentry.Client, scope sentry.EventModifier) {
+		client.CaptureMessage(msg, nil, scope)
+	})
+}
+
+func (m Monitor) RecoverPanic(r interface{}) {
 	if m.OnRecoverPanic == nil {
 		return
 	}
 
-	if r := recover(); r != nil {
-		m.Fields = merge(map[string]interface{}{
-			"ts":    now(),
-			"panic": r,
-			"msg":   "An internal error occured. Please file an issue at https://github.com/caos/orbos/issues containing the following stack trace",
-		}, m.Fields)
+	if sentryClient != nil {
+		sentryClient.Recover(r, nil, nil)
+		sentryClient.Flush(time.Second * 2)
+	}
+	if r == nil {
+		return
+	}
 
-		m.addDebugContext()
-		m.OnRecoverPanic(r, normalize(m.Fields))
+	ingestionEnabled := sentryClient != nil
+	logMsg := "An internal error occured"
+
+	if ingestionEnabled {
+		logMsg += ". Details are sent to CAOS AG where the issue is being investigated"
+	} else {
+		logMsg += ". Please file an issue at https://github.com/caos/orbos/issues containing the following stack trace"
+	}
+
+	m.Fields = merge(map[string]interface{}{
+		"ts":    now(),
+		"panic": r,
+		"msg":   logMsg,
+	}, m.Fields)
+
+	m.addDebugContext()
+	m.OnRecoverPanic(r, normalize(m.Fields))
+
+	if m.IsVerbose() || !ingestionEnabled {
 		panic(r)
 	}
+	os.Exit(1)
 }
 
 func (m Monitor) Debug(dbg string) {

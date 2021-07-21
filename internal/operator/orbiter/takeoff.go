@@ -51,6 +51,8 @@ type event struct {
 }
 
 func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
+	defer func() { monitor.RecoverPanic(recover()) }()
+
 	healthy := true
 
 	prometheus.MustRegister(prometheus.NewBuildInfoCollector())

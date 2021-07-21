@@ -1,8 +1,11 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"sync"
+
+	"github.com/caos/orbos/mntr"
 )
 
 func Concat(left error, right error) error {
@@ -14,7 +17,12 @@ func Concat(left error, right error) error {
 		return left
 	}
 
-	return fmt.Errorf("%s: %s", right.Error(), left.Error())
+	newErr := fmt.Errorf("%s: %s", right.Error(), left.Error())
+	if errors.As(left, &mntr.UserError{}) && errors.As(right, &mntr.UserError{}) {
+		newErr = mntr.UserError{Err: newErr}
+	}
+
+	return newErr
 }
 
 // Synchronizer implements the error interface as well as

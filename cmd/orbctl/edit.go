@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
@@ -25,7 +27,7 @@ func EditCommand(getRv GetRootValues) *cobra.Command {
 		Example: `orbctl edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			rv, err := getRv()
+			rv, err := getRv("edit", "", map[string]interface{}{"file": args[0]})
 			if err != nil {
 				return err
 			}
@@ -37,7 +39,7 @@ func EditCommand(getRv GetRootValues) *cobra.Command {
 			gitClient := rv.GitClient
 
 			if !rv.Gitops {
-				return errors.New("edit command is only supported with the --gitops flag")
+				return mntr.ToUserError(errors.New("edit command is only supported with the --gitops flag"))
 			}
 
 			if err := orbConfig.IsConnectable(); err != nil {
@@ -105,7 +107,7 @@ func OpenFileInEditor(filename string, resolveEditor PreferredEditorResolver) er
 	// Get the full executable path for the editor.
 	executable, err := exec.LookPath(resolveEditor())
 	if err != nil {
-		return err
+		return mntr.ToUserError(err)
 	}
 
 	cmd := exec.Command(executable, resolveEditorArguments(executable, filename)...)

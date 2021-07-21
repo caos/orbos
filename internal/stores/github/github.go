@@ -102,14 +102,14 @@ func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID,
 	cookieHandler := utils.NewCookieHandler([]byte(key), []byte(key), utils.WithUnsecure())
 	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
-		g.status = fmt.Errorf("error creating relaying party: %w", err)
-		return g
+		panic(fmt.Errorf("error creating relaying party: %w", err))
 	}
 
 	makeClient := func(token *oidc.Tokens) error {
 		g.client = github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
-		_, _, g.status = g.client.Users.Get(ctx, "")
-		if g.status != nil {
+		_, _, err = g.client.Users.Get(ctx, "")
+		if err != nil {
+			g.status = err
 			g.client = nil
 		}
 		return g.status

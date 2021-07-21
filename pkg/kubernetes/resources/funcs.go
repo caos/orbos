@@ -1,10 +1,11 @@
 package resources
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 type AdaptFuncToEnsure func(monitor mntr.Monitor, desired *tree.Tree, current *tree.Tree) (QueryFunc, error)
@@ -21,15 +22,13 @@ func WrapFuncs(monitor mntr.Monitor, query QueryFunc, destroy DestroyFunc) (Quer
 			monitor.Info("querying...")
 			ensure, err := query(client)
 			if err != nil {
-				err := errors.Wrapf(err, "error while querying")
-				monitor.Error(err)
-				return nil, err
+				return nil, fmt.Errorf("error while querying: %w", err)
 			}
 			monitor.Info("queried")
 			return func(k8sClient kubernetes.ClientInt) error {
 				monitor.Info("ensuring...")
 				if err := ensure(k8sClient); err != nil {
-					return errors.Wrap(err, "error while destroying")
+					return fmt.Errorf("error while destroying: %w", err)
 				}
 				monitor.Info("ensured")
 				return nil
@@ -38,9 +37,7 @@ func WrapFuncs(monitor mntr.Monitor, query QueryFunc, destroy DestroyFunc) (Quer
 			monitor.Info("destroying...")
 			err := destroy(client)
 			if err != nil {
-				err := errors.Wrapf(err, "error while destroying")
-				monitor.Error(err)
-				return err
+				return fmt.Errorf("error while destroying: %w", err)
 			}
 			monitor.Info("destroyed")
 			return nil

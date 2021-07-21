@@ -2,11 +2,10 @@ package dep
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func Manipulate(from io.Reader, to io.Writer, removeContaining, append []string, eachLine func(string) *string) error {
@@ -55,13 +54,17 @@ func ManipulateFile(path string, removeContaining, append []string, eachLine fun
 func createTmpFile(path string, tmpPath string, removeContaining, append []string, eachLine func(string) *string) (err error) {
 
 	closeFile := func(file *os.File) {
-		closeErr := errors.Wrap(file.Close(), "closing file failed")
-		if err == nil {
-			err = closeErr
+
+		closeErr := file.Close()
+		if closeErr == nil {
 			return
 		}
-		if closeErr != nil {
-			err = errors.Wrap(err, "closing file also failed:"+closeErr.Error())
+		if err == nil {
+			err = fmt.Errorf("closing file failed: %w", closeErr)
+			return
+		}
+		if err != nil {
+			err = fmt.Errorf("closing file also failed: %w: %s", err, closeErr.Error())
 		}
 	}
 

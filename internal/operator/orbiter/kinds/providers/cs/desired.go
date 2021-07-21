@@ -1,11 +1,13 @@
 package cs
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 type Desired struct {
@@ -38,7 +40,12 @@ type SSHKey struct {
 	Public  *secret.Secret `yaml:",omitempty"`
 }
 
-func (d Desired) validateAdapt() error {
+func (d Desired) validateAdapt() (err error) {
+
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
 	if d.Loadbalancing == nil {
 		return errors.New("no loadbalancing configured")
 	}
@@ -56,12 +63,15 @@ func (d Desired) validateAdapt() error {
 func (d Desired) validateAPIToken() error {
 	if d.Spec.APIToken == nil ||
 		d.Spec.APIToken.Value == "" {
-		return errors.New("apitoken missing... please provide a cloudscale api token using orbctl writesecret command")
+		return mntr.ToUserError(errors.New("apitoken missing... please provide a cloudscale api token using orbctl writesecret command"))
 	}
 	return nil
 }
 
-func (d Desired) validateQuery() error {
+func (d Desired) validateQuery() (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 
 	if err := d.validateAPIToken(); err != nil {
 		return err
@@ -84,7 +94,7 @@ func parseDesired(desiredTree *tree.Tree) (*Desired, error) {
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, mntr.ToUserError(fmt.Errorf("parsing desired state failed: %w", err))
 	}
 
 	return desiredKind, nil

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -105,7 +107,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 		}
 	}
 
-	return nil, errors.New("no machines left")
+	return nil, mntr.ToUserError(errors.New("no machines left"))
 }
 
 func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
@@ -124,40 +126,49 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	newCache := make([]*machine, 0)
 
-	initializeMachine := func(rebootRequired bool, replacementRequired bool, spec *Machine) *machine {
-		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
-			rebootRequired,
-			func() {
-				spec.RebootRequired = true
-			}, func() {
-				spec.RebootRequired = false
-			},
-			replacementRequired,
-			func() {
-				spec.ReplacementRequired = true
-			}, func() {
-				spec.ReplacementRequired = false
-			})
+	initializeMachineFunc := func(spec *Machine) func() error {
+		return func() error {
+			newM := newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
+				spec.RebootRequired,
+				func() {
+					spec.RebootRequired = true
+				}, func() {
+					spec.RebootRequired = false
+				},
+				spec.ReplacementRequired,
+				func() {
+					spec.ReplacementRequired = true
+				}, func() {
+					spec.ReplacementRequired = false
+				})
+
+			if err := newM.UseKey(keys...); err != nil {
+				return err
+			}
+
+			buf := new(bytes.Buffer)
+			defer buf.Reset()
+			if err := newM.ReadFile(c.statusFile, buf); err != nil {
+				// if error, treat as active
+			}
+			newM.X_active = strings.Contains(buf.String(), "active")
+			newCache = append(newCache, newM)
+			return nil
+		}
 	}
+
+	var fanout []func() error
 	for _, spec := range specifiedMachines {
+		fanout = append(fanout, initializeMachineFunc(spec))
+	}
 
-		machine := initializeMachine(spec.RebootRequired, spec.ReplacementRequired, spec)
-		if err := machine.UseKey(keys...); err != nil {
-			return nil, err
-		}
-
-		buf := new(bytes.Buffer)
-		defer buf.Reset()
-		if err := machine.ReadFile(c.statusFile, buf); err != nil {
-			// if error, treat as active
-		}
-		machine.X_active = strings.Contains(buf.String(), "active")
-		newCache = append(newCache, machine)
+	if err := helpers.Fanout(fanout)(); err != nil {
+		return nil, err
 	}
 
 	if c.cache == nil {
 		c.cache = make(map[string]cachedMachines)
-	} else if ok {
+	} else if ok { // TODO: Never true
 		c.cache[poolName] = nil
 		delete(c.cache, poolName)
 	}

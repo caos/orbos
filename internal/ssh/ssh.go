@@ -5,9 +5,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"strings"
 
-	"github.com/pkg/errors"
 	sshlib "golang.org/x/crypto/ssh"
 )
 
@@ -20,20 +20,20 @@ var (
 	cachedKeys []pair
 )
 
-func Generate() (private string, public string, err error) {
+func Generate() (private string, public string) {
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 	if err != nil {
-		return private, public, err
+		panic(err)
 	}
 
 	if err := privateKey.Validate(); err != nil {
-		return private, public, err
+		panic(err)
 	}
 
 	publicKey, err := sshlib.NewPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return private, public, err
+		panic(err)
 	}
 
 	enc := pem.EncodeToMemory(&pem.Block{
@@ -41,7 +41,7 @@ func Generate() (private string, public string, err error) {
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	})
 
-	return strings.TrimSpace(string(enc)), string(sshlib.MarshalAuthorizedKey(publicKey)), nil
+	return strings.TrimSpace(string(enc)), string(sshlib.MarshalAuthorizedKey(publicKey))
 }
 
 func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error) {
@@ -60,7 +60,7 @@ func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error)
 		if !cached {
 			signer, err := sshlib.ParsePrivateKey(key)
 			if err != nil {
-				return nil, errors.Wrap(err, "parsing private key failed")
+				return nil, fmt.Errorf("parsing private key failed: %w", err)
 			}
 			cachedKeys = append(cachedKeys, pair{key, signer})
 			signers = append(signers, signer)

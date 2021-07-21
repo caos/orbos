@@ -3,10 +3,11 @@ package gce_test
 import (
 	"bytes"
 	"fmt"
-	secret2 "github.com/caos/orbos/pkg/secret"
 	"os"
 	"strings"
 	"testing"
+
+	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
@@ -23,10 +24,7 @@ func TestComputeService(t *testing.T) {
 		StorageGB:   20,
 	}
 
-	private, public, err := ssh.Generate()
-	if err != nil {
-		t.Fatal(err)
-	}
+	private, public := ssh.Generate()
 
 	jsonKey := os.Getenv("ORBOS_GCE_JSON_KEY")
 	t.Log(jsonKey)
