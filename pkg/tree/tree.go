@@ -39,13 +39,19 @@ func (c *Common) UnmarshalYAML(node *yaml.Node) error {
 }
 
 func (c *Common) MarshalYAML() (interface{}, error) {
+	type proxy Common
+	clone := proxy{
+		Kind:             c.Kind,
+		Version:          c.Version,
+		X_ApiVersion:     c.X_ApiVersion,
+		parsedApiVersion: c.parsedApiVersion,
+	}
 	if c.parsedApiVersion {
-		clone := new(Common)
-		clone.Kind = c.Kind
+		clone.Version = ""
 		clone.X_ApiVersion = c.Version
 		return clone, nil
 	}
-	return c, nil
+	return clone, nil
 }
 
 func (c *Tree) UnmarshalYAML(node *yaml.Node) error {
