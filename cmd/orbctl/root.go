@@ -75,7 +75,7 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 	flags.StringVarP(&rv.Kubeconfig, "kubeconfig", "k", "~/.kube/config", "Path to the kubeconfig file to the cluster orbctl should target")
 	flags.BoolVar(&rv.Gitops, "gitops", false, "Run orbctl in gitops mode. Not specifying this flag is only supported for BOOM and Networking Operator")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
-	flags.BoolVar(&disableAnalytics, "disable-analytics", false, "Don't help CAOS AG to improve ORBOS by sending them errors and usage data")
+	flags.BoolVar(&disableAnalytics, "disable-analytics", false, "Don't help CAOS Ltd. to improve ORBOS by sending them errors and usage data")
 
 	return cmd, func(command, component string, tags map[string]interface{}) (*RootValues, error) {
 
