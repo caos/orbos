@@ -177,18 +177,15 @@ func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newR
 		}
 		repo, err := g.GetRepositorySSH(orbConfig.URL)
 		if err != nil {
-			// TODO: Why do we create a new error here?
-			return errors.New("failed to get github repository")
+			return fmt.Errorf("failed to get github repository: %w", err)
 		}
 
 		if err := g.EnsureNoDeployKey(repo).GetStatus(); err != nil {
-			// TODO: Why do we create a new error here?
-			return errors.New("failed to clear deploy keys in repository")
+			return fmt.Errorf("failed to clear deploy keys in repository: %w", err)
 		}
 
 		if err := g.CreateDeployKey(repo, deployKeyPub).GetStatus(); err != nil {
-			// TODO: Why do we create a new error here?
-			return errors.New("failed to create deploy keys in repository")
+			return fmt.Errorf("failed to create deploy keys in repository: %w", err)
 		}
 		orbConfig.Repokey = deployKeyPrivLocal
 
