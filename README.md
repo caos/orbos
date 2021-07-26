@@ -132,7 +132,7 @@ We run and maintain your Orbs on a supported provider of your choice. Your incid
 
 ## Usage Data
 
-ORBOS components send errors and usage data to CAOS AG, so that we are able to identify code improvement potential. If you don't want to send this data or don't have an internet connection, pass the global flag `--disable-ingestion` when using orbctl. For disabling ingestion for already-running components, execute the takeoff command again with the `--disable-ingestion` flag.
+ORBOS components send errors and usage data to CAOS AG, so that we are able to identify code improvement potential. If you don't want to send this data or don't have an internet connection, pass the global flag `--disable-analytics` when using orbctl. For disabling ingestion for already-running components, execute the takeoff command again with the `--disable-analytics` flag.
 
 We try to distinguishing the environments from which events come from. As environment identifier, we defer the environment identifier from your git repository URL if the --gitops flag is passed.
 
