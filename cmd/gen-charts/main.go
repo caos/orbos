@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"github.com/pkg/errors"
+	"fmt"
 	"os"
 
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart/fetch"
@@ -32,7 +32,7 @@ func main() {
 	// ctrl.SetLogger(monitor)
 
 	if err := fetch.All(monitor, basePath, newVersions); err != nil {
-		monitor.Error(errors.Wrap(err, "unable to fetch charts"))
+		monitor.Error(fmt.Errorf("unable to fetch charts: %w", err))
 		os.Exit(1)
 	}
 }

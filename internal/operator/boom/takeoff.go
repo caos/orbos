@@ -1,20 +1,20 @@
 package boom
 
 import (
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/orb"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/caos/orbos/internal/operator/boom/app"
 	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/config"
 	gitcrdconfig "github.com/caos/orbos/internal/operator/boom/gitcrd/config"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
 )
 
 func Metrics(monitor mntr.Monitor) {
@@ -24,7 +24,7 @@ func Metrics(monitor mntr.Monitor) {
 	address := strings.Join([]string{":", metricsport}, "")
 	go func() {
 		if err := http.ListenAndServe(address, nil); err != nil {
-			monitor.Error(errors.Wrap(err, "error while serving metrics endpoint"))
+			panic(fmt.Errorf("error while serving metrics endpoint: %w", err))
 		}
 
 		monitor.WithFields(map[string]interface{}{
@@ -76,7 +76,7 @@ func task(monitor mntr.Monitor, orbpath string, gitcrdConf gitcrdconfig.Config, 
 		}
 
 		if err := readSpecs(&gitcrdConf, orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			monitor.Error(errors.Wrap(err, "unable to start supervised crd"))
+			monitor.Error(fmt.Errorf("unable to start supervised crd: %w", err))
 		}
 
 		goErr = do()

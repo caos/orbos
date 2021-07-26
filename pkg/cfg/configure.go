@@ -36,7 +36,7 @@ func ApplyOrbconfigSecret(
 
 	orbConfigBytes, err := yaml.Marshal(orbConfig)
 	if err != nil {
-		return err
+		return mntr.ToUserError(err)
 	}
 
 	if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfigBytes); err != nil {

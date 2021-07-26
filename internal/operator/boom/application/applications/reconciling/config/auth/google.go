@@ -1,14 +1,13 @@
 package auth
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/pkg/secret/read"
-
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/secret/read"
 )
 
 type googleConnector struct {
@@ -65,7 +64,7 @@ func getGoogle(spec *google.Connector, redirect string) (interface{}, error) {
 		// write json to file
 		err = ioutil.WriteFile(spec.Config.ServiceAccountFilePath, []byte(serviceAccountJSON), 0644)
 		if err != nil {
-			return nil, errors.Wrapf(err, "Error while writing json to file %s", spec.Config.ServiceAccountFilePath)
+			return nil, fmt.Errorf("error while writing json to file %s: %w", spec.Config.ServiceAccountFilePath, err)
 		}
 	}
 

@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/git"
 
 	orbcfg "github.com/caos/orbos/pkg/orb"
@@ -25,7 +27,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, err := getRv()
+		rv, err := getRv("api", "", nil)
 		if err != nil {
 			return err
 		}
@@ -34,7 +36,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 		}()
 
 		if !rv.Gitops {
-			return errors.New("api command is only supported with the --gitops flag")
+			return mntr.ToUserError(errors.New("api command is only supported with the --gitops flag"))
 		}
 
 		monitor := rv.Monitor
@@ -73,7 +75,6 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 					Path:    git.OrbiterFile,
 				})
 			}
-
 		}
 		if gitClient.Exists(git.BoomFile) {
 

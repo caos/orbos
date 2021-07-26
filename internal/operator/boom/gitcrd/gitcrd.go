@@ -1,6 +1,8 @@
 package gitcrd
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -20,7 +22,6 @@ import (
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -141,7 +142,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		preapplymonitor := monitor.WithField("application", "preapply")
 		preapplymonitor.Info("Start")
 		if err := c.applyFolder(preapplymonitor, toolsetCRD.Spec.PreApply, toolsetCRD.Spec.ForceApply); err != nil {
-			c.status = errors.Wrap(err, "Preapply failed")
+			c.status = fmt.Errorf("preapply failed: %w", err)
 			return
 		}
 		preapplymonitor.Info("Done")
@@ -159,7 +160,7 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		preapplymonitor := monitor.WithField("application", "postapply")
 		preapplymonitor.Info("Start")
 		if err := c.applyFolder(monitor, toolsetCRD.Spec.PostApply, toolsetCRD.Spec.ForceApply); err != nil {
-			c.status = errors.Wrap(err, "Postapply failed")
+			c.status = fmt.Errorf("postapply failed: %w", err)
 			return
 		}
 		preapplymonitor.Info("Done")
@@ -170,11 +171,10 @@ func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
 	toolsetCRD := &toolsetslatest.ToolsetMetadata{}
 	err := c.git.ReadYamlIntoStruct("boom.yml", toolsetCRD)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error while unmarshaling boom.yml to struct")
+		return nil, fmt.Errorf("error while unmarshaling boom.yml to struct: %w", err)
 	}
 
 	return toolsetCRD, nil
-
 }
 
 func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
@@ -185,7 +185,7 @@ func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
 
 	desiredKind, _, _, _, err := api.ParseToolset(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desiredKind
 

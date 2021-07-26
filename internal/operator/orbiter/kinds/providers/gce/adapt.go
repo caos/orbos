@@ -1,18 +1,18 @@
 package gce
 
 import (
+	"fmt"
+
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/ssh"
+	"github.com/caos/orbos/mntr"
 	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/mntr"
 )
 
 func AdaptFunc(
@@ -39,11 +39,13 @@ func AdaptFunc(
 		err error,
 	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
@@ -86,16 +88,15 @@ func AdaptFunc(
 		}
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/GCEProvider",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/GCEProvider", "v0", false),
 		}
 		currentTree.Parsed = current
 
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 				defer func() {
-					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("querying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				if err := desiredKind.validateQuery(); err != nil {
@@ -142,10 +143,7 @@ func AdaptFunc(
 				if desiredKind.Spec.SSHKey == nil ||
 					desiredKind.Spec.SSHKey.Private == nil || desiredKind.Spec.SSHKey.Private.Value == "" ||
 					desiredKind.Spec.SSHKey.Public == nil || desiredKind.Spec.SSHKey.Public.Value == "" {
-					priv, pub, err := ssh.Generate()
-					if err != nil {
-						return err
-					}
+					priv, pub := ssh.Generate()
 					desiredKind.Spec.SSHKey = &SSHKey{
 						Private: &secret.Secret{Value: priv},
 						Public:  &secret.Secret{Value: pub},

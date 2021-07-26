@@ -3,6 +3,8 @@ package main
 import (
 	"os"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/kubernetes/cli"
 
 	"github.com/caos/orbos/pkg/secret"
@@ -24,7 +26,12 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted
 orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			rv, err := getRv()
+			path := ""
+			if len(args) > 0 {
+				path = args[0]
+			}
+
+			rv, err := getRv("readsecret", "", map[string]interface{}{"path": path})
 			if err != nil {
 				return err
 			}
@@ -36,14 +43,9 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient
 
-			path := ""
-			if len(args) > 0 {
-				path = args[0]
-			}
-
 			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
 			if err != nil && !rv.Gitops {
-				return err
+				return mntr.ToUserError(err)
 			}
 			err = nil
 

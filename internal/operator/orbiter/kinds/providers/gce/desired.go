@@ -1,11 +1,12 @@
 package gce
 
 import (
+	"errors"
 	"fmt"
-	secret2 "github.com/caos/orbos/pkg/secret"
 
+	"github.com/caos/orbos/mntr"
+	secret2 "github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 type Desired struct {
@@ -64,7 +65,11 @@ type Spec struct {
 	ReplacementRequired []string
 }
 
-func (d Desired) validateAdapt() error {
+func (d Desired) validateAdapt() (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
 	if d.Loadbalancing == nil {
 		return errors.New("no loadbalancing configured")
 	}
@@ -87,12 +92,17 @@ func (d Desired) validateAdapt() error {
 
 func (d Desired) validateJSONKey() error {
 	if d.Spec.JSONKey == nil || d.Spec.JSONKey.Value == "" {
-		return errors.New("jsonkey missing... please provide a google service accounts jsonkey using orbctl writesecret command")
+		return mntr.ToUserError(errors.New("jsonkey missing... please provide a google service accounts jsonkey using orbctl writesecret command"))
 	}
 	return nil
 }
 
-func (d Desired) validateQuery() error {
+func (d Desired) validateQuery() (err error) {
+
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
 	if err := d.validateJSONKey(); err != nil {
 		return err
 	}
@@ -113,7 +123,7 @@ func parseDesiredV0(desiredTree *tree.Tree) (*Desired, error) {
 	}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, mntr.ToUserError(fmt.Errorf("parsing desired state failed: %w", err))
 	}
 
 	return desiredKind, nil

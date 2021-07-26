@@ -2,18 +2,17 @@ package customimage
 
 import (
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
-
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/secret/read"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/info"
 	"github.com/caos/orbos/internal/operator/boom/application/resources"
 	"github.com/caos/orbos/internal/operator/boom/labels"
 	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/secret/read"
 )
 
 const (
@@ -197,7 +196,7 @@ func AddPostStartFromSpec(spec *reconciling.Reconciling, resultFilePath string) 
 	}
 	jsonStores, err := json.Marshal(stores)
 	if err != nil {
-		return errors.Wrap(err, "Error while marshaling gopass stores in json")
+		return fmt.Errorf("marshaling gopass stores in json failed: %w", err)
 	}
 	jsonStoresStr := strings.ReplaceAll(string(jsonStores), "\"", "\\\"")
 

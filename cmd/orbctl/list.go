@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/kataras/tablewriter"
 	"github.com/landoop/tableprinter"
 	"github.com/spf13/cobra"
@@ -22,7 +24,7 @@ func ListCommand(getRv GetRootValues) *cobra.Command {
 			Use:   "list",
 			Short: "List available machines",
 			Long:  "List available machines",
-			Args:  cobra.MaximumNArgs(1),
+			Args:  cobra.MaximumNArgs(0),
 		}
 	)
 
@@ -31,7 +33,8 @@ func ListCommand(getRv GetRootValues) *cobra.Command {
 	flags.StringVar(&context, "context", "", "Print machines from this context only")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		rv, err := getRv()
+
+		rv, err := getRv("list", "", map[string]interface{}{"column": column, "context": context})
 		if err != nil {
 			return err
 		}
@@ -44,7 +47,7 @@ func ListCommand(getRv GetRootValues) *cobra.Command {
 		gitClient := rv.GitClient
 
 		if !rv.Gitops {
-			return errors.New("list command is only supported with the --gitops flag and a committed orbiter.yml")
+			return mntr.ToUserError(errors.New("list command is only supported with the --gitops flag and a committed orbiter.yml"))
 		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {

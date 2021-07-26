@@ -8,22 +8,17 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbos/pkg/secret"
-
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
-
-	"github.com/caos/orbos/pkg/tree"
-
 	"github.com/caos/orbos/internal/helpers"
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -55,14 +50,16 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
-		if desiredTree.Common.Version != "v2" {
+		if desiredTree.Common.Version() != "v2" {
 			migrate = true
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, nil, migrate, nil, fmt.Errorf("unmarshaling desired state for kind %s failed: %w", desiredTree.Common.Kind, err)
 		}
 
 		for _, pool := range desiredKind.Spec {
@@ -104,10 +101,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/DynamicLoadBalancer", "v0", false),
 		}
 		currentTree.Parsed = current
 
@@ -212,7 +206,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						whoami := "whoami"
 						stdout, err := machine.Execute(nil, whoami)
 						if err != nil {
-							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
+							return "", fmt.Errorf("running command %s remotely failed", whoami)
 						}
 						user = strings.TrimSuffix(string(stdout), "\n")
 						monitor.WithFields(map[string]interface{}{

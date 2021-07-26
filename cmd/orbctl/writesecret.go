@@ -1,17 +1,15 @@
 package main
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/secret"
-
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
 func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
@@ -45,7 +43,12 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 			return err
 		}
 
-		rv, err := getRv()
+		path := ""
+		if len(args) > 0 {
+			path = args[0]
+		}
+
+		rv, err := getRv("writesecret", "", map[string]interface{}{"path": path, "value": value != "", "file": file, "stdin": stdin})
 		if err != nil {
 			return err
 		}
@@ -56,11 +59,6 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
-
-		path := ""
-		if len(args) > 0 {
-			path = args[0]
-		}
 
 		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
 		if err != nil && !rv.Gitops {

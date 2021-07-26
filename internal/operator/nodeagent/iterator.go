@@ -93,7 +93,7 @@ func Iterator(
 		curr := &common.NodeAgentCurrent{}
 
 		events := make([]*event, 0)
-		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
+		monitor.OnChange = mntr.ConcatOnMessage(func(evt string, fields map[string]string) {
 			clone := *curr
 			events = append(events, &event{
 				commit:  mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
