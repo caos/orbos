@@ -14,7 +14,6 @@ require (
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/mock v1.5.0
-	github.com/golang/protobuf v1.4.2
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.2.0
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
@@ -24,7 +23,6 @@ require (
 	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/pires/go-proxyproto v0.3.0
-	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.0.0
@@ -33,8 +31,7 @@ require (
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	google.golang.org/api v0.30.0
-	google.golang.org/grpc v1.31.0
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/grpc v1.39.0 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.19.2
 	k8s.io/apiextensions-apiserver v0.19.2
