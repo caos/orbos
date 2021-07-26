@@ -2,8 +2,9 @@ package metricspersisting
 
 import (
 	"errors"
-	"github.com/caos/orbos/internal/utils/helper"
 	"strconv"
+
+	"github.com/caos/orbos/internal/utils/helper"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -27,8 +28,8 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *late
 	}
 
 	_, getSecretErr := clientgo.GetSecret("grafana-cloud", info.GetNamespace())
-	ingestionSecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
-	if getSecretErr != nil && !ingestionSecretAbsent {
+	telemetrySecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
+	if getSecretErr != nil && !telemetrySecretAbsent {
 		monitor.Info("Not sending telemetry data to MISSION as secret grafana-cloud is missing in namespace caos-system")
 	}
 
@@ -96,7 +97,7 @@ func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *late
 		}
 	}
 
-	if getSecretErr == nil && !ingestionSecretAbsent {
+	if getSecretErr == nil && !telemetrySecretAbsent {
 		values.Prometheus.PrometheusSpec.ExternalLabels["orb"] = p.orb
 		values.Prometheus.PrometheusSpec.RemoteWrite = append(values.Prometheus.PrometheusSpec.RemoteWrite, &helm.RemoteWrite{
 			URL: "https://prometheus-us-central1.grafana.net/api/prom/push",

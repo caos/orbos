@@ -122,10 +122,10 @@ func (m Monitor) RecoverPanic(r interface{}) {
 		return
 	}
 
-	ingestionEnabled := sentryClient != nil
+	analyticsEnabled := sentryClient != nil
 	logMsg := "An internal error occured"
 
-	if ingestionEnabled {
+	if analyticsEnabled {
 		logMsg += ". Details are sent to CAOS AG where the issue is being investigated"
 	} else {
 		logMsg += ". Please file an issue at https://github.com/caos/orbos/issues containing the following stack trace"
@@ -140,7 +140,7 @@ func (m Monitor) RecoverPanic(r interface{}) {
 	m.addDebugContext()
 	m.OnRecoverPanic(r, normalize(m.Fields))
 
-	if m.IsVerbose() || !ingestionEnabled {
+	if m.IsVerbose() || !analyticsEnabled {
 		panic(r)
 	}
 	os.Exit(1)
