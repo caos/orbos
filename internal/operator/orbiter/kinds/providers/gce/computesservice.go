@@ -140,12 +140,7 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 			zoneCovered := 0
 			for _, currentInfraMachine := range currentInfraMachines {
 				currentGCEMachine, ok := currentInfraMachine.(machine)
-				replaceRequired := false
-				for _, replaceRequiredID := range m.context.desired.ReplacementRequired {
-					if currentInfraMachine.ID() == replaceRequiredID {
-						replaceRequired = true
-					}
-				}
+				replaceRequired, _, _ := currentInfraMachine.ReplacementRequired()
 				if ok && zone == currentGCEMachine.Zone() && !replaceRequired {
 					zoneCovered++
 				}
