@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -36,6 +37,7 @@ func RootCommand() (*cobra.Command, GetRootValues) {
 		ErrFunc: func(err error) error {
 			if err != nil {
 				monitor.Error(err)
+				os.Exit(1)
 			}
 			return nil
 		},
