@@ -12,6 +12,10 @@
 // You can read more here:
 // https://on.cypress.io/configuration
 // ***********************************************************
+module.exports = (on, config) => {
+  // `on` is used to hook into various events Cypress emits
+  // `config` is the resolved Cypress config
+}
 
 // Import commands.js using ES2015 syntax:
 import './commands'

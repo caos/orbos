@@ -25,6 +25,8 @@ orbctl
 cypress/results
 cypress/videos
 cypress/screenshots
+orbconfig
+ghtoken
 
 /local
 

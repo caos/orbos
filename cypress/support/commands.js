@@ -1,25 +1,10 @@
-// ***********************************************
-// This example commands.js shows you how to
-// create various custom commands and overwrite
-// existing commands.
-//
-// For more comprehensive examples of custom
-// commands please read more here:
-// https://on.cypress.io/custom-commands
-// ***********************************************
-//
-//
-// -- This is a parent command --
-// Cypress.Commands.add('login', (email, password) => { ... })
-//
-//
-// -- This is a child command --
-// Cypress.Commands.add('drag', { prevSubject: 'element'}, (subject, options) => { ... })
-//
-//
-// -- This is a dual command --
-// Cypress.Commands.add('dismiss', { prevSubject: 'optional'}, (subject, options) => { ... })
-//
-//
-// -- This will overwrite an existing command --
-// Cypress.Commands.overwrite('visit', (originalFn, url, options) => { ... })
+Cypress.Commands.add('orbctl',
+    (parameter1, parameter2, parameter3, parameter4, parameter5) => {
+
+        cy.exec('$orbCtl --gitops --orbconfig $orbConfig --disable-analytics $parameter1 $parameter2 $parameter3 $parameter4 $parameter5', { setTimeout: 20000, env: { orbCtl: Cypress.env("orbCtl"), orbConfig: Cypress.env("orbConfig"), repoUrl: Cypress.env("repoUrl"), parameter1: parameter1, parameter2: parameter2, parameter3: parameter3, parameter4: parameter4, parameter5: parameter5 } }).then(result => {
+            //return JSON.parse(result.stdout)
+            cy.log(result.stdout)
+            cy.log(result.stderr)
+            //return String.parse(result.stdout)
+        })
+    })

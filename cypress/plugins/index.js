@@ -17,6 +17,15 @@
  */
 // eslint-disable-next-line no-unused-vars
 module.exports = (on, config) => {
-  // `on` is used to hook into various events Cypress emits
-  // `config` is the resolved Cypress config
+  // modify the config values
+  config.defaultCommandTimeout = 20000
+ 
+  config.env.repoUrl = "git@github.com:caos/cypress-ops.git"
+  config.env.orbConfig = "./orbconfig"
+  config.env.orbCtl = "./orbctl"
+  config.env.testPassword = "somesortofcrypticpw"
+
+  // IMPORTANT return the updated config object
+  return config
+
 }
