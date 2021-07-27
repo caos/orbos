@@ -238,8 +238,8 @@ status:
 		}}
 	}
 
-	if _, _, ingestionEnabled := mntr.Environment(); !ingestionEnabled {
-		cmd = append(cmd, "--disable-ingestion")
+	if _, _, analyticsEnabled := mntr.Environment(); !analyticsEnabled {
+		cmd = append(cmd, "--disable-analytics")
 	}
 
 	deployment := &apps.Deployment{
