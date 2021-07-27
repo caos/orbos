@@ -18,7 +18,7 @@ describe('orbctl configure', { execTimeout: 90000 }, () => {
         }).its('code').should('eq', 0)
     })
 })
-
+//TODO: GH token shall be set and automatic renewed
 
 
 describe('orbctl tests', { execTimeout: 90000 }, () => {
