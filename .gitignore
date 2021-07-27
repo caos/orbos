@@ -22,9 +22,9 @@ orbctl
 *.out
 
 # cypress results and videos
-cypress/results
-cypress/videos
-cypress/screenshots
+testing/cypress/results
+testing/cypress/videos
+testing/cypress/screenshots
 orbconfig
 ghtoken
 
