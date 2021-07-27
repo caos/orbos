@@ -24,5 +24,9 @@ orbctl
 # cypress results and videos
 cypress/results
 cypress/videos
+cypress/screenshots
 
 /local
+
+
+.DS_Store
