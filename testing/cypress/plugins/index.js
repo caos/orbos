@@ -24,7 +24,7 @@ module.exports = (on, config) => {
   config.env.orbConfig = "./orbconfig"
   config.env.orbCtl = "./orbctl"
   config.env.testPassword = "somesortofcrypticpw"
-
+  config.env.releaseVersion ="https://api.github.com/repos/caos/orbos/releases/latest"
   // IMPORTANT return the updated config object
   return config
 

@@ -4,8 +4,9 @@ describe('install orbctl', { execTimeout: 90000 }, () => {
     // prepare orbctl, download and configuration
     it('download orbctl', () => {
         cy.exec('bash -c \"if [ -f "./orbctl" ]; then rm ./orbctl ; fi\"').its('code').should('eq', 0)
-        cy.exec('curl -s https://api.github.com/repos/caos/orbos/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d \'\"\' -f 4 | wget -i - -O ./orbctl ').its('code').should('eq', 0)
-        cy.exec('ls ./orbctl').its('code').should('eq', 0)
+        cy.exec(`curl -s ${Cypress.env("releaseVersion")} | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d \'\"\' -f 4 | wget -i - -O ./orbctl `).its('code').should('eq', 0)
+        cy.exec('[ -s ./orbctl ]').its('code').should('eq', 0)
+        //TODO: check filesize > 0
     })
     it('chmod orbctl', () => {
         cy.exec('chmod +x ./orbctl ').its('code').should('eq', 0)
@@ -33,7 +34,7 @@ describe('orbctl tests', { execTimeout: 90000 }, () => {
             //return String.parse(result.stdout)
         }).its('code').should('eq', 0)
     })
-   
+
     it('orbctl writesecret', () => {
         cy.exec(`${orbctlGitops} writesecret boom.monitoring.admin.password.encrypted --value ${Cypress.env("testPassword")}`, { setTimeout: 20000 }).then(result => {
             cy.log(result.stdout)
@@ -45,6 +46,16 @@ describe('orbctl tests', { execTimeout: 90000 }, () => {
         cy.exec(`${orbctlGitops} readsecret boom.monitoring.admin.password.encrypted`, { setTimeout: 20000 }).then(result => {
             return result.stdout
         }).then(returnpw => { expect(returnpw).to.eq(Cypress.env("testPassword")) })
+    })
+})
+
+describe('orbctl cleanup yml', { execTimeout: 90000 }, () => {
+
+    it('orbctl remove/patch secret', () => {
+        cy.exec(`${orbctlGitops} file patch --file boom.yml spec.monitoring.admin.password.value --exact --value ""`, { setTimeout: 20000 }).then(result => {
+            cy.log(result.stdout)
+            cy.log(result.stderr)
+        }).its('code').should('eq', 0)
     })
 })
 
