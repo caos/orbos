@@ -1,3 +1,5 @@
+const orbctlGitops = `${Cypress.env("orbCtl")} --gitops --orbconfig ${Cypress.env("orbConfig")} --disable-analytics`
+
 describe('install orbctl', { execTimeout: 90000 }, () => {
     // prepare orbctl, download and configuration
     it('download orbctl', () => {
@@ -12,19 +14,19 @@ describe('install orbctl', { execTimeout: 90000 }, () => {
 
 describe('orbctl configure', { execTimeout: 90000 }, () => {
     it('orbctl configure', () => {
-        cy.exec('$orbCtl --gitops --orbconfig $orbConfig --disable-analytics configure --repourl $repoUrl --masterkey "$(openssl rand -base64 21)"', { setTimeout: 20000, env: { orbCtl: Cypress.env("orbCtl"), orbConfig: Cypress.env("orbConfig"), repoUrl: Cypress.env("repoUrl") } }).then(result => {
+        cy.exec(`${orbctlGitops} configure --repourl ${Cypress.env("repoUrl")} --masterkey "$(openssl rand -base64 21)"`, { setTimeout: 20000 }).then(result => {
             cy.log(result.stdout)
             cy.log(result.stderr)
         }).its('code').should('eq', 0)
     })
 })
-//TODO: GH token shall be set and automatic renewed
+//TODO: GH token shall be set and automatically renewed
 
 
 describe('orbctl tests', { execTimeout: 90000 }, () => {
     // basic orbctl operations
     it('orbctl help', () => {
-        cy.exec('$orbCtl --gitops --orbconfig $orbConfig --disable-analytics  help ', { setTimeout: 20000, env: { orbCtl: Cypress.env("orbCtl"), orbConfig: Cypress.env("orbConfig") } }).then(result => {
+        cy.exec(`${orbctlGitops} help`, { setTimeout: 20000 }).then(result => {
             //return JSON.parse(result.stdout)
             cy.log(result.stdout)
             cy.log(result.stderr)
@@ -33,14 +35,14 @@ describe('orbctl tests', { execTimeout: 90000 }, () => {
     })
    
     it('orbctl writesecret', () => {
-        cy.exec('$orbCtl --gitops --orbconfig $orbConfig --disable-analytics  writesecret boom.monitoring.admin.password.encrypted --value $testPassword', { setTimeout: 20000, env: { orbCtl: Cypress.env("orbCtl"), orbConfig: Cypress.env("orbConfig"), testPassword: Cypress.env("testPassword")} }).then(result => {
+        cy.exec(`${orbctlGitops} writesecret boom.monitoring.admin.password.encrypted --value ${Cypress.env("testPassword")}`, { setTimeout: 20000 }).then(result => {
             cy.log(result.stdout)
             cy.log(result.stderr)
         }).its('code').should('eq', 0)
     })
 
     it('orbctl readsecret', () => {
-        cy.exec('$orbCtl --gitops --orbconfig $orbConfig --disable-analytics  readsecret boom.monitoring.admin.password.encrypted', { setTimeout: 20000, env: { orbCtl: Cypress.env("orbCtl"), orbConfig: Cypress.env("orbConfig"), testPassword: Cypress.env("testPassword") } }).then(result => {
+        cy.exec(`${orbctlGitops} readsecret boom.monitoring.admin.password.encrypted`, { setTimeout: 20000 }).then(result => {
             return result.stdout
         }).then(returnpw => { expect(returnpw).to.eq(Cypress.env("testPassword")) })
     })
