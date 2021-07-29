@@ -5,8 +5,8 @@ go 1.14
 require (
 	github.com/AlecAivazis/survey/v2 v2.0.8
 	github.com/AppsFlyer/go-sundheit v0.2.0
+	github.com/caos/oidc v0.15.7
 	github.com/aws/aws-sdk-go v1.40.7
-	github.com/caos/oidc v0.14.4
 	github.com/cloudflare/cloudflare-go v0.12.1
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
 	github.com/getsentry/sentry-go v0.11.0
@@ -32,7 +32,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	google.golang.org/api v0.51.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
-	golang.org/x/net v0.0.0-20200904194848-62affa334b73
+	golang.org/x/net v0.0.0-20210405180319-a5a99cb37ef4
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	google.golang.org/api v0.30.0
 	google.golang.org/grpc v1.39.0 // indirect
