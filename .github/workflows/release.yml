@@ -46,17 +46,15 @@ jobs:
           docker push ${TAG_LATEST}
 
           npx semantic-release && exit 0
-<<<<<<< HEAD
-      - name: Trigger E2E Test On StaticProvider
-        if: steps.dev-release.outputs.relbranch != null
-        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.CR_PAT }}"
-      - name: Trigger E2E Test On GCEProvider
-        if: steps.dev-release.outputs.relbranch != null
-        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-GCEProvider --access-token "${{ secrets.CR_PAT }}"
-      - name: Trigger E2E Test On CloudscaleProvider
-        if: steps.dev-release.outputs.relbranch != null
-        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-CloudscaleProvider --access-token "${{ secrets.CR_PAT }}"
-=======
+#      - name: Trigger E2E Test On StaticProvider
+#        if: steps.dev-release.outputs.relbranch != null
+#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.CR_PAT }}"
+#      - name: Trigger E2E Test On GCEProvider
+#        if: steps.dev-release.outputs.relbranch != null
+#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-GCEProvider --access-token "${{ secrets.CR_PAT }}"
+#      - name: Trigger E2E Test On CloudscaleProvider
+#        if: steps.dev-release.outputs.relbranch != null
+#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-CloudscaleProvider --access-token "${{ secrets.CR_PAT }}"
       - name: Create Sentry release
         uses: getsentry/action-release@v1
         env:
@@ -67,4 +65,3 @@ jobs:
           version: orbos-${{ steps.release.outputs.version }}
           projects: "orbctl boom orbiter networking-operator node-agent"
         if: steps.release.outputs.version != null
->>>>>>> master
