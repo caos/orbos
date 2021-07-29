@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/secret"
 
 	core2 "github.com/caos/orbos/internal/operator/core"
@@ -50,7 +52,10 @@ func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*Int
 	}, curr
 }
 
-func (e *ExternalConfig) Validate() error {
+func (e *ExternalConfig) Validate() (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 	if e == nil {
 		return errors.New("domain not found")
 	}
@@ -63,7 +68,12 @@ func (e *ExternalConfig) Validate() error {
 	return nil
 }
 
-func (e *ExternalConfig) ValidateSecrets() error {
+func (e *ExternalConfig) ValidateSecrets() (err error) {
+
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
 	if e.Credentials == nil {
 		return errors.New("no credentials specified")
 	}

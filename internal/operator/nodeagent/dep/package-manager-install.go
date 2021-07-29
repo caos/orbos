@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/caos/orbos/mntr"
-
-	"github.com/pkg/errors"
 )
 
 func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Software) error {
@@ -41,7 +39,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 		err := cmd.Run()
 		stderr := errBuf.String()
 		if err != nil && !strings.Contains(stderr, "versionlock delete: no matches") {
-			return errors.Wrapf(err, "unlocking package %s failed with stderr %s", sw.Package, stderr)
+			return fmt.Errorf("unlocking package %s failed with stderr %s: %w", sw.Package, stderr, err)
 		}
 		errBuf.Reset()
 
@@ -52,7 +50,7 @@ func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Soft
 			cmd.Stdout = os.Stdout
 		}
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "locking package %s at version %s failed with stderr %s", sw.Package, sw.Version, errBuf.String())
+			return fmt.Errorf("locking package %s at version %s failed with stderr %s: %w", sw.Package, sw.Version, errBuf.String(), err)
 		}
 		errBuf.Reset()
 	}
@@ -80,13 +78,10 @@ func rembasedInstallPkg(monitor mntr.Monitor, pkg string) error {
 		"stdout": outStr,
 		"stderr": errStr,
 	}).Debug("Executed yum install")
-	if err != nil {
-		if strings.Contains(errStr+outStr, "is already installed") {
-			err = nil
-		}
+	if err != nil && !strings.Contains(errStr+outStr, "is already installed") {
+		return fmt.Errorf("installing yum package %s failed with stderr %s: %w", pkg, errStr, err)
 	}
-
-	return errors.Wrapf(err, "installing yum package %s failed with stderr %s", pkg, errStr)
+	return nil
 }
 
 // TODO: Use lower level apt instead of apt-get?
@@ -112,7 +107,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 			cmd.Stdout = os.Stdout
 		}
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "unholding installed package failed with stderr %s", errBuf.String())
+			return fmt.Errorf("unholding installed package failed with stderr %s: %w", errBuf.String(), err)
 		}
 		errBuf.Reset()
 	}
@@ -124,7 +119,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "cleaning up dpkg failed with stderr %s", errBuf.String())
+		return fmt.Errorf("cleaning up dpkg failed with stderr %s: %w", errBuf.String(), err)
 	}
 	errBuf.Reset()
 
@@ -136,7 +131,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "installing package failed with stderr %s", errBuf.String())
+		return fmt.Errorf("installing package failed with stderr %s: %w", errBuf.String(), err)
 	}
 	errBuf.Reset()
 
@@ -148,7 +143,7 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 			cmd.Stdout = os.Stdout
 		}
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "holding package failed with stderr %s", errBuf.String())
+			return fmt.Errorf("holding package failed with stderr %s: %w", errBuf.String(), err)
 		}
 		errBuf.Reset()
 

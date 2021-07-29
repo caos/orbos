@@ -1,22 +1,19 @@
 package gce
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/caos/orbos/mntr"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-
 	uuid "github.com/satori/go.uuid"
+	"google.golang.org/api/compute/v1"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
 var _ core.MachinesService = (*machinesService)(nil)
@@ -59,7 +56,7 @@ func (m *machinesService) DesiredMachines(poolName string, instances int) int {
 
 func (m *machinesService) use(key *SSHKey) error {
 	if key == nil || key.Private == nil || key.Public == nil || key.Private.Value == "" || key.Public.Value == "" {
-		return errors.New("machines are not connectable. have you configured the orb by running orbctl configure?")
+		return mntr.ToUserError(errors.New("machines are not connectable. have you configured the orb by running orbctl configure?"))
 	}
 	m.key = key
 	return nil

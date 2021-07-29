@@ -1,9 +1,8 @@
 package helpers
 
 import (
+	"errors"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
 func Retry(timer *time.Timer, interval time.Duration, callback func() (retry bool)) error {

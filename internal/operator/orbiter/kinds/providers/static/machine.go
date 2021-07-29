@@ -1,18 +1,15 @@
 package static
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-
-	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 var _ infra.Machine = (*machine)(nil)
@@ -89,7 +86,7 @@ func (c *machine) ReplacementRequired() (bool, func(), func()) {
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID string) (map[string]infra.Machine, error) {
 	desired, err := parseDesiredV0(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desired
 

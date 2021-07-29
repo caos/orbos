@@ -154,7 +154,7 @@ status:
 	}
 
 	var (
-		cmd          = []string{"/orbctl", "takeoff", "boom", "--kubeconfig", ""}
+		cmd          = []string{"/orbctl", "start", "boom", "--kubeconfig", ""}
 		volumes      []core.Volume
 		volumeMounts []core.VolumeMount
 	)
@@ -173,6 +173,10 @@ status:
 			ReadOnly:  true,
 			MountPath: "/secrets",
 		}}
+	}
+
+	if _, _, analyticsEnabled := mntr.Environment(); !analyticsEnabled {
+		cmd = append(cmd, "--disable-analytics")
 	}
 
 	deployment := &apps.Deployment{

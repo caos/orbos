@@ -1,8 +1,7 @@
 package providers
 
 import (
-	"regexp"
-	"strings"
+	"fmt"
 
 	"github.com/caos/orbos/pkg/secret"
 
@@ -15,10 +14,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
-
-var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -27,7 +23,7 @@ func GetQueryAndDestroyFuncs(
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan struct{},
-	orbiterCommit, repoURL, repoKey string,
+	orbiterCommit, orbID, repoURL, repoKey string,
 	oneoff bool,
 	pprof bool,
 ) (
@@ -51,7 +47,7 @@ func GetQueryAndDestroyFuncs(
 	case "orbiter.caos.ch/GCEProvider":
 		return gce.AdaptFunc(
 			provID,
-			orbID(repoURL),
+			orbID,
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
@@ -65,7 +61,7 @@ func GetQueryAndDestroyFuncs(
 	case "orbiter.caos.ch/CloudScaleProvider":
 		return cs.AdaptFunc(
 			provID,
-			orbID(repoURL),
+			orbID,
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
@@ -90,7 +86,7 @@ func GetQueryAndDestroyFuncs(
 			providerTree,
 			providerCurrent)
 	default:
-		return nil, nil, nil, false, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown provider kind %s", providerTree.Common.Kind))
 	}
 }
 
@@ -98,7 +94,7 @@ func ListMachines(
 	monitor mntr.Monitor,
 	providerTree *tree.Tree,
 	provID string,
-	repoURL string,
+	orbID string,
 ) (
 	map[string]infra.Machine,
 	error,
@@ -109,14 +105,14 @@ func ListMachines(
 		return gce.ListMachines(
 			monitor,
 			providerTree,
-			orbID(repoURL),
+			orbID,
 			provID,
 		)
 	case "orbiter.caos.ch/CloudScaleProvider":
 		return cs.ListMachines(
 			monitor,
 			providerTree,
-			orbID(repoURL),
+			orbID,
 			provID,
 		)
 	case "orbiter.caos.ch/StaticProvider":
@@ -126,10 +122,6 @@ func ListMachines(
 			provID,
 		)
 	default:
-		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, mntr.ToUserError(fmt.Errorf("unknown provider kind %s", providerTree.Common.Kind))
 	}
-}
-
-func orbID(repoURL string) string {
-	return strings.ToLower(alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-"))
 }

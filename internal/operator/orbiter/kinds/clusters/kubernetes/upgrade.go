@@ -3,12 +3,9 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/caos/orbos/pkg/kubernetes"
-
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 type initializedMachines []*initializedMachine
@@ -64,12 +61,12 @@ func findPath(
 		}).Debug("Found kubelet version from node info")
 		kubelet := ParseString(nodeinfoKubelet)
 		if kubelet == Unknown {
-			return zeroSW, zeroSW, errors.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, id)
+			return zeroSW, zeroSW, fmt.Errorf("parsing version %s from nodes %s info failed", nodeinfoKubelet, id)
 		}
 
 		kubeletMinor, err := kubelet.ExtractMinor(monitor)
 		if err != nil {
-			return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from kubelet version %s from nodes %s info failed", nodeinfoKubelet, id)
+			return zeroSW, zeroSW, fmt.Errorf("extracting minor from kubelet version %s from nodes %s info failed: %w", nodeinfoKubelet, id, err)
 		}
 
 		if overallLowKubelet == Unknown {
@@ -80,15 +77,15 @@ func findPath(
 
 		kubeletPatch, err := kubelet.ExtractPatch(monitor)
 		if err != nil {
-			return zeroSW, zeroSW, errors.Wrapf(err, "extracting patch from kubelet version %s from nodes %s info failed", nodeinfoKubelet, id)
+			return zeroSW, zeroSW, fmt.Errorf("extracting patch from kubelet version %s from nodes %s info failed: %w", nodeinfoKubelet, id, err)
 		}
 		tmpOverallLowKubeletMinor, err := overallLowKubelet.ExtractMinor(monitor)
 		if err != nil {
-			return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from overall kubelet version %s failed", overallLowKubelet)
+			return zeroSW, zeroSW, fmt.Errorf("extracting minor from overall kubelet version %s failed: %w", overallLowKubelet, err)
 		}
 		tmpOverallLowKubeletPatch, err := overallLowKubelet.ExtractPatch(monitor)
 		if err != nil {
-			return zeroSW, zeroSW, errors.Wrapf(err, "extracting patch from overall kubelet version %s failed", overallLowKubelet)
+			return zeroSW, zeroSW, fmt.Errorf("extracting patch from overall kubelet version %s failed: %w", overallLowKubelet, err)
 		}
 
 		if kubeletMinor < tmpOverallLowKubeletMinor ||
@@ -109,11 +106,11 @@ func findPath(
 
 	targetMinor, err := target.ExtractMinor(monitor)
 	if err != nil {
-		return zeroSW, zeroSW, errors.Wrapf(err, "extracting minor from target version %s failed", target)
+		return zeroSW, zeroSW, fmt.Errorf("extracting minor from target version %s failed: %w", target, err)
 	}
 
 	if targetMinor < overallLowKubeletMinor {
-		return zeroSW, zeroSW, errors.Errorf("downgrading from %s to %s is not possible as they are on different minors", overallLowKubelet, target)
+		return zeroSW, zeroSW, fmt.Errorf("downgrading from %s to %s is not possible as they are on different minors", overallLowKubelet, target)
 	}
 
 	overallLowKubeletSoftware := overallLowKubelet.DefineSoftware()
@@ -161,7 +158,7 @@ func step(
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, from, to)
 		if err != nil {
-			return false, errors.Wrapf(err, "planning machine %s failed", machine.infra.ID())
+			return false, fmt.Errorf("planning machine %s failed: %w", machine.infra.ID(), err)
 		}
 
 		if next == nil {
@@ -230,7 +227,9 @@ func plan(
 	migrate := func() (err error) {
 
 		defer func() {
-			err = errors.Wrapf(err, "migrating node %s failed", machine.infra.ID())
+			if err != nil {
+				err = fmt.Errorf("migrating node %s failed: %w", machine.infra.ID(), err)
+			}
 		}()
 
 		if err := drain(); err != nil {

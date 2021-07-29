@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -135,7 +134,10 @@ func DeleteResource(monitor mntr.Monitor, resource *Resource) error {
 		err = clientRes.Delete(context.Background(), resource.Name, *deleteOptions)
 	}
 
-	return errors.Wrapf(err, "Error while deleting %s", resource.Name)
+	if err != nil {
+		return fmt.Errorf("error while deleting %s: %w", resource.Name, err)
+	}
+	return nil
 }
 
 func GetGroupVersionsResources(monitor mntr.Monitor, filtersResources []string) ([]*ResourceInfo, error) {

@@ -17,13 +17,14 @@ func PrintCommand(getRv GetRootValues) *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Example: `orbctl file print orbiter.yml`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			rv, err := getRv()
+
+			file := args[0]
+
+			rv, err := getRv("print", "", map[string]interface{}{"file": file})
 			if err != nil {
 				return err
 			}
-			defer func() {
-				err = rv.ErrFunc(err)
-			}()
+			defer rv.ErrFunc(err)
 
 			if !rv.Gitops {
 				return errors.New("print command is only supported with the --gitops flag")
@@ -33,7 +34,7 @@ func PrintCommand(getRv GetRootValues) *cobra.Command {
 				return err
 			}
 
-			fmt.Print(string(rv.GitClient.Read(args[0])))
+			fmt.Print(string(rv.GitClient.Read(file)))
 			return nil
 		},
 	}

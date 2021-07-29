@@ -9,12 +9,11 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/pkg/git"
-
-	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
 )
 
 func PatchCommand(getRv GetRootValues) *cobra.Command {
@@ -41,13 +40,18 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 
-		rv, err := getRv()
+		var path []string
+		if len(args) > 1 {
+			path = strings.Split(args[1], ".")
+		}
+
+		filePath := args[0]
+
+		rv, err := getRv("patch", "", map[string]interface{}{"value": value, "filePath": filePath, "valuePath": file, "stdin": stdin, "exact": exact})
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
+		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {
 			return errors.New("patch command is only supported with the --gitops flag")
@@ -55,11 +59,6 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 
 		if err := initRepo(rv.OrbConfig, rv.GitClient); err != nil {
 			return err
-		}
-
-		var path []string
-		if len(args) > 1 {
-			path = strings.Split(args[1], ".")
 		}
 
 		contentStr, err := content(value, file, stdin)
@@ -74,7 +73,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 			result = contentYaml
 		} else {
 			structure := map[string]interface{}{}
-			if err := yaml.Unmarshal(rv.GitClient.Read(args[0]), structure); err != nil {
+			if err := yaml.Unmarshal(rv.GitClient.Read(filePath), structure); err != nil {
 				return err
 			}
 			if err := updateMap(structure, path, contentYaml, exact); err != nil {
@@ -83,9 +82,9 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 			result = structure
 		}
 
-		return rv.GitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", args[0]), func() []git.File {
+		return rv.GitClient.UpdateRemote(fmt.Sprintf("Overwrite %s", filePath), func() []git.File {
 			return []git.File{{
-				Path:    args[0],
+				Path:    filePath,
 				Content: common.MarshalYAML(result),
 			}}
 		})

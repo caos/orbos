@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
@@ -43,22 +45,20 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 			return err
 		}
 
-		rv, err := getRv()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
-
-		monitor := rv.Monitor
-		orbConfig := rv.OrbConfig
-		gitClient := rv.GitClient
-
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
 		}
+
+		rv, err := getRv("writesecret", "", map[string]interface{}{"path": path, "value": value != "", "file": file, "stdin": stdin})
+		if err != nil {
+			return err
+		}
+		defer rv.ErrFunc(err)
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
 
 		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
 		if err != nil && !rv.Gitops {
@@ -79,7 +79,13 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 	return cmd
 }
 
-func content(value string, file string, stdin bool) (string, error) {
+func content(value string, file string, stdin bool) (val string, err error) {
+
+	defer func() {
+		if err != nil {
+			err = mntr.ToUserError(err)
+		}
+	}()
 
 	channels := 0
 	if value != "" {

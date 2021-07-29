@@ -7,8 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func (p *PackageManager) rembasedAdd(repo *Repository) error {
@@ -30,7 +28,7 @@ func (p *PackageManager) rembasedAdd(repo *Repository) error {
 	}
 
 	if err != nil && !strings.Contains(out, fmt.Sprintf("Cannot add repo from %s as is a duplicate of an existing repo", repo.Repository)) {
-		return errors.Wrapf(err, "adding yum repository %s failed with stderr %s", repo.Repository, out)
+		return fmt.Errorf("adding yum repository %s failed with stderr %s: %w", repo.Repository, out, err)
 	}
 
 	return nil
@@ -43,7 +41,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 
 	resp, err := http.Get(repo.KeyURL)
 	if err != nil {
-		return errors.Wrapf(err, "getting key from url %s failed", repo.KeyURL)
+		return fmt.Errorf("getting key from url %s failed: %w", repo.KeyURL, err)
 	}
 	defer resp.Body.Close()
 	cmd := exec.Command("apt-key", "add", "-")
@@ -56,7 +54,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "adding key failed with stderr %s", errBuf.String())
+		return fmt.Errorf("adding key failed with stderr %s: %w", errBuf.String(), err)
 	}
 	errBuf.Reset()
 	p.monitor.WithFields(map[string]interface{}{
@@ -71,7 +69,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 		cmd.Stdout = buf
 		cmd.Stderr = errBuf
 		if err := cmd.Run(); err != nil {
-			return errors.Wrapf(err, "verifying fingerprint %s failed with stderr %s", repo.KeyFingerprint, errBuf.String())
+			return fmt.Errorf("verifying fingerprint %s failed with stderr %s: %w", repo.KeyFingerprint, errBuf.String(), err)
 		}
 
 		if p.monitor.IsVerbose() {
@@ -102,7 +100,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 			}
 		}
 		if !found {
-			return errors.Errorf("No key with fingerprint %s found", repo.KeyFingerprint)
+			return fmt.Errorf("no key with fingerprint %s found", repo.KeyFingerprint)
 		}
 	}
 
@@ -115,7 +113,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "adding repository %s failed with stderr %s", repo.Repository, errBuf.String())
+		return fmt.Errorf("adding repository %s failed with stderr %s: %w", repo.Repository, errBuf.String(), err)
 	}
 	errBuf.Reset()
 	p.monitor.WithFields(map[string]interface{}{
@@ -129,7 +127,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "updating indices failed with stderr %s", errBuf.String())
+		return fmt.Errorf("updating indices failed with stderr %s: %w", errBuf.String(), err)
 	}
 	errBuf.Reset()
 	p.monitor.Debug("Updated index")

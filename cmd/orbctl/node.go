@@ -43,16 +43,15 @@ func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orb
 		for _, arg := range args {
 			machine, found := machines[arg]
 			if !found {
-
 				if selected {
 					panic(fmt.Errorf("selected machine %s not found", arg))
 				}
 
 				if strings.Count(arg, ".") != 2 {
-					return helpErr{fmt.Errorf("machine id must have the format <provider>.<pool>.<machine>")}
+					return mntr.ToUserError(fmt.Errorf("machine id must have the format <provider>.<pool>.<machine>"))
 				}
 
-				return fmt.Errorf("machine %s not found", arg)
+				return mntr.ToUserError(fmt.Errorf("machine %s not found", arg))
 			}
 
 			required, require, _ := method(machine)

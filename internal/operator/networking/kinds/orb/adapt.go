@@ -1,6 +1,8 @@
 package orb
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking"
 	"github.com/caos/orbos/mntr"
@@ -8,7 +10,6 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func OperatorSelector() *labels.Selector {
@@ -30,14 +31,16 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 		err error,
 	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		orbMonitor := monitor.WithField("kind", "orb")
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -63,10 +66,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 		}
 
 		currentTree.Parsed = &DesiredV0{
-			Common: &tree.Common{
-				Kind:    "networking.caos.ch/Orb",
-				Version: "v0",
-			},
+			Common:     tree.NewCommon("networking.caos.ch/Orb", "v0", false),
 			Networking: networkingCurrent,
 		}
 

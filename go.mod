@@ -10,6 +10,7 @@ require (
 	github.com/caos/oidc v0.14.4
 	github.com/cloudflare/cloudflare-go v0.12.1
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
+	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
@@ -39,7 +40,7 @@ require (
 	google.golang.org/grpc v1.31.0
 	google.golang.org/protobuf v1.25.0
 	gopkg.in/raintank/schema.v1 v1.0.0
-	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.19.2
 	k8s.io/apiextensions-apiserver v0.19.2
 	k8s.io/apimachinery v0.19.2
@@ -47,5 +48,4 @@ require (
 	k8s.io/kubectl v0.18.3
 	sigs.k8s.io/controller-runtime v0.7.0
 	sigs.k8s.io/controller-tools v0.4.1
-	sigs.k8s.io/yaml v1.2.0
 )

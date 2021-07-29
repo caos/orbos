@@ -1,13 +1,15 @@
 package kubernetes
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/pkg/errors"
 )
 
 func query(
@@ -75,10 +77,10 @@ func query(
 func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) error {
 	prov, ok := infra[poolSpec.Provider]
 	if !ok {
-		return errors.Errorf("provider %s not configured", poolSpec.Provider)
+		return fmt.Errorf("provider %s not configured", poolSpec.Provider)
 	}
 	if _, ok := prov[poolSpec.Pool]; !ok {
-		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Pool, poolSpec.Provider)
+		return fmt.Errorf("pool %s not configured on provider %s", poolSpec.Pool, poolSpec.Provider)
 	}
 	return nil
 }

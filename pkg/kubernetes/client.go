@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
@@ -815,7 +815,9 @@ func (r *recreateErr) Error() string { return "recreate" }
 func (c *Client) applyResource(object, name string, create func() error, update func() error) (err error) {
 
 	defer func() {
-		err = errors.Wrapf(err, "applying %s %s failed", object, name)
+		if err != nil {
+			err = fmt.Errorf("applying %s %s failed: %w", object, name, err)
+		}
 	}()
 
 	err = update()
@@ -852,7 +854,7 @@ func (c *Client) applyController(
 			}
 
 			if !force {
-				return errors.Errorf("only recreating %s when force is true", controllerType)
+				return fmt.Errorf("only recreating %s when force is true", controllerType)
 			}
 
 			if err := deleteResource(); err != nil {
@@ -865,7 +867,9 @@ func (c *Client) applyController(
 
 func (c *Client) init(kubeconfig *string) (err error) {
 	defer func() {
-		err = errors.Wrap(err, "refreshing Kubernetes client failed")
+		if err != nil {
+			err = fmt.Errorf("refreshing Kubernetes client failed: %w", err)
+		}
 	}()
 
 	restCfg := new(rest.Config)
@@ -929,7 +933,9 @@ func (c *Client) GetNode(id string) (node *core.Node, err error) {
 
 func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 	defer func() {
-		err = errors.Wrapf(err, "listing nodes %s failed", strings.Join(filterID, ", "))
+		if err != nil {
+			err = fmt.Errorf("listing nodes %s failed: %w", strings.Join(filterID, ", "), err)
+		}
 	}()
 
 	labelSelector := ""
@@ -953,7 +959,9 @@ func (c *Client) ListNodes(filterID ...string) (nodes []core.Node, err error) {
 func (c *Client) UpdateNode(node *core.Node) (err error) {
 
 	defer func() {
-		err = errors.Wrapf(err, "updating node %s failed", node.GetName())
+		if err != nil {
+			fmt.Errorf("updating node %s failed: %w", node.GetName(), err)
+		}
 	}()
 
 	node.ResourceVersion = ""
@@ -971,7 +979,9 @@ const (
 
 func (c *Client) cordon(node *core.Node, reason DrainReason) (err error) {
 	defer func() {
-		err = errors.Wrapf(err, "cordoning node %s failed", node.GetName())
+		if err != nil {
+			err = fmt.Errorf("cordoning node %s failed: %w", node.GetName(), err)
+		}
 	}()
 
 	monitor := c.monitor.WithFields(map[string]interface{}{
@@ -1025,7 +1035,9 @@ func (c *Client) RemoveFromTaints(taints []core.Taint, reason DrainReason) (resu
 
 func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason, self bool) (err error) {
 	defer func() {
-		err = errors.Wrapf(err, "draining node %s failed", node.GetName())
+		if err != nil {
+			err = fmt.Errorf("draining node %s failed: %w", node.GetName(), err)
+		}
 	}()
 
 	monitor := c.monitor.WithFields(map[string]interface{}{
@@ -1058,7 +1070,9 @@ func (c *Client) DeleteNode(name string) error {
 func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 
 	defer func() {
-		err = errors.Wrapf(err, "evicting pods from node %s failed", node.GetName())
+		if err != nil {
+			err = fmt.Errorf("evicting pods from node %s failed: %w", node.GetName(), err)
+		}
 	}()
 
 	monitor := c.monitor.WithFields(map[string]interface{}{
@@ -1077,7 +1091,7 @@ func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "listing pods with field-selector %s and label-selector %s failed", fieldSelector, labelSelector)
+		return fmt.Errorf("listing pods with field-selector %s and label-selector %s failed: %w", fieldSelector, labelSelector, err)
 	}
 
 	// --ignore-daemonsets
@@ -1122,7 +1136,7 @@ func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 					GracePeriodSeconds: &gracePeriodSeconds,
 				},
 			}); goErr != nil {
-				synchronizer.Done(errors.Wrapf(goErr, "evicting pod %s failed", pod.Name))
+				synchronizer.Done(fmt.Errorf("evicting pod %s failed: %w", pod.Name, goErr))
 				return
 			}
 			monitor.Debug("Watching pod")
@@ -1147,7 +1161,12 @@ func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 						return
 					}
 				case <-timeout:
-					synchronizer.Done(errors.Wrapf(c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{}), "Deleting pod %s after timout exceeded failed", pod.Name))
+
+					delPodErr := c.set.CoreV1().Pods(pod.Namespace).Delete(context.Background(), pod.Name, mach.DeleteOptions{})
+					if delPodErr != nil {
+						delPodErr = fmt.Errorf("deleting pod %s after timout exceeded failed", pod.Name)
+					}
+					synchronizer.Done(delPodErr)
 					return
 				}
 			}
@@ -1156,7 +1175,7 @@ func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 	wg.Wait()
 
 	if synchronizer.IsError() {
-		return errors.Wrapf(synchronizer, "concurrently evicting pods from node %s failed", node.Name)
+		return fmt.Errorf("concurrently evicting pods from node %s failed: %w", node.Name, synchronizer)
 	}
 
 	monitor.Info("Pods evicted")
@@ -1303,7 +1322,7 @@ func (c *Client) ApplyNamespacedCRDResource(group, version, kind, namespace, nam
 	resources := c.dynamic.Resource(mapping.Resource).Namespace(namespace)
 	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
 	if err != nil && !macherrs.IsNotFound(err) {
-		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+		return fmt.Errorf("getting existing crd %s of kind %s failed: %w", name, kind, err)
 	}
 	update := func() error {
 		return err
@@ -1351,7 +1370,7 @@ func (c *Client) ApplyCRDResource(crd *unstructured.Unstructured) error {
 	resources := c.dynamic.Resource(mapping.Resource)
 	existing, err := resources.Get(context.Background(), name, mach.GetOptions{})
 	if err != nil && !macherrs.IsNotFound(err) {
-		return errors.Wrapf(err, "getting existing crd %s of kind %s failed", name, kind)
+		return fmt.Errorf("getting existing crd %s of kind %s failed: %w", name, kind, err)
 	}
 	if err == nil {
 		crd.SetResourceVersion(existing.GetResourceVersion())

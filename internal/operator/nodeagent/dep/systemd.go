@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/mntr"
 )
 
@@ -37,7 +35,7 @@ func (s *SystemD) Disable(binary string) error {
 		if strings.Contains(errString, "not loaded") {
 			err = nil
 		} else {
-			return errors.Wrapf(err, "stopping %s by systemd failed with stderr %s", binary, errString)
+			return fmt.Errorf("stopping %s by systemd failed with stderr %s: %w", binary, errString, err)
 		}
 	}
 
@@ -53,7 +51,7 @@ func (s *SystemD) Disable(binary string) error {
 		if strings.Contains(errString, "No such file or directory") {
 			err = nil
 		} else {
-			return errors.Wrapf(err, "disabling %s by systemd failed with stderr %s", binary, errString)
+			return fmt.Errorf("disabling %s by systemd failed with stderr %s: %w", binary, errString, err)
 		}
 	}
 
@@ -66,7 +64,11 @@ func (s *SystemD) Start(binary string) error {
 
 	cmd := exec.Command("systemctl", "restart", binary)
 	cmd.Stderr = errBuf
-	return errors.Wrapf(cmd.Run(), "restarting %s from systemd failed with stderr %s", binary, errBuf.String())
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("restarting %s from systemd failed with stderr %s: %w", binary, errBuf.String(), err)
+	}
+	return nil
 }
 
 func (s *SystemD) Enable(binary string) error {
@@ -82,7 +84,7 @@ func (s *SystemD) Enable(binary string) error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "enabling systemd unit %s failed with stderr %s", binary, errBuf.String())
+		return fmt.Errorf("enabling systemd unit %s failed with stderr %s", binary, errBuf.String(), err)
 	}
 
 	if !s.Active(binary) {
