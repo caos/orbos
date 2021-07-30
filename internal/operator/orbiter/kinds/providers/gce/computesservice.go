@@ -138,21 +138,18 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 			zoneCovered := 0
 			for _, currentInfraMachine := range currentInfraMachines {
 				currentGCEMachine, ok := currentInfraMachine.(machine)
-				replaceRequired := false
-				for _, replaceRequiredID := range m.context.desired.ReplacementRequired {
-					if currentInfraMachine.ID() == replaceRequiredID {
-						replaceRequired = true
-					}
-				}
+				replaceRequired, _, _ := currentInfraMachine.ReplacementRequired()
 				if ok && zone == currentGCEMachine.Zone() && !replaceRequired {
 					zoneCovered++
 				}
 			}
+			m.cache.Lock()
 			for _, currentCreating := range m.cache.creatingInstances[poolName] {
 				if currentCreating.zone == zone {
 					zoneCovered++
 				}
 			}
+			m.cache.Unlock()
 			if zoneCovered >= desiredInstances {
 				continue
 			}
@@ -167,6 +164,7 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 	}
 
 	name := newName()
+	m.cache.Lock()
 	if m.cache.creatingInstances == nil {
 		m.cache.creatingInstances = map[string][]*creatingInstance{}
 	}
@@ -177,6 +175,7 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 		zone: usableZone,
 		id:   name,
 	})
+	m.cache.Unlock()
 
 	monitor := m.context.monitor.WithFields(map[string]interface{}{
 		"machine": name,
@@ -196,10 +195,12 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 	}
 
 	if m.cache.instances != nil {
+		m.cache.Lock()
 		if _, ok := m.cache.instances[poolName]; !ok {
 			m.cache.instances[poolName] = make([]*instance, 0)
 		}
 		m.cache.instances[poolName] = append(m.cache.instances[poolName], infraMachine)
+		m.cache.Unlock()
 	}
 
 	if err := m.onCreate(poolName, infraMachine); err != nil {
@@ -209,7 +210,9 @@ func (m *machinesService) Create(poolName string, desiredInstances int) (infra.M
 	infraMachines = append(infraMachines, infraMachine)
 	for i, instance := range m.cache.creatingInstances[poolName] {
 		if instance.id == infraMachine.ID() {
+			m.cache.Lock()
 			m.cache.creatingInstances[poolName] = append(m.cache.creatingInstances[poolName][:i], m.cache.creatingInstances[poolName][i+1:]...)
+			m.cache.Unlock()
 		}
 	}
 	return infraMachines, nil
@@ -369,11 +372,14 @@ func (m *machinesService) List(poolName string) (infra.Machines, error) {
 }
 
 func getAllInstances(m *machinesService) (map[string][]*instance, error) {
+	m.cache.Lock()
 	if m.cache.instances != nil {
+		m.cache.Unlock()
 		return m.cache.instances, nil
 	} else {
 		m.cache.instances = make(map[string][]*instance)
 	}
+	m.cache.Unlock()
 
 	region, err := m.context.client.Regions.Get(m.context.projectID, m.context.desired.Region).Do()
 	if err != nil {
@@ -467,8 +473,9 @@ func getAllInstances(m *machinesService) (map[string][]*instance, error) {
 				}(inst.Name),
 				unrequireReplacement,
 			)
-
+			m.cache.Lock()
 			m.cache.instances[pool] = append(m.cache.instances[pool], mach)
+			m.cache.Unlock()
 		}
 	}
 
