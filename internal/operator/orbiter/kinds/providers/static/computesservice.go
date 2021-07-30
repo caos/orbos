@@ -82,7 +82,16 @@ func (c *machinesService) List(poolName string) (infra.Machines, error) {
 	return pool.Machines(), nil
 }
 
-func (c *machinesService) Create(poolName string) (infra.Machine, error) {
+func (c *machinesService) DesiredMachines(poolName string, instances int) int {
+	_, err := c.cachedPool(poolName)
+	if err != nil {
+		return 0
+	}
+
+	return instances
+}
+
+func (c *machinesService) Create(poolName string, _ int) (infra.Machines, error) {
 	pool, err := c.cachedPool(poolName)
 	if err != nil {
 		return nil, err
@@ -103,7 +112,7 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 				return nil, err
 			}
 
-			return machine, nil
+			return []infra.Machine{machine}, nil
 		}
 	}
 

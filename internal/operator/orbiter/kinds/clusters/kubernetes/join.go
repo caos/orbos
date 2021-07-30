@@ -93,7 +93,7 @@ func join(
 	kubeadmCfg := new(bytes.Buffer)
 	defer kubeadmCfg.Reset()
 
-	template.Must(template.New("").Parse(`kind: ClusterConfiguration
+	if err := template.Must(template.New("").Parse(`kind: ClusterConfiguration
 apiVersion: kubeadm.k8s.io/v1beta2
 apiServer:
   timeoutForControlPlane: 4m0s
@@ -218,7 +218,9 @@ nodeRegistration:
 		CertKey:              certKey,
 		ProviderK8sSpec:      providerK8sSpec,
 		CloudConfigPath:      cloudCfgPath,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 		return cmp.WriteFile(kubeadmCfgPath, kubeadmCfg, 600)

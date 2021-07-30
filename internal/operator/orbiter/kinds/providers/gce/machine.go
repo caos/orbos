@@ -21,6 +21,7 @@ type machine interface {
 	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
+	Zone() string
 }
 
 type instance struct {
@@ -28,6 +29,7 @@ type instance struct {
 	ip      string
 	url     string
 	pool    string
+	zone    string
 	remove  func() error
 	context *context
 	start   bool
@@ -51,6 +53,7 @@ func newMachine(
 	ip,
 	url,
 	pool string,
+	zone string,
 	remove func() error,
 	start bool,
 	machine machine,
@@ -66,6 +69,7 @@ func newMachine(
 		ip:                   ip,
 		url:                  url,
 		pool:                 pool,
+		zone:                 zone,
 		remove:               remove,
 		context:              context,
 		start:                start,
@@ -77,6 +81,10 @@ func newMachine(
 		requireReplacement:   requireReplacement,
 		unrequireReplacement: unrequireReplacement,
 	}
+}
+
+func (c *instance) Zone() string {
+	return c.zone
 }
 
 func (c *instance) ID() string {
