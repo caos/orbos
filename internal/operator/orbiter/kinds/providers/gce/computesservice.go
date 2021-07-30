@@ -3,7 +3,6 @@ package gce
 import (
 	"errors"
 	"fmt"
-	"github.com/caos/orbos/mntr"
 	"strings"
 	"sync"
 	"time"
@@ -327,8 +326,12 @@ func (m *machinesService) getCreatableMachine(monitor mntr.Monitor, poolName str
 			)
 			return formatErr
 		}); err != nil {
-			if cleanupErr := infraMachine.Remove(); cleanupErr != nil {
+			remove, cleanupErr := infraMachine.Destroy()
+			if cleanupErr != nil {
 				panic(cleanupErr)
+			}
+			if rmErr := remove(); rmErr != nil {
+				panic(rmErr)
 			}
 			return nil, err
 		}

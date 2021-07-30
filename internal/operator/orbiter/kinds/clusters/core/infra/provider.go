@@ -20,6 +20,7 @@ type ProviderCurrent interface {
 	Pools() map[string]Pool
 	Ingresses() map[string]*Address
 	Kubernetes() Kubernetes
+	PrivateInterface() string
 }
 
 type Kubernetes struct {
@@ -49,7 +50,7 @@ type Pool interface {
 type Machine interface {
 	ID() string
 	IP() string
-	Remove() error
+	Destroy() (remove func() error, err error)
 	Execute(stdin io.Reader, cmd string) ([]byte, error)
 	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error

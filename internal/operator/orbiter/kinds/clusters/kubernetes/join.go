@@ -30,7 +30,9 @@ func join(
 	client *kubernetes.Client,
 	imageRepository string,
 	gitClient *git.Client,
-	providerK8sSpec infra.Kubernetes) (*string, error) {
+	providerK8sSpec infra.Kubernetes,
+	privateInterface string,
+) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
@@ -72,9 +74,11 @@ func join(
 		buf := new(bytes.Buffer)
 		defer buf.Reset()
 		template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
-			ImageRegistry string
+			ImageRegistry    string
+			PrivateInterface string
 		}{
-			ImageRegistry: reg,
+			ImageRegistry:    reg,
+			PrivateInterface: privateInterface,
 		})
 		applyResources = concatYAML(applyResources, buf)
 	case "":

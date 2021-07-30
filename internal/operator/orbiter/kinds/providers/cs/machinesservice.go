@@ -10,6 +10,7 @@ import (
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	sshgen "github.com/caos/orbos/internal/ssh"
@@ -24,6 +25,11 @@ func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerI
 		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desired
+
+	_, _, _, _, _, err = loadbalancers.GetQueryAndDestroyFunc(monitor, nil, desired.Loadbalancing, &tree.Tree{}, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	ctx := buildContext(monitor, &desired.Spec, orbID, providerID, true)
 

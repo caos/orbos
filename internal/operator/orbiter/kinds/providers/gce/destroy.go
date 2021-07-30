@@ -30,8 +30,16 @@ func destroy(svc *machinesService, delegates map[string]interface{}) error {
 				if err != nil {
 					return err
 				}
-				for idx := range machines {
-					delFuncs = append(delFuncs, machines[idx].Remove)
+				for _, machine := range machines {
+					delFuncs = append(delFuncs, func(machine infra.Machine) func() error {
+						return func() error {
+							remove, err := machine.Destroy()
+							if err != nil {
+								return err
+							}
+							return remove()
+						}
+					}(machine))
 				}
 			}
 			if err := helpers.Fanout(delFuncs)(); err != nil {

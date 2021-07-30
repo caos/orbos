@@ -103,8 +103,8 @@ func (c *instance) ReplacementRequired() (bool, func(), func()) {
 	return c.replacementRequired, c.requireReplacement, c.unrequireReplacement
 }
 
-func (c *instance) Remove() error {
-	return c.remove()
+func (c *instance) Destroy() (func() error, error) {
+	return c.remove, nil
 }
 
 type instances []*instance
