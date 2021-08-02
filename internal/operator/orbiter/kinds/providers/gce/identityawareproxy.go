@@ -1,8 +1,6 @@
 package gce
 
 import (
-	"fmt"
-
 	"google.golang.org/api/servicemanagement/v1"
 )
 
@@ -16,8 +14,9 @@ func ensureIdentityAwareProxyAPIEnabled(c *context) error {
 		func() {
 			c.monitor.Debug("Enabling Identity Aware Proxy API")
 		},
-		servicesOpCall(svc.Services.Enable("iap.googleapis.com", &servicemanagement.EnableServiceRequest{
-			ConsumerId: fmt.Sprintf("project:%s", c.projectID),
+		servicesOpCall(svc.Services.Create(&servicemanagement.ManagedService{
+			ServiceName:       "iap.googleapis.com",
+			ProducerProjectId: c.projectID,
 		}).Do),
 		func() error {
 			c.monitor.Debug("Identity Aware Proxy API ensured")
