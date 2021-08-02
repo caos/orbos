@@ -27,9 +27,7 @@ func ReplaceCommand(getRv GetRootValues) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			defer func() {
-				err = rv.ErrFunc(err)
-			}()
+			defer rv.ErrFunc(err)
 
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient

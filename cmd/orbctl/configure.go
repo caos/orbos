@@ -36,9 +36,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
 		rv, _ := getRv("configure", "", map[string]interface{}{"masterkey": newMasterKey != "", "newRepoURL": newRepoURL})
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
+		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {
 			return mntr.ToUserError(errors.New("configure command is only supported with the --gitops flag"))

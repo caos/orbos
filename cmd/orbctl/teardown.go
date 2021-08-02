@@ -54,9 +54,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
+		defer rv.ErrFunc(err)
 
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig

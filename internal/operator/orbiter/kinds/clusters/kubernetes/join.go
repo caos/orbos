@@ -30,7 +30,9 @@ func join(
 	client *kubernetes.Client,
 	imageRepository string,
 	gitClient *git.Client,
-	providerK8sSpec infra.Kubernetes) (*string, error) {
+	providerK8sSpec infra.Kubernetes,
+	privateInterface string,
+) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
@@ -72,9 +74,11 @@ func join(
 		buf := new(bytes.Buffer)
 		defer buf.Reset()
 		template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
-			ImageRegistry string
+			ImageRegistry    string
+			PrivateInterface string
 		}{
-			ImageRegistry: reg,
+			ImageRegistry:    reg,
+			PrivateInterface: privateInterface,
 		})
 		applyResources = concatYAML(applyResources, buf)
 	case "":
@@ -93,7 +97,7 @@ func join(
 	kubeadmCfg := new(bytes.Buffer)
 	defer kubeadmCfg.Reset()
 
-	template.Must(template.New("").Parse(`kind: ClusterConfiguration
+	if err := template.Must(template.New("").Parse(`kind: ClusterConfiguration
 apiVersion: kubeadm.k8s.io/v1beta2
 apiServer:
   timeoutForControlPlane: 4m0s
@@ -218,7 +222,9 @@ nodeRegistration:
 		CertKey:              certKey,
 		ProviderK8sSpec:      providerK8sSpec,
 		CloudConfigPath:      cloudCfgPath,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
 		return cmp.WriteFile(kubeadmCfgPath, kubeadmCfg, 600)

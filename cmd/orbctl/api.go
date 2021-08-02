@@ -31,9 +31,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
+		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {
 			return mntr.ToUserError(errors.New("api command is only supported with the --gitops flag"))
