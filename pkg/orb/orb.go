@@ -181,11 +181,8 @@ func Reconfigure(
 	// This ensures git providers other than github keep being supported
 	// Only if you're not trying to set a new key, as you don't want to generate a new key then
 	if err := configureGit(false); err != nil {
-		if newRepoKey == "" {
-			return err
-		} else {
+		if newRepoKey == "" && strings.HasPrefix(orbConfig.URL, "git@github.com") {
 			monitor.Info("Starting connection with git-repository")
-
 			dir := filepath.Dir(orbConfig.Path)
 
 			deployKeyPrivLocal, deployKeyPub := ssh.Generate()
@@ -211,6 +208,8 @@ func Reconfigure(
 				return err
 			}
 			changes = true
+		} else {
+			return err
 		}
 	}
 	if changes {
