@@ -180,37 +180,39 @@ func Reconfigure(
 	// If the repokey already has read/write permissions, don't generate a new one.
 	// This ensures git providers other than github keep being supported
 	// Only if you're not trying to set a new key, as you don't want to generate a new key then
-	if err := configureGit(false); err != nil && newRepoKey == "" {
-
-		monitor.Info("Starting connection with git-repository")
-
-		dir := filepath.Dir(orbConfig.Path)
-
-		deployKeyPrivLocal, deployKeyPub := ssh.Generate()
-		g := github.New(monitor).LoginOAuth(ctx, dir, clientID, clientSecret)
-		if err := g.GetStatus(); err != nil {
-			return fmt.Errorf("github oauth login failed: %w", err)
-		}
-		repo, err := g.GetRepositorySSH(orbConfig.URL)
-		if err != nil {
-			return fmt.Errorf("failed to get github repository: %w", err)
-		}
-
-		if err := g.EnsureNoDeployKey(repo).GetStatus(); err != nil {
-			return fmt.Errorf("failed to clear deploy keys in repository: %w", err)
-		}
-
-		if err := g.CreateDeployKey(repo, deployKeyPub).GetStatus(); err != nil {
-			return fmt.Errorf("failed to create deploy keys in repository: %w", err)
-		}
-		orbConfig.Repokey = deployKeyPrivLocal
-
-		if err := configureGit(true); err != nil {
+	if err := configureGit(false); err != nil {
+		if newRepoKey == "" {
 			return err
-		}
-		changes = true
-	}
+		} else {
+			monitor.Info("Starting connection with git-repository")
 
+			dir := filepath.Dir(orbConfig.Path)
+
+			deployKeyPrivLocal, deployKeyPub := ssh.Generate()
+			g := github.New(monitor).LoginOAuth(ctx, dir, clientID, clientSecret)
+			if err := g.GetStatus(); err != nil {
+				return fmt.Errorf("github oauth login failed: %w", err)
+			}
+			repo, err := g.GetRepositorySSH(orbConfig.URL)
+			if err != nil {
+				return fmt.Errorf("failed to get github repository: %w", err)
+			}
+
+			if err := g.EnsureNoDeployKey(repo).GetStatus(); err != nil {
+				return fmt.Errorf("failed to clear deploy keys in repository: %w", err)
+			}
+
+			if err := g.CreateDeployKey(repo, deployKeyPub).GetStatus(); err != nil {
+				return fmt.Errorf("failed to create deploy keys in repository: %w", err)
+			}
+			orbConfig.Repokey = deployKeyPrivLocal
+
+			if err := configureGit(true); err != nil {
+				return err
+			}
+			changes = true
+		}
+	}
 	if changes {
 		monitor.Info("Writing local orbconfig")
 		if err := orbConfig.writeBackOrbConfig(); err != nil {
