@@ -106,7 +106,16 @@ func (o *Orb) writeBackOrbConfig() error {
 	return nil
 }
 
-func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newRepoURL, newMasterKey string, gitClient *git.Client, clientID, clientSecret string) (err error) {
+func Reconfigure(
+	ctx context.Context,
+	monitor mntr.Monitor,
+	orbConfig *Orb,
+	newRepoURL,
+	newMasterKey,
+	newRepoKey string,
+	gitClient *git.Client,
+	clientID,
+	clientSecret string) (err error) {
 
 	defer func() {
 		if err != nil {
@@ -144,6 +153,12 @@ func Reconfigure(ctx context.Context, monitor mntr.Monitor, orbConfig *Orb, newR
 			}
 		}()
 		orbConfig.URL = newRepoURL
+		changes = true
+	}
+
+	if newRepoKey != "" {
+		monitor.Info("Changing used key to connect to repository in current orbconfig")
+		orbConfig.Repokey = newRepoKey
 		changes = true
 	}
 
