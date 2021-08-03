@@ -179,7 +179,8 @@ func Reconfigure(
 
 	// If the repokey already has read/write permissions, don't generate a new one.
 	// This ensures git providers other than github keep being supported
-	if err := configureGit(false); err != nil {
+	// Only if you're not trying to set a new key, as you don't want to generate a new key then
+	if err := configureGit(false); err != nil && newRepoKey == "" {
 
 		monitor.Info("Starting connection with git-repository")
 
