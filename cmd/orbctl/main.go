@@ -39,7 +39,7 @@ func main() {
 	file.AddCommand(
 		EditCommand(getRootValues),
 		PrintCommand(getRootValues),
-		//		PatchCommand(getRootValues),
+		PatchCommand(getRootValues),
 	)
 
 	nodes := NodeCommand()
