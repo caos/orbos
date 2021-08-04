@@ -67,3 +67,25 @@ describe('orbctl takeoff', { execTimeout: 900000 }, () => {
         cy.exec(`${orbctlGitops} takeoff`).its('code').should('eq', 0)
     });
 });
+
+describe("init scaling", {execTimeout: 90000}, () => {
+    it('orbctl patch should set the desired scale to 2 workers', () => {
+        cy.exec(`${orbctlGitops} file patch --file orbiter.yml clusters.orbos-test-gceprovider.spec.workers.0.nodes --exact --value "3"`, { timeout: 20000 }).then(result => {
+            cy.log(result.stdout)
+            cy.log(result.stderr)
+        }).its('code').should('eq', 0)
+    })
+})
+/*
+describe('scaling', { execTimeout: 90000, retries: 20 * 6 }, () => {
+
+    it('cluster should have 3 workers', (done) => {
+        cy.exec(`${orbctlGitops} file print caos-internal/orbiter/current.yml`, { timeout: 20000 }).then(result => {
+            setTimeout( () => { }, 10 * 1000 ); // 10 seconds
+            done("its an error")
+            cy.log(result.stdout)
+            cy.log(result.stderr)
+        }).its('code').should('eq', 0)
+    })
+})
+*/
