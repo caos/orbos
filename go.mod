@@ -12,6 +12,7 @@ require (
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
+	github.com/go-delve/delve v1.6.1 // indirect
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/mock v1.5.0

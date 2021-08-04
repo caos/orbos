@@ -1,8 +1,8 @@
-FROM golang:1.14.4-alpine3.11 as build
+FROM golang:1.16.6-alpine3.13 as build
 
 RUN apk update && \
     apk add -U --no-cache ca-certificates git curl openssh && \
-    go get github.com/go-delve/delve/cmd/dlv
+    go get github.com/go-delve/delve/cmd/dlv@v1.7.0
 
 # Runtime dependencies
 RUN mkdir /dependencies && \
