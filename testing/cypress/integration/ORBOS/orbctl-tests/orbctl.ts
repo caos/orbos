@@ -1,10 +1,39 @@
+import {load as ymlToObj} from "js-yaml"
+
 const orbctlGitops = `${Cypress.env("orbCtl")} --gitops --orbconfig ${Cypress.env("orbConfig")} --disable-analytics`
+const retrySeconds = 10
+
+var remainingRetries = -1
+
+// Stops the runner on the first failing test and waits between retries
+afterEach(function() {
+    const totalRetries = this.currentTest.retries()
+    if (this.currentTest.state === 'failed') {
+        if (totalRetries > -1) {
+            if (remainingRetries == -1) {
+                remainingRetries = totalRetries
+            }
+            remainingRetries--
+            cy.log("retries:", remainingRetries)
+        }
+        if (remainingRetries <= 0) {
+            remainingRetries = -1
+            cy.log("err:", this.currentTest.err)
+            Cypress.runner.stop()
+        }
+        if (totalRetries > -1) {
+            cy.wait(retrySeconds * 1000)
+        } else {
+            cy.log("err:", this.currentTest.err)
+        }
+    }
+});
 
 describe('install orbctl', { execTimeout: 90000 }, () => {
     // prepare orbctl, download and configuration
     it('download orbctl', () => {
         cy.exec('bash -c \"if [ -f "./orbctl" ]; then rm ./orbctl ; fi\"').its('code').should('eq', 0);
-        cy.exec(`curl -s ${Cypress.env("releaseVersion")} | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d \'\"\' -f 4 | wget -i - -O ./orbctl `).its('code').should('eq', 0);
+        cy.exec(`curl -s ${Cypress.env("releaseVersion")} | grep "browser_download_url.*orbctl.$(uname).$(uname -m)" | cut -d \'\"\' -f 4 | wget -i - -O ./orbctl `).its('code').should('eq', 0);
         cy.exec('[ -s ./orbctl ]').its('code').should('eq', 0);
         //TODO: check filesize > 0
     });
@@ -13,9 +42,16 @@ describe('install orbctl', { execTimeout: 90000 }, () => {
     })
 });
 
-describe('orbctl configure', { execTimeout: 90000 }, () => {
+describe('initalize repo', () => {
+/*    it('should initialize the orbiter.yml', () => {
+        cy.exec(`${orbctlGitops} file patch orbiter.yml --exact --value ${to}`, { timeout: 20000 }).then(result => {
+            cy.log(result.stdout)
+            cy.log(result.stderr)
+        }).its('code').should('eq', 0)
+    });
+*/
     it('orbctl configure', () => {
-        cy.exec(`${orbctlGitops} configure --repourl ${Cypress.env("repoUrl")} --masterkey "$(openssl rand -base64 21)"`, { timeout: 20000 }).then(result => {
+        cy.exec(`${orbctlGitops} configure --repourl ${Cypress.env("repoUrl")} --masterkey "$(openssl rand -base64 21)"`, { timeout: 60 * 1000 }).then(result => {
             cy.log(result.stdout);
             cy.log(result.stderr);
         }).its('code').should('eq', 0);
@@ -68,24 +104,33 @@ describe('orbctl takeoff', { execTimeout: 900000 }, () => {
     });
 });
 
-describe("init scaling", {execTimeout: 90000}, () => {
-    it('orbctl patch should set the desired scale to 2 workers', () => {
-        cy.exec(`${orbctlGitops} file patch --file orbiter.yml clusters.orbos-test-gceprovider.spec.workers.0.nodes --exact --value "3"`, { timeout: 20000 }).then(result => {
-            cy.log(result.stdout)
-            cy.log(result.stderr)
-        }).its('code').should('eq', 0)
-    })
-})
-/*
-describe('scaling', { execTimeout: 90000, retries: 20 * 6 }, () => {
+function scale(describe: Mocha.SuiteFunction | Mocha.ExclusiveSuiteFunction | Mocha.PendingSuiteFunction, pool: string, to: number, expectTotal: number, ensureTimeoutSeconds: number) {
 
-    it('cluster should have 3 workers', (done) => {
-        cy.exec(`${orbctlGitops} file print caos-internal/orbiter/current.yml`, { timeout: 20000 }).then(result => {
-            setTimeout( () => { }, 10 * 1000 ); // 10 seconds
-            done("its an error")
-            cy.log(result.stdout)
-            cy.log(result.stderr)
-        }).its('code').should('eq', 0)
+    describe(`init scaling ${pool}`, {execTimeout: 90000}, () => {
+        it(`orbctl patch should set the desired scale ${pool} to ${to}`, () => {
+            cy.exec(`${orbctlGitops} file patch orbiter.yml clusters.orbos-test-gceprovider.spec.${pool}.nodes --exact --value ${to}`, { timeout: 20000 }).then(result => {
+                cy.log(result.stdout)
+                cy.log(result.stderr)
+            }).its('code').should('eq', 0)
+        })
     })
-})
-*/
+ 
+    describe(`scaling ${pool}`, { execTimeout: 90000, retries: Math.ceil(ensureTimeoutSeconds / retrySeconds) }, () => {
+
+        it(`cluster should have ${expectTotal} machines`, () => {
+            cy.exec(`${orbctlGitops} file print caos-internal/orbiter/current.yml`, { timeout: 20000 }).then(result => {
+                interface CurrentOrbiter { clusters: { "orbos-test-gceprovider" : { current: { status: string, machines: object} } } }
+                const currentOrbiter: CurrentOrbiter = <any>ymlToObj(result.stdout);
+                const currentCluster = currentOrbiter.clusters["orbos-test-gceprovider"].current
+                expect(Object.keys(currentCluster.machines).length).to.eq(expectTotal)
+                expect(currentCluster.status).to.eq("running")
+            }).its('code').should('eq', 0)
+            // TODO check nodes with kubectl
+        })
+    })
+}
+
+scale(describe, "workers.0", 3, 4, 15 * 60)
+scale(describe, "workers.0", 1, 2, 5 * 60)
+scale(describe.only, "controlplane", 2, 3, 15 * 60)
+scale(describe, "controlplane", 1, 2, 5 * 60)
