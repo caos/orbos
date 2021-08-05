@@ -1,32 +1,41 @@
-import {load as ymlToObj} from "js-yaml"
+import { match } from "cypress/types/sinon";
+import { load as ymlToObj} from "js-yaml"
 
 const orbctlGitops = `${Cypress.env("orbCtl")} --gitops --orbconfig ${Cypress.env("orbConfig")} --disable-analytics`
 const retrySeconds = 10
 
-var remainingRetries = -1
+interface errorMeta {
+    operator: string     
+    since: string     
+}
 
 // Stops the runner on the first failing test and waits between retries
 afterEach(function() {
-    const totalRetries = this.currentTest.retries()
-    if (this.currentTest.state === 'failed') {
-        if (totalRetries > -1) {
-            if (remainingRetries == -1) {
-                remainingRetries = totalRetries
-            }
-            remainingRetries--
-            cy.log("retries:", remainingRetries)
-        }
-        if (remainingRetries <= 0) {
-            remainingRetries = -1
-            cy.log("err:", this.currentTest.err)
-            Cypress.runner.stop()
-        }
-        if (totalRetries > -1) {
-            cy.wait(retrySeconds * 1000)
-        } else {
-            cy.log("err:", this.currentTest.err)
-        }
+
+    if (!this.currentTest.isFailed()) {
+        return
     }
+
+    const totalRetries = this.currentTest.retries()
+    if (!totalRetries) {
+        handleError(this.currentTest.err, null)
+        return
+    }
+
+    const remaining = this.remainingRetries === undefined ? totalRetries : this.remainingRetries-1
+    cy.wrap(remaining).as("remainingRetries").then(remainingRetries => {
+        cy.task('info', `retrying ${remainingRetries}, totally ${totalRetries} times`)
+        if (remainingRetries < 1) {
+            cy.wrap(undefined).as("remainingRetries")
+            const errorMeta = <errorMeta>this.errorMeta
+            handleError(this.currentTest.err, () => {
+                cy.exec(`kubectl -n caos-system logs "app.kubernetes.io/name=${errorMeta.operator}" --since-time ${errorMeta.since}`).then(result => {
+                    
+                })
+            })
+        }
+        cy.wait(retrySeconds * 1000)
+    })
 });
 
 describe('install orbctl', { execTimeout: 90000 }, () => {
@@ -46,7 +55,7 @@ describe('initalize repo', () => {
 /*    it('should initialize the orbiter.yml', () => {
         cy.exec(`${orbctlGitops} file patch orbiter.yml --exact --value ${to}`, { timeout: 20000 }).then(result => {
             cy.log(result.stdout)
-            cy.log(result.stderr)
+            cy.log(result.stderr) 
         }).its('code').should('eq', 0)
     });
 */
@@ -108,23 +117,27 @@ function scale(describe: Mocha.SuiteFunction | Mocha.ExclusiveSuiteFunction | Mo
 
     describe(`init scaling ${pool}`, {execTimeout: 90000}, () => {
         it(`orbctl patch should set the desired scale ${pool} to ${to}`, () => {
-            cy.exec(`${orbctlGitops} file patch orbiter.yml clusters.orbos-test-gceprovider.spec.${pool}.nodes --exact --value ${to}`, { timeout: 20000 }).then(result => {
-                cy.log(result.stdout)
-                cy.log(result.stderr)
-            }).its('code').should('eq', 0)
+            cy.exec(`${orbctlGitops} file patch orbiter.yml clusters.orbos-test-gceprovider.spec.${pool}.nodes --exact --value ${to}`, { timeout: 20000 })
+                .its('code')
+                .should('eq', 0)
         })
     })
- 
-    describe(`scaling ${pool}`, { execTimeout: 90000, retries: Math.ceil(ensureTimeoutSeconds / retrySeconds) }, () => {
 
-        it(`cluster should have ${expectTotal} machines`, () => {
-            cy.exec(`${orbctlGitops} file print caos-internal/orbiter/current.yml`, { timeout: 20000 }).then(result => {
+    describe(`scaling ${pool}`, { execTimeout: 90000, retries: Math.ceil(ensureTimeoutSeconds / retrySeconds) }, () => {
+        it(`cluster should have ${expectTotal} machines`, function() {
+            const since = new Date()       
+            cy.wrap(<errorMeta>{
+                operator: "",
+                since: since.toISOString() 
+            }).as('errorMeta').exec(`${orbctlGitops} file print caos-internal/orbiter/current.yml`, { timeout: 20000 })
+                .then(result => {
+                expect(result.code).to.equal(0)
                 interface CurrentOrbiter { clusters: { "orbos-test-gceprovider" : { current: { status: string, machines: object} } } }
                 const currentOrbiter: CurrentOrbiter = <any>ymlToObj(result.stdout);
                 const currentCluster = currentOrbiter.clusters["orbos-test-gceprovider"].current
                 expect(Object.keys(currentCluster.machines).length).to.eq(expectTotal)
                 expect(currentCluster.status).to.eq("running")
-            }).its('code').should('eq', 0)
+            })
             // TODO check nodes with kubectl
         })
     })
@@ -134,3 +147,23 @@ scale(describe, "workers.0", 3, 4, 15 * 60)
 scale(describe, "workers.0", 1, 2, 5 * 60)
 scale(describe.only, "controlplane", 2, 3, 15 * 60)
 scale(describe, "controlplane", 1, 2, 5 * 60)
+
+function handleError(err: any, onError: () => string) {
+    cy.task('error', err)
+    if (onError) {
+        const anotherErr = onError()
+        if (anotherErr) {
+            cy.task('error', anotherErr)
+        }
+    }
+    Cypress.runner.stop()
+}
+
+
+
+
+
+
+
+
+
