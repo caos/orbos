@@ -29,7 +29,7 @@ func alignMachines(
 		wg  sync.WaitGroup
 		err error
 	)
-	alignPool := func(pool *initializedPool, ensured func(int)) {
+	alignPool := func(pool *initializedPool) {
 		defer wg.Done()
 
 		if pool.upscaling > 0 {
@@ -53,23 +53,14 @@ func alignMachines(
 			return
 		}
 		machines = append(machines, poolMachines...)
-		if ensured != nil {
-			ensured(len(poolMachines))
-		}
 	}
 
-	var ensuredControlplane int
 	wg.Add(1)
-	go alignPool(controlplanePool, func(ensured int) {
-		ensuredControlplane = ensured
-	})
+	go alignPool(controlplanePool)
 
-	var ensuredWorkers int
 	for _, workerPool := range workerPools {
 		wg.Add(1)
-		go alignPool(workerPool, func(ensured int) {
-			ensuredWorkers += ensured
-		})
+		go alignPool(workerPool)
 	}
 	wg.Wait()
 	if err != nil {
