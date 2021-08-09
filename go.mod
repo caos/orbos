@@ -15,7 +15,6 @@ require (
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/mock v1.5.0
-	github.com/golang/protobuf v1.4.2
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.2.0
@@ -37,8 +36,7 @@ require (
 	golang.org/x/net v0.0.0-20200904194848-62affa334b73
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43
 	google.golang.org/api v0.30.0
-	google.golang.org/grpc v1.31.0
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/grpc v1.39.1 // indirect
 	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.19.2
