@@ -10,6 +10,7 @@
 // https://on.cypress.io/plugins-guide
 // ***********************************************************
 
+import { info } from 'winston'
 import { logger } from './logging'
 
 // This function is called when a project is opened or re-opened (e.g. due to
@@ -32,16 +33,33 @@ module.exports = (on, config) => {
   // IMPORTANT return the updated config object
 
   on('task', {
-    info(msg: any) {
-      console.info(msg)
-      logger.info(msg)
+    info(entry: LogEntry) {
+
+      console.info(`${entry.origin} info:`, entry.msg)
+/*
+      logger.log({
+        level: 'info',
+        message: entry.msg.toString(),
+        origin: entry.origin
+      })*/
       return null
     },
-    error(err: any) {
-      console.error(err)
-      logger.error(err)
+    error(entry: LogEntry) {
+
+      console.error(`${entry.origin} error:`, entry.msg)
+/*
+      logger.log({
+        level: 'error',
+        message: entry.msg.toString(),
+        origin: entry.origin
+      })*/
       return null
     }
   })
   return config
+}
+
+export type LogEntry = {
+  msg: string
+  origin: string
 }
