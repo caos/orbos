@@ -22,11 +22,7 @@ orbctl
 *.out
 
 # cypress results and videos
-/testing/cypress/results
-/testing/cypress/videos
-/testing/cypress/screenshots
 orbconfig
-package-lock.json
 ghtoken
 
 /local

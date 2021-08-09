@@ -1,3 +1,10 @@
 node_modules
 log
 promtail/config.yaml
+
+cypress/results
+cypress/videos
+cypress/screenshots
+
+orbctl
+kubectl
