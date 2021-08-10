@@ -1,3 +1,5 @@
+/// <reference types="cypress" />
+
 // ***********************************************************
 // This example support/index.js is processed and
 // loaded automatically before your test files.
@@ -12,9 +14,12 @@
 // You can read more here:
 // https://on.cypress.io/configuration
 // ***********************************************************
+
+
 module.exports = (on, config) => {
   // `on` is used to hook into various events Cypress emits
   // `config` is the resolved Cypress config
+  return config
 }
 
 // Import commands.js using ES2015 syntax:
