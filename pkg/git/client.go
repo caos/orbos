@@ -368,20 +368,31 @@ func (g *Client) stage(files ...File) bool {
 
 		updatemonitor.Debug("Overwriting local index")
 
-		file, err := g.fs.Create(f.Path)
-		if err != nil {
-			panic(err)
-		}
-		//noinspection GoDeferInLoop
-		defer file.Close()
+		var doNotAdd bool
+		if len(f.Content) == 0 {
+			if err := g.fs.Remove(f.Path); err != nil {
+				if !errors.Is(err, os.ErrNotExist) {
+					panic(err)
+				}
+				doNotAdd = true
+			}
+		} else {
+			file, err := g.fs.Create(f.Path)
+			if err != nil {
+				panic(err)
+			}
+			//noinspection GoDeferInLoop
+			defer file.Close()
 
-		if _, err := io.Copy(file, bytes.NewReader(f.Content)); err != nil {
-			panic(err)
+			if _, err := io.Copy(file, bytes.NewReader(f.Content)); err != nil {
+				panic(err)
+			}
 		}
 
-		_, err = g.workTree.Add(f.Path)
-		if err != nil {
-			panic(err)
+		if !doNotAdd {
+			if _, err := g.workTree.Add(f.Path); err != nil {
+				panic(err)
+			}
 		}
 	}
 

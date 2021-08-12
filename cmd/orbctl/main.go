@@ -40,6 +40,7 @@ func main() {
 		EditCommand(getRootValues),
 		PrintCommand(getRootValues),
 		PatchCommand(getRootValues),
+		RemoveCommand(getRootValues),
 	)
 
 	nodes := NodeCommand()
