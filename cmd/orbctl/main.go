@@ -28,29 +28,6 @@ func main() {
 	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
-	start := StartCommand()
-	start.AddCommand(
-		StartBoom(getRootValues),
-		StartOrbiter(getRootValues),
-		StartNetworking(getRootValues),
-	)
-
-	file := FileCommand()
-	file.AddCommand(
-		EditCommand(getRootValues),
-		PrintCommand(getRootValues),
-		PatchCommand(getRootValues),
-		RemoveCommand(getRootValues),
-	)
-
-	nodes := NodeCommand()
-	nodes.AddCommand(
-		ReplaceCommand(getRootValues),
-		RebootCommand(getRootValues),
-		ExecCommand(getRootValues),
-		ListCommand(getRootValues),
-	)
-
 	rootCmd.AddCommand(
 		ReadSecretCommand(getRootValues),
 		WriteSecretCommand(getRootValues),
@@ -58,9 +35,9 @@ func main() {
 		ConfigCommand(getRootValues),
 		APICommand(getRootValues),
 		TakeoffCommand(getRootValues),
-		file,
-		start,
-		nodes,
+		FileCommand(getRootValues),
+		StartCommand(getRootValues),
+		NodeCommand(getRootValues),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

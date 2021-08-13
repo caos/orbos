@@ -15,7 +15,7 @@ import (
 func RemoveCommand(getRv GetRootValues) *cobra.Command {
 
 	cmd := &cobra.Command{
-		Use:     "remove <filepath> [<filepath> <filepath>...]",
+		Use:     "remove <filepath>",
 		Short:   "Remove file from git repository",
 		Long:    "If the file doesn't exist, the command completes successfully",
 		Args:    cobra.MinimumNArgs(1),
