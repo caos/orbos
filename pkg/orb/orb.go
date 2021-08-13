@@ -236,6 +236,6 @@ func (o *Orb) ID() (id string, err error) {
 		return o.id, nil
 	}
 
-	o.id = alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(o.URL, "git@"), ".git"), "-")
+	o.id = strings.ToLower(alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(o.URL, "git@"), ".git"), "-"))
 	return o.id, nil
 }
