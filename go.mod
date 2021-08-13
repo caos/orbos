@@ -7,13 +7,16 @@ require (
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/aws/aws-sdk-go v1.40.7
 	github.com/caos/oidc v0.15.7
+	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/cloudflare/cloudflare-go v0.12.1
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
-	github.com/golang/mock v1.6.0
+	github.com/golang/mock v1.5.0
+	github.com/golang/protobuf v1.4.2
+	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
@@ -23,8 +26,10 @@ require (
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
-	github.com/pires/go-proxyproto v0.3.0
 	github.com/prometheus/client_golang v1.11.0
+	github.com/philhofer/fwd v1.1.1 // indirect
+	github.com/pires/go-proxyproto v0.3.3
+	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.0
@@ -32,6 +37,9 @@ require (
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	google.golang.org/api v0.52.0
+	google.golang.org/grpc v1.31.0
+	google.golang.org/protobuf v1.25.0
+	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.21.3
 	k8s.io/apiextensions-apiserver v0.21.3

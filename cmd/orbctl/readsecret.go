@@ -3,15 +3,12 @@ package main
 import (
 	"os"
 
-	"github.com/caos/orbos/mntr"
-
-	"github.com/caos/orbos/pkg/kubernetes/cli"
-
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-
-	"github.com/spf13/cobra"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
@@ -35,9 +32,7 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 			if err != nil {
 				return err
 			}
-			defer func() {
-				err = rv.ErrFunc(err)
-			}()
+			defer rv.ErrFunc(err)
 
 			monitor := rv.Monitor
 			orbConfig := rv.OrbConfig

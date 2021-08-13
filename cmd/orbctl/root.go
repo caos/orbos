@@ -4,15 +4,13 @@ import (
 	"context"
 	"os"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/spf13/cobra"
 
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/orb"
 	orbcfg "github.com/caos/orbos/pkg/orb"
-
-	"github.com/spf13/cobra"
-
-	"github.com/caos/orbos/mntr"
 )
 
 type RootValues struct {
@@ -27,19 +25,19 @@ type RootValues struct {
 
 type GetRootValues func(command, component string, tags map[string]interface{}) (*RootValues, error)
 
-type errFunc func(err error) error
+type errFunc func(err error)
 
 func RootCommand() (*cobra.Command, GetRootValues) {
 
 	ctx := context.Background()
 	rv := &RootValues{
 		Ctx: ctx,
-		ErrFunc: func(err error) error {
-			if err != nil {
-				monitor.Error(err)
-				os.Exit(1)
+		ErrFunc: func(err error) {
+			if err == nil {
+				return
 			}
-			return nil
+			monitor.Error(err)
+			os.Exit(1)
 		},
 	}
 
@@ -70,6 +68,7 @@ $ cat > ~/.orb/myorb << EOF
 > EOF
 $ orbctl --gitops -f ~/.orb/myorb [command]
 `,
+		SilenceErrors: true,
 	}
 
 	flags := cmd.PersistentFlags()

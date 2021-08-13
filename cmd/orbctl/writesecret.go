@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
@@ -38,7 +40,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		s, err := key(value, file, stdin)
+		s, err := content(value, file, stdin)
 		if err != nil {
 			return err
 		}
@@ -52,9 +54,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
+		defer rv.ErrFunc(err)
 
 		monitor := rv.Monitor
 		orbConfig := rv.OrbConfig
@@ -79,7 +79,13 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 	return cmd
 }
 
-func key(value string, file string, stdin bool) (string, error) {
+func content(value string, file string, stdin bool) (val string, err error) {
+
+	defer func() {
+		if err != nil {
+			err = mntr.ToUserError(err)
+		}
+	}()
 
 	channels := 0
 	if value != "" {
@@ -93,7 +99,7 @@ func key(value string, file string, stdin bool) (string, error) {
 	}
 
 	if channels != 1 {
-		return "", errors.New("Key must be provided eighter by value or by file path or by standard input")
+		return "", errors.New("content must be provided eighter by value or by file path or by standard input")
 	}
 
 	if value != "" {
@@ -109,9 +115,9 @@ func key(value string, file string, stdin bool) (string, error) {
 		}
 	}
 
-	key, err := readFunc()
+	c, err := readFunc()
 	if err != nil {
 		panic(err)
 	}
-	return string(key), err
+	return string(c), err
 }

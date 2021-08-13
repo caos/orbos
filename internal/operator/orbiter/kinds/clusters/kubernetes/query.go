@@ -25,7 +25,7 @@ func query(
 	gitClient *git.Client,
 ) (orbiter.EnsureFunc, error) {
 
-	cloudPools, kubeAPIAddress, providerK8sSpec, err := GetProviderInfos(desired, providerCurrents)
+	cloudPools, kubeAPIAddress, providerK8sSpec, privateInterface, err := GetProviderInfos(desired, providerCurrents)
 	if err != nil {
 		panic(err)
 	}
@@ -69,6 +69,7 @@ func query(
 			uninitializeMachine,
 			gitClient,
 			providerK8sSpec,
+			privateInterface,
 		))
 	}, err
 }
@@ -84,11 +85,12 @@ func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) er
 	return nil
 }
 
-func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{}) (map[string]map[string]infra.Pool, *infra.Address, infra.Kubernetes, error) {
+func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{}) (map[string]map[string]infra.Pool, *infra.Address, infra.Kubernetes, string, error) {
 	cloudPools := make(map[string]map[string]infra.Pool)
 	var (
-		kubeAPIAddress  *infra.Address
-		providerK8sSpec infra.Kubernetes
+		kubeAPIAddress   *infra.Address
+		providerK8sSpec  infra.Kubernetes
+		privateInterface string
 	)
 
 	for providerName, provider := range providerCurrents {
@@ -104,11 +106,12 @@ func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{
 				var ok bool
 				kubeAPIAddress, ok = providerIngresses["kubeapi"]
 				if !ok {
-					return nil, nil, providerK8sSpec, errors.New("no externally reachable address named kubeapi found")
+					return nil, nil, providerK8sSpec, "", errors.New("no externally reachable address named kubeapi found")
 				}
 				providerK8sSpec = prov.Kubernetes()
+				privateInterface = prov.PrivateInterface()
 			}
 		}
 	}
-	return cloudPools, kubeAPIAddress, providerK8sSpec, nil
+	return cloudPools, kubeAPIAddress, providerK8sSpec, privateInterface, nil
 }
