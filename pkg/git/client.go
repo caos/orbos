@@ -150,6 +150,7 @@ func (g *Client) writeCheck() (err error) {
 		if ref, err = g.repo.Tag(localWriteCheckTag); err != nil {
 			return err
 		}
+		createErr = nil
 	}
 
 	if createErr != nil {
@@ -162,7 +163,7 @@ func (g *Client) writeCheck() (err error) {
 			config.RefSpec("+" + ref.Name() + ":" + ref.Name()),
 		},
 		Auth: g.auth,
-	}); pushErr != nil && pushErr == gogit.NoErrAlreadyUpToDate {
+	}); pushErr != nil && pushErr != gogit.NoErrAlreadyUpToDate {
 		return fmt.Errorf("write-check failed: %w", pushErr)
 	}
 
