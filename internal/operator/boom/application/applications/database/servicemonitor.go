@@ -39,6 +39,21 @@ func getDatabaseServiceMonitor(instanceName string) *servicemonitor.Config {
 	}
 }
 
+func GetCloudDatabaseServiceMonitor(instanceName string) *servicemonitor.Config {
+	sm := getDatabaseServiceMonitor(instanceName)
+
+	relabel := &servicemonitor.ConfigRelabeling{
+		Regex:        "(.+)",
+		SourceLabels: []string{"__name__"},
+		TargetLabel:  "__name__",
+		Replacement:  "caos_crdb_$1",
+	}
+
+	sm.Endpoints[0].Relabelings = append(sm.Endpoints[0].Relabelings, relabel)
+	sm.Name = "database-cloud-servicemonitor"
+	return sm
+}
+
 func getOperatorServiceMonitor(instanceName string) *servicemonitor.Config {
 	var monitorName name.Application = "database-operator-servicemonitor"
 

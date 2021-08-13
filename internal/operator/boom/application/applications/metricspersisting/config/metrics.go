@@ -21,7 +21,12 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/labels"
 )
 
-func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSpec *toolsetslatest.ToolsetSpec) *Config {
+func ScrapeMetricsCrdsConfig(
+	instanceName string,
+	namespace string,
+	toolsetCRDSpec *toolsetslatest.ToolsetSpec,
+	withGrafanaCloud bool,
+) *Config {
 	if toolsetCRDSpec.MetricsPersisting == nil || !toolsetCRDSpec.MetricsPersisting.Deploy {
 		return nil
 	}
@@ -30,6 +35,9 @@ func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSp
 	if toolsetCRDSpec.APIGateway != nil && toolsetCRDSpec.APIGateway.Deploy &&
 		(toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Ambassador) {
 		servicemonitors = append(servicemonitors, ambassadormetrics.GetServicemonitor(instanceName))
+		if withGrafanaCloud {
+			servicemonitors = append(servicemonitors, ambassadormetrics.GetCloudServicemonitor(instanceName))
+		}
 	}
 
 	if toolsetCRDSpec.MetricCollection != nil && toolsetCRDSpec.MetricCollection.Deploy &&
@@ -87,11 +95,17 @@ func ScrapeMetricsCrdsConfig(instanceName string, namespace string, toolsetCRDSp
 		for _, sm := range zitadel.GetServicemonitors(instanceName) {
 			servicemonitors = append(servicemonitors, sm)
 		}
+		if withGrafanaCloud {
+			servicemonitors = append(servicemonitors, zitadel.GetCloudZitadelServiceMonitor(instanceName))
+		}
 	}
 
 	if toolsetCRDSpec.MetricsPersisting.Metrics == nil || toolsetCRDSpec.MetricsPersisting.Metrics.Database {
 		for _, sm := range database.GetServicemonitors(instanceName) {
 			servicemonitors = append(servicemonitors, sm)
+		}
+		if withGrafanaCloud {
+			servicemonitors = append(servicemonitors, database.GetCloudDatabaseServiceMonitor(instanceName))
 		}
 	}
 

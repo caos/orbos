@@ -29,6 +29,21 @@ func getZitadelServicemonitor(instanceName string) *servicemonitor.Config {
 	}
 }
 
+func GetCloudZitadelServiceMonitor(instanceName string) *servicemonitor.Config {
+	sm := getZitadelServicemonitor(instanceName)
+
+	relabel := &servicemonitor.ConfigRelabeling{
+		Regex:        "zitadel_(.+)",
+		SourceLabels: []string{"__name__"},
+		TargetLabel:  "__name__",
+		Replacement:  "caos_zitadel_$1",
+	}
+
+	sm.Endpoints[0].Relabelings = append(sm.Endpoints[0].Relabelings, relabel)
+	sm.Name = "zitadel-cloud-servicemonitor"
+	return sm
+}
+
 func getOperatorServicemonitor(instanceName string) *servicemonitor.Config {
 	var monitorName name.Application = "zitadel-operator-servicemonitor"
 

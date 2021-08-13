@@ -29,3 +29,19 @@ func GetServicemonitor(instanceName string) *servicemonitor.Config {
 		JobName:               "ambassador",
 	}
 }
+
+func GetCloudServicemonitor(instanceName string) *servicemonitor.Config {
+	sm := GetCloudServicemonitor(instanceName)
+	sm.Name = "ambassador-cloud-servicemonitor"
+
+	relabel := &servicemonitor.ConfigRelabeling{
+		Regex:        "envoy_(.+)",
+		SourceLabels: []string{"__name__"},
+		TargetLabel:  "__name__",
+		Replacement:  "caos_ambassador_$1",
+	}
+
+	sm.Endpoints[0].Relabelings = []*servicemonitor.ConfigRelabeling{relabel}
+
+	return sm
+}
