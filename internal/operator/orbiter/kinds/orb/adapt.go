@@ -197,10 +197,10 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf func(monitor mntr.Monitor) error) *orbiter.EnsureResult {
+				return func(psf func(monitor mntr.Monitor) error) (ennsureResult *orbiter.EnsureResult) {
 					defer func() {
-						if err != nil {
-							err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, err)
+						if ennsureResult != nil && ennsureResult.Err != nil {
+							ennsureResult.Err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, ennsureResult.Err)
 						}
 					}()
 
@@ -217,7 +217,7 @@ func AdaptFunc(
 
 					return orbiter.ToEnsureResult(done, nil)
 				}, nil
-			}, func(delegates map[string]interface{}) error {
+			}, func(delegates map[string]interface{}) (err error) {
 				defer func() {
 					if err != nil {
 						err = fmt.Errorf("destroying %s failed: %w", desiredKind.Common.Kind, err)
@@ -230,10 +230,10 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, func(orb orbcfg.Orb) error {
+			}, func(orb orbcfg.Orb) (err error) {
 				defer func() {
 					if err != nil {
-						err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, err)
+						err = fmt.Errorf("configuring %s failed: %w", desiredKind.Common.Kind, err)
 					}
 				}()
 
