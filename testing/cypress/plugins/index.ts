@@ -20,6 +20,12 @@ export type LogEntry = {
   origin: string
 }
 
+declare global {
+  namespace Cypress {
+    event()
+  }
+}
+
 /**
  * @type {Cypress.PluginConfig}
  */
@@ -33,8 +39,11 @@ module.exports = (on, config) => {
   config.env.e2eOrbUrl = process.env.E2E_ORB_URL
   config.env.orbosTag = process.env.ORBOS_TAG
   config.env.githubAccessToken = process.env.GITHUB_ACCESS_TOKEN
-  config.env.orbctl = './orbctl'
-  config.env.orbconfig = './orbconfig'
+  config.env.workFolder = './work'
+  config.env.orbctlFile = `${config.env.workFolder}/orbctl`
+  config.env.orbconfigFile = `${config.env.workFolder}/orbconfig`
+  config.env.orbctl = `${config.env.orbctlFile} --disable-analytics`
+  config.env.orbctlGitops = `${config.env.orbctl} --gitops --orbconfig ${config.env.orbconfigFile}`
   config.env.retrySeconds = 10
 
   on('task', {
@@ -45,6 +54,9 @@ module.exports = (on, config) => {
     error(entry: LogEntry) {
       console.error(`${entry.origin} error:`, entry.msg)
       return null
+    },
+    env(key: string): string {
+      return process.env[key] || ""
     }
   })
   return config  
