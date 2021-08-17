@@ -1,16 +1,29 @@
 package logcollection
 
 import (
+	"errors"
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/helm"
+	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/info"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/logspersisting/logs"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/mntr"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (l *LoggingOperator) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {
-	return logs.GetAllResources(toolsetCRDSpec), nil
+
+	secretName := "grafana-cloud-logs"
+
+	_, getSecretErr := clientgo.GetSecret(secretName, info.GetNamespace())
+	telemetrySecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
+	if getSecretErr != nil && !telemetrySecretAbsent {
+		monitor.Info("Not sending telemetry data to MISSION as secret grafana-cloud is missing in namespace caos-system")
+	}
+
+	return logs.GetAllResources(toolsetCRDSpec, getSecretErr == nil && !telemetrySecretAbsent, secretName, l.orb), nil
 }
 
 func (l *LoggingOperator) SpecToHelmValues(monitor mntr.Monitor, toolset *toolsetslatest.ToolsetSpec) interface{} {
