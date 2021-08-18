@@ -69,9 +69,29 @@ func NewOutput(clusterOutput bool, conf *ConfigOutput) *Output {
 		meta.Namespace = ""
 	}
 
-	var username, password *Value
+	ret := &Output{
+		APIVersion: "logging.banzaicloud.io/v1beta1",
+		Kind:       kind,
+		Metadata:   meta,
+		Spec: &OutputSpec{
+			Loki: &Loki{
+				URL:                       conf.URL,
+				ExtractKubernetesLabels:   conf.ExtractKubernetesLabels,
+				ConfigureKubernetesLabels: conf.ConfigureKubernetesLabels,
+				Buffer: &Buffer{
+					Timekey:       "1m",
+					TimekeyWait:   "30s",
+					TimekeyUseUtc: true,
+				},
+			},
+		},
+	}
+
+	if conf.EnabledNamespaces != nil {
+		ret.Spec.EnabledNamespaces = conf.EnabledNamespaces
+	}
 	if conf.Username != nil {
-		username = &Value{
+		ret.Spec.Loki.Username = &Value{
 			ValueFrom: &ValueFrom{
 				SecretKeyRef: &SecretKeyRef{
 					Key:  conf.Username.Key,
@@ -81,7 +101,7 @@ func NewOutput(clusterOutput bool, conf *ConfigOutput) *Output {
 		}
 	}
 	if conf.Password != nil {
-		password = &Value{
+		ret.Spec.Loki.Password = &Value{
 			ValueFrom: &ValueFrom{
 				SecretKeyRef: &SecretKeyRef{
 					Key:  conf.Password.Key,
@@ -90,28 +110,15 @@ func NewOutput(clusterOutput bool, conf *ConfigOutput) *Output {
 			},
 		}
 	}
-
-	return &Output{
-		APIVersion: "logging.banzaicloud.io/v1beta1",
-		Kind:       kind,
-		Metadata:   meta,
-		Spec: &OutputSpec{
-			EnabledNamespaces: conf.EnabledNamespaces,
-			Loki: &Loki{
-				URL:                       conf.URL,
-				ExtractKubernetesLabels:   conf.ExtractKubernetesLabels,
-				ConfigureKubernetesLabels: conf.ConfigureKubernetesLabels,
-				ExtraLabels:               conf.ExtraLabels,
-				Labels:                    conf.Labels,
-				RemoveKeys:                conf.RemoveKeys,
-				Buffer: &Buffer{
-					Timekey:       "1m",
-					TimekeyWait:   "30s",
-					TimekeyUseUtc: true,
-				},
-				Username: username,
-				Password: password,
-			},
-		},
+	if conf.ExtraLabels != nil {
+		ret.Spec.Loki.ExtraLabels = conf.ExtraLabels
 	}
+
+	if conf.Labels != nil {
+		ret.Spec.Loki.Labels = conf.Labels
+	}
+	if conf.RemoveKeys != nil {
+		ret.Spec.Loki.RemoveKeys = conf.RemoveKeys
+	}
+	return ret
 }

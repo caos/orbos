@@ -54,7 +54,7 @@ func GetAllResources(
 		outputs = append(outputs, lokiOutputs...)
 
 		if len(lokiOutputNames) > 0 || len(lokiClusterOutputNames) > 0 {
-			flows := getAllCloudFlows(toolsetCRDSpec, outputNames, clusterOutputNames)
+			flows := getAllCloudFlows(toolsetCRDSpec, lokiOutputNames, lokiClusterOutputNames)
 			for _, flow := range flows {
 				ret = append(ret, flow)
 			}
