@@ -28,8 +28,8 @@ type Loki struct {
 	ExtraLabels               map[string]string `yaml:"extra_labels,omitempty"`
 	Labels                    map[string]string `yaml:"labels,omitempty"`
 	RemoveKeys                []string          `yaml:"remove_keys,omitempty"`
-	Username                  *Value            `yaml:"username"`
-	Password                  *Value            `yaml:"password"`
+	Username                  *Value            `yaml:"username,omitempty"`
+	Password                  *Value            `yaml:"password,omitempty"`
 	Buffer                    *Buffer           `yaml:"buffer"`
 }
 
