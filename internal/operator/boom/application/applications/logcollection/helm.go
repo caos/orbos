@@ -2,6 +2,7 @@ package logcollection
 
 import (
 	"errors"
+	"fmt"
 	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/helm"
 	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/info"
@@ -20,7 +21,7 @@ func (l *LoggingOperator) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec
 	_, getSecretErr := clientgo.GetSecret(secretName, info.GetNamespace())
 	telemetrySecretAbsent := k8serrors.IsNotFound(errors.Unwrap(getSecretErr))
 	if getSecretErr != nil && !telemetrySecretAbsent {
-		monitor.Info("Not sending telemetry data to MISSION as secret grafana-cloud is missing in namespace caos-system")
+		monitor.Info(fmt.Sprintf("Not sending telemetry data to MISSION as secret %s is missing in namespace caos-system", secretName))
 	}
 
 	return logs.GetAllResources(toolsetCRDSpec, getSecretErr == nil && !telemetrySecretAbsent, secretName, l.orb), nil

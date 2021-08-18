@@ -28,8 +28,8 @@ import (
 func GetAllResources(
 	toolsetCRDSpec *toolsetslatest.ToolsetSpec,
 	withGrafanaCloud bool,
-	orb string,
 	secretName string,
+	orb string,
 ) []interface{} {
 
 	if toolsetCRDSpec.LogCollection == nil || !toolsetCRDSpec.LogCollection.Deploy {
@@ -231,6 +231,10 @@ func getCloudLokiOutput(
 	orb string,
 ) ([]string, []string, []*logging.Output) {
 	conf := &logging.ConfigOutput{
+		EnabledNamespaces: []string{
+			"caos-system",
+			"caos-zitadel",
+		},
 		ConfigureKubernetesLabels: true,
 		ExtractKubernetesLabels:   true,
 		ExtraLabels: map[string]string{
@@ -239,6 +243,9 @@ func getCloudLokiOutput(
 		Labels: map[string]string{
 			"id":    "$.id",
 			"level": "$.level",
+		},
+		RemoveKeys: []string{
+			"kubernetes",
 		},
 		Name:      "output-grafana-cloud-loki",
 		Namespace: "caos-system",
