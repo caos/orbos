@@ -41,7 +41,10 @@ $(sed s/^/\ \ /g /tmp/myorb_repo)
 EOF
 ```
 
-## Create a service account in a billable GCP project of your choice
+## Enable IAP in a billable GCP project of you choice and create a service account
+
+Please follow [this](https://cloud.google.com/iap/docs/enabling-compute-howto#iap-enable) instructions and enable IAP for the project in which the compute-instances should run.
+Under this [link](https://console.cloud.google.com/apis/api/iap.googleapis.com/overview) in the console it should get available.
 
 Assign the service account the roles `Compute Admin`, `IAP-secured Tunnel User` and `Service Usage Admin`
 
