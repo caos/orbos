@@ -129,5 +129,5 @@ func (s *SystemD) UnitPath(unit string) (string, error) {
 		return "", fmt.Errorf("expected prefix %s but got %s", expectOutputPrefix, outStr)
 	}
 
-	return strings.TrimPrefix(outStr, expectOutputPrefix), nil
+	return strings.Trim(strings.TrimPrefix(outStr, expectOutputPrefix), "\n"), nil
 }
