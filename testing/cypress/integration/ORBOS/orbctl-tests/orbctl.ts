@@ -19,20 +19,22 @@ describe('initalize repo', () => {
 
     afterEach(stopAndReport);
 
-    it('configures repo access', () => {
+    before('initialize local files', () => {
         cy.writeFile(Cypress.env('orbconfigFile'), '')
         cy.writeFile(`${Cypress.env('workFolder')}/ghtoken`, `IDToken: ""
 IDTokenClaims: null
 access_token: ${Cypress.env('githubAccessToken')}
 expiry: "0001-01-01T00:00:00Z"
 token_type: bearer`)
-        cy.exec(`${Cypress.env('orbctlGitops')} configure --repourl ${Cypress.env("e2eOrbUrl")} --masterkey "$(openssl rand -base64 21)"`, { failOnNonZeroExit: false })
-        cy.exec(`${Cypress.env('orbctlGitops')} file remove orbiter.yml boom.yml`)
-    });
+    })
 
-    describe('configure repo content', () => {
+    execLongRunning(describe, 'should create the orbconfig and add a new deploy key to the repo', `${Cypress.env('orbctlGitops')} configure --repourl ${Cypress.env("e2eOrbUrl")} --masterkey "$(openssl rand -base64 21)"`, 'orbctl', { timeout: 5 * 60 * 1000, failOnNonZeroExit: false })
 
-        before('cleanup files and load config', () => {
+    describe('initialize repo', () => {
+
+        afterEach(stopAndReport);
+
+        before('load configuration', () => {
             cy.exec(`${Cypress.env('orbctlGitops')} file print e2e.yml`).its("stdout").toObject().as('e2e')
             cy.fixture('boom-init.yml').toObject().then(desiredBoom => {
                 desiredBoom.spec.boomVersion = Cypress.env('orbosTag')
@@ -40,17 +42,23 @@ token_type: bearer`)
             }).as('desiredBoom')
         })
 
-        afterEach(stopAndReport);
-
         describe('with loaded configuration', () => {
 
-            it('creates boom.yml configuration file', function() {
+            it('should have loaded the configuration files', function() {
+                expect(this.desiredBoom).to.not.be.undefined
+            })
+
+            it('should remove remote files', () => {
+                cy.exec(`${Cypress.env('orbctlGitops')} file remove orbiter.yml boom.yml`)
+            })
+
+            it('should create the raw boom.yml configuration file', function() {
                 cy.toYAML(this.desiredBoom).then(boomYml => {
                     cy.exec(`${Cypress.env('orbctlGitops')} file patch boom.yml --exact --value '${boomYml}'`)
                 })
             })
 
-            it('creates orbiter.yml configuration file', () => {
+            it('should create the provider dependent raw orbiter.yml file', () => {
                 cy.fixture('orbiter-init.yml').toObject().then(orbiter => {
                     cy.fixture('clusterspec-init.yml').toObject().then(cluster => {
                         cluster.versions.orbiter = Cypress.env('orbosTag')
@@ -72,11 +80,11 @@ token_type: bearer`)
                 })
             })
 
-            it('migrates the api', () => {
+            it('should migrate the api', () => {
                 cy.exec(`${Cypress.env('orbctlGitops')} api`)
             })
 
-            it('writes provider secrets', function() {
+            it('should write provider secrets', function() {
                 Object.entries(this.e2e.initsecrets).forEach((secretRef) => {
                     cy.task('env', secretRef[1]).then(value => {
                         cy.exec(`${Cypress.env('orbctlGitops')} writesecret orbiter.providerundertest.${secretRef[0]}.encrypted --value '${value}'`)
@@ -84,54 +92,44 @@ token_type: bearer`)
                 })
             });
 
-            it('generates some secrets', () => {
-                cy.exec(`${Cypress.env('orbctlGitops')} configure`)
-            })
+            execLongRunning(describe, 'should generate some secrets', `${Cypress.env('orbctlGitops')} configure`, 'orbctl', { timeout: 2 * 60 * 1000 })
         })
     })
 });
 
 describe('orbctl tests', () => {
    
-    it('orbctl help', () => {
+    it('should not fail when help is passed', () => {
         cy.exec(`${Cypress.env('orbctl')} help`);
     });
 
-    it('orbctl writesecret', () => {
+    it('should write a secret', () => {
         cy.exec(`${Cypress.env('orbctlGitops')} writesecret boom.monitoring.admin.password.encrypted --value dummy`);
     });
 
-    it('orbctl readsecret', () => {
+    it('should read a secret', () => {
         cy.exec(`${Cypress.env('orbctlGitops')} readsecret boom.monitoring.admin.password.encrypted`).its('stdout').should('equal', 'dummy')
     })
 });
 
-execLongRunning(describe, 'should successfully return when the cluster is bootstrapped and ORBITER took off', `${Cypress.env('orbctlGitops')} takeoff`, 15 * 60 * 1000)
+execLongRunning(describe, 'should successfully return when the cluster is bootstrapped and ORBITER took off', `${Cypress.env('orbctlGitops')} takeoff`, 'orbctl', { timeout: 15 * 60 * 1000 })
 
-describe('bootstrap orb', () => {
-    // orbctl takeoff
-    it('should successfully return when the cluster is bootstrapped and ORBITER took off', () => {
-        cy.exec(`${Cypress.env('orbctlGitops')} takeoff`, { timeout: 15 * 60 * 1000 })
-    });
-});
-
-scale(describe, "workers.0", 3, 4, 15 * 60)
+scale(describe.only, "workers.0", 3, 4, 15 * 60)
 scale(describe, "workers.0", 1, 2, 5 * 60)
 scale(describe, "controlplane", 3, 4, 15 * 60)
 scale(describe, "controlplane", 1, 2, 5 * 60)
 
-
 function scale(describe: Mocha.SuiteFunction | Mocha.ExclusiveSuiteFunction | Mocha.PendingSuiteFunction, pool: string, to: number, expectTotal: number, ensureTimeoutSeconds: number) {
 
     describe(`init scaling ${pool}`, () => {
-        it(`orbctl patch should set the desired scale ${pool} to ${to}`, () => {
+        it(`should patch the desired scale of ${pool} to ${to}`, () => {
             cy.exec(`${Cypress.env('orbctlGitops')} file patch orbiter.yml clusters.k8s.spec.${pool}.nodes --exact --value ${to}`)
         })
     })
 
     describe(`scaling ${pool}`, { retries: Math.ceil(ensureTimeoutSeconds / Cypress.env('retrySeconds')) }, () => {
-        it(`cluster should have ${expectTotal} machines`, function() {
-            cy.exec(`${Cypress.env('orbctlGitops')} file print caos-internal/orbiter/current.yml`).its('stdout').toObject().its('clusters.k8s.current').then(current => {
+        it(`should update the infrastructure and the current state to have ${expectTotal} machines`, function() {
+            cy.wrap(<Watch>{ operator: 'orbiter', testStart: new Date().toISOString() }).as('watch').exec(`${Cypress.env('orbctlGitops')} file print caos-internal/orbiter/current.yml`).its('stdout').toObject().its('clusters.k8s.current').then(current => {
                 expect(Object.keys(current.machines).length, `${pool} machines`).to.equal(expectTotal)
                 expect(current.status, 'cluster status').to.equal("running")
                 // TODO check nodes with kubectl
@@ -140,76 +138,74 @@ function scale(describe: Mocha.SuiteFunction | Mocha.ExclusiveSuiteFunction | Mo
     })
 }
 
-execLongRunning(describe, 'destroys the orb', `yes | ${Cypress.env('orbctlGitops')} destroy`, 5 * 60 * 1000)
+execLongRunning(describe, 'should destroy the orb', `yes | ${Cypress.env('orbctlGitops')} destroy`, 'orbctl', { timeout: 5 * 60 * 1000})
+
+interface Watch {
+    operator: string
+    testStart: string
+}
 
 function stopAndReport() {
 
     const ctx = this
 
-    if (!ctx.currentTest.isFailed()) {
-        cy.wrap(undefined).as("retryMeta")
+    if (!ctx.currentTest.isFailed() || ctx.currentTest.ctx.isLongRunning) {
+        cy.wrap(undefined).as("retryMeta").wrap(undefined).as('sinceLatestTrial')
         return
-    }
-
-    const panic = (err: any) => {
-        cy.task('error', <LogEntry>{msg: err, origin: 'cypress'})
-        Cypress.runner.stop()
     }
 
     const totalRetries = ctx.currentTest.retries()
     if (!totalRetries) {
-        panic(ctx.currentTest.err)
+        cy.panic(ctx.currentTest.err)
     }
 
-    interface RetryMeta {
-        remaining: number
-        since: string
-    }
-    const currentRetryMeta: RetryMeta = ctx.retryMeta
-    const newRetryMeta: RetryMeta = {
-        remaining: currentRetryMeta === undefined ? totalRetries : currentRetryMeta.remaining-1,
-        since: currentRetryMeta === undefined ? new Date().toISOString() : currentRetryMeta.since
-    }
-    cy.wrap(newRetryMeta).as("retryMeta").then(meta => {
-        if (meta.remaining > 0) {
-            cy.task('info', <LogEntry>{msg: `retrying ${meta.remaining}, totally ${totalRetries} times`, origin: 'cypress'})
+    const remaining: number = ctx.remainingRetries === undefined ? totalRetries : ctx.remainingRetries
+    cy.wrap(remaining - 1).as("remainingRetries").then(remaining => {
+        cy.task('info', <LogEntry>{msg: `retrying ${remaining}, totally ${totalRetries} times`, origin: 'cypress'}).then(() => {
+            cy.exec('hodor').then(result => cy.task('info', <LogEntry>{msg: result.stdout, origin: 'debug'}))
+            /*            
+            cy.exec(`kubectl -n caos-system logs --selector "app.kubernetes.io/name=${ctx.currentTest.ctx.watch.operator}" --since-time ${ctx.sinceLatestTrial || ctx.currentTest.ctx.watch.testStart}`).then(result => {
+                expect(result.code).to.equal(0)
+                return result.stdout.split("\n").forEach((entry) => {
+                    var level = 'info'
+                    if (entry.indexOf(" err=") > -1) {
+                        level = 'error'
+                    }
+                    cy.task(level, <LogEntry>{msg: entry, origin: ctx.currentTest.ctx.operator})
+                })
+            }).wrap(ctx.currentTest.watch.testStart).as('sinceLatestTrial')*/
+        })
+        if (remaining > 0) {
             cy.wait(Cypress.env('retrySeconds') * 1000)
             return
         }
-        cy.exec(`kubectl -n caos-system logs --selector "app.kubernetes.io/name=${ctx.currentTest.ctx.operator}" --since-time ${meta.since}`).then(result => {
-            return result.stdout.split("\n").forEach((entry) => {
-                var level = 'info'
-                if (entry.indexOf(" err=") > -1) {
-                    level = 'error'
-                }
-                cy.task(level, <LogEntry>{msg: entry, origin: ctx.currentTest.ctx.operator})
-            })
-        })
-        panic(ctx.currentTest.err)
+        cy.panic(ctx.currentTest.err)
     })
 }
 
-function execLongRunning(describe: Mocha.SuiteFunction | Mocha.ExclusiveSuiteFunction | Mocha.PendingSuiteFunction, itMsg: string, command: string, timeoutMS: number, then?: (chainable: Cypress.Chainable<Cypress.Exec>) => void) {
+function execLongRunning(describe: Mocha.SuiteFunction | Mocha.ExclusiveSuiteFunction | Mocha.PendingSuiteFunction, itMsg: string, command: string, pkill?: string, options?: Partial<Cypress.ExecOptions>, then?: (chainable: Cypress.Chainable<Cypress.Exec>) => void) {
 
     describe(`setup command: ${command}`, () => {
-        after(stopAndReport);
-
         after(function(){
-           if (this.currentTest.err.message.indexOf('timed out after waiting ') > -1) {
-                cy.readFile(`${Cypress.env('workFolder')}/longrunning.log`).then(log => 
-                    cy.task('error', <LogEntry>{msg: `Command timed out.
-${log}`, origin: 'cypress'}))
+           if (this.currentTest.isFailed() && this.currentTest.err.message.indexOf('timed out after waiting ') > -1) {
+               cy.exec(pkill ? `pkill ${pkill}`: 'true', { failOnNonZeroExit: false }).then(() =>
+                   cy.readFile(`${Cypress.env('workFolder')}/longrunning.log`).then(log =>
+                    cy.panic(`Command timed out.
+${log}`
+                            )
+                    )
+                )
             }
         })
-    
+       
         describe(`execute command: ${command}`, () => {
             it(itMsg, () => {
-                const c = cy.exec(`bash -c '${command}' > ${Cypress.env('workFolder')}/longrunning.log`, { timeout: timeoutMS })
+                const c = cy.wrap(true).as('isLongRunning').exec(`${command} > ${Cypress.env('workFolder')}/longrunning.log`, options)
                 if (then) {
                     then(c)
                 }
+                c.wrap(false).as('isLongRunning')
             })
         })
     })
 }
-

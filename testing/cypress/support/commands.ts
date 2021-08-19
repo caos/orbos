@@ -1,6 +1,7 @@
 
 import cypress = require("cypress")
 import { load as ymlToObj, dump as objToYML} from "js-yaml"
+import { LogEntry } from "../plugins";
 
 declare global {
     namespace Cypress {
@@ -26,9 +27,27 @@ declare global {
              * @example cy.toYAML({"some": 'json'})
              */
              toYAML(json?: any): Chainable<string>
+
+             /**
+             * Custom command that logs the passed error and stops the cypress runner
+             * 
+             * @example cy.panic('a fatal error occurred')
+             */
+             panic(err: string): void
         }
     }
 }
+
+function panic(err: string): void {
+    cy.task('error', <LogEntry>{msg: err, origin: 'cypress'}).then(() => {
+        expect(false).to.equal(true)
+        Cypress.runner.stop()
+    })
+}
+
+Cypress.Commands.add('panic', { prevSubject: false }, (err: string) => {
+    panic(err)
+})
 
 Cypress.Commands.overwrite('exec', (originalFn: (...args: any[]) => Cypress.Chainable<Cypress.Exec>, command: string, options?: Partial<Cypress.ExecOptions>) => {
 
@@ -36,10 +55,18 @@ Cypress.Commands.overwrite('exec', (originalFn: (...args: any[]) => Cypress.Chai
 
     return originalFn(command, Object.assign(options || {}, { failOnNonZeroExit: false })).then(result => {
         if (result.code && mustSucceed) {
-            throw new Error(`Execution of "${command}" failed
+            cy.task('error', <LogEntry>{msg: `Execution of "${command}" failed
 Exit code: ${result.code}
 Stdout:\n${result.stdout}
-Stderr:\n${result.stderr}`);
+Stderr:\n${result.stderr}`, origin: 'cypress'}).then(() => {
+                expect(false).to.equal(true)
+                Cypress.runner.stop()
+            })
+        
+/*            panic(`Execution of "${command}" failed
+Exit code: ${result.code}
+Stdout:\n${result.stdout}
+Stderr:\n${result.stderr}`)*/
         }
         return result
     })

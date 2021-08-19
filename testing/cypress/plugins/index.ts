@@ -20,22 +20,17 @@ export type LogEntry = {
   origin: string
 }
 
-declare global {
-  namespace Cypress {
-    event()
-  }
-}
-
 /**
  * @type {Cypress.PluginConfig}
  */
 // eslint-disable-next-line no-unused-vars
 module.exports = (on, config) => {
-//  require("cypress-fail-fast/plugin")(on, config);  
 
   // modify the config values
   config.defaultCommandTimeout = 20000
- 
+  config.screenshotOnRunFailure = false
+  config.video = false
+
   config.env.e2eOrbUrl = process.env.E2E_ORB_URL
   config.env.orbosTag = process.env.ORBOS_TAG
   config.env.githubAccessToken = process.env.GITHUB_ACCESS_TOKEN
@@ -52,12 +47,12 @@ module.exports = (on, config) => {
       return null
     },
     error(entry: LogEntry) {
-      console.error(`${entry.origin} error:`, entry.msg)
+      console.info(`${entry.origin} error:`, entry.msg)
       return null
     },
     env(key: string): string {
       return process.env[key] || ""
-    }
+    },
   })
   return config  
 
