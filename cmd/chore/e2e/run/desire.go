@@ -19,7 +19,7 @@ func desireORBITERState(specs *testSpecs, settings programSettings, conditions *
 
 	clusterSpec := fmt.Sprintf(`      controlplane:
         updatesdisabled: false
-        provider: %s
+        provider: providerundertest
         nodes: %d
         pool: management
         taints:
@@ -37,13 +37,11 @@ func desireORBITERState(specs *testSpecs, settings programSettings, conditions *
         orbiter: %s
       workers:
       - updatesdisabled: false
-        provider: %s
+        provider: providerundertest
         nodes: %d
         pool: application`,
-		settings.orbID,
 		specs.DesireORBITERState.InitialMasters,
 		settings.artifactsVersion(),
-		settings.orbID,
 		specs.DesireORBITERState.InitialWorkers,
 	)
 
@@ -59,7 +57,7 @@ func desireORBITERState(specs *testSpecs, settings programSettings, conditions *
 		var providerYml string
 		if err := runCommand(settings, nil, nil, func(line string) {
 			providerYml += fmt.Sprintf("    %s\n", line)
-		}, newOrbctl(initCtx), "--gitops", "file", "print", "provider.yml"); err != nil {
+		}, newOrbctl(initCtx), "--gitops", "file", "print", "provider-init.yml"); err != nil {
 			return err
 		}
 
@@ -70,13 +68,13 @@ version: v0
 spec:
   verbose: false
 clusters:
-  %s:
+  k8s:
     kind: orbiter.caos.ch/KubernetesCluster
     version: v0
     spec:
 %s
 providers:
-  %s:
+  providerundertest:
 %s
     loadbalancing:
       kind: orbiter.caos.ch/DynamicLoadBalancer
@@ -123,7 +121,7 @@ providers:
               path: /ambassador/v0/check_ready
               code: 200
             proxyprotocol: true
-`, settings.orbID, clusterSpec, settings.orbID, providerYml))
+`, clusterSpec, providerYml))
 	}
 }
 
