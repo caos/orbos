@@ -84,7 +84,7 @@ func (s *SystemD) Enable(binary string) error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("enabling systemd unit %s failed with stderr %s", binary, errBuf.String(), err)
+		return fmt.Errorf("enabling systemd unit %s failed with stderr %s: %w", binary, errBuf.String(), err)
 	}
 
 	if !s.Active(binary) {

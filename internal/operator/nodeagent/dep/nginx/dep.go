@@ -15,6 +15,9 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
+const LimitNoFileKey = "LimitNOFILE="
+const LimitNoFile8192Entry = LimitNoFileKey + "8192 # Line added by CAOS node agent"
+
 type Installer interface {
 	isNgninx()
 	nodeagent.Installer
@@ -66,6 +69,16 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 
 	pkg.Config = map[string]string{
 		"nginx.conf": string(config),
+	}
+
+	svc, err := ioutil.ReadFile("/etc/systemd/system/nginx.service")
+	if err != nil {
+		return pkg, err
+	}
+
+	// make pkg config different, so (*nginxDep).Ensure() is triggered
+	if !strings.Contains(string(svc), LimitNoFile8192Entry) {
+		pkg.Config["ensure"] = "yes"
 	}
 
 	return pkg, nil
@@ -127,9 +140,20 @@ module_hotfixes=true`, repoURL)), 0600); err != nil {
 		return err
 	}
 
+	if err := dep.ManipulateFile("", []string{LimitNoFileKey}, nil, func(line string) *string {
+		if strings.HasPrefix(line, "[Service]") {
+			return strPtr("\n" + LimitNoFile8192Entry)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
 	if err := s.systemd.Enable("nginx"); err != nil {
 		return err
 	}
 
 	return s.systemd.Start("nginx")
 }
+
+func strPtr(str string) *string { return &str }
