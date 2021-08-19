@@ -151,10 +151,11 @@ module_hotfixes=true`, repoURL)), 0600); err != nil {
 	}
 
 	if err := dep.ManipulateFile(unitPath, []string{LimitNoFileKey}, nil, func(line string) *string {
-		if strings.HasPrefix(line, "[Service]") {
-			return strPtr("\n" + LimitNoFile8192Entry)
+		serviceLine := "[Service]"
+		if strings.HasPrefix(line, serviceLine) {
+			return strPtr(serviceLine + "\n" + LimitNoFile8192Entry)
 		}
-		return nil
+		return strPtr(line)
 	}); err != nil {
 		return err
 	}
