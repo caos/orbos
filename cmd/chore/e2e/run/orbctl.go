@@ -21,7 +21,7 @@ func buildOrbctl(ctx context.Context, settings programSettings) (newOrbctlComman
 
 	return func(ctx context.Context) *exec.Cmd {
 		cmd := newCmd(ctx)
-		cmd.Args = append(cmd.Args, "--orbconfig", settings.orbconfig)
+		cmd.Args = append(cmd.Args, "--disable-analytics", "--orbconfig", settings.orbconfig)
 		return cmd
 	}, nil
 }
