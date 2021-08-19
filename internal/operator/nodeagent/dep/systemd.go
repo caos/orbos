@@ -120,7 +120,7 @@ func (s *SystemD) UnitPath(unit string) (string, error) {
 	s.monitor.WithFields(map[string]interface{}{
 		"stdout": outStr,
 		"stderr": errStr,
-	}).Debug("Executed yum install")
+	}).Debug("Executed " + strings.Join(cmd.Args, " "))
 	if err != nil {
 		return "", fmt.Errorf("getting systemd unit path for %s failed with stderr %s: %w", unit, errStr, err)
 	}

@@ -71,14 +71,19 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 		"nginx.conf": string(config),
 	}
 
-	svc, err := ioutil.ReadFile("/etc/systemd/system/nginx.service")
+	unitPath, err := s.systemd.UnitPath("nginx")
 	if err != nil {
 		return pkg, err
 	}
 
-	// make pkg config different, so (*nginxDep).Ensure() is triggered
+	svc, err := ioutil.ReadFile(unitPath)
+	if err != nil {
+		return pkg, err
+	}
+
+	// make pkg config different, so (*nginxDep).Ensure() is called
 	if !strings.Contains(string(svc), LimitNoFile8192Entry) {
-		pkg.Config["ensure"] = "yes"
+		pkg.Config["ensuresystemdconf"] = "yes"
 	}
 
 	return pkg, nil
