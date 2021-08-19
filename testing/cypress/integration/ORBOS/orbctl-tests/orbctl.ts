@@ -114,7 +114,7 @@ describe('orbctl tests', () => {
 
 execLongRunning(describe, 'should successfully return when the cluster is bootstrapped and ORBITER took off', `${Cypress.env('orbctlGitops')} takeoff`, 'orbctl', { timeout: 15 * 60 * 1000 })
 
-scale(describe.only, "workers.0", 3, 4, 15 * 60)
+scale(describe, "workers.0", 3, 4, 15 * 60)
 scale(describe, "workers.0", 1, 2, 5 * 60)
 scale(describe, "controlplane", 3, 4, 15 * 60)
 scale(describe, "controlplane", 1, 2, 5 * 60)
