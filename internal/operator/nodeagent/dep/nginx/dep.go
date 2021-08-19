@@ -140,7 +140,12 @@ module_hotfixes=true`, repoURL)), 0600); err != nil {
 		return err
 	}
 
-	if err := dep.ManipulateFile("", []string{LimitNoFileKey}, nil, func(line string) *string {
+	unitPath, err := s.systemd.UnitPath("nginx")
+	if err != nil {
+		return err
+	}
+
+	if err := dep.ManipulateFile(unitPath, []string{LimitNoFileKey}, nil, func(line string) *string {
 		if strings.HasPrefix(line, "[Service]") {
 			return strPtr("\n" + LimitNoFile8192Entry)
 		}
