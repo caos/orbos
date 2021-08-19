@@ -4,18 +4,19 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/caos/orbos/cmd/chore"
+	"github.com/caos/orbos/cmd/chore/orbctl"
 )
 
 type newOrbctlCommandFunc func(context.Context) *exec.Cmd
 
 func buildOrbctl(ctx context.Context, settings programSettings) (newOrbctlCommandFunc, error) {
-	newCmd, err := chore.Orbctl(false, false)
+
+	newCmd, err := orbctl.Command(false, false, settings.download, settings.tag)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := runCommand(settings, orbctl.strPtr(), nil, nil, newCmd(ctx), "--version"); err != nil {
+	if err := runCommand(settings, orbctlPrefix.strPtr(), nil, nil, newCmd(ctx), "--version"); err != nil {
 		return nil, err
 	}
 

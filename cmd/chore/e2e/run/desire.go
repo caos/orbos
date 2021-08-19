@@ -41,7 +41,7 @@ func desireORBITERState(specs *testSpecs, settings programSettings, conditions *
         nodes: %d
         pool: application`,
 		specs.DesireORBITERState.InitialMasters,
-		settings.artifactsVersion(),
+		settings.tag,
 		specs.DesireORBITERState.InitialWorkers,
 	)
 
@@ -130,7 +130,7 @@ func desireBOOMState(deploy bool) testFunc {
 
 		// needs to be assigned also when test is skipped
 		conditions.boom = &condition{
-			watcher: watch(10*time.Minute, boom),
+			watcher: watch(10*time.Minute, boomPrefix),
 			checks: func(ctx context.Context, newKubectl newKubectlCommandFunc, orbiter currentOrbiter, current common.NodeAgentsCurrentKind) error {
 
 				checkCtx, checkCancel := context.WithTimeout(ctx, 1*time.Minute)
@@ -167,9 +167,9 @@ func desireBOOMState(deploy bool) testFunc {
 					checkPodsAreReadyFunc("app=systemd-exporter", allNodes),
 					checkPodsAreReadyFunc("app.kubernetes.io/name notin (orbiter, boom)", expectTotal),
 					func() error {
-						provider, ok := orbiter.Providers[settings.orbID]
+						provider, ok := orbiter.Providers[settings.providerkey]
 						if !ok {
-							return fmt.Errorf("provider %s not found in current state", settings.orbID)
+							return fmt.Errorf("provider %s not found in current state", settings.providerkey)
 						}
 
 						ep := provider.Current.Ingresses.Httpsingress
@@ -261,7 +261,7 @@ spec:
   metricsServer:
     deploy: false
 `,
-				settings.artifactsVersion(),
+				settings.tag,
 				deploy,
 				deploy,
 				deploy,
@@ -286,5 +286,5 @@ func desireState(ctx context.Context, settings programSettings, newOrbctl newOrb
 	cmd := newOrbctl(desireCtx)
 	cmd.Stdin = bytes.NewReader([]byte(yml))
 
-	return runCommand(settings, orbctl.strPtr(), nil, nil, cmd, "--gitops", "file", "patch", path, "--exact", "--stdin")
+	return runCommand(settings, orbctlPrefix.strPtr(), nil, nil, cmd, "--gitops", "file", "patch", path, "--exact", "--stdin")
 }

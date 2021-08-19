@@ -12,19 +12,20 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/afiskon/promtail-client/promtail"
+
 	"github.com/caos/orbos/pkg/orb"
 
-	"github.com/afiskon/promtail-client/promtail"
 	"github.com/caos/orbos/internal/helpers"
 )
 
 func main() {
 
 	var (
-		settings                          programSettings
-		from                              int
-		graphiteURL, graphiteKey, lokiURL string
-		returnCode                        int
+		settings = programSettings{clusterkey: "k8s", providerkey: "providerundertest"}
+		from     int
+		//		graphiteURL, graphiteKey, lokiURL string
+		returnCode int
 	)
 
 	defer func() {
@@ -36,32 +37,40 @@ func main() {
 	}()
 
 	const (
-		orbDefault         = "~/.orb/config"
-		orbUsage           = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
-		graphiteURLDefault = ""
-		graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
-		graphiteKeyDefault = ""
-		graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
-		lokiURLDefault     = ""
-		lokiURLUsage       = "https://<instanceId>:<apiKey>@<instanceUrl>/api/prom/push"
-		fromDefault        = 1
-		fromUsage          = "step to continue e2e tests from"
-		cleanupDefault     = true
-		cleanupUsage       = "destroy orb after tests are done"
+		orbDefault = "~/.orb/config"
+		orbUsage   = "Path to the orbconfig file which points to the orb the end-to-end testing should be performed on"
+		/*		graphiteURLDefault = ""
+				graphiteURLUsage   = "https://<your-subdomain>.hosted-metrics.grafana.net/metrics"
+				graphiteKeyDefault = ""
+				graphiteKeyUsage   = "your api key from grafana.net -- should be editor role"
+				lokiURLDefault     = ""
+				lokiURLUsage       = "https://<instanceId>:<apiKey>@<instanceUrl>/api/prom/push"*/
+		fromDefault     = 1
+		fromUsage       = "step to continue e2e tests from"
+		cleanupDefault  = true
+		cleanupUsage    = "destroy orb after tests are done"
+		downloadDefault = true
+		downloadUsage   = "download a release binary instead of building it locally"
+		tagDefault      = ""
+		tagUsage        = "download this tags release binary. Empty means latest"
 	)
 
 	flag.StringVar(&settings.orbconfig, "orbconfig", orbDefault, orbUsage)
 	flag.StringVar(&settings.orbconfig, "f", orbDefault, orbUsage+" (shorthand)")
-	flag.StringVar(&graphiteURL, "graphiteurl", graphiteURLDefault, graphiteURLUsage)
-	flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
-	flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
-	flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
-	flag.StringVar(&lokiURL, "lokiurl", lokiURLDefault, lokiURLUsage)
-	flag.StringVar(&lokiURL, "l", lokiURLDefault, lokiURLUsage+" (shorthand)")
-	flag.BoolVar(&settings.cleanup, "cleanup", cleanupDefault, cleanupUsage)
-	flag.BoolVar(&settings.cleanup, "c", cleanupDefault, cleanupUsage+" (shorthand)")
+	/*	flag.StringVar(&graphiteURL, "graphiteurl", graphiteURLDefault, graphiteURLUsage)
+		flag.StringVar(&graphiteURL, "g", graphiteURLDefault, graphiteURLUsage+" (shorthand)")
+		flag.StringVar(&graphiteKey, "graphitekey", graphiteKeyDefault, graphiteKeyUsage)
+		flag.StringVar(&graphiteKey, "k", graphiteKeyDefault, graphiteKeyUsage+" (shorthand)")
+		flag.StringVar(&lokiURL, "lokiurl", lokiURLDefault, lokiURLUsage)
+		flag.StringVar(&lokiURL, "l", lokiURLDefault, lokiURLUsage+" (shorthand)")*/
 	flag.IntVar(&from, "from", fromDefault, fromUsage)
 	flag.IntVar(&from, "s", fromDefault, fromUsage)
+	flag.BoolVar(&settings.cleanup, "cleanup", cleanupDefault, cleanupUsage)
+	flag.BoolVar(&settings.cleanup, "c", cleanupDefault, cleanupUsage+" (shorthand)")
+	flag.BoolVar(&settings.download, "download", downloadDefault, downloadUsage)
+	flag.BoolVar(&settings.download, "d", downloadDefault, downloadUsage+" (shorthand)")
+	flag.StringVar(&settings.tag, "tag", tagDefault, tagUsage)
+	flag.StringVar(&settings.tag, "t", tagDefault, tagUsage+" (shorthand)")
 
 	flag.Parse()
 
@@ -76,8 +85,6 @@ func main() {
 		panic(fmt.Errorf("%s: %w", string(out), err))
 	}
 
-	settings.branch = strings.ReplaceAll(strings.TrimPrefix(strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(string(out)), "refs/"), "heads/"), "origin/"), ".", "-")
-
 	orbCfg, err := orb.ParseOrbConfig(helpers.PruneHome(settings.orbconfig))
 	if err != nil {
 		panic(err)
@@ -90,14 +97,14 @@ func main() {
 	settings.orbID = strings.ToLower(strings.Split(strings.Split(orbCfg.URL, "/")[1], ".")[0])
 
 	sendLevel := promtail.DISABLE
-	if lokiURL != "" {
+	/*	if lokiURL != "" {
 		fmt.Println("Sending logs to Loki")
 		sendLevel = promtail.INFO
-	}
+	}*/
 
 	settings.logger, err = promtail.NewClientProto(promtail.ClientConfig{
-		PushURL:            lokiURL,
-		Labels:             fmt.Sprintf(`{e2e_test="true", branch="%s", orb="%s"}`, settings.branch, settings.orbID),
+		//		PushURL:            lokiURL,
+		Labels:             fmt.Sprintf(`{e2e_test="true", tag="%s", orb="%s"}`, settings.tag, settings.orbID),
 		BatchWait:          1 * time.Second,
 		BatchEntriesNumber: 0,
 		SendLevel:          sendLevel,
@@ -125,13 +132,16 @@ func main() {
 
 	testFunc := run
 
-	if graphiteURL != "" {
-		fmt.Println("Sending status to Graphite")
-		testFunc = graphite(
-			graphiteURL,
-			graphiteKey,
-			run)
-	}
+	/*
+		if graphiteURL != "" {
+			fmt.Println("Sending status to Graphite")
+			testFunc = graphite(
+				graphiteURL,
+				graphiteKey,
+				run)
+		}
+
+	*/
 
 	fmt.Println("Starting end-to-end test")
 	fmt.Println(settings.String())

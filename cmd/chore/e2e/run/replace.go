@@ -23,7 +23,7 @@ func replace(_ *testSpecs, settings programSettings, conditions *conditions) int
 
 		// as we don't know the machines name that a skipped test replaced originally (variable "nodeID"), we can't check this anymore in downstream tests.
 		conditions.testCase = &condition{
-			watcher: watch(20*time.Minute, orbiter),
+			watcher: watch(20*time.Minute, orbiterPrefix),
 			checks: func(_ context.Context, _ newKubectlCommandFunc, _ currentOrbiter, current common.NodeAgentsCurrentKind) error {
 				_, ok := current.Current.Get(nodeID)
 				if ok {
@@ -33,6 +33,6 @@ func replace(_ *testSpecs, settings programSettings, conditions *conditions) int
 			},
 		}
 
-		return runCommand(settings, orbctl.strPtr(), nil, nil, newOrbctl(replaceCtx), "--gitops", "node", "replace", fmt.Sprintf("%s.%s", nodeContext, nodeID))
+		return runCommand(settings, orbctlPrefix.strPtr(), nil, nil, newOrbctl(replaceCtx), "--gitops", "node", "replace", fmt.Sprintf("%s.%s", nodeContext, nodeID))
 	}
 }

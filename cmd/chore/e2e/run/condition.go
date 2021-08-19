@@ -55,9 +55,9 @@ type currentOrbiter struct {
 }
 
 func (c *currentOrbiter) cluster(settings programSettings) (cc kubernetes.CurrentCluster, err error) {
-	clusters, ok := c.Clusters[settings.orbID]
+	clusters, ok := c.Clusters[settings.clusterkey]
 	if !ok {
-		return cc, fmt.Errorf("cluster %s not found in current state", settings.orbID)
+		return cc, fmt.Errorf("cluster %s not found in current state", settings.clusterkey)
 	}
 	return clusters.Current, nil
 }
@@ -77,9 +77,9 @@ func (o operatorPrefix) strPtr() *string {
 }
 
 const (
-	orbctl  operatorPrefix = "orbctl: "
-	orbiter operatorPrefix = "ORBITER: "
-	boom    operatorPrefix = "BOOM: "
+	orbctlPrefix  operatorPrefix = "orbctl: "
+	orbiterPrefix operatorPrefix = "ORBITER: "
+	boomPrefix    operatorPrefix = "BOOM: "
 )
 
 func watch(timeout time.Duration, operator operatorPrefix) watcher {
@@ -90,13 +90,13 @@ func watch(timeout time.Duration, operator operatorPrefix) watcher {
 	}
 
 	switch operator {
-	case orbiter:
+	case orbiterPrefix:
 		w.selector = "app.kubernetes.io/name=orbiter"
 		w.checkWhenLogContains = "Desired state is ensured"
-	case boom:
+	case boomPrefix:
 		w.selector = "app.kubernetes.io/name=boom"
 		w.checkWhenLogContains = "Iteration done"
-	case orbctl:
+	case orbctlPrefix:
 		panic("orbctl must be watched by reading its standard output")
 	}
 

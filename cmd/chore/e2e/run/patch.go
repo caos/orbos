@@ -10,5 +10,5 @@ func patch(ctx context.Context, settings programSettings, newOrbctl newOrbctlCom
 	patchCtx, patchCancel := context.WithTimeout(ctx, 1*time.Minute)
 	defer patchCancel()
 
-	return runCommand(settings, orbctl.strPtr(), nil, nil, newOrbctl(patchCtx), "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
+	return runCommand(settings, orbctlPrefix.strPtr(), nil, nil, newOrbctl(patchCtx), "--gitops", "file", "patch", "orbiter.yml", path, "--value", value, "--exact")
 }

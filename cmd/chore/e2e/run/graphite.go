@@ -17,7 +17,7 @@ func graphite(cloudURL, cloudKey string, test runFunc) runFunc {
 
 	return func(ctx context.Context, settings programSettings) error {
 		send := func(value float64, ts time.Time) {
-			if err := sendGraphiteStatus(settings.orbID, cloudURL, cloudKey, settings.branch, value, ts); err != nil {
+			if err := sendGraphiteStatus(settings.orbID, cloudURL, cloudKey, settings.tag, value, ts); err != nil {
 				panic(err)
 			}
 		}

@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"reflect"
 	"runtime"
-	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -76,34 +75,25 @@ func run(ctx context.Context, settings programSettings) error {
 var _ fmt.Stringer = (*programSettings)(nil)
 
 type programSettings struct {
-	ctx                          context.Context
-	logger                       promtail.Client
-	orbID, branch, orbconfig     string
-	from                         uint8
-	cleanup, debugOrbctlCommands bool
-	cache                        struct {
+	ctx                                            context.Context
+	logger                                         promtail.Client
+	orbID, tag, orbconfig, clusterkey, providerkey string
+	from                                           uint8
+	cleanup, debugOrbctlCommands, download         bool
+	cache                                          struct {
 		artifactsVersion string
 	}
-}
-
-func (s programSettings) artifactsVersion() string {
-	if s.cache.artifactsVersion != "" {
-		return s.cache.artifactsVersion
-	}
-	branchParts := strings.Split(s.branch, "/")
-	s.cache.artifactsVersion = branchParts[len(branchParts)-1:][0] + "-dev"
-	return s.cache.artifactsVersion
 }
 
 func (p *programSettings) String() string {
 	return fmt.Sprintf(`orbconfig=%s
 orb=%s
-branch=%s
+tag=%s
 from=%d
 cleanup=%t`,
 		p.orbconfig,
 		p.orbID,
-		p.branch,
+		p.tag,
 		p.from,
 		p.cleanup,
 	)

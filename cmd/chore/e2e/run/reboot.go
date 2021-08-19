@@ -26,7 +26,7 @@ func reboot(_ *testSpecs, settings programSettings, conditions *conditions) inte
 
 		// as we don't know the time when a skipped test was run originally (variable "since"), we can't check this anymore in downstream tests.
 		conditions.testCase = &condition{
-			watcher: watch(10*time.Minute, orbiter),
+			watcher: watch(10*time.Minute, orbiterPrefix),
 			checks: func(_ context.Context, _ newKubectlCommandFunc, _ currentOrbiter, current common.NodeAgentsCurrentKind) error {
 				nodeagent, ok := current.Current.Get(nodeID)
 				if !ok {
@@ -39,6 +39,6 @@ func reboot(_ *testSpecs, settings programSettings, conditions *conditions) inte
 			},
 		}
 
-		return runCommand(settings, orbiter.strPtr(), nil, nil, orbctl(rebootCtx), "--gitops", "node", "reboot", fmt.Sprintf("%s.%s", nodeContext, nodeID))
+		return runCommand(settings, orbiterPrefix.strPtr(), nil, nil, orbctl(rebootCtx), "--gitops", "node", "reboot", fmt.Sprintf("%s.%s", nodeContext, nodeID))
 	}
 }

@@ -1,31 +1,14 @@
-package chore
+package orbctl
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 )
-
-func Orbctl(debug, skipRebuild bool) (func(context.Context) *exec.Cmd, error) {
-
-	noop := func(context.Context) *exec.Cmd { return nil }
-
-	if skipRebuild {
-		return runOrbctlCmd(debug), nil
-	}
-
-	if err := BuildExecutables(debug, false); err != nil {
-		return noop, err
-	}
-
-	return runOrbctlCmd(debug), nil
-}
 
 func BuildExecutables(debug, hostBinsOnly bool) error {
 
@@ -86,23 +69,6 @@ func BuildExecutables(debug, hostBinsOnly bool) error {
 	cmd.Env = []string{"CGO_ENABLED=0", "GOOS=linux"}
 	// gen-charts
 	return run(cmd)
-}
-
-func runOrbctlCmd(debug bool) func(context.Context) *exec.Cmd {
-
-	var extension string
-
-	if runtime.GOOS == "windows" {
-		extension = ".exe"
-	}
-
-	bin := fmt.Sprintf("./artifacts/orbctl-%s-x86_64%s", strings.ToUpper(runtime.GOOS[0:1])+runtime.GOOS[1:], extension)
-	return func(ctx context.Context) *exec.Cmd {
-		if debug {
-			return exec.CommandContext(ctx, "dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", bin, "--")
-		}
-		return exec.CommandContext(ctx, bin)
-	}
 }
 
 func run(cmd *exec.Cmd) error {

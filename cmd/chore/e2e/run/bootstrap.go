@@ -16,7 +16,7 @@ func bootstrap(_ *testSpecs, settings programSettings, conditions *conditions) i
 
 	conditions.testCase = nil
 	conditions.orbiter = &condition{
-		watcher: watch(15*time.Minute, orbiter),
+		watcher: watch(15*time.Minute, orbiterPrefix),
 		checks: func(checkCtx context.Context, newKubectl newKubectlCommandFunc, currentOrbiter currentOrbiter, nodeagents common.NodeAgentsCurrentKind) error {
 
 			cluster, err := currentOrbiter.cluster(settings)
@@ -136,31 +136,31 @@ func bootstrap(_ *testSpecs, settings programSettings, conditions *conditions) i
 			for {
 				select {
 				case <-ticker.C:
-					printProgress(orbctl, settings, fmt.Sprintf("%d (takeoff)", step), started, takeoffTimeout)
+					printProgress(orbctlPrefix, settings, fmt.Sprintf("%d (takeoff)", step), started, takeoffTimeout)
 				case <-takeoffCtx.Done():
 					return
 				}
 			}
 		}()
 
-		if err := runCommand(settings, orbctl.strPtr(), nil, nil, newOrbctl(takeoffCtx), "--gitops", "takeoff"); err != nil {
+		if err := runCommand(settings, orbctlPrefix.strPtr(), nil, nil, newOrbctl(takeoffCtx), "--gitops", "takeoff"); err != nil {
 			return err
 		}
 
 		buf := new(bytes.Buffer)
 		defer buf.Reset()
 
-		if err := runCommand(settings, nil, buf, nil, newOrbctl(takeoffCtx), "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID)); err != nil {
+		if err := runCommand(settings, nil, buf, nil, newOrbctl(takeoffCtx), "--gitops", "readsecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.clusterkey)); err != nil {
 			return err
 		}
 
-		if err := runCommand(settings, orbctl.strPtr(), nil, nil, newOrbctl(takeoffCtx), "--gitops", "writesecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID), "--value", "dummy"); err != nil {
+		if err := runCommand(settings, orbctlPrefix.strPtr(), nil, nil, newOrbctl(takeoffCtx), "--gitops", "writesecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.clusterkey), "--value", "dummy"); err != nil {
 			return err
 		}
 
 		writeSecretCmd := newOrbctl(takeoffCtx)
 		writeSecretCmd.Stdin = buf
 
-		return runCommand(settings, orbctl.strPtr(), nil, nil, writeSecretCmd, "--gitops", "writesecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.orbID), "--stdin")
+		return runCommand(settings, orbctlPrefix.strPtr(), nil, nil, writeSecretCmd, "--gitops", "writesecret", fmt.Sprintf("orbiter.%s.kubeconfig.encrypted", settings.clusterkey), "--stdin")
 	}
 }

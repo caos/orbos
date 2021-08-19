@@ -25,7 +25,7 @@ func destroy(_ *testSpecs, settings programSettings, conditions *conditions) int
 
 		conditions.testCase = nil
 
-		return runCommand(settings, orbctl.strPtr(), nil, func(line string) {
+		return runCommand(settings, orbctlPrefix.strPtr(), nil, func(line string) {
 			if !confirmed && strings.HasPrefix(line, "Are you absolutely sure") {
 				confirmed = true
 				if _, err := stdin.Write([]byte("y\n")); err != nil {
