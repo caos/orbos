@@ -84,7 +84,7 @@ func (s *SystemD) Enable(binary string) error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("enabling systemd unit %s failed with stderr %s", binary, errBuf.String(), err)
+		return fmt.Errorf("enabling systemd unit %s failed with stderr %s: %w", binary, errBuf.String(), err)
 	}
 
 	if !s.Active(binary) {
@@ -100,4 +100,34 @@ func (s *SystemD) Active(binary string) bool {
 		cmd.Stdout = os.Stdout
 	}
 	return cmd.Run() == nil
+}
+
+func (s *SystemD) UnitPath(unit string) (string, error) {
+
+	const showProperty = "FragmentPath"
+	const expectOutputPrefix = showProperty + "="
+
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	cmd := exec.Command("systemctl", "show", "-p", showProperty, unit)
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
+	err := cmd.Run()
+	errStr := errBuf.String()
+	outStr := outBuf.String()
+	s.monitor.WithFields(map[string]interface{}{
+		"stdout": outStr,
+		"stderr": errStr,
+	}).Debug("Executed " + strings.Join(cmd.Args, " "))
+	if err != nil {
+		return "", fmt.Errorf("getting systemd unit path for %s failed with stderr %s: %w", unit, errStr, err)
+	}
+
+	if !strings.HasPrefix(outStr, expectOutputPrefix) {
+		return "", fmt.Errorf("expected prefix %s but got %s", expectOutputPrefix, outStr)
+	}
+
+	return strings.Trim(strings.TrimPrefix(outStr, expectOutputPrefix), "\n"), nil
 }
