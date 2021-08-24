@@ -2,6 +2,7 @@ package nginx
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -81,10 +82,12 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	_, err = ioutil.ReadFile(unitPath)
+	systemdUnit, err := ioutil.ReadFile(unitPath)
 	if err != nil {
 		return pkg, err
 	}
+
+	CurrentSystemdEntries(bytes.NewReader(systemdUnit), &pkg)
 
 	return pkg, nil
 }
