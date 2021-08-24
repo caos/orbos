@@ -16,7 +16,7 @@ import (
 )
 
 const LimitNoFileKey = "LimitNOFILE="
-const LimitNoFile8192Entry = LimitNoFileKey + "8192 # Line added by CAOS node agent"
+const LimitNoFile8192Entry = LimitNoFileKey + "8192"
 
 type Installer interface {
 	isNgninx()
