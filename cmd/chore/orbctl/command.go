@@ -36,6 +36,7 @@ func Command(debug, reuse, download bool, downloadTag string) (func(context.Cont
 }
 
 func runOrbctlCmd(debug bool, orbctlPath string) func(context.Context) *exec.Cmd {
+
 	return func(ctx context.Context) *exec.Cmd {
 		if debug {
 			return exec.CommandContext(ctx, "dlv", "exec", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", orbctlPath, "--")

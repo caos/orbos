@@ -12,7 +12,17 @@ import (
 
 func downloadOrbctl(orbctlPath, tag string) error {
 
+	var err error
+	orbctlPath, err = filepath.Abs(orbctlPath)
+	if err != nil {
+		return err
+	}
+
 	if err := os.RemoveAll(orbctlPath); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(orbctlPath), os.ModePerm); err != nil {
 		return err
 	}
 

@@ -1,0 +1,50 @@
+apiVersion: caos.ch/v1
+kind: Boom
+metadata:
+  name: caos
+  namespace: caos-system
+spec:
+  boomVersion: ${ORBOS_E2E_TAG}
+  preApply:
+    folder: preapply
+    deploy: true
+  postApply:
+    folder: postapply
+    deploy: true
+  metricCollection:
+    resources:
+      requests: {}
+  logCollection:
+    fluentbit:
+      resources:
+        requests: {}
+    fluentd:
+      resources:
+        requests: {}
+  nodeMetricsExporter:
+    resources:
+      requests: {}
+  systemdMetricsExporter:
+    resources:
+      requests: {}
+  monitoring:
+    resources:
+      requests: {}
+  apiGateway:
+    replicaCount: 1
+    service:
+      type: NodePort
+  kubeMetricsExporter:
+    resources:
+      requests: {}
+  reconciling:
+    resources:
+      requests: {}
+  metricsPersisting:
+    resources:
+      requests: {}
+  logsPersisting:
+    resources:
+      requests: {}
+  metricsServer:
+    deploy: false

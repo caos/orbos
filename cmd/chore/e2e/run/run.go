@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"reflect"
 	"runtime"
+	"testing"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -14,13 +15,16 @@ import (
 	"github.com/afiskon/promtail-client/promtail"
 )
 
-var _ runFunc = run
+//var _ runFunc = run
 
-func run(ctx context.Context, settings programSettings) error {
+func run( /*ctx context.Context, */ t *testing.T, settings programSettings) {
+
+	ctx, ctxCancel := context.WithCancel(context.Background())
+	defer ctxCancel()
 
 	newOrbctl, err := buildOrbctl(ctx, settings)
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	if settings.cleanup {
@@ -42,16 +46,16 @@ func run(ctx context.Context, settings programSettings) error {
 
 	kubeconfig, err := ioutil.TempFile("", "kubeconfig-*")
 	if err != nil {
-		return err
+		t.Fatal(err)
 	}
 	if err := kubeconfig.Close(); err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	readKubeconfig, deleteKubeconfig := downloadKubeconfigFunc(settings, kubeconfig.Name())
 	defer deleteKubeconfig()
 
-	return seq(ctx, testSpecs{
+	seq(ctx, t, testSpecs{
 		DesireORBITERState: struct {
 			InitialMasters int
 			InitialWorkers int
@@ -115,13 +119,14 @@ type interactFunc func(context.Context, uint8, newOrbctlCommandFunc) (err error)
 
 func seq(
 	ctx context.Context,
+	t *testing.T,
 	defaultSpecs testSpecs,
 	settings programSettings,
 	newOrbctl newOrbctlCommandFunc,
 	newKubectl newKubectlCommandFunc,
 	downloadKubeconfigFunc downloadKubeconfig,
 	fns ...testFunc,
-) error {
+) {
 
 	conditions := zeroConditions()
 
@@ -129,11 +134,11 @@ func seq(
 	defer e2eSpecBuf.Reset()
 
 	if err := runCommand(settings, nil, e2eSpecBuf, nil, newOrbctl(ctx), "--gitops", "file", "print", "e2e.yml"); err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	if err := yaml.Unmarshal(e2eSpecBuf.Bytes(), &defaultSpecs); err != nil {
-		return err
+		t.Fatal(err)
 	}
 
 	var at uint8
@@ -149,10 +154,9 @@ func seq(
 		}
 
 		if err := runTest(ctx, settings, interactFn, newOrbctl, newKubectl, downloadKubeconfigFunc, at, conditions); err != nil {
-			return err
+			t.Fatal(err)
 		}
 	}
-	return nil
 }
 
 func runTest(
