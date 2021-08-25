@@ -234,7 +234,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					for _, desiredVIPs := range desiredKind.Spec {
 						vips = append(vips, desiredVIPs...)
 					}
-					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
+					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 stream { {{ range $nat := .NATs }}
@@ -329,7 +331,9 @@ vrrp_instance VI_{{ $idx }} {
 }
 {{ end }}`))
 
-					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 
@@ -395,7 +399,7 @@ http {
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return false, err
 						}
-						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := desireNginx(ngxBuf.String())
 						ngxBuf.Reset()
 
 						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
@@ -490,7 +494,7 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := desireNginx(ngxBuf.String())
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
@@ -654,5 +658,15 @@ func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelis
 			enrichVIPsCache[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
 		}
 		return enrichVIPsCache, authCheckResultsCache, nil
+	}
+}
+
+func desireNginx(cfg string) common.Package {
+	return common.Package{
+		Version: nginxVersion,
+		Config: map[string]string{
+			"nginx.conf":                  cfg,
+			"Systemd[Service]LimitNOFILE": "8192",
+		},
 	}
 }
