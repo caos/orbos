@@ -21,9 +21,6 @@ import (
 const LineAddedComment = "# The following line was added by CAOS node agent"
 const CleanupLine = "# Line added by CAOS node agent"
 
-/*const LimitNoFileKey = "LimitNOFILE="
-const LimitNoFile8192Entry = LimitNoFileKey + "8192  "*/
-
 type Installer interface {
 	isNgninx()
 	nodeagent.Installer
