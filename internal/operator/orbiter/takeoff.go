@@ -215,13 +215,9 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 				}
 				if deletedACurrentNodeAgent {
 					monitor.Info("Clearing node agents current states")
-					currentNodeAgentBytes, err := yaml.Marshal(currentNodeAgents)
-					if err != nil {
-						panic(err)
-					}
 					pushFiles = append(pushFiles, git.File{
 						Path:    "caos-internal/orbiter/node-agents-current.yml",
-						Content: currentNodeAgentBytes,
+						Content: common.MarshalYAML(currentNodeAgents),
 					})
 				}
 			}
