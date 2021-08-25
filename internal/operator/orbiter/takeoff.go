@@ -209,7 +209,7 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 				var deletedACurrentNodeAgent bool
 				for currentNA := range currentNodeAgents.Current.NA {
 					if _, ok := desiredNodeAgents.Spec.NodeAgents.NA[currentNA]; !ok {
-						currentNodeAgents.Current.NA = nil
+						currentNodeAgents.Current.NA[currentNA] = nil
 						delete(currentNodeAgents.Current.NA, currentNA)
 						deletedACurrentNodeAgent = true
 					}
