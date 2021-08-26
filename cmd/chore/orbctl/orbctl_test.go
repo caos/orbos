@@ -3,26 +3,17 @@ package orbctl_test
 import (
 	"context"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
-	"testing"
 	"time"
-
-	"gopkg.in/yaml.v3"
-
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/pkg/orb"
-
-	"github.com/onsi/gomega/gbytes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 
 	"github.com/caos/orbos/cmd/chore/orbctl"
@@ -35,6 +26,7 @@ var _ = Describe("orbctl", func() {
 		orbctlGitops                                                             orbctlGitopsCmd
 		kubectl                                                                  kubectlCmd
 		e2eYml                                                                   func(into interface{})
+		ExpectEnsuredOrbiter                                                     expectEnsuredOrbiter
 		//		cleanup               bool
 	)
 
@@ -48,6 +40,7 @@ var _ = Describe("orbctl", func() {
 		orbctlGitops = orbctlGitopsFunc(orbconfig)
 		e2eYml = memoizeUnmarshalE2eYml(orbctlGitops)
 		kubectl = memoizeKubecltCmd(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
+		ExpectEnsuredOrbiter = expectEnsuredOrbiterFunc(orbctlGitops, kubectl)
 		//		orbID = calcOrbID(orbconfig)
 		//		cleanup = boolEnv(prefixedEnv("CLEANUP"))
 
@@ -94,11 +87,11 @@ var _ = Describe("orbctl", func() {
 
 	Context("repository initialization", func() {
 		When("initializing local files", func() {
-			It("truncates the orbconfig", func() {
-				orbconfigFile, err := os.Create(orbconfig)
-				Expect(err).ToNot(HaveOccurred())
-				defer orbconfigFile.Close()
-			})
+			/*			It("truncates the orbconfig", func() {
+						orbconfigFile, err := os.Create(orbconfig)
+						Expect(err).ToNot(HaveOccurred())
+						defer orbconfigFile.Close()
+					})*/
 
 			It("ensures the ghtoken cache file so that the oauth flow is skipped", func() {
 				ghtoken, err := os.Create(ghTokenPath)
@@ -182,185 +175,56 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 		})
 	})
 	Context("bootstrapping", func() {
-		It("creates the kubeapi", func() {
+		FIt("creates the kubeapi", func() {
 
 			session, err := gexec.Start(orbctlGitops("takeoff"), os.Stdout, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(session, 15*time.Minute, 5*time.Second).Should(gexec.Exit(0))
 
+			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 5*time.Minute)
 		})
+	})
+	Context("scaling", func() {
+		When("desiring a higher workers count", func() {
+			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "3", "--exact"), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
-		It("ensures the starting position", func() {
+			ExpectEnsuredOrbiter(1, 3, "v1.18.8", 10*time.Minute)
+		})
+		When("desiring a lower workers count", func() {
+			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "1", "--exact"), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
-			Eventually(readyPods(kubectl, "caos-system", "app.kubernetes.io/name=orbiter"), 10*time.Minute, 5*time.Second).Should(BeIdenticalTo(1))
+			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
+		})
+		When("desiring a higher masters count", func() {
+			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "3", "--exact"), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
-			/*
-				var (
-					orbiter    = currentOrbiter{}
-					nodeagents = common.NodeAgentsCurrentKind{}
-				)
+			ExpectEnsuredOrbiter(3, 1, "v1.18.8", 10*time.Minute)
+		})
+		When("desiring a lower masters count", func() {
+			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "1", "--exact"), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
-				if err := helpers.Fanout([]func() error{
-					func() error {
-						return readyPods(ctx, settings, newKubectl, "caos-system", condition.watcher.selector, 1)
-					},
-					func() error {
-						return unmarshalStdoutYaml(ctx, settings, newOrbctl, &orbiter, "--gitops", "file", "print", "caos-internal/orbiter/current.yml")
-					},
-					func() error {
-						return unmarshalStdoutYaml(ctx, settings, newOrbctl, &nodeagents, "--gitops", "file", "print", "caos-internal/orbiter/node-agents-current.yml")
-					},
-				})(); err != nil {
-					return err
-				}*/
+			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
 		})
 	})
 })
 
-func prefixedEnv(env string) string {
-	return os.Getenv("ORBOS_E2E_" + env)
-}
+type expectUpdating func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration)
 
-func parseUint8(t *testing.T, val string) uint8 {
-	parsed, err := strconv.ParseInt(val, 10, 8)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return uint8(parsed)
-}
-
-func boolEnv(val string) bool {
-	if val == "" {
-		return false
-	}
-	value, err := strconv.ParseBool(val)
-	Expect(err).ToNot(HaveOccurred())
-	return value
-}
-
-func calcOrbID(orbconfig string) string {
-	orbCfg, err := orb.ParseOrbConfig(helpers.PruneHome(orbconfig))
-	Expect(err).ToNot(HaveOccurred())
-
-	Expect(orb.IsComplete(orbCfg)).ToNot(HaveOccurred())
-
-	return strings.ToLower(strings.Split(strings.Split(orbCfg.URL, "/")[1], ".")[0])
-}
-
-type orbctlGitopsCmd func(args ...string) *exec.Cmd
-
-func orbctlGitopsFunc(orbconfig string) orbctlGitopsCmd {
-	cmdFunc, error := orbctl.Command(false, true, false, "")
-	Expect(error).ToNot(HaveOccurred())
-	return func(args ...string) *exec.Cmd {
-		cmd := cmdFunc(context.Background())
-		cmd.Args = append(cmd.Args, append([]string{"--disable-analytics", "--gitops", "--orbconfig", orbconfig}, args...)...)
-		return cmd
-	}
-}
-
-func memoizeUnmarshalE2eYml(orbctl orbctlGitopsCmd) func(interface{}) {
-
-	var bytes []byte
-	return func(into interface{}) {
-
-		if bytes != nil {
-			unmarshalYaml(bytes, into)
-			return
-		}
-
-		session, err := gexec.Start(orbctl("file", "print", "e2e.yml"), GinkgoWriter, GinkgoWriter)
+func ExpectUpdatingOrbiter(orbctlGitops orbctlGitopsCmd, ExpectEnsuredOrbiter expectEnsuredOrbiter) expectUpdating {
+	return func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration) {
+		session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", patchPath, "--value", "1", "--exact"), GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 5*time.Second).Should(gexec.Exit(0))
+		Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
-		bytes = session.Out.Contents()
-		unmarshalYaml(bytes, into)
+		ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
 	}
-}
-
-type kubectlCmd func(...string) *exec.Cmd
-
-func memoizeKubecltCmd(kubectlPath string, orbctl orbctlGitopsCmd) kubectlCmd {
-	var read bool
-
-	return func(args ...string) *exec.Cmd {
-		cmd := exec.Command("kubectl", append([]string{"--kubeconfig", kubectlPath}, args...)...)
-
-		if read {
-			return cmd
-		}
-
-		session, err := gexec.Start(orbctl("readsecret", "orbiter.k8s.kubeconfig.encrypted"), GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 5*time.Second).Should(gexec.Exit(0))
-
-		file, err := os.Create(kubectlPath)
-		Expect(err).ToNot(HaveOccurred())
-		defer file.Close()
-
-		Expect(io.Copy(session.Out, file)).To(BeNumerically("~", 5500, 1000))
-
-		read = true
-
-		return cmd
-	}
-}
-
-func unmarshalYaml(content []byte, into interface{}) {
-	Expect(yaml.Unmarshal(content, into)).To(Succeed())
-}
-
-func unmarshalStdoutYaml(cmd *exec.Cmd, into interface{}, timeout time.Duration) {
-
-	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).ToNot(HaveOccurred())
-	Eventually(session, timeout).Should(gexec.Exit(0))
-
-	unmarshalYaml(session.Out.Contents(), into)
-}
-
-func readyPods(kubectl kubectlCmd, namespace, selector string) (readyPodsCount uint8) {
-
-	pods := struct {
-		Items []struct {
-			Metadata struct {
-				Name string
-			}
-			Status struct {
-				Conditions []struct {
-					Type   string
-					Status string
-				}
-			}
-		}
-	}{}
-
-	args := []string{
-		"get", "pods",
-		"--namespace", namespace,
-		"--output", "yaml",
-	}
-
-	if selector != "" {
-		args = append(args, "--selector", selector)
-	}
-
-	unmarshalStdoutYaml(kubectl(args...), &pods, 5*time.Second)
-
-	for i := range pods.Items {
-		pod := pods.Items[i]
-		for j := range pod.Status.Conditions {
-			condition := pod.Status.Conditions[j]
-			if condition.Type != "Ready" {
-				continue
-			}
-			if condition.Status == "True" {
-				readyPodsCount++
-				break
-			}
-		}
-	}
-
-	return readyPodsCount
 }
