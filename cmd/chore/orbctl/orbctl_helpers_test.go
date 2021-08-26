@@ -175,7 +175,7 @@ func printOperatorLogs(kubectl kubectlCmd) func() {
 	return func() {
 		session, err := gexec.Start(kubectl("--namespace", "caos-system", "logs", "--selector", "app.kubernetes.io/name=orbiter", "--since-time", from.Format(time.RFC3339)), os.Stdout, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session).Should(gexec.Exit(0))
+		Eventually(session).Should(gexec.Exit())
 
 		from = time.Now()
 	}
@@ -270,5 +270,17 @@ func expectEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) 
 			clusterStatus:  "running",
 			nodeAgentsDone: expectMasters + expectWorkers,
 		}))
+	}
+}
+
+type expectUpdatedOrbiter func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration)
+
+func expectUpdatedOrbiterFunc(orbctlGitops orbctlGitopsCmd, ExpectEnsuredOrbiter expectEnsuredOrbiter) expectUpdatedOrbiter {
+	return func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration) {
+		session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", patchPath, "--value", patchValue, "--exact"), GinkgoWriter, GinkgoWriter)
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+
+		ExpectEnsuredOrbiter(expectMasters, expectWorkers, expectK8sVersion, timeout)
 	}
 }

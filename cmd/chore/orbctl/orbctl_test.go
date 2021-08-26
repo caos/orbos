@@ -27,6 +27,7 @@ var _ = Describe("orbctl", func() {
 		kubectl                                                                  kubectlCmd
 		e2eYml                                                                   func(into interface{})
 		ExpectEnsuredOrbiter                                                     expectEnsuredOrbiter
+		ExpectUpdatedOrbiter                                                     expectUpdatedOrbiter
 		//		cleanup               bool
 	)
 
@@ -41,6 +42,7 @@ var _ = Describe("orbctl", func() {
 		e2eYml = memoizeUnmarshalE2eYml(orbctlGitops)
 		kubectl = memoizeKubecltCmd(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
 		ExpectEnsuredOrbiter = expectEnsuredOrbiterFunc(orbctlGitops, kubectl)
+		ExpectUpdatedOrbiter = expectUpdatedOrbiterFunc(orbctlGitops, ExpectEnsuredOrbiter)
 		//		orbID = calcOrbID(orbconfig)
 		//		cleanup = boolEnv(prefixedEnv("CLEANUP"))
 
@@ -175,7 +177,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 		})
 	})
 	Context("bootstrapping", func() {
-		FIt("creates the kubeapi", func() {
+		It("creates the kubeapi", func() {
 
 			session, err := gexec.Start(orbctlGitops("takeoff"), os.Stdout, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
@@ -187,44 +189,43 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 	})
 	Context("scaling", func() {
 		When("desiring a higher workers count", func() {
-			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "3", "--exact"), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
-
-			ExpectEnsuredOrbiter(1, 3, "v1.18.8", 10*time.Minute)
+			It("scales up workers", func() {
+				ExpectUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "3", "v1.18.8", 1, 3, 10*time.Minute)
+			})
 		})
 		When("desiring a lower workers count", func() {
-			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "1", "--exact"), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
-
-			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
+			It("scales down workers", func() {
+				ExpectUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
+			})
 		})
 		When("desiring a higher masters count", func() {
-			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "3", "--exact"), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
-
-			ExpectEnsuredOrbiter(3, 1, "v1.18.8", 10*time.Minute)
+			FIt("scales up masters", func() {
+				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "3", "v1.18.8", 3, 1, 10*time.Minute)
+			})
 		})
 		When("desiring a lower masters count", func() {
-			session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "clusters.k8s.spec.controlplane.nodes", "--value", "1", "--exact"), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+			It("scales down masters", func() {
+				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
+			})
+		})
+	})
+	Context("machine", func() {
+		When("desiring a machine reboot", func() {
+			It("updates the machines last reboot time", func() {
 
-			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
+			})
+		})
+		When("desiring a machine replacement", func() {
+			It("removes a machine and joins a new one", func() {
+
+			})
+		})
+	})
+	Context("kubernetes upgrading", func() {
+		When("desiring the latest kubernetes release", func() {
+			It("upgrades the kubernetes binaries", func() {
+				ExpectUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 10*time.Minute)
+			})
 		})
 	})
 })
-
-type expectUpdating func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration)
-
-func ExpectUpdatingOrbiter(orbctlGitops orbctlGitopsCmd, ExpectEnsuredOrbiter expectEnsuredOrbiter) expectUpdating {
-	return func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration) {
-		session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", patchPath, "--value", "1", "--exact"), GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
-
-		ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
-	}
-}
