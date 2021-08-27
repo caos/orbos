@@ -11,6 +11,9 @@ jobs:
       - name: Source Checkout Dev
         id: source-checkout-dev
         uses: actions/checkout@v1
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.16.0'
       - name: Dev-Release
         id: dev-release
         shell: bash
