@@ -21,13 +21,20 @@ import (
 
 var _ = Describe("orbctl", func() {
 
+	const (
+		envPrefix = "ORBOS_E2E_"
+		tagEnv    = envPrefix + "TAG"
+		orbEnv    = envPrefix + "ORBURL"
+		ghpatEnv  = envPrefix + "GITHUB_ACCESS_TOKEN"
+	)
+
 	var (
-		tag, orbURL /*, orbID*/, workfolder, orbconfig, ghTokenPath, accessToken string
-		orbctlGitops                                                             orbctlGitopsCmd
-		kubectl                                                                  kubectlCmd
-		e2eYml                                                                   func(into interface{})
-		ExpectEnsuredOrbiter                                                     expectEnsuredOrbiter
-		ExpectUpdatedOrbiter                                                     expectUpdatedOrbiter
+		tag, orbURL, workfolder, orbconfig, ghTokenPath, accessToken string
+		orbctlGitops                                                 orbctlGitopsCmd
+		kubectl                                                      kubectlCmd
+		e2eYml                                                       func(into interface{})
+		ExpectEnsuredOrbiter                                         expectEnsuredOrbiter
+		ExpectUpdatedOrbiter                                         expectUpdatedOrbiter
 		//		cleanup               bool
 	)
 
@@ -35,21 +42,34 @@ var _ = Describe("orbctl", func() {
 		workfolder = "./artifacts"
 		orbconfig = filepath.Join(workfolder, "orbconfig")
 		ghTokenPath = filepath.Join(workfolder, "ghtoken")
-		tag = prefixedEnv("TAG")
-		orbURL = prefixedEnv("ORBURL")
-		accessToken = prefixedEnv("GITHUB_ACCESS_TOKEN")
+		tag = os.Getenv(tagEnv)
+		orbURL = os.Getenv(orbEnv)
+		accessToken = os.Getenv(ghpatEnv)
 		orbctlGitops = orbctlGitopsFunc(orbconfig)
 		e2eYml = memoizeUnmarshalE2eYml(orbctlGitops)
 		kubectl = memoizeKubecltCmd(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
 		ExpectEnsuredOrbiter = expectEnsuredOrbiterFunc(orbctlGitops, kubectl)
 		ExpectUpdatedOrbiter = expectUpdatedOrbiterFunc(orbctlGitops, ExpectEnsuredOrbiter)
-		//		orbID = calcOrbID(orbconfig)
 		//		cleanup = boolEnv(prefixedEnv("CLEANUP"))
 
-		Expect(tag).ToNot(BeEmpty())
-		Expect(orbconfig).ToNot(BeEmpty())
-		Expect(orbURL).ToNot(BeEmpty())
-		//		Expect(orbID).ToNot(BeEmpty())
+		Expect(tag).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", tagEnv))
+		Expect(orbURL).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", orbEnv))
+		Expect(accessToken).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", ghpatEnv))
+	})
+
+	AfterSuite(func() {
+		destroy := func() {
+			cmd := orbctlGitops("destroy")
+			cmd.Stdin = strings.NewReader("yes")
+
+			session, err := gexec.Start(cmd, os.Stdout, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
+		}
+		var _ = destroy
+
+		// do uncomment when in dev mode
+		//destroy()
 	})
 
 	Context("version", func() {
@@ -130,15 +150,22 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				})
 
 				It("succeeds when creating the initial orbiter.yml", func() {
+
+					By("fetching the file provider-init.yml from git")
+
 					printSession, err := gexec.Start(orbctlGitops("file", "print", "provider-init.yml"), GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(printSession, 1*time.Minute).Should(gexec.Exit(0))
 					providerSpecs := "    " + strings.Join(strings.Split(string(printSession.Out.Contents()), "\n"), "\n    ")
 
+					By("reading the file ./orbiter-init.yml from the file system")
+
 					contentBytes, err := ioutil.ReadFile("./orbiter-init.yml")
 					Expect(err).ToNot(HaveOccurred())
 
 					orbiterYml := os.ExpandEnv(fmt.Sprintf(string(contentBytes), providerSpecs))
+
+					By("replacing the file orbiter.yml in git")
 
 					patchSession, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", "--exact", "--value", orbiterYml), GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
@@ -160,9 +187,13 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 					Expect(cfg.Initsecrets).ToNot(HaveLen(0))
 
 					for k, v := range cfg.Initsecrets {
+						secretKey := fmt.Sprintf("orbiter.providerundertest.%s.encrypted", k)
+
+						By(fmt.Sprintf("writing the secret %s using the value from environment variable %s", secretKey, v))
+
 						expanded := os.Getenv(v)
 						Expect(expanded).ToNot(BeEmpty())
-						session, err := gexec.Start(orbctlGitops("writesecret", fmt.Sprintf("orbiter.providerundertest.%s.encrypted", k), "--value", expanded), GinkgoWriter, GinkgoWriter)
+						session, err := gexec.Start(orbctlGitops("writesecret", secretKey, "--value", expanded), GinkgoWriter, GinkgoWriter)
 						Expect(err).ToNot(HaveOccurred())
 						Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 					}
@@ -176,7 +207,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			})
 		})
 	})
-	Context("bootstrapping", func() {
+	When("bootstrapping", func() {
 		It("creates the kubeapi", func() {
 
 			session, err := gexec.Start(orbctlGitops("takeoff"), os.Stdout, GinkgoWriter)
@@ -198,34 +229,67 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				ExpectUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
 			})
 		})
-		When("desiring a higher masters count", func() {
-			FIt("scales up masters", func() {
+		FWhen("desiring a higher masters count", func() {
+			It("scales up masters", func() {
 				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "3", "v1.18.8", 3, 1, 10*time.Minute)
 			})
 		})
-		When("desiring a lower masters count", func() {
+		FWhen("desiring a lower masters count", func() {
 			It("scales down masters", func() {
 				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
 			})
 		})
 	})
-	Context("machine", func() {
+	FContext("machine", func() {
 		When("desiring a machine reboot", func() {
 			It("updates the machines last reboot time", func() {
 
+				testStart := time.Now()
+				machineContext, machineID := someMaster(orbctlGitops)
+
+				By(fmt.Sprintf("executing the reboot command for machine %s", machineID))
+
+				session, err := gexec.Start(orbctlGitops("node", "reboot", fmt.Sprintf("%s.%s", machineContext, machineID)), GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+
+				By("waiting for ORBITER to ensure the result")
+
+				Eventually(func() time.Time {
+					machine, ok := currentNodeagents(orbctlGitops).Current.Get(machineID)
+					if !ok {
+						Fail("node agent not found in current state")
+					}
+					return machine.Booted
+				}, 5*time.Minute).Should(SatisfyAll(BeTemporally(">", testStart)))
+
+				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 1*time.Minute)
 			})
 		})
 		When("desiring a machine replacement", func() {
 			It("removes a machine and joins a new one", func() {
 
+				machineContext, machineID := someMaster(orbctlGitops)
+
+				By(fmt.Sprintf("executing the replace command for machine %s", machineID))
+
+				session, err := gexec.Start(orbctlGitops("node", "replace", fmt.Sprintf("%s.%s", machineContext, machineID)), GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+
+				By("waiting for ORBITER to ensure the result")
+
+				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
+				Eventually(func() bool {
+					_, ok := currentNodeagents(orbctlGitops).Current.Get(machineID)
+					return ok
+				}, 15*time.Minute).Should(BeFalse())
 			})
 		})
 	})
-	Context("kubernetes upgrading", func() {
-		When("desiring the latest kubernetes release", func() {
-			It("upgrades the kubernetes binaries", func() {
-				ExpectUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 10*time.Minute)
-			})
+	FWhen("desiring the latest kubernetes release", func() {
+		It("upgrades the kubernetes binaries", func() {
+			ExpectUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 10*time.Minute)
 		})
 	})
 })

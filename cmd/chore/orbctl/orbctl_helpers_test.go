@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/onsi/gomega/types"
+
 	"github.com/caos/orbos/internal/operator/common"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -24,10 +26,6 @@ import (
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/pkg/orb"
 )
-
-func prefixedEnv(env string) string {
-	return os.Getenv("ORBOS_E2E_" + env)
-}
 
 func parseUint8(t *testing.T, val string) uint8 {
 	parsed, err := strconv.ParseInt(val, 10, 8)
@@ -77,9 +75,11 @@ func memoizeUnmarshalE2eYml(orbctl orbctlGitopsCmd) func(interface{}) {
 			return
 		}
 
+		By("fetching the file e2e.yml from git")
+
 		session, err := gexec.Start(orbctl("file", "print", "e2e.yml"), GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 5*time.Second).Should(gexec.Exit(0))
+		Eventually(session, 5).Should(gexec.Exit(0))
 
 		bytes = session.Out.Contents()
 		unmarshalYaml(bytes, into)
@@ -104,7 +104,7 @@ func memoizeKubecltCmd(kubectlPath string, orbctl orbctlGitopsCmd) kubectlCmd {
 
 		session, err := gexec.Start(orbctl("readsecret", "orbiter.k8s.kubeconfig.encrypted"), file, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 5*time.Second).Should(gexec.Exit(0))
+		Eventually(session, 5).Should(gexec.Exit(0))
 
 		read = true
 
@@ -116,11 +116,16 @@ func unmarshalYaml(content []byte, into interface{}) {
 	Expect(yaml.Unmarshal(content, into)).To(Succeed())
 }
 
-func unmarshalStdoutYaml(cmd *exec.Cmd, into interface{}) {
+func unmarshalStdoutYaml(cmd *exec.Cmd, into interface{}, flaky bool) {
+
+	var matcher types.GomegaMatcher = gexec.Exit(0)
+	if flaky {
+		matcher = FlakyExit(0)
+	}
 
 	session, err := gexec.Start(cmd, nil, GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
-	Eventually(session, 5*time.Second).Should(gexec.Exit(0))
+	Eventually(session, 2*time.Minute).Should(matcher)
 
 	unmarshalYaml(session.Out.Contents(), into)
 }
@@ -151,7 +156,7 @@ func readyPods(kubectl kubectlCmd, namespace, selector string) (readyPodsCount u
 		args = append(args, "--selector", selector)
 	}
 
-	unmarshalStdoutYaml(kubectl(args...), &pods)
+	unmarshalStdoutYaml(kubectl(args...), &pods, true)
 
 	for i := range pods.Items {
 		pod := pods.Items[i]
@@ -196,12 +201,13 @@ func currentOrbiter(orbctlGitops orbctlGitopsCmd) (currentOrbiter struct {
 	}
 }) {
 
-	unmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/current.yml"), &currentOrbiter)
+	unmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/current.yml"), &currentOrbiter, false)
 	return currentOrbiter
 }
 
-func currentNodeagents(orbctlGitops orbctlGitopsCmd) (currentNAs common.NodeAgentsCurrentKind) {
-	unmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/node-agents-current.yml"), &currentNAs)
+func currentNodeagents(orbctlGitops orbctlGitopsCmd) *common.NodeAgentsCurrentKind {
+	currentNAs := &common.NodeAgentsCurrentKind{}
+	unmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/node-agents-current.yml"), currentNAs, false)
 	return currentNAs
 }
 
@@ -263,7 +269,7 @@ func expectEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) 
 				clusterStatus:  currentOrbiter.Status,
 				nodeAgentsDone: nodeAgentsDone,
 			}
-		}, timeout, 5*time.Second).Should(Equal(comparable{
+		}, timeout, 5).Should(Equal(comparable{
 			orbiterPods:    1,
 			mastersDone:    expectMasters,
 			workersDone:    expectWorkers,
@@ -277,10 +283,25 @@ type expectUpdatedOrbiter func(patchPath, patchValue, expectK8sVersion string, e
 
 func expectUpdatedOrbiterFunc(orbctlGitops orbctlGitopsCmd, ExpectEnsuredOrbiter expectEnsuredOrbiter) expectUpdatedOrbiter {
 	return func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration) {
+
+		By(fmt.Sprintf("patching the orbiter.yml at %s using the value %s", patchPath, patchValue))
+
 		session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", patchPath, "--value", patchValue, "--exact"), GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
+		By("waiting for ORBITER to ensure the result")
+
 		ExpectEnsuredOrbiter(expectMasters, expectWorkers, expectK8sVersion, timeout)
 	}
+}
+
+func someMaster(orbctlGitops orbctlGitopsCmd) (context string, id string) {
+
+	context = "providerundertest.management"
+	session, err := gexec.Start(orbctlGitops("nodes", "list", "--context", context, "--column", "id"), GinkgoWriter, GinkgoWriter)
+	Expect(err).ToNot(HaveOccurred())
+	Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+
+	return context, strings.Split(string(session.Out.Contents()), "\n")[0]
 }
