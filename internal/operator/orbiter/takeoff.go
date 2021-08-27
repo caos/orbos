@@ -107,10 +107,6 @@ func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, 
 	return query, destroy, configure, migrate, treeDesired, treeCurrent, secrets, err
 }
 
-const clearEachEnsuredIteration uint8 = 10
-
-var clearCount uint8
-
 func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 
 	return func() {
@@ -202,25 +198,29 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if result.Done {
-			if clearCount < clearEachEnsuredIteration {
-				clearCount++
-			}
 			monitor.Info("Desired state is ensured")
 		} else {
-			clearCount = 0
 			monitor.Info("Desired state is not yet ensured")
 		}
 
 		conf.GitClient.UpdateRemote("Current state changed", func() []git.File {
 			pushFiles := marshalCurrentFiles()
-			if result.Done &&
-				(len(currentNodeAgents.Current.NA) != len(desiredNodeAgents.Spec.NodeAgents.NA) || clearCount == clearEachEnsuredIteration) {
-				clearCount = 0
-				monitor.Info("Clearing node agents current states")
-				pushFiles = append(pushFiles, git.File{
-					Path:    "caos-internal/orbiter/node-agents-current.yml",
-					Content: nil,
-				})
+			if result.Done {
+				var deletedACurrentNodeAgent bool
+				for currentNA := range currentNodeAgents.Current.NA {
+					if _, ok := desiredNodeAgents.Spec.NodeAgents.NA[currentNA]; !ok {
+						currentNodeAgents.Current.NA[currentNA] = nil
+						delete(currentNodeAgents.Current.NA, currentNA)
+						deletedACurrentNodeAgent = true
+					}
+				}
+				if deletedACurrentNodeAgent {
+					monitor.Info("Clearing node agents current states")
+					pushFiles = append(pushFiles, git.File{
+						Path:    "caos-internal/orbiter/node-agents-current.yml",
+						Content: common.MarshalYAML(currentNodeAgents),
+					})
+				}
 			}
 			return pushFiles
 		})
