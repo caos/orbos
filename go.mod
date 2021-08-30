@@ -10,7 +10,7 @@ require (
 	github.com/caos/oidc v0.15.7
 	github.com/cloudflare/cloudflare-go v0.12.1
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
-	github.com/fsnotify/fsnotify v1.5.0 // indirect
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-delve/delve v1.6.1 // indirect
