@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -22,14 +24,16 @@ import (
 var _ = Describe("orbctl", func() {
 
 	const (
-		envPrefix = "ORBOS_E2E_"
-		tagEnv    = envPrefix + "TAG"
-		orbEnv    = envPrefix + "ORBURL"
-		ghpatEnv  = envPrefix + "GITHUB_ACCESS_TOKEN"
+		envPrefix  = "ORBOS_E2E_"
+		tagEnv     = envPrefix + "TAG"
+		orbEnv     = envPrefix + "ORBURL"
+		ghpatEnv   = envPrefix + "GITHUB_ACCESS_TOKEN"
+		cleanupEnv = envPrefix + "CLEANUP"
 	)
 
 	var (
 		tag, orbURL, workfolder, orbconfig, ghTokenPath, accessToken string
+		cleanup                                                      bool
 		orbctlGitops                                                 orbctlGitopsCmd
 		kubectl                                                      kubectlCmd
 		e2eYml                                                       func(into interface{})
@@ -45,12 +49,12 @@ var _ = Describe("orbctl", func() {
 		tag = os.Getenv(tagEnv)
 		orbURL = os.Getenv(orbEnv)
 		accessToken = os.Getenv(ghpatEnv)
+		cleanup = parseBool(os.Getenv(cleanupEnv))
 		orbctlGitops = orbctlGitopsFunc(orbconfig)
 		e2eYml = memoizeUnmarshalE2eYml(orbctlGitops)
 		kubectl = memoizeKubecltCmd(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
 		ExpectEnsuredOrbiter = expectEnsuredOrbiterFunc(orbctlGitops, kubectl)
 		ExpectUpdatedOrbiter = expectUpdatedOrbiterFunc(orbctlGitops, ExpectEnsuredOrbiter)
-		//		cleanup = boolEnv(prefixedEnv("CLEANUP"))
 
 		Expect(tag).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", tagEnv))
 		Expect(orbURL).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", orbEnv))
@@ -58,18 +62,15 @@ var _ = Describe("orbctl", func() {
 	})
 
 	AfterSuite(func() {
-		destroy := func() {
-			cmd := orbctlGitops("destroy")
-			cmd.Stdin = strings.NewReader("yes")
-
-			session, err := gexec.Start(cmd, os.Stdout, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
+		if !cleanup {
+			return
 		}
-		var _ = destroy
+		cmd := orbctlGitops("destroy")
+		cmd.Stdin = strings.NewReader("yes")
 
-		// do uncomment when in dev mode
-		//destroy()
+		session, err := gexec.Start(cmd, os.Stdout, GinkgoWriter)
+		Expect(err).ToNot(HaveOccurred())
+		Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
 	})
 
 	Context("version", func() {
@@ -215,7 +216,11 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 
 			Eventually(session, 15*time.Minute, 5*time.Second).Should(gexec.Exit(0))
 
-			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 5*time.Minute)
+			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
+		})
+
+		PIt("runs the tooling", func() {
+
 		})
 	})
 	Context("scaling", func() {
@@ -229,18 +234,18 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				ExpectUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
 			})
 		})
-		FWhen("desiring a higher masters count", func() {
+		When("desiring a higher masters count", func() {
 			It("scales up masters", func() {
 				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "3", "v1.18.8", 3, 1, 10*time.Minute)
 			})
 		})
-		FWhen("desiring a lower masters count", func() {
+		When("desiring a lower masters count", func() {
 			It("scales down masters", func() {
 				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
 			})
 		})
 	})
-	FContext("machine", func() {
+	Context("machine", func() {
 		When("desiring a machine reboot", func() {
 			It("updates the machines last reboot time", func() {
 
@@ -258,18 +263,35 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				Eventually(func() time.Time {
 					machine, ok := currentNodeagents(orbctlGitops).Current.Get(machineID)
 					if !ok {
-						Fail("node agent not found in current state")
+						return testStart
 					}
 					return machine.Booted
 				}, 5*time.Minute).Should(SatisfyAll(BeTemporally(">", testStart)))
 
-				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 1*time.Minute)
+				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 2*time.Minute)
 			})
 		})
-		When("desiring a machine replacement", func() {
+		FWhen("desiring a machine replacement", func() {
 			It("removes a machine and joins a new one", func() {
 
 				machineContext, machineID := someMaster(orbctlGitops)
+
+				currentMachines := func() map[string]*kubernetes.Machine {
+					return currentOrbiter(orbctlGitops).Clusters["k8s"].Current.Machines.M
+				}
+
+				var old []string
+				for k := range currentMachines() {
+					old = append(old, k)
+				}
+				isNew := func(id string) bool {
+					for i := range old {
+						if old[i] == id {
+							return false
+						}
+					}
+					return true
+				}
 
 				By(fmt.Sprintf("executing the replace command for machine %s", machineID))
 
@@ -277,17 +299,29 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
+				By("waiting for ORBITER to add a new machine")
+
+				Eventually(func() bool {
+					for k := range currentMachines() {
+						if isNew(k) {
+							return true
+						}
+					}
+					return false
+				}, 5*time.Minute).Should(BeTrue())
+
 				By("waiting for ORBITER to ensure the result")
 
-				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
+				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 15*time.Minute)
 				Eventually(func() bool {
 					_, ok := currentNodeagents(orbctlGitops).Current.Get(machineID)
+					fmt.Println("machine is still listed in current node agents")
 					return ok
-				}, 15*time.Minute).Should(BeFalse())
+				}, 2*time.Minute).Should(BeFalse())
 			})
 		})
 	})
-	FWhen("desiring the latest kubernetes release", func() {
+	When("desiring the latest kubernetes release", func() {
 		It("upgrades the kubernetes binaries", func() {
 			ExpectUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 10*time.Minute)
 		})

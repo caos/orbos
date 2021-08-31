@@ -10,16 +10,15 @@ require (
 	github.com/caos/oidc v0.15.7
 	github.com/cloudflare/cloudflare-go v0.12.1
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
+	github.com/cucumber/godog v0.12.1
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-delve/delve v1.6.1 // indirect
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.2.0
-	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
@@ -28,7 +27,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.14.0
-	github.com/philhofer/fwd v1.1.1 // indirect
 	github.com/pires/go-proxyproto v0.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
@@ -41,10 +39,7 @@ require (
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 	golang.org/x/oauth2 v0.0.0-20210628180205-a41e5a781914
 	golang.org/x/sys v0.0.0-20210820121016-41cdb8703e55 // indirect
-	golang.org/x/tools v0.1.5 // indirect
 	google.golang.org/api v0.52.0
-	google.golang.org/grpc v1.39.0
-	google.golang.org/protobuf v1.27.1
 	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.21.3

@@ -10,8 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/onsi/gomega/types"
-
 	"github.com/caos/orbos/internal/operator/common"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
@@ -35,7 +33,7 @@ func parseUint8(t *testing.T, val string) uint8 {
 	return uint8(parsed)
 }
 
-func boolEnv(val string) bool {
+func parseBool(val string) bool {
 	if val == "" {
 		return false
 	}
@@ -116,21 +114,32 @@ func unmarshalYaml(content []byte, into interface{}) {
 	Expect(yaml.Unmarshal(content, into)).To(Succeed())
 }
 
-func unmarshalStdoutYaml(cmd *exec.Cmd, into interface{}, flaky bool) {
-
-	var matcher types.GomegaMatcher = gexec.Exit(0)
-	if flaky {
-		matcher = FlakyExit(0)
-	}
+func mustUnmarshalStdoutYaml(cmd *exec.Cmd, into interface{}) {
 
 	session, err := gexec.Start(cmd, nil, GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
-	Eventually(session, 2*time.Minute).Should(matcher)
+	Eventually(session, 2*time.Minute).Should(gexec.Exit(0))
 
 	unmarshalYaml(session.Out.Contents(), into)
 }
 
-func readyPods(kubectl kubectlCmd, namespace, selector string) (readyPodsCount uint8) {
+func readyPods(kubectl kubectlCmd, namespace, selector string) (readyPodsCount int8) {
+
+	args := []string{
+		"get", "pods",
+		"--namespace", namespace,
+		"--output", "yaml",
+	}
+
+	if selector != "" {
+		args = append(args, "--selector", selector)
+	}
+
+	cmd := kubectl(args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return -1
+	}
 
 	pods := struct {
 		Items []struct {
@@ -146,17 +155,9 @@ func readyPods(kubectl kubectlCmd, namespace, selector string) (readyPodsCount u
 		}
 	}{}
 
-	args := []string{
-		"get", "pods",
-		"--namespace", namespace,
-		"--output", "yaml",
+	if err := yaml.Unmarshal(out, &pods); err != nil {
+		return -1
 	}
-
-	if selector != "" {
-		args = append(args, "--selector", selector)
-	}
-
-	unmarshalStdoutYaml(kubectl(args...), &pods, true)
 
 	for i := range pods.Items {
 		pod := pods.Items[i]
@@ -180,7 +181,7 @@ func printOperatorLogs(kubectl kubectlCmd) func() {
 	return func() {
 		session, err := gexec.Start(kubectl("--namespace", "caos-system", "logs", "--selector", "app.kubernetes.io/name=orbiter", "--since-time", from.Format(time.RFC3339)), os.Stdout, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
-		Eventually(session).Should(gexec.Exit())
+		Eventually(session, 30*time.Second).Should(FlakyExit())
 
 		from = time.Now()
 	}
@@ -201,13 +202,13 @@ func currentOrbiter(orbctlGitops orbctlGitopsCmd) (currentOrbiter struct {
 	}
 }) {
 
-	unmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/current.yml"), &currentOrbiter, false)
+	mustUnmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/current.yml"), &currentOrbiter)
 	return currentOrbiter
 }
 
 func currentNodeagents(orbctlGitops orbctlGitopsCmd) *common.NodeAgentsCurrentKind {
 	currentNAs := &common.NodeAgentsCurrentKind{}
-	unmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/node-agents-current.yml"), currentNAs, false)
+	mustUnmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/node-agents-current.yml"), currentNAs)
 	return currentNAs
 }
 
@@ -218,8 +219,9 @@ func expectEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) 
 	return func(expectMasters, expectWorkers uint8, k8sVersion string, timeout time.Duration) {
 		print := printOperatorLogs(kubectl)
 		type comparable struct {
-			orbiterPods, mastersDone, workersDone, nodeAgentsDone uint8
-			clusterStatus                                         string
+			orbiterPods                              int8
+			mastersDone, workersDone, nodeAgentsDone uint8
+			clusterStatus                            string
 		}
 		Eventually(func() comparable {
 			defer print()
