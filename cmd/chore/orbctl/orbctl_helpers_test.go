@@ -2,7 +2,6 @@ package orbctl_test
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"strconv"
@@ -63,7 +62,7 @@ func orbctlGitopsFunc(orbconfig string) orbctlGitopsCmd {
 	}
 }
 
-func memoizeUnmarshalE2eYml(orbctl orbctlGitopsCmd) func(interface{}) {
+func unmarshale2eYmlFunc(orbctl orbctlGitopsCmd) func(interface{}) {
 
 	var bytes []byte
 	return func(into interface{}) {
@@ -86,7 +85,7 @@ func memoizeUnmarshalE2eYml(orbctl orbctlGitopsCmd) func(interface{}) {
 
 type kubectlCmd func(...string) *exec.Cmd
 
-func memoizeKubecltCmd(kubectlPath string, orbctl orbctlGitopsCmd) kubectlCmd {
+func kubectlCmdFunc(kubectlPath string, orbctl orbctlGitopsCmd) kubectlCmd {
 	var read bool
 
 	return func(args ...string) *exec.Cmd {
@@ -123,70 +122,6 @@ func mustUnmarshalStdoutYaml(cmd *exec.Cmd, into interface{}) {
 	unmarshalYaml(session.Out.Contents(), into)
 }
 
-func readyPods(kubectl kubectlCmd, namespace, selector string) (readyPodsCount int8) {
-
-	args := []string{
-		"get", "pods",
-		"--namespace", namespace,
-		"--output", "yaml",
-	}
-
-	if selector != "" {
-		args = append(args, "--selector", selector)
-	}
-
-	cmd := kubectl(args...)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return -1
-	}
-
-	pods := struct {
-		Items []struct {
-			Metadata struct {
-				Name string
-			}
-			Status struct {
-				Conditions []struct {
-					Type   string
-					Status string
-				}
-			}
-		}
-	}{}
-
-	if err := yaml.Unmarshal(out, &pods); err != nil {
-		return -1
-	}
-
-	for i := range pods.Items {
-		pod := pods.Items[i]
-		for j := range pod.Status.Conditions {
-			condition := pod.Status.Conditions[j]
-			if condition.Type != "Ready" {
-				continue
-			}
-			if condition.Status == "True" {
-				readyPodsCount++
-				break
-			}
-		}
-	}
-
-	return readyPodsCount
-}
-
-func printOperatorLogs(kubectl kubectlCmd) func() {
-	from := time.Now()
-	return func() {
-		session, err := gexec.Start(kubectl("--namespace", "caos-system", "logs", "--selector", "app.kubernetes.io/name=orbiter", "--since-time", from.Format(time.RFC3339)), os.Stdout, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 30*time.Second).Should(FlakyExit())
-
-		from = time.Now()
-	}
-}
-
 func currentOrbiter(orbctlGitops orbctlGitopsCmd) (currentOrbiter struct {
 	Clusters map[string]struct {
 		Current kubernetes.CurrentCluster
@@ -210,92 +145,6 @@ func currentNodeagents(orbctlGitops orbctlGitopsCmd) *common.NodeAgentsCurrentKi
 	currentNAs := &common.NodeAgentsCurrentKind{}
 	mustUnmarshalStdoutYaml(orbctlGitops("file", "print", "caos-internal/orbiter/node-agents-current.yml"), currentNAs)
 	return currentNAs
-}
-
-type expectEnsuredOrbiter = func(expectMasters, expectWorkers uint8, k8sVersion string, timeout time.Duration)
-
-func expectEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) expectEnsuredOrbiter {
-
-	return func(expectMasters, expectWorkers uint8, k8sVersion string, timeout time.Duration) {
-		print := printOperatorLogs(kubectl)
-		type comparable struct {
-			orbiterPods                              int8
-			mastersDone, workersDone, nodeAgentsDone uint8
-			clusterStatus                            string
-		}
-		Eventually(func() comparable {
-			defer print()
-
-			currentOrbiter := currentOrbiter(orbctlGitops).Clusters["k8s"].Current
-			var (
-				mastersDone uint8
-				workersDone uint8
-			)
-			for machineID, machine := range currentOrbiter.Machines.M {
-				if machine.Joined &&
-					!machine.Rebooting &&
-					machine.FirewallIsReady &&
-					machine.Ready &&
-					!machine.Unknown &&
-					!machine.Updating {
-					switch machine.Metadata.Tier {
-					case kubernetes.Controlplane:
-						mastersDone++
-					case kubernetes.Workers:
-						workersDone++
-					default:
-						Fail(fmt.Sprintf(`expected machine group to eighter be "%s" or "%s", but is "%s"`, kubernetes.Controlplane, kubernetes.Workers, machine.Metadata.Group))
-					}
-					continue
-				}
-				fmt.Printf("machine %s is not ready yet: %+v\n", machineID, *machine)
-			}
-
-			var nodeAgentsDone uint8
-			for naID, na := range currentNodeagents(orbctlGitops).Current.NA {
-				sw := na.Software
-				if na.NodeIsReady &&
-					sw.Kubeadm.Version == k8sVersion &&
-					sw.Kubelet.Version == k8sVersion &&
-					sw.Kubectl.Version == k8sVersion {
-					nodeAgentsDone++
-					continue
-				}
-				fmt.Printf("node agent %s is not done yet: ready=%t kubeadm=%s kubelet=%s kubectl=%s", naID, na.NodeIsReady, sw.Kubeadm.Version, sw.Kubelet.Version, sw.Kubectl.Version)
-			}
-
-			return comparable{
-				orbiterPods:    readyPods(kubectl, "caos-system", "app.kubernetes.io/name=orbiter"),
-				mastersDone:    mastersDone,
-				workersDone:    workersDone,
-				clusterStatus:  currentOrbiter.Status,
-				nodeAgentsDone: nodeAgentsDone,
-			}
-		}, timeout, 5).Should(Equal(comparable{
-			orbiterPods:    1,
-			mastersDone:    expectMasters,
-			workersDone:    expectWorkers,
-			clusterStatus:  "running",
-			nodeAgentsDone: expectMasters + expectWorkers,
-		}))
-	}
-}
-
-type expectUpdatedOrbiter func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration)
-
-func expectUpdatedOrbiterFunc(orbctlGitops orbctlGitopsCmd, ExpectEnsuredOrbiter expectEnsuredOrbiter) expectUpdatedOrbiter {
-	return func(patchPath, patchValue, expectK8sVersion string, expectMasters, expectWorkers uint8, timeout time.Duration) {
-
-		By(fmt.Sprintf("patching the orbiter.yml at %s using the value %s", patchPath, patchValue))
-
-		session, err := gexec.Start(orbctlGitops("file", "patch", "orbiter.yml", patchPath, "--value", patchValue, "--exact"), GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
-
-		By("waiting for ORBITER to ensure the result")
-
-		ExpectEnsuredOrbiter(expectMasters, expectWorkers, expectK8sVersion, timeout)
-	}
 }
 
 func someMaster(orbctlGitops orbctlGitopsCmd) (context string, id string) {

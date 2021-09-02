@@ -37,9 +37,8 @@ var _ = Describe("orbctl", func() {
 		orbctlGitops                                                 orbctlGitopsCmd
 		kubectl                                                      kubectlCmd
 		e2eYml                                                       func(into interface{})
-		ExpectEnsuredOrbiter                                         expectEnsuredOrbiter
-		ExpectUpdatedOrbiter                                         expectUpdatedOrbiter
-		//		cleanup               bool
+		AwaitEnsuredORBOS                                            awaitEnsuredORBOS
+		AwaitUpdatedOrbiter                                          awaitUpdatedOrbiter
 	)
 
 	BeforeSuite(func() {
@@ -51,10 +50,10 @@ var _ = Describe("orbctl", func() {
 		accessToken = os.Getenv(ghpatEnv)
 		cleanup = parseBool(os.Getenv(cleanupEnv))
 		orbctlGitops = orbctlGitopsFunc(orbconfig)
-		e2eYml = memoizeUnmarshalE2eYml(orbctlGitops)
-		kubectl = memoizeKubecltCmd(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
-		ExpectEnsuredOrbiter = expectEnsuredOrbiterFunc(orbctlGitops, kubectl)
-		ExpectUpdatedOrbiter = expectUpdatedOrbiterFunc(orbctlGitops, ExpectEnsuredOrbiter)
+		e2eYml = unmarshale2eYmlFunc(orbctlGitops)
+		kubectl = kubectlCmdFunc(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
+		AwaitEnsuredORBOS = awaitEnsuredOrbiterFunc(orbctlGitops, kubectl)
+		AwaitUpdatedOrbiter = awaitUpdatedOrbiterFunc(orbctlGitops, AwaitEnsuredORBOS)
 
 		Expect(tag).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", tagEnv))
 		Expect(orbURL).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", orbEnv))
@@ -216,32 +215,28 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 
 			Eventually(session, 15*time.Minute, 5*time.Second).Should(gexec.Exit(0))
 
-			ExpectEnsuredOrbiter(1, 1, "v1.18.8", 10*time.Minute)
-		})
-
-		PIt("runs the tooling", func() {
-
+			AwaitEnsuredORBOS(1, 1, "v1.18.8", 10*time.Minute)
 		})
 	})
 	Context("scaling", func() {
 		When("desiring a higher workers count", func() {
 			It("scales up workers", func() {
-				ExpectUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "3", "v1.18.8", 1, 3, 10*time.Minute)
+				AwaitUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "3", "v1.18.8", 1, 3, 10*time.Minute)
 			})
 		})
 		When("desiring a lower workers count", func() {
 			It("scales down workers", func() {
-				ExpectUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
+				AwaitUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
 			})
 		})
 		When("desiring a higher masters count", func() {
 			It("scales up masters", func() {
-				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "3", "v1.18.8", 3, 1, 10*time.Minute)
+				AwaitUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "3", "v1.18.8", 3, 1, 15*time.Minute)
 			})
 		})
 		When("desiring a lower masters count", func() {
 			It("scales down masters", func() {
-				ExpectUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
+				AwaitUpdatedOrbiter("clusters.k8s.spec.controlplane.nodes", "1", "v1.18.8", 1, 1, 10*time.Minute)
 			})
 		})
 	})
@@ -268,10 +263,10 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 					return machine.Booted
 				}, 5*time.Minute).Should(SatisfyAll(BeTemporally(">", testStart)))
 
-				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 2*time.Minute)
+				AwaitEnsuredORBOS(1, 1, "v1.18.8", 5*time.Minute)
 			})
 		})
-		FWhen("desiring a machine replacement", func() {
+		When("desiring a machine replacement", func() {
 			It("removes a machine and joins a new one", func() {
 
 				machineContext, machineID := someMaster(orbctlGitops)
@@ -290,6 +285,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 							return false
 						}
 					}
+					fmt.Println(id, "is new")
 					return true
 				}
 
@@ -302,6 +298,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				By("waiting for ORBITER to add a new machine")
 
 				Eventually(func() bool {
+					fmt.Println("waiting for ORBITER to add a new machine")
 					for k := range currentMachines() {
 						if isNew(k) {
 							return true
@@ -312,10 +309,11 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 
 				By("waiting for ORBITER to ensure the result")
 
-				ExpectEnsuredOrbiter(1, 1, "v1.18.8", 15*time.Minute)
+				AwaitEnsuredORBOS(1, 1, "v1.18.8", 15*time.Minute)
 				Eventually(func() bool {
+					fmt.Println("waiting for ORBITER to remove machine from current state")
 					_, ok := currentNodeagents(orbctlGitops).Current.Get(machineID)
-					fmt.Println("machine is still listed in current node agents")
+					fmt.Println("machine", machineID, "is still listed in current node agents")
 					return ok
 				}, 2*time.Minute).Should(BeFalse())
 			})
@@ -323,7 +321,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 	})
 	When("desiring the latest kubernetes release", func() {
 		It("upgrades the kubernetes binaries", func() {
-			ExpectUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 10*time.Minute)
+			AwaitUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 60*time.Minute)
 		})
 	})
 })
