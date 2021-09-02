@@ -8,7 +8,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/caos/orbos/cmd/chore/orbctl"
+	"github.com/caos/orbos/cmd/chore/e2e"
+
 	"github.com/pkg/errors"
 )
 
@@ -63,7 +64,7 @@ func main() {
 		cancel()
 	}()
 
-	newOrbctl, err := orbctl.Command(debug, reuse, download, downloadTag)
+	newOrbctl, err := e2e.Command(debug, reuse, download, downloadTag)
 	if err != nil {
 		panic(err)
 	}
