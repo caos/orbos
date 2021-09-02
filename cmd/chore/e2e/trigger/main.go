@@ -8,18 +8,21 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 )
 
 func main() {
 
 	var (
 		token, org, repository, tag string
+		cleanup                     bool
 	)
 
 	flag.StringVar(&token, "access-token", "", "Personal access token with repo scope")
 	flag.StringVar(&org, "organization", "", "Github organization")
 	flag.StringVar(&repository, "repository", "", "Github project")
 	flag.StringVar(&tag, "tag", "", "Tag to test")
+	flag.BoolVar(&cleanup, "cleanup", true, "Cleanup after tests are run")
 
 	flag.Parse()
 
@@ -30,7 +33,8 @@ func main() {
 	if err := emit(event{
 		EventType: "webhook-trigger",
 		ClientPayload: map[string]string{
-			"tag": tag,
+			"tag":     tag,
+			"cleanup": strconv.FormatBool(cleanup),
 		},
 	}, token, org, repository); err != nil {
 		panic(err)
