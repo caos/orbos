@@ -199,6 +199,15 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				})
 
 				It("configures successfully", func() {
+
+					out, err := exec.Command("ls", "-la").Output()
+					Expect(err).ToNot(HaveOccurred())
+					fmt.Println("ls -la\n:", string(out))
+
+					orbconfig, err := ioutil.ReadFile("./artifacts/orbconfig")
+					Expect(err).ToNot(HaveOccurred())
+					fmt.Println("orbconfig\n:", string(orbconfig))
+
 					configureSession, err := gexec.Start(orbctlGitops("configure"), GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(configureSession, 2*time.Minute, 1*time.Second).Should(gexec.Exit(0))
