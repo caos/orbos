@@ -41,25 +41,36 @@ jobs:
           docker build --tag ${TAG_VERSION} --file ./build/orbos/Dockerfile .
           docker push ${TAG_VERSION}
 
-          echo "##[set-output name=relbranch;]$(echo ${VERSION})"
+          echo "##[set-output name=reltag;]$(echo ${VERSION})"
           curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/$(echo $(curl -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/repos/caos/orbos/releases/tags/${VERSION} | jq .id))
       - name: Dev Release Create
         id: dev-release-create
         uses: actions/create-release@v1
-        if: steps.dev-release.outputs.relbranch != null
+        if: steps.dev-release.outputs.reltag != null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.dev-release.outputs.relbranch }}
-          release_name: Branch ${{ steps.dev-release.outputs.relbranch }}
+          tag_name: ${{ steps.dev-release.outputs.reltag }}
+          release_name: Branch ${{ steps.dev-release.outputs.reltag }}
           body: |
             This is a release from a development branch.
             Do not use these artifacts in production.
           draft: false
           prerelease: true
+      - name: Create tag
+        uses: actions/github-script@v3
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            github.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "refs/tags/${{ steps.dev-release.outputs.reltag }}",
+              sha: context.sha
+            })
       - name: Upload Darwin Dev Release Asset
         uses: actions/upload-release-asset@v1.0.1
-        if: steps.dev-release.outputs.relbranch != null
+        if: steps.dev-release.outputs.reltag != null
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -68,7 +79,7 @@ jobs:
           asset_name: orbctl Darwin x86_64
           asset_content_type: application/octet-stream
       - name: Upload FreeBSD Dev Release Asset
-        if: steps.dev-release.outputs.relbranch != null
+        if: steps.dev-release.outputs.reltag != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -78,7 +89,7 @@ jobs:
           asset_name: orbctl FreeBSD x86_64
           asset_content_type: application/octet-stream
       - name: Upload Linux Dev Release Asset
-        if: steps.dev-release.outputs.relbranch != null
+        if: steps.dev-release.outputs.reltag != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -88,7 +99,7 @@ jobs:
           asset_name: orbctl Linux x86_64
           asset_content_type: application/octet-stream
       - name: Upload OpenBSD Dev Release Asset
-        if: steps.dev-release.outputs.relbranch != null
+        if: steps.dev-release.outputs.reltag != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -98,7 +109,7 @@ jobs:
           asset_name: orbctl OpenBSD x86_64
           asset_content_type: application/octet-stream
       - name: Upload Windows Dev Release Asset
-        if: steps.dev-release.outputs.relbranch != null
+        if: steps.dev-release.outputs.reltag != null
         uses: actions/upload-release-asset@v1.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -108,11 +119,11 @@ jobs:
           asset_name: orbctl Windows x86_64
           asset_content_type: application/octet-stream
 #     - name: Trigger E2E Test On StaticProvider
-#       if: steps.dev-release.outputs.relbranch != null
+#       if: steps.dev-release.outputs.reltag != null
 #       run: go run ./cmd/chore/e2e/trigger/*.go --tag "${{ steps.dev-release.outputs.version }}" --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.CR_PAT }}"
 #     - name: Trigger E2E Test On GCEProvider
-#       if: steps.dev-release.outputs.relbranch != null
+#       if: steps.dev-release.outputs.reltag != null
 #       run: go run ./cmd/chore/e2e/trigger/*.go --tag "${{ steps.dev-release.outputs.version }}" --organization caos --repository ORBOS-Test-GCEProvider --access-token "${{ secrets.CR_PAT }}"
 #     - name: Trigger E2E Test On CloudscaleProvider
-#       if: steps.dev-release.outputs.relbranch != null
+#       if: steps.dev-release.outputs.reltag != null
 #       run: go run ./cmd/chore/e2e/trigger/*.go --tag "${{ steps.dev-release.outputs.version }}" --organization caos --repository ORBOS-Test-CloudscaleProvider --access-token "${{ secrets.CR_PAT }}"
