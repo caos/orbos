@@ -57,17 +57,13 @@ jobs:
             Do not use these artifacts in production.
           draft: false
           prerelease: true
-      - name: Create tag
-        uses: actions/github-script@v3
+      - name: Create or Update Repo Tag
+        uses: richardsimko/update-tag@v1
         with:
-          github-token: ${{ github.token }}
-          script: |
-            github.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: "refs/tags/${{ steps.dev-release.outputs.reltag }}",
-              sha: context.sha
-            })
+          tag_name: ${{ steps.dev-release.outputs.reltag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.dev-release.outputs.reltag != null
       - name: Upload Darwin Dev Release Asset
         uses: actions/upload-release-asset@v1.0.1
         if: steps.dev-release.outputs.reltag != null
