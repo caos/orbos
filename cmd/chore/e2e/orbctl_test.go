@@ -92,6 +92,8 @@ var _ = Describe("orbctl", func() {
 		When("the orbctl is downloaded from github releases", func() {
 			It("contains the tag read from environment variable", func() {
 
+				fmt.Println("DEBUG: download orbctl")
+
 				cmdFunc, err := e2e.Command(false, false, true, tag)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -115,6 +117,8 @@ var _ = Describe("orbctl", func() {
 					})*/
 
 			It("ensures the ghtoken cache file so that the oauth flow is skipped", func() {
+				fmt.Println("DEBUG: write local files")
+
 				ghtoken, err := os.Create(ghTokenPath)
 				Expect(err).ToNot(HaveOccurred())
 				defer ghtoken.Close()
@@ -127,6 +131,9 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 		})
 		When("configure command is executed for the first time", func() {
 			It("creates a new orbconfig containing a new masterkey and a new ssh private key and adds the public key to the repository", func() {
+
+				fmt.Println("DEBUG: create orbconfig")
+
 				masterKeySession, err := gexec.Start(exec.Command("openssl", "rand", "-base64", "21"), nil, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(masterKeySession).Should(gexec.Exit(0))
@@ -139,6 +146,8 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 		Context("initialized repository access", func() {
 			When("creating remote initial files", func() {
 
+				fmt.Println("DEBUG: create remote boom.yml")
+
 				It("succeeds when creating the initial boom.yml", func() {
 					contentBytes, err := ioutil.ReadFile("./boom-init.yml")
 					Expect(err).ToNot(HaveOccurred())
@@ -149,6 +158,8 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				})
 
 				It("succeeds when creating the initial orbiter.yml", func() {
+
+					fmt.Println("DEBUG: create remote orbiter.yml")
 
 					By("fetching the file provider-init.yml from git")
 
@@ -172,12 +183,17 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 				})
 
 				It("migrates the api successfully", func() {
+
+					fmt.Println("DEBUG: migrate")
+
 					patchSession, err := gexec.Start(orbctlGitops("api"), GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(patchSession, 1*time.Minute).Should(gexec.Exit(0))
 				})
 
 				It("creates provider specific secrets successfully", func() {
+
+					fmt.Println("DEBUG: write provider secrets")
 
 					cfg := struct {
 						Initsecrets map[string]string
@@ -200,13 +216,19 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 
 				It("configures successfully", func() {
 
-					out, err := exec.Command("ls", "-la").Output()
+					fmt.Println("DEBUG: generate secrets")
+
+					out, err := exec.Command("ls", "-la", "./artifacts").Output()
 					Expect(err).ToNot(HaveOccurred())
 					fmt.Println("ls -la\n:", string(out))
 
 					orbconfig, err := ioutil.ReadFile("./artifacts/orbconfig")
 					Expect(err).ToNot(HaveOccurred())
 					fmt.Println("orbconfig\n:", string(orbconfig))
+
+					ghtoken, err := ioutil.ReadFile("./artifacts/ghtoken")
+					Expect(err).ToNot(HaveOccurred())
+					fmt.Println("orbconfig\n:", string(ghtoken))
 
 					configureSession, err := gexec.Start(orbctlGitops("configure"), GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
