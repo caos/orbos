@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -229,11 +230,12 @@ func (g *Client) Read(path string) []byte {
 
 	readmonitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
-	})
+	}).Verbose()
 	readmonitor.Debug("Reading file")
 	file, err := g.fs.Open(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
+			readmonitor.Debug("remote file doesn't exist")
 			return make([]byte, 0)
 		}
 		panic(err)
