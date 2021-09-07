@@ -230,7 +230,7 @@ func (g *Client) Read(path string) []byte {
 
 	readmonitor := g.monitor.WithFields(map[string]interface{}{
 		"path": path,
-	}).Verbose()
+	})
 	readmonitor.Debug("Reading file")
 	file, err := g.fs.Open(path)
 	if err != nil {
