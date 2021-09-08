@@ -2,6 +2,7 @@ package e2e_test
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
@@ -155,4 +156,34 @@ func someMaster(orbctlGitops orbctlGitopsCmd) (context string, id string) {
 	Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 
 	return context, strings.Split(string(session.Out.Contents()), "\n")[0]
+}
+
+func writeRemoteFile(orbctlGitops orbctlGitopsCmd, remoteFile string, content []byte, env func(string) string) {
+	session, err := gexec.Start(orbctlGitops("file", "patch", remoteFile, "--exact", "--value", os.Expand(string(content), env)), GinkgoWriter, GinkgoWriter)
+	Expect(err).ToNot(HaveOccurred())
+	Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+}
+
+func localToRemoteFile(orbctlGitops orbctlGitopsCmd, remoteFile, localFile string, env func(string) string) {
+	contentBytes, err := ioutil.ReadFile(localFile)
+	Expect(err).ToNot(HaveOccurred())
+	writeRemoteFile(orbctlGitops, remoteFile, contentBytes, env)
+}
+
+func desireNetworking(orbctlGitops orbctlGitopsCmd, vip string) {
+	localToRemoteFile(orbctlGitops, "networking.yml", "./templates/networking.yml", func(key string) string {
+		if key == "ORBOS_E2E_WORKLOAD_VIP" {
+			return vip
+		}
+		return os.Getenv(key)
+	})
+}
+
+func cleanup(orbctlGitops orbctlGitopsCmd) {
+	cmd := orbctlGitops("destroy")
+	cmd.Stdin = strings.NewReader("yes")
+
+	session, err := gexec.Start(cmd, os.Stdout, GinkgoWriter)
+	Expect(err).ToNot(HaveOccurred())
+	Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
 }

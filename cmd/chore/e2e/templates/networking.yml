@@ -1,0 +1,136 @@
+kind: networking.caos.ch/Orb
+version: v0
+spec:
+  verbose: false
+  version: ${ORBOS_E2E_TAG}
+  selfReconciling: true
+networking:
+  kind: networking.caos.ch/LegacyCloudflare
+  version: v0
+  spec:
+    verbose: false
+    domain: ${ORBOS_E2E_DOMAIN}
+    ip: "127.0.0.1"
+    rules:
+      - description: netlify allow
+        priority: 1
+        action: allow
+        filters:
+          - description: internal addresses allow for all subdomains
+            targets: []
+            targetgroups: []
+            sources: []
+            sourcegroups:
+              - internal
+            containstargets:
+              - ""
+            containstargetsgroups: []
+            ssl: ""
+      - description: all allow
+        priority: 2
+        action: allow
+        filters:
+          - description: internal addresses allow for all subdomains
+            targets: []
+            targetgroups: []
+            sources: []
+            sourcegroups:
+              - internal
+            containstargets:
+              - ""
+            containstargetsgroups: []
+            ssl: ""
+      - description: all block
+        priority: 3
+        action: block
+        filters:
+          - description: block all non internal addresses for subdomains
+            targets: []
+            targetgroups: []
+            sources: []
+            sourcegroups: []
+            containstargets: []
+            containstargetsgroups: []
+            ssl: "true"
+    groups:
+      - name: internal
+        list:
+          - 0.0.0.0/0
+    credentials:
+      user: {}
+      apikey: {}
+      userservicekey: {}
+    prefix: ""
+    additionalSubdomains:
+      - subdomain: httpbin
+        ip: "127.0.0.1"
+        proxied: true
+        ttl: 0
+        type: A
+        priority: 0
+      - subdomain: www
+        ip: caos.github.com
+        proxied: true
+        ttl: 0
+        type: CNAME
+        priority: 0
+      - subdomain: docs
+        ip: caos.github.com
+        proxied: true
+        ttl: 0
+        type: CNAME
+        priority: 0
+      - subdomain: '@'
+        ip: caos.github.com
+        proxied: true
+        ttl: 0
+        type: CNAME
+        priority: 0
+      - subdomain: wdaib74qdkfs
+        ip: gv-633svsnqm6sjpa.dv.googlehosted.com
+        proxied: false
+        ttl: 0
+        type: TXT
+        priority: 0
+      - subdomain: '@'
+        ip: ASPMX.L.GOOGLE.COM
+        proxied: false
+        ttl: 1
+        type: MX
+        priority: 1
+      - subdomain: '@'
+        ip: ALT1.ASPMX.L.GOOGLE.COM
+        proxied: false
+        ttl: 1
+        type: MX
+        priority: 5
+      - subdomain: '@'
+        ip: ALT2.ASPMX.L.GOOGLE.COM
+        proxied: false
+        ttl: 1
+        type: MX
+        priority: 5
+      - subdomain: '@'
+        ip: ALT3.ASPMX.L.GOOGLE.COM
+        proxied: false
+        ttl: 1
+        type: MX
+        priority: 10
+      - subdomain: '@'
+        ip: ALT4.ASPMX.L.GOOGLE.COM
+        proxied: false
+        ttl: 1
+        type: MX
+        priority: 10
+      - subdomain: '@'
+        ip: v=spf1 include:_spf.google.com ~all
+        proxied: false
+        ttl: 1
+        type: TXT
+        priority: 0
+      - subdomain: 'local-iam.static'
+        ip: storage.googleapis.com
+        proxied: true
+        ttl: 0
+        type: CNAME
+        priority: 0

@@ -10,7 +10,7 @@ import (
 type readyPods struct {
 	orbiter, boom, ambassador, argocd, grafana, kubeStateMetrics,
 	fluentbit, fluentd, loggingOperator, loki, prometheusNodeExporter,
-	prometheus, prometheusOperator, systemdExporter,
+	prometheus, prometheusOperator, systemdExporter, networkingOperator,
 	total int8
 }
 
@@ -18,6 +18,7 @@ func assertReadyPods(kubectl kubectlCmd, expectMasters, expectWorkers uint8) (ex
 	expect = readyPods{
 		orbiter:                1,
 		boom:                   1,
+		networkingOperator:     1,
 		ambassador:             2,
 		argocd:                 4,
 		grafana:                1,
@@ -30,12 +31,13 @@ func assertReadyPods(kubectl kubectlCmd, expectMasters, expectWorkers uint8) (ex
 		prometheus:             1,
 		prometheusOperator:     1,
 		systemdExporter:        int8(expectMasters + expectWorkers),
-		total:                  15 + 3*int8(expectWorkers) + 2*int8(expectMasters),
+		total:                  16 + 3*int8(expectWorkers) + 2*int8(expectMasters),
 	}
 	return expect, func() readyPods {
 		actual := readyPods{
 			orbiter:                countReadyPods(kubectl, "app.kubernetes.io/name=orbiter"),
 			boom:                   countReadyPods(kubectl, "app.kubernetes.io/name=boom"),
+			networkingOperator:     countReadyPods(kubectl, "app.kubernetes.io/name=networking-operator"),
 			ambassador:             countReadyPods(kubectl, "app.kubernetes.io/instance=ambassador"),
 			argocd:                 countReadyPods(kubectl, "app.kubernetes.io/instance=argocd"),
 			grafana:                countReadyPods(kubectl, "app.kubernetes.io/instance=grafana"),

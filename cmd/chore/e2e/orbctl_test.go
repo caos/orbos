@@ -24,16 +24,21 @@ import (
 var _ = Describe("orbctl", func() {
 
 	const (
-		envPrefix  = "ORBOS_E2E_"
-		tagEnv     = envPrefix + "TAG"
-		orbEnv     = envPrefix + "ORBURL"
-		ghpatEnv   = envPrefix + "GITHUB_ACCESS_TOKEN"
-		cleanupEnv = envPrefix + "CLEANUP"
+		envPrefix           = "ORBOS_E2E_"
+		tagEnv              = envPrefix + "TAG"
+		orbEnv              = envPrefix + "ORBURL"
+		ghpatEnv            = envPrefix + "GITHUB_ACCESS_TOKEN"
+		cleanupAfterEnv     = envPrefix + "CLEANUP_AFTER"
+		reuseOrbEnv         = envPrefix + "REUSE_ORB"
+		cfUserApiKeyEnv     = envPrefix + "CLOUDFLARE_APIKEY"
+		cfUserEnv           = envPrefix + "CLOUDFLARE_USER"
+		cfUserServiceKeyEnv = envPrefix + "CLOUDFLARE_USERSERVICEKEY"
+		domain              = envPrefix + "DOMAIN"
 	)
 
 	var (
 		tag, orbURL, workfolder, orbconfig, ghTokenPath, accessToken string
-		cleanup                                                      bool
+		cleanupAfter, reuseOrb                                       bool
 		orbctlGitops                                                 orbctlGitopsCmd
 		kubectl                                                      kubectlCmd
 		e2eYml                                                       func(into interface{})
@@ -48,7 +53,8 @@ var _ = Describe("orbctl", func() {
 		tag = os.Getenv(tagEnv)
 		orbURL = os.Getenv(orbEnv)
 		accessToken = os.Getenv(ghpatEnv)
-		cleanup = parseBool(os.Getenv(cleanupEnv))
+		cleanupAfter = parseBool(os.Getenv(cleanupAfterEnv))
+		reuseOrb = parseBool(os.Getenv(reuseOrbEnv))
 		orbctlGitops = orbctlGitopsFunc(orbconfig)
 		e2eYml = unmarshale2eYmlFunc(orbctlGitops)
 		kubectl = kubectlCmdFunc(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
@@ -58,18 +64,16 @@ var _ = Describe("orbctl", func() {
 		Expect(tag).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", tagEnv))
 		Expect(orbURL).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", orbEnv))
 		Expect(accessToken).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", ghpatEnv))
+		Expect(os.Getenv(cfUserApiKeyEnv)).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", cfUserApiKeyEnv))
+		Expect(os.Getenv(cfUserEnv)).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", cfUserEnv))
+		Expect(os.Getenv(cfUserServiceKeyEnv)).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", cfUserServiceKeyEnv))
+		Expect(os.Getenv(domain)).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", domain))
 	})
 
 	AfterSuite(func() {
-		if !cleanup {
-			return
+		if cleanupAfter {
+			cleanup(orbctlGitops)
 		}
-		cmd := orbctlGitops("destroy")
-		cmd.Stdin = strings.NewReader("yes")
-
-		session, err := gexec.Start(cmd, os.Stdout, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(session, 5*time.Minute).Should(gexec.Exit(0))
 	})
 
 	Context("version", func() {
@@ -143,12 +147,11 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			When("creating remote initial files", func() {
 
 				It("succeeds when creating the initial boom.yml", func() {
-					contentBytes, err := ioutil.ReadFile("./boom-init.yml")
-					Expect(err).ToNot(HaveOccurred())
+					localToRemoteFile(orbctlGitops, "boom.yml", "./templates/boom.yml", os.Getenv)
+				})
 
-					session, err := gexec.Start(orbctlGitops("file", "patch", "boom.yml", "--exact", "--value", os.ExpandEnv(string(contentBytes))), GinkgoWriter, GinkgoWriter)
-					Expect(err).ToNot(HaveOccurred())
-					Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+				It("succeeds when creating the initial networking.yml", func() {
+					localToRemoteFile(orbctlGitops, "networking.yml", "./templates/networking.yml", os.Getenv)
 				})
 
 				It("succeeds when creating the initial orbiter.yml", func() {
@@ -162,7 +165,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 
 					By("reading the file ./orbiter-init.yml from the file system")
 
-					contentBytes, err := ioutil.ReadFile("./orbiter-init.yml")
+					contentBytes, err := ioutil.ReadFile("./templates/orbiter.yml")
 					Expect(err).ToNot(HaveOccurred())
 
 					orbiterYml := os.ExpandEnv(fmt.Sprintf(string(contentBytes), providerSpecs))
@@ -181,9 +184,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 					Eventually(patchSession, 1*time.Minute).Should(gexec.Exit(0))
 				})
 
-				It("creates provider specific secrets successfully", func() {
-
-					fmt.Println("DEBUG: write provider secrets")
+				It("creates non-generatable secrets successfully", func() {
 
 					cfg := struct {
 						Initsecrets map[string]string
@@ -191,21 +192,30 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 					e2eYml(&cfg)
 					Expect(cfg.Initsecrets).ToNot(HaveLen(0))
 
+					pathEnvMapping := map[string]string{
+						"networking.credentials.apikey.encrypted":         cfUserApiKeyEnv,
+						"networking.credentials.user.encrypted":           cfUserEnv,
+						"networking.credentials.userservicekey.encrypted": cfUserServiceKeyEnv,
+					}
+
 					for k, v := range cfg.Initsecrets {
-						secretKey := fmt.Sprintf("orbiter.providerundertest.%s.encrypted", k)
+						pathEnvMapping[fmt.Sprintf("orbiter.providerundertest.%s.encrypted", k)] = v
+					}
 
-						By(fmt.Sprintf("writing the secret %s using the value from environment variable %s", secretKey, v))
+					for yamlKey, envKey := range pathEnvMapping {
 
-						expanded := os.Getenv(v)
-						Expect(expanded).ToNot(BeEmpty())
+						By(fmt.Sprintf("writing the secret %s using the value from environment variable %s", yamlKey, envKey))
 
-						if strings.HasSuffix(v, "_BASE64") {
+						expanded := os.Getenv(envKey)
+						Expect(expanded).ToNot(BeEmpty(), fmt.Sprintf("expected environment variable %s to not be empty", envKey))
+
+						if strings.HasSuffix(envKey, "_BASE64") {
 							decoded, err := base64.StdEncoding.DecodeString(expanded)
 							Expect(err).ToNot(HaveOccurred())
 							expanded = string(decoded)
 						}
 
-						session, err := gexec.Start(orbctlGitops("writesecret", secretKey, "--value", expanded), GinkgoWriter, GinkgoWriter)
+						session, err := gexec.Start(orbctlGitops("writesecret", yamlKey, "--value", expanded), GinkgoWriter, GinkgoWriter)
 						Expect(err).ToNot(HaveOccurred())
 						Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
 					}
@@ -221,17 +231,55 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 		})
 	})
 	When("bootstrapping", func() {
-		It("creates the kubeapi", func() {
+		It("cleans up the old orb", func() {
+			if !reuseOrb {
+				cleanup(orbctlGitops)
+				return
+			}
+			session, err := gexec.Start(orbctlGitops("writesecret", "orbiter.k8s.kubeconfig.encrypted", "--file", "./artifacts/kubeconfig"), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+		})
 
+		It("create the kubeapi and runs the operators", func() {
 			session, err := gexec.Start(orbctlGitops("takeoff"), os.Stdout, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(session, 15*time.Minute, 5*time.Second).Should(gexec.Exit(0))
+		})
 
+		It("updates the VIP in networking.yml", func() {
+
+			vip := currentOrbiter(orbctlGitops).Providers["providerundertest"].Current.Ingresses.Httpsingress.Location
+
+			patch := func(path string) {
+				session, err := gexec.Start(orbctlGitops("file", "patch", "networking.yml", path, "--exact", "--value", vip), GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+			}
+
+			patch("networking.spec.ip")
+			patch("networking.spec.additionalSubdomains.0.ip")
+		})
+
+		It("deploys httpbin", func() {
+
+			bytes, err := ioutil.ReadFile("./templates/httpbin.yml")
+			Expect(err).ToNot(HaveOccurred())
+
+			cmd := kubectl("apply", "-f", "-")
+			cmd.Stdin = strings.NewReader(os.ExpandEnv(string(bytes)))
+
+			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+		})
+
+		It("waits for in-cluster operators to ensure the rest", func() {
 			AwaitEnsuredORBOS(1, 1, "v1.18.8", 10*time.Minute)
 		})
 	})
-	Context("scaling", func() {
+	PContext("scaling", func() {
 		When("desiring a higher workers count", func() {
 			It("scales up workers", func() {
 				AwaitUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "3", "v1.18.8", 1, 3, 10*time.Minute)
@@ -253,7 +301,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			})
 		})
 	})
-	Context("machine", func() {
+	PContext("machine", func() {
 		When("desiring a machine reboot", func() {
 			It("updates the machines last reboot time", func() {
 
@@ -324,7 +372,6 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 
 				AwaitEnsuredORBOS(1, 1, "v1.18.8", 15*time.Minute)
 				Eventually(func() bool {
-					fmt.Println("waiting for ORBITER to remove machine from current state")
 					_, ok := currentNodeagents(orbctlGitops).Current.Get(machineID)
 					fmt.Println("machine", machineID, "is still listed in current node agents")
 					return ok
@@ -332,7 +379,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			})
 		})
 	})
-	When("desiring the latest kubernetes release", func() {
+	PWhen("desiring the latest kubernetes release", func() {
 		It("upgrades the kubernetes binaries", func() {
 			AwaitUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 60*time.Minute)
 		})

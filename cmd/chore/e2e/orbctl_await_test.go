@@ -27,7 +27,7 @@ func awaitEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) a
 			readyPods                                                 readyPods
 			mastersDone, workersDone, nodeAgentsDone, currentMachines uint8
 			clusterStatus                                             string
-			vipAvailable                                              bool
+			vipAvailable, httpBinAvailable                            bool
 		}
 
 		Eventually(func() comparable {
@@ -74,22 +74,24 @@ func awaitEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) a
 			}
 
 			return comparable{
-				mastersDone:     mastersDone,
-				workersDone:     workersDone,
-				clusterStatus:   currentOrbiter.Status,
-				nodeAgentsDone:  nodeAgentsDone,
-				currentMachines: uint8(len(currentOrbiter.Machines.M)),
-				readyPods:       countReadyPods(),
-				vipAvailable:    checkVIPAvailability(orbctlGitops),
+				mastersDone:      mastersDone,
+				workersDone:      workersDone,
+				clusterStatus:    currentOrbiter.Status,
+				nodeAgentsDone:   nodeAgentsDone,
+				currentMachines:  uint8(len(currentOrbiter.Machines.M)),
+				readyPods:        countReadyPods(),
+				vipAvailable:     checkVIPAvailability(orbctlGitops),
+				httpBinAvailable: checkHTTPBinAvailability(),
 			}
 		}, timeout, 5).Should(Equal(comparable{
-			mastersDone:     expectMasters,
-			workersDone:     expectWorkers,
-			clusterStatus:   "running",
-			nodeAgentsDone:  expectMasters + expectWorkers,
-			currentMachines: expectMasters + expectWorkers,
-			readyPods:       expectReadyPods,
-			vipAvailable:    true,
+			mastersDone:      expectMasters,
+			workersDone:      expectWorkers,
+			clusterStatus:    "running",
+			nodeAgentsDone:   expectMasters + expectWorkers,
+			currentMachines:  expectMasters + expectWorkers,
+			readyPods:        expectReadyPods,
+			vipAvailable:     true,
+			httpBinAvailable: true,
 		}))
 	}
 }
@@ -129,5 +131,11 @@ func checkVIPAvailability(orbctl orbctlGitopsCmd) bool {
 
 	msg, err := helpers.Check("https", ep.Location, ep.FrontendPort, "/ambassador/v0/check_ready", 200, false)
 	fmt.Printf("ambassador ready check: %s: err: %v\n", msg, err)
+	return err == nil
+}
+
+func checkHTTPBinAvailability() bool {
+	msg, err := helpers.Check("https", "httpbin.orbos.app" /* TODO */, 443, "/get", 200, false)
+	fmt.Printf("httpbin ready check: %s: err: %v\n", msg, err)
 	return err == nil
 }

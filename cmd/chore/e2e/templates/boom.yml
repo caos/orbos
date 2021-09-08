@@ -4,7 +4,8 @@ metadata:
   name: caos
   namespace: caos-system
 spec:
-  boomVersion: ${ORBOS_E2E_TAG}
+  boom:
+    version: ${ORBOS_E2E_TAG}
   preApply:
     folder: preapply
     deploy: true
