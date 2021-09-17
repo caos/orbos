@@ -129,7 +129,7 @@ deleteLoop:
 				return nil, err
 			}
 		}
-		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
+		changes = append(changes, fmt.Sprintf("link delete %s", ifaceNameWithPrefix))
 	}
 
 	if (changes == nil || len(changes) == 0) &&
