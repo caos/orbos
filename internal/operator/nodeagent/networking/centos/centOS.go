@@ -125,7 +125,7 @@ deleteLoop:
 		}
 
 		for filename, _ := range getNetworkFiles(ifaceNameWithPrefix, "", []string{}) {
-			if err := os.Remove(filename); err != nil && err != os.ErrNotExist {
+			if err := os.RemoveAll(filename); err != nil && err != os.ErrNotExist {
 				return nil, err
 			}
 		}
