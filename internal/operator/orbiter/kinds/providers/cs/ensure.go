@@ -72,6 +72,7 @@ func query(
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
 		VRRPInterface: "eth1",
+		VIPInterface:  "eth0",
 		NotifyMaster:  notifyMaster(hostPools, current, poolsWithUnassignedVIPs),
 		AuthCheck:     checkAuth,
 	}, desiredToCurrentVIP(current))
@@ -94,7 +95,7 @@ func query(
 				if err != nil {
 					return err
 				}
-
+				/* TODO: Remove unused code
 				vips, err := allHostedVIPs(hostPools, context.machinesService, current)
 				if err != nil {
 					return err
@@ -103,8 +104,8 @@ func query(
 				if err != nil {
 					return err
 				}
-
-				done = lbDone && fwDone && nwDone
+				*/
+				done = lbDone && fwDone //&& nwDone
 				return nil
 			},
 		})())

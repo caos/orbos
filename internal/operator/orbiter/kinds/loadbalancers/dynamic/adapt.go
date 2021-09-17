@@ -42,6 +42,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 type VRRP struct {
 	VRRPInterface string
+	VIPInterface  string
 	NotifyMaster  func(machine infra.Machine) (string, bool)
 	AuthCheck     func(machine infra.Machine) (string, int)
 }
@@ -281,7 +282,8 @@ stream { {{ range $nat := .NATs }}
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
 							CustomMasterNotifyer: vrrp.NotifyMaster != nil,
-							Interface:            vrrp.VRRPInterface,
+							VRRPInterface:        vrrp.VRRPInterface,
+							VIPInterface:         vrrp.VIPInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -312,7 +314,7 @@ vrrp_instance VI_{{ $idx }} {
 	unicast_peer {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
-	interface {{ $root.Interface }}
+	interface {{ $root.VRRPInterface }}
 	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
@@ -322,6 +324,10 @@ vrrp_instance VI_{{ $idx }} {
 	track_script {
 		chk_{{ vip $vip }}
 	}
+
+    virtual_ipaddress {
+        {{ vip $vip }} dev $root.VIPInterface
+    }
 
 {{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh"
 {{ else }}	virtual_ipaddress {
@@ -568,7 +574,8 @@ type LB struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
-	Interface            string
+	VRRPInterface        string
+	VIPInterface         string
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
