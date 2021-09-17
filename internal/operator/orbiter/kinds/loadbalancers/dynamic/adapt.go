@@ -325,9 +325,9 @@ vrrp_instance VI_{{ $idx }} {
 		chk_{{ vip $vip }}
 	}
 
-    virtual_ipaddress {
-        {{ vip $vip }} dev {{ $root.VIPInterface }}
-    }
+	virtual_ipaddress {
+		{{ vip $vip }} dev {{ $root.VIPInterface }}
+	}
 
 {{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh"
 {{ else }}	virtual_ipaddress {
