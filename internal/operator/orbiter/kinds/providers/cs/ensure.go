@@ -62,12 +62,6 @@ func query(
 			return err
 		}
 
-		vips := hostedVIPs(hostPools, m, current)
-		_, err = core.DesireOSNetworkingForMachine(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, m, "dummy", vips)
-		if err != nil {
-			return err
-		}
-
 		return ensureServer(context, current, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
