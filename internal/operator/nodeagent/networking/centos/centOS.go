@@ -125,11 +125,11 @@ deleteLoop:
 		}
 
 		for filename, _ := range getNetworkFiles(ifaceNameWithPrefix, "", []string{}) {
-			if err := os.Remove(filename); err != nil && err != os.ErrNotExist {
+			if err := os.RemoveAll(filename); err != nil && err != os.ErrNotExist {
 				return nil, err
 			}
 		}
-		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
+		changes = append(changes, fmt.Sprintf("link delete %s", ifaceNameWithPrefix))
 	}
 
 	if (changes == nil || len(changes) == 0) &&
