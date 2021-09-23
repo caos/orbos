@@ -1,17 +1,17 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/pkg/labels"
-	core "k8s.io/api/core/v1"
+	"fmt"
 
-	"github.com/pkg/errors"
+	core "k8s.io/api/core/v1"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )
@@ -43,16 +43,18 @@ func AdaptFunc(
 		err error,
 	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
-		if desiredTree.Common.Version != "v0" {
+		if desiredTree.Common.Version() != "v0" {
 			migrate = true
 		}
 
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -130,10 +132,7 @@ func AdaptFunc(
 		currentKind := "orbiter.caos.ch/KubernetesCluster"
 		current := &CurrentCluster{}
 		currentTree.Parsed = &Current{
-			Common: tree.Common{
-				Kind:    currentKind,
-				Version: "v0",
-			},
+			Common:  *(tree.NewCommon(currentKind, "v0", false)),
 			Current: current,
 		}
 
@@ -150,10 +149,15 @@ func AdaptFunc(
 					oneoff,
 					gitClient,
 				)
-				return ensureFunc, errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
+				if err != nil {
+					err = fmt.Errorf("querying %s failed: %w", desiredKind.Common.Kind, err)
+				}
+				return ensureFunc, err
 			}, func(delegate map[string]interface{}) error {
 				defer func() {
-					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("destroying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				if k8sClient != nil {

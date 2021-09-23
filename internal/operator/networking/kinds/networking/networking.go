@@ -1,13 +1,14 @@
 package networking
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -28,6 +29,6 @@ func GetQueryAndDestroyFuncs(
 	case "networking.caos.ch/LegacyCloudflare":
 		return legacycf.AdaptFunc(namespace, operatorLabels)(monitor, desiredTree, currentTree)
 	default:
-		return nil, nil, nil, nil, false, errors.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
+		return nil, nil, nil, nil, false, fmt.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}
 }

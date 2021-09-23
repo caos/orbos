@@ -11,23 +11,22 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/operator/common"
+	"errors"
 
-	"github.com/caos/orbos/pkg/tree"
-
-	"github.com/go-git/go-git/v5/config"
-	"gopkg.in/yaml.v3"
-
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/mntr"
-	billy "github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	gogit "github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 	"golang.org/x/crypto/ssh"
+	"gopkg.in/yaml.v3"
+
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type DesiredFile string
@@ -84,7 +83,7 @@ func (g *Client) GetURL() string {
 func (g *Client) Configure(repoURL string, deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {
-		return errors.Wrap(err, "parsing deployment key failed")
+		return fmt.Errorf("parsing deployment key failed: %w", err)
 	}
 
 	if repoURL != g.repoURL {
@@ -127,18 +126,22 @@ func (g *Client) readCheck() error {
 		Auth: g.auth,
 	})
 	if err != nil {
-		return errors.Wrap(err, "Read check failed")
+		return mntr.ToUserError(fmt.Errorf("read check failed: %w", err))
 	}
 
 	g.monitor.Info("Read check success")
 	return nil
 }
 
-func (g *Client) writeCheck() error {
+func (g *Client) writeCheck() (err error) {
+
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 
 	head, err := g.repo.Head()
 	if err != nil {
-		return errors.Wrap(err, "Failed to get head")
+		return fmt.Errorf("failed to get head: %w", err)
 	}
 	localWriteCheckTag := strings.Join([]string{writeCheckTag, g.committer}, "-")
 
@@ -147,10 +150,11 @@ func (g *Client) writeCheck() error {
 		if ref, err = g.repo.Tag(localWriteCheckTag); err != nil {
 			return err
 		}
+		createErr = nil
 	}
 
 	if createErr != nil {
-		return errors.Wrap(createErr, "Write-check failed")
+		return fmt.Errorf("write-check failed: %w", createErr)
 	}
 
 	if pushErr := g.repo.Push(&gogit.PushOptions{
@@ -159,14 +163,14 @@ func (g *Client) writeCheck() error {
 			config.RefSpec("+" + ref.Name() + ":" + ref.Name()),
 		},
 		Auth: g.auth,
-	}); pushErr != nil && pushErr == gogit.NoErrAlreadyUpToDate {
-		return errors.Wrap(pushErr, "Write-check failed")
+	}); pushErr != nil && pushErr != gogit.NoErrAlreadyUpToDate {
+		return fmt.Errorf("write-check failed: %w", pushErr)
 	}
 
 	g.monitor.Debug("Write check tag created")
 
 	if deleteErr := g.repo.DeleteTag(localWriteCheckTag); deleteErr != nil && deleteErr != gogit.ErrTagNotFound {
-		return errors.Wrap(err, "Write-check cleanup delete tag failed")
+		return fmt.Errorf("write-check cleanup delete tag failed: %w", deleteErr)
 	}
 
 	if err := g.repo.Push(&gogit.PushOptions{
@@ -176,7 +180,7 @@ func (g *Client) writeCheck() error {
 		},
 		Auth: g.auth,
 	}); err != nil {
-		return errors.Wrap(err, "Write-check cleanup failed")
+		return fmt.Errorf("write-check cleanup failed: %w", err)
 	}
 
 	g.monitor.Debug("Write check tag cleaned up")
@@ -207,7 +211,7 @@ func (g *Client) clone() error {
 		Progress:     g.progress,
 	})
 	if err != nil {
-		return errors.Wrapf(err, "cloning repository from %s failed", g.repoURL)
+		return mntr.ToUserError(fmt.Errorf("cloning repository from %s failed: %w", g.repoURL, err))
 	}
 	g.monitor.Debug("Cloned")
 
@@ -229,7 +233,7 @@ func (g *Client) Read(path string) []byte {
 	readmonitor.Debug("Reading file")
 	file, err := g.fs.Open(path)
 	if err != nil {
-		if os.IsNotExist(errors.Cause(err)) {
+		if os.IsNotExist(err) {
 			return make([]byte, 0)
 		}
 		panic(err)
@@ -249,7 +253,12 @@ func (g *Client) Read(path string) []byte {
 func (g *Client) ReadYamlIntoStruct(path string, struc interface{}) error {
 	data := g.Read(path)
 
-	return errors.Wrapf(yaml.Unmarshal(data, struc), "Error while unmarshaling yaml %s to struct", path)
+	err := yaml.Unmarshal(data, struc)
+	if err != nil {
+		err = fmt.Errorf("unmarshaling yaml %s to struct failed: %w", path, err)
+	}
+
+	return err
 }
 
 func (g *Client) ExistsFolder(path string) (bool, error) {
@@ -259,10 +268,10 @@ func (g *Client) ExistsFolder(path string) (bool, error) {
 	monitor.Debug("Reading folder")
 	_, err := g.fs.ReadDir(path)
 	if err != nil {
-		if os.IsNotExist(errors.Cause(err)) {
+		if os.IsNotExist(err) {
 			return false, nil
 		}
-		return false, errors.Wrapf(err, "opening %s from worktree failed", path)
+		return false, fmt.Errorf("opening %s from worktree failed: %w", path, err)
 	}
 
 	return true, nil
@@ -275,7 +284,7 @@ func (g *Client) EmptyFolder(path string) (bool, error) {
 	monitor.Debug("Reading folder")
 	files, err := g.fs.ReadDir(path)
 	if err != nil {
-		return false, errors.Wrapf(err, "opening %s from worktree failed", path)
+		return false, fmt.Errorf("opening %s from worktree failed: %w", path, err)
 	}
 	if len(files) == 0 {
 		return true, nil
@@ -291,10 +300,10 @@ func (g *Client) ReadFolder(path string) (map[string][]byte, []string, error) {
 	dirBytes := make(map[string][]byte, 0)
 	files, err := g.fs.ReadDir(path)
 	if err != nil {
-		if os.IsNotExist(errors.Cause(err)) {
+		if os.IsNotExist(err) {
 			return make(map[string][]byte, 0), nil, nil
 		}
-		return nil, nil, errors.Wrapf(err, "opening %s from worktree failed", path)
+		return nil, nil, fmt.Errorf("opening %s from worktree failed: %w", path, err)
 	}
 	subdirs := make([]string, 0)
 	for _, file := range files {
@@ -319,7 +328,7 @@ type File struct {
 	Content []byte
 }
 
-func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
+func (g *Client) stageAndCommit(msg string, files ...File) (bool, error) {
 	if g.stage(files...) {
 		return false, nil
 	}
@@ -327,12 +336,13 @@ func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
 	return true, g.Commit(msg)
 }
 
-func (g *Client) UpdateRemote(msg string, files ...File) error {
+func (g *Client) UpdateRemote(msg string, whenCloned func() []File) error {
+
 	if err := g.Clone(); err != nil {
-		return errors.Wrap(err, "recloning before committing changes failed")
+		return fmt.Errorf("recloning before committing changes failed: %w", err)
 	}
 
-	changed, err := g.StageAndCommit(msg, files...)
+	changed, err := g.stageAndCommit(msg, whenCloned()...)
 	if err != nil {
 		return err
 	}
@@ -341,8 +351,14 @@ func (g *Client) UpdateRemote(msg string, files ...File) error {
 		g.monitor.Info("No changes")
 		return nil
 	}
-
-	return g.Push()
+	err = g.Push()
+	if err != nil &&
+		(errors.Is(err, plumbing.ErrObjectNotFound) ||
+			strings.Contains(err.Error(), "cannot lock ref")) {
+		g.monitor.WithField("response", err.Error()).Info("Git collision detected, retrying")
+		return g.UpdateRemote(msg, whenCloned)
+	}
+	return err
 }
 
 func (g *Client) stage(files ...File) bool {
@@ -387,7 +403,7 @@ func (g *Client) Commit(msg string) error {
 			When:  time.Now(),
 		},
 	}); err != nil {
-		return errors.Wrap(err, "committing changes failed")
+		return fmt.Errorf("committing changes failed: %w", err)
 	}
 	g.monitor.Debug("Changes commited")
 	return nil
@@ -395,14 +411,13 @@ func (g *Client) Commit(msg string) error {
 
 func (g *Client) Push() error {
 
-	err := g.repo.PushContext(g.ctx, &gogit.PushOptions{
+	if err := g.repo.PushContext(g.ctx, &gogit.PushOptions{
 		RemoteName: "origin",
 		//			RefSpecs:   refspecs,
 		Auth:     g.auth,
 		Progress: g.progress,
-	})
-	if err != nil {
-		return errors.Wrap(err, "pushing repository failed")
+	}); err != nil {
+		return fmt.Errorf("pushing repository failed: %w", err)
 	}
 
 	g.monitor.Info("Repository pushed")
@@ -419,11 +434,7 @@ func (g *Client) Exists(path DesiredFile) bool {
 
 func (g *Client) ReadTree(path DesiredFile) (*tree.Tree, error) {
 	tree := &tree.Tree{}
-	if err := yaml.Unmarshal(g.Read(string(path)), tree); err != nil {
-		return nil, err
-	}
-
-	return tree, nil
+	return tree, yaml.Unmarshal(g.Read(string(path)), tree)
 }
 
 type GitDesiredState struct {
@@ -433,16 +444,17 @@ type GitDesiredState struct {
 
 func (g *Client) PushGitDesiredStates(monitor mntr.Monitor, msg string, desireds []GitDesiredState) (err error) {
 	monitor.OnChange = func(_ string, fields map[string]string) {
-		gitFiles := make([]File, len(desireds))
-		for i := range desireds {
-			desired := desireds[i]
-			gitFiles[i] = File{
-				Path:    string(desired.Path),
-				Content: common.MarshalYAML(desired.Desired),
+		err = g.UpdateRemote(mntr.SprintCommit(msg, fields), func() []File {
+			gitFiles := make([]File, len(desireds))
+			for i := range desireds {
+				desired := desireds[i]
+				gitFiles[i] = File{
+					Path:    string(desired.Path),
+					Content: common.MarshalYAML(desired.Desired),
+				}
 			}
-		}
-		err = g.UpdateRemote(mntr.SprintCommit(msg, fields), gitFiles...)
-		//		mntr.LogMessage(msg, fields)
+			return gitFiles
+		})
 	}
 	monitor.Changed(msg)
 	return err

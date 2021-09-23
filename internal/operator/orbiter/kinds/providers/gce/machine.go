@@ -1,19 +1,17 @@
 package gce
 
 import (
+	"fmt"
 	"io"
 	"sort"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-
-	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
+	"google.golang.org/api/compute/v1"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/mntr"
-	"google.golang.org/api/compute/v1"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 var _ infra.Machine = (*instance)(nil)
@@ -23,6 +21,7 @@ type machine interface {
 	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error
 	ReadFile(path string, data io.Writer) error
+	Zone() string
 }
 
 type instance struct {
@@ -30,6 +29,7 @@ type instance struct {
 	ip      string
 	url     string
 	pool    string
+	zone    string
 	remove  func() error
 	context *context
 	start   bool
@@ -53,6 +53,7 @@ func newMachine(
 	ip,
 	url,
 	pool string,
+	zone string,
 	remove func() error,
 	start bool,
 	machine machine,
@@ -68,6 +69,7 @@ func newMachine(
 		ip:                   ip,
 		url:                  url,
 		pool:                 pool,
+		zone:                 zone,
 		remove:               remove,
 		context:              context,
 		start:                start,
@@ -79,6 +81,10 @@ func newMachine(
 		requireReplacement:   requireReplacement,
 		unrequireReplacement: unrequireReplacement,
 	}
+}
+
+func (c *instance) Zone() string {
+	return c.zone
 }
 
 func (c *instance) ID() string {
@@ -97,8 +103,8 @@ func (c *instance) ReplacementRequired() (bool, func(), func()) {
 	return c.replacementRequired, c.requireReplacement, c.unrequireReplacement
 }
 
-func (c *instance) Remove() error {
-	return c.remove()
+func (c *instance) Destroy() (func() error, error) {
+	return c.remove, nil
 }
 
 type instances []*instance
@@ -130,7 +136,7 @@ func (i instances) refs() []*compute.InstanceReference {
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, orbID, providerID string) (map[string]infra.Machine, error) {
 	desired, err := parseDesiredV0(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desired
 

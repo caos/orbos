@@ -24,6 +24,7 @@ func ensure(
 	uninitializeMachine uninitializeMachineFunc,
 	gitClient *git.Client,
 	providerK8sSpec infra.Kubernetes,
+	privateInterface string,
 ) (done bool, err error) {
 
 	desireFW := firewallFunc(monitor, *desired)
@@ -42,7 +43,24 @@ func ensure(
 
 	targetVersion := ParseString(desired.Spec.Versions.Kubernetes)
 
+	machinesDone, initializedMachines, err := alignMachines(
+		monitor,
+		controlplane,
+		workers,
+		func(created infra.Machine, pool *initializedPool) initializedMachine {
+			machine := initializeMachine(created, pool)
+			target := targetVersion.DefineSoftware()
+			machine.desiredNodeagent.Software.Merge(target)
+			return *machine
+		},
+	)
+	if err != nil || !machinesDone {
+		monitor.Info("Aligning machines is not done yet")
+		return machinesDone, err
+	}
+
 	done, err = ensureSoftware(
+
 		monitor,
 		targetVersion,
 		k8sClient,
@@ -53,24 +71,17 @@ func ensure(
 		return done, err
 	}
 
-	done, err = ensureUpScale(
+	done, err = ensureNodes(
 		monitor,
 		clusterID,
 		desired,
 		pdf,
-		controlplane,
-		workers,
 		kubeAPIAddress,
 		targetVersion,
 		k8sClient,
 		oneoff,
-		func(created infra.Machine, pool *initializedPool) initializedMachine {
-			machine := initializeMachine(created, pool)
-			target := targetVersion.DefineSoftware()
-			machine.desiredNodeagent.Software.Merge(target)
-			return *machine
-		},
 		providerK8sSpec,
+		initializedMachines,
 	)
 	if err != nil {
 		return done, err
@@ -78,6 +89,7 @@ func ensure(
 
 	if !done {
 		monitor.Info("Scaling is not done yet")
+		return done, err
 	}
 
 	// When bootstrapping, the admin config was just generated
@@ -85,5 +97,5 @@ func ensure(
 		k8sClient = tryToConnect(monitor, desired)
 	}
 
-	return done, ensureK8sPlugins(monitor, gitClient, k8sClient, *desired, providerK8sSpec)
+	return done, ensureK8sPlugins(monitor, gitClient, k8sClient, *desired, providerK8sSpec, privateInterface)
 }

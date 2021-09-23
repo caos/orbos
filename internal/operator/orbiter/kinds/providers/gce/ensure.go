@@ -17,7 +17,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
@@ -36,7 +35,7 @@ func query(
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
+		panic(fmt.Errorf("unknown or unsupported load balancing of type %T", lb))
 	}
 	vips, _, err := lbCurrent.Current.Spec(svc)
 	if err != nil {

@@ -237,6 +237,20 @@ func (mr *MockClientIntMockRecorder) DeleteStatefulset(namespace, name interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStatefulset", reflect.TypeOf((*MockClientInt)(nil).DeleteStatefulset), namespace, name)
 }
 
+// ScaleStatefulset mocks base method
+func (m *MockClientInt) ScaleStatefulset(namespace, name string, replicaCount int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ScaleStatefulset", namespace, name, replicaCount)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ScaleStatefulset indicates an expected call of ScaleStatefulset
+func (mr *MockClientIntMockRecorder) ScaleStatefulset(namespace, name, replicaCount interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScaleStatefulset", reflect.TypeOf((*MockClientInt)(nil).ScaleStatefulset), namespace, name, replicaCount)
+}
+
 // WaitUntilStatefulsetIsReady mocks base method
 func (m *MockClientInt) WaitUntilStatefulsetIsReady(namespace, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	m.ctrl.T.Helper()
@@ -845,6 +859,35 @@ func (m *MockClientInt) ApplyPlainYAML(arg0 mntr.Monitor, arg1 []byte) error {
 func (mr *MockClientIntMockRecorder) ApplyPlainYAML(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPlainYAML", reflect.TypeOf((*MockClientInt)(nil).ApplyPlainYAML), arg0, arg1)
+}
+
+// ListPersistentVolumeClaims mocks base method
+func (m *MockClientInt) ListPersistentVolumeClaims(namespace string) (*v11.PersistentVolumeClaimList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPersistentVolumeClaims", namespace)
+	ret0, _ := ret[0].(*v11.PersistentVolumeClaimList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPersistentVolumeClaims indicates an expected call of ListPersistentVolumeClaims
+func (mr *MockClientIntMockRecorder) ListPersistentVolumeClaims(namespace interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumeClaims", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumeClaims), namespace)
+}
+
+// DeletePersistentVolumeClaim mocks base method
+func (m *MockClientInt) DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePersistentVolumeClaim", namespace, name, timeout)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePersistentVolumeClaim indicates an expected call of DeletePersistentVolumeClaim
+func (mr *MockClientIntMockRecorder) DeletePersistentVolumeClaim(namespace, name, timeout interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePersistentVolumeClaim", reflect.TypeOf((*MockClientInt)(nil).DeletePersistentVolumeClaim), namespace, name, timeout)
 }
 
 // MockMachine is a mock of Machine interface

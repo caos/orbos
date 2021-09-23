@@ -21,5 +21,6 @@
 | redis                | Redis options , [here](CommonComponent/CommonComponent.md)                                             |         |            |      |
 | controller           | Controller options , [here](CommonComponent/CommonComponent.md)                                        |         |            |      |
 | server               | Server options , [here](CommonComponent/CommonComponent.md)                                            |         |            |      |
-| overwriteVersion     | Override used image version                                                                            |         |            |      |
+| overwriteImage       | Overwrite used image                                                                                   |         |            |      |
+| overwriteVersion     | Overwrite used image version                                                                           |         |            |      |
 | additionalParameters | Additional parameters to use in the deployments , [here](AdditionalParameters/AdditionalParameters.md) |         |            |      |

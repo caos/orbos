@@ -1,7 +1,10 @@
 package nginx
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -14,6 +17,9 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/selinux"
 	"github.com/caos/orbos/mntr"
 )
+
+const LineAddedComment = "# The following line was added by CAOS node agent"
+const CleanupLine = "# Line added by CAOS node agent"
 
 type Installer interface {
 	isNgninx()
@@ -67,6 +73,18 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 	pkg.Config = map[string]string{
 		"nginx.conf": string(config),
 	}
+
+	unitPath, err := s.systemd.UnitPath("nginx")
+	if err != nil {
+		return pkg, err
+	}
+
+	systemdUnit, err := ioutil.ReadFile(unitPath)
+	if err != nil {
+		return pkg, err
+	}
+
+	CurrentSystemdEntries(bytes.NewReader(systemdUnit), &pkg)
 
 	return pkg, nil
 }
@@ -127,9 +145,82 @@ module_hotfixes=true`, repoURL)), 0600); err != nil {
 		return err
 	}
 
+	unitPath, err := s.systemd.UnitPath("nginx")
+	if err != nil {
+		return err
+	}
+
+	if err := UpdateSystemdUnitFile(unitPath, ensure.Config); err != nil {
+		return err
+	}
+
 	if err := s.systemd.Enable("nginx"); err != nil {
 		return err
 	}
 
 	return s.systemd.Start("nginx")
 }
+
+func CurrentSystemdEntries(r io.Reader, p *common.Package) {
+
+	sectionRegexp := regexp.MustCompile("^\\[[a-zA-Z]+]$")
+	scanner := bufio.NewScanner(r)
+	var addNextLine bool
+	var currentSection string
+	for scanner.Scan() {
+		line := scanner.Text()
+		section := sectionRegexp.FindString(line)
+		if len(section) >= 1 {
+			currentSection = section
+		}
+
+		lineparts := strings.Split(line, "=")
+
+		if strings.Contains(line, CleanupLine) {
+			p.Config["ensuresystemdconf"] = "yes"
+		}
+
+		if addNextLine {
+			p.Config[fmt.Sprintf("Systemd%s%s", currentSection, lineparts[0])] = lineparts[1]
+			addNextLine = false
+		}
+		addNextLine = strings.Contains(line, LineAddedComment)
+	}
+}
+
+func UpdateSystemdUnitFile(path string, cfg map[string]string) error {
+
+	removeContaining := []string{CleanupLine, LineAddedComment}
+	sectionRegexpStr := "\\[[a-zA-Z]+\\]"
+	keyPartsRegexp := regexp.MustCompile(fmt.Sprintf("^Systemd(%s)([a-zA-Z]+)$", sectionRegexpStr))
+	sectionRegexpLine := regexp.MustCompile(fmt.Sprintf("^%s$", sectionRegexpStr))
+
+	for k := range cfg {
+		parts := keyPartsRegexp.FindStringSubmatch(k)
+		if len(parts) == 3 {
+			removeContaining = append(removeContaining, parts[2]+"=")
+		}
+	}
+
+	return dep.ManipulateFile(path, removeContaining, nil, func(line string) *string {
+
+		if !sectionRegexpLine.MatchString(line) {
+			return strPtr(line)
+		}
+
+		addLines := []string{line}
+
+		for k, v := range cfg {
+			parts := keyPartsRegexp.FindStringSubmatch(k)
+			if len(parts) == 3 {
+				if parts[1] == line {
+					addLines = append(addLines, LineAddedComment, fmt.Sprintf("%s=%s", parts[2], v))
+				}
+			}
+		}
+
+		return strPtr(strings.Join(addLines, "\n"))
+	})
+}
+
+func strPtr(str string) *string { return &str }

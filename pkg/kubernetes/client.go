@@ -75,6 +75,7 @@ type ClientInt interface {
 
 	ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error
 	DeleteStatefulset(namespace, name string) error
+	ScaleStatefulset(namespace, name string, replicaCount int) error
 	WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error
 
 	ExecInPodWithOutput(namespace, name, container, command string) (string, error)
@@ -133,6 +134,9 @@ type ClientInt interface {
 	ListPersistentVolumes() (*core.PersistentVolumeList, error)
 
 	ApplyPlainYAML(mntr.Monitor, []byte) error
+
+	ListPersistentVolumeClaims(namespace string) (*core.PersistentVolumeClaimList, error)
+	DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error
 }
 
 var _ ClientInt = (*Client)(nil)
@@ -235,6 +239,48 @@ func (c *Client) ListSecrets(namespace string, labels map[string]string) (*core.
 
 func (c *Client) ListPersistentVolumes() (*core.PersistentVolumeList, error) {
 	return c.set.CoreV1().PersistentVolumes().List(context.Background(), mach.ListOptions{})
+}
+
+func (c *Client) ListPersistentVolumeClaims(namespace string) (*core.PersistentVolumeClaimList, error) {
+	return c.set.CoreV1().PersistentVolumeClaims(namespace).List(context.Background(), mach.ListOptions{})
+}
+
+func (c *Client) DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error {
+	ctx := context.Background()
+
+	returnChannel := make(chan error, 1)
+	interval := time.Second * 1
+	timesS := (timeout / interval) * time.Second
+
+	go func() {
+		ctx := context.Background()
+		for i := 0; i < int(timesS.Seconds()); i++ {
+			_, err := c.set.CoreV1().PersistentVolumeClaims(namespace).Get(ctx, name, mach.GetOptions{})
+			if err != nil && !macherrs.IsNotFound(err) {
+				returnChannel <- err
+				return
+			}
+
+			if macherrs.IsNotFound(err) {
+				returnChannel <- nil
+				return
+			}
+			time.Sleep(interval)
+		}
+		returnChannel <- errors.New("delete pvc timeout")
+		return
+	}()
+
+	if err := c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, mach.DeleteOptions{}); err != nil {
+		return err
+	}
+
+	select {
+	case res := <-returnChannel:
+		return res
+	case <-time.After(timeout):
+		return errors.New("timeout while waiting for job to complete")
+	}
 }
 
 func (c *Client) ScaleDeployment(namespace, name string, replicaCount int) error {
@@ -536,6 +582,12 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error {
 
 func (c *Client) DeleteStatefulset(namespace, name string) error {
 	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+}
+
+func (c *Client) ScaleStatefulset(namespace, name string, replicaCount int) error {
+	patch := []byte(`{"spec":{"replicas":` + strconv.Itoa(replicaCount) + `}}`)
+	_, err := c.set.AppsV1().StatefulSets(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, patch, mach.PatchOptions{})
+	return err
 }
 
 func (c *Client) WaitUntilStatefulsetIsReady(namespace string, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
@@ -987,10 +1039,10 @@ func (c *Client) RemoveFromTaints(taints []core.Taint, reason DrainReason) (resu
 	return append(taints[0:idx], taints[idx+1:]...)
 }
 
-func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason) (err error) {
+func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason, self bool) (err error) {
 	defer func() {
 		if err != nil {
-			err = fmt.Errorf("draining node %s failed", node.GetName(), err)
+			err = fmt.Errorf("draining node %s failed: %w", node.GetName(), err)
 		}
 	}()
 
@@ -1003,7 +1055,7 @@ func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason) (er
 		return err
 	}
 
-	if err := c.evictPods(node); err != nil {
+	if err := c.evictPods(node, self); err != nil {
 		return err
 	}
 	if !machine.GetUpdating() {
@@ -1021,7 +1073,7 @@ func (c *Client) DeleteNode(name string) error {
 	return err
 }
 
-func (c *Client) evictPods(node *core.Node) (err error) {
+func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 
 	defer func() {
 		if err != nil {
@@ -1035,19 +1087,28 @@ func (c *Client) evictPods(node *core.Node) (err error) {
 
 	monitor.Info("Evicting pods")
 
-	selector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name)
+	fieldSelector := fmt.Sprintf("spec.nodeName=%s,status.phase=Running", node.Name) // possibly selects self too
+	var labelSelector string
+	if !self {
+		labelSelector = "app.kubernetes.io/name!=orbiter" // exclude self
+	}
 	podItems, err := c.set.CoreV1().Pods("").List(context.Background(), mach.ListOptions{
-		FieldSelector: selector,
+		FieldSelector: fieldSelector,
+		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		return fmt.Errorf("listing pods with selector %s failed: %w", selector, err)
+		return fmt.Errorf("listing pods with field-selector %s and label-selector %s failed: %w", fieldSelector, labelSelector, err)
 	}
 
 	// --ignore-daemonsets
-	pods := deriveFilter(func(pod core.Pod) bool {
+	var pods []core.Pod
+	for i := range podItems.Items {
+		pod := podItems.Items[i]
 		controllerRef := mach.GetControllerOf(&pod)
-		return controllerRef == nil || controllerRef.Kind != apps.SchemeGroupVersion.WithKind("DaemonSet").Kind
-	}, append([]core.Pod{}, podItems.Items...))
+		if controllerRef == nil || controllerRef.Kind != apps.SchemeGroupVersion.WithKind("DaemonSet").Kind {
+			pods = append(pods, pod)
+		}
+	}
 
 	var wg sync.WaitGroup
 	synchronizer := helpers.NewSynchronizer(&wg)

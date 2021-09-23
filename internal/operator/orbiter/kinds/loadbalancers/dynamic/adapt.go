@@ -8,22 +8,17 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbos/pkg/secret"
-
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
-
-	"github.com/caos/orbos/pkg/tree"
-
 	"github.com/caos/orbos/internal/helpers"
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -47,6 +42,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 type VRRP struct {
 	VRRPInterface string
+	VIPInterface  string
 	NotifyMaster  func(machine infra.Machine) (string, bool)
 	AuthCheck     func(machine infra.Machine) (string, int)
 }
@@ -55,14 +51,16 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
-		if desiredTree.Common.Version != "v2" {
+		if desiredTree.Common.Version() != "v2" {
 			migrate = true
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, nil, migrate, nil, fmt.Errorf("unmarshaling desired state for kind %s failed: %w", desiredTree.Common.Kind, err)
 		}
 
 		for _, pool := range desiredKind.Spec {
@@ -104,10 +102,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/DynamicLoadBalancer", "v0", false),
 		}
 		currentTree.Parsed = current
 
@@ -212,7 +207,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						whoami := "whoami"
 						stdout, err := machine.Execute(nil, whoami)
 						if err != nil {
-							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
+							return "", fmt.Errorf("running command %s remotely failed", whoami)
 						}
 						user = strings.TrimSuffix(string(stdout), "\n")
 						monitor.WithFields(map[string]interface{}{
@@ -240,7 +235,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					for _, desiredVIPs := range desiredKind.Spec {
 						vips = append(vips, desiredVIPs...)
 					}
-					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
+					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 stream { {{ range $nat := .NATs }}
@@ -285,7 +282,8 @@ stream { {{ range $nat := .NATs }}
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
 							CustomMasterNotifyer: vrrp.NotifyMaster != nil,
-							Interface:            vrrp.VRRPInterface,
+							VRRPInterface:        vrrp.VRRPInterface,
+							VIPInterface:         vrrp.VIPInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -316,7 +314,7 @@ vrrp_instance VI_{{ $idx }} {
 	unicast_peer {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
-	interface {{ $root.Interface }}
+	interface {{ $root.VRRPInterface }}
 	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
@@ -327,6 +325,10 @@ vrrp_instance VI_{{ $idx }} {
 		chk_{{ vip $vip }}
 	}
 
+	virtual_ipaddress {
+		{{ vip $vip }} dev {{ $root.VIPInterface }}
+	}
+
 {{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh"
 {{ else }}	virtual_ipaddress {
 		{{ vip $vip }}
@@ -335,7 +337,9 @@ vrrp_instance VI_{{ $idx }} {
 }
 {{ end }}`))
 
-					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 
@@ -401,7 +405,7 @@ http {
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return false, err
 						}
-						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := desireNginx(ngxBuf.String())
 						ngxBuf.Reset()
 
 						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
@@ -452,7 +456,8 @@ http {
 									return false, err
 								}
 
-								for _, machine := range destMachines {
+								for idx := range destMachines {
+									machine := destMachines[idx]
 									desireNodeAgent(machine, common.ToFirewall("internal", destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
 									if vrrp != nil || forPool != dest {
@@ -495,7 +500,7 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := desireNginx(ngxBuf.String())
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
@@ -569,7 +574,8 @@ type LB struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
-	Interface            string
+	VRRPInterface        string
+	VIPInterface         string
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
@@ -659,5 +665,15 @@ func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelis
 			enrichVIPsCache[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
 		}
 		return enrichVIPsCache, authCheckResultsCache, nil
+	}
+}
+
+func desireNginx(cfg string) common.Package {
+	return common.Package{
+		Version: nginxVersion,
+		Config: map[string]string{
+			"nginx.conf":                  cfg,
+			"Systemd[Service]LimitNOFILE": "8192",
+		},
 	}
 }

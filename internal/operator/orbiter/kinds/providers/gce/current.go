@@ -2,7 +2,6 @@ package gce
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"strings"
 
@@ -36,6 +35,7 @@ func (c *Current) Ingresses() map[string]*infra.Address {
 func (c *Current) Cleanupped() <-chan error {
 	return c.Current.cleanupped
 }
+func (c *Current) PrivateInterface() string { return "eth0" }
 
 func (c *Current) Kubernetes() infra.Kubernetes {
 	return infra.Kubernetes{
@@ -90,7 +90,7 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 			return nil, nil
 
 		},
-		CloudController: infra.CloudControllerManager{
+/*		CloudController: infra.CloudControllerManager{
 			Supported: true,
 			CloudConfig: func(machine infra.Machine) io.Reader {
 				instance := machine.(*instance)
@@ -109,7 +109,7 @@ container-api-endpoint = "Don't use container API'"
 				))
 			},
 			ProviderName: "external",
-		},
+		},*/
 	}
 }
 

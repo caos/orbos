@@ -22,6 +22,7 @@ func ensureK8sPlugins(
 	k8sClient kubernetes.ClientInt,
 	desired DesiredV0,
 	providerK8sSpec infra.Kubernetes,
+	privateInterface string,
 ) (err error) {
 
 	k8sPluginsMonitor := monitor
@@ -112,8 +113,10 @@ func ensureK8sPlugins(
 		defer buf.Reset()
 		template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
 			ImageRegistry string
+			PrivateInterface string
 		}{
 			ImageRegistry: reg,
+			PrivateInterface: privateInterface,
 		})
 		applyResources = concatYAML(applyResources, buf)
 	case "":

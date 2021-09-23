@@ -1,12 +1,12 @@
 package static
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -70,8 +70,14 @@ func query(
 			return vip.IP
 		}
 
+		vipInterface := desired.Spec.PrivateInterface
+		if len(desired.Spec.ExternalInterfaces) > 0 {
+			vipInterface = desired.Spec.ExternalInterfaces[0]
+		}
+
 		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, &dynamiclbmodel.VRRP{
-			VRRPInterface: "eth0",
+			VRRPInterface: desired.Spec.PrivateInterface,
+			VIPInterface:  vipInterface,
 			NotifyMaster:  nil,
 			AuthCheck:     nil,
 		}, mapVIP)
@@ -100,7 +106,7 @@ func query(
 		//			current.Current.Ingresses[name] = address
 		//		}
 	default:
-		return nil, errors.Errorf("Unknown load balancer of type %T", lb)
+		return nil, fmt.Errorf("unknown or unsupported load balancing of type %T", lb)
 	}
 
 	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {

@@ -36,6 +36,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {
 			queryClient,
 		)
 		go func() {
+			defer func() { monitor.RecoverPanic(recover()) }()
 			started := time.Now()
 			query()
 
@@ -47,6 +48,7 @@ func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {
 			queryChan <- struct{}{}
 		}()
 		go func() {
+			defer func() { monitor.RecoverPanic(recover()) }()
 			started := time.Now()
 			ensure()
 
