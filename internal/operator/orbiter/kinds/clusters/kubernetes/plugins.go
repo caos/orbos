@@ -75,13 +75,15 @@ func ensureK8sPlugins(
 			ciliumReg = "docker.io"
 		}
 
-		template.Must(template.New("").Parse(string(executables.PreBuilt("cilium.yaml")))).Execute(buf, struct {
+		if err := template.Must(template.New("").Parse(string(executables.PreBuilt("cilium.yaml")))).Execute(buf, struct {
 			IstioProxyImageRegistry string
 			CiliumImageRegistry     string
 		}{
 			IstioProxyImageRegistry: istioReg,
 			CiliumImageRegistry:     ciliumReg,
-		})
+		}); err != nil {
+			return err
+		}
 		applyResources = concatYAML(applyResources, buf)
 
 	case "calico":
@@ -111,13 +113,15 @@ func ensureK8sPlugins(
 
 		buf := new(bytes.Buffer)
 		defer buf.Reset()
-		template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
-			ImageRegistry string
+		if err := template.Must(template.New("").Parse(string(executables.PreBuilt("calico.yaml")))).Execute(buf, struct {
+			ImageRegistry    string
 			PrivateInterface string
 		}{
-			ImageRegistry: reg,
+			ImageRegistry:    reg,
 			PrivateInterface: privateInterface,
-		})
+		}); err != nil {
+			return err
+		}
 		applyResources = concatYAML(applyResources, buf)
 	case "":
 	default:
