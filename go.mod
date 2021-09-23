@@ -43,4 +43,5 @@ require (
 	k8s.io/kubectl v0.21.3
 	sigs.k8s.io/controller-runtime v0.9.5
 	sigs.k8s.io/controller-tools v0.4.1
+	sigs.k8s.io/yaml v1.2.0
 )
