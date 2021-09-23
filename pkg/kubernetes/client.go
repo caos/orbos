@@ -1589,15 +1589,13 @@ func forEachObjectInYAML(
 				return nil
 			}
 
-			go func() {
-				if err := actionFn(obj); err != nil {
-					chanErr <- fmt.Errorf("running passed forEachObjectInYAMLActionFunc failed: %w", err)
-				}
-				monitor.WithFields(map[string]interface{}{
-					"kind": obj.GetKind(),
-					"name": obj.GetName(),
-				}).Debug("Resource successfully applied")
-			}()
+			if err := actionFn(obj); err != nil {
+				return fmt.Errorf("running passed forEachObjectInYAMLActionFunc failed: %w", err)
+			}
+			monitor.WithFields(map[string]interface{}{
+				"kind": obj.GetKind(),
+				"name": obj.GetName(),
+			}).Debug("forEachObjectInYAMLActionFunc succeeded")
 		case err := <-chanErr:
 			if err == nil {
 				return nil
@@ -1610,7 +1608,7 @@ func forEachObjectInYAML(
 // DecodeYAML unmarshals a YAML document or multidoc YAML as unstructured
 // objects, placing each decoded object into a channel.
 // this is heavily ispired by https://github.com/kubernetes/client-go/issues/216#issuecomment-718813670
-func decodeYAML(data []byte) (<-chan *unstructured.Unstructured, chan error) {
+func decodeYAML(data []byte) (<-chan *unstructured.Unstructured, <-chan error) {
 
 	var (
 		chanErr        = make(chan error)
