@@ -1,12 +1,14 @@
 package cloudflare
 
 import (
+	"context"
 	"crypto/rsa"
+
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
 	"github.com/cloudflare/cloudflare-go"
 )
 
-func (c *Cloudflare) CreateOriginCACertificate(domain string, hosts []string, key *rsa.PrivateKey) (*cloudflare.OriginCACertificate, error) {
+func (c *Cloudflare) CreateOriginCACertificate(ctx context.Context, domain string, hosts []string, key *rsa.PrivateKey) (*cloudflare.OriginCACertificate, error) {
 
 	csr, err := certificate.GetCSR(domain, key)
 	if err != nil {
@@ -25,19 +27,19 @@ func (c *Cloudflare) CreateOriginCACertificate(domain string, hosts []string, ke
 		CSR:             string(csrPem),
 	}
 
-	return c.api.CreateOriginCertificate(cert)
+	return c.api.CreateOriginCertificate(ctx, cert)
 }
 
-func (c *Cloudflare) GetOriginCACertificates(domain string) ([]cloudflare.OriginCACertificate, error) {
+func (c *Cloudflare) GetOriginCACertificates(ctx context.Context, domain string) ([]cloudflare.OriginCACertificate, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.api.OriginCertificates(cloudflare.OriginCACertificateListOptions{ZoneID: id})
+	return c.api.OriginCertificates(ctx, cloudflare.OriginCACertificateListOptions{ZoneID: id})
 }
 
-func (c *Cloudflare) RevokeOriginCACertificate(id string) error {
-	_, err := c.api.RevokeOriginCertificate(id)
+func (c *Cloudflare) RevokeOriginCACertificate(ctx context.Context, id string) error {
+	_, err := c.api.RevokeOriginCertificate(ctx, id)
 	return err
 }
