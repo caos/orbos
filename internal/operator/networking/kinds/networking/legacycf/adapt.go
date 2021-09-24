@@ -1,6 +1,7 @@
 package legacycf
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -15,6 +16,7 @@ import (
 )
 
 func AdaptFunc(
+	ctx context.Context,
 	namespace string,
 	operatorLabels *labels.Operator,
 ) opcore.AdaptFunc {
@@ -53,7 +55,7 @@ func AdaptFunc(
 
 		internalSpec, current := desiredKind.Spec.Internal(namespace, apiLabels)
 
-		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
+		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(ctx, monitor, internalSpec)
 		if err != nil {
 			return nil, nil, nil, nil, false, err
 		}

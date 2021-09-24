@@ -1,27 +1,28 @@
 package app
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
-func (a *App) EnsureFirewallRules(domain string, rules []*cloudflare.FirewallRule) error {
-	currentRules, err := a.cloudflare.GetFirewallRules(domain)
+func (a *App) EnsureFirewallRules(ctx context.Context, domain string, rules []*cloudflare.FirewallRule) error {
+	currentRules, err := a.cloudflare.GetFirewallRules(ctx, domain)
 	if err != nil {
 		return err
 	}
 
 	deleteRules := getFirewallRulesToDelete(currentRules, rules)
 	if deleteRules != nil && len(deleteRules) > 0 {
-		if err := a.cloudflare.DeleteFirewallRules(domain, deleteRules); err != nil {
+		if err := a.cloudflare.DeleteFirewallRules(ctx, domain, deleteRules); err != nil {
 			return err
 		}
 	}
 
 	createRules := getFirewallRulesToCreate(currentRules, rules)
 	if createRules != nil && len(createRules) > 0 {
-		_, err := a.cloudflare.CreateFirewallRules(domain, createRules)
+		_, err := a.cloudflare.CreateFirewallRules(ctx, domain, createRules)
 		if err != nil {
 			return err
 		}
@@ -29,7 +30,7 @@ func (a *App) EnsureFirewallRules(domain string, rules []*cloudflare.FirewallRul
 
 	updateRules := getFirewallRulesToUpdate(currentRules, rules)
 	if updateRules != nil && len(updateRules) > 0 {
-		_, err := a.cloudflare.UpdateFirewallRules(domain, updateRules)
+		_, err := a.cloudflare.UpdateFirewallRules(ctx, domain, updateRules)
 		if err != nil {
 			return err
 		}
