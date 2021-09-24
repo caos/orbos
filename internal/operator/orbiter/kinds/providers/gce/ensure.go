@@ -196,7 +196,7 @@ func internalPort(lb *normalizedLoadbalancer) uint16 {
 }
 
 func externalPort(lb *normalizedLoadbalancer) uint16 {
-	port, err := strconv.Atoi(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0])
+	port, err := strconv.ParseInt(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0], 10, 16)
 	if err != nil {
 		panic(err)
 	}

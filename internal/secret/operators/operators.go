@@ -123,7 +123,7 @@ func getAllSecrets(
 		allExisting,
 		func() (*tree.Tree, error) { return nwcrd.ReadCRD(k8sClient) },
 		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
-			_, _, nwSecrets, nwExisting, migrate, err := nwOrb.AdaptFunc(nil, false)(monitor, t, nil)
+			_, _, nwSecrets, nwExisting, migrate, err := nwOrb.AdaptFunc(nil, nil, false)(monitor, t, nil)
 			return nwSecrets, nwExisting, migrate, err
 		},
 	); err != nil {

@@ -84,6 +84,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			rv.GitClient,
 			rv.OrbConfig.Masterkey,
 			cfg.ORBOSConfigurers(
+				rv.Ctx,
 				rv.Monitor,
 				rv.OrbConfig,
 				rv.GitClient,

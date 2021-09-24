@@ -1,6 +1,7 @@
 package legacycf
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 )
 
 func adaptFunc(
+	ctx context.Context,
 	monitor mntr.Monitor,
 	cfg *config.InternalConfig,
 ) (
@@ -52,7 +54,7 @@ func adaptFunc(
 
 				caSecretLabels := labels.MustForName(labels.MustForComponent(cfg.Labels, "cloudflare"), cfg.OriginCASecretName)
 				for _, domain := range cfg.Domains {
-					err = apps.Ensure(k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
+					err = apps.Ensure(ctx, k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
 					if err != nil {
 						return err
 					}
