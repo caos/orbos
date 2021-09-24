@@ -1,4 +1,4 @@
-module github.com/caos/orbos
+module github.com/caos/orbos/v5
 
 go 1.16
 
