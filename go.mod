@@ -3,7 +3,7 @@ module github.com/caos/orbos
 go 1.16
 
 require (
-	github.com/AlecAivazis/survey/v2 v2.2.15
+	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/aws/aws-sdk-go v1.40.45
