@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/caos/oidc v0.15.7
 	github.com/cloudflare/cloudflare-go v0.23.0
-	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
+	github.com/cloudscale-ch/cloudscale-go-sdk v1.7.1
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0
