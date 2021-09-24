@@ -1,6 +1,7 @@
 package orb
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/caos/orbos/internal/operator/core"
@@ -16,7 +17,7 @@ func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("ORBOS", "networking.caos.ch")
 }
 
-func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
+func AdaptFunc(ctx context.Context, binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
 	return func(
@@ -51,7 +52,7 @@ func AdaptFunc(binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
+		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(ctx, orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
 			return nil, nil, nil, nil, false, err
 		}

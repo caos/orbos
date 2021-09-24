@@ -144,7 +144,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			return ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version)
+			return ctrlgitops.Networking(rv.Ctx, monitor, orbConfig.Path, k8sClient, &version)
 		} else {
 			return ctrlcrd.Start(monitor, version, "/boom", metricsAddr, rv.Kubeconfig, ctrlcrd.Networking)
 		}
