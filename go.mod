@@ -8,7 +8,7 @@ require (
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/caos/oidc v0.15.7
-	github.com/cloudflare/cloudflare-go v0.12.1
+	github.com/cloudflare/cloudflare-go v0.23.0
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.6.0
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
@@ -22,7 +22,6 @@ require (
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
 	github.com/mattn/go-colorable v0.1.4 // indirect
 	github.com/mattn/go-isatty v0.0.11 // indirect
-	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/pires/go-proxyproto v0.3.3
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
