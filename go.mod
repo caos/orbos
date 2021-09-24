@@ -20,8 +20,6 @@ require (
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
-	github.com/mattn/go-colorable v0.1.4 // indirect
-	github.com/mattn/go-isatty v0.0.11 // indirect
 	github.com/pires/go-proxyproto v0.6.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
@@ -41,5 +39,5 @@ require (
 	k8s.io/client-go v0.22.2
 	k8s.io/kubectl v0.22.2
 	sigs.k8s.io/controller-runtime v0.10.1
-	sigs.k8s.io/controller-tools v0.4.1
+	sigs.k8s.io/controller-tools v0.7.0
 )
