@@ -200,8 +200,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
-					"forMachines": svc.List,
-					"add":         func(i, y int) int { return i + y },
+					"forMachines": func(poolName string) (infra.Machines, error) {
+						machines, err := svc.List(poolName)
+						if err != nil {
+							return nil, err
+						}
+						sort.Sort(machines)
+						return machines, nil
+					},
+					"add": func(i, y int) int { return i + y },
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
