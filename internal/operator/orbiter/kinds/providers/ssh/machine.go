@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
 
@@ -196,15 +197,22 @@ func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 func (c *Machine) UseKey(keys ...[]byte) error {
 
-	publicKeys, err := ssh.AuthMethodFromKeys(keys...)
+	signers, err := ssh.ParsePrivateKeys(keys...)
 	if err != nil {
 		return err
 	}
 
 	c.sshCfg = &sshlib.ClientConfig{
-		User:            c.remoteUser,
-		Auth:            []sshlib.AuthMethod{publicKeys},
-		HostKeyCallback: sshlib.InsecureIgnoreHostKey(),
+		User: c.remoteUser,
+		Auth: []sshlib.AuthMethod{sshlib.PublicKeys(signers...)},
+		HostKeyCallback: func(hostname string, remote net.Addr, key sshlib.PublicKey) error {
+			for i := range signers {
+				if err := sshlib.FixedHostKey(signers[i].PublicKey())(hostname, remote, key); err != nil {
+					return err
+				}
+			}
+			return nil
+		},
 	}
 	return nil
 }

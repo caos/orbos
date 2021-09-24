@@ -44,7 +44,7 @@ func Generate() (private string, public string) {
 	return strings.TrimSpace(string(enc)), string(sshlib.MarshalAuthorizedKey(publicKey))
 }
 
-func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error) {
+func ParsePrivateKeys(privKey ...[]byte) ([]sshlib.Signer, error) {
 
 	var signers []sshlib.Signer
 	for _, copyKey := range privKey {
@@ -67,5 +67,5 @@ func AuthMethodFromKeys(privKey ...[]byte) (method sshlib.AuthMethod, err error)
 		}
 	}
 
-	return sshlib.PublicKeys(signers...), nil
+	return signers, nil
 }
