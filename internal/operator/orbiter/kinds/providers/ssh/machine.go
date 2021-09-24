@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/helpers"
+
 	sshlib "golang.org/x/crypto/ssh"
 
 	"github.com/caos/orbos/internal/ssh"
@@ -206,12 +208,19 @@ func (c *Machine) UseKey(keys ...[]byte) error {
 		User: c.remoteUser,
 		Auth: []sshlib.AuthMethod{sshlib.PublicKeys(signers...)},
 		HostKeyCallback: func(hostname string, remote net.Addr, key sshlib.PublicKey) error {
+			var errs []error
 			for i := range signers {
 				if err := sshlib.FixedHostKey(signers[i].PublicKey())(hostname, remote, key); err != nil {
-					return err
+					errs = append(errs, err)
+					continue
 				}
+				return nil
 			}
-			return nil
+			var err error
+			for i := range errs {
+				err = helpers.Concat(err, errs[i])
+			}
+			return err
 		},
 	}
 	return nil
