@@ -5,7 +5,7 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 )
 
-func tryToConnect(monitor mntr.Monitor, desired *DesiredV0) *kubernetes.Client {
+func tryToConnect(monitor mntr.Monitor, desired DesiredV0) *kubernetes.Client {
 	var kc *string
 	if desired.Spec.Kubeconfig != nil && desired.Spec.Kubeconfig.Value != "" {
 		kc = &desired.Spec.Kubeconfig.Value

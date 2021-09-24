@@ -4,7 +4,6 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/helper"
 	"github.com/caos/orbos/pkg/kubernetes"
 )
 
@@ -89,12 +88,6 @@ func ensure(
 
 	if !done {
 		monitor.Info("Scaling is not done yet")
-		return done, err
-	}
-
-	// When bootstrapping, the admin config was just generated
-	if helper.IsNil(k8sClient) {
-		k8sClient = tryToConnect(monitor, desired)
 	}
 
 	return done, ensureK8sPlugins(monitor, gitClient, k8sClient, *desired, providerK8sSpec, privateInterface)

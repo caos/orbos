@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/caos/orbos/pkg/helper"
+
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/caos/orbos/internal/executables"
@@ -32,6 +34,15 @@ func ensureK8sPlugins(
 			err = fmt.Errorf("ensuring kubernetes plugin resources failed: %w", err)
 		}
 	}()
+
+	if helper.IsNil(k8sClient) {
+		k8sClient = tryToConnect(monitor, desired)
+	}
+
+	if helper.IsNil(k8sClient) {
+		monitor.Info("not ensuring kubernetes plugins as kubeapi is not available")
+		return nil
+	}
 
 	applyResources, err := providerK8sSpec.CleanupAndApply(k8sClient)
 	if err != nil {
