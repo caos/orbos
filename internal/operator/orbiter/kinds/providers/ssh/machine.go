@@ -199,6 +199,18 @@ func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 func (c *Machine) UseKey(keys ...[]byte) error {
 
+	var typedCheckErr *knownhosts.KeyError
+
+	khPath, err := ensureKnownHostsPath()
+	if err != nil {
+		return err
+	}
+
+	checkHost, err := knownhosts.New(khPath)
+	if err != nil {
+		return err
+	}
+
 	publicKeys, err := ssh.AuthMethodFromKeys(keys...)
 	if err != nil {
 		return err
@@ -208,18 +220,8 @@ func (c *Machine) UseKey(keys ...[]byte) error {
 		User: c.remoteUser,
 		Auth: []sshlib.AuthMethod{publicKeys},
 		HostKeyCallback: func(hostname string, remote net.Addr, key sshlib.PublicKey) error {
+			// implementation is inspired by https://cyruslab.net/2020/10/23/golang-how-to-write-ssh-hostkeycallback/
 
-			khPath, err := knownHostsPath()
-			if err != nil {
-				return err
-			}
-
-			checkHost, err := knownhosts.New(khPath)
-			if err != nil {
-				return err
-			}
-
-			var typedCheckErr *knownhosts.KeyError
 			checkErr := checkHost(hostname, remote, key)
 			if checkErr == nil || !errors.As(checkErr, &typedCheckErr) {
 				return checkErr
@@ -246,22 +248,20 @@ func addHostKey(knownHostsPath string, remote net.Addr, pubKey sshlib.PublicKey)
 	defer f.Close()
 
 	knownHosts := knownhosts.Normalize(remote.String())
-	_, fileErr := f.WriteString(knownhosts.Line([]string{knownHosts}, pubKey))
+	_, fileErr := f.WriteString(knownhosts.Line([]string{knownHosts}, pubKey) + "\n")
 	return fileErr
 }
 
-func ensureKnownHostsPath(knownHostsPath string) error {
-	f, err := os.OpenFile(knownHostsPath, os.O_CREATE, 0600)
-	if err != nil {
-		return err
-	}
-	return f.Close()
-}
-
-func knownHostsPath() (string, error) {
+func ensureKnownHostsPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".ssh", "known_hosts"), nil
+	path := filepath.Join(home, ".ssh", "known_hosts")
+
+	f, err := os.OpenFile(path, os.O_CREATE, 0600)
+	if err != nil {
+		return "", err
+	}
+	return path, f.Close()
 }
