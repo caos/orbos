@@ -16,7 +16,7 @@ require (
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
