@@ -3,9 +3,9 @@
 ![ORBOS](./docs/img/orbos-logo-oneline-lightdesign@2x.png)
 
 [![semantic-release](https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg)](https://github.com/semantic-release/semantic-release)
-[![Release](https://github.com/caos/orbos/v5/workflows/Release/badge.svg)](https://github.com/caos/orbos/v5/actions)
-[![license](https://badgen.net/github/license/caos/orbos/)](https://github.com/caos/orbos/v5/blob/master/LICENSE)
-[![release](https://badgen.net/github/release/caos/orbos/stable)](https://github.com/caos/orbos/v5/releases)
+[![Release](https://github.com/caos/orbos/workflows/Release/badge.svg)](https://github.com/caos/orbos/actions)
+[![license](https://badgen.net/github/license/caos/orbos/)](https://github.com/caos/orbos/blob/master/LICENSE)
+[![release](https://badgen.net/github/release/caos/orbos/stable)](https://github.com/caos/orbos/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/caos/orbos)](https://goreportcard.com/report/github.com/caos/orbos)
 [![codecov](https://codecov.io/gh/caos/orbos/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/orbos)
 

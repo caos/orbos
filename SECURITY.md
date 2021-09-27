@@ -35,7 +35,7 @@ TBD
 
 ## Public Disclosure
 
-All accepted and mitigated vulnerabilitys will be published on the [Github Security Page](https://github.com/caos/orbos/v5/security/advisories)
+All accepted and mitigated vulnerabilitys will be published on the [Github Security Page](https://github.com/caos/orbos/security/advisories)
 
 ### Timing
 
