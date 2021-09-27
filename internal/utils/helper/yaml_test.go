@@ -1,11 +1,12 @@
 package helper
 
 import (
-	"github.com/caos/orbos/internal/utils/yaml"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/caos/orbos/v5/internal/utils/yaml"
 
 	"github.com/stretchr/testify/assert"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
 )
 
 func gitClient(monitor mntr.Monitor, task string) *git.Client {

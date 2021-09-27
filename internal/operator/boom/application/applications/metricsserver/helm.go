@@ -1,11 +1,11 @@
 package metricsserver
 
 import (
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/helm"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/mntr"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricsserver/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func (m *MetricsServer) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec, resultFilePath string) error {

@@ -1,10 +1,10 @@
 package templator
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Templator interface {

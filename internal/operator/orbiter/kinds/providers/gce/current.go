@@ -5,14 +5,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/executables"
+	"github.com/caos/orbos/v5/internal/executables"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 var _ infra.ProviderCurrent = (*Current)(nil)
@@ -90,26 +90,26 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 			return nil, nil
 
 		},
-/*		CloudController: infra.CloudControllerManager{
-			Supported: true,
-			CloudConfig: func(machine infra.Machine) io.Reader {
-				instance := machine.(*instance)
-				ctx := instance.context
-				return strings.NewReader(fmt.Sprintf(`[Global]
-project-id = "%s"
-network-name = "%s"
-node-instance-prefix = "orbos-"
-multizone = false
-local-zone = "%s"
-container-api-endpoint = "Don't use container API'"
-`,
-					ctx.projectID,
-					ctx.networkName,
-					ctx.desired.Zone,
-				))
-			},
-			ProviderName: "external",
-		},*/
+		/*		CloudController: infra.CloudControllerManager{
+							Supported: true,
+							CloudConfig: func(machine infra.Machine) io.Reader {
+								instance := machine.(*instance)
+								ctx := instance.context
+								return strings.NewReader(fmt.Sprintf(`[Global]
+				project-id = "%s"
+				network-name = "%s"
+				node-instance-prefix = "orbos-"
+				multizone = false
+				local-zone = "%s"
+				container-api-endpoint = "Don't use container API'"
+				`,
+									ctx.projectID,
+									ctx.networkName,
+									ctx.desired.Zone,
+								))
+							},
+							ProviderName: "external",
+						},*/
 	}
 }
 

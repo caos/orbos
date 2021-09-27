@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 )
 
 func CopyFolderToLocal(git *git.Client, tempDirectory, folderRelativePath string) error {

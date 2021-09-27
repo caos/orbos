@@ -11,17 +11,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/operator/nodeagent/networking"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/networking"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
 
 	_ "net/http/pprof"
 
-	"github.com/caos/orbos/internal/operator/nodeagent"
-	"github.com/caos/orbos/internal/operator/nodeagent/dep"
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/conv"
-	"github.com/caos/orbos/internal/operator/nodeagent/firewall"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep/conv"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/firewall"
 )
 
 var (

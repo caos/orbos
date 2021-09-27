@@ -1,11 +1,11 @@
 package reconciling
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/network"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/repository"
-	"github.com/caos/orbos/pkg/kubernetes/k8s"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/network"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/repository"
+	"github.com/caos/orbos/v5/pkg/kubernetes/k8s"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Reconciling struct {

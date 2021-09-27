@@ -3,11 +3,11 @@ package networking
 import (
 	"errors"
 
-	"github.com/caos/orbos/internal/operator/core"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/core"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	kubernetes2 "github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt core.AdaptFunc, k8sClient *kubernetes2.Client) func() {

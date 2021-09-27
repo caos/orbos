@@ -1,9 +1,9 @@
 package zitadel
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	deprecatedlabels "github.com/caos/orbos/v5/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
 )
 
 func GetServicemonitors(instanceName string) []*servicemonitor.Config {

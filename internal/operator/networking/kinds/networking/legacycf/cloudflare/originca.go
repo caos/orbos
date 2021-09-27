@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/rsa"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
 	"github.com/cloudflare/cloudflare-go"
 )
 

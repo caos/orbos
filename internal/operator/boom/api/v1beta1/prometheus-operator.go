@@ -1,6 +1,6 @@
 package v1beta1
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/toleration"
+import "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/toleration"
 
 type PrometheusOperator struct {
 	//Flag if tool should be deployed

@@ -4,20 +4,20 @@ import (
 	"errors"
 	"strconv"
 
-	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/v5/internal/utils/helper"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/config"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/helm"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/info"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/internal/utils/kubectl"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/internal/utils/kubectl"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func (p *Prometheus) SpecToHelmValues(monitor mntr.Monitor, toolsetCRDSpec *latest.ToolsetSpec) interface{} {

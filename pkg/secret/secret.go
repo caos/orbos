@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/caos/orbos/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
 	"gopkg.in/yaml.v3"
 )
 

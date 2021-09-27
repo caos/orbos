@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/internal/operator/boom/api/common"
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	"github.com/caos/orbos/internal/operator/boom/metrics"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/common"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/v5/internal/operator/boom/metrics"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 const (

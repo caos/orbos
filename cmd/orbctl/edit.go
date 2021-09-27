@@ -11,12 +11,12 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 )
 
 func EditCommand(getRv GetRootValues) *cobra.Command {

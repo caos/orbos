@@ -1,9 +1,9 @@
 package systemdmetricsexporter
 
 import (
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/systemdmetricsexporter/info"
-	"github.com/caos/orbos/internal/operator/boom/name"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/systemdmetricsexporter/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
 )
 
 type prometheusSystemdExporter struct{}

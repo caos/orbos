@@ -3,7 +3,7 @@ package v1beta1
 import (
 	"fmt"
 
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func ParseToolset(desiredTree *tree.Tree) (*Toolset, error) {

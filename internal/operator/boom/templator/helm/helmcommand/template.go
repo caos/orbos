@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	helper2 "github.com/caos/orbos/internal/utils/helper"
+	helper2 "github.com/caos/orbos/v5/internal/utils/helper"
 )
 
 type TemplateConfig struct {

@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type InternalConfig struct {

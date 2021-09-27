@@ -1,6 +1,6 @@
 package orb
 
-import "github.com/caos/orbos/pkg/labels"
+import "github.com/caos/orbos/v5/pkg/labels"
 
 func mustDatabaseOperator(binaryVersion *string) *labels.Operator {
 

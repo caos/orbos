@@ -6,7 +6,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Version struct {

@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 
 	"google.golang.org/api/googleapi"
 
-	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
 	"google.golang.org/api/compute/v1"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
 
 type normalizedLoadbalancer struct {

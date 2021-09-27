@@ -1,15 +1,15 @@
 package apigateway
 
 import (
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/apigateway/crds"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/apigateway/helm"
-	grafananet "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/network"
-	argocdnet "github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/network"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/secret/read"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/apigateway/crds"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/apigateway/helm"
+	grafananet "github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/network"
+	argocdnet "github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/network"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 )
 
 func (a *Ambassador) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {

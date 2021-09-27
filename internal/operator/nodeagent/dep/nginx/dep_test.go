@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/nginx"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep/nginx"
 
-	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/common"
 )
 
 var systemdPackageConfigEntries = map[string]string{

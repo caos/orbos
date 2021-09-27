@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/caos/orbos/internal/executables"
+	"github.com/caos/orbos/v5/internal/executables"
 )
 
 func TestBuildAndParseNodeAgent(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 	v1 "k8s.io/api/core/v1"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 )

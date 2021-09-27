@@ -3,9 +3,9 @@ package yaml
 import (
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/yaml"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	helper2 "github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/internal/utils/yaml"
 )
 
 func (y *YAML) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(string, string) error) error {

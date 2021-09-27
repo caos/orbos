@@ -1,9 +1,9 @@
 package dynamic
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 type AuthCheckResult struct {

@@ -3,12 +3,12 @@ package orb
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error)

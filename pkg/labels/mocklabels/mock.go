@@ -1,6 +1,6 @@
 package mocklabels
 
-import "github.com/caos/orbos/pkg/labels"
+import "github.com/caos/orbos/v5/pkg/labels"
 
 var (
 	productKey         = "app.kubernetes.io/part-of"

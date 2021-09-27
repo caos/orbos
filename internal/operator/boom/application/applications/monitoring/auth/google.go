@@ -3,9 +3,9 @@ package auth
 import (
 	"strings"
 
-	"github.com/caos/orbos/pkg/secret/read"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 
-	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
+	google "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Google"
 )
 
 func GetGoogleAuthConfig(spec *google.Auth) (map[string]string, error) {

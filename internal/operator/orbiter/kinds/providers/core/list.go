@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 func ListMachines(svc MachinesService) (map[string]infra.Machine, error) {

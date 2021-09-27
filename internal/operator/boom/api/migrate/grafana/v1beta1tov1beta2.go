@@ -1,17 +1,17 @@
 package grafana
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth"
-	generic "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Generic"
-	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
-	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate/network"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate/storage"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/admin"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth"
+	generic "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Generic"
+	github "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Github"
+	gitlab "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
+	google "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Google"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate/network"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate/storage"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {

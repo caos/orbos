@@ -1,9 +1,9 @@
 package secret
 
 import (
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/kubernetes/resources"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/kubernetes/resources"
+	"github.com/caos/orbos/v5/pkg/labels"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )

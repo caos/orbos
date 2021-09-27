@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	helper2 "github.com/caos/orbos/internal/utils/helper"
+	helper2 "github.com/caos/orbos/v5/internal/utils/helper"
 )
 
 var (

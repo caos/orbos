@@ -1,11 +1,11 @@
 package auth
 
 import (
-	generic "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Generic"
-	github "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Github"
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
-	google "github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth/Google"
-	"github.com/caos/orbos/pkg/secret"
+	generic "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana/auth/Generic"
+	github "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana/auth/Github"
+	gitlab "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana/auth/Gitlab"
+	google "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana/auth/Google"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Auth struct {

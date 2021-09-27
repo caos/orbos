@@ -1,10 +1,10 @@
 package networking
 
 import (
-	"github.com/caos/orbos/internal/operator/nodeagent"
-	"github.com/caos/orbos/internal/operator/nodeagent/dep"
-	"github.com/caos/orbos/internal/operator/nodeagent/networking/centos"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/networking/centos"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func Ensurer(monitor mntr.Monitor, os dep.OperatingSystem) nodeagent.NetworkingEnsurer {

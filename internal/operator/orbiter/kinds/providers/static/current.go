@@ -1,9 +1,9 @@
 package static
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 var _ infra.ProviderCurrent = (*Current)(nil)
@@ -11,10 +11,10 @@ var _ infra.ProviderCurrent = (*Current)(nil)
 type Current struct {
 	Common  *tree.Common `yaml:",inline"`
 	Current struct {
-		pools      map[string]infra.Pool `yaml:"-"`
-		Ingresses  map[string]*infra.Address
-		cleanupped <-chan error `yaml:"-"`
-		privateInterface string `yaml:"-"`
+		pools            map[string]infra.Pool `yaml:"-"`
+		Ingresses        map[string]*infra.Address
+		cleanupped       <-chan error `yaml:"-"`
+		privateInterface string       `yaml:"-"`
 	}
 }
 

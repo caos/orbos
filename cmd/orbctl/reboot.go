@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
 
 	"github.com/spf13/cobra"
 )

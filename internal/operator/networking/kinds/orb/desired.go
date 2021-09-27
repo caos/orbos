@@ -3,9 +3,9 @@ package orb
 import (
 	"fmt"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/pkg/tree"
 	corev1 "k8s.io/api/core/v1"
 )
 

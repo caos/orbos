@@ -6,8 +6,8 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 func maintainNodes(allInitializedMachines initializedMachines, monitor mntr.Monitor, k8sClient *kubernetes.Client, pdf func(mntr.Monitor) error) (done bool, err error) {

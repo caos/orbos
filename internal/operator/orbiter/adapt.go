@@ -1,9 +1,9 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 type AdaptFunc func(

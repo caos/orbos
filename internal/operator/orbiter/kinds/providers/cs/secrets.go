@@ -1,7 +1,7 @@
 package cs
 
 import (
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {

@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Software) error {

@@ -1,6 +1,6 @@
 package info
 
-import "github.com/caos/orbos/internal/operator/boom/name"
+import "github.com/caos/orbos/v5/internal/operator/boom/name"
 
 const (
 	applicationName name.Application = "grafana"

@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 
-	"github.com/caos/orbos/cmd/orbctl/cmds"
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/orb"
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/cmd/orbctl/cmds"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 	"golang.org/x/net/context"
 )
 

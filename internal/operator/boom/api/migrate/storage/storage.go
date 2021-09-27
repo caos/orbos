@@ -1,8 +1,8 @@
 package storage
 
 import (
-	storagev1beta2 "github.com/caos/orbos/internal/operator/boom/api/latest/storage"
-	storagev1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
+	storagev1beta2 "github.com/caos/orbos/v5/internal/operator/boom/api/latest/storage"
+	storagev1beta1 "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/storage"
 )
 
 func V1beta1Tov1beta2(old *storagev1beta1.Spec) *storagev1beta2.Spec {

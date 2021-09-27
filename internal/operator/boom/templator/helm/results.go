@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/boom/templator"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator"
 )
 
 func (h *Helm) deleteResults(app templator.HelmApplication) error {

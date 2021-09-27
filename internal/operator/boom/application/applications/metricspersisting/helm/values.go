@@ -1,9 +1,9 @@
 package helm
 
 import (
-	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/metriccollection/helm"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	prometheusoperator "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metriccollection/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	"github.com/caos/orbos/v5/pkg/kubernetes/k8s"
 )
 
 type Service struct {

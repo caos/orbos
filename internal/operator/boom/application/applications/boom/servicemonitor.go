@@ -1,10 +1,10 @@
 package boom
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	deprecatedlabels "github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	deprecatedlabels "github.com/caos/orbos/v5/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 func GetServicemonitor(instanceName string) *servicemonitor.Config {

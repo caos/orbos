@@ -1,9 +1,9 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/templator"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type TemplatorMutateValues interface {

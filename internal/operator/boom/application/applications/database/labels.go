@@ -1,7 +1,7 @@
 package database
 
 import (
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 func getOperatorServiceLabels() map[string]string {

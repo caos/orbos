@@ -3,10 +3,10 @@ package helm
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/templator"
-	"github.com/caos/orbos/internal/utils/yaml"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator"
+	"github.com/caos/orbos/v5/internal/utils/yaml"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type TemplatorPreSteps interface {

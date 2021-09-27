@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep"
 )
 
 type Common struct {

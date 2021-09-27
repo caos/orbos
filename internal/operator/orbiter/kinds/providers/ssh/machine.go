@@ -10,8 +10,8 @@ import (
 
 	sshlib "golang.org/x/crypto/ssh"
 
-	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/ssh"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Machine struct {

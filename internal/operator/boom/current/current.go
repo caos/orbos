@@ -3,10 +3,10 @@ package current
 import (
 	"sort"
 
-	"github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Current struct {

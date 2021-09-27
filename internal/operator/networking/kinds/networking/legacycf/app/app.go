@@ -4,12 +4,12 @@ import (
 	"context"
 	"strings"
 
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/labels"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/expression"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare/expression"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/config"
 )
 
 type App struct {

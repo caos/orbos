@@ -5,15 +5,15 @@ import (
 
 	core "k8s.io/api/core/v1"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 var deployErrors int

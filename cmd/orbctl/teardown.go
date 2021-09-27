@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbos/internal/operator/orbiter"
-	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	orbadapter "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/orb"
 )
 
 func TeardownCommand(getRv GetRootValues) *cobra.Command {

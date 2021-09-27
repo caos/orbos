@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
 
-	"github.com/caos/orbos/internal/operator/boom/metrics"
+	"github.com/caos/orbos/v5/internal/operator/boom/metrics"
 
-	"github.com/caos/orbos/internal/operator/boom/application"
-	"github.com/caos/orbos/internal/operator/boom/bundle/bundles"
-	"github.com/caos/orbos/internal/operator/boom/bundle/config"
-	"github.com/caos/orbos/internal/operator/boom/current"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/operator/boom/templator"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm"
-	helperTemp "github.com/caos/orbos/internal/operator/boom/templator/helper"
-	"github.com/caos/orbos/internal/operator/boom/templator/yaml"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/application"
+	"github.com/caos/orbos/v5/internal/operator/boom/bundle/bundles"
+	"github.com/caos/orbos/v5/internal/operator/boom/bundle/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/current"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm"
+	helperTemp "github.com/caos/orbos/v5/internal/operator/boom/templator/helper"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/yaml"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 var (

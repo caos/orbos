@@ -3,9 +3,9 @@ package metrics
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/nodemetricsexporter/info"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/nodemetricsexporter/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
 )
 
 func getLocalServiceMonitor(appName string, monitorMatchingLabels, serviceMatchingLabels map[string]string) *servicemonitor.Config {

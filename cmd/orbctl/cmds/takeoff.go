@@ -6,15 +6,15 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/v5/pkg/kubernetes/cli"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
-	"github.com/caos/orbos/internal/ctrlgitops"
+	"github.com/caos/orbos/v5/internal/ctrlgitops"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 func Takeoff(

@@ -5,12 +5,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/templator"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/helmcommand"
-	"github.com/caos/orbos/internal/utils/helper"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/yaml"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/helmcommand"
+	"github.com/caos/orbos/v5/internal/utils/helper"
+	helper2 "github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/internal/utils/yaml"
 )
 
 func (h *Helm) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {

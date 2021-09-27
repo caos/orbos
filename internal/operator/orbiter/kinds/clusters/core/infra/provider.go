@@ -5,7 +5,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 type Address struct {

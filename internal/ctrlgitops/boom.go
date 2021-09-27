@@ -4,8 +4,8 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/caos/orbos/internal/operator/boom"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func Boom(monitor mntr.Monitor, orbConfigPath string, version string) error {

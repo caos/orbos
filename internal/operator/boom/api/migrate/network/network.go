@@ -1,8 +1,8 @@
 package network
 
 import (
-	networkvv1beta2 "github.com/caos/orbos/internal/operator/boom/api/latest/network"
-	networkv1beta1 "github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
+	networkvv1beta2 "github.com/caos/orbos/v5/internal/operator/boom/api/latest/network"
+	networkv1beta1 "github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/network"
 )
 
 func V1beta1Tov1beta2(old *networkv1beta1.Network) *networkvv1beta2.Network {

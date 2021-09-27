@@ -1,11 +1,11 @@
 package auth
 
 import (
-	generic "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Generic"
-	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
-	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
-	"github.com/caos/orbos/pkg/secret"
+	generic "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Generic"
+	github "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Github"
+	gitlab "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
+	google "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Google"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Auth struct {

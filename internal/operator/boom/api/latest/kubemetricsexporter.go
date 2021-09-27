@@ -1,6 +1,6 @@
 package latest
 
-import "github.com/caos/orbos/pkg/kubernetes/k8s"
+import "github.com/caos/orbos/v5/pkg/kubernetes/k8s"
 
 type KubeMetricsExporter struct {
 	//Flag if tool should be deployed

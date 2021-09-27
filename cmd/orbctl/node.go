@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/tree"
 	"github.com/spf13/cobra"
 )
 

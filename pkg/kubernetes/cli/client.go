@@ -6,13 +6,13 @@ import (
 	"io/ioutil"
 	"strings"
 
-	orb2 "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/secret/operators"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/orb"
-	"github.com/caos/orbos/pkg/secret"
+	orb2 "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/v5/internal/secret/operators"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func Client(

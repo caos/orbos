@@ -10,15 +10,15 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/v5/internal/utils/helper"
 
-	helperpkg "github.com/caos/orbos/pkg/helper"
+	helperpkg "github.com/caos/orbos/v5/pkg/helper"
 
 	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/client/rp/cli"
 	"github.com/caos/oidc/pkg/oidc"
 	"github.com/caos/oidc/pkg/utils"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-github/v31/github"
 	"github.com/google/uuid"

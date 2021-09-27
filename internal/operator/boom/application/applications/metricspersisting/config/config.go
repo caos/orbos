@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/helm"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
 )
 
 type Config struct {

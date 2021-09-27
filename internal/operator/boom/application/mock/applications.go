@@ -3,8 +3,8 @@ package application
 import (
 	"testing"
 
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
-	"github.com/caos/orbos/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
 	"github.com/golang/mock/gomock"
 )
 

@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/caos/orbos/internal/ctrlcrd"
-	"github.com/caos/orbos/internal/ctrlgitops"
-	"github.com/caos/orbos/pkg/kubernetes"
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/internal/ctrlcrd"
+	"github.com/caos/orbos/v5/internal/ctrlgitops"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 	"github.com/spf13/cobra"
 )
 

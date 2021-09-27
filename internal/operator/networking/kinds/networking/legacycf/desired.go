@@ -3,10 +3,10 @@ package legacycf
 import (
 	"fmt"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/config"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 type Desired struct {

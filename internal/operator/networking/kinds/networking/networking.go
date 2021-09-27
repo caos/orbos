@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/core"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/core"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func GetQueryAndDestroyFuncs(

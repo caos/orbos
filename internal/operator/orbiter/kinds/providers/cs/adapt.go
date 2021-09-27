@@ -3,16 +3,16 @@ package cs
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/mntr"
-	orbcfg "github.com/caos/orbos/pkg/orb"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/internal/ssh"
+	"github.com/caos/orbos/v5/mntr"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func AdaptFunc(

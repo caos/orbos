@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
 func (a *App) EnsureFirewallRules(ctx context.Context, domain string, rules []*cloudflare.FirewallRule) error {

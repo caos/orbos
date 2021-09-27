@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/labels"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

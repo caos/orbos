@@ -5,15 +5,15 @@ import (
 	"runtime/debug"
 	"time"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 
-	"github.com/caos/orbos/internal/executables"
-	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/internal/executables"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
 )
 
 type OrbiterConfig struct {

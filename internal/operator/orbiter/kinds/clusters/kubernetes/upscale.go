@@ -4,11 +4,11 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func ensureNodes(

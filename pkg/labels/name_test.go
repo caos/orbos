@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 	"gopkg.in/yaml.v3"
 )
 

@@ -1,7 +1,7 @@
 package helm
 
 import (
-	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	"github.com/caos/orbos/v5/pkg/kubernetes/k8s"
 	"gopkg.in/yaml.v3"
 )
 

@@ -4,13 +4,13 @@ import (
 	"context"
 	"flag"
 
-	"github.com/caos/orbos/internal/ctrlcrd"
+	"github.com/caos/orbos/v5/internal/ctrlcrd"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/operator/boom"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/internal/operator/boom"
+	"github.com/caos/orbos/v5/mntr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )
 

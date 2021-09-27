@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func ParseToolset(desiredTree *tree.Tree) (*Toolset, error) {

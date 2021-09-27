@@ -3,7 +3,7 @@
 package dynamic
 
 import (
-	infra "github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	infra "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 // deriveUnique returns a list containing only the unique items from the input list.

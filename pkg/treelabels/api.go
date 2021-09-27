@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func MustForAPI(tree *tree.Tree, operator *labels.Operator) *labels.API {

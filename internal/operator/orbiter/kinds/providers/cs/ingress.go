@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	dynamiclbmodel "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
 
 func desiredToCurrentVIP(current *Current) func(vip *dynamiclbmodel.VIP) string {

@@ -3,7 +3,7 @@ package helmcommand
 import (
 	"strings"
 
-	helper2 "github.com/caos/orbos/internal/utils/helper"
+	helper2 "github.com/caos/orbos/v5/internal/utils/helper"
 )
 
 type FetchConfig struct {

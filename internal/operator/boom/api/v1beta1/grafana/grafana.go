@@ -1,10 +1,10 @@
 package grafana
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/admin"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana/auth"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana/admin"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/grafana/auth"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/network"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/storage"
 )
 
 type Grafana struct {

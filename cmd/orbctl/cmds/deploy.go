@@ -3,14 +3,14 @@ package cmds
 import (
 	"fmt"
 
-	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
-	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
+	boomapi "github.com/caos/orbos/v5/internal/operator/boom/api"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	cmdboom "github.com/caos/orbos/v5/internal/operator/boom/cmd"
+	orbnw "github.com/caos/orbos/v5/internal/operator/networking/kinds/orb"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops bool) error {

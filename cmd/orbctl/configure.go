@@ -4,15 +4,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/pkg/cfg"
+	"github.com/caos/orbos/v5/pkg/cfg"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/v5/pkg/kubernetes/cli"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 
-	"github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/orb"
 	"github.com/spf13/cobra"
 )
 

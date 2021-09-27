@@ -1,8 +1,8 @@
 package network
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/network"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/apigateway/crds"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/network"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/apigateway/crds"
 )
 
 func GetHostConfig(spec *network.Network) *crds.HostConfig {

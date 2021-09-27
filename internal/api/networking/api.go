@@ -3,18 +3,18 @@ package networking
 import (
 	"errors"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
 	"gopkg.in/yaml.v3"
 
-	v1 "github.com/caos/orbos/internal/api/networking/v1"
+	v1 "github.com/caos/orbos/v5/internal/api/networking/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 const (

@@ -1,8 +1,8 @@
 package networking
 
 import (
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/nodeagent"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent"
 )
 
 func noopEnsurer() nodeagent.NetworkingEnsurer {

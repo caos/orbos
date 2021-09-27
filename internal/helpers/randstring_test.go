@@ -1,8 +1,9 @@
 package helpers_test
 
 import (
-	"github.com/caos/orbos/internal/helpers"
 	"testing"
+
+	"github.com/caos/orbos/v5/internal/helpers"
 )
 
 func TestRandomStringRunes(t *testing.T) {

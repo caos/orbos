@@ -1,18 +1,18 @@
 package bundles
 
 import (
-	ambassadorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/apigateway/info"
-	kubestatemetricsinfo "github.com/caos/orbos/internal/operator/boom/application/applications/kubemetricsexporter/info"
-	loggingoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/info"
-	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/logspersisting/info"
-	prometheusoperatorinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metriccollection/info"
-	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/info"
-	metricsserverinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/info"
-	grafanainfo "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/info"
-	prometheusnodeexporterinfo "github.com/caos/orbos/internal/operator/boom/application/applications/nodemetricsexporter/info"
-	argocdinfo "github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/info"
-	prometheussystemdexporterinfo "github.com/caos/orbos/internal/operator/boom/application/applications/systemdmetricsexporter/info"
-	"github.com/caos/orbos/internal/operator/boom/name"
+	ambassadorinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/apigateway/info"
+	kubestatemetricsinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/kubemetricsexporter/info"
+	loggingoperatorinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/logcollection/info"
+	lokiinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/logspersisting/info"
+	prometheusoperatorinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metriccollection/info"
+	prometheusinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/info"
+	metricsserverinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricsserver/info"
+	grafanainfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/info"
+	prometheusnodeexporterinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/nodemetricsexporter/info"
+	argocdinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/info"
+	prometheussystemdexporterinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/systemdmetricsexporter/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
 )
 
 const (

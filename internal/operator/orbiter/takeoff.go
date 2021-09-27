@@ -5,17 +5,17 @@ import (
 	"net/http"
 	"time"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func ToEnsureResult(done bool, err error) *EnsureResult {

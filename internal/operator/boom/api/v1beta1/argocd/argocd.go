@@ -1,10 +1,10 @@
 package argocd
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/repository"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
-	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd/auth"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd/repository"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/network"
+	secret2 "github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Argocd struct {

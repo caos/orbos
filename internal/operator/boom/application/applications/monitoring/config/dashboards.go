@@ -3,7 +3,7 @@ package config
 import (
 	"path/filepath"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
 )
 
 var orgID = 0

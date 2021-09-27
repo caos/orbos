@@ -1,11 +1,11 @@
 package fetch
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application"
-	"github.com/caos/orbos/internal/operator/boom/bundle/bundles"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/helmcommand"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/application"
+	"github.com/caos/orbos/v5/internal/operator/boom/bundle/bundles"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/helmcommand"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type ChartKey struct {

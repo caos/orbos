@@ -3,10 +3,10 @@ package config
 import (
 	"strings"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
 
-	lokiinfo "github.com/caos/orbos/internal/operator/boom/application/applications/logspersisting/info"
-	prometheusinfo "github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/info"
+	lokiinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/logspersisting/info"
+	prometheusinfo "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/info"
 )
 
 var (

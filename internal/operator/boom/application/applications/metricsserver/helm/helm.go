@@ -1,6 +1,6 @@
 package helm
 
-import "github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
+import "github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
 
 func GetChartInfo() *chart.Chart {
 	return &chart.Chart{

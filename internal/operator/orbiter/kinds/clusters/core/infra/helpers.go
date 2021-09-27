@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func Try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machine Machine, callback func(cmp Machine) error) error {

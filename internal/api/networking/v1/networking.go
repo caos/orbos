@@ -3,8 +3,8 @@
 package v1
 
 import (
-	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	"github.com/caos/orbos/pkg/tree"
+	orbnw "github.com/caos/orbos/v5/internal/operator/networking/kinds/orb"
+	"github.com/caos/orbos/v5/pkg/tree"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/scheme"

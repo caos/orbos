@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/github"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/gitlab"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/oidc"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/github"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/gitlab"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/google"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/oidc"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Auth struct {

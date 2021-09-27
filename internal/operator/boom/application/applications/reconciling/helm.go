@@ -1,18 +1,19 @@
 package reconciling
 
 import (
-	"github.com/caos/orbos/internal/utils/helper"
 	"strings"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config/credential"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config/repository"
+	"github.com/caos/orbos/v5/internal/utils/helper"
 
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/customimage"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/helm"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/mntr"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config/credential"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config/repository"
+
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/customimage"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func (a *Argocd) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {

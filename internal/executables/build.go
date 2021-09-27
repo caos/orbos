@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 )
 
 var Unpack func(string)

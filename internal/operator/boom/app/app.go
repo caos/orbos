@@ -3,21 +3,21 @@ package app
 import (
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api"
-	crdconfig "github.com/caos/orbos/internal/operator/boom/crd/config"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/boom/api"
+	crdconfig "github.com/caos/orbos/v5/internal/operator/boom/crd/config"
+	"github.com/caos/orbos/v5/pkg/tree"
 
-	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
-	"github.com/caos/orbos/internal/operator/boom/crd"
-	"github.com/caos/orbos/internal/operator/boom/current"
-	"github.com/caos/orbos/internal/operator/boom/gitcrd"
-	gitcrdconfig "github.com/caos/orbos/internal/operator/boom/gitcrd/config"
-	"github.com/caos/orbos/internal/operator/boom/metrics"
-	"github.com/caos/orbos/internal/utils/clientgo"
+	bundleconfig "github.com/caos/orbos/v5/internal/operator/boom/bundle/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/crd"
+	"github.com/caos/orbos/v5/internal/operator/boom/current"
+	"github.com/caos/orbos/v5/internal/operator/boom/gitcrd"
+	gitcrdconfig "github.com/caos/orbos/v5/internal/operator/boom/gitcrd/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/metrics"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
 
-	"github.com/caos/orbos/internal/operator/boom/bundle/bundles"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/bundle/bundles"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type App struct {

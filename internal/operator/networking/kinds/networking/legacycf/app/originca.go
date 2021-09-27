@@ -4,9 +4,9 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/labels"
 	"github.com/cloudflare/cloudflare-go"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"

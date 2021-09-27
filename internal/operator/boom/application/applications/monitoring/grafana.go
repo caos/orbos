@@ -3,12 +3,12 @@ package monitoring
 import (
 	"reflect"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring"
 
-	"github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/info"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Grafana struct {

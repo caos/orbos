@@ -4,17 +4,17 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/caos/orbos/pkg/secret/read"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/auth"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/config"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/helm"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/kubectl"
-	"github.com/caos/orbos/internal/utils/kustomize"
-	"github.com/caos/orbos/mntr"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/auth"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/internal/utils/kubectl"
+	"github.com/caos/orbos/v5/internal/utils/kustomize"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func (g *Grafana) HelmMutate(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec, resultFilePath string) error {

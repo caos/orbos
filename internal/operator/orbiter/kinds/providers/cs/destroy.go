@@ -1,6 +1,6 @@
 package cs
 
-import "github.com/caos/orbos/internal/helpers"
+import "github.com/caos/orbos/v5/internal/helpers"
 
 func destroy(context *context, current *Current) error {
 

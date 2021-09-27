@@ -5,22 +5,22 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/pkg/helper"
+	"github.com/caos/orbos/v5/pkg/helper"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 
 	v1 "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 
 	"github.com/AlecAivazis/survey/v2"
 
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/pkg/tree"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type PushFuncs func(trees map[string]*tree.Tree, path string) error

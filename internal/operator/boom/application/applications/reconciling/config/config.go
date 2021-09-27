@@ -1,12 +1,12 @@
 package config
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config/auth"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config/credential"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config/plugin"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/config/repository"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config/auth"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config/credential"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config/plugin"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/config/repository"
+	"github.com/caos/orbos/v5/mntr"
 	"gopkg.in/yaml.v3"
 )
 

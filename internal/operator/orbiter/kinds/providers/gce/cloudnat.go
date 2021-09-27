@@ -1,7 +1,7 @@
 package gce
 
 import (
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"

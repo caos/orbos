@@ -1,7 +1,7 @@
 package centos
 
 import (
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func getEnsureTarget(monitor mntr.Monitor, zoneName string) ([]string, error) {

@@ -3,7 +3,7 @@
 package main
 
 import (
-	executables "github.com/caos/orbos/internal/executables"
+	executables "github.com/caos/orbos/v5/internal/executables"
 )
 
 // deriveJoinPackables listens on all input channels c0 and c1, and sends all their results onto the single output channel.

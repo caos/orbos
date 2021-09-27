@@ -1,6 +1,6 @@
 package database
 
-import "github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/logging"
+import "github.com/caos/orbos/v5/internal/operator/boom/application/applications/logcollection/logging"
 
 func GetFlows(outputs, clusterOutputs []string) []*logging.FlowConfig {
 	return []*logging.FlowConfig{

@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/pkg/git"
 )
 
 func PatchCommand(getRv GetRootValues) *cobra.Command {

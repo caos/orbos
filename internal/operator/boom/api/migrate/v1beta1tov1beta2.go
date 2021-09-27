@@ -1,12 +1,12 @@
 package migrate
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate/argocd"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate/grafana"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate/storage"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate/argocd"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate/grafana"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate/storage"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta2"
 )
 
 func V1beta1Tov1beta2(oldToolset *v1beta1.Toolset) *v1beta2.Toolset {

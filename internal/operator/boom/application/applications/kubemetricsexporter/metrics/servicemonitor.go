@@ -1,9 +1,9 @@
 package metrics
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/kubemetricsexporter/info"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/kubemetricsexporter/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
 )
 
 func getLocalServiceMonitor(monitorMatchingLabels, serviceMatchingLabels map[string]string) *servicemonitor.Config {

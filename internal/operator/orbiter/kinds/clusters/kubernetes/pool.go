@@ -3,8 +3,8 @@ package kubernetes
 import (
 	"sync"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
 )
 
 func newMachines(pool infra.Pool, number int, desiredInstances int) (machines []infra.Machine, err error) {

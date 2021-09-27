@@ -1,9 +1,9 @@
 package boom
 
 import (
-	v1 "github.com/caos/orbos/internal/api/boom/v1"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/tree"
+	v1 "github.com/caos/orbos/v5/internal/api/boom/v1"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/tree"
 	"gopkg.in/yaml.v3"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"

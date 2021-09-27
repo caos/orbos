@@ -1,9 +1,9 @@
 package metrics
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/logspersisting/info"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/logspersisting/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/servicemonitor"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
 )
 
 func GetServicemonitor(instanceName string) *servicemonitor.Config {

@@ -3,17 +3,17 @@ package providers
 import (
 	"fmt"
 
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/secret"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/cs"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/cs"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
 
-	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/gce"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/gce"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/static"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func GetQueryAndDestroyFuncs(

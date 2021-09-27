@@ -5,9 +5,12 @@
 package kubernetesmock
 
 import (
-	mntr "github.com/caos/orbos/mntr"
-	gomock "github.com/golang/mock/gomock"
 	io "io"
+	reflect "reflect"
+	time "time"
+
+	mntr "github.com/caos/orbos/v5/mntr"
+	gomock "github.com/golang/mock/gomock"
 	v1 "k8s.io/api/apps/v1"
 	v10 "k8s.io/api/batch/v1"
 	v1beta1 "k8s.io/api/batch/v1beta1"
@@ -17,8 +20,6 @@ import (
 	v12 "k8s.io/api/rbac/v1"
 	v1beta12 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	reflect "reflect"
-	time "time"
 )
 
 // MockNodeWithKubeadm is a mock of NodeWithKubeadm interface

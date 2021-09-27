@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
-	"github.com/caos/orbos/internal/operator/networking"
-	"github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/internal/operator/networking"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/orb"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	kubernetes2 "github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 func Networking(ctx context.Context, monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, binaryVersion *string) error {

@@ -3,7 +3,7 @@ package dep
 import (
 	"fmt"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Software struct {

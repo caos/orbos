@@ -1,8 +1,8 @@
 package legacycf
 
 import (
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/config"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func getSecretsMap(desiredKind *Desired) (map[string]*secret.Secret, map[string]*secret.Existing) {

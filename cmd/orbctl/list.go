@@ -7,14 +7,14 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
 	"github.com/kataras/tablewriter"
 	"github.com/landoop/tableprinter"
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func ListCommand(getRv GetRootValues) *cobra.Command {

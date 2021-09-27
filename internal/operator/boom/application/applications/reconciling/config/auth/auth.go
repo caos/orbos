@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Connectors struct {

@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 var _ infra.Machine = (*machine)(nil)

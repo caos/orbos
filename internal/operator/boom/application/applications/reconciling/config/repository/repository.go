@@ -3,13 +3,13 @@ package repository
 import (
 	"strings"
 
-	"github.com/caos/orbos/pkg/secret/read"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/info"
-	"github.com/caos/orbos/internal/operator/boom/application/resources"
-	"github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/info"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/resources"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Repository struct {

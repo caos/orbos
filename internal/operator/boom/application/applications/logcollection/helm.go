@@ -1,12 +1,12 @@
 package logcollection
 
 import (
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/helm"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/logspersisting/logs"
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/mntr"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/logcollection/helm"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/logspersisting/logs"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart"
+	"github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func (l *LoggingOperator) HelmPreApplySteps(monitor mntr.Monitor, toolsetCRDSpec *toolsetslatest.ToolsetSpec) ([]interface{}, error) {

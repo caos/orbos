@@ -5,13 +5,13 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
 	"github.com/spf13/cobra"
 
-	"github.com/caos/orbos/internal/secret/operators"
-	"github.com/caos/orbos/pkg/kubernetes/cli"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/secret/operators"
+	"github.com/caos/orbos/v5/pkg/kubernetes/cli"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func WriteSecretCommand(getRv GetRootValues) *cobra.Command {

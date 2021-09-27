@@ -128,7 +128,7 @@ func (m Monitor) RecoverPanic(r interface{}) {
 	if analyticsEnabled {
 		logMsg += ". Details are sent to CAOS AG where the issue is being investigated"
 	} else {
-		logMsg += ". Please file an issue at https://github.com/caos/orbos/issues containing the following stack trace"
+		logMsg += ". Please file an issue at https://github.com/caos/orbos/v5/issues containing the following stack trace"
 	}
 
 	m.Fields = merge(map[string]interface{}{

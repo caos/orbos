@@ -3,7 +3,7 @@ package helper
 import (
 	"strings"
 
-	yamlfile "github.com/caos/orbos/internal/utils/yaml"
+	yamlfile "github.com/caos/orbos/v5/internal/utils/yaml"
 	"gopkg.in/yaml.v3"
 )
 

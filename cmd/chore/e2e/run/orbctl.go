@@ -4,7 +4,7 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/caos/orbos/cmd/chore"
+	"github.com/caos/orbos/v5/cmd/chore"
 )
 
 type newOrbctlCommandFunc func(context.Context) *exec.Cmd

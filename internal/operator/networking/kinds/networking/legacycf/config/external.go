@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/secret"
 
-	core2 "github.com/caos/orbos/internal/operator/core"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
-	"github.com/caos/orbos/pkg/labels"
+	core2 "github.com/caos/orbos/v5/internal/operator/core"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/core"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 type ExternalConfig struct {

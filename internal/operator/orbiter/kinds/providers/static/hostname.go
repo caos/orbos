@@ -3,9 +3,9 @@ package static
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func desireHostname(poolsSpec map[string][]*Machine, nodeagents *common.DesiredNodeAgents, nodeagentsCurr *common.CurrentNodeAgents, monitor mntr.Monitor) func(machine infra.Machine, pool string) (bool, error) {

@@ -5,21 +5,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	dynamiclbmodel "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 
-	"github.com/caos/orbos/internal/operator/orbiter"
-	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	//	externallbmodel "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/external"
 )
 
 func query(

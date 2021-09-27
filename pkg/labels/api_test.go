@@ -3,7 +3,7 @@ package labels_test
 import (
 	"testing"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 func expectValidAPILabels(t *testing.T, kind, version string) *labels.API {

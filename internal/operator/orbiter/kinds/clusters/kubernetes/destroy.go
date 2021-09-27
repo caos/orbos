@@ -1,8 +1,8 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 func destroy(providerCurrents map[string]interface{}, k8sClient *kubernetes.Client) error {

@@ -1,8 +1,8 @@
 package statefulset
 
 import (
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/kubernetes/resources"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/kubernetes/resources"
 	appsv1 "k8s.io/api/apps/v1"
 )
 

@@ -3,7 +3,7 @@ package labels_test
 import (
 	"testing"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 func expectValidComponentLabels(t *testing.T, component string) *labels.Component {

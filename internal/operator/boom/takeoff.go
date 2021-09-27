@@ -9,12 +9,12 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/caos/orbos/internal/operator/boom/app"
-	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/config"
-	gitcrdconfig "github.com/caos/orbos/internal/operator/boom/gitcrd/config"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/internal/operator/boom/app"
+	gconfig "github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/config"
+	gitcrdconfig "github.com/caos/orbos/v5/internal/operator/boom/gitcrd/config"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/orb"
 )
 
 func Metrics(monitor mntr.Monitor) {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func Concat(left error, right error) error {

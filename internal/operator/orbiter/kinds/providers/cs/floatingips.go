@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
 
 	"github.com/cloudscale-ch/cloudscale-go-sdk"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 )
 
 func queryFloatingIPs(context *context, loadbalancing map[string][]*dynamic.VIP, writeTo *Current) ([]func() error, []func() error, map[string]bool, error) {

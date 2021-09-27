@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/operator/boom/templator"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 const (

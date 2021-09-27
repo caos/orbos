@@ -4,8 +4,8 @@ import (
 	"flag"
 	"path/filepath"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 const (

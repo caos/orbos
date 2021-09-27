@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep"
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string) error {

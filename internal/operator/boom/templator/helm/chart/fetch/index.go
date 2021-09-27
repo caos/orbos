@@ -1,14 +1,15 @@
 package fetch
 
 import (
-	helper2 "github.com/caos/orbos/internal/utils/helper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	helper2 "github.com/caos/orbos/v5/internal/utils/helper"
+
+	"github.com/caos/orbos/v5/mntr"
 	"gopkg.in/yaml.v3"
 )
 

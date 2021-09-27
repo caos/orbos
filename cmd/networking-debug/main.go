@@ -5,15 +5,15 @@ import (
 	"flag"
 	"os"
 
-	"github.com/caos/orbos/internal/ctrlcrd"
-	"github.com/caos/orbos/internal/ctrlgitops"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/v5/internal/ctrlcrd"
+	"github.com/caos/orbos/v5/internal/ctrlgitops"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes/cli"
 
-	"github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/orb"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func main() {

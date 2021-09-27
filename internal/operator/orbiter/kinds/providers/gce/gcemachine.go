@@ -9,8 +9,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type gceMachine struct {

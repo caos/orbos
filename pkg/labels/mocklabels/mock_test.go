@@ -3,8 +3,8 @@ package mocklabels_test
 import (
 	"testing"
 
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/labels/mocklabels"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels/mocklabels"
 )
 
 func TestLabelMockTypes(t *testing.T) {

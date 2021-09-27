@@ -3,9 +3,9 @@ package kubernetes
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 type initializedMachines []*initializedMachine

@@ -12,12 +12,12 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/internal/stores/github"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/internal/ssh"
+	"github.com/caos/orbos/v5/internal/stores/github"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")

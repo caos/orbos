@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 )

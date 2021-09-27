@@ -18,10 +18,10 @@ import (
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8syaml "sigs.k8s.io/yaml"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/mntr"
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"

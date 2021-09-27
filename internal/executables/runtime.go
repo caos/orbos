@@ -12,7 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 )
 
 var executables map[string][]byte

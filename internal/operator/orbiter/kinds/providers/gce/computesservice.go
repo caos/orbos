@@ -10,10 +10,10 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/compute/v1"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/providers/ssh"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 var _ core.MachinesService = (*machinesService)(nil)

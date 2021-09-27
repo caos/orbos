@@ -7,12 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/caos/orbos/internal/executables"
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/internal/executables"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 )
 
 type IterateNodeAgentFuncs func(currentNodeAgents *common.CurrentNodeAgents) (queryNodeAgent func(machine infra.Machine, orbiterCommit string) (bool, error), install func(machine infra.Machine) error)

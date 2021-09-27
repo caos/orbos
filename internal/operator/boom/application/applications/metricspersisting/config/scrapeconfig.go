@@ -1,6 +1,6 @@
 package config
 
-import "github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/helm"
+import "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/helm"
 
 func getScrapeConfigs() []*helm.AdditionalScrapeConfig {
 

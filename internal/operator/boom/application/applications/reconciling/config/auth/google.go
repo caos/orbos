@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
-	"github.com/caos/orbos/pkg/secret/read"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/google"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 )
 
 type googleConnector struct {

@@ -1,11 +1,11 @@
 package auth
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/github"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/gitlab"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/google"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth/oidc"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd/auth/github"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd/auth/gitlab"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd/auth/google"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd/auth/oidc"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Auth struct {

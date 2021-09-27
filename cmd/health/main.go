@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 )
 
 func main() {

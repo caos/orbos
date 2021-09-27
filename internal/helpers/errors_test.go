@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/caos/orbos/internal/helpers"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/helpers"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func TestConcatKeepsUserErrorType(t *testing.T) {

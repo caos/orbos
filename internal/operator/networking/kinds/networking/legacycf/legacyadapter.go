@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/caos/orbos/internal/operator/core"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/app"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/secret/read"
+	"github.com/caos/orbos/v5/internal/operator/core"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/app"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/config"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 )
 
 func adaptFunc(

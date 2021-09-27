@@ -5,13 +5,13 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
 	core "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 )

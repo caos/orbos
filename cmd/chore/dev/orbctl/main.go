@@ -7,7 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/caos/orbos/cmd/chore"
+	"github.com/caos/orbos/v5/cmd/chore"
 )
 
 func main() {

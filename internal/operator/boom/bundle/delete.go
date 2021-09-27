@@ -3,9 +3,9 @@ package bundle
 import (
 	"fmt"
 
-	"github.com/caos/orbos/internal/operator/boom/application"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/application"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func deleteWithCurrentState(monitor mntr.Monitor, currentResourceList []*clientgo.Resource, app application.Application) func(resultFilePath, namespace string) error {

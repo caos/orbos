@@ -3,7 +3,7 @@ package cloudflare
 import (
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/expression"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare/expression"
 )
 
 func EmptyExpression() *expression.Expression {

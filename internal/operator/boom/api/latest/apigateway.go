@@ -1,8 +1,8 @@
 package latest
 
 import (
-	"github.com/caos/orbos/pkg/kubernetes/k8s"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/kubernetes/k8s"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 type APIGateway struct {

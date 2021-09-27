@@ -8,9 +8,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
 )
 
 type Rebooter interface {

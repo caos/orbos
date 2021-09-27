@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/orb"
 )
 
 func initRepo(orbConfig *orb.Orb, gitClient *git.Client) error {

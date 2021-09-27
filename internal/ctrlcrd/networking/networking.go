@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/caos/orbos/internal/api/networking"
-	v1 "github.com/caos/orbos/internal/api/networking/v1"
-	orbnw "github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/internal/api/networking"
+	v1 "github.com/caos/orbos/v5/internal/api/networking/v1"
+	orbnw "github.com/caos/orbos/v5/internal/operator/networking/kinds/orb"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/tree"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 )

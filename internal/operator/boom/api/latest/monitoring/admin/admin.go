@@ -1,7 +1,7 @@
 package admin
 
 import (
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 // Admin: Not defining the admin credentials results in an user admin with password admin.

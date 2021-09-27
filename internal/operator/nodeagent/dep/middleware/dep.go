@@ -1,6 +1,6 @@
 package middleware
 
-import "github.com/caos/orbos/internal/operator/nodeagent"
+import "github.com/caos/orbos/v5/internal/operator/nodeagent"
 
 type Installer interface {
 	nodeagent.Installer

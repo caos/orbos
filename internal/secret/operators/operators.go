@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
 
-	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/pkg/labels"
+	orbiterOrb "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/v5/pkg/labels"
 
-	boomcrd "github.com/caos/orbos/internal/api/boom"
-	nwcrd "github.com/caos/orbos/internal/api/networking"
-	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
-	orbcfg "github.com/caos/orbos/pkg/orb"
-	"github.com/caos/orbos/pkg/secret"
-	"github.com/caos/orbos/pkg/tree"
+	boomcrd "github.com/caos/orbos/v5/internal/api/boom"
+	nwcrd "github.com/caos/orbos/v5/internal/api/networking"
+	boomapi "github.com/caos/orbos/v5/internal/operator/boom/api"
+	nwOrb "github.com/caos/orbos/v5/internal/operator/networking/kinds/orb"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/secret"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 func GetAllSecretsFunc(

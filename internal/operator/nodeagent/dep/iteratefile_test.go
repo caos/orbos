@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep"
 )
 
 func TestIterateFile(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 
 	"github.com/go-git/go-git/v5/utils/ioutil"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 )
 
 func ExtractTarGczFile(packables <-chan PackableTuple, file string) <-chan PackableTuple {

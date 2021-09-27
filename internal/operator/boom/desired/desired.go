@@ -6,14 +6,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	yamlfile "github.com/caos/orbos/internal/utils/yaml"
+	yamlfile "github.com/caos/orbos/v5/internal/utils/yaml"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/operator/boom/labels"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/kustomize"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/utils/helper"
+	"github.com/caos/orbos/v5/internal/utils/kustomize"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func Apply(monitor mntr.Monitor, resultFilePath, namespace string, appName name.Application, force bool) error {

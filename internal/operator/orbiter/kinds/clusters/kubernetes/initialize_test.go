@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 	v1 "k8s.io/api/core/v1"
 )
 

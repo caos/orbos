@@ -3,9 +3,9 @@ package auth
 import (
 	"strings"
 
-	"github.com/caos/orbos/pkg/secret/read"
+	"github.com/caos/orbos/v5/pkg/secret/read"
 
-	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
+	github "github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring/auth/Github"
 )
 
 func GetGithubAuthConfig(spec *github.Auth) (map[string]string, error) {

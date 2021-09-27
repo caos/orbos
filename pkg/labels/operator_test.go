@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/pkg/labels"
 )
 
 func expectValidOperatorLabels(t *testing.T, operator, version string) *labels.Operator {

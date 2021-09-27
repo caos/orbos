@@ -1,8 +1,8 @@
 package v1beta1
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/toleration"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/storage"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/toleration"
 )
 
 type Prometheus struct {

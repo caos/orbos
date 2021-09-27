@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/v5/internal/helpers"
 
-	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/common"
 
 	"gopkg.in/yaml.v3"
 )

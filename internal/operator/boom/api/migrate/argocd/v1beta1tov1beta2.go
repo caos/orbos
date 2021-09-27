@@ -1,15 +1,15 @@
 package argocd
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/github"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/gitlab"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/google"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/auth/oidc"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling/repository"
-	"github.com/caos/orbos/internal/operator/boom/api/migrate/network"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/github"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/gitlab"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/google"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/auth/oidc"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling/repository"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/migrate/network"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta1/argocd"
 )
 
 func V1beta1Tov1beta2(old *argocd.Argocd) *reconciling.Reconciling {

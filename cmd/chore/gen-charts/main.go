@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/caos/orbos/internal/operator/boom/templator/helm/chart/fetch"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/boom/templator/helm/chart/fetch"
+	"github.com/caos/orbos/v5/mntr"
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )

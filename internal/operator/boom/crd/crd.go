@@ -4,19 +4,19 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/boom/cmd"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/v5/internal/operator/boom/cmd"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/bundle"
-	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
-	"github.com/caos/orbos/internal/operator/boom/crd/config"
-	"github.com/caos/orbos/internal/operator/boom/metrics"
-	"github.com/caos/orbos/internal/operator/boom/name"
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/mntr"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/bundle"
+	bundleconfig "github.com/caos/orbos/v5/internal/operator/boom/bundle/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/crd/config"
+	"github.com/caos/orbos/v5/internal/operator/boom/metrics"
+	"github.com/caos/orbos/v5/internal/operator/boom/name"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 const (

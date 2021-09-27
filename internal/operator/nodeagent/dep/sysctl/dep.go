@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/nodeagent"
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/internal/operator/common"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent"
+	"github.com/caos/orbos/v5/internal/operator/nodeagent/dep/middleware"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 type Installer interface {

@@ -3,13 +3,14 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
 	"io"
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 func join(

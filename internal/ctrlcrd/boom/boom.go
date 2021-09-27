@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/api/boom"
+	"github.com/caos/orbos/v5/internal/api/boom"
 
-	v1 "github.com/caos/orbos/internal/api/boom/v1"
-	"github.com/caos/orbos/internal/operator/boom/app"
-	gconfig "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/config"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/kubernetes"
+	v1 "github.com/caos/orbos/v5/internal/api/boom/v1"
+	"github.com/caos/orbos/v5/internal/operator/boom/app"
+	gconfig "github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/config"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 )

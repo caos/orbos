@@ -7,15 +7,15 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbos/pkg/helper"
+	"github.com/caos/orbos/v5/pkg/helper"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
-	"github.com/caos/orbos/internal/executables"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
-	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/v5/internal/executables"
+	"github.com/caos/orbos/v5/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/v5/mntr"
+	"github.com/caos/orbos/v5/pkg/git"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
 )
 
 func ensureK8sPlugins(

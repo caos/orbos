@@ -1,7 +1,7 @@
 package orb
 
 import (
-	"github.com/caos/orbos/pkg/tree"
+	"github.com/caos/orbos/v5/pkg/tree"
 )
 
 type Current struct {

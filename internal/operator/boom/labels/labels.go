@@ -1,6 +1,6 @@
 package labels
 
-import "github.com/caos/orbos/internal/operator/boom/name"
+import "github.com/caos/orbos/v5/internal/operator/boom/name"
 
 var (
 	instanceName = "boom"

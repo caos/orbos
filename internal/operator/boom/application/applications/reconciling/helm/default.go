@@ -3,7 +3,7 @@ package helm
 import (
 	"strings"
 
-	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	"github.com/caos/orbos/v5/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

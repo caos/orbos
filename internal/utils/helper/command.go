@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 )
 
 func RunWithOutput(monitor mntr.Monitor, cmd exec.Cmd) ([]byte, error) {

@@ -1,28 +1,29 @@
 package logs
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/application/applications/boom"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/database"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/networking"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/orbiter"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/zitadel"
 	"strings"
 
-	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
-	amlogs "github.com/caos/orbos/internal/operator/boom/application/applications/apigateway/logs"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/boom"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/database"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/networking"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/orbiter"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/zitadel"
 
-	ksmlogs "github.com/caos/orbos/internal/operator/boom/application/applications/kubemetricsexporter/logs"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/logging"
-	lologs "github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/logs"
-	"github.com/caos/orbos/internal/operator/boom/application/applications/logspersisting/info"
-	pologs "github.com/caos/orbos/internal/operator/boom/application/applications/metriccollection/logs"
-	plogs "github.com/caos/orbos/internal/operator/boom/application/applications/metricspersisting/logs"
-	mslogs "github.com/caos/orbos/internal/operator/boom/application/applications/metricsserver/logs"
-	glogs "github.com/caos/orbos/internal/operator/boom/application/applications/monitoring/logs"
-	pnelogs "github.com/caos/orbos/internal/operator/boom/application/applications/nodemetricsexporter/logs"
-	aglogs "github.com/caos/orbos/internal/operator/boom/application/applications/reconciling/logs"
-	pselogs "github.com/caos/orbos/internal/operator/boom/application/applications/systemdmetricsexporter/logs"
-	"github.com/caos/orbos/internal/operator/boom/labels"
+	toolsetslatest "github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	amlogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/apigateway/logs"
+
+	ksmlogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/kubemetricsexporter/logs"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/logcollection/logging"
+	lologs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/logcollection/logs"
+	"github.com/caos/orbos/v5/internal/operator/boom/application/applications/logspersisting/info"
+	pologs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metriccollection/logs"
+	plogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricspersisting/logs"
+	mslogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metricsserver/logs"
+	glogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/monitoring/logs"
+	pnelogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/nodemetricsexporter/logs"
+	aglogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/reconciling/logs"
+	pselogs "github.com/caos/orbos/v5/internal/operator/boom/application/applications/systemdmetricsexporter/logs"
+	"github.com/caos/orbos/v5/internal/operator/boom/labels"
 )
 
 func GetAllResources(toolsetCRDSpec *toolsetslatest.ToolsetSpec) []interface{} {

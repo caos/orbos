@@ -1,9 +1,9 @@
 package read
 
 import (
-	"github.com/caos/orbos/internal/utils/clientgo"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/v5/internal/utils/clientgo"
+	"github.com/caos/orbos/v5/pkg/kubernetes"
+	"github.com/caos/orbos/v5/pkg/secret"
 )
 
 func IsExistentSecret(secret *secret.Secret, existent *secret.Existing) bool {

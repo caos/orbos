@@ -3,16 +3,16 @@ package main
 import (
 	"errors"
 
-	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/v5/mntr"
 
-	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/v5/pkg/git"
 
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 
-	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-	"github.com/caos/orbos/internal/operator/orbiter"
-	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/pkg/labels"
+	boomapi "github.com/caos/orbos/v5/internal/operator/boom/api"
+	"github.com/caos/orbos/v5/internal/operator/orbiter"
+	orbadapter "github.com/caos/orbos/v5/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/v5/pkg/labels"
 	"github.com/spf13/cobra"
 )
 

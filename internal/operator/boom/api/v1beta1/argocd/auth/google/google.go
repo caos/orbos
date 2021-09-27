@@ -1,7 +1,7 @@
 package google
 
 import (
-	secret2 "github.com/caos/orbos/pkg/secret"
+	secret2 "github.com/caos/orbos/v5/pkg/secret"
 )
 
 type Connector struct {

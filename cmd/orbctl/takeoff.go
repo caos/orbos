@@ -3,7 +3,7 @@ package main
 import (
 	_ "net/http/pprof"
 
-	"github.com/caos/orbos/cmd/orbctl/cmds"
+	"github.com/caos/orbos/v5/cmd/orbctl/cmds"
 	"github.com/spf13/cobra"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 )

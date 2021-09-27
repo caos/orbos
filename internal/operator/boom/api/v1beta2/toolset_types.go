@@ -1,9 +1,9 @@
 package v1beta2
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
-	"github.com/caos/orbos/internal/operator/boom/api/latest/reconciling"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/monitoring"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest/reconciling"
 )
 
 // ToolsetSpec: BOOM reconciles itself if a boomVersion is defined, if no boomVersion is defined there is no reconciling.

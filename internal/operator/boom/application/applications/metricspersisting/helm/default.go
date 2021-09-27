@@ -1,8 +1,8 @@
 package helm
 
 import (
-	prometheusoperator "github.com/caos/orbos/internal/operator/boom/application/applications/metriccollection/helm"
-	"github.com/caos/orbos/pkg/kubernetes/k8s"
+	prometheusoperator "github.com/caos/orbos/v5/internal/operator/boom/application/applications/metriccollection/helm"
+	"github.com/caos/orbos/v5/pkg/kubernetes/k8s"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )

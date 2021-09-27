@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
+	"github.com/caos/orbos/v5/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
 func (a *App) EnsureFilters(ctx context.Context, domain string, filters []*cloudflare.Filter) ([]*cloudflare.Filter, func() error, error) {

@@ -1,8 +1,8 @@
 package orbiter
 
 import (
-	"github.com/caos/orbos/pkg/git"
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/v5/pkg/git"
+	orbcfg "github.com/caos/orbos/v5/pkg/orb"
 )
 
 type Config struct {

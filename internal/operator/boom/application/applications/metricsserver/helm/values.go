@@ -1,6 +1,6 @@
 package helm
 
-import "github.com/caos/orbos/pkg/kubernetes/k8s"
+import "github.com/caos/orbos/v5/pkg/kubernetes/k8s"
 
 type Rbac struct {
 	Create     bool `yaml:"create"`

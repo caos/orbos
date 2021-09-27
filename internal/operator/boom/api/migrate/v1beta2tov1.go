@@ -1,8 +1,8 @@
 package migrate
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/latest"
+	"github.com/caos/orbos/v5/internal/operator/boom/api/v1beta2"
 )
 
 func V1beta2Tov1(oldToolset *v1beta2.Toolset) (newToolset *latest.Toolset) {
