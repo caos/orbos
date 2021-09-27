@@ -4,12 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/secret"
 )
 
 func ensureNodes(
@@ -21,11 +20,10 @@ func ensureNodes(
 	k8sVersion KubernetesVersion,
 	k8sClient *kubernetes.Client,
 	oneoff bool,
-	gitClient *git.Client,
 	providerK8sSpec infra.Kubernetes,
 	machines []*initializedMachine,
-	privateInterface string,
-) (changed bool, err error) {
+
+) (done bool, err error) {
 
 	var joinCP *initializedMachine
 	var certsCP infra.Machine
@@ -131,9 +129,7 @@ nodes:
 			string(certKey),
 			k8sClient,
 			imageRepository,
-			gitClient,
 			providerK8sSpec,
-			privateInterface,
 		)
 
 		if err != nil {
@@ -167,9 +163,7 @@ nodes:
 			"",
 			k8sClient,
 			imageRepository,
-			gitClient,
 			providerK8sSpec,
-			privateInterface,
 		); err != nil {
 			return false, fmt.Errorf("joining worker %s failed: %w", worker.infra.ID(), err)
 		}
