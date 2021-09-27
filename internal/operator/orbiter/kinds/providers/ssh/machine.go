@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/crypto/ssh/knownhosts"
 
 	sshlib "golang.org/x/crypto/ssh"
 
@@ -202,9 +205,63 @@ func (c *Machine) UseKey(keys ...[]byte) error {
 	}
 
 	c.sshCfg = &sshlib.ClientConfig{
-		User:            c.remoteUser,
-		Auth:            []sshlib.AuthMethod{publicKeys},
-		HostKeyCallback: sshlib.InsecureIgnoreHostKey(),
+		User: c.remoteUser,
+		Auth: []sshlib.AuthMethod{publicKeys},
+		HostKeyCallback: func(hostname string, remote net.Addr, key sshlib.PublicKey) error {
+
+			khPath, err := knownHostsPath()
+			if err != nil {
+				return err
+			}
+
+			checkHost, err := knownhosts.New(khPath)
+			if err != nil {
+				return err
+			}
+
+			var typedCheckErr *knownhosts.KeyError
+			checkErr := checkHost(hostname, remote, key)
+			if checkErr == nil || !errors.As(checkErr, &typedCheckErr) {
+				return checkErr
+			}
+			// Reference: https://www.godoc.org/golang.org/x/crypto/ssh/knownhosts#KeyError
+			// if keyErr.Want slice is empty then host is unknown, if keyErr.Want is not empty
+			// and if host is known then there is key mismatch the connection is then rejected.
+			if len(typedCheckErr.Want) > 0 {
+				return fmt.Errorf("%v is not a key of %s, either you are a victim of a MiTM attack or %s has reconfigured the host pub key: %w", string(key.Marshal()), hostname, hostname, checkErr)
+			}
+			c.monitor.Info("Adding missing host key to known_hosts file")
+			return addHostKey(khPath, remote, key)
+		},
 	}
 	return nil
+}
+
+func addHostKey(knownHostsPath string, remote net.Addr, pubKey sshlib.PublicKey) error {
+
+	f, fErr := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_WRONLY, 0600)
+	if fErr != nil {
+		return fErr
+	}
+	defer f.Close()
+
+	knownHosts := knownhosts.Normalize(remote.String())
+	_, fileErr := f.WriteString(knownhosts.Line([]string{knownHosts}, pubKey))
+	return fileErr
+}
+
+func ensureKnownHostsPath(knownHostsPath string) error {
+	f, err := os.OpenFile(knownHostsPath, os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+	return f.Close()
+}
+
+func knownHostsPath() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".ssh", "known_hosts"), nil
 }
