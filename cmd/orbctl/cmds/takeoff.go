@@ -6,7 +6,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	cli "github.com/caos/orbos/pkg/cli"
+	cli2 "github.com/caos/orbos/pkg/kubernetes/cli"
 
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
@@ -37,11 +38,7 @@ func Takeoff(
 			return err
 		}
 
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
+		if err := cli.InitRepo(orbConfig, gitClient); err != nil {
 			return err
 		}
 
@@ -65,7 +62,7 @@ func Takeoff(
 		return nil
 	}
 
-	k8sClient, err := cli.Client(
+	k8sClient, err := cli2.Client(
 		monitor,
 		orbConfig,
 		gitClient,

@@ -1,16 +1,11 @@
 package main
 
 import (
-	"errors"
-	"io/ioutil"
-	"os"
-
-	"github.com/caos/orbos/mntr"
-
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/cli"
+	cli2 "github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/secret"
 )
 
@@ -40,7 +35,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		s, err := content(value, file, stdin)
+		s, err := cli.Content(value, file, stdin)
 		if err != nil {
 			return err
 		}
@@ -60,7 +55,7 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 		orbConfig := rv.OrbConfig
 		gitClient := rv.GitClient
 
-		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
+		k8sClient, err := cli2.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
 		if err != nil && !rv.Gitops {
 			return err
 		}
@@ -77,47 +72,4 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 			operators.PushFunc(monitor, rv.Gitops, gitClient, k8sClient))
 	}
 	return cmd
-}
-
-func content(value string, file string, stdin bool) (val string, err error) {
-
-	defer func() {
-		if err != nil {
-			err = mntr.ToUserError(err)
-		}
-	}()
-
-	channels := 0
-	if value != "" {
-		channels++
-	}
-	if file != "" {
-		channels++
-	}
-	if stdin {
-		channels++
-	}
-
-	if channels != 1 {
-		return "", errors.New("content must be provided eighter by value or by file path or by standard input")
-	}
-
-	if value != "" {
-		return value, nil
-	}
-
-	readFunc := func() ([]byte, error) {
-		return ioutil.ReadFile(file)
-	}
-	if stdin {
-		readFunc = func() ([]byte, error) {
-			return ioutil.ReadAll(os.Stdin)
-		}
-	}
-
-	c, err := readFunc()
-	if err != nil {
-		panic(err)
-	}
-	return string(c), err
 }

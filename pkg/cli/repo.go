@@ -1,11 +1,11 @@
-package main
+package cli
 
 import (
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/orb"
 )
 
-func initRepo(orbConfig *orb.Orb, gitClient *git.Client) error {
+func InitRepo(orbConfig *orb.Orb, gitClient *git.Client) error {
 	if err := orbConfig.IsConnectable(); err != nil {
 		return err
 	}

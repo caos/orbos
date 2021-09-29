@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"github.com/caos/orbos/pkg/cli"
 
 	"github.com/caos/orbos/mntr"
 
@@ -45,11 +46,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
+		if err := cli.InitRepo(orbConfig, gitClient); err != nil {
 			return err
 		}
 

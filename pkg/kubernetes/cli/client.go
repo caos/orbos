@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"github.com/caos/orbos/pkg/cli"
 	"io/ioutil"
 	"strings"
 
@@ -32,11 +33,7 @@ func Client(
 
 	if orbConfigIsIncompleteErr == nil && gitops {
 		if clone {
-			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-				return nil, err
-			}
-
-			if err := gitClient.Clone(); err != nil {
+			if err := cli.InitRepo(orbConfig, gitClient); err != nil {
 				return nil, err
 			}
 		}

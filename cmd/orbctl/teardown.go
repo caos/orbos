@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/caos/orbos/pkg/cli"
 	"strings"
 
 	"github.com/caos/orbos/pkg/git"
@@ -68,11 +69,7 @@ func TeardownCommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
+		if err := cli.InitRepo(orbConfig, gitClient); err != nil {
 			return err
 		}
 

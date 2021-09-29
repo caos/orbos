@@ -1,13 +1,13 @@
 package main
 
 import (
+	"github.com/caos/orbos/pkg/cli"
 	"log"
 	"net/http"
 
 	"github.com/caos/orbos/internal/ctrlcrd"
 	"github.com/caos/orbos/internal/ctrlgitops"
 	"github.com/caos/orbos/pkg/kubernetes"
-	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/spf13/cobra"
 )
 
@@ -59,11 +59,7 @@ func StartOrbiter(getRv GetRootValues) *cobra.Command {
 		gitClient := rv.GitClient
 		ctx := rv.Ctx
 
-		if err := orbcfg.IsComplete(orbConfig); err != nil {
-			return err
-		}
-
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+		if err := cli.InitRepo(orbConfig, gitClient); err != nil {
 			return err
 		}
 

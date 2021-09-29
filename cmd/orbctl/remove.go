@@ -4,12 +4,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
+	"github.com/caos/orbos/pkg/cli"
 	"strings"
 
 	"github.com/spf13/cobra"
-
-	"github.com/caos/orbos/pkg/git"
 )
 
 func RemoveCommand(getRv GetRootValues) *cobra.Command {
@@ -36,19 +34,11 @@ func RemoveCommand(getRv GetRootValues) *cobra.Command {
 			return errors.New("remove command is only supported with the --gitops flag")
 		}
 
-		if err := initRepo(rv.OrbConfig, rv.GitClient); err != nil {
+		if err := cli.InitRepo(rv.OrbConfig, rv.GitClient); err != nil {
 			return err
 		}
 
-		files := make([]git.File, len(args))
-		for i := range args {
-			files[i] = git.File{
-				Path:    args[i],
-				Content: nil,
-			}
-		}
-
-		return rv.GitClient.UpdateRemote(fmt.Sprintf("Remove %s", filesStr), func() []git.File { return files })
+		return cli.Remove(rv.GitClient, args)
 	}
 
 	return cmd

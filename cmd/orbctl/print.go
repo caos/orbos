@@ -5,6 +5,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/caos/orbos/pkg/cli"
 
 	"github.com/spf13/cobra"
 )
@@ -30,7 +31,7 @@ func PrintCommand(getRv GetRootValues) *cobra.Command {
 				return errors.New("print command is only supported with the --gitops flag")
 			}
 
-			if err := initRepo(rv.OrbConfig, rv.GitClient); err != nil {
+			if err := cli.InitRepo(rv.OrbConfig, rv.GitClient); err != nil {
 				return err
 			}
 
