@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"strings"
 	"text/template"
@@ -44,10 +45,15 @@ func ensureK8sPlugins(
 		return nil
 	}
 
-	applyResources, err := providerK8sSpec.CleanupAndApply(k8sClient)
-	if err != nil {
-		return err
+	var applyResources io.Reader
+
+	if providerK8sSpec.CleanupAndApply != nil {
+		applyResources, err = providerK8sSpec.CleanupAndApply(k8sClient)
+		if err != nil {
+			return err
+		}
 	}
+
 	if applyResources != nil {
 		k8sPluginsMonitor = k8sPluginsMonitor.WithField("cloudcontrollermanager", providerK8sSpec.CloudController.ProviderName)
 	}
