@@ -56,8 +56,8 @@ func (c *Machine) Execute(stdin io.Reader, cmd string) (stdout []byte, err error
 	monitor.Debug("Trying to execute with ssh")
 
 	var output []byte
-	sess, close, err := c.open()
-	defer close()
+	sess, closeSession, err := c.open(c.sshCfg)
+	defer mustClose(closeSession)
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,9 @@ func (c *Machine) Shell() (err error) {
 		}
 	}()
 
-	sess, close, err := c.open()
-	defer close()
+	sess, closeSession, err := c.open(c.sshCfg)
+	defer mustClose(closeSession)
+
 	if err != nil {
 		return err
 	}
@@ -154,8 +155,9 @@ func (c *Machine) ReadFile(path string, data io.Writer) (err error) {
 	monitor.Debug("Trying to read file with ssh")
 
 	cmd := fmt.Sprintf("sudo cat %s", path)
-	sess, close, err := c.open()
-	defer close()
+	sess, closeSession, err := c.open(c.sshCfg)
+	defer mustClose(closeSession)
+
 	if err != nil {
 		return err
 	}
@@ -170,12 +172,12 @@ func (c *Machine) ReadFile(path string, data io.Writer) (err error) {
 	return nil
 }
 
-func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
+func (c *Machine) open(sshCfg *sshlib.ClientConfig) (sess *sshlib.Session, close func() error, err error) {
 
 	c.monitor.Debug("Trying to open an ssh connection")
 	close = func() error { return nil }
 
-	if c.sshCfg == nil {
+	if sshCfg == nil {
 		return nil, close, errors.New("no ssh key passed via infra.Machine.UseKey")
 	}
 
@@ -187,13 +189,21 @@ func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
 
 	sess, err = conn.NewSession()
 	if err != nil {
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			panic(err)
+		}
 		return sess, close, err
 	}
 	return sess, func() error {
 		err := sess.Close()
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
 		err = conn.Close()
-		return err
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
+		return nil
 	}, nil
 }
 
@@ -216,14 +226,71 @@ func (c *Machine) UseKey(keys ...[]byte) error {
 		return err
 	}
 
+	var startedHostKeyInitialization bool
+	hostKeyInitialized := make(chan struct{})
+
+	var calls int
+
 	c.sshCfg = &sshlib.ClientConfig{
 		User: c.remoteUser,
 		Auth: []sshlib.AuthMethod{publicKeys},
-		HostKeyCallback: func(hostname string, remote net.Addr, key sshlib.PublicKey) error {
-			// implementation is inspired by https://cyruslab.net/2020/10/23/golang-how-to-write-ssh-hostkeycallback/
+		HostKeyCallback: func(hostname string, remote net.Addr, key sshlib.PublicKey) (err error) {
+
+			calls++
+			fmt.Println("calls", calls)
+
+			awaitRemoteSSHDaemon := func() error {
+				sess, closeSession, err := c.open(&sshlib.ClientConfig{
+					User:            c.remoteUser,
+					Auth:            []sshlib.AuthMethod{publicKeys},
+					HostKeyCallback: sshlib.FixedHostKey(key),
+				})
+				defer mustClose(closeSession)
+
+				if err != nil {
+					return err
+				}
+				fmt.Println("trying whoami")
+				out, err := sess.Output("whoami")
+				if err != nil {
+					return fmt.Errorf("first time connection to the machine failed with output: %s: %w", string(out), err)
+				}
+				fmt.Println("executed whoami")
+				if string(out) != c.remoteUser {
+					return fmt.Errorf("expected the remote command whoami to output %s, but got %s", c.remoteUser, string(out))
+				}
+				fmt.Println("checked whoami")
+				return nil
+			}
+
+			doInit := !startedHostKeyInitialization // should be an independent copy of startedHostKeyInitialization
+			if doInit {
+				defer func() {
+					if err != nil {
+						// try again
+						fmt.Println("trying again")
+						startedHostKeyInitialization = false
+						return
+					}
+					err = awaitRemoteSSHDaemon()
+					if err == nil {
+						fmt.Println("closing hostKeyInitialized")
+						close(hostKeyInitialized)
+					}
+				}()
+			} else {
+				fmt.Println("<-hostKeyInitialized waiting")
+				<-hostKeyInitialized
+				fmt.Println("<-hostKeyInitialized received")
+			}
+
+			startedHostKeyInitialization = true
 
 			checkErr := checkHost(hostname, remote, key)
-			if checkErr == nil || !errors.As(checkErr, &typedCheckErr) {
+			if checkErr == nil {
+				return nil
+			}
+			if !errors.As(checkErr, &typedCheckErr) {
 				return checkErr
 			}
 			// Reference: https://www.godoc.org/golang.org/x/crypto/ssh/knownhosts#KeyError
@@ -257,11 +324,22 @@ func ensureKnownHostsPath() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path := filepath.Join(home, ".ssh", "known_hosts")
+	sshPath := filepath.Join(home, ".ssh")
+	khPath := filepath.Join(sshPath, "known_hosts")
 
-	f, err := os.OpenFile(path, os.O_CREATE, 0600)
+	if err := os.MkdirAll(sshPath, 0600); err != nil {
+		return "", err
+	}
+
+	f, err := os.OpenFile(khPath, os.O_CREATE, 0600)
 	if err != nil {
 		return "", err
 	}
-	return path, f.Close()
+	return khPath, f.Close()
+}
+
+func mustClose(closeFn func() error) {
+	if err := closeFn(); err != nil {
+		panic(fmt.Sprintf("closing failed: %w", err))
+	}
 }
