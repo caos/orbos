@@ -1,12 +1,14 @@
 package orb
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/caos/orbos/pkg/treelabels"
-	"github.com/pkg/errors"
 )
 
 func Reconcile(
@@ -30,15 +32,11 @@ func Reconcile(
 
 		if spec.SelfReconciling {
 			desiredTree := &tree.Tree{
-				Common: &tree.Common{
-					Kind:    "networking.caos.ch/Orb",
-					Version: "v0",
-				},
+				Common: tree.NewCommon("networking.caos.ch/Orb", "v0", false),
 			}
 
 			if err := kubernetes.EnsureNetworkingArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&spec.Version)), k8sClient, spec.Version, spec.NodeSelector, spec.Tolerations, imageRegistry, gitops); err != nil {
-				recMonitor.Error(errors.Wrap(err, "Failed to deploy networking-operator into k8s-cluster"))
-				return err
+				return fmt.Errorf("failed to deploy networking-operator into k8s-cluster: %w", err)
 			}
 
 			recMonitor.Info("Applied networking-operator")

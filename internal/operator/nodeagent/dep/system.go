@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type Packages int
@@ -73,7 +71,7 @@ func GetOperatingSystem() (OperatingSystemMajor, error) {
 	hostnamectl.Stdout = buf
 
 	if err := hostnamectl.Run(); err != nil {
-		return Unknown, errors.Wrap(err, "running hostnamectl in order to get operating system information failed")
+		return Unknown, fmt.Errorf("running hostnamectl in order to get operating system information failed: %w", err)
 	}
 
 	var (
@@ -88,7 +86,7 @@ func GetOperatingSystem() (OperatingSystemMajor, error) {
 	}
 
 	if err != nil {
-		return Unknown, errors.Wrap(err, "finding line containing \"Operating System\" in hostnamectl output failed")
+		return Unknown, fmt.Errorf("finding line containing \"Operating System\" in hostnamectl output failed: %w", err)
 	}
 
 	os := strings.Fields(osLine)[2]
@@ -98,13 +96,13 @@ func GetOperatingSystem() (OperatingSystemMajor, error) {
 		if strings.HasPrefix(version, "18.04") {
 			return Bionic, nil
 		}
-		return Unknown, errors.Errorf("Unsupported ubuntu version %s", version)
+		return Unknown, fmt.Errorf("unsupported ubuntu version %s", version)
 	case "CentOS":
 		version := strings.Fields(osLine)[4]
 		if version == "7" {
 			return CentOS7, nil
 		}
-		return Unknown, errors.Errorf("Unsupported centOS version %s", version)
+		return Unknown, fmt.Errorf("unsupported centOS version %s", version)
 	}
-	return Unknown, errors.Errorf("Unknown operating system %s", os)
+	return Unknown, fmt.Errorf("unknown operating system %s", os)
 }

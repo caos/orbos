@@ -9,8 +9,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
@@ -106,7 +104,7 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 
 	cmd := exec.CommandContext(s.ctx, "sysctl", "--system")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
+		return fmt.Errorf("running %s failed with stderr %s: %w", strings.Join(cmd.Args, " "), string(output), err)
 	}
 	return nil
 }
@@ -138,7 +136,7 @@ func currentSysctlConfig(ctx context.Context, monitor mntr.Monitor, property com
 	if err := cmd.Run(); err != nil {
 		errStr := errBuf.String()
 		if !strings.Contains(errStr, "No such file or directory") {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errStr)
+			return fmt.Errorf("running %s failed with stderr %s: %w", fullCmd, errStr, err)
 		}
 	}
 

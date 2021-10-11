@@ -1,27 +1,29 @@
 package app
 
 import (
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
+	"context"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
-func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) error {
+func (a *App) EnsureDNSRecords(ctx context.Context, domain string, records []*cloudflare.DNSRecord) error {
 
-	currentRecords, err := a.cloudflare.GetDNSRecords(domain)
+	currentRecords, err := a.cloudflare.GetDNSRecords(ctx, domain)
 	if err != nil {
 		return err
 	}
 
 	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
 	if createRecords != nil && len(createRecords) > 0 {
-		_, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
+		_, err := a.cloudflare.CreateDNSRecords(ctx, domain, createRecords)
 		if err != nil {
 			return err
 		}
 	}
 
 	if updateRecords != nil && len(updateRecords) > 0 {
-		_, err := a.cloudflare.UpdateDNSRecords(domain, updateRecords)
+		_, err := a.cloudflare.UpdateDNSRecords(ctx, domain, updateRecords)
 		if err != nil {
 			return err
 		}
@@ -29,7 +31,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) e
 
 	deleteRecords := getRecordsToDelete(currentRecords, records)
 	if deleteRecords != nil && len(deleteRecords) > 0 {
-		if err := a.cloudflare.DeleteDNSRecords(domain, deleteRecords); err != nil {
+		if err := a.cloudflare.DeleteDNSRecords(ctx, domain, deleteRecords); err != nil {
 			return err
 		}
 	}

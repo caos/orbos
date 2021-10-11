@@ -1,6 +1,7 @@
 package desired
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/caos/orbos/internal/utils/helper"
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 func Apply(monitor mntr.Monitor, resultFilePath, namespace string, appName name.Application, force bool) error {
@@ -29,8 +29,12 @@ func Apply(monitor mntr.Monitor, resultFilePath, namespace string, appName name.
 		return err
 	}
 	cmd = cmd.Apply(force)
+	err = helper.Run(monitor, cmd.Build())
+	if err != nil {
+		return fmt.Errorf("failed to apply with file %s: %w", resultFilePath, err)
+	}
 
-	return errors.Wrapf(helper.Run(monitor, cmd.Build()), "Failed to apply with file %s", resultFilePath)
+	return nil
 }
 
 func Get(monitor mntr.Monitor, resultFilePath, namespace string, appName name.Application) ([]*helper.Resource, error) {
@@ -48,7 +52,7 @@ func Get(monitor mntr.Monitor, resultFilePath, namespace string, appName name.Ap
 
 	out, err := helper.RunWithOutput(monitor, cmd.Build())
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed to apply with file %s", resultFilePath)
+		return nil, fmt.Errorf("failed to apply with file %s: %w", resultFilePath, err)
 	}
 
 	resources := make([]*helper.Resource, 0)

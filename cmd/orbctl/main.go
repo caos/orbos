@@ -23,16 +23,23 @@ var (
 
 func main() {
 
-	defer monitor.RecoverPanic()
+	defer func() { monitor.RecoverPanic(recover()) }()
 
 	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
-	takeoff := TakeoffCommand(getRootValues)
-	takeoff.AddCommand(
+	start := StartCommand()
+	start.AddCommand(
 		StartBoom(getRootValues),
 		StartOrbiter(getRootValues),
 		StartNetworking(getRootValues),
+	)
+
+	file := FileCommand()
+	file.AddCommand(
+		EditCommand(getRootValues),
+		PrintCommand(getRootValues),
+		//		PatchCommand(getRootValues),
 	)
 
 	nodes := NodeCommand()
@@ -46,15 +53,17 @@ func main() {
 	rootCmd.AddCommand(
 		ReadSecretCommand(getRootValues),
 		WriteSecretCommand(getRootValues),
-		EditCommand(getRootValues),
 		TeardownCommand(getRootValues),
 		ConfigCommand(getRootValues),
 		APICommand(getRootValues),
-		takeoff,
+		TakeoffCommand(getRootValues),
+		file,
+		start,
 		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {
+		monitor.Error(mntr.ToUserError(err))
 		os.Exit(1)
 	}
 }

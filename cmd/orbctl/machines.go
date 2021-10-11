@@ -16,20 +16,12 @@ import (
 
 func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb, do func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error) error {
 
-	if err := orbConfig.IsConnectable(); err != nil {
-		return err
-	}
-
-	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-		return err
-	}
-
-	if err := gitClient.Clone(); err != nil {
+	if err := initRepo(orbConfig, gitClient); err != nil {
 		return err
 	}
 
 	if !gitClient.Exists(git.OrbiterFile) {
-		return fmt.Errorf("%s not found", git.OrbiterFile)
+		return mntr.ToUserError(fmt.Errorf("%s not found", git.OrbiterFile))
 	}
 
 	monitor.Debug("Reading machines from orbiter.yml")
@@ -41,11 +33,20 @@ func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb
 
 	listMachines := orb.ListMachines(labels.NoopOperator("ORBOS"))
 
+	orbID, err := orbConfig.ID()
+	if err != nil {
+		return err
+	}
+
 	machineIDs, machines, err := listMachines(
 		monitor,
 		desired,
-		orbConfig.URL,
+		orbID,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	return do(machineIDs, machines, desired)
 }

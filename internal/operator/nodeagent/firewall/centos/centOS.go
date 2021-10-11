@@ -21,6 +21,11 @@ func Ensurer(ctx context.Context, monitor mntr.Monitor, open []string) nodeagent
 			desired.Zones = make(map[string]*common.Zone, 0)
 		}
 
+		// Ensure that all runtime config made in the previous iteration becomes permanent.
+		if _, err := runFirewallCommand(ctx, monitor, "--runtime-to-permanent"); err != nil {
+			return current, nil, err
+		}
+
 		for name, _ := range desired.Zones {
 			currentZone, ensureFunc, err := ensureZone(ctx, monitor, name, desired, open)
 			if err != nil {
@@ -40,7 +45,7 @@ func Ensurer(ctx context.Context, monitor mntr.Monitor, open []string) nodeagent
 
 		current.Sort()
 
-		return current, func() error {
+		return current, func() (err error) {
 			monitor.Debug("Ensuring firewall")
 			for _, ensurer := range ensurers {
 				if err := ensurer(); err != nil {
@@ -113,7 +118,20 @@ func ensureZone(ctx context.Context, monitor mntr.Monitor, zoneName string, desi
 	}
 
 	zoneNameCopy := zoneName
-	return current, func() error {
+	return current, func() (err error) {
+
+		if len(ensureTarget) > 0 {
+
+			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
+			if err := ensure(ctx, monitor, ensureTarget, zoneNameCopy); err != nil {
+				return err
+			}
+
+			// this is the only property that needs a firewall reload
+			_, err := runFirewallCommand(ctx, monitor, "--reload")
+			return err
+		}
+
 		if ensureMasquerade != "" {
 			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureMasquerade, zoneNameCopy))
 			if err := ensure(ctx, monitor, []string{ensureMasquerade}, zoneNameCopy); err != nil {
@@ -128,11 +146,6 @@ func ensureZone(ctx context.Context, monitor mntr.Monitor, zoneName string, desi
 
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneNameCopy))
 		if err := ensure(ctx, monitor, ensureIfaces, zoneNameCopy); err != nil {
-			return err
-		}
-
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
-		if err := ensure(ctx, monitor, ensureTarget, zoneNameCopy); err != nil {
 			return err
 		}
 
@@ -172,21 +185,12 @@ func ensure(ctx context.Context, monitor mntr.Monitor, changes []string, zone st
 	return changeFirewall(ctx, monitor, changes, zone)
 }
 
-func changeFirewall(ctx context.Context, monitor mntr.Monitor, changes []string, zone string) (err error) {
+func changeFirewall(ctx context.Context, monitor mntr.Monitor, changes []string, zone string) error {
 	if len(changes) == 0 {
 		return nil
 	}
 
-	if _, err := runFirewallCommand(ctx, monitor, append([]string{"--permanent", "--zone", zone}, changes...)...); err != nil {
-		return err
-	}
-
-	return reloadFirewall(ctx, monitor)
-}
-
-func reloadFirewall(ctx context.Context, monitor mntr.Monitor) error {
-
-	_, err := runFirewallCommand(ctx, monitor, "--reload")
+	_, err := runFirewallCommand(ctx, monitor.Verbose(), append([]string{"--zone", zone}, changes...)...)
 	return err
 }
 

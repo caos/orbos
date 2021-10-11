@@ -2,12 +2,12 @@ package swap
 
 import (
 	"bytes"
+
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -82,7 +82,7 @@ func (s *swapDep) Ensure(remove common.Package, ensure common.Package) error {
 	swapoff := exec.CommandContext(s.ctx, "swapoff", "--all")
 	swapoff.Stderr = buf
 	if err := swapoff.Run(); err != nil {
-		return errors.Wrapf(err, "Disabling swap failed with standard error: %s", buf.String())
+		return fmt.Errorf("disabling swap failed with standard error: %s: %w", buf.String(), err)
 	}
 
 	return dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) *string {

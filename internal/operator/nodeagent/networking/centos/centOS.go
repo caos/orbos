@@ -3,6 +3,7 @@ package centos
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +14,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -127,11 +127,11 @@ deleteLoop:
 		}
 
 		for filename, _ := range getNetworkFiles(ifaceNameWithPrefix, "", []string{}) {
-			if err := os.Remove(filename); err != nil && err != os.ErrNotExist {
+			if err := os.RemoveAll(filename); err != nil && err != os.ErrNotExist {
 				return nil, err
 			}
 		}
-		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
+		changes = append(changes, fmt.Sprintf("link delete %s", ifaceNameWithPrefix))
 	}
 
 	if (changes == nil || len(changes) == 0) &&
@@ -294,7 +294,12 @@ func ensureIP(ctx context.Context, monitor mntr.Monitor, changes []string) (err 
 		cmd.Stdout = os.Stdout
 	}
 
-	return errors.Wrapf(cmd.Run(), "running %s failed with stderr %s", cmdStr, errBuf.String())
+	err = cmd.Run()
+	if err != nil {
+		err = fmt.Errorf("running %s failed with stderr %s: %w", cmdStr, errBuf.String(), err)
+	}
+
+	return err
 }
 
 func getNetworkScriptPath(interfaceName string) string {
