@@ -1,13 +1,16 @@
 package centos
 
 import (
+	"context"
 	"errors"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
-	"strings"
 )
 
 func getEnsureMasquerade(
+	ctx context.Context,
 	monitor mntr.Monitor,
 	zoneName string,
 	current *common.ZoneDesc,
@@ -18,7 +21,7 @@ func getEnsureMasquerade(
 ) {
 	ensureMasquerade := ""
 
-	masq, err := queryMasquerade(monitor, zoneName)
+	masq, err := queryMasquerade(ctx, monitor, zoneName)
 	if err != nil {
 		return ensureMasquerade, err
 	}
@@ -37,8 +40,8 @@ func getEnsureMasquerade(
 	return ensureMasquerade, nil
 }
 
-func queryMasquerade(monitor mntr.Monitor, zone string) (bool, error) {
-	response, err := listFirewall(monitor, zone, "--list-all")
+func queryMasquerade(ctx context.Context, monitor mntr.Monitor, zone string) (bool, error) {
+	response, err := listFirewall(ctx, monitor, zone, "--list-all")
 
 	if err != nil {
 		return false, err

@@ -44,7 +44,7 @@ func (p *PackageManager) debbasedAdd(repo *Repository) error {
 		return fmt.Errorf("getting key from url %s failed: %w", repo.KeyURL, err)
 	}
 	defer resp.Body.Close()
-	cmd := exec.CommandContext("apt-key", "add", "-")
+	cmd := exec.CommandContext(p.ctx, "apt-key", "add", "-")
 	cmd.Stdin = resp.Body
 	cmd.Stderr = errBuf
 

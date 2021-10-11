@@ -100,7 +100,7 @@ func main() {
 		}()
 	}
 
-	os, err := dep.GetOperatingSystem()
+	os, err := dep.GetOperatingSystem(ctx)
 	if err != nil {
 		panic(err)
 	}

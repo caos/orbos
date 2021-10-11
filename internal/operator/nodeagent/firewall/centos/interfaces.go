@@ -1,7 +1,9 @@
 package centos
 
 import (
+	"context"
 	"fmt"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 )
@@ -46,6 +48,6 @@ func getEnsureAndRemoveInterfaces(zoneName string, current *common.ZoneDesc, des
 	return ensureIfaces, removeIfaces, nil
 }
 
-func getInterfaces(monitor mntr.Monitor, zone string) ([]string, error) {
-	return listFirewall(monitor, zone, "--list-interfaces")
+func getInterfaces(ctx context.Context, monitor mntr.Monitor, zone string) ([]string, error) {
+	return listFirewall(ctx, monitor, zone, "--list-interfaces")
 }

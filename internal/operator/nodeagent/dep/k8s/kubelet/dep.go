@@ -55,12 +55,12 @@ func (k *kubeletDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	return pkg, selinux.Current(k.os, &pkg)
+	return pkg, selinux.Current(k.ctx, k.os, &pkg)
 }
 
 func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error {
 
-	if err := selinux.EnsurePermissive(k.monitor, k.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(k.ctx, k.monitor, k.os, remove); err != nil {
 		return err
 	}
 

@@ -13,7 +13,7 @@ import (
 func (c *criDep) ensureCentOS(runtime string, version string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
-	cmd := exec.CommandContext("yum", "--assumeyes", "remove", "docker",
+	cmd := exec.CommandContext(c.ctx, "yum", "--assumeyes", "remove", "docker",
 		"docker-client",
 		"docker-client-latest",
 		"docker-common",
@@ -47,7 +47,7 @@ func (c *criDep) ensureUbuntu(runtime string, version string) error {
 	defer buf.Reset()
 
 	var versionLine string
-	cmd := exec.CommandContext("apt-cache", "madison", runtime)
+	cmd := exec.CommandContext(c.ctx, "apt-cache", "madison", runtime)
 	cmd.Stderr = errBuf
 	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {

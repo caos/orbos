@@ -65,24 +65,24 @@ func ensureZone(ctx context.Context, monitor mntr.Monitor, zoneName string, desi
 		FW:         []*common.Allowed{},
 	}
 
-	ifaces, err := getInterfaces(monitor, zoneName)
+	ifaces, err := getInterfaces(ctx, monitor, zoneName)
 	if err != nil {
 		return current, nil, err
 	}
 	current.Interfaces = ifaces
 
-	sources, err := getSources(monitor, zoneName)
+	sources, err := getSources(ctx, monitor, zoneName)
 	if err != nil {
 		return current, nil, err
 	}
 	current.Sources = sources
 
-	ensureMasquerade, err := getEnsureMasquerade(monitor, zoneName, current, desired)
+	ensureMasquerade, err := getEnsureMasquerade(ctx, monitor, zoneName, current, desired)
 	if err != nil {
 		return current, nil, err
 	}
 
-	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), open)
+	addPorts, removePorts, err := getAddAndRemovePorts(ctx, monitor, zoneName, current, desired.Ports(zoneName), open)
 	if err != nil {
 		return current, nil, err
 	}
@@ -97,7 +97,7 @@ func ensureZone(ctx context.Context, monitor mntr.Monitor, zoneName string, desi
 		return current, nil, err
 	}
 
-	ensureTarget, err := getEnsureTarget(monitor, zoneName)
+	ensureTarget, err := getEnsureTarget(ctx, monitor, zoneName)
 	if err != nil {
 		return current, nil, err
 	}

@@ -54,7 +54,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 	defer func() {
 		if err == nil {
-			err = selinux.Current(s.os, &pkg)
+			err = selinux.Current(s.ctx, s.os, &pkg)
 		}
 	}()
 
@@ -123,7 +123,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) error {
 
-	if err := selinux.EnsurePermissive(s.monitor, s.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(s.ctx, s.monitor, s.os, remove); err != nil {
 		return err
 	}
 

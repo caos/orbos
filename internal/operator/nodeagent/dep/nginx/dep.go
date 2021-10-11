@@ -3,6 +3,7 @@ package nginx
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,6 +27,7 @@ type Installer interface {
 	nodeagent.Installer
 }
 type nginxDep struct {
+	ctx        context.Context
 	manager    *dep.PackageManager
 	systemd    *dep.SystemD
 	monitor    mntr.Monitor
@@ -33,8 +35,8 @@ type nginxDep struct {
 	normalizer *regexp.Regexp
 }
 
-func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem) Installer {
-	return &nginxDep{manager, systemd, monitor, os, regexp.MustCompile(`\d+\.\d+\.\d+`)}
+func New(ctx context.Context, monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem) Installer {
+	return &nginxDep{ctx, manager, systemd, monitor, os, regexp.MustCompile(`\d+\.\d+\.\d+`)}
 }
 
 func (nginxDep) isNgninx() {}
@@ -91,7 +93,7 @@ func (s *nginxDep) Current() (pkg common.Package, err error) {
 
 func (s *nginxDep) Ensure(remove common.Package, ensure common.Package) error {
 
-	if err := selinux.EnsurePermissive(s.monitor, s.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(s.ctx, s.monitor, s.os, remove); err != nil {
 		return err
 	}
 

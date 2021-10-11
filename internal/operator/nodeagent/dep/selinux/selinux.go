@@ -2,6 +2,7 @@ package selinux
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,7 +13,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
+func Current(ctx context.Context, os dep.OperatingSystem, pkg *common.Package) (err error) {
 
 	if os != dep.CentOS {
 		return nil
@@ -29,7 +30,7 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 	buf := new(bytes.Buffer)
 	defer buf.Reset()
 
-	cmd := exec.CommandContext("sestatus")
+	cmd := exec.CommandContext(ctx, "sestatus")
 	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
 		return err
@@ -54,7 +55,7 @@ func Current(os dep.OperatingSystem, pkg *common.Package) (err error) {
 	return err
 }
 
-func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove common.Package) error {
+func EnsurePermissive(ctx context.Context, monitor mntr.Monitor, opsys dep.OperatingSystem, remove common.Package) error {
 
 	if opsys != dep.CentOS || remove.Config["selinux"] == "permissive" {
 		return nil
@@ -63,7 +64,7 @@ func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove co
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.CommandContext("setenforce", "0")
+	cmd := exec.CommandContext(ctx, "setenforce", "0")
 	cmd.Stderr = errBuf
 	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -74,7 +75,7 @@ func EnsurePermissive(monitor mntr.Monitor, opsys dep.OperatingSystem, remove co
 	}
 	errBuf.Reset()
 
-	cmd = exec.CommandContext("sed", "-i", "s/^SELINUX=enforcing$/SELINUX=permissive/", "/etc/selinux/config")
+	cmd = exec.CommandContext(ctx, "sed", "-i", "s/^SELINUX=enforcing$/SELINUX=permissive/", "/etc/selinux/config")
 	cmd.Stderr = errBuf
 	if monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
