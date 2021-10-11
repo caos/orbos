@@ -57,13 +57,13 @@ func prepareQuery(
 	firewallEnsurer FirewallEnsurer,
 	networkingEnsurer NetworkingEnsurer,
 	conv Converter,
-) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
+) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, bool, error) {
 
 	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
 		panic(err)
 	}
 
-	return func(desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (func() error, error) {
+	return func(desired common.NodeAgentSpec, curr *common.NodeAgentCurrent) (ensure func() error, isEnsured bool, err error) {
 		curr.Commit = commit
 
 		curr.NodeIsReady = isReady()
@@ -72,14 +72,14 @@ func prepareQuery(
 
 		dateTime, err := exec.Command("uptime", "-s").CombinedOutput()
 		if err != nil {
-			return noop, err
+			return noop, false, err
 		}
 
 		//dateTime := strings.Fields(string(who))[2:]
 		//str := strings.Join(dateTime, " ") + ":00"
 		t, err := time.Parse("2006-01-02 15:04:05", strings.TrimSuffix(string(dateTime), "\n"))
 		if err != nil {
-			return noop, err
+			return noop, false, err
 		}
 
 		curr.Booted = t
@@ -88,7 +88,7 @@ func prepareQuery(
 			curr.NodeIsReady = false
 			if !desired.ChangesAllowed {
 				monitor.Info("Not rebooting as changes are not allowed")
-				return noop, nil
+				return noop, false, nil
 			}
 			return func() error {
 				monitor.Info("Rebooting")
@@ -96,26 +96,26 @@ func prepareQuery(
 					return fmt.Errorf("rebooting system failed: %w", err)
 				}
 				return nil
-			}, nil
+			}, false, nil
 		}
 
 		var ensureNetworking func() error
 		curr.Networking, ensureNetworking, err = networkingEnsurer.Query(*desired.Networking)
 		if err != nil {
-			return noop, err
+			return noop, false, err
 		}
 		curr.Networking.Sort()
 
 		var ensureFirewall func() error
 		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
 		if err != nil {
-			return noop, err
+			return noop, false, err
 		}
 		curr.Open.Sort()
 
 		installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
 		if err != nil {
-			return noop, err
+			return noop, false, err
 		}
 
 		curr.Software = conv.ToSoftware(installedSw, func(dep Dependency) common.Package {
@@ -125,13 +125,13 @@ func prepareQuery(
 		divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
 		if len(divergentSw) == 0 && ensureFirewall == nil && ensureNetworking == nil {
 			curr.NodeIsReady = true
-			return noop, nil
+			return noop, true, nil
 		}
 
 		if curr.NodeIsReady {
 			curr.NodeIsReady = false
 			monitor.Changed("Marked node as unready")
-			return noop, nil
+			return noop, false, nil
 		}
 
 		return func() error {
@@ -167,7 +167,7 @@ func prepareQuery(
 			ensureDep := ensureFunc(monitor, conv, curr)
 			_, err := deriveTraverse(ensureDep, divergentSw)
 			return err
-		}, nil
+		}, false, nil
 	}
 }
 

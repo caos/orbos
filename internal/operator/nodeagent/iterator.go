@@ -42,7 +42,10 @@ func Iterator(
 	networkingEnsurer NetworkingEnsurer,
 	conv Converter,
 	before func() error,
-) func() {
+) (func(), <-chan struct{}) {
+
+	ensuredOnce := make(chan struct{})
+	var ensuredOnceClosed bool
 
 	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, networkingEnsurer, conv)
 
@@ -96,12 +99,17 @@ func Iterator(
 			panic(err)
 		}
 
-		ensure, err := doQuery(*naDesired, curr)
+		ensure, isEnsured, err := doQuery(*naDesired, curr)
 		if err != nil {
 			monitor.Error(err)
 			return
-
 		}
+
+		if isEnsured && !ensuredOnceClosed {
+			close(ensuredOnce)
+			ensuredOnceClosed = true
+		}
+
 		readCurrent := func() common.NodeAgentsCurrentKind {
 			current := common.NodeAgentsCurrentKind{}
 			yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &current)
@@ -126,5 +134,5 @@ func Iterator(
 		}
 
 		monitor.Error(ensure())
-	}
+	}, ensuredOnce
 }

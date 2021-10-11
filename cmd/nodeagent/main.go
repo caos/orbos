@@ -103,7 +103,7 @@ func main() {
 		portsSlice = strings.Split(*ignorePorts, ",")
 	}
 
-	itFunc := nodeagent.Iterator(
+	itFunc, ensuredOnce := nodeagent.Iterator(
 		monitor,
 		gitClient,
 		gitCommit,
@@ -120,6 +120,7 @@ func main() {
 		for range daily.C {
 			//			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
 			//			<-timer.C
+			<-ensuredOnce
 			update <- struct{}{}
 			//			timer.Stop()
 		}
