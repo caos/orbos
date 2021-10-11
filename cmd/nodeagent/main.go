@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"flag"
 	"fmt"
-	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -114,15 +113,15 @@ func main() {
 		conv,
 		conv.Init())
 
-	daily := time.NewTicker(24 * time.Hour)
+	daily := time.NewTicker(3 * time.Minute)
 	defer daily.Stop()
 	update := make(chan struct{})
 	go func() {
 		for range daily.C {
-			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
-			<-timer.C
+			//			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
+			//			<-timer.C
 			update <- struct{}{}
-			timer.Stop()
+			//			timer.Stop()
 		}
 	}()
 
