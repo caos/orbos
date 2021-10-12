@@ -1,7 +1,6 @@
 package centos
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -57,6 +56,6 @@ func getAddAndRemoveSources(
 	return addSources, removeSources, nil
 }
 
-func getSources(ctx context.Context, monitor mntr.Monitor, zone string) ([]string, error) {
-	return listFirewall(ctx, monitor, zone, "--list-sources")
+func getSources(monitor mntr.Monitor, zone string) ([]string, error) {
+	return listFirewall(monitor, zone, "--list-sources")
 }

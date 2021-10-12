@@ -1,7 +1,6 @@
 package centos
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func getAddAndRemovePorts(
-	ctx context.Context,
+
 	monitor mntr.Monitor,
 	zone string,
 	current *common.ZoneDesc,
@@ -25,7 +24,7 @@ func getAddAndRemovePorts(
 	ensure := make([]string, 0)
 	remove := make([]string, 0)
 
-	alreadyOpen, err := getPorts(ctx, monitor, zone)
+	alreadyOpen, err := getPorts(monitor, zone)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -106,8 +105,8 @@ func getAddAndRemovePorts(
 	return ensure, remove, nil
 }
 
-func getPorts(ctx context.Context, monitor mntr.Monitor, zone string) ([]string, error) {
-	return listFirewall(ctx, monitor, zone, "--list-ports")
+func getPorts(monitor mntr.Monitor, zone string) ([]string, error) {
+	return listFirewall(monitor, zone, "--list-ports")
 }
 
 func ignoredPorts(ports []string) []*common.Allowed {

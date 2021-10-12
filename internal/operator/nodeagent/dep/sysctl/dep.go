@@ -2,7 +2,6 @@ package sysctl
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -20,12 +19,11 @@ type Installer interface {
 	nodeagent.Installer
 }
 type sysctlDep struct {
-	ctx     context.Context
 	monitor mntr.Monitor
 }
 
-func New(ctx context.Context, monitor mntr.Monitor) Installer {
-	return &sysctlDep{ctx: ctx, monitor: monitor}
+func New(monitor mntr.Monitor) Installer {
+	return &sysctlDep{monitor: monitor}
 }
 
 func (sysctlDep) isSysctl() {}
@@ -78,7 +76,7 @@ func (s *sysctlDep) Current() (pkg common.Package, err error) {
 
 	for idx := range supportedModules {
 		module := supportedModules[idx]
-		if err := currentSysctlConfig(s.ctx, s.monitor, module, &pkg); err != nil {
+		if err := currentSysctlConfig(s.monitor, module, &pkg); err != nil {
 			return pkg, err
 		}
 	}
@@ -102,7 +100,7 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(s.ctx, "sysctl", "--system")
+	cmd := exec.Command("sysctl", "--system")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("running %s failed with stderr %s: %w", strings.Join(cmd.Args, " "), string(output), err)
 	}
@@ -117,7 +115,7 @@ func oneOrZero(cfg map[string]string, property common.KernelModule) string {
 	return "0"
 }
 
-func currentSysctlConfig(ctx context.Context, monitor mntr.Monitor, property common.KernelModule, pkg *common.Package) error {
+func currentSysctlConfig(monitor mntr.Monitor, property common.KernelModule, pkg *common.Package) error {
 
 	propertyStr := string(property)
 
@@ -126,7 +124,7 @@ func currentSysctlConfig(ctx context.Context, monitor mntr.Monitor, property com
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.CommandContext(ctx, "sysctl", propertyStr)
+	cmd := exec.Command("sysctl", propertyStr)
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 

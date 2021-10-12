@@ -3,7 +3,6 @@
 package nodeagent
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 
@@ -35,7 +34,6 @@ func RepoKey() ([]byte, error) {
 }
 
 func Iterator(
-	ctx context.Context,
 	monitor mntr.Monitor,
 	gitClient *git.Client,
 	nodeAgentCommit string,
@@ -46,7 +44,7 @@ func Iterator(
 	before func() error,
 ) func() {
 
-	doQuery := prepareQuery(ctx, monitor, nodeAgentCommit, firewallEnsurer, networkingEnsurer, conv)
+	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, networkingEnsurer, conv)
 
 	return func() {
 

@@ -2,7 +2,6 @@ package keepalived
 
 import (
 	"bytes"
-	"context"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -23,7 +22,6 @@ type Installer interface {
 	nodeagent.Installer
 }
 type keepaliveDDep struct {
-	ctx        context.Context
 	monitor    mntr.Monitor
 	manager    *dep.PackageManager
 	systemd    *dep.SystemD
@@ -32,8 +30,8 @@ type keepaliveDDep struct {
 	normalizer *regexp.Regexp
 }
 
-func New(ctx context.Context, monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem, cipher string) Installer {
-	return &keepaliveDDep{ctx, monitor, manager, systemd, cipher[:8], os, regexp.MustCompile(`\d+\.\d+\.\d+`)}
+func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem, cipher string) Installer {
+	return &keepaliveDDep{monitor, manager, systemd, cipher[:8], os, regexp.MustCompile(`\d+\.\d+\.\d+`)}
 }
 
 func (keepaliveDDep) isKeepalived() {}
@@ -54,7 +52,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 	defer func() {
 		if err == nil {
-			err = selinux.Current(s.ctx, s.os, &pkg)
+			err = selinux.Current(s.os, &pkg)
 		}
 	}()
 
@@ -112,7 +110,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	if string(authCheck) != "" {
 		pkg.Config["authcheck.sh"] = string(authCheck)
 		var exitCode int
-		if err := exec.CommandContext(s.ctx, "/etc/keepalived/authcheck.sh").Run(); err != nil {
+		if err := exec.Command("/etc/keepalived/authcheck.sh").Run(); err != nil {
 			exitCode = err.(*exec.ExitError).ExitCode()
 		}
 		pkg.Config["authcheckexitcode"] = strconv.Itoa(exitCode)
@@ -123,7 +121,7 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) error {
 
-	if err := selinux.EnsurePermissive(s.ctx, s.monitor, s.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(s.monitor, s.os, remove); err != nil {
 		return err
 	}
 

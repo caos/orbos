@@ -9,7 +9,7 @@ import (
 )
 
 func (p *PackageManager) debbasedInstalled() error {
-	return p.listAndParse(exec.CommandContext(p.ctx, "apt", "list", "--installed"), "Listing...", func(line string) (string, string, error) {
+	return p.listAndParse(exec.Command("apt", "list", "--installed"), "Listing...", func(line string) (string, string, error) {
 		parts := strings.Split(line, "/")
 		if len(parts) < 2 {
 			return "", "", fmt.Errorf(`splitting line "%s" by a forward slash failed`, line)
@@ -25,7 +25,7 @@ func (p *PackageManager) debbasedInstalled() error {
 }
 
 func (p *PackageManager) rembasedInstalled() error {
-	return p.listAndParse(exec.CommandContext(p.ctx, "rpm", "-qa", "--queryformat", "%{NAME} %{VERSION}-%{RELEASE}\n"), "", func(line string) (string, string, error) {
+	return p.listAndParse(exec.Command("rpm", "-qa", "--queryformat", "%{NAME} %{VERSION}-%{RELEASE}\n"), "", func(line string) (string, string, error) {
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
 			return "", "", fmt.Errorf(`splitting line "%s" empty characters failed`, line)

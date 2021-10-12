@@ -1,7 +1,6 @@
 package dep
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/caos/orbos/mntr"
@@ -23,7 +22,6 @@ type Repository struct {
 }
 
 type PackageManager struct {
-	ctx       context.Context
 	monitor   mntr.Monitor
 	os        OperatingSystem
 	installed map[string]string
@@ -85,8 +83,8 @@ func (p *PackageManager) Update() error {
 	return nil
 }
 
-func NewPackageManager(ctx context.Context, monitor mntr.Monitor, os OperatingSystem, systemd *SystemD) *PackageManager {
-	return &PackageManager{ctx, monitor, os, nil, systemd}
+func NewPackageManager(monitor mntr.Monitor, os OperatingSystem, systemd *SystemD) *PackageManager {
+	return &PackageManager{monitor, os, nil, systemd}
 }
 
 func (p *PackageManager) CurrentVersions(possiblePackages ...string) []*Software {

@@ -2,7 +2,6 @@ package dep
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -12,12 +11,11 @@ import (
 )
 
 type SystemD struct {
-	ctx     context.Context
 	monitor mntr.Monitor
 }
 
-func NewSystemD(ctx context.Context, monitor mntr.Monitor) *SystemD {
-	return &SystemD{ctx, monitor}
+func NewSystemD(monitor mntr.Monitor) *SystemD {
+	return &SystemD{monitor}
 }
 
 func (s *SystemD) Disable(binary string) error {
@@ -25,7 +23,7 @@ func (s *SystemD) Disable(binary string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.CommandContext(s.ctx, "systemctl", "stop", binary)
+	cmd := exec.Command("systemctl", "stop", binary)
 	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -42,7 +40,7 @@ func (s *SystemD) Disable(binary string) error {
 	}
 
 	errBuf.Reset()
-	cmd = exec.CommandContext(s.ctx, "systemctl", "disable", binary)
+	cmd = exec.Command("systemctl", "disable", binary)
 	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -64,7 +62,7 @@ func (s *SystemD) Start(binary string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.CommandContext(s.ctx, "systemctl", "restart", binary)
+	cmd := exec.Command("systemctl", "restart", binary)
 	cmd.Stderr = errBuf
 
 	if err := cmd.Run(); err != nil {
@@ -78,7 +76,7 @@ func (s *SystemD) Enable(binary string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.CommandContext(s.ctx, "systemctl", "enable", binary)
+	cmd := exec.Command("systemctl", "enable", binary)
 	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -96,7 +94,7 @@ func (s *SystemD) Enable(binary string) error {
 }
 
 func (s *SystemD) Active(binary string) bool {
-	cmd := exec.CommandContext(s.ctx, "systemctl", "is-active", binary)
+	cmd := exec.Command("systemctl", "is-active", binary)
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
 		cmd.Stdout = os.Stdout
@@ -113,7 +111,7 @@ func (s *SystemD) UnitPath(unit string) (string, error) {
 	defer errBuf.Reset()
 	outBuf := new(bytes.Buffer)
 	defer outBuf.Reset()
-	cmd := exec.CommandContext(s.ctx, "systemctl", "show", "-p", showProperty, unit)
+	cmd := exec.Command("systemctl", "show", "-p", showProperty, unit)
 	cmd.Stderr = errBuf
 	cmd.Stdout = outBuf
 	err := cmd.Run()

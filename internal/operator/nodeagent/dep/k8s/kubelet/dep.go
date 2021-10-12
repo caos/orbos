@@ -2,7 +2,6 @@ package kubelet
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,15 +22,14 @@ type Installer interface {
 }
 
 type kubeletDep struct {
-	ctx     context.Context
 	os      dep.OperatingSystem
 	monitor mntr.Monitor
 	common  *k8s.Common
 	systemd *dep.SystemD
 }
 
-func New(ctx context.Context, monitor mntr.Monitor, os dep.OperatingSystem, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &kubeletDep{ctx, os, monitor, k8s.New(os, manager, "kubelet"), systemd}
+func New(monitor mntr.Monitor, os dep.OperatingSystem, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
+	return &kubeletDep{os, monitor, k8s.New(os, manager, "kubelet"), systemd}
 }
 
 func (kubeletDep) isKubelet() {}
@@ -55,12 +53,12 @@ func (k *kubeletDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	return pkg, selinux.Current(k.ctx, k.os, &pkg)
+	return pkg, selinux.Current(k.os, &pkg)
 }
 
 func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error {
 
-	if err := selinux.EnsurePermissive(k.ctx, k.monitor, k.os, remove); err != nil {
+	if err := selinux.EnsurePermissive(k.monitor, k.os, remove); err != nil {
 		return err
 	}
 
@@ -71,7 +69,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.CommandContext(k.ctx, "modprobe", "br_netfilter")
+	cmd := exec.Command("modprobe", "br_netfilter")
 	cmd.Stderr = errBuf
 	if k.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))

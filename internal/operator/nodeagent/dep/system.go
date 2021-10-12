@@ -4,7 +4,6 @@ package dep
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -64,11 +63,11 @@ var (
 	//	Debian OperatingSystem = OperatingSystem{DebianBased}
 )
 
-func GetOperatingSystem(ctx context.Context) (OperatingSystemMajor, error) {
+func GetOperatingSystem() (OperatingSystemMajor, error) {
 	buf := new(bytes.Buffer)
 	defer buf.Reset()
 
-	hostnamectl := exec.CommandContext(ctx, "hostnamectl")
+	hostnamectl := exec.Command("hostnamectl")
 	hostnamectl.Stdout = buf
 
 	if err := hostnamectl.Run(); err != nil {

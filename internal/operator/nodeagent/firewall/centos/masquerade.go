@@ -1,7 +1,6 @@
 package centos
 
 import (
-	"context"
 	"errors"
 	"strings"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func getEnsureMasquerade(
-	ctx context.Context,
+
 	monitor mntr.Monitor,
 	zoneName string,
 	current *common.ZoneDesc,
@@ -21,7 +20,7 @@ func getEnsureMasquerade(
 ) {
 	ensureMasquerade := ""
 
-	masq, err := queryMasquerade(ctx, monitor, zoneName)
+	masq, err := queryMasquerade(monitor, zoneName)
 	if err != nil {
 		return ensureMasquerade, err
 	}
@@ -40,8 +39,8 @@ func getEnsureMasquerade(
 	return ensureMasquerade, nil
 }
 
-func queryMasquerade(ctx context.Context, monitor mntr.Monitor, zone string) (bool, error) {
-	response, err := listFirewall(ctx, monitor, zone, "--list-all")
+func queryMasquerade(monitor mntr.Monitor, zone string) (bool, error) {
+	response, err := listFirewall(monitor, zone, "--list-all")
 
 	if err != nil {
 		return false, err

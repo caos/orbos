@@ -33,6 +33,8 @@ var (
 
 func main() {
 
+	ctx, cancelCtx := context.WithCancel(context.Background())
+
 	monitor := mntr.Monitor{
 		OnInfo:   mntr.LogMessage,
 		OnChange: mntr.LogMessage,
@@ -79,9 +81,6 @@ func main() {
 		"sentryEnvironment": *sentryEnvironment,
 	}).Info("Node Agent is starting")
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	signalChannel := make(chan os.Signal)
 	signal.Notify(signalChannel,
 		syscall.SIGTERM,
@@ -89,18 +88,13 @@ func main() {
 		syscall.SIGQUIT,
 	)
 
-	go func() {
-		<-signalChannel
-		cancel()
-	}()
-
 	if *pprof {
 		go func() {
 			monitor.Info(http.ListenAndServe("localhost:6060", nil).Error())
 		}()
 	}
 
-	os, err := dep.GetOperatingSystem(ctx)
+	runningOnOS, err := dep.GetOperatingSystem()
 	if err != nil {
 		panic(err)
 	}
@@ -112,7 +106,7 @@ func main() {
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-	conv := conv.New(ctx, monitor, os, fmt.Sprintf("%x", hashed[:]))
+	conv := conv.New(monitor, runningOnOS, fmt.Sprintf("%x", hashed[:]))
 
 	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
 
@@ -122,19 +116,19 @@ func main() {
 	}
 
 	itFunc := nodeagent.Iterator(
-		ctx,
 		monitor,
 		gitClient,
 		gitCommit,
 		*nodeAgentID,
-		firewall.Ensurer(ctx, monitor, os.OperatingSystem, portsSlice),
-		networking.Ensurer(ctx, monitor, os.OperatingSystem),
+		firewall.Ensurer(monitor, runningOnOS.OperatingSystem, portsSlice),
+		networking.Ensurer(monitor, runningOnOS.OperatingSystem),
 		conv,
 		conv.Init())
 
 	daily := time.NewTicker(24 * time.Hour)
 	defer daily.Stop()
 	update := make(chan struct{})
+
 	go func() {
 		for range daily.C {
 			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
@@ -147,8 +141,13 @@ func main() {
 	iterate := make(chan struct{})
 	//trigger first iteration
 	go func() { iterate <- struct{}{} }()
+
 	for {
 		select {
+		case signal := <-signalChannel:
+			monitor.WithField("signal", signal.String()).Info("Shutting down")
+			cancelCtx()
+			os.Exit(int(signal.(syscall.Signal)))
 		case <-iterate:
 			monitor.Info("Starting iteration")
 			itFunc()

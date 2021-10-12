@@ -1,7 +1,6 @@
 package cri
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -26,7 +25,6 @@ type Installer interface {
 
 // TODO: Add support for containerd, cri-o, ...
 type criDep struct {
-	ctx                       context.Context
 	monitor                   mntr.Monitor
 	os                        dep.OperatingSystemMajor
 	manager                   *dep.PackageManager
@@ -35,8 +33,8 @@ type criDep struct {
 }
 
 // New returns a dependency that implements the kubernetes container runtime interface
-func New(ctx context.Context, monitor mntr.Monitor, os dep.OperatingSystemMajor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
-	return &criDep{ctx, monitor, os, manager, regexp.MustCompile(`\d+\.\d+\.\d+`), systemd}
+func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, manager *dep.PackageManager, systemd *dep.SystemD) Installer {
+	return &criDep{monitor, os, manager, regexp.MustCompile(`\d+\.\d+\.\d+`), systemd}
 }
 
 func (criDep) Is(other nodeagent.Installer) bool {
@@ -83,7 +81,7 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 	} else {
 		// Deprecated Code: Ensure existing containerd versions get locked
 		// TODO: Remove in ORBOS v4
-		lock, err := exec.CommandContext(c.ctx, "yum", "versionlock", "list").Output()
+		lock, err := exec.Command("yum", "versionlock", "list").Output()
 		if err != nil {
 			return pkg, err
 		}

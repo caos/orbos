@@ -3,7 +3,6 @@ package swap
 import (
 	"bytes"
 
-	"context"
 	"fmt"
 	"io"
 	"os/exec"
@@ -21,12 +20,11 @@ type Installer interface {
 }
 
 type swapDep struct {
-	ctx           context.Context
 	fstabFilePath string
 }
 
-func New(ctx context.Context, fstabFilePath string) Installer {
-	return &swapDep{ctx: ctx, fstabFilePath: fstabFilePath}
+func New(fstabFilePath string) Installer {
+	return &swapDep{fstabFilePath: fstabFilePath}
 }
 
 func (swapDep) Is(other nodeagent.Installer) bool {
@@ -48,7 +46,7 @@ func (s *swapDep) Current() (pkg common.Package, err error) {
 	buf := new(bytes.Buffer)
 	defer buf.Reset()
 
-	swapon := exec.CommandContext(s.ctx, "swapon", "--summary")
+	swapon := exec.Command("swapon", "--summary")
 	swapon.Stdout = buf
 	if err := swapon.Run(); err != nil {
 		return pkg, err
@@ -79,7 +77,7 @@ func (s *swapDep) Ensure(remove common.Package, ensure common.Package) error {
 	buf := new(bytes.Buffer)
 	defer buf.Reset()
 
-	swapoff := exec.CommandContext(s.ctx, "swapoff", "--all")
+	swapoff := exec.Command("swapoff", "--all")
 	swapoff.Stderr = buf
 	if err := swapoff.Run(); err != nil {
 		return fmt.Errorf("disabling swap failed with standard error: %s: %w", buf.String(), err)
