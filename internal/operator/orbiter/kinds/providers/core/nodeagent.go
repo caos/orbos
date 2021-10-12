@@ -116,7 +116,8 @@ MemoryLimit=250M
 MemoryAccounting=yes
 RestartSec=10
 CPUAccounting=yes
-MemoryAccounting=yes
+TimeoutStopSec=300
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target
