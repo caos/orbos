@@ -165,8 +165,11 @@ func listInitramfsVersions() ([]string, error) {
 		if d.IsDir() {
 			return filepath.SkipDir
 		}
+		fmt.Println("listInitramfsVersions path", path)
 		if strings.HasPrefix(path, initramfsdir+"initramfs-") && strings.HasSuffix(path, ".img") {
-			initramfsKernels = append(initramfsKernels, trimArchitecture(path[len(initramfsdir+"initramfs-"):strings.LastIndex(path, ".img")]))
+			version := trimArchitecture(path[len(initramfsdir+"initramfs-"):strings.LastIndex(path, ".img")])
+			fmt.Println("listInitramfsVersions version", version)
+			initramfsKernels = append(initramfsKernels, version)
 		}
 		return nil
 	})
