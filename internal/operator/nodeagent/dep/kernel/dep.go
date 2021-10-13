@@ -165,7 +165,8 @@ func listInitramfsVersions() ([]string, error) {
 			return err
 		}
 		fmt.Println("listInitramfsVersions d.IsDir()", d.IsDir())
-		if d.IsDir() {
+		fmt.Println("listInitramfsVersions path", path)
+		if path != initramfsdir && d.IsDir() {
 			return filepath.SkipDir
 		}
 		fmt.Println("listInitramfsVersions path", path)
