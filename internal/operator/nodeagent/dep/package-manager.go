@@ -107,12 +107,12 @@ func (p *PackageManager) CurrentVersions(possiblePackages ...string) []*Software
 	return software
 }
 
-func (p *PackageManager) Install(installVersion *Software, more ...*Software) error {
+func (p *PackageManager) Install(installVersion ...*Software) error {
 	switch p.os.Packages {
 	case DebianBased:
-		return p.debbasedInstall(installVersion, more...)
+		return p.debbasedInstall(installVersion...)
 	case REMBased:
-		return p.rembasedInstall(installVersion, more...)
+		return p.rembasedInstall(installVersion...)
 	}
 	return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
 }
@@ -123,6 +123,17 @@ func (p *PackageManager) Add(repo *Repository) error {
 		return p.debbasedAdd(repo)
 	case REMBased:
 		return p.rembasedAdd(repo)
+	default:
+		return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
+	}
+}
+
+func (p *PackageManager) Remove(remove ...*Software) error {
+	switch p.os.Packages {
+	case DebianBased:
+		panic("removing software on debian bases systems is not yet implemented")
+	case REMBased:
+		return p.rembasedRemove(remove...)
 	default:
 		return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
 	}

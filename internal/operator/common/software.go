@@ -12,11 +12,16 @@ type Software struct {
 	Hostname         Package `yaml:",omitempty"`
 	Sysctl           Package `yaml:",omitempty"`
 	Health           Package `yaml:",omitempty"`
+	Kernel           Package `yaml:",omitempty"`
 }
 
 func (s *Software) Merge(sw Software) {
 
 	zeroPkg := Package{}
+
+	if !sw.Kernel.Equals(zeroPkg) && !s.Kernel.Equals(zeroPkg) {
+		s.Kernel = sw.Kernel
+	}
 
 	if !sw.Containerruntime.Equals(zeroPkg) {
 		s.Containerruntime = sw.Containerruntime

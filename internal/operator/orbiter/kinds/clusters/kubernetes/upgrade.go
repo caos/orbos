@@ -154,6 +154,7 @@ func step(
 			}
 		}
 	}
+
 	for idx, machine := range sortedMachines {
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, from, to)
@@ -204,7 +205,9 @@ func plan(
 			if !packages.Kubelet.Equals(zeroPkg) &&
 				!machine.currentNodeagent.Software.Kubelet.Equals(packages.Kubelet) ||
 				!packages.Containerruntime.Equals(zeroPkg) &&
-					!machine.currentNodeagent.Software.Containerruntime.Equals(packages.Containerruntime) {
+					!machine.currentNodeagent.Software.Containerruntime.Equals(packages.Containerruntime) ||
+				!packages.Kernel.Equals(zeroPkg) &&
+					!machine.currentNodeagent.Software.Kernel.Equals(packages.Kernel) {
 				if err := drain(); err != nil {
 					return err
 				}
@@ -249,6 +252,10 @@ func plan(
 		}
 
 		return labelUpgradeState()
+	}
+
+	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) || !machine.desiredNodeagent.Software.Kernel.Equals(to.Kernel) {
+		return ensureSoftware(common.Software{Kernel: to.Kernel}, "Update kernel"), nil
 	}
 
 	nodeIsReady := machine.currentNodeagent.NodeIsReady

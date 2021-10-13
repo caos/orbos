@@ -119,19 +119,16 @@ func (k KubernetesVersion) String() string {
 }
 
 func (k KubernetesVersion) DefineSoftware() common.Software {
-	dockerVersion := "docker-ce v19.03.5"
-	//	if minor, err := k.ExtractMinor(); err != nil && minor <= 15 {
-	//		dockerVersion = "docker-ce v18.09.6"
-	//	}
-
 	sysctlPkg := common.Package{}
 	sysctl.Enable(&sysctlPkg, common.IpForward)
 	sysctl.Enable(&sysctlPkg, common.BridgeNfCallIptables)
 	sysctl.Enable(&sysctlPkg, common.BridgeNfCallIp6tables)
 	return common.Software{
 		Swap: common.Package{Version: "disabled"},
-		Containerruntime: common.Package{Version: dockerVersion, Config: map[string]string{
-			"daemon.json": `{
+		Containerruntime: common.Package{
+			Version: "docker-ce v19.03.5",
+			Config: map[string]string{
+				"daemon.json": `{
 	"exec-opts": ["native.cgroupdriver=systemd"],
 	"log-driver": "json-file",
 	"log-opts": {
@@ -139,11 +136,12 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	},
 	"storage-driver": "overlay2"
 }`,
-		}},
+			}},
 		Kubelet: common.Package{Version: k.String()},
 		Kubeadm: common.Package{Version: k.String()},
 		Kubectl: common.Package{Version: k.String()},
 		Sysctl:  sysctlPkg,
+		Kernel:  common.Package{Version: "3.10.0-1160.42.2.el7.x86_64"},
 	}
 }
 

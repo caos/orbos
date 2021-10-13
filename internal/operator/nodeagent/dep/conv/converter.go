@@ -1,11 +1,9 @@
 package conv
 
 import (
-	"bytes"
 	"fmt"
-	"os"
-	"os/exec"
-	"strings"
+
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/kernel"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/health"
 
@@ -60,18 +58,9 @@ func (d *dependencies) Init() func() error {
 		if len(sw) == 0 {
 			return nil
 		}
-		errBuf := new(bytes.Buffer)
-		defer errBuf.Reset()
-		cmd := exec.Command("yum", "--assumeyes", "remove", "yum-cron")
-		cmd.Stderr = errBuf
-		if d.monitor.IsVerbose() {
-			fmt.Println(strings.Join(cmd.Args, " "))
-			cmd.Stdout = os.Stdout
-		}
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("removing yum-cron failed with stderr %s: %w", errBuf.String(), err)
-		}
-		return nil
+		return d.pm.Remove(&dep.Software{
+			Package: "yum-cron",
+		})
 	}
 }
 
@@ -82,6 +71,9 @@ func (d *dependencies) Update() error {
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
 
 	dependencies := []*nodeagent.Dependency{{
+		Desired:   sw.Kernel,
+		Installer: kernel.New(d.pm),
+	}, {
 		Desired:   sw.Sysctl,
 		Installer: sysctl.New(d.monitor),
 	}, {
@@ -128,6 +120,8 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
+		case kernel.Installer:
+			sw.Kernel = pkg(*dependency)
 		case sysctl.Installer:
 			sw.Sysctl = pkg(*dependency)
 		case health.Installer:

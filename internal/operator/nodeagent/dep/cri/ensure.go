@@ -3,7 +3,6 @@ package cri
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -11,23 +10,18 @@ import (
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string) error {
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-	cmd := exec.Command("yum", "--assumeyes", "remove", "docker",
-		"docker-client",
-		"docker-client-latest",
-		"docker-common",
-		"docker-latest",
-		"docker-latest-logrotate",
-		"docker-logrotate",
-		"docker-engine")
-	cmd.Stderr = errBuf
-	if c.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("removing older docker versions failed with stderr %s: %w", errBuf.String(), err)
+
+	if err := c.manager.Remove(
+		&dep.Software{Package: "docker"},
+		&dep.Software{Package: "docker-client"},
+		&dep.Software{Package: "docker-client-latest"},
+		&dep.Software{Package: "docker-common"},
+		&dep.Software{Package: "docker-latest"},
+		&dep.Software{Package: "docker-latest-logrotate"},
+		&dep.Software{Package: "docker-logrotate"},
+		&dep.Software{Package: "docker-engine"},
+	); err != nil {
+		return fmt.Errorf("removing older docker versions failed: %w", err)
 	}
 
 	for _, pkg := range []string{"device-mapper-persistent-data", "lvm2"} {
