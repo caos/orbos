@@ -132,7 +132,7 @@ func (k *kernelDep) kernelVersions() (loadedKernel string, corruptedKernels []st
 		return loadedKernel, corruptedKernels, fmt.Errorf("getting loaded kernel failed: %s: %w", loadedKernel, err)
 	}
 
-	loadedKernel = string(loadedKernelBytes)
+	loadedKernel = trimArchitecture(string(loadedKernelBytes))
 
 	initramfsVersions, err := listInitramfsVersions()
 	if err != nil {
@@ -167,8 +167,12 @@ func listInitramfsVersions() ([]string, error) {
 			return filepath.SkipDir
 		}
 		if strings.HasPrefix(path, initramfsdir+"initramfs-") && strings.HasSuffix(path, ".img") {
-			initramfsKernels = append(initramfsKernels, path[len(initramfsdir+"initramfs-"):strings.LastIndex(path, ".img")])
+			initramfsKernels = append(initramfsKernels, trimArchitecture(path[len(initramfsdir+"initramfs-"):strings.LastIndex(path, ".img")]))
 		}
 		return nil
 	})
+}
+
+func trimArchitecture(kernel string) string {
+	return strings.TrimSuffix(strings.TrimSuffix(kernel, "\n"), ".x86_64")
 }

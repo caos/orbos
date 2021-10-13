@@ -141,7 +141,7 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 		Kubeadm: common.Package{Version: k.String()},
 		Kubectl: common.Package{Version: k.String()},
 		Sysctl:  sysctlPkg,
-		Kernel:  common.Package{Version: "3.10.0-1160.42.2.el7.x86_64"},
+		Kernel:  common.Package{Version: "3.10.0-1160.42.2.el7"},
 	}
 }
 
