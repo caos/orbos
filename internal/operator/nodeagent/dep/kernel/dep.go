@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
+	"syscall"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -115,14 +115,7 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 		return fmt.Errorf("couldn't find a corresponding initramfs file corresponding kernel version %s. Not rebooting", ensure.Version)
 	}
 
-	out, err := exec.Command("reboot").CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("rebooting system failed: %s: %w", string(out), err)
-	}
-
-	// give os signal some time before doing anything
-	time.Sleep(5 * time.Second)
-	return nil
+	return syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
 }
 
 func (k *kernelDep) kernelVersions() (loadedKernel string, corruptedKernels []string, err error) {

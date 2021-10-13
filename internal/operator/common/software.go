@@ -19,7 +19,7 @@ func (s *Software) Merge(sw Software) {
 
 	zeroPkg := Package{}
 
-	if !sw.Kernel.Equals(zeroPkg) && !s.Kernel.Equals(zeroPkg) {
+	if !sw.Kernel.Equals(zeroPkg) {
 		s.Kernel = sw.Kernel
 	}
 
