@@ -60,6 +60,9 @@ func (k *kernelDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
+	fmt.Println("CURR loaded", loaded)
+	fmt.Println("CURR corrupted", strings.Join(corrupted, ", "))
+
 	pkg.Version = loaded
 
 	if len(corrupted) > 0 {
@@ -106,7 +109,7 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 	var found bool
 	for i := range initramfsVersions {
 		if initramfsVersions[i] == ensure.Version {
-			fmt.Printf("initramfsVersions[i] == ensure.Version: %s == %s: %t\n", initramfsVersions[i], ensure.Version, initramfsVersions[i] == ensure.Version)
+			fmt.Printf("ENS initramfsVersions[i] == ensure.Version: %s == %s: %t\n", initramfsVersions[i], ensure.Version, initramfsVersions[i] == ensure.Version)
 			found = true
 			break
 		}
@@ -126,11 +129,14 @@ func (k *kernelDep) kernelVersions() (loadedKernel string, corruptedKernels []st
 	}
 
 	loadedKernel = trimArchitecture(string(loadedKernelBytes))
+	fmt.Println("VER loadedKernel", loadedKernel)
 
 	initramfsVersions, err := listInitramfsVersions()
 	if err != nil {
 		return loadedKernel, corruptedKernels, err
 	}
+
+	fmt.Println("VER initramfsVersions", strings.Join(initramfsVersions, ", "))
 
 	corruptedKernels = make([]string, 0)
 kernels:
