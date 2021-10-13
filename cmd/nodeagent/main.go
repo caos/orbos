@@ -137,7 +137,7 @@ func main() {
 	type updateType struct{}
 	go func() {
 		for range time.Tick(24 * time.Hour) {
-			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Hour)
+			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
 			<-timer.C
 			mutexActionChannel <- updateType{}
 			timer.Stop()
