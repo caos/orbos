@@ -60,9 +60,6 @@ func (k *kernelDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	fmt.Println("CURR loaded", loaded)
-	fmt.Println("CURR corrupted", strings.Join(corrupted, ", "))
-
 	pkg.Version = loaded
 
 	if len(corrupted) > 0 {
@@ -109,7 +106,6 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 	var found bool
 	for i := range initramfsVersions {
 		if initramfsVersions[i] == ensure.Version {
-			fmt.Printf("ENS initramfsVersions[i] == ensure.Version: %s == %s: %t\n", initramfsVersions[i], ensure.Version, initramfsVersions[i] == ensure.Version)
 			found = true
 			break
 		}
@@ -129,14 +125,11 @@ func (k *kernelDep) kernelVersions() (loadedKernel string, corruptedKernels []st
 	}
 
 	loadedKernel = trimArchitecture(string(loadedKernelBytes))
-	fmt.Println("VER loadedKernel", loadedKernel)
 
 	initramfsVersions, err := listInitramfsVersions()
 	if err != nil {
 		return loadedKernel, corruptedKernels, err
 	}
-
-	fmt.Println("VER initramfsVersions", strings.Join(initramfsVersions, ", "))
 
 	corruptedKernels = make([]string, 0)
 kernels:
@@ -160,19 +153,14 @@ func listInitramfsVersions() ([]string, error) {
 
 	var initramfsKernels []string
 	if err := filepath.WalkDir(initramfsdir, func(path string, d fs.DirEntry, err error) error {
-		fmt.Println("listInitramfsVersions err", err)
 		if err != nil {
 			return err
 		}
-		fmt.Println("listInitramfsVersions d.IsDir()", d.IsDir())
-		fmt.Println("listInitramfsVersions path", path)
 		if path != initramfsdir && d.IsDir() {
 			return filepath.SkipDir
 		}
-		fmt.Println("listInitramfsVersions path", path)
 		if strings.HasPrefix(path, initramfsdir+"initramfs-") && strings.HasSuffix(path, ".img") {
 			version := trimArchitecture(path[len(initramfsdir+"initramfs-"):strings.LastIndex(path, ".img")])
-			fmt.Println("listInitramfsVersions version", version)
 			initramfsKernels = append(initramfsKernels, version)
 		}
 		return nil

@@ -12,6 +12,10 @@ import (
 
 func (p *PackageManager) rembasedInstall(install ...*Software) error {
 
+	if len(install) == 0 {
+		return nil
+	}
+
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 

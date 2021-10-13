@@ -9,6 +9,10 @@ import (
 
 func (p *PackageManager) rembasedRemove(remove ...*Software) error {
 
+	if len(remove) == 0 {
+		return nil
+	}
+
 	swStrs := make([]string, len(remove))
 	for i, sw := range remove {
 		swStrs[i] = sw.Package
