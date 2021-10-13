@@ -114,7 +114,7 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 		return fmt.Errorf("couldn't find a corresponding initramfs file corresponding kernel version %s. Not rebooting", ensure.Version)
 	}
 
-	return syscall.Reboot(syscall.LINUX_REBOOT_CMD_RESTART)
+	return syscall.Reboot(syscall.LINUX_REBOOT_CMD_CAD_OFF)
 }
 
 func (k *kernelDep) kernelVersions() (loadedKernel string, corruptedKernels []string, err error) {
