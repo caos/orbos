@@ -156,7 +156,7 @@ kernels:
 }
 
 func listInitramfsVersions() ([]string, error) {
-	initramfsdir := "/boot/"
+	initramfsdir := "/boot"
 	var initramfsKernels []string
 	return initramfsKernels, filepath.WalkDir(initramfsdir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -166,8 +166,8 @@ func listInitramfsVersions() ([]string, error) {
 			return filepath.SkipDir
 		}
 		fmt.Println("listInitramfsVersions path", path)
-		if strings.HasPrefix(path, initramfsdir+"initramfs-") && strings.HasSuffix(path, ".img") {
-			version := trimArchitecture(path[len(initramfsdir+"initramfs-"):strings.LastIndex(path, ".img")])
+		if strings.HasPrefix(path, initramfsdir+"/initramfs-") && strings.HasSuffix(path, ".img") {
+			version := trimArchitecture(path[len(initramfsdir+"/initramfs-"):strings.LastIndex(path, ".img")])
 			fmt.Println("listInitramfsVersions version", version)
 			initramfsKernels = append(initramfsKernels, version)
 		}
