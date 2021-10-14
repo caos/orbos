@@ -22,8 +22,8 @@ func (p *PackageManager) rembasedInstall(install ...*Software) error {
 	installPkgs := make([]string, 0)
 	for _, sw := range install {
 
-		installedVersion, ok := p.installed[sw.Package]
-		if ok && (sw.Version == "" || sw.Version == installedVersion) {
+		_, ok := p.installed[sw.Package]
+		if ok && sw.Version == "" {
 			continue
 		}
 

@@ -24,7 +24,7 @@ type Repository struct {
 type PackageManager struct {
 	monitor   mntr.Monitor
 	os        OperatingSystem
-	installed map[string]string
+	installed map[string][]string
 	systemd   *SystemD
 }
 
@@ -90,17 +90,20 @@ func NewPackageManager(monitor mntr.Monitor, os OperatingSystem, systemd *System
 func (p *PackageManager) CurrentVersions(possiblePackages ...string) []*Software {
 
 	software := make([]*Software, 0)
-	for _, pkg := range possiblePackages {
-		if version, ok := p.installed[pkg]; ok {
-			pkg := &Software{
-				Package: pkg,
-				Version: version,
+	for i := range possiblePackages {
+		pkg := possiblePackages[i]
+		if versions, ok := p.installed[pkg]; ok {
+			for j := range versions {
+				foundSw := &Software{
+					Package: pkg,
+					Version: versions[j],
+				}
+				software = append(software, foundSw)
+				p.monitor.WithFields(map[string]interface{}{
+					"package": foundSw.Package,
+					"version": foundSw.Version,
+				}).Debug("Found filtered installed package")
 			}
-			software = append(software, pkg)
-			p.monitor.WithFields(map[string]interface{}{
-				"package": pkg.Package,
-				"version": pkg.Version,
-			}).Debug("Found filtered installed package")
 		}
 	}
 

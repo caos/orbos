@@ -58,9 +58,7 @@ func (d *dependencies) Init() func() error {
 		if len(sw) == 0 {
 			return nil
 		}
-		return d.pm.Remove(&dep.Software{
-			Package: "yum-cron",
-		})
+		return d.pm.Remove(sw...)
 	}
 }
 

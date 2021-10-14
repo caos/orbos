@@ -37,7 +37,7 @@ func (p *PackageManager) rembasedInstalled() error {
 
 func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining string, parse func(line string) (string, string, error)) error {
 
-	p.installed = make(map[string]string)
+	p.installed = make(map[string][]string)
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(listCommand.Args, " "))
 	}
@@ -71,7 +71,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		}
 
 		pkg, version, _ := parse(line)
-		p.installed[pkg] = version
+		p.installed[pkg] = append(p.installed[pkg], version)
 		p.monitor.WithFields(map[string]interface{}{
 			"package": pkg,
 			"version": version,
