@@ -86,7 +86,7 @@ func (c *criDep) run(runtime, version, repoURL, keyURL, keyFingerprint string) e
 		// https://docs.docker.com/engine/install/ubuntu/
 		if err := c.manager.Install(&dep.Software{
 			Package: "containerd.io",
-			Version: containerdVersion,
+			Version: installContainerdVersion,
 		}); err != nil {
 			return err
 		}
