@@ -217,7 +217,7 @@ func plan(
 			} else {
 				swmonitor.Info("Awaiting kubernetes software")
 			}
-			machine.desiredNodeagent.Software.Merge(packages)
+			machine.desiredNodeagent.Software.Merge(packages, true)
 			return nil
 		}
 	}

@@ -15,7 +15,7 @@ type Software struct {
 	Kernel           Package `yaml:",omitempty"`
 }
 
-func (s *Software) Merge(sw Software) {
+func (s *Software) Merge(sw Software, forceKernel bool) {
 
 	zeroPkg := Package{}
 
@@ -58,7 +58,7 @@ func (s *Software) Merge(sw Software) {
 	if !sw.Kernel.Equals(zeroPkg) &&
 		// If eighter this or that software has no kernel desired, ensure it using the upgrade software path
 		// TODO: Remove the following check in ORBOS v6 to speed up bootstrapping as for running v5 clusters this will be defined
-		!s.Kernel.Equals(zeroPkg) {
+		(!s.Kernel.Equals(zeroPkg) || forceKernel) {
 		s.Kernel = sw.Kernel
 	}
 
