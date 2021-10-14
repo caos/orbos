@@ -19,7 +19,8 @@ type Installer interface {
 	nodeagent.Installer
 }
 
-type hostnameDep struct{}
+type hostnameDep struct {
+}
 
 func New() Installer {
 	return &hostnameDep{}

@@ -9,6 +9,7 @@ import (
 )
 
 func getAddAndRemovePorts(
+
 	monitor mntr.Monitor,
 	zone string,
 	current *common.ZoneDesc,

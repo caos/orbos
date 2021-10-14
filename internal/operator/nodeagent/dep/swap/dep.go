@@ -2,6 +2,7 @@ package swap
 
 import (
 	"bytes"
+
 	"fmt"
 	"io"
 	"os/exec"
@@ -23,7 +24,7 @@ type swapDep struct {
 }
 
 func New(fstabFilePath string) Installer {
-	return &swapDep{fstabFilePath}
+	return &swapDep{fstabFilePath: fstabFilePath}
 }
 
 func (swapDep) Is(other nodeagent.Installer) bool {

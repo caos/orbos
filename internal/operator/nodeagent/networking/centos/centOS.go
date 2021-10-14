@@ -50,6 +50,7 @@ func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 }
 
 func ensureInterfaces(
+
 	monitor mntr.Monitor,
 	desired *common.Networking,
 	current *common.NetworkingCurrent,
@@ -158,6 +159,7 @@ deleteLoop:
 }
 
 func ensureInterface(
+
 	monitor mntr.Monitor,
 	name string,
 	desired *common.NetworkingInterface,
