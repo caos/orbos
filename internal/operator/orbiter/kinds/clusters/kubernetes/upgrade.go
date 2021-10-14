@@ -254,10 +254,6 @@ func plan(
 		return labelUpgradeState()
 	}
 
-	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) || !machine.desiredNodeagent.Software.Kernel.Equals(to.Kernel) {
-		return ensureSoftware(common.Software{Kernel: to.Kernel}, "Update kernel"), nil
-	}
-
 	nodeIsReady := machine.currentNodeagent.NodeIsReady
 
 	if !machine.currentMachine.Joined {
@@ -270,6 +266,10 @@ func plan(
 			return nil, nil
 		}
 		return ensureSoftware(to, "Prepare for joining"), nil
+	}
+
+	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) || !machine.desiredNodeagent.Software.Kernel.Equals(to.Kernel) {
+		return ensureSoftware(common.Software{Kernel: to.Kernel}, "Update kernel"), nil
 	}
 
 	if !machine.currentNodeagent.Software.Kubeadm.Equals(to.Kubeadm) || !machine.desiredNodeagent.Software.Kubeadm.Equals(to.Kubeadm) {

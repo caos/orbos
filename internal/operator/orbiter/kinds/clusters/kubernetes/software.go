@@ -153,6 +153,7 @@ func KubernetesSoftware(current common.Software) common.Software {
 		Kubeadm:          current.Kubeadm,
 		Kubectl:          current.Kubectl,
 		Sysctl:           current.Sysctl,
+		Kernel:           current.Kernel,
 	}
 }
 
