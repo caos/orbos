@@ -226,7 +226,8 @@ func softwareContains(this common.Software, that common.Software) bool {
 		contains(this.Nginx, that.Nginx) &&
 		contains(this.Hostname, that.Hostname) &&
 		sysctl.Contains(this.Sysctl, that.Sysctl) &&
-		contains(this.Health, that.Health)
+		contains(this.Health, that.Health) &&
+		contains(this.Kernel, that.Kernel)
 }
 
 func contains(this, that common.Package) bool {
@@ -243,11 +244,11 @@ func softwareDefines(this common.Software, that common.Software) bool {
 		defines(this.Nginx, that.Nginx) &&
 		defines(this.Hostname, that.Hostname) &&
 		defines(this.Sysctl, that.Sysctl) &&
-		defines(this.Health, that.Health)
+		defines(this.Health, that.Health) &&
+		defines(this.Kernel, that.Kernel)
 }
 
 func defines(this, that common.Package) bool {
 	zeroPkg := common.Package{}
-	defines := common.PackageEquals(that, zeroPkg) || !common.PackageEquals(this, zeroPkg)
-	return defines
+	return common.PackageEquals(that, zeroPkg) || !common.PackageEquals(this, zeroPkg)
 }
