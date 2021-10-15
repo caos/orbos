@@ -268,8 +268,10 @@ func plan(
 		return ensureSoftware(to, "Prepare for joining"), nil
 	}
 
-	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) || !machine.desiredNodeagent.Software.Kernel.Equals(to.Kernel) {
+	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) {
 		return ensureSoftware(common.Software{Kernel: to.Kernel}, "Update kernel"), nil
+	} else {
+		machine.desiredNodeagent.Software.Merge(common.Software{Kernel: to.Kernel}, true)
 	}
 
 	if !machine.currentNodeagent.Software.Kubeadm.Equals(to.Kubeadm) || !machine.desiredNodeagent.Software.Kubeadm.Equals(to.Kubeadm) {

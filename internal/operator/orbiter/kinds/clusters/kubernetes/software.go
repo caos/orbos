@@ -199,7 +199,7 @@ func (k KubernetesVersion) ExtractPatch(monitor mntr.Monitor) (int, error) {
 
 func (k KubernetesVersion) extractNumber(monitor mntr.Monitor, position int) (int, error) {
 	if k == Unknown {
-		return 0, errors.New("Unknown kubernetes version")
+		return 0, errors.New("unknown kubernetes version")
 	}
 
 	parts := strings.Split(k.String(), ".")
