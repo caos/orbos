@@ -97,13 +97,16 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 		return err
 	}
 
-	if remove.Version == ensure.Version || ensure.Version == "" {
+	removeVersion := fmt.Sprintf("%s-%s", ensure.Version, ensure.Config[dep.CentOS7.String()])
+	ensureVersion := fmt.Sprintf("%s-%s", ensure.Version, ensure.Config[dep.CentOS7.String()])
+
+	if removeVersion == ensureVersion || ensure.Version == "" {
 		return nil
 	}
 
 	if err := k.manager.Install(&dep.Software{
 		Package: "kernel",
-		Version: fmt.Sprintf("%s-%s", ensure.Version, ensure.Config[dep.CentOS7.String()]),
+		Version: ensureVersion,
 	}); err != nil {
 		return err
 	}
