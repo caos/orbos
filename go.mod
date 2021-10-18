@@ -8,7 +8,7 @@ require (
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/caos/oidc v0.15.7
-	github.com/cloudflare/cloudflare-go v0.23.0
+	github.com/cloudflare/cloudflare-go v0.26.0
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.7.1
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
