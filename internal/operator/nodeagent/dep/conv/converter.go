@@ -1,6 +1,7 @@
 package conv
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/kernel"
@@ -31,6 +32,7 @@ type Converter interface {
 }
 
 type dependencies struct {
+	ctx     context.Context
 	monitor mntr.Monitor
 	os      dep.OperatingSystemMajor
 	pm      *dep.PackageManager
@@ -38,8 +40,8 @@ type dependencies struct {
 	cipher  string
 }
 
-func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Converter {
-	return &dependencies{monitor, os, nil, nil, cipher}
+func New(ctx context.Context, monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Converter {
+	return &dependencies{ctx, monitor, os, nil, nil, cipher}
 }
 
 func (d *dependencies) Init() func() error {
@@ -70,7 +72,7 @@ func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependenc
 
 	dependencies := []*nodeagent.Dependency{{
 		Desired:   sw.Kernel,
-		Installer: kernel.New(d.pm),
+		Installer: kernel.New(d.ctx, d.monitor, d.pm),
 	}, {
 		Desired:   sw.Sysctl,
 		Installer: sysctl.New(d.monitor),

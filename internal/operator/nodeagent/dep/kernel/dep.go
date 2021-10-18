@@ -1,12 +1,14 @@
 package kernel
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
+
+	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -22,6 +24,8 @@ type Installer interface {
 }
 
 type kernelDep struct {
+	ctx     context.Context
+	monitor mntr.Monitor
 	manager *dep.PackageManager
 }
 
@@ -34,8 +38,10 @@ loaded kernel. If the currently loaded kernel doesn't have a corresponding initr
 If ORBITER desires a specific kernel version, Node Agent installs and locks it, checks the initramfs file and reboots.
 It is in the ORBITERS responsibility to ensure not all nodes are updated and rebooted simultaneously.
 */
-func New(manager *dep.PackageManager) *kernelDep {
+func New(ctx context.Context, monitor mntr.Monitor, manager *dep.PackageManager) *kernelDep {
 	return &kernelDep{
+		ctx:     ctx,
+		monitor: monitor,
 		manager: manager,
 	}
 }
@@ -114,12 +120,18 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 		return fmt.Errorf("couldn't find a corresponding initramfs file corresponding kernel version %s. Not rebooting", ensure.Version)
 	}
 
-	if out, err := exec.Command("reboot").CombinedOutput(); err != nil {
-		return fmt.Errorf("rebooting system failed: %s: %w", string(out), err)
+	k.monitor.Info("Stopping node-agentd in the background")
+	if err := exec.Command("bash", "-c", "systemctl stop node-agentd &").Run(); err != nil {
+		return fmt.Errorf("stopping node-agentd failed: %w", err)
 	}
 
-	// await signal from system
-	time.Sleep(5 * time.Second)
+	k.monitor.Info("Rebooting system in the background")
+	if err := exec.Command("bash", "-c", "reboot &").Run(); err != nil {
+		return fmt.Errorf("rebooting the system failed: %w", err)
+	}
+
+	k.monitor.Info("Awaiting SIGTERM")
+	<-k.ctx.Done()
 	return nil
 }
 
