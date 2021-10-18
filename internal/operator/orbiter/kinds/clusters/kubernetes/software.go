@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -141,7 +143,12 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 		Kubeadm: common.Package{Version: k.String()},
 		Kubectl: common.Package{Version: k.String()},
 		Sysctl:  sysctlPkg,
-		Kernel:  common.Package{Version: "3.10.0-1160.42.2.el7"},
+		Kernel: common.Package{
+			Version: "3.10.0",
+			Config: map[string]string{
+				dep.CentOS7.String(): "1160.42.2.el7",
+			},
+		},
 	}
 }
 

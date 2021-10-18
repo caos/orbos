@@ -66,7 +66,11 @@ func (k *kernelDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	pkg.Version = loaded
+	dashIdx := strings.Index(loaded, "-")
+	pkg.Version = loaded[0:dashIdx]
+	pkg.Config = map[string]string{
+		dep.CentOS7.String(): loaded[dashIdx+1:],
+	}
 
 	if len(corrupted) > 0 {
 		pkg.Config = map[string]string{"corrupted": strings.Join(corrupted, ",")}
@@ -99,7 +103,7 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	if err := k.manager.Install(&dep.Software{
 		Package: "kernel",
-		Version: ensure.Version,
+		Version: fmt.Sprintf("%s-%s", ensure.Version, ensure.Config[dep.CentOS7.String()]),
 	}); err != nil {
 		return err
 	}
