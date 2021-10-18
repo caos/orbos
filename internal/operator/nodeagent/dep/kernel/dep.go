@@ -118,7 +118,7 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 
 	var found bool
 	for i := range initramfsVersions {
-		if initramfsVersions[i] == ensure.Version {
+		if initramfsVersions[i] == ensureVersion {
 			found = true
 			break
 		}
