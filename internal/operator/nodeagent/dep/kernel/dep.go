@@ -97,7 +97,7 @@ func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
 		return err
 	}
 
-	removeVersion := fmt.Sprintf("%s-%s", ensure.Version, ensure.Config[dep.CentOS7.String()])
+	removeVersion := fmt.Sprintf("%s-%s", remove.Version, remove.Config[dep.CentOS7.String()])
 	ensureVersion := fmt.Sprintf("%s-%s", ensure.Version, ensure.Config[dep.CentOS7.String()])
 
 	if removeVersion == ensureVersion || ensure.Version == "" {
