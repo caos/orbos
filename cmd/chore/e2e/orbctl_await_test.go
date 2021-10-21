@@ -15,7 +15,7 @@ import (
 
 type awaitEnsuredORBOS = func(expectMasters, expectWorkers uint8, k8sVersion string, timeout time.Duration)
 
-func awaitEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) awaitEnsuredORBOS {
+func awaitEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd, domain string) awaitEnsuredORBOS {
 
 	return func(expectMasters, expectWorkers uint8, k8sVersion string, timeout time.Duration) {
 
@@ -81,7 +81,7 @@ func awaitEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd) a
 				currentMachines:  uint8(len(currentOrbiter.Machines.M)),
 				readyPods:        countReadyPods(),
 				vipAvailable:     checkVIPAvailability(orbctlGitops),
-				httpBinAvailable: checkHTTPBinAvailability(),
+				httpBinAvailable: checkHTTPBinAvailability(domain),
 			}
 		}, timeout, 5).Should(Equal(comparable{
 			mastersDone:      expectMasters,
@@ -134,8 +134,8 @@ func checkVIPAvailability(orbctl orbctlGitopsCmd) bool {
 	return err == nil
 }
 
-func checkHTTPBinAvailability() bool {
-	msg, err := helpers.Check("https", "httpbin.orbos.app" /* TODO */, 443, "/get", 200, false)
+func checkHTTPBinAvailability(domain string) bool {
+	msg, err := helpers.Check("https", fmt.Sprintf("httpbin.%s", domain), 443, "/get", 200, false)
 	fmt.Printf("httpbin ready check: %s: err: %v\n", msg, err)
 	return err == nil
 }

@@ -58,7 +58,7 @@ var _ = Describe("orbctl", func() {
 		orbctlGitops = orbctlGitopsFunc(orbconfig)
 		e2eYml = unmarshale2eYmlFunc(orbctlGitops)
 		kubectl = kubectlCmdFunc(filepath.Join(workfolder, "kubeconfig"), orbctlGitops)
-		AwaitEnsuredORBOS = awaitEnsuredOrbiterFunc(orbctlGitops, kubectl)
+		AwaitEnsuredORBOS = awaitEnsuredOrbiterFunc(orbctlGitops, kubectl, os.Getenv(domain))
 		AwaitUpdatedOrbiter = awaitUpdatedOrbiterFunc(orbctlGitops, AwaitEnsuredORBOS)
 
 		Expect(tag).ToNot(BeEmpty(), fmt.Sprintf("environment variable %s is required", tagEnv))
