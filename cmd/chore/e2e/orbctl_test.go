@@ -267,19 +267,23 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			bytes, err := ioutil.ReadFile("./templates/httpbin.yml")
 			Expect(err).ToNot(HaveOccurred())
 
-			cmd := kubectl("apply", "-f", "-")
-			cmd.Stdin = strings.NewReader(os.ExpandEnv(string(bytes)))
-
-			session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, 1*time.Minute).Should(gexec.Exit(0))
+			// Eventually(session) only waits for the command to exit,
+			// so for retrying the command itself we need to wrap it
+			// into an Eventually function
+			Eventually(func(g Gomega) {
+				cmd := kubectl("apply", "-f", "-")
+				cmd.Stdin = strings.NewReader(os.ExpandEnv(string(bytes)))
+				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				g.Expect(err).ToNot(HaveOccurred())
+				g.Eventually(session).Should(gexec.Exit(0))
+			}, 5*time.Minute, 1*time.Second).Should(Succeed())
 		})
 
 		It("waits for in-cluster operators to ensure the rest", func() {
 			AwaitEnsuredORBOS(1, 1, "v1.18.8", 10*time.Minute)
 		})
 	})
-	PContext("scaling", func() {
+	Context("scaling", func() {
 		When("desiring a higher workers count", func() {
 			It("scales up workers", func() {
 				AwaitUpdatedOrbiter("clusters.k8s.spec.workers.0.nodes", "3", "v1.18.8", 1, 3, 10*time.Minute)
@@ -301,7 +305,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			})
 		})
 	})
-	PContext("machine", func() {
+	Context("machine", func() {
 		When("desiring a machine reboot", func() {
 			It("updates the machines last reboot time", func() {
 
@@ -379,7 +383,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 			})
 		})
 	})
-	PWhen("desiring the latest kubernetes release", func() {
+	When("desiring the latest kubernetes release", func() {
 		It("upgrades the kubernetes binaries", func() {
 			AwaitUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 60*time.Minute)
 		})
