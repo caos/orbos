@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbos/mntr"
@@ -18,6 +19,7 @@ type gceMachine struct {
 	id      string
 	zone    string
 	context *context
+	mux     *sync.Mutex
 }
 
 func newGCEMachine(context *context, monitor mntr.Monitor, id string, zone string) machine {
@@ -26,6 +28,7 @@ func newGCEMachine(context *context, monitor mntr.Monitor, id string, zone strin
 		id:      id,
 		zone:    zone,
 		context: context,
+		mux:     new(sync.Mutex),
 	}
 }
 
@@ -58,6 +61,8 @@ func (c *gceMachine) execute(stdin io.Reader, command string) (outBuf *bytes.Buf
 		return nil, err
 	}
 
+	c.mux.Lock()
+	defer c.mux.Unlock()
 	if err := gcloudSession(c.context.desired.JSONKey.Value, gcloud, func(bin string) error {
 		cmd := exec.Command(gcloud,
 			"compute",

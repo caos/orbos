@@ -5,23 +5,48 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"strings"
 	"syscall"
 
-	"github.com/caos/orbos/cmd/chore"
+	"github.com/caos/orbos/cmd/chore/e2e"
+
+	"github.com/pkg/errors"
 )
 
 func main() {
 
-	var debug, skipRequild bool
+	var (
+		debug, reuse, download bool
+		downloadTag            string
+	)
+
+	var cmdArgs []string
+	var skip bool
 	for idx, arg := range os.Args {
-		switch arg {
-		case "--debug":
-			debug = true
-			removeFromCommandArguments(idx)
-		case "--skip-rebuild":
-			skipRequild = true
-			removeFromCommandArguments(idx)
+		if skip {
+			skip = false
+			continue
 		}
+		if strings.HasPrefix(arg, "--bin-download-tag=") {
+			downloadTag = strings.TrimPrefix(arg, "--bin-download-tag=")
+			continue
+		}
+		switch arg {
+		case "--bin-debug":
+			debug = true
+			continue
+		case "--bin-reuse":
+			reuse = true
+			continue
+		case "--bin-download":
+			download = true
+			continue
+		case "--bin-download-tag":
+			downloadTag = os.Args[idx+1]
+			skip = true
+			continue
+		}
+		cmdArgs = append(cmdArgs, arg)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -39,22 +64,22 @@ func main() {
 		cancel()
 	}()
 
-	newOrbctl, err := chore.Orbctl(debug, skipRequild)
+	newOrbctl, err := e2e.Command(debug, reuse, download, downloadTag)
 	if err != nil {
 		panic(err)
 	}
 
 	cmd := newOrbctl(ctx)
-	cmd.Args = append(cmd.Args, os.Args[1:]...)
+	cmd.Args = append(cmd.Args, cmdArgs[1:]...)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	cmd.Stdin = os.Stdin
 
 	if err := cmd.Run(); err != nil {
-		os.Exit(err.(*exec.ExitError).ExitCode())
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			os.Exit(err.(*exec.ExitError).ExitCode())
+		}
+		panic(err)
 	}
-}
-
-func removeFromCommandArguments(idx int) {
-	os.Args = append(os.Args[0:idx], os.Args[idx+1:]...)
 }
