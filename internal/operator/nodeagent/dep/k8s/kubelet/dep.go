@@ -49,7 +49,7 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 func (k *kubeletDep) Current() (pkg common.Package, err error) {
 
 	pkg, err = k.common.Current()
-	if err != nil {
+	if err != nil || pkg.Version == "" {
 		return pkg, err
 	}
 
