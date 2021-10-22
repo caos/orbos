@@ -26,18 +26,6 @@ networking:
               - ""
             containstargetsgroups: []
             ssl: ""
-      - description: all block
-        priority: 2
-        action: block
-        filters:
-          - description: block all non internal addresses for subdomains
-            targets: []
-            targetgroups: []
-            sources: []
-            sourcegroups: []
-            containstargets: []
-            containstargetsgroups: []
-            ssl: "true"
     groups:
       - name: internal
         list:
