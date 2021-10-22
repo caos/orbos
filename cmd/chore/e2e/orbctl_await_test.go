@@ -74,24 +74,24 @@ func awaitEnsuredOrbiterFunc(orbctlGitops orbctlGitopsCmd, kubectl kubectlCmd, d
 			}
 
 			return comparable{
-				mastersDone:      mastersDone,
-				workersDone:      workersDone,
-				clusterStatus:    currentOrbiter.Status,
-				nodeAgentsDone:   nodeAgentsDone,
-				currentMachines:  uint8(len(currentOrbiter.Machines.M)),
-				readyPods:        countReadyPods(),
-				vipAvailable:     checkVIPAvailability(orbctlGitops),
-				httpBinAvailable: checkHTTPBinAvailability(domain),
+				mastersDone:     mastersDone,
+				workersDone:     workersDone,
+				clusterStatus:   currentOrbiter.Status,
+				nodeAgentsDone:  nodeAgentsDone,
+				currentMachines: uint8(len(currentOrbiter.Machines.M)),
+				readyPods:       countReadyPods(),
+				vipAvailable:    checkVIPAvailability(orbctlGitops),
+				//				httpBinAvailable: checkHTTPBinAvailability(domain),
 			}
 		}, timeout, 5).Should(Equal(comparable{
-			mastersDone:      expectMasters,
-			workersDone:      expectWorkers,
-			clusterStatus:    "running",
-			nodeAgentsDone:   expectMasters + expectWorkers,
-			currentMachines:  expectMasters + expectWorkers,
-			readyPods:        expectReadyPods,
-			vipAvailable:     true,
-			httpBinAvailable: true,
+			mastersDone:     expectMasters,
+			workersDone:     expectWorkers,
+			clusterStatus:   "running",
+			nodeAgentsDone:  expectMasters + expectWorkers,
+			currentMachines: expectMasters + expectWorkers,
+			readyPods:       expectReadyPods,
+			vipAvailable:    true,
+			//			httpBinAvailable: true,
 		}))
 	}
 }
