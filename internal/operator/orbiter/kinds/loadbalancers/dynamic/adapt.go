@@ -128,7 +128,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.Spec = enrichedVIPs
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
-				var lbMachines []infra.Machine
+				var lbMachines infra.Machines
 
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
@@ -273,6 +273,8 @@ stream { {{ range $nat := .NATs }}
 					}); err != nil {
 						return false, err
 					}
+
+					sort.Sort(lbMachines)
 
 					spec, _, err := enrichedVIPs(svc)
 					if err != nil {

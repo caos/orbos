@@ -51,7 +51,7 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 	defer func() {
-		if err == nil {
+		if err == nil && pkg.Version != "" {
 			err = selinux.Current(s.os, &pkg)
 		}
 	}()
