@@ -370,7 +370,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 						}
 					}
 					return false
-				}, 5*time.Minute).Should(BeTrue())
+				}, 15*time.Minute).Should(BeTrue())
 
 				By("waiting for ORBITER to ensure the result")
 
