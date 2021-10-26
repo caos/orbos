@@ -201,7 +201,7 @@ func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurr
 
 		curr.Software.Merge(conv.ToSoftware([]*Dependency{dep}, func(dep Dependency) common.Package {
 			return dep.Desired
-		}))
+		}), true)
 		monitor.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
 			"from":       dep.Current.Version,

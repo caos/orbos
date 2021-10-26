@@ -154,6 +154,7 @@ func step(
 			}
 		}
 	}
+
 	for idx, machine := range sortedMachines {
 
 		next, err := plan(k8sClient, monitor, machine, idx == 0, from, to)
@@ -204,7 +205,9 @@ func plan(
 			if !packages.Kubelet.Equals(zeroPkg) &&
 				!machine.currentNodeagent.Software.Kubelet.Equals(packages.Kubelet) ||
 				!packages.Containerruntime.Equals(zeroPkg) &&
-					!machine.currentNodeagent.Software.Containerruntime.Equals(packages.Containerruntime) {
+					!machine.currentNodeagent.Software.Containerruntime.Equals(packages.Containerruntime) ||
+				!packages.Kernel.Equals(zeroPkg) &&
+					!machine.currentNodeagent.Software.Kernel.Equals(packages.Kernel) {
 				if err := drain(); err != nil {
 					return err
 				}
@@ -214,7 +217,7 @@ func plan(
 			} else {
 				swmonitor.Info("Awaiting kubernetes software")
 			}
-			machine.desiredNodeagent.Software.Merge(packages)
+			machine.desiredNodeagent.Software.Merge(packages, true)
 			return nil
 		}
 	}
@@ -263,6 +266,12 @@ func plan(
 			return nil, nil
 		}
 		return ensureSoftware(to, "Prepare for joining"), nil
+	}
+
+	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) {
+		return ensureSoftware(common.Software{Kernel: to.Kernel}, "Update kernel"), nil
+	} else {
+		machine.desiredNodeagent.Software.Merge(common.Software{Kernel: to.Kernel}, true)
 	}
 
 	if !machine.currentNodeagent.Software.Kubeadm.Equals(to.Kubeadm) || !machine.desiredNodeagent.Software.Kubeadm.Equals(to.Kubeadm) {

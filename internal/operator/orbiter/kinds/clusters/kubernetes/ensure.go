@@ -49,7 +49,7 @@ func ensure(
 		func(created infra.Machine, pool *initializedPool) initializedMachine {
 			machine := initializeMachine(created, pool)
 			target := targetVersion.DefineSoftware()
-			machine.desiredNodeagent.Software.Merge(target)
+			machine.desiredNodeagent.Software.Merge(target, true)
 			return *machine
 		},
 	)

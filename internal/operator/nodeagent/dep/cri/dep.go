@@ -16,7 +16,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-const containerdVersion = "1.4.3"
+const installContainerdVersion = "1.4.3"
 
 type Installer interface {
 	isCRI()
