@@ -82,7 +82,7 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 						return apply(), nil
 					}
 				case "gce-pd-driver":
-					if imageVersion(container.Image) != "v1.2.0-gke.0" {
+					if imageVersion(container.Image) != "v1.2.1-gke.0" {
 						return apply(), nil
 					}
 				}
@@ -90,26 +90,26 @@ func (c *Current) Kubernetes() infra.Kubernetes {
 			return nil, nil
 
 		},
-/*		CloudController: infra.CloudControllerManager{
-			Supported: true,
-			CloudConfig: func(machine infra.Machine) io.Reader {
-				instance := machine.(*instance)
-				ctx := instance.context
-				return strings.NewReader(fmt.Sprintf(`[Global]
-project-id = "%s"
-network-name = "%s"
-node-instance-prefix = "orbos-"
-multizone = false
-local-zone = "%s"
-container-api-endpoint = "Don't use container API'"
-`,
-					ctx.projectID,
-					ctx.networkName,
-					ctx.desired.Zone,
-				))
-			},
-			ProviderName: "external",
-		},*/
+		/*		CloudController: infra.CloudControllerManager{
+							Supported: true,
+							CloudConfig: func(machine infra.Machine) io.Reader {
+								instance := machine.(*instance)
+								ctx := instance.context
+								return strings.NewReader(fmt.Sprintf(`[Global]
+				project-id = "%s"
+				network-name = "%s"
+				node-instance-prefix = "orbos-"
+				multizone = false
+				local-zone = "%s"
+				container-api-endpoint = "Don't use container API'"
+				`,
+									ctx.projectID,
+									ctx.networkName,
+									ctx.desired.Zone,
+								))
+							},
+							ProviderName: "external",
+						},*/
 	}
 }
 
