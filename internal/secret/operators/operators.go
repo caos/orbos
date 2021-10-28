@@ -2,129 +2,196 @@ package operators
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
+
+	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
+	boomcrd "github.com/caos/orbos/internal/api/boom"
+	nwcrd "github.com/caos/orbos/internal/api/networking"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	nwOrb "github.com/caos/orbos/internal/operator/networking/kinds/orb"
-	orbiterOrb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	"github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )
 
-const (
-	boom       string = "boom"
-	orbiter    string = "orbiter"
-	networking string = "networking"
-)
-
-func GetAllSecretsFunc(orb *orb.Orb, binaryVersion *string) func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
-	return func(monitor mntr.Monitor, gitClient *git.Client) (map[string]*secret.Secret, map[string]*tree.Tree, error) {
-		allSecrets := make(map[string]*secret.Secret, 0)
-		allTrees := make(map[string]*tree.Tree, 0)
-		foundBoom, err := api.ExistsBoomYml(gitClient)
-		if err != nil {
-			return nil, nil, err
-		}
-		if foundBoom {
-			boomYML, err := api.ReadBoomYml(gitClient)
-			if err != nil {
-				return nil, nil, err
-			}
-			allTrees[boom] = boomYML
-			_, _, boomSecrets, _, _, err := boomapi.ParseToolset(boomYML)
-			if err != nil {
-				return nil, nil, err
-			}
-
-			if boomSecrets != nil && len(boomSecrets) > 0 {
-				secret.AppendSecrets(boom, allSecrets, boomSecrets)
-			}
-		}
-
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return nil, nil, err
-		}
-		if foundOrbiter {
-			orbiterYML, err := api.ReadOrbiterYml(gitClient)
-			if err != nil {
-				return nil, nil, err
-			}
-			allTrees[orbiter] = orbiterYML
-
-			_, _, _, _, orbiterSecrets, err := orbiterOrb.AdaptFunc(
-				labels.NoopOperator("ORBOS"),
-				orb,
-				"",
-				true,
-				false,
-				gitClient,
-			)(monitor, make(chan struct{}), orbiterYML, &tree.Tree{})
-			if err != nil {
-				return nil, nil, err
-			}
-
-			if orbiterSecrets != nil && len(orbiterSecrets) > 0 {
-				secret.AppendSecrets(orbiter, allSecrets, orbiterSecrets)
-			}
-		}
-
-		foundNW, err := api.ExistsNetworkingYml(gitClient)
-		if err != nil {
-			return nil, nil, err
-		}
-		if foundNW {
-			nwYML, err := api.ReadNetworkinglYml(gitClient)
-			if err != nil {
-				return nil, nil, err
-			}
-			allTrees[networking] = nwYML
-
-			_, _, nwSecrets, err := nwOrb.AdaptFunc(nil)(monitor, nwYML, nil)
-			if err != nil {
-				return nil, nil, err
-			}
-			if nwSecrets != nil && len(nwSecrets) > 0 {
-				secret.AppendSecrets(networking, allSecrets, nwSecrets)
-			}
-		}
-
-		return allSecrets, allTrees, nil
+func GetAllSecretsFunc(
+	monitor mntr.Monitor,
+	printLogs,
+	gitops bool,
+	gitClient *git.Client,
+	k8sClient kubernetes.ClientInt,
+	orb *orbcfg.Orb,
+) func() (
+	map[string]*secret.Secret,
+	map[string]*secret.Existing,
+	map[string]*tree.Tree,
+	error,
+) {
+	return func() (
+		map[string]*secret.Secret,
+		map[string]*secret.Existing,
+		map[string]*tree.Tree,
+		error,
+	) {
+		return getAllSecrets(monitor, printLogs, gitops, gitClient, k8sClient, orb)
 	}
 }
 
-func PushFunc() func(monitor mntr.Monitor, gitClient *git.Client, trees map[string]*tree.Tree, path string) error {
-	return func(monitor mntr.Monitor, gitClient *git.Client, trees map[string]*tree.Tree, path string) error {
-		operator := ""
-		if strings.HasPrefix(path, orbiter) {
-			operator = orbiter
-		} else if strings.HasPrefix(path, boom) {
-			operator = boom
-		} else if strings.HasPrefix(path, networking) {
-			operator = networking
-		} else {
-			return errors.New("Operator unknown")
-		}
+func getAllSecrets(
+	monitor mntr.Monitor,
+	printLogs,
+	gitops bool,
+	gitClient *git.Client,
+	k8sClient kubernetes.ClientInt,
+	orb *orbcfg.Orb,
+) (
+	map[string]*secret.Secret,
+	map[string]*secret.Existing,
+	map[string]*tree.Tree,
+	error,
+) {
 
-		desired, found := trees[operator]
-		if !found {
-			return errors.New("Operator file not found")
-		}
+	allSecrets := make(map[string]*secret.Secret, 0)
+	allExisting := make(map[string]*secret.Existing, 0)
+	allTrees := make(map[string]*tree.Tree, 0)
 
-		if operator == orbiter {
-			return api.PushOrbiterDesiredFunc(gitClient, desired)(monitor)
-		} else if operator == boom {
-			return api.PushBoomDesiredFunc(gitClient, desired)(monitor)
-		} else if operator == networking {
-			return api.PushNetworkingDesiredFunc(gitClient, desired)(monitor)
-		}
-
-		return errors.New("Operator push function unknown")
+	if err := secret.GetOperatorSecrets(
+		monitor,
+		printLogs,
+		gitops,
+		gitClient,
+		git.BoomFile,
+		allTrees,
+		allSecrets,
+		allExisting,
+		func() (*tree.Tree, error) { return boomcrd.ReadCRD(k8sClient) },
+		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
+			toolset, migrate, _, _, err := boomapi.ParseToolset(t)
+			if err != nil {
+				return nil, nil, false, err
+			}
+			boomSecrets, boomExistingSecrets := latest.GetSecretsMap(toolset)
+			return boomSecrets, boomExistingSecrets, migrate, nil
+		},
+	); err != nil {
+		return nil, nil, nil, err
 	}
+
+	if gitops {
+		if err := secret.GetOperatorSecrets(
+			monitor,
+			printLogs,
+			gitops,
+			gitClient,
+			git.OrbiterFile,
+			allTrees,
+			allSecrets,
+			allExisting,
+			func() (*tree.Tree, error) { return nil, errors.New("ORBITER doesn't support crd mode") },
+			func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
+				_, _, _, migrate, orbiterSecrets, err := orbiterOrb.AdaptFunc(
+					labels.NoopOperator("ORBOS"),
+					orb,
+					"",
+					true,
+					false,
+					gitClient,
+				)(monitor, make(chan struct{}), t, &tree.Tree{})
+				return orbiterSecrets, nil, migrate, err
+			},
+		); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+
+	if err := secret.GetOperatorSecrets(
+		monitor,
+		printLogs,
+		gitops,
+		gitClient,
+		git.NetworkingFile,
+		allTrees,
+		allSecrets,
+		allExisting,
+		func() (*tree.Tree, error) { return nwcrd.ReadCRD(k8sClient) },
+		func(t *tree.Tree) (map[string]*secret.Secret, map[string]*secret.Existing, bool, error) {
+			_, _, nwSecrets, nwExisting, migrate, err := nwOrb.AdaptFunc(nil, nil, false)(monitor, t, nil)
+			return nwSecrets, nwExisting, migrate, err
+		},
+	); err != nil {
+		return nil, nil, nil, err
+	}
+
+	if len(allSecrets) == 0 && len(allExisting) == 0 {
+		return nil, nil, nil, mntr.ToUserError(errors.New("couldn't find any secrets"))
+	}
+
+	return allSecrets, allExisting, allTrees, nil
+}
+
+func PushFunc(
+	monitor mntr.Monitor,
+	gitops bool,
+	gitClient *git.Client,
+	k8sClient kubernetes.ClientInt,
+) func(
+	trees map[string]*tree.Tree,
+	path string,
+) error {
+	return func(
+		trees map[string]*tree.Tree,
+		path string,
+	) error {
+		return push(monitor, gitops, gitClient, k8sClient, trees, path)
+	}
+}
+
+func push(
+	monitor mntr.Monitor,
+	gitops bool,
+	gitClient *git.Client,
+	k8sClient kubernetes.ClientInt,
+	trees map[string]*tree.Tree,
+	path string,
+) error {
+	var (
+		applyCRDFunc func(*tree.Tree) error
+		desiredFile  git.DesiredFile
+	)
+	if strings.HasPrefix(path, git.OrbiterFile.WOExtension()) {
+		desiredFile = git.OrbiterFile
+		applyCRDFunc = func(t *tree.Tree) error {
+			panic(errors.New("ORBITER doesn't support CRD mode"))
+		}
+	} else if strings.HasPrefix(path, git.BoomFile.WOExtension()) {
+		desiredFile = git.BoomFile
+		applyCRDFunc = func(t *tree.Tree) error {
+			return boomcrd.WriteCrd(k8sClient, t)
+		}
+	} else if strings.HasPrefix(path, git.NetworkingFile.WOExtension()) {
+		desiredFile = git.NetworkingFile
+		applyCRDFunc = func(t *tree.Tree) error {
+			return nwcrd.WriteCrd(k8sClient, t)
+		}
+	} else {
+		return errors.New("operator unknown")
+	}
+
+	desired, found := trees[desiredFile.WOExtension()]
+	if !found {
+		return mntr.ToUserError(fmt.Errorf("desired state not found for %s", desiredFile.WOExtension()))
+	}
+
+	if gitops {
+		return gitClient.PushDesiredFunc(desiredFile, desired)(monitor)
+	}
+	return applyCRDFunc(desired)
 }

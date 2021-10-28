@@ -1,56 +1,52 @@
 package main
 
 import (
-	"errors"
+	"fmt"
+
+	orbcfg "github.com/caos/orbos/pkg/orb"
 
 	"github.com/caos/orbos/pkg/labels"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-	cfg "github.com/caos/orbos/internal/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/tree"
 )
 
-func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *cfg.Orb, do func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error) error {
+func machines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb, do func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error) error {
 
-	if err := orbConfig.IsConnectable(); err != nil {
+	if err := initRepo(orbConfig, gitClient); err != nil {
 		return err
 	}
 
-	if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-		return err
-	}
-
-	if err := gitClient.Clone(); err != nil {
-		return err
-	}
-
-	foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-	if err != nil {
-		return err
-	}
-
-	if !foundOrbiter {
-		return errors.New("Orbiter.yml not found")
+	if !gitClient.Exists(git.OrbiterFile) {
+		return mntr.ToUserError(fmt.Errorf("%s not found", git.OrbiterFile))
 	}
 
 	monitor.Debug("Reading machines from orbiter.yml")
 
-	desired, err := api.ReadOrbiterYml(gitClient)
+	desired, err := gitClient.ReadTree(git.OrbiterFile)
 	if err != nil {
 		return err
 	}
 
 	listMachines := orb.ListMachines(labels.NoopOperator("ORBOS"))
 
+	orbID, err := orbConfig.ID()
+	if err != nil {
+		return err
+	}
+
 	machineIDs, machines, err := listMachines(
 		monitor,
 		desired,
-		orbConfig.URL,
+		orbID,
 	)
+
+	if err != nil {
+		return err
+	}
 
 	return do(machineIDs, machines, desired)
 }

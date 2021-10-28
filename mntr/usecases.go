@@ -32,7 +32,7 @@ func WriteToStdout(record string) {
 	}
 }
 
-func Concat(new OnMessage, original OnMessage) OnMessage {
+func ConcatOnMessage(new OnMessage, original OnMessage) OnMessage {
 	if original == nil {
 		return new
 	}

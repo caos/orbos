@@ -2,13 +2,15 @@ package clientgo
 
 import (
 	"context"
-	pkgerrors "github.com/pkg/errors"
+	"fmt"
+
+	"github.com/caos/orbos/mntr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func GetSecret(name, namespace string) (*v1.Secret, error) {
-	conf, err := GetClusterConfig()
+	conf, err := GetClusterConfig(mntr.Monitor{}, "")
 	if err != nil {
 		return nil, err
 	}
@@ -23,7 +25,7 @@ func GetSecret(name, namespace string) (*v1.Secret, error) {
 		return nil, err
 	}
 	if secret == nil {
-		return nil, pkgerrors.New("Secret not found")
+		return nil, fmt.Errorf("secret %s not found in namespace %s", name, namespace)
 	}
 
 	return secret, nil

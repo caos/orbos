@@ -9,10 +9,10 @@ type OIDC struct {
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
 	//Issuer of the OIDC provider
 	Issuer   string          `json:"issuer,omitempty" yaml:"issuer,omitempty"`
-	ClientID *secret2.Secret `yaml:"clientID,omitempty"`
+	ClientID *secret2.Secret `json:"clientID,omitempty" yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
 	ExistingClientIDSecret *secret2.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret           *secret2.Secret   `yaml:"clientSecret,omitempty"`
+	ClientSecret           *secret2.Secret   `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 	//Existing secret with the clientSecret
 	ExistingClientSecretSecret *secret2.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//Optional set of OIDC scopes to request. If omitted, defaults to: ["openid", "profile", "email", "groups"]

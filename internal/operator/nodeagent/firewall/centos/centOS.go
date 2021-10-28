@@ -11,7 +11,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
+func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 	return nodeagent.FirewallEnsurerFunc(func(desired common.Firewall) (common.FirewallCurrent, func() error, error) {
 		ensurers := make([]func() error, 0)
 		current := make(common.FirewallCurrent, 0)
@@ -20,8 +20,13 @@ func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 			desired.Zones = make(map[string]*common.Zone, 0)
 		}
 
+		// Ensure that all runtime config made in the previous iteration becomes permanent.
+		if _, err := runFirewallCommand(monitor, "--runtime-to-permanent"); err != nil {
+			return current, nil, err
+		}
+
 		for name, _ := range desired.Zones {
-			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, ignore)
+			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, open)
 			if err != nil {
 				return current, nil, err
 			}
@@ -39,7 +44,7 @@ func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 
 		current.Sort()
 
-		return current, func() error {
+		return current, func() (err error) {
 			monitor.Debug("Ensuring firewall")
 			for _, ensurer := range ensurers {
 				if err := ensurer(); err != nil {
@@ -51,7 +56,7 @@ func Ensurer(monitor mntr.Monitor, ignore []string) nodeagent.FirewallEnsurer {
 	})
 }
 
-func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, ignore []string) (*common.ZoneDesc, func() error, error) {
+func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, open []string) (*common.ZoneDesc, func() error, error) {
 	current := &common.ZoneDesc{
 		Name:       zoneName,
 		Interfaces: []string{},
@@ -76,7 +81,7 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		return current, nil, err
 	}
 
-	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), ignore)
+	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), open)
 	if err != nil {
 		return current, nil, err
 	}
@@ -112,7 +117,20 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 	}
 
 	zoneNameCopy := zoneName
-	return current, func() error {
+	return current, func() (err error) {
+
+		if len(ensureTarget) > 0 {
+
+			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
+			if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
+				return err
+			}
+
+			// this is the only property that needs a firewall reload
+			_, err := runFirewallCommand(monitor, "--reload")
+			return err
+		}
+
 		if ensureMasquerade != "" {
 			monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureMasquerade, zoneNameCopy))
 			if err := ensure(monitor, []string{ensureMasquerade}, zoneNameCopy); err != nil {
@@ -127,11 +145,6 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 
 		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureIfaces, zoneNameCopy))
 		if err := ensure(monitor, ensureIfaces, zoneNameCopy); err != nil {
-			return err
-		}
-
-		monitor.Debug(fmt.Sprintf("Ensuring part of firewall with %s in zone %s", ensureTarget, zoneNameCopy))
-		if err := ensure(monitor, ensureTarget, zoneNameCopy); err != nil {
 			return err
 		}
 
@@ -171,21 +184,12 @@ func ensure(monitor mntr.Monitor, changes []string, zone string) error {
 	return changeFirewall(monitor, changes, zone)
 }
 
-func changeFirewall(monitor mntr.Monitor, changes []string, zone string) (err error) {
+func changeFirewall(monitor mntr.Monitor, changes []string, zone string) error {
 	if len(changes) == 0 {
 		return nil
 	}
 
-	if _, err := runFirewallCommand(monitor, append([]string{"--permanent", "--zone", zone}, changes...)...); err != nil {
-		return err
-	}
-
-	return reloadFirewall(monitor)
-}
-
-func reloadFirewall(monitor mntr.Monitor) error {
-
-	_, err := runFirewallCommand(monitor, "--reload")
+	_, err := runFirewallCommand(monitor.Verbose(), append([]string{"--zone", zone}, changes...)...)
 	return err
 }
 

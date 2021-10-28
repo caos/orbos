@@ -7,7 +7,7 @@ import (
 
 func destroy(providerCurrents map[string]interface{}, k8sClient *kubernetes.Client) error {
 
-	if k8sClient.Available() {
+	if k8sClient != nil {
 		k8sClient.DeleteDeployment("caos-system", "orbiter")
 	}
 
@@ -19,7 +19,13 @@ func destroy(providerCurrents map[string]interface{}, k8sClient *kubernetes.Clie
 				return err
 			}
 			for _, machine := range machines {
-				machine.Remove()
+				remove, err := machine.Destroy()
+				if err != nil {
+					return err
+				}
+				if err := remove(); err != nil {
+					return err
+				}
 			}
 		}
 	}

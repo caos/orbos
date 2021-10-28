@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"io"
 
-	"gopkg.in/src-d/go-git.v4/utils/ioutil"
+	"github.com/go-git/go-git/v5/utils/ioutil"
 
 	"github.com/caos/orbos/internal/helpers"
 )

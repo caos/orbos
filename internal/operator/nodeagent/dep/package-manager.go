@@ -3,8 +3,6 @@ package dep
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/mntr"
 )
 
@@ -39,16 +37,36 @@ func (p *PackageManager) RefreshInstalled() error {
 		err = p.rembasedInstalled()
 	}
 
+	if err != nil {
+		return fmt.Errorf("refreshing installed packages failed: %w", err)
+	}
 	p.monitor.WithFields(map[string]interface{}{
 		"packages": len(p.installed),
 	}).Debug("Refreshed installed packages")
-
-	return errors.Wrap(err, "refreshing installed packages failed")
+	return nil
 }
 
 func (p *PackageManager) Init() error {
 
 	p.monitor.Debug("Initializing package manager")
+	var err error
+	switch p.os.Packages {
+	case DebianBased:
+		err = p.debSpecificInit()
+	case REMBased:
+		err = p.remSpecificInit()
+	}
+
+	if err != nil {
+		return fmt.Errorf("initializing packages %s failed: %w", p.os.Packages, err)
+	}
+
+	p.monitor.Debug("Package manager initialized")
+	return nil
+}
+
+func (p *PackageManager) Update() error {
+	p.monitor.Debug("Updating packages")
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
@@ -58,10 +76,10 @@ func (p *PackageManager) Init() error {
 	}
 
 	if err != nil {
-		return errors.Wrapf(err, "updating packages failed", p.os.Packages)
+		return fmt.Errorf("updating packages %s failed: %w", p.os.Packages, err)
 	}
 
-	p.monitor.Debug("Package manager initialized")
+	p.monitor.Info("Packages updated")
 	return nil
 }
 
@@ -69,7 +87,7 @@ func NewPackageManager(monitor mntr.Monitor, os OperatingSystem, systemd *System
 	return &PackageManager{monitor, os, nil, systemd}
 }
 
-func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Software, error) {
+func (p *PackageManager) CurrentVersions(possiblePackages ...string) []*Software {
 
 	software := make([]*Software, 0)
 	for _, pkg := range possiblePackages {
@@ -86,7 +104,7 @@ func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Softwar
 		}
 	}
 
-	return software, nil
+	return software
 }
 
 func (p *PackageManager) Install(installVersion *Software, more ...*Software) error {
@@ -96,20 +114,16 @@ func (p *PackageManager) Install(installVersion *Software, more ...*Software) er
 	case REMBased:
 		return p.rembasedInstall(installVersion, more...)
 	}
-	return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
+	return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
 }
 
-func (p *PackageManager) Add(repo *Repository) {
-	var err error
+func (p *PackageManager) Add(repo *Repository) error {
 	switch p.os.Packages {
 	case DebianBased:
-		err = p.debbasedAdd(repo)
+		return p.debbasedAdd(repo)
 	case REMBased:
-		err = p.rembasedAdd(repo)
+		return p.rembasedAdd(repo)
 	default:
-		err = errors.Errorf("Package manager %s is not implemented", p.os.Packages)
-	}
-	if err != nil {
-		p.monitor.Info(errors.Wrap(err, "Adding repo failed").Error())
+		return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
 	}
 }

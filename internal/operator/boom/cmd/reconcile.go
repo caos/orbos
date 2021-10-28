@@ -8,12 +8,18 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/k8s"
 	"github.com/caos/orbos/pkg/labels"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernetes.Client, boomSpec *latest.Boom, binaryVersion string) error {
+func Reconcile(
+	monitor mntr.Monitor,
+	apiLabels *labels.API,
+	k8sClient kubernetes.ClientInt,
+	boomSpec *latest.Boom,
+	binaryVersion string,
+	gitops bool,
+) error {
 
 	resources := k8s.Resources(corev1.ResourceRequirements{
 		Limits: corev1.ResourceList{
@@ -55,14 +61,11 @@ func Reconcile(monitor mntr.Monitor, apiLabels *labels.API, k8sClient *kubernete
 
 	recMonitor := monitor.WithField("version", boomVersion)
 
-	if !k8sClient.Available() {
-		recMonitor.Info("Failed to connect to k8s")
-		return nil
+	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomVersion, tolerations, nodeselector, &resources, imageRegistry, gitops); err != nil {
+		return fmt.Errorf("failed to deploy boom into k8s-cluster: %w", err)
 	}
 
-	if err := kubernetes.EnsureBoomArtifacts(monitor, apiLabels, k8sClient, boomVersion, tolerations, nodeselector, &resources, imageRegistry); err != nil {
-		recMonitor.Error(errors.Wrap(err, "Failed to deploy boom into k8s-cluster"))
-		return err
-	}
+	recMonitor.Info("Applied BOOM")
+
 	return nil
 }

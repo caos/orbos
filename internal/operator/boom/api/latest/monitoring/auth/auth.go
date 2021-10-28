@@ -40,6 +40,12 @@ func (a *Auth) InitSecrets() {
 	if a.GenericOAuth.ClientSecret == nil {
 		a.GenericOAuth.ClientSecret = &secret.Secret{}
 	}
+	if a.GenericOAuth.ExistingClientIDSecret == nil {
+		a.GenericOAuth.ExistingClientIDSecret = &secret.Existing{}
+	}
+	if a.GenericOAuth.ExistingClientSecretSecret == nil {
+		a.GenericOAuth.ExistingClientSecretSecret = &secret.Existing{}
+	}
 
 	if a.Google == nil {
 		a.Google = &google.Auth{}
@@ -49,6 +55,12 @@ func (a *Auth) InitSecrets() {
 	}
 	if a.Google.ClientSecret == nil {
 		a.Google.ClientSecret = &secret.Secret{}
+	}
+	if a.Google.ExistingClientIDSecret == nil {
+		a.Google.ExistingClientIDSecret = &secret.Existing{}
+	}
+	if a.Google.ExistingClientSecretSecret == nil {
+		a.Google.ExistingClientSecretSecret = &secret.Existing{}
 	}
 
 	if a.Github == nil {
@@ -60,6 +72,12 @@ func (a *Auth) InitSecrets() {
 	if a.Github.ClientSecret == nil {
 		a.Github.ClientSecret = &secret.Secret{}
 	}
+	if a.Github.ExistingClientIDSecret == nil {
+		a.Github.ExistingClientIDSecret = &secret.Existing{}
+	}
+	if a.Github.ExistingClientSecretSecret == nil {
+		a.Github.ExistingClientSecretSecret = &secret.Existing{}
+	}
 
 	if a.Gitlab == nil {
 		a.Gitlab = &gitlab.Auth{}
@@ -69,5 +87,11 @@ func (a *Auth) InitSecrets() {
 	}
 	if a.Gitlab.ClientSecret == nil {
 		a.Gitlab.ClientSecret = &secret.Secret{}
+	}
+	if a.Gitlab.ExistingClientIDSecret == nil {
+		a.Gitlab.ExistingClientIDSecret = &secret.Existing{}
+	}
+	if a.Gitlab.ExistingClientSecretSecret == nil {
+		a.Gitlab.ExistingClientSecretSecret = &secret.Existing{}
 	}
 }

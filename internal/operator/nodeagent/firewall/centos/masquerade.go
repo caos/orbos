@@ -2,12 +2,14 @@ package centos
 
 import (
 	"errors"
+	"strings"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
-	"strings"
 )
 
 func getEnsureMasquerade(
+
 	monitor mntr.Monitor,
 	zoneName string,
 	current *common.ZoneDesc,

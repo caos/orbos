@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"sort"
+
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 type Address struct {
@@ -20,10 +22,11 @@ type ProviderCurrent interface {
 	Pools() map[string]Pool
 	Ingresses() map[string]*Address
 	Kubernetes() Kubernetes
+	PrivateInterface() string
 }
 
 type Kubernetes struct {
-	Apply           io.Reader
+	CleanupAndApply func(k8sClient kubernetes.ClientInt) (io.Reader, error)
 	CloudController CloudControllerManager
 }
 
@@ -39,16 +42,17 @@ type Ingress struct {
 }
 
 type Pool interface {
+	DesiredMembers(instances int) int
 	EnsureMembers() error
 	EnsureMember(Machine) error
 	GetMachines() (Machines, error)
-	AddMachine() (Machine, error)
+	AddMachine(desiredInstances int) (Machines, error)
 }
 
 type Machine interface {
 	ID() string
 	IP() string
-	Remove() error
+	Destroy() (remove func() error, err error)
 	Execute(stdin io.Reader, cmd string) ([]byte, error)
 	Shell() error
 	WriteFile(path string, data io.Reader, permissions uint16) error

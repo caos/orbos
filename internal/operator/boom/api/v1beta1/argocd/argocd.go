@@ -35,6 +35,10 @@ func (r *Argocd) InitSecrets() {
 		r.Auth = &auth.Auth{}
 	}
 	r.Auth.InitSecrets()
+
+	for _, repo := range append(r.Repositories, r.Credentials...) {
+		repo.InitSecrets()
+	}
 }
 
 func (r *Argocd) IsZero() bool {
@@ -70,10 +74,10 @@ type CustomImage struct {
 }
 
 type GopassStore struct {
-	SSHKey *secret2.Secret `yaml:"sshKey,omitempty"`
+	SSHKey *secret2.Secret `json:"sshKey,omitempty" yaml:"sshKey,omitempty"`
 	//Existing secret with ssh-key to clone the repository for gopass
 	ExistingSSHKeySecret *secret2.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
-	GPGKey               *secret2.Secret   `yaml:"gpgKey,omitempty"`
+	GPGKey               *secret2.Secret   `json:"gpgKey,omitempty" yaml:"gpgKey,omitempty"`
 	//Existing secret with gpg-key to decode the repository for gopass
 	ExistingGPGKeySecret *secret2.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
 	//URL to repository for gopass store

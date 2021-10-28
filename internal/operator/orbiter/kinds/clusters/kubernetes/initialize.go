@@ -5,7 +5,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes/drainreason"
 	"github.com/caos/orbos/pkg/kubernetes"
 
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
@@ -123,14 +122,19 @@ func initialize(
 			}
 		}
 
-		upscale := desired.Nodes + len(replace) - len(machines)
+		machinesPerDesired := 1
+		if desired.Nodes > 0 {
+			machinesPerDesired = pool.infra.DesiredMembers(desired.Nodes) / desired.Nodes
+		}
+
+		upscale := (desired.Nodes * machinesPerDesired) + len(replace) - len(machines)
 		if upscale > 0 {
 			pool.upscaling = upscale
 			return pool, nil
 		}
 
 		if len(replace) > 0 {
-			for backReplacement >= desired.Nodes && len(replace) > 0 {
+			for backReplacement >= (desired.Nodes*machinesPerDesired) && len(replace) > 0 {
 				backReplacement--
 				pool.downscaling = append(pool.downscaling, replace[0])
 				replace = replace[1:]
@@ -138,7 +142,7 @@ func initialize(
 			return pool, nil
 		}
 
-		pool.downscaling = machines[desired.Nodes:]
+		pool.downscaling = machines[(desired.Nodes * machinesPerDesired):]
 
 		return pool, nil
 	}
@@ -154,7 +158,7 @@ func initialize(
 		}
 
 		var node *v1.Node
-		if k8s.Available() {
+		if k8s != nil {
 			var k8sNodeErr error
 			node, k8sNodeErr = k8s.GetNode(machine.ID())
 			if k8sNodeErr != nil {
@@ -178,8 +182,8 @@ func initialize(
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					current.Ready = true
-					current.Updating = k8s.Tainted(node, drainreason.Updating)
-					current.Rebooting = k8s.Tainted(node, drainreason.Rebooting)
+					current.Updating = k8s.Tainted(node, kubernetes.Updating)
+					current.Rebooting = k8s.Tainted(node, kubernetes.Rebooting)
 				}
 			}
 		}
@@ -338,13 +342,13 @@ outer:
 		break
 	}
 	// internal taints
-	if k8s.Tainted(node, drainreason.Updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
-		newTaints = k8s.RemoveFromTaints(newTaints, drainreason.Updating)
+	if k8s.Tainted(node, kubernetes.Updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
+		newTaints = k8s.RemoveFromTaints(newTaints, kubernetes.Updating)
 		updateTaints = true
 	}
 
-	if k8s.Tainted(node, drainreason.Rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
-		newTaints = k8s.RemoveFromTaints(newTaints, drainreason.Rebooting)
+	if k8s.Tainted(node, kubernetes.Rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
+		newTaints = k8s.RemoveFromTaints(newTaints, kubernetes.Rebooting)
 		updateTaints = true
 	}
 

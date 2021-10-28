@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 
-	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -17,7 +17,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
@@ -36,7 +35,7 @@ func query(
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
+		panic(fmt.Errorf("unknown or unsupported load balancing of type %T", lb))
 	}
 	vips, _, err := lbCurrent.Current.Spec(svc)
 	if err != nil {
@@ -143,7 +142,7 @@ func query(
 		}
 		panic(fmt.Errorf("external address for %v is not ensured", vip))
 	})
-	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {
 
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
@@ -197,7 +196,7 @@ func internalPort(lb *normalizedLoadbalancer) uint16 {
 }
 
 func externalPort(lb *normalizedLoadbalancer) uint16 {
-	port, err := strconv.Atoi(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0])
+	port, err := strconv.ParseInt(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0], 10, 16)
 	if err != nil {
 		panic(err)
 	}

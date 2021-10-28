@@ -2,23 +2,23 @@ package ssh
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 
-	"github.com/caos/orbos/internal/ssh"
-
-	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
-
 	sshlib "golang.org/x/crypto/ssh"
+
+	"github.com/caos/orbos/internal/ssh"
+	"github.com/caos/orbos/mntr"
 )
 
 type Machine struct {
 	monitor    mntr.Monitor
 	remoteUser string
 	ip         string
+	zone       string
 	sshCfg     *sshlib.ClientConfig
 }
 
@@ -31,6 +31,10 @@ func NewMachine(monitor mntr.Monitor, remoteUser, ip string) *Machine {
 		}),
 		ip: ip,
 	}
+}
+
+func (c *Machine) Zone() string {
+	return c.zone
 }
 
 func (c *Machine) Execute(stdin io.Reader, cmd string) (stdout []byte, err error) {
@@ -56,6 +60,7 @@ func (c *Machine) Execute(stdin io.Reader, cmd string) (stdout []byte, err error
 	}
 
 	buf := new(bytes.Buffer)
+	defer buf.Reset()
 	sess.Stdin = stdin
 	sess.Stderr = buf
 
@@ -90,11 +95,11 @@ func (c *Machine) Shell() (err error) {
 	}
 
 	if err := sess.RequestPty("xterm", 40, 80, modes); err != nil {
-		return errors.Wrap(err, "request for pseudo terminal failed")
+		return fmt.Errorf("request for pseudo terminal failed: %w", err)
 	}
 
 	if err := sess.Shell(); err != nil {
-		return errors.Wrap(err, "failed to start shell")
+		return fmt.Errorf("failed to start shell: %w", err)
 	}
 	return sess.Wait()
 }
@@ -152,6 +157,7 @@ func (c *Machine) ReadFile(path string, data io.Writer) (err error) {
 		return err
 	}
 	stderr := new(bytes.Buffer)
+	defer stderr.Reset()
 	sess.Stdout = data
 	sess.Stderr = stderr
 
@@ -173,7 +179,7 @@ func (c *Machine) open() (sess *sshlib.Session, close func() error, err error) {
 	address := fmt.Sprintf("%s:%d", c.ip, 22)
 	conn, err := sshlib.Dial("tcp", address, c.sshCfg)
 	if err != nil {
-		return nil, close, errors.Wrapf(err, "dialling tcp %s with user %s failed", address, c.remoteUser)
+		return nil, close, fmt.Errorf("dialling tcp %s with user %s failed: %w", address, c.remoteUser, err)
 	}
 
 	sess, err = conn.NewSession()

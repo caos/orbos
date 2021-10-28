@@ -10,22 +10,21 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/caos/oidc/pkg/cli"
-	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/rp"
 	"github.com/caos/orbos/internal/utils/helper"
+
+	helperpkg "github.com/caos/orbos/pkg/helper"
+
+	"github.com/caos/oidc/pkg/client/rp"
+	"github.com/caos/oidc/pkg/client/rp/cli"
+	"github.com/caos/oidc/pkg/oidc"
+	"github.com/caos/oidc/pkg/utils"
 	"github.com/caos/orbos/mntr"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-github/v31/github"
+	"github.com/google/uuid"
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
-)
-
-var (
-	ClientID     = ""
-	ClientSecret = ""
-	Key          = ""
 )
 
 type githubAPI struct {
@@ -86,79 +85,84 @@ const (
 	githubToken = "ghtoken"
 )
 
-func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string) *githubAPI {
+func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID, clientSecret string) *githubAPI {
 	filePath := filepath.Join(folderPath, githubToken)
 	port := "9999"
 	callbackPath := "/orbctl/github/callback"
 
-	rpConfig := &rp.Config{
-		ClientID:     ClientID,
-		ClientSecret: ClientSecret,
-		CallbackURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
+	rpConfig := &oauth2.Config{
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+		RedirectURL:  fmt.Sprintf("http://localhost:%v%v", port, callbackPath),
 		Scopes:       []string{"repo", "repo_deployment"},
-		Endpoints:    githubOAuth.Endpoint,
+		Endpoint:     githubOAuth.Endpoint,
 	}
 
-	if helper.FileExists(filePath) {
-		token := new(oidc.Tokens)
+	key := helperpkg.RandStringBytes(32)
+	cookieHandler := utils.NewCookieHandler([]byte(key), []byte(key), utils.WithUnsecure())
+	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
+	if err != nil {
+		panic(fmt.Errorf("error creating relaying party: %w", err))
+	}
 
-		data, err := ioutil.ReadFile(filePath)
+	makeClient := func(token *oidc.Tokens) error {
+		g.client = github.NewClient(relyingParty.OAuthConfig().Client(ctx, token.Token))
+		_, _, err = g.client.Users.Get(ctx, "")
 		if err != nil {
 			g.status = err
-			return g
-		}
-
-		if err := yaml.Unmarshal(data, token); err != nil {
-			g.status = err
-			return g
-		}
-
-		client := github.NewClient(cli.TokenForClient(rpConfig, []byte(Key), token))
-		_, _, g.status = client.Users.Get(ctx, "")
-		if g.status != nil {
-			if err := os.Remove(filePath); err != nil {
-				g.status = err
-				return g
-			}
 			g.client = nil
-		} else {
-			g.client = client
 		}
+		return g.status
 	}
 
-	if g.client == nil {
+	if err := clientFromCache(filePath, makeClient); err != nil {
 
-		token := cli.CodeFlow(rpConfig, []byte(Key), callbackPath, port)
+		g.monitor.WithField("reason", err.Error()).Info("Trying CodeFlow as reusing an existing token failed")
 
-		g.monitor.Info("Finished CodeFlow")
+		token := cli.CodeFlow(ctx, relyingParty, callbackPath, port, uuid.NewString)
 
-		oauth2Client := cli.TokenForClient(rpConfig, []byte(Key), token)
-
-		client := github.NewClient(oauth2Client)
-
-		_, _, g.status = client.Users.Get(ctx, "")
+		makeClient(token)
 		if g.status != nil {
-			g.monitor.Info("Failed CodeFlow")
+			g.status = fmt.Errorf("CodeFlow failed: %w", g.status)
 			return g
 		}
+		g.monitor.Info("CodeFlow succeeded")
 
 		data, err := yaml.Marshal(token)
 		if err != nil {
 			g.status = err
-			g.monitor.Error(err)
 			return g
 		}
 
 		if err := ioutil.WriteFile(filePath, data, os.ModePerm); err != nil {
 			g.status = err
-			g.monitor.Error(err)
 			return g
 		}
-
-		g.monitor.Info("Successful CodeFlow")
-		g.client = client
 	}
 	return g
+}
+
+func clientFromCache(filePath string, makeClient func(token *oidc.Tokens) error) error {
+	if !helper.FileExists(filePath) {
+		return fmt.Errorf("file %s does not exist", filePath)
+	}
+	token := new(oidc.Tokens)
+
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return err
+	}
+
+	if err := yaml.Unmarshal(data, token); err != nil {
+		return err
+	}
+
+	if err := makeClient(token); err != nil {
+		if rmErr := os.Remove(filePath); rmErr != nil {
+			panic(rmErr)
+		}
+	}
+	return err
 }
 
 func (g *githubAPI) LoginToken(token string) *githubAPI {
@@ -178,7 +182,7 @@ func (g *githubAPI) LoginToken(token string) *githubAPI {
 		return g
 	}
 
-	g.monitor.Info("Successful PersonalAccessTokenFlow")
+	g.monitor.Info("PersonalAccessTokenFlow succeeded")
 	g.client = client
 	return g
 }
@@ -201,7 +205,7 @@ func (g *githubAPI) LoginBasicAuth(username, password string) *githubAPI {
 		return g
 	}
 
-	g.monitor.Info("Successful BasicAuthFlow")
+	g.monitor.Info("BasicAuthFlow succeeded")
 	g.client = client
 	return g
 }
@@ -225,7 +229,7 @@ func (g *githubAPI) LoginTwoFactor(username, password, twoFactor string) *github
 		return g
 	}
 
-	g.monitor.Info("Successful BasicAuthFlow with OTP")
+	g.monitor.Info("BasicAuthFlow with OTP succeeded")
 	g.client = client
 	return g
 }
