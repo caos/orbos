@@ -100,6 +100,7 @@ type ClientInt interface {
 
 	ApplyCronJob(rsc *v1beta1.CronJob) error
 	DeleteCronJob(namespace string, name string) error
+	ListCronJobs(namespace string, labels map[string]string) (*batch.CronJobList, error)
 
 	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
 	GetSecret(namespace string, name string) (*core.Secret, error)
@@ -493,6 +494,10 @@ func (c *Client) DeleteJob(namespace string, name string) error {
 
 	//Pod cleanup if necessary
 	return notFoundIsSuccess(c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels))
+}
+
+func (c *Client) ListCronJobs(namespace string, labels map[string]string) (*batch.CronJobList, error) {
+	return c.set.BatchV1().CronJobs(namespace).List(context.Background(), mach.ListOptions{LabelSelector: getLabelSelector(labels)})
 }
 
 func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {

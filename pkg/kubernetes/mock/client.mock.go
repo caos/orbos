@@ -508,6 +508,21 @@ func (mr *MockClientIntMockRecorder) DeleteCronJob(namespace, name interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCronJob", reflect.TypeOf((*MockClientInt)(nil).DeleteCronJob), namespace, name)
 }
 
+// ListCronJobs mocks base method
+func (m *MockClientInt) ListCronJobs(namespace string, labels map[string]string) (*v10.CronJobList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCronJobs", namespace, labels)
+	ret0, _ := ret[0].(*v10.CronJobList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCronJobs indicates an expected call of ListCronJobs
+func (mr *MockClientIntMockRecorder) ListCronJobs(namespace, labels interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCronJobs", reflect.TypeOf((*MockClientInt)(nil).ListCronJobs), namespace, labels)
+}
+
 // ListSecrets mocks base method
 func (m *MockClientInt) ListSecrets(namespace string, labels map[string]string) (*v11.SecretList, error) {
 	m.ctrl.T.Helper()
