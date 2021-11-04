@@ -509,10 +509,10 @@ func (mr *MockClientIntMockRecorder) DeleteCronJob(namespace, name interface{}) 
 }
 
 // ListCronJobs mocks base method
-func (m *MockClientInt) ListCronJobs(namespace string, labels map[string]string) (*v10.CronJobList, error) {
+func (m *MockClientInt) ListCronJobs(namespace string, labels map[string]string) (*v1beta1.CronJobList, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListCronJobs", namespace, labels)
-	ret0, _ := ret[0].(*v10.CronJobList)
+	ret0, _ := ret[0].(*v1beta1.CronJobList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
