@@ -27,6 +27,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
@@ -100,7 +101,7 @@ type ClientInt interface {
 
 	ApplyCronJob(rsc *v1beta1.CronJob) error
 	DeleteCronJob(namespace string, name string) error
-	ListCronJobs(namespace string, labels map[string]string) (*batch.CronJobList, error)
+	ListCronJobs(namespace string, labels map[string]string) (*batchv1beta1.CronJobList, error)
 
 	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
 	GetSecret(namespace string, name string) (*core.Secret, error)
@@ -496,8 +497,8 @@ func (c *Client) DeleteJob(namespace string, name string) error {
 	return notFoundIsSuccess(c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels))
 }
 
-func (c *Client) ListCronJobs(namespace string, labels map[string]string) (*batch.CronJobList, error) {
-	return c.set.BatchV1().CronJobs(namespace).List(context.Background(), mach.ListOptions{LabelSelector: getLabelSelector(labels)})
+func (c *Client) ListCronJobs(namespace string, labels map[string]string) (*batchv1beta1.CronJobList, error) {
+	return c.set.BatchV1beta1().CronJobs(namespace).List(context.Background(), mach.ListOptions{LabelSelector: getLabelSelector(labels)})
 }
 
 func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
