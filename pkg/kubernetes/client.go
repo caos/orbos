@@ -493,8 +493,11 @@ func (c *Client) DeleteJob(namespace string, name string) error {
 		return err
 	}
 
-	//Pod cleanup if necessary
-	return notFoundIsSuccess(c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels))
+	if job != nil {
+		//Pod cleanup if necessary
+		return notFoundIsSuccess(c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels))
+	}
+	return nil
 }
 
 func (c *Client) ListCronJobs(namespace string, labels map[string]string) (*batchv1beta1.CronJobList, error) {
