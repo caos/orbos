@@ -485,11 +485,11 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeout ti
 
 func (c *Client) DeleteJob(namespace string, name string) error {
 	job, err := c.GetJob(namespace, name)
-	if err != nil {
+	if notFoundIsSuccess(err) != nil {
 		return err
 	}
 
-	if err := c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
+	if err := notFoundIsSuccess(c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{})); err != nil {
 		return err
 	}
 
