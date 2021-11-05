@@ -493,7 +493,7 @@ func (c *Client) DeleteJob(namespace string, name string) error {
 		return err
 	}
 
-	if job != nil {
+	if job != nil && err == nil && job.Spec.Selector != nil && job.Spec.Selector.MatchLabels != nil {
 		//Pod cleanup if necessary
 		return notFoundIsSuccess(c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels))
 	}
