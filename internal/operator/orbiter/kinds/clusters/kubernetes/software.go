@@ -119,7 +119,7 @@ func (k KubernetesVersion) String() string {
 }
 
 func (k KubernetesVersion) DefineSoftware() common.Software {
-	dockerVersion := "docker-ce v19.03.5"
+	dockerVersion := "docker-ce v20.10.10"
 	//	if minor, err := k.ExtractMinor(); err != nil && minor <= 15 {
 	//		dockerVersion = "docker-ce v18.09.6"
 	//	}
