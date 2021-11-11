@@ -137,7 +137,8 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	"log-opts": {
 		"max-size": "100m"
 	},
-	"storage-driver": "overlay2"
+	"storage-driver": "overlay2",
+    "iptables": true
 }`,
 		}},
 		Kubelet: common.Package{Version: k.String()},
