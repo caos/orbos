@@ -11,10 +11,10 @@ var _ infra.ProviderCurrent = (*Current)(nil)
 type Current struct {
 	Common  *tree.Common `yaml:",inline"`
 	Current struct {
-		pools      map[string]infra.Pool `yaml:"-"`
-		Ingresses  map[string]*infra.Address
-		cleanupped <-chan error `yaml:"-"`
-		privateInterface string `yaml:"-"`
+		pools            map[string]infra.Pool `yaml:"-"`
+		Ingresses        map[string]*infra.Address
+		cleanupped       <-chan error `yaml:"-"`
+		privateInterface string       `yaml:"-"`
 	}
 }
 
