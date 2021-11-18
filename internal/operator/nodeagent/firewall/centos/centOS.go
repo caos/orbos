@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -18,6 +19,26 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 
 		if desired.Zones == nil {
 			desired.Zones = make(map[string]*common.Zone, 0)
+		}
+
+		_, inactiveErr := runCommand(monitor, "systemctl", "is-active", "firewalld")
+		_, disabledErr := runCommand(monitor, "systemctl", "is-enabled", "firewalld")
+		if inactiveErr != nil || disabledErr != nil {
+			monitor.WithFields(
+				map[string]interface{}{
+					"disabled": strconv.FormatBool(disabledErr != nil),
+					"inactive": strconv.FormatBool(inactiveErr != nil),
+				},
+			).Info("Firewall inactive or disabled")
+			return current, func() error {
+				monitor.Info("Enabling and starting firewall")
+				if _, err := runCommand(monitor, "systemctl", "enable", "firewalld"); err != nil {
+					return err
+				}
+
+				_, err := runCommand(monitor, "systemctl", "start", "firewalld")
+				return err
+			}, nil
 		}
 
 		// Ensure that all runtime config made in the previous iteration becomes permanent.
@@ -36,8 +57,7 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 			}
 		}
 
-		_, inactiveErr := runCommand(monitor, "systemctl", "is-active", "firewalld")
-		if inactiveErr == nil && len(ensurers) == 0 {
+		if len(ensurers) == 0 {
 			monitor.Debug("Not changing firewall")
 			return current, nil, nil
 		}
@@ -171,14 +191,6 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 func ensure(monitor mntr.Monitor, changes []string, zone string) error {
 	if changes == nil || len(changes) == 0 {
 		return nil
-	}
-
-	if _, err := runCommand(monitor, "systemctl", "enable", "firewalld"); err != nil {
-		return err
-	}
-
-	if _, err := runCommand(monitor, "systemctl", "start", "firewalld"); err != nil {
-		return err
 	}
 
 	return changeFirewall(monitor, changes, zone)
