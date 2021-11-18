@@ -29,7 +29,7 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 					"disabled": strconv.FormatBool(disabledErr != nil),
 					"inactive": strconv.FormatBool(inactiveErr != nil),
 				},
-			).Info("Firewall inactive or disabled")
+			).Info("Firewall is inactive or disabled")
 			return current, func() error {
 				monitor.Info("Enabling and starting firewall")
 				if _, err := runCommand(monitor, "systemctl", "enable", "firewalld"); err != nil {
