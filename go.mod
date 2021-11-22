@@ -6,7 +6,7 @@ require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/AppsFlyer/go-sundheit v0.2.0
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
-	github.com/aws/aws-sdk-go v1.40.45
+	github.com/aws/aws-sdk-go v1.42.9
 	github.com/caos/oidc v1.0.0
 	github.com/cloudflare/cloudflare-go v0.23.0
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.7.1
