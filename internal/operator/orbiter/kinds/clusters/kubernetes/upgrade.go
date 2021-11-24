@@ -268,13 +268,11 @@ func plan(
 		return ensureSoftware(to, "Prepare for joining"), nil
 	}
 
-	/* TODO: Delete this, as when upgrading, the k8s software is ensured in the last step anyways (steps are ensured for one machine after the other)
 	if !machine.currentNodeagent.Software.Kernel.Equals(to.Kernel) {
 		return ensureSoftware(common.Software{Kernel: to.Kernel}, "Update kernel"), nil
 	} else {
 		machine.desiredNodeagent.Software.Merge(common.Software{Kernel: to.Kernel}, true)
 	}
-	*/
 
 	if !machine.currentNodeagent.Software.Kubeadm.Equals(to.Kubeadm) || !machine.desiredNodeagent.Software.Kubeadm.Equals(to.Kubeadm) {
 		if !softwareContains(machine.currentNodeagent.Software, from) || !softwareContains(*machine.desiredNodeagent.Software, from) {
