@@ -5,7 +5,6 @@ go 1.16
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.2
 	github.com/AppsFlyer/go-sundheit v0.2.0
-	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/caos/oidc v1.0.0
 	github.com/cloudflare/cloudflare-go v0.23.0
@@ -22,7 +21,6 @@ require (
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1
-	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.15.0
 	github.com/pires/go-proxyproto v0.6.1
@@ -37,7 +35,6 @@ require (
 	golang.org/x/sys v0.0.0-20211020174200-9d6173849985 // indirect
 	google.golang.org/api v0.57.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
-	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.2
@@ -46,4 +43,5 @@ require (
 	k8s.io/kubectl v0.22.2
 	sigs.k8s.io/controller-runtime v0.10.1
 	sigs.k8s.io/controller-tools v0.7.0
+	sigs.k8s.io/yaml v1.2.0
 )
