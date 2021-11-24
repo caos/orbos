@@ -93,11 +93,8 @@ func main() {
 
 	go func() {
 		for sig := range signalChannel {
-<<<<<<< HEAD
 			monitor.WithField("signal", sig.String()).Info("Received signal")
 			cancelCtx()
-=======
->>>>>>> cypress-testing
 			mutexActionChannel <- sig
 		}
 	}()
@@ -120,11 +117,7 @@ func main() {
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-<<<<<<< HEAD
 	conv := conv.New(ctx, monitor, runningOnOS, fmt.Sprintf("%x", hashed[:]))
-=======
-	conv := conv.New(monitor, runningOnOS, fmt.Sprintf("%x", hashed[:]))
->>>>>>> cypress-testing
 
 	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
 
@@ -170,12 +163,7 @@ func main() {
 		switch sig := action.(type) {
 		case os.Signal:
 			monitor.WithField("signal", sig.String()).Info("Shutting down")
-<<<<<<< HEAD
 			os.Exit(0)
-=======
-			cancelCtx()
-			os.Exit(int(sig.(syscall.Signal)))
->>>>>>> cypress-testing
 		case iterateType:
 			monitor.Info("Starting iteration")
 			itFunc()
