@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+
 	extensions "k8s.io/api/extensions/v1beta1"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
 	k8syaml "sigs.k8s.io/yaml"
@@ -25,6 +27,7 @@ import (
 	apps "k8s.io/api/apps/v1"
 	batch "k8s.io/api/batch/v1"
 	"k8s.io/api/batch/v1beta1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	core "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	rbac "k8s.io/api/rbac/v1"
@@ -89,7 +92,7 @@ type ClientInt interface {
 	ScaleDeployment(namespace, name string, replicaCount int) error
 	ExecInPodOfDeployment(namespace, name, container, command string) error
 
-	CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error)
+	CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, bool, error)
 	GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error)
 	ApplyNamespacedCRDResource(group, version, kind, namespace, name string, crd *unstructured.Unstructured) error
 	DeleteNamespacedCRDResource(group, version, kind, namespace, name string) error
@@ -98,6 +101,7 @@ type ClientInt interface {
 
 	ApplyCronJob(rsc *v1beta1.CronJob) error
 	DeleteCronJob(namespace string, name string) error
+	ListCronJobs(namespace string, labels map[string]string) (*batchv1beta1.CronJobList, error)
 
 	ListSecrets(namespace string, labels map[string]string) (*core.SecretList, error)
 	GetSecret(namespace string, name string) (*core.Secret, error)
@@ -217,7 +221,7 @@ func (c *Client) ApplyNamespace(rsc *core.Namespace) error {
 	})
 }
 func (c *Client) DeleteNamespace(name string) error {
-	return c.set.CoreV1().Namespaces().Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.CoreV1().Namespaces().Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ListNamespaces() (*core.NamespaceList, error) {
@@ -271,7 +275,7 @@ func (c *Client) DeletePersistentVolumeClaim(namespace, name string, timeout tim
 		return
 	}()
 
-	if err := c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, mach.DeleteOptions{}); err != nil {
+	if err := notFoundIsSuccess(c.set.CoreV1().PersistentVolumeClaims(namespace).Delete(ctx, name, mach.DeleteOptions{})); err != nil {
 		return err
 	}
 
@@ -333,7 +337,7 @@ func (c *Client) ApplyDeployment(rsc *apps.Deployment, force bool) error {
 }
 
 func (c *Client) DeleteDeployment(namespace, name string) error {
-	return c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.AppsV1().Deployments(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 func (c *Client) PatchDeployment(namespace, name string, data string) error {
 	_, err := c.set.AppsV1().Deployments(namespace).Patch(context.Background(), name, types.StrategicMergePatchType, []byte(data), mach.PatchOptions{})
@@ -391,7 +395,7 @@ func (c *Client) ApplyService(rsc *core.Service) error {
 }
 
 func (c *Client) DeleteService(namespace, name string) error {
-	return c.set.CoreV1().Services(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.CoreV1().Services(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) GetJob(namespace, name string) (*batch.Job, error) {
@@ -481,16 +485,23 @@ func (c *Client) WaitUntilJobCompleted(namespace string, name string, timeout ti
 
 func (c *Client) DeleteJob(namespace string, name string) error {
 	job, err := c.GetJob(namespace, name)
-	if err != nil {
+	if notFoundIsSuccess(err) != nil {
 		return err
 	}
 
-	if err := c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{}); err != nil {
+	if err := notFoundIsSuccess(c.set.BatchV1().Jobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{})); err != nil {
 		return err
 	}
 
-	//Pod cleanup if necessary
-	return c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels)
+	if job != nil && err == nil && job.Spec.Selector != nil && job.Spec.Selector.MatchLabels != nil {
+		//Pod cleanup if necessary
+		return notFoundIsSuccess(c.DeletePodsByLabels(namespace, job.Spec.Selector.MatchLabels))
+	}
+	return nil
+}
+
+func (c *Client) ListCronJobs(namespace string, labels map[string]string) (*batchv1beta1.CronJobList, error) {
+	return c.set.BatchV1beta1().CronJobs(namespace).List(context.Background(), mach.ListOptions{LabelSelector: getLabelSelector(labels)})
 }
 
 func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
@@ -512,7 +523,7 @@ func (c *Client) ApplyCronJob(rsc *v1beta1.CronJob) error {
 }
 
 func (c *Client) DeleteCronJob(namespace string, name string) error {
-	return c.set.BatchV1beta1().CronJobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.BatchV1beta1().CronJobs(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ListPods(namespace string, labels map[string]string) (*core.PodList, error) {
@@ -538,7 +549,7 @@ func (c *Client) ApplyPodDisruptionBudget(rsc *policy.PodDisruptionBudget) error
 	})
 }
 func (c *Client) DeletePodDisruptionBudget(namespace string, name string) error {
-	return c.set.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.PolicyV1beta1().PodDisruptionBudgets(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error {
@@ -581,7 +592,7 @@ func (c *Client) ApplyStatefulSet(rsc *apps.StatefulSet, force bool) error {
 }
 
 func (c *Client) DeleteStatefulset(namespace, name string) error {
-	return c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.AppsV1().StatefulSets(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ScaleStatefulset(namespace, name string, replicaCount int) error {
@@ -669,7 +680,7 @@ func await(timeout time.Duration, getResource func() (interface{}, error)) error
 }
 
 func (c *Client) DeleteSecret(namespace, name string) error {
-	return c.set.CoreV1().Secrets(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.CoreV1().Secrets(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) GetConfigMap(namespace, name string) (*core.ConfigMap, error) {
@@ -688,7 +699,7 @@ func (c *Client) ApplyConfigmap(rsc *core.ConfigMap) error {
 }
 
 func (c *Client) DeleteConfigmap(namespace, name string) error {
-	return c.set.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.CoreV1().ConfigMaps(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyServiceAccount(rsc *core.ServiceAccount) error {
@@ -732,7 +743,7 @@ func (c *Client) WaitForConfigMap(namespace string, name string, timeout time.Du
 }
 
 func (c *Client) DeleteServiceAccount(namespace, name string) error {
-	return c.set.CoreV1().ServiceAccounts(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.CoreV1().ServiceAccounts(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyIngress(rsc *extensions.Ingress) error {
@@ -752,7 +763,7 @@ func (c *Client) ApplyIngress(rsc *extensions.Ingress) error {
 }
 
 func (c *Client) DeleteIngress(namespace, name string) error {
-	return c.set.ExtensionsV1beta1().Ingresses(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.ExtensionsV1beta1().Ingresses(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyRole(rsc *rbac.Role) error {
@@ -766,7 +777,7 @@ func (c *Client) ApplyRole(rsc *rbac.Role) error {
 	})
 }
 func (c *Client) DeleteRole(namespace, name string) error {
-	return c.set.RbacV1().Roles(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.RbacV1().Roles(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
@@ -781,7 +792,7 @@ func (c *Client) ApplyClusterRole(rsc *rbac.ClusterRole) error {
 }
 
 func (c *Client) DeleteClusterRole(name string) error {
-	return c.set.RbacV1().ClusterRoles().Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.RbacV1().ClusterRoles().Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
@@ -796,7 +807,7 @@ func (c *Client) ApplyRoleBinding(rsc *rbac.RoleBinding) error {
 }
 
 func (c *Client) DeleteRoleBinding(namespace, name string) error {
-	return c.set.RbacV1().RoleBindings(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.RbacV1().RoleBindings(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
@@ -811,7 +822,7 @@ func (c *Client) ApplyClusterRoleBinding(rsc *rbac.ClusterRoleBinding) error {
 }
 
 func (c *Client) DeleteClusterRoleBinding(name string) error {
-	return c.set.RbacV1().ClusterRoleBindings().Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.RbacV1().ClusterRoleBindings().Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 type recreateErr struct{}
@@ -1066,11 +1077,7 @@ func (c *Client) Drain(machine Machine, node *core.Node, reason DrainReason, sel
 }
 
 func (c *Client) DeleteNode(name string) error {
-	err := c.set.CoreV1().Nodes().Delete(context.Background(), name, mach.DeleteOptions{})
-	if macherrs.IsNotFound(err) {
-		return nil
-	}
-	return err
+	return notFoundIsSuccess(c.set.CoreV1().Nodes().Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) evictPods(node *core.Node, self bool) (err error) {
@@ -1176,7 +1183,7 @@ func (c *Client) evictPods(node *core.Node, self bool) (err error) {
 					if delErr != nil {
 						delErr = fmt.Errorf("deleting pod %s after timout exceeded failed: %w", pod.Name, delErr)
 					}
-					synchronizer.Done(delErr)
+					synchronizer.Done(notFoundIsSuccess(delErr))
 					return
 				}
 			}
@@ -1199,13 +1206,13 @@ func safeUint64(ptr *int64) int64 {
 	return *ptr
 }
 func (c *Client) DeletePodsByLabels(namespace string, labels map[string]string) error {
-	return c.set.CoreV1().Pods(namespace).DeleteCollection(context.Background(), mach.DeleteOptions{}, mach.ListOptions{
+	return notFoundIsSuccess(c.set.CoreV1().Pods(namespace).DeleteCollection(context.Background(), mach.DeleteOptions{}, mach.ListOptions{
 		LabelSelector: getLabelSelector(labels),
-	})
+	}))
 }
 
 func (c *Client) DeletePod(namespace, name string) error {
-	return c.set.CoreV1().Pods(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.set.CoreV1().Pods(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func getLabelSelector(labels map[string]string) string {
@@ -1302,9 +1309,13 @@ func checkReady(containers []containerStatus) bool {
 	return ready
 }
 
-func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, error) {
+func (c *Client) CheckCRD(name string) (*apixv1beta1.CustomResourceDefinition, bool, error) {
 	crds := c.apixv1beta1client.CustomResourceDefinitions()
-	return crds.Get(context.Background(), name, mach.GetOptions{})
+	crd, err := crds.Get(context.Background(), name, mach.GetOptions{})
+	if macherrs.IsNotFound(err) {
+		return nil, false, nil
+	}
+	return crd, true, err
 }
 
 func (c *Client) GetNamespacedCRDResource(group, version, kind, namespace, name string) (*unstructured.Unstructured, error) {
@@ -1357,10 +1368,13 @@ func (c *Client) DeleteNamespacedCRDResource(group, version, kind, namespace, na
 		Kind:  kind,
 	}, version)
 	if err != nil {
+		if _, ok := err.(*meta.NoKindMatchError); ok {
+			return nil
+		}
 		return err
 	}
 
-	return c.dynamic.Resource(mapping.Resource).Namespace(namespace).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.dynamic.Resource(mapping.Resource).Namespace(namespace).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ApplyCRDResource(crd *unstructured.Unstructured) error {
@@ -1424,7 +1438,7 @@ func (c *Client) DeleteCRDResource(group, version, kind, name string) error {
 		return err
 	}
 
-	return c.dynamic.Resource(mapping.Resource).Delete(context.Background(), name, mach.DeleteOptions{})
+	return notFoundIsSuccess(c.dynamic.Resource(mapping.Resource).Delete(context.Background(), name, mach.DeleteOptions{}))
 }
 
 func (c *Client) ExecInPodOfDeployment(namespace, name, container, command string) error {
@@ -1554,6 +1568,13 @@ func (c *Client) execInPodWithOutput(cmd []string, container string, req *rest.R
 
 	outData := stdout.Bytes()
 	return string(outData), nil
+}
+
+func notFoundIsSuccess(err error) error {
+	if macherrs.IsNotFound(err) {
+		return nil
+	}
+	return err
 }
 
 func (c *Client) ApplyPlainYAML(monitor mntr.Monitor, data []byte) error {
