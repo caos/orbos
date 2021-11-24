@@ -28,10 +28,9 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 	}
 	flags := cmd.Flags()
 	var (
-		value string
-		file  string
-		stdin bool
-		exact bool
+		value        string
+		file         string
+		stdin, exact bool
 	)
 	flags.StringVar(&value, "value", "", "Content value")
 	flags.StringVar(&file, "file", "", "File containing the content value")
@@ -65,9 +64,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 		if err != nil {
 			return err
 		}
-
 		contentYaml := yamlTypedValue(contentStr)
-
 		var result interface{}
 		if len(path) == 0 && exact {
 			result = contentYaml

@@ -16,7 +16,7 @@ func Retry(timer *time.Timer, interval time.Duration, callback func() (retry boo
 	for {
 		select {
 		case <-timer.C:
-			return errors.New("Timed out")
+			return errors.New("timed out")
 		case <-time.After(interval):
 			if !callback() {
 				if !timer.Stop() {

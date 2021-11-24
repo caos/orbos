@@ -111,7 +111,11 @@ After=network.target
 Type=simple
 User=root
 ExecStart=%s --id "%s" %s %s --environment "%s"
+<<<<<<< HEAD
 Restart=on-failure
+=======
+Restart=always
+>>>>>>> cypress-testing
 MemoryLimit=1G
 MemoryAccounting=yes
 RestartSec=10
@@ -136,7 +140,7 @@ WantedBy=multi-user.target
 
 					var response []byte
 					isActive := "sudo systemctl is-active node-agentd"
-					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 						var cbErr error
 						if response, cbErr = cmp.Execute(nil, isActive); cbErr != nil {
 							return fmt.Errorf("remote command %s returned an unsuccessful exit code: %w", isActive, cbErr)
@@ -153,7 +157,7 @@ WantedBy=multi-user.target
 
 					remoteSystemdUnitFile := new(bytes.Buffer)
 					defer remoteSystemdUnitFile.Reset()
-					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 						if err := cmp.ReadFile(systemdPath, remoteSystemdUnitFile); err != nil {
 							return fmt.Errorf("reading remote file %s on machine %s failed: %s", systemdPath, machine.ID(), err)
 						}
@@ -170,7 +174,7 @@ WantedBy=multi-user.target
 
 					showVersion := "node-agent --version"
 
-					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+					err = infra.Try(machineMonitor, time.NewTimer(7*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 						var cbErr error
 						if response, cbErr = cmp.Execute(nil, showVersion); cbErr != nil {
 							return fmt.Errorf("running command %s remotely failed: %w", showVersion, cbErr)
@@ -218,7 +222,7 @@ WantedBy=multi-user.target
 					if err := helpers.Fanout([]func() error{
 						configure(machine),
 						func() error {
-							if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+							if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 								if cbErr := cmp.WriteFile(systemdPath, strings.NewReader(systemdUnitFile(machine)), 600); cbErr != nil {
 									return fmt.Errorf("creating remote file %s failed: %w", systemdPath, cbErr)
 								}
@@ -232,7 +236,7 @@ WantedBy=multi-user.target
 							return nil
 						},
 						func() error {
-							if err := infra.Try(machineMonitor, time.NewTimer(20*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+							if err := infra.Try(machineMonitor, time.NewTimer(20*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 								if cbErr := cmp.WriteFile(nodeAgentPath, bytes.NewReader(executables.PreBuilt("nodeagent")), 700); cbErr != nil {
 									return fmt.Errorf("creating remote file %s failed: %w", nodeAgentPath, cbErr)
 								}
@@ -246,7 +250,7 @@ WantedBy=multi-user.target
 							return nil
 						},
 						func() error {
-							if err := infra.Try(machineMonitor, time.NewTimer(20*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+							if err := infra.Try(machineMonitor, time.NewTimer(20*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 								if cbErr := cmp.WriteFile(healthPath, bytes.NewReader(executables.PreBuilt("health")), 711); cbErr != nil {
 									return fmt.Errorf("creating remote file %s failed: %w", healthPath, cbErr)
 								}
@@ -264,7 +268,7 @@ WantedBy=multi-user.target
 					}
 
 					enableSystemd := fmt.Sprintf("sudo systemctl daemon-reload && sudo systemctl enable %s && sudo systemctl restart %s", systemdPath, systemdEntry)
-					if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+					if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 5*time.Second, machine, func(cmp infra.Machine) error {
 						if _, cbErr := cmp.Execute(nil, enableSystemd); cbErr != nil {
 							return fmt.Errorf("running command %s remotely failed: %w", enableSystemd, cbErr)
 						}

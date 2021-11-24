@@ -1,0 +1,45 @@
+kind: networking.caos.ch/Orb
+version: v0
+spec:
+  verbose: false
+  version: ${ORBOS_E2E_TAG}
+  selfReconciling: true
+networking:
+  kind: networking.caos.ch/LegacyCloudflare
+  version: v0
+  spec:
+    verbose: false
+    domain: ${ORBOS_E2E_DOMAIN}
+    ip: "127.0.0.1"
+    rules:
+      - description: all allow
+        priority: 1
+        action: allow
+        filters:
+          - description: internal addresses allow for all subdomains
+            targets: []
+            targetgroups: []
+            sources: []
+            sourcegroups:
+              - internal
+            containstargets:
+              - ""
+            containstargetsgroups: []
+            ssl: ""
+    groups:
+      - name: internal
+        list:
+          - 0.0.0.0/0
+    credentials:
+      user: {}
+      apikey: {}
+      userservicekey: {}
+    prefix: ""
+    additionalSubdomains:
+      - subdomain: httpbin
+        ip: "127.0.0.1"
+        proxied: true
+        ttl: 0
+        type: A
+        priority: 0
+

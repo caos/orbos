@@ -14,15 +14,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NodeCommand() *cobra.Command {
+func NodeCommand(getRootValues GetRootValues) *cobra.Command {
 
-	return &cobra.Command{
+	node := &cobra.Command{
 		Use:     "node [id] command",
 		Short:   "Work with an orbs node",
 		Example: `orbctl node <exec|reboot|replace> `,
 		Aliases: []string{"nodes", "machine", "machines"},
 		Args:    cobra.MinimumNArgs(1),
 	}
+
+	node.AddCommand(
+		ReplaceCommand(getRootValues),
+		RebootCommand(getRootValues),
+		ExecCommand(getRootValues),
+		ListCommand(getRootValues),
+	)
+
+	return node
 }
 
 func requireMachines(monitor mntr.Monitor, gitClient *git.Client, orbConfig *orbcfg.Orb, args []string, method func(machine infra.Machine) (required bool, require func(), unrequire func())) error {
