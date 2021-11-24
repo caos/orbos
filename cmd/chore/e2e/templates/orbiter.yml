@@ -17,7 +17,7 @@ clusters:
             effect: NoSchedule
       kubeconfig: null
       networking:
-        dnsdomain: cluster.orbitertest
+        dnsdomain: cluster.dev
         network: calico
         podcidr: 100.126.4.0/22
         servicecidr: 100.127.224.0/20
