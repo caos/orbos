@@ -26,12 +26,21 @@ func Try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machin
 		monitor := monitor.WithFields(map[string]interface{}{
 			"cause": fmt.Sprintf("%#+v\n", err),
 		})
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		var (
+			exitErr   *exec.ExitError
+			lookupErr *exec.Error
+		)
+
+		isExitErr := errors.As(err, &exitErr)
+		isLookupErr := errors.As(err, &lookupErr)
+
+		if isExitErr || isLookupErr {
 			monitor.WithFields(map[string]interface{}{
 				"machine": machine.ID(),
 			}).Debug("retrying failed severely")
-			err = fmt.Errorf("%s: %w", string(exitErr.Stderr), exitErr)
+			if isExitErr {
+				err = fmt.Errorf("%s: %w", string(exitErr.Stderr), exitErr)
+			}
 			return false
 		}
 		monitor.WithFields(map[string]interface{}{
@@ -40,8 +49,9 @@ func Try(monitor mntr.Monitor, timer *time.Timer, interval time.Duration, machin
 
 		return true
 	})
+
 	if timedOut != nil {
-		return fmt.Errorf("execution on node %s timed out after %s", machine.ID(), interval)
+		return fmt.Errorf("execution on node %s timed out after %s: %w", machine.ID(), interval, err)
 	}
-	return nil
+	return err
 }

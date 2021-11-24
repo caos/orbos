@@ -11,13 +11,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func StartCommand() *cobra.Command {
-	return &cobra.Command{
+func StartCommand(getRootValues GetRootValues) *cobra.Command {
+	start := &cobra.Command{
 		Use:   "start",
 		Short: "Start an operator",
 		Long:  `Pass exactly one of orbiter, boom or networking"`,
 		Args:  cobra.MinimumNArgs(1),
 	}
+
+	start.AddCommand(
+		StartBoom(getRootValues),
+		StartOrbiter(getRootValues),
+		StartNetworking(getRootValues),
+	)
+
+	return start
 }
 
 func StartOrbiter(getRv GetRootValues) *cobra.Command {

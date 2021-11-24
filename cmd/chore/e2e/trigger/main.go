@@ -8,47 +8,32 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
-	"strings"
 )
 
 func main() {
 
 	var (
-		token, org, repository, branch string
-		from                           int
-		cleanup                        bool
+		token, org, repository, tag string
+		cleanup                     bool
 	)
 
 	flag.StringVar(&token, "access-token", "", "Personal access token with repo scope")
 	flag.StringVar(&org, "organization", "", "Github organization")
 	flag.StringVar(&repository, "repository", "", "Github project")
-	flag.StringVar(&branch, "branch", "", "Branch to test. Default is current")
-	flag.IntVar(&from, "from", 1, "From e2e test stage")
-	flag.BoolVar(&cleanup, "cleanup", true, "Cleanup after tests are done")
+	flag.StringVar(&tag, "tag", "", "Tag to test")
+	flag.BoolVar(&cleanup, "cleanup", true, "Cleanup after tests are run")
 
 	flag.Parse()
 
-	if branch == "" {
-		ref, err := exec.Command("git", "branch", "--show-current").Output()
-		if err != nil {
-			panic(err)
-		}
-		branch = strings.TrimPrefix(strings.TrimSpace(string(ref)), "heads/")
-	}
-
 	fmt.Printf("organization=%s\n", org)
 	fmt.Printf("repository=%s\n", repository)
-	fmt.Printf("branch=%s\n", branch)
-	fmt.Printf("from=%d\n", from)
-	fmt.Printf("cleanup=%t\n", cleanup)
+	fmt.Printf("tag=%s\n", tag)
 
 	if err := emit(event{
 		EventType: "webhook-trigger",
 		ClientPayload: map[string]string{
-			"branch":  branch,
-			"from":    strconv.Itoa(from),
+			"tag":     tag,
 			"cleanup": strconv.FormatBool(cleanup),
 		},
 	}, token, org, repository); err != nil {
@@ -59,7 +44,6 @@ func main() {
 type event struct {
 	EventType     string            `json:"event_type,omitempty"`
 	ClientPayload map[string]string `json:"client_payload,omitempty"`
-	Branch        string            `json:"branch,omitempty"`
 }
 
 func emit(event event, accessToken, organisation, repository string) error {
