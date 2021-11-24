@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"context"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -18,13 +19,13 @@ type FirewallRule struct {
 	ModifiedOn  time.Time   `json:"modified_on,omitempty"`
 }
 
-func (c *Cloudflare) CreateFirewallRules(domain string, rules []*FirewallRule) ([]*FirewallRule, error) {
+func (c *Cloudflare) CreateFirewallRules(ctx context.Context, domain string, rules []*FirewallRule) ([]*FirewallRule, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	createdRules, err := c.api.CreateFirewallRules(id, internalRulesToRules(rules))
+	createdRules, err := c.api.CreateFirewallRules(ctx, id, internalRulesToRules(rules))
 
 	if err != nil {
 		return nil, err
@@ -33,13 +34,13 @@ func (c *Cloudflare) CreateFirewallRules(domain string, rules []*FirewallRule) (
 	return rulesToInternalRules(createdRules), err
 }
 
-func (c *Cloudflare) UpdateFirewallRules(domain string, rules []*FirewallRule) ([]*FirewallRule, error) {
+func (c *Cloudflare) UpdateFirewallRules(ctx context.Context, domain string, rules []*FirewallRule) ([]*FirewallRule, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	updatedRules, err := c.api.UpdateFirewallRules(id, internalRulesToRules(rules))
+	updatedRules, err := c.api.UpdateFirewallRules(ctx, id, internalRulesToRules(rules))
 	if err != nil {
 		return nil, err
 	}
@@ -47,27 +48,27 @@ func (c *Cloudflare) UpdateFirewallRules(domain string, rules []*FirewallRule) (
 	return rulesToInternalRules(updatedRules), err
 }
 
-func (c *Cloudflare) DeleteFirewallRules(domain string, ruleIDs []string) error {
+func (c *Cloudflare) DeleteFirewallRules(ctx context.Context, domain string, ruleIDs []string) error {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return err
 	}
 
 	for _, ruleID := range ruleIDs {
-		if err := c.api.DeleteFirewallRule(id, ruleID); err != nil {
+		if err := c.api.DeleteFirewallRule(ctx, id, ruleID); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (c *Cloudflare) GetFirewallRules(domain string) ([]*FirewallRule, error) {
+func (c *Cloudflare) GetFirewallRules(ctx context.Context, domain string) ([]*FirewallRule, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	rules, err := c.api.FirewallRules(id, pageOpts)
+	rules, err := c.api.FirewallRules(ctx, id, pageOpts)
 	if err != nil {
 		return nil, err
 	}

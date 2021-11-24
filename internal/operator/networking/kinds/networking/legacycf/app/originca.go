@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare/certificate"
@@ -11,7 +12,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespace string, nameLabels *labels.Name, domain string) error {
+func (a *App) EnsureOriginCACertificate(ctx context.Context, k8sClient kubernetes.ClientInt, namespace string, nameLabels *labels.Name, domain string) error {
 
 	certKey := "tls.crt"
 	keyKey := "tls.key"
@@ -33,7 +34,7 @@ func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespac
 		domain,
 	}
 
-	current, err := a.cloudflare.GetOriginCACertificates(domain)
+	current, err := a.cloudflare.GetOriginCACertificates(ctx, domain)
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespac
 
 	if !ensured {
 		if foundCA != nil && foundCA.ID != "" {
-			if err := a.cloudflare.RevokeOriginCACertificate(foundCA.ID); err != nil {
+			if err := a.cloudflare.RevokeOriginCACertificate(ctx, foundCA.ID); err != nil {
 				return err
 			}
 		}
@@ -64,7 +65,7 @@ func (a *App) EnsureOriginCACertificate(k8sClient kubernetes.ClientInt, namespac
 			return err
 		}
 
-		origin, err := a.cloudflare.CreateOriginCACertificate(domain, caHosts, priv)
+		origin, err := a.cloudflare.CreateOriginCACertificate(ctx, domain, caHosts, priv)
 		if err != nil {
 			return err
 		}

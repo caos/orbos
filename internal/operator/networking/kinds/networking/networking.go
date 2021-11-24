@@ -1,6 +1,7 @@
 package networking
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/caos/orbos/internal/operator/core"
@@ -12,6 +13,7 @@ import (
 )
 
 func GetQueryAndDestroyFuncs(
+	ctx context.Context,
 	monitor mntr.Monitor,
 	operatorLabels *labels.Operator,
 	desiredTree *tree.Tree,
@@ -27,7 +29,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "networking.caos.ch/LegacyCloudflare":
-		return legacycf.AdaptFunc(namespace, operatorLabels)(monitor, desiredTree, currentTree)
+		return legacycf.AdaptFunc(ctx, namespace, operatorLabels)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, nil, false, fmt.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}

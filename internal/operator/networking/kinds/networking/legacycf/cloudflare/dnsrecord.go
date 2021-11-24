@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"context"
 	"time"
 
 	"github.com/cloudflare/cloudflare-go"
@@ -12,7 +13,7 @@ type DNSRecord struct {
 	Name       string      `json:"name,omitempty"`
 	Content    string      `json:"content,omitempty"`
 	Proxiable  bool        `json:"proxiable,omitempty"`
-	Proxied    bool        `json:"proxied"`
+	Proxied    *bool       `json:"proxied"`
 	TTL        int         `json:"ttl,omitempty"`
 	Locked     bool        `json:"locked,omitempty"`
 	ZoneID     string      `json:"zone_id,omitempty"`
@@ -21,20 +22,20 @@ type DNSRecord struct {
 	ModifiedOn time.Time   `json:"modified_on,omitempty"`
 	Data       interface{} `json:"data,omitempty"` // data returned by: SRV, LOC
 	Meta       interface{} `json:"meta,omitempty"`
-	Priority   int         `json:"priority"`
+	Priority   *uint16     `json:"priority"`
 }
 
-func (c *Cloudflare) GetDNSRecords(domain string) ([]*DNSRecord, error) {
+func (c *Cloudflare) GetDNSRecords(ctx context.Context, domain string) ([]*DNSRecord, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	records, err := c.api.DNSRecords(id, cloudflare.DNSRecord{})
+	records, err := c.api.DNSRecords(ctx, id, cloudflare.DNSRecord{})
 	return dnsRecordsToInternalDNSRecords(records), err
 }
 
-func (c *Cloudflare) CreateDNSRecords(domain string, records []*DNSRecord) ([]*DNSRecord, error) {
+func (c *Cloudflare) CreateDNSRecords(ctx context.Context, domain string, records []*DNSRecord) ([]*DNSRecord, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
@@ -42,7 +43,7 @@ func (c *Cloudflare) CreateDNSRecords(domain string, records []*DNSRecord) ([]*D
 
 	createdRecords := make([]cloudflare.DNSRecord, 0)
 	for _, record := range records {
-		createdRecord, err := c.api.CreateDNSRecord(id, internalDNSRecordToDNSRecord(record))
+		createdRecord, err := c.api.CreateDNSRecord(ctx, id, internalDNSRecordToDNSRecord(record))
 		if err != nil {
 			return nil, err
 		}
@@ -53,7 +54,7 @@ func (c *Cloudflare) CreateDNSRecords(domain string, records []*DNSRecord) ([]*D
 	return dnsRecordsToInternalDNSRecords(createdRecords), err
 }
 
-func (c *Cloudflare) UpdateDNSRecords(domain string, records []*DNSRecord) ([]*DNSRecord, error) {
+func (c *Cloudflare) UpdateDNSRecords(ctx context.Context, domain string, records []*DNSRecord) ([]*DNSRecord, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func (c *Cloudflare) UpdateDNSRecords(domain string, records []*DNSRecord) ([]*D
 
 	updatedRecords := make([]*DNSRecord, 0)
 	for _, record := range records {
-		err := c.api.UpdateDNSRecord(id, record.ID, internalDNSRecordToDNSRecord(record))
+		err := c.api.UpdateDNSRecord(ctx, id, record.ID, internalDNSRecordToDNSRecord(record))
 		if err != nil {
 			return nil, err
 		}
@@ -71,14 +72,14 @@ func (c *Cloudflare) UpdateDNSRecords(domain string, records []*DNSRecord) ([]*D
 	return updatedRecords, err
 }
 
-func (c *Cloudflare) DeleteDNSRecords(domain string, recordIDs []string) error {
+func (c *Cloudflare) DeleteDNSRecords(ctx context.Context, domain string, recordIDs []string) error {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return err
 	}
 
 	for _, recordID := range recordIDs {
-		if err := c.api.DeleteDNSRecord(id, recordID); err != nil {
+		if err := c.api.DeleteDNSRecord(ctx, id, recordID); err != nil {
 			return err
 		}
 	}

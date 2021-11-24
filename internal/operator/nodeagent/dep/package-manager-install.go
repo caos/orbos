@@ -75,8 +75,9 @@ func rembasedInstallPkg(monitor mntr.Monitor, pkg string) error {
 	errStr := errBuf.String()
 	outStr := outBuf.String()
 	monitor.WithFields(map[string]interface{}{
-		"stdout": outStr,
-		"stderr": errStr,
+		"command": fmt.Sprintf("'%s'", strings.Join(cmd.Args, "' '")),
+		"stdout":  outStr,
+		"stderr":  errStr,
 	}).Debug("Executed yum install")
 	if err != nil && !strings.Contains(errStr+outStr, "is already installed") {
 		return fmt.Errorf("installing yum package %s failed with stderr %s: %w", pkg, errStr, err)

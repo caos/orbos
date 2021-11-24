@@ -42,6 +42,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 type VRRP struct {
 	VRRPInterface string
+	VIPInterface  string
 	NotifyMaster  func(machine infra.Machine) (string, bool)
 	AuthCheck     func(machine infra.Machine) (string, int)
 }
@@ -127,7 +128,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.Spec = enrichedVIPs
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
-				var lbMachines []infra.Machine
+				var lbMachines infra.Machines
 
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
@@ -199,8 +200,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
-					"forMachines": svc.List,
-					"add":         func(i, y int) int { return i + y },
+					"forMachines": func(poolName string) (infra.Machines, error) {
+						machines, err := svc.List(poolName)
+						if err != nil {
+							return nil, err
+						}
+						sort.Sort(machines)
+						return machines, nil
+					},
+					"add": func(i, y int) int { return i + y },
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
@@ -266,6 +274,8 @@ stream { {{ range $nat := .NATs }}
 						return false, err
 					}
 
+					sort.Sort(lbMachines)
+
 					spec, _, err := enrichedVIPs(svc)
 					if err != nil {
 						return false, err
@@ -281,7 +291,8 @@ stream { {{ range $nat := .NATs }}
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
 							CustomMasterNotifyer: vrrp.NotifyMaster != nil,
-							Interface:            vrrp.VRRPInterface,
+							VRRPInterface:        vrrp.VRRPInterface,
+							VIPInterface:         vrrp.VIPInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -312,7 +323,7 @@ vrrp_instance VI_{{ $idx }} {
 	unicast_peer {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
-	interface {{ $root.Interface }}
+	interface {{ $root.VRRPInterface }}
 	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
@@ -321,6 +332,10 @@ vrrp_instance VI_{{ $idx }} {
 	}
 	track_script {
 		chk_{{ vip $vip }}
+	}
+
+	virtual_ipaddress {
+		{{ vip $vip }} dev {{ $root.VIPInterface }}
 	}
 
 {{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh"
@@ -568,7 +583,8 @@ type LB struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
-	Interface            string
+	VRRPInterface        string
+	VIPInterface         string
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {

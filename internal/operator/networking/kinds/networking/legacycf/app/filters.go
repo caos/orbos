@@ -1,22 +1,24 @@
 package app
 
 import (
+	"context"
+
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
-func (a *App) EnsureFilters(domain string, filters []*cloudflare.Filter) ([]*cloudflare.Filter, func() error, error) {
+func (a *App) EnsureFilters(ctx context.Context, domain string, filters []*cloudflare.Filter) ([]*cloudflare.Filter, func() error, error) {
 
 	del := func() error { return nil }
 
 	result := make([]*cloudflare.Filter, 0)
-	currentFilters, err := a.cloudflare.GetFilters(domain)
+	currentFilters, err := a.cloudflare.GetFilters(ctx, domain)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	createFilters, updateFilters := getFilterToCreateAndUpdate(currentFilters, filters)
 	if createFilters != nil && len(createFilters) > 0 {
-		created, err := a.cloudflare.CreateFilters(domain, createFilters)
+		created, err := a.cloudflare.CreateFilters(ctx, domain, createFilters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -25,7 +27,7 @@ func (a *App) EnsureFilters(domain string, filters []*cloudflare.Filter) ([]*clo
 	}
 
 	if updateFilters != nil && len(updateFilters) > 0 {
-		updated, err := a.cloudflare.UpdateFilters(domain, updateFilters)
+		updated, err := a.cloudflare.UpdateFilters(ctx, domain, updateFilters)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -36,7 +38,7 @@ func (a *App) EnsureFilters(domain string, filters []*cloudflare.Filter) ([]*clo
 	deleteFilters, restFilters := getFilterToDelete(currentFilters, filters)
 	if deleteFilters != nil && len(deleteFilters) > 0 {
 		del = func() error {
-			return a.cloudflare.DeleteFilters(domain, deleteFilters)
+			return a.cloudflare.DeleteFilters(ctx, domain, deleteFilters)
 		}
 	} else {
 		del = func() error { return nil }
