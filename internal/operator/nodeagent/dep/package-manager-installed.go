@@ -82,7 +82,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		err = nil
 	}
 
-	if waitErr := listCommand.Wait(); waitErr != nil || ignoreError {
+	if waitErr := listCommand.Wait(); waitErr != nil && !ignoreError {
 		return fmt.Errorf("waiting for list packages command failed: %w", waitErr)
 	}
 
