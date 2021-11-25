@@ -61,9 +61,7 @@ func (d *dependencies) Init() func() error {
 		)); err != nil {
 			return err
 		}
-		sw := d.pm.CurrentVersions(
-			"yum-cron",
-		)
+		sw := d.pm.CurrentVersions("yum-cron")
 		if len(sw) == 0 {
 			return nil
 		}
