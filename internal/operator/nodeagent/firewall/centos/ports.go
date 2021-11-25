@@ -5,41 +5,31 @@ import (
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/mntr"
 )
 
 func getAddAndRemovePorts(
-
-	monitor mntr.Monitor,
-	zone string,
 	current *common.ZoneDesc,
 	desiredPorts []*common.Allowed,
 	open []string,
+	currentZone Zone,
 ) (
 	[]string,
 	[]string,
-	error,
 ) {
 
 	ensure := make([]string, 0)
 	remove := make([]string, 0)
 
-	alreadyOpen, err := getPorts(monitor, zone)
-	if err != nil {
-		return nil, nil, err
-	}
 	alwaysOpen := ignoredPorts(open)
 
 	//ports that should stay open
 	for _, open := range alwaysOpen {
 		found := false
 		openStr := fmt.Sprintf("%s/%s", open.Port, open.Protocol)
-		if alreadyOpen != nil && len(alreadyOpen) > 0 {
-			for _, open := range alreadyOpen {
-				if open == openStr {
-					found = true
-					break
-				}
+		for _, open := range currentZone.Ports.slice {
+			if open == openStr {
+				found = true
+				break
 			}
 		}
 		if !found {
@@ -51,12 +41,10 @@ func getAddAndRemovePorts(
 	for _, desired := range desiredPorts {
 		found := false
 		desStr := fmt.Sprintf("%s/%s", desired.Port, desired.Protocol)
-		if alreadyOpen != nil && len(alreadyOpen) > 0 {
-			for _, open := range alreadyOpen {
-				if open == desStr {
-					found = true
-					break
-				}
+		for _, open := range currentZone.Ports.slice {
+			if open == desStr {
+				found = true
+				break
 			}
 		}
 		if !found {
@@ -65,7 +53,7 @@ func getAddAndRemovePorts(
 	}
 
 	//port that are not desired anymore
-	for _, open := range alreadyOpen {
+	for _, open := range currentZone.Ports.slice {
 		found := false
 
 		fields := strings.Split(open, "/")
@@ -77,22 +65,18 @@ func getAddAndRemovePorts(
 			Protocol: protocol,
 		})
 
-		if desiredPorts != nil && len(desiredPorts) > 0 {
-			for _, desired := range desiredPorts {
-				if desired.Port == port && desired.Protocol == protocol {
-					found = true
-					break
-				}
+		for _, desired := range desiredPorts {
+			if desired.Port == port && desired.Protocol == protocol {
+				found = true
+				break
 			}
 		}
 
 		if !found {
-			if alwaysOpen != nil && len(alwaysOpen) > 0 {
-				for _, open := range alwaysOpen {
-					if open.Port == port && open.Protocol == protocol {
-						found = true
-						break
-					}
+			for _, open := range alwaysOpen {
+				if open.Port == port && open.Protocol == protocol {
+					found = true
+					break
 				}
 			}
 		}
@@ -102,11 +86,7 @@ func getAddAndRemovePorts(
 		}
 	}
 
-	return ensure, remove, nil
-}
-
-func getPorts(monitor mntr.Monitor, zone string) ([]string, error) {
-	return listFirewall(monitor, zone, "--list-ports")
+	return ensure, remove
 }
 
 func ignoredPorts(ports []string) []*common.Allowed {
