@@ -28,13 +28,13 @@ type PackageManager struct {
 	systemd   *SystemD
 }
 
-func (p *PackageManager) RefreshInstalled() error {
+func (p *PackageManager) RefreshInstalled(filter []string) error {
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
 		err = p.debbasedInstalled()
 	case REMBased:
-		err = p.rembasedInstalled()
+		err = p.rembasedInstalled(filter)
 	}
 
 	if err != nil {

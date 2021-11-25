@@ -53,7 +53,7 @@ func (d *dependencies) Init() func() error {
 		if err := d.pm.Init(); err != nil {
 			return err
 		}
-		if err := d.pm.RefreshInstalled(); err != nil {
+		if err := d.pm.RefreshInstalled(append(d.InstalledFilter(), "yum-cron")); err != nil {
 			return err
 		}
 		sw := d.pm.CurrentVersions("yum-cron")
@@ -77,6 +77,14 @@ func (d *dependencies) Init() func() error {
 
 func (d *dependencies) Update() error {
 	return d.pm.Update()
+}
+
+func (d *dependencies) InstalledFilter() []string {
+	var query []string
+	for _, dep := range d.ToDependencies(common.Software{}) {
+		query = append(query, dep.Installer.InstalledFilter()...)
+	}
+	return query
 }
 
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {

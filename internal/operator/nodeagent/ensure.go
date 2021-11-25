@@ -44,6 +44,7 @@ type Converter interface {
 }
 
 type Installer interface {
+	InstalledFilter() []string
 	Current() (common.Package, error)
 	Ensure(uninstall common.Package, install common.Package) error
 	Equals(other Installer) bool

@@ -51,6 +51,10 @@ func (*nginxDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (s *nginxDep) InstalledFilter() []string {
+	return []string{"nginx"}
+}
+
 func (s *nginxDep) Current() (pkg common.Package, err error) {
 	if !s.systemd.Active("nginx") {
 		return pkg, err

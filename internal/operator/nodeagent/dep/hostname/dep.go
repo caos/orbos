@@ -40,6 +40,8 @@ func (*hostnameDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (*hostnameDep) InstalledFilter() []string { return nil }
+
 func (s *hostnameDep) Current() (pkg common.Package, err error) {
 
 	buf := new(bytes.Buffer)

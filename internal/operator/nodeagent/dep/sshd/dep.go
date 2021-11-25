@@ -40,6 +40,8 @@ func (*sshdDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (*sshdDep) InstalledFilter() []string { return nil }
+
 func (s *sshdDep) Current() (pkg common.Package, err error) {
 
 	buf := new(bytes.Buffer)

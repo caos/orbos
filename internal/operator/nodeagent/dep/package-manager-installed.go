@@ -24,8 +24,8 @@ func (p *PackageManager) debbasedInstalled() error {
 	})
 }
 
-func (p *PackageManager) rembasedInstalled() error {
-	return p.listAndParse(exec.Command("rpm", "-qa", "--queryformat", "%{NAME} %{VERSION}-%{RELEASE}\n"), "", func(line string) (string, string, error) {
+func (p *PackageManager) rembasedInstalled(filter []string) error {
+	return p.listAndParse(exec.Command("rpm", append([]string{"-q", "--queryformat", "%{NAME} %{VERSION}-%{RELEASE}\n"}, filter...)...), "", func(line string) (string, string, error) {
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
 			return "", "", fmt.Errorf(`splitting line "%s" empty characters failed`, line)

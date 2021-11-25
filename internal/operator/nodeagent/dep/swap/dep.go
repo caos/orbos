@@ -41,6 +41,8 @@ func (*swapDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (*swapDep) InstalledFilter() []string { return nil }
+
 func (s *swapDep) Current() (pkg common.Package, err error) {
 
 	buf := new(bytes.Buffer)
