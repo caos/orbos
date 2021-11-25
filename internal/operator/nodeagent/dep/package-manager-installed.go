@@ -78,11 +78,11 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		}).Debug("Found installed package")
 	}
 
-	if err == io.EOF || ignoreError {
+	if err == io.EOF {
 		err = nil
 	}
 
-	if waitErr := listCommand.Wait(); waitErr != nil {
+	if waitErr := listCommand.Wait(); waitErr != nil || ignoreError {
 		return fmt.Errorf("waiting for list packages command failed: %w", waitErr)
 	}
 
