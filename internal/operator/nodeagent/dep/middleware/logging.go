@@ -24,7 +24,7 @@ func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 	}
 }
 
-func (l *loggedDep) InstalledFilter() []string { return l.InstalledFilter() }
+func (l *loggedDep) InstalledFilter() []string { return l.unwrapped.InstalledFilter() }
 
 func (l *loggedDep) Current() (common.Package, error) {
 	current, err := l.unwrapped.Current()
