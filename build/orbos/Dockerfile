@@ -2,7 +2,7 @@ FROM golang:1.16-alpine3.14 as build
 
 RUN apk update && \
     apk add -U --no-cache ca-certificates git curl openssh build-base && \
-    go get github.com/go-delve/delve/cmd/dlv
+    go get github.com/go-delve/delve/cmd/dlv@v1.7.0
 
 # Runtime dependencies
 RUN mkdir /dependencies && \

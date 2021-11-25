@@ -5,6 +5,7 @@ import (
 )
 
 func getEnsureMasquerade(
+
 	zoneName string,
 	current *common.ZoneDesc,
 	desired common.Firewall,

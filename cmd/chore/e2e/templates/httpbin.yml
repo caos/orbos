@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: caos-zitadel
+---
+apiVersion: getambassador.io/v2
+kind: Host
+metadata:
+  annotations:
+    aes_res_changed: "true"
+  name: httpbin
+  namespace: caos-zitadel
+spec:
+  acmeProvider:
+    authority: none
+  ambassador_id:
+    - default
+  hostname: httpbin.${ORBOS_E2E_DOMAIN}
+  selector:
+    matchLabels:
+      hostname: httpbin.${ORBOS_E2E_DOMAIN}
+  tlsSecret:
+    name: tls-cert-wildcard
+status:
+  state: Ready
+  tlsCertificateSource: Other
+---
+apiVersion: getambassador.io/v2
+kind: Mapping
+metadata:
+  name: httpbin
+  namespace: caos-zitadel
+spec:
+  connect_timeout_ms: 30000
+  host: httpbin.${ORBOS_E2E_DOMAIN}
+  service: http://httpbin.caos-zitadel
+  prefix: /
+  rewrite: /
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin
+  namespace: caos-zitadel
+  labels:
+    app: httpbin
+    service: httpbin
+spec:
+  ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: httpbin
+  selector:
+    app: httpbin
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin
+  namespace: caos-zitadel
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpbin
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: httpbin
+        version: v1
+    spec:
+      containers:
+        - image: docker.io/kennethreitz/httpbin
+          imagePullPolicy: IfNotPresent
+          name: httpbin
+          ports:
+            - containerPort: 80
+              name: httpbin
+              protocol: TCP
