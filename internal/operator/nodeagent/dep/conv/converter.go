@@ -53,14 +53,16 @@ func (d *dependencies) Init() func() error {
 		if err := d.pm.Init(); err != nil {
 			return err
 		}
-		if err := d.pm.RefreshInstalled(append(d.InstalledFilter(), "yum-cron")); err != nil {
-			return err
-		}
-		sw := d.pm.CurrentVersions(
+		if err := d.pm.RefreshInstalled(append(d.InstalledFilter(),
 			"yum-cron",
 			"yum-utils",
 			"yum-plugin-versionlock",
 			"firewalld",
+		)); err != nil {
+			return err
+		}
+		sw := d.pm.CurrentVersions(
+			"yum-cron",
 		)
 		if len(sw) == 0 {
 			return nil
