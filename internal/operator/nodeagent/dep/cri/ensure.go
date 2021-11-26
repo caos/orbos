@@ -24,10 +24,8 @@ func (c *criDep) ensureCentOS(runtime string, version string) error {
 		return fmt.Errorf("removing older docker versions failed: %w", err)
 	}
 
-	for _, pkg := range []string{"device-mapper-persistent-data", "lvm2"} {
-		if err := c.manager.Install(&dep.Software{Package: pkg}); err != nil {
-			c.monitor.Error(fmt.Errorf("installing docker dependency failed: %w", err))
-		}
+	if err := c.manager.Install(&dep.Software{Package: "device-mapper-persistent-data"}, &dep.Software{Package: "lvm2"}); err != nil {
+		c.monitor.Error(fmt.Errorf("installing docker dependency failed: %w", err))
 	}
 
 	return c.run(runtime, version, "https://download.docker.com/linux/centos/docker-ce.repo", "", "")

@@ -48,6 +48,10 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (keepaliveDDep) InstalledFilter() []string {
+	return []string{"keepalived"}
+}
+
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 
 	defer func() {

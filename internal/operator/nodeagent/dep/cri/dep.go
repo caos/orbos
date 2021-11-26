@@ -51,6 +51,10 @@ func (s *criDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (c *criDep) InstalledFilter() []string {
+	return []string{"docker-ce", "containerd.io", "device-mapper-persistent-data", "lvm2"}
+}
+
 func (c *criDep) Current() (pkg common.Package, err error) {
 	if !c.systemd.Active("docker") {
 		return pkg, err

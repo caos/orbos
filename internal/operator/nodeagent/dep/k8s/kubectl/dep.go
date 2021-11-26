@@ -35,6 +35,10 @@ func (*kubectlDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (k *kubectlDep) InstalledFilter() []string {
+	return []string{"kubectl"}
+}
+
 func (k *kubectlDep) Current() (common.Package, error) {
 	return k.common.Current()
 }

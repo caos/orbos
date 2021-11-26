@@ -40,6 +40,8 @@ func (*sysctlDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (*sysctlDep) InstalledFilter() []string { return nil }
+
 var supportedModules = []common.KernelModule{common.IpForward, common.NonLocalBind, common.BridgeNfCallIptables, common.BridgeNfCallIp6tables}
 
 func Contains(this common.Package, that common.Package) bool {
