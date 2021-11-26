@@ -60,6 +60,10 @@ func (*kernelDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (*kernelDep) InstalledFilter() []string {
+	return []string{"kernel"}
+}
+
 func (k *kernelDep) Current() (pkg common.Package, err error) {
 	loaded, corrupted, err := k.kernelVersions()
 	if err != nil {
