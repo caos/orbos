@@ -1,6 +1,6 @@
 package logs
 
-import "github.com/caos/orbos/internal/operator/boom/application/applications/loggingoperator/logging"
+import "github.com/caos/orbos/internal/operator/boom/application/applications/logcollection/logging"
 
 func GetFlow(outputs []string, clusterOutputs []string) *logging.FlowConfig {
 	ls := map[string]string{

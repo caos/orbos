@@ -2,7 +2,6 @@ package orbiter
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -40,9 +38,9 @@ func NoopConfigure(orb orbcfg.Orb) error {
 
 type QueryFunc func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, queried map[string]interface{}) (EnsureFunc, error)
 
-type EnsureFunc func(pdf api.PushDesiredFunc) *EnsureResult
+type EnsureFunc func(pdf func(monitor mntr.Monitor) error) *EnsureResult
 
-func NoopEnsure(_ api.PushDesiredFunc) *EnsureResult {
+func NoopEnsure(_ func(monitor mntr.Monitor) error) *EnsureResult {
 	return &EnsureResult{Done: true}
 }
 
@@ -52,6 +50,8 @@ type event struct {
 }
 
 func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
+	defer func() { monitor.RecoverPanic(recover()) }()
+
 	healthy := true
 
 	prometheus.MustRegister(prometheus.NewBuildInfoCollector())
@@ -97,7 +97,7 @@ func Instrument(monitor mntr.Monitor, healthyChan chan bool) {
 
 func Adapt(gitClient *git.Client, monitor mntr.Monitor, finished chan struct{}, adapt AdaptFunc) (QueryFunc, DestroyFunc, ConfigureFunc, bool, *tree.Tree, *tree.Tree, map[string]*secret.Secret, error) {
 
-	treeDesired, err := api.ReadOrbiterYml(gitClient)
+	treeDesired, err := gitClient.ReadTree(git.OrbiterFile)
 	if err != nil {
 		return nil, nil, nil, false, nil, nil, nil, err
 	}
@@ -147,7 +147,10 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		if migrate {
-			if err = api.PushOrbiterYml(monitor, "Desired state migrated", conf.GitClient, treeDesired); err != nil {
+			if err = conf.GitClient.PushGitDesiredStates(monitor, "Desired state migrated", []git.GitDesiredState{{
+				Desired: treeDesired,
+				Path:    git.OrbiterFile,
+			}}); err != nil {
 				monitor.Error(err)
 				return
 			}
@@ -180,20 +183,15 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		}
 
 		reconciledCurrentStateMsg := "Current state reconciled"
-		currentReconciled, err := conf.GitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), marshalCurrentFiles()[0])
-		if err != nil {
-			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
+
+		if err := conf.GitClient.UpdateRemote(reconciledCurrentStateMsg, func() []git.File {
+			return []git.File{marshalCurrentFiles()[0]}
+		}); err != nil {
+			monitor.Error(err)
 			return
 		}
 
-		if currentReconciled {
-			if err := conf.GitClient.Push(); err != nil {
-				monitor.Error(fmt.Errorf("Pushing event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
-				return
-			}
-		}
-
-		result := ensure(api.PushOrbiterDesiredFunc(conf.GitClient, treeDesired))
+		result := ensure(conf.GitClient.PushDesiredFunc(git.OrbiterFile, treeDesired))
 		if result.Err != nil {
 			handleAdapterError(result.Err)
 			return
@@ -204,23 +202,27 @@ func Takeoff(monitor mntr.Monitor, conf *Config, healthyChan chan bool) func() {
 		} else {
 			monitor.Info("Desired state is not yet ensured")
 		}
-		if err := conf.GitClient.Clone(); err != nil {
-			monitor.Error(fmt.Errorf("Commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
-			return
-		}
 
-		changed, err := conf.GitClient.StageAndCommit("Current state changed", marshalCurrentFiles()...)
-		if err != nil {
-			monitor.Error(fmt.Errorf("commiting current state failed: %w", err))
-			return
-		}
-
-		if changed {
-			pushErr := conf.GitClient.Push()
-			if err == nil {
-				err = pushErr
+		conf.GitClient.UpdateRemote("Current state changed", func() []git.File {
+			pushFiles := marshalCurrentFiles()
+			if result.Done {
+				var deletedACurrentNodeAgent bool
+				for currentNA := range currentNodeAgents.Current.NA {
+					if _, ok := desiredNodeAgents.Spec.NodeAgents.NA[currentNA]; !ok {
+						currentNodeAgents.Current.NA[currentNA] = nil
+						delete(currentNodeAgents.Current.NA, currentNA)
+						deletedACurrentNodeAgent = true
+					}
+				}
+				if deletedACurrentNodeAgent {
+					monitor.Info("Clearing node agents current states")
+					pushFiles = append(pushFiles, git.File{
+						Path:    "caos-internal/orbiter/node-agents-current.yml",
+						Content: common.MarshalYAML(currentNodeAgents),
+					})
+				}
 			}
-			monitor.Error(err)
-		}
+			return pushFiles
+		})
 	}
 }

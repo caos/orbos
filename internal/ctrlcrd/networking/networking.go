@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
 
 	"github.com/caos/orbos/internal/api/networking"
@@ -42,7 +41,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.
 		return res, err
 	}
 
-	query, _, _, _, _, err := orbnw.AdaptFunc("", &r.Version, false)(internalMonitor, desired, &tree.Tree{})
+	query, _, _, _, _, err := orbnw.AdaptFunc(ctx, "", &r.Version, false)(internalMonitor, desired, &tree.Tree{})
 	if err != nil {
 
 		if errors.Is(err, config.ErrNoLBID) {

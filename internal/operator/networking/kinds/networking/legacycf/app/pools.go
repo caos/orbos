@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 	"reflect"
 	"strings"
@@ -10,11 +11,11 @@ func getPoolName(domain, region, clusterID string) string {
 	return strings.Join([]string{clusterID, region, strings.ReplaceAll(domain, ".", "-")}, "-")
 }
 
-func (a *App) EnsureLoadBalancerPools(id string, pools []*cloudflare.LoadBalancerPool) (func() error, error) {
+func (a *App) EnsureLoadBalancerPools(ctx context.Context, id string, pools []*cloudflare.LoadBalancerPool) (func() error, error) {
 	destroy := func() error {
 		return nil
 	}
-	currentPools, err := a.cloudflare.ListLoadBalancerPools()
+	currentPools, err := a.cloudflare.ListLoadBalancerPools(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +31,7 @@ func (a *App) EnsureLoadBalancerPools(id string, pools []*cloudflare.LoadBalance
 	if deletePools != nil && len(deletePools) > 0 {
 		destroy = func() error {
 			for _, pool := range deletePools {
-				if err := a.cloudflare.DeleteLoadBalancerPools(pool); err != nil {
+				if err := a.cloudflare.DeleteLoadBalancerPools(ctx, pool); err != nil {
 					return err
 				}
 			}
@@ -41,7 +42,7 @@ func (a *App) EnsureLoadBalancerPools(id string, pools []*cloudflare.LoadBalance
 	createPools := getLoadBalancerPoolsToCreate(currentPools, pools)
 	if createPools != nil && len(createPools) > 0 {
 		for _, pool := range createPools {
-			created, err := a.cloudflare.CreateLoadBalancerPools(pool)
+			created, err := a.cloudflare.CreateLoadBalancerPools(ctx, pool)
 			if err != nil {
 				return nil, err
 			}
@@ -52,7 +53,7 @@ func (a *App) EnsureLoadBalancerPools(id string, pools []*cloudflare.LoadBalance
 	updatePools := getLoadBalancerPoolsToUpdate(currentPools, pools)
 	if updatePools != nil && len(updatePools) > 0 {
 		for _, pool := range updatePools {
-			updated, err := a.cloudflare.UpdateLoadBalancerPools(pool)
+			updated, err := a.cloudflare.UpdateLoadBalancerPools(ctx, pool)
 			if err != nil {
 				return nil, err
 			}

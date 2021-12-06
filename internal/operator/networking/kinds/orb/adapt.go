@@ -1,6 +1,9 @@
 package orb
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking"
 	"github.com/caos/orbos/mntr"
@@ -8,14 +11,13 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("ORBOS", "networking.caos.ch")
 }
 
-func AdaptFunc(ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
+func AdaptFunc(ctx context.Context, ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
 	return func(
@@ -30,14 +32,16 @@ func AdaptFunc(ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
 		err error,
 	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		orbMonitor := monitor.WithField("kind", "orb")
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 		currentTree = &tree.Tree{}
@@ -48,7 +52,7 @@ func AdaptFunc(ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
 
 		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(orbMonitor, ID, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
+		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(ctx, orbMonitor, ID, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
 			return nil, nil, nil, nil, false, err
 		}
@@ -63,10 +67,7 @@ func AdaptFunc(ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
 		}
 
 		currentTree.Parsed = &DesiredV0{
-			Common: &tree.Common{
-				Kind:    "networking.caos.ch/Orb",
-				Version: "v0",
-			},
+			Common:     tree.NewCommon("networking.caos.ch/Orb", "v0", false),
 			Networking: networkingCurrent,
 		}
 

@@ -1,7 +1,8 @@
 package cmds
 
 import (
-	"github.com/caos/orbos/internal/api"
+	"fmt"
+
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	cmdboom "github.com/caos/orbos/internal/operator/boom/cmd"
@@ -15,15 +16,11 @@ import (
 func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, binaryVersion string, gitops bool) error {
 
 	if gitops {
-		foundBoom, err := api.ExistsBoomYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if !foundBoom {
-			monitor.Info("No BOOM deployed as no boom.yml present")
+		if !gitClient.Exists(git.BoomFile) {
+			monitor.Info(fmt.Sprintf("Deployment of BOOM skipped as %s not found in git repo", git.BoomFile))
 			return nil
 		}
-		desiredTree, err := api.ReadBoomYml(gitClient)
+		desiredTree, err := gitClient.ReadTree(git.BoomFile)
 		if err != nil {
 			return err
 		}
@@ -73,30 +70,29 @@ func deployBoom(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernete
 
 func deployNetworking(monitor mntr.Monitor, gitClient *git.Client, k8sClient kubernetes.ClientInt, version string, gitops bool) error {
 	if gitops {
-		found, err := api.ExistsNetworkingYml(gitClient)
+		if !gitClient.Exists(git.NetworkingFile) {
+			monitor.Info(fmt.Sprintf("Deployment of networking operator skipped as %s not found in git repo", git.NetworkingFile))
+			return nil
+		}
+
+		desiredTree, err := gitClient.ReadTree(git.NetworkingFile)
 		if err != nil {
 			return err
 		}
-		if found {
-			desiredTree, err := api.ReadNetworkinglYml(gitClient)
-			if err != nil {
-				return err
-			}
-			desired, err := orbnw.ParseDesiredV0(desiredTree)
-			if err != nil {
-				return err
-			}
-			spec := desired.Spec
+		desired, err := orbnw.ParseDesiredV0(desiredTree)
+		if err != nil {
+			return err
+		}
+		spec := desired.Spec
 
-			// at takeoff the artifacts have to be applied
-			spec.SelfReconciling = true
-			if err := orbnw.Reconcile(
-				monitor,
-				spec,
-				gitops,
-			)(k8sClient); err != nil {
-				return err
-			}
+		// at takeoff the artifacts have to be applied
+		spec.SelfReconciling = true
+		if err := orbnw.Reconcile(
+			monitor,
+			spec,
+			gitops,
+		)(k8sClient); err != nil {
+			return err
 		}
 	} else {
 		// at takeoff the artifacts have to be applied

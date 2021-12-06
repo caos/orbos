@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"context"
 	"github.com/cloudflare/cloudflare-go"
 	"time"
 )
@@ -29,8 +30,8 @@ type LoadBalancerOrigin struct {
 	Weight  float64 `json:"weight"`
 }
 
-func (c *Cloudflare) GetLoadBalancerPoolDetails(ID string) (*LoadBalancerPool, error) {
-	pool, err := c.api.LoadBalancerPoolDetails(ID)
+func (c *Cloudflare) GetLoadBalancerPoolDetails(ctx context.Context, ID string) (*LoadBalancerPool, error) {
+	pool, err := c.api.LoadBalancerPoolDetails(ctx, ID)
 
 	if err != nil {
 		return nil, err
@@ -39,8 +40,8 @@ func (c *Cloudflare) GetLoadBalancerPoolDetails(ID string) (*LoadBalancerPool, e
 	return poolToInternalPool(pool), err
 }
 
-func (c *Cloudflare) CreateLoadBalancerPools(pool *LoadBalancerPool) (*LoadBalancerPool, error) {
-	createdPool, err := c.api.CreateLoadBalancerPool(internalPoolToPool(pool))
+func (c *Cloudflare) CreateLoadBalancerPools(ctx context.Context, pool *LoadBalancerPool) (*LoadBalancerPool, error) {
+	createdPool, err := c.api.CreateLoadBalancerPool(ctx, internalPoolToPool(pool))
 
 	if err != nil {
 		return nil, err
@@ -49,8 +50,8 @@ func (c *Cloudflare) CreateLoadBalancerPools(pool *LoadBalancerPool) (*LoadBalan
 	return poolToInternalPool(createdPool), err
 }
 
-func (c *Cloudflare) UpdateLoadBalancerPools(pool *LoadBalancerPool) (*LoadBalancerPool, error) {
-	updatedPool, err := c.api.ModifyLoadBalancerPool(internalPoolToPool(pool))
+func (c *Cloudflare) UpdateLoadBalancerPools(ctx context.Context, pool *LoadBalancerPool) (*LoadBalancerPool, error) {
+	updatedPool, err := c.api.ModifyLoadBalancerPool(ctx, internalPoolToPool(pool))
 	if err != nil {
 		return nil, err
 	}
@@ -58,12 +59,12 @@ func (c *Cloudflare) UpdateLoadBalancerPools(pool *LoadBalancerPool) (*LoadBalan
 	return poolToInternalPool(updatedPool), err
 }
 
-func (c *Cloudflare) DeleteLoadBalancerPools(poolID string) error {
-	return c.api.DeleteLoadBalancerPool(poolID)
+func (c *Cloudflare) DeleteLoadBalancerPools(ctx context.Context, poolID string) error {
+	return c.api.DeleteLoadBalancerPool(ctx, poolID)
 }
 
-func (c *Cloudflare) ListLoadBalancerPools() ([]*LoadBalancerPool, error) {
-	pools, err := c.api.ListLoadBalancerPools()
+func (c *Cloudflare) ListLoadBalancerPools(ctx context.Context) ([]*LoadBalancerPool, error) {
+	pools, err := c.api.ListLoadBalancerPools(ctx)
 	if err != nil {
 		return nil, err
 	}

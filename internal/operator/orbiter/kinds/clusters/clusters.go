@@ -1,6 +1,8 @@
 package clusters
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/mntr"
@@ -8,7 +10,6 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -36,7 +37,7 @@ func GetQueryAndDestroyFuncs(
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
 		return kubernetes.AdaptFunc(
-			labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version),
+			labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version()),
 			clusterID,
 			oneoff,
 			deployOrbiter,
@@ -60,6 +61,6 @@ func GetQueryAndDestroyFuncs(
 
 		//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 	default:
-		return nil, nil, nil, false, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown cluster kind %s", clusterTree.Common.Kind))
 	}
 }

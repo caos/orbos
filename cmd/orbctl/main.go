@@ -2,12 +2,9 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 
 	"github.com/caos/orbos/mntr"
-
-	"github.com/caos/orbos/internal/stores/github"
 )
 
 var (
@@ -26,20 +23,23 @@ var (
 
 func main() {
 
-	defer monitor.RecoverPanic()
-
-	github.ClientID = githubClientID
-	github.ClientSecret = githubClientSecret
-	github.Key = RandStringBytes(32)
+	defer func() { monitor.RecoverPanic(recover()) }()
 
 	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
-	takeoff := TakeoffCommand(getRootValues)
-	takeoff.AddCommand(
+	start := StartCommand()
+	start.AddCommand(
 		StartBoom(getRootValues),
 		StartOrbiter(getRootValues),
 		StartNetworking(getRootValues),
+	)
+
+	file := FileCommand()
+	file.AddCommand(
+		EditCommand(getRootValues),
+		PrintCommand(getRootValues),
+		//		PatchCommand(getRootValues),
 	)
 
 	nodes := NodeCommand()
@@ -53,25 +53,17 @@ func main() {
 	rootCmd.AddCommand(
 		ReadSecretCommand(getRootValues),
 		WriteSecretCommand(getRootValues),
-		EditCommand(getRootValues),
 		TeardownCommand(getRootValues),
 		ConfigCommand(getRootValues),
 		APICommand(getRootValues),
-		takeoff,
+		TakeoffCommand(getRootValues),
+		file,
+		start,
 		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {
+		monitor.Error(mntr.ToUserError(err))
 		os.Exit(1)
 	}
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }

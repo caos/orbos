@@ -1,12 +1,13 @@
 package app
 
 import (
+	"context"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
 )
 
-func (a *App) EnsureLoadBalancers(id string, clusterID, region, domain string, lbs []*cloudflare.LoadBalancer) error {
-	currentLbs, err := a.cloudflare.ListLoadBalancers(domain)
+func (a *App) EnsureLoadBalancers(ctx context.Context, id string, clusterID, region, domain string, lbs []*cloudflare.LoadBalancer) error {
+	currentLbs, err := a.cloudflare.ListLoadBalancers(ctx, domain)
 	if err != nil {
 		return err
 	}
@@ -14,16 +15,16 @@ func (a *App) EnsureLoadBalancers(id string, clusterID, region, domain string, l
 	//only try to manage lbs which have pools in them managed by this operator
 	filteredCurrentLbs := make([]*cloudflare.LoadBalancer, 0)
 	for _, currentLb := range currentLbs {
-		filteredPool := filterSameID(a.cloudflare, currentLb.DefaultPools, id)
+		filteredPool := filterSameID(ctx, a.cloudflare, currentLb.DefaultPools, id)
 		if filteredPool != nil && len(filteredPool) > 0 {
 			filteredCurrentLbs = append(filteredCurrentLbs, currentLb)
 		}
 	}
 
-	deleteLbs, updateLbs := getLoadBalancerToDelete(a.cloudflare, id, filteredCurrentLbs, lbs)
+	deleteLbs, updateLbs := getLoadBalancerToDelete(ctx, a.cloudflare, id, filteredCurrentLbs, lbs)
 	if deleteLbs != nil && len(deleteLbs) > 0 {
 		for _, lb := range deleteLbs {
-			if err := a.cloudflare.DeleteLoadBalancer(domain, lb); err != nil {
+			if err := a.cloudflare.DeleteLoadBalancer(ctx, domain, lb); err != nil {
 				return err
 			}
 		}
@@ -32,17 +33,17 @@ func (a *App) EnsureLoadBalancers(id string, clusterID, region, domain string, l
 	createLbs := getLoadBalancerToCreate(currentLbs, lbs)
 	if createLbs != nil && len(createLbs) > 0 {
 		for _, lb := range createLbs {
-			_, err := a.cloudflare.CreateLoadBalancer(domain, lb)
+			_, err := a.cloudflare.CreateLoadBalancer(ctx, domain, lb)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	updateLbs = append(updateLbs, getLoadBalancerToUpdate(a.cloudflare, id, clusterID, region, domain, currentLbs, lbs)...)
+	updateLbs = append(updateLbs, getLoadBalancerToUpdate(ctx, a.cloudflare, id, clusterID, region, domain, currentLbs, lbs)...)
 	if updateLbs != nil && len(updateLbs) > 0 {
 		for _, lb := range updateLbs {
-			_, err := a.cloudflare.UpdateLoadBalancer(domain, lb)
+			_, err := a.cloudflare.UpdateLoadBalancer(ctx, domain, lb)
 			if err != nil {
 				return err
 			}
@@ -53,6 +54,7 @@ func (a *App) EnsureLoadBalancers(id string, clusterID, region, domain string, l
 }
 
 func getLoadBalancerToDelete(
+	ctx context.Context,
 	cf *cloudflare.Cloudflare,
 	id string,
 	currentLbs []*cloudflare.LoadBalancer,
@@ -75,14 +77,14 @@ func getLoadBalancerToDelete(
 			}
 		}
 
-		hasPoolWithOtherID := hasPoolsWithOtherID(cf, id, currentLb)
+		hasPoolWithOtherID := hasPoolsWithOtherID(ctx, cf, id, currentLb)
 		//delete lbs with no pools managed by another operator
 		if !found && !hasPoolWithOtherID {
 			deleteLbs = append(deleteLbs, currentLb.ID)
 			//otherwise just delete the pool and let the lb stand
 		} else if !found && hasPoolWithOtherID {
 			updateLb := currentLb
-			updateLb.DefaultPools = filterNotSameID(cf, currentLb.DefaultPools, id)
+			updateLb.DefaultPools = filterNotSameID(ctx, cf, currentLb.DefaultPools, id)
 			updateLb.FallbackPool = updateLb.DefaultPools[0]
 
 			updateLbs = append(updateLbs, updateLb)
@@ -116,6 +118,7 @@ func getLoadBalancerToCreate(currentLbs []*cloudflare.LoadBalancer, lbs []*cloud
 }
 
 func getLoadBalancerToUpdate(
+	ctx context.Context,
 	cf *cloudflare.Cloudflare,
 	id,
 	clusterID,
@@ -164,18 +167,18 @@ func getLoadBalancerToUpdate(
 				lb.ID = currentLb.ID
 				// add already entered pools for update
 				//all pools which are maintained by operators with other ids
-				lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(cf, currentLb.DefaultPools, id)...)
+				lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(ctx, cf, currentLb.DefaultPools, id)...)
 
 				// combine the defined region pools for update
 				for currentRegion, currentPools := range currentLb.RegionPools {
 					regionSlice, found := lb.RegionPools[currentRegion]
 					if found {
-						lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(cf, currentLb.DefaultPools, id)...)
+						lb.DefaultPools = append(lb.DefaultPools, filterNotSameID(ctx, cf, currentLb.DefaultPools, id)...)
 
 						regionSlice = append(regionSlice, currentPools...)
 					} else {
 						defPool := []string{}
-						defPool = append(defPool, filterNotSameID(cf, currentPools, id)...)
+						defPool = append(defPool, filterNotSameID(ctx, cf, currentPools, id)...)
 						lb.RegionPools[currentRegion] = defPool
 					}
 				}
@@ -187,18 +190,18 @@ func getLoadBalancerToUpdate(
 	return updateLbs
 }
 
-func hasPoolsWithOtherID(cf *cloudflare.Cloudflare, id string, lb *cloudflare.LoadBalancer) bool {
-	filteredPools := filterNotSameID(cf, lb.DefaultPools, id)
+func hasPoolsWithOtherID(ctx context.Context, cf *cloudflare.Cloudflare, id string, lb *cloudflare.LoadBalancer) bool {
+	filteredPools := filterNotSameID(ctx, cf, lb.DefaultPools, id)
 	if filteredPools != nil && len(filteredPools) > 0 {
 		return true
 	}
 	return false
 }
 
-func filterSameID(cf *cloudflare.Cloudflare, pools []string, id string) []string {
+func filterSameID(ctx context.Context, cf *cloudflare.Cloudflare, pools []string, id string) []string {
 	ret := make([]string, 0)
 	for _, poolID := range pools {
-		poolDet, err := cf.GetLoadBalancerPoolDetails(poolID)
+		poolDet, err := cf.GetLoadBalancerPoolDetails(ctx, poolID)
 		if err != nil {
 			return nil
 		}
@@ -209,10 +212,10 @@ func filterSameID(cf *cloudflare.Cloudflare, pools []string, id string) []string
 	return ret
 }
 
-func filterNotSameID(cf *cloudflare.Cloudflare, pools []string, id string) []string {
+func filterNotSameID(ctx context.Context, cf *cloudflare.Cloudflare, pools []string, id string) []string {
 	ret := make([]string, 0)
 	for _, poolID := range pools {
-		poolDet, err := cf.GetLoadBalancerPoolDetails(poolID)
+		poolDet, err := cf.GetLoadBalancerPoolDetails(ctx, poolID)
 		if err != nil {
 			return nil
 		}

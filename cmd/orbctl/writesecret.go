@@ -1,17 +1,17 @@
 package main
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/mntr"
+
+	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/secret"
-
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 )
 
 func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
@@ -25,9 +25,11 @@ func WriteSecretCommand(getRv GetRootValues) *cobra.Command {
 			Short: "Encrypt a secret and push it to the repository",
 			Long:  "Encrypt a secret and push it to the repository.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
 			Args:  cobra.MaximumNArgs(1),
-			Example: `orbctl writesecret mystaticprovider.bootstrapkey --file ~/.ssh/my-orb-bootstrap
-orbctl writesecret mystaticprovider.bootstrapkey_pub --file ~/.ssh/my-orb-bootstrap.pub
-orbctl writesecret mygceprovider.google_application_credentials_value --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
+			Example: `orbctl writesecret --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret --value $(cat ~/.ssh/my-orb-bootstrap)
+orbctl writesecret mystaticprovider.bootstrapkey.encrypted --file ~/.ssh/my-orb-bootstrap
+orbctl writesecret mystaticprovider.bootstrapkey_pub.encrypted --file ~/.ssh/my-orb-bootstrap.pub
+orbctl writesecret mygceprovider.google_application_credentials_value.encrypted --value "$(cat $GOOGLE_APPLICATION_CREDENTIALS)" `,
 		}
 	)
 
@@ -38,29 +40,27 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		s, err := key(value, file, stdin)
+		s, err := content(value, file, stdin)
 		if err != nil {
 			return err
 		}
-
-		rv, err := getRv()
-		if err != nil {
-			return err
-		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
-
-		monitor := rv.Monitor
-		orbConfig := rv.OrbConfig
-		gitClient := rv.GitClient
 
 		path := ""
 		if len(args) > 0 {
 			path = args[0]
 		}
 
-		k8sClient, _, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
+		rv, err := getRv("writesecret", "", map[string]interface{}{"path": path, "value": value != "", "file": file, "stdin": stdin})
+		if err != nil {
+			return err
+		}
+		defer rv.ErrFunc(err)
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+
+		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
 		if err != nil && !rv.Gitops {
 			return err
 		}
@@ -79,7 +79,13 @@ orbctl writesecret mygceprovider.google_application_credentials_value --value "$
 	return cmd
 }
 
-func key(value string, file string, stdin bool) (string, error) {
+func content(value string, file string, stdin bool) (val string, err error) {
+
+	defer func() {
+		if err != nil {
+			err = mntr.ToUserError(err)
+		}
+	}()
 
 	channels := 0
 	if value != "" {
@@ -93,7 +99,7 @@ func key(value string, file string, stdin bool) (string, error) {
 	}
 
 	if channels != 1 {
-		return "", errors.New("Key must be provided eighter by value or by file path or by standard input")
+		return "", errors.New("content must be provided eighter by value or by file path or by standard input")
 	}
 
 	if value != "" {
@@ -109,9 +115,9 @@ func key(value string, file string, stdin bool) (string, error) {
 		}
 	}
 
-	key, err := readFunc()
+	c, err := readFunc()
 	if err != nil {
 		panic(err)
 	}
-	return string(key), err
+	return string(c), err
 }

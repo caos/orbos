@@ -2,9 +2,10 @@ package main
 
 import (
 	"flag"
+	"path/filepath"
+
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
-	"path/filepath"
 )
 
 const (
@@ -26,7 +27,7 @@ func main() {
 			panic(err)
 		}
 
-		if k8sClient.Available() {
+		if k8sClient != nil {
 			if err := kubernetes.ApplyCRDs(boilerplatePath, "./...", k8sClient); err != nil {
 				panic(err)
 			}

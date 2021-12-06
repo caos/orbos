@@ -1,19 +1,18 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/api"
+	"fmt"
+
+	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
+	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/labels"
 	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
-
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/internal/operator/orbiter"
-	"github.com/caos/orbos/mntr"
 )
 
 func OperatorSelector() *labels.Selector {
@@ -42,12 +41,14 @@ func AdaptFunc(
 		err error,
 	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
@@ -67,6 +68,11 @@ func AdaptFunc(
 
 		whitelistChan := make(chan []*orbiter.CIDR)
 
+		orbID, err := orbConfig.ID()
+		if err != nil {
+			panic(err)
+		}
+
 		for provID, providerTree := range desiredKind.Providers {
 
 			providerCurrent := &tree.Tree{}
@@ -85,6 +91,7 @@ func AdaptFunc(
 				whitelistChan,
 				finishedChan,
 				orbiterCommit,
+				orbID,
 				orbConfig.URL,
 				orbConfig.Repokey,
 				oneoff,
@@ -158,10 +165,7 @@ func AdaptFunc(
 		}
 
 		currentTree.Parsed = &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/Orb",
-				Version: "v0",
-			},
+			Common:    tree.NewCommon("orbiter.caos.ch/Orb", "v0", false),
 			Clusters:  clusterCurrents,
 			Providers: providerCurrents,
 		}
@@ -193,9 +197,11 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf api.PushDesiredFunc) *orbiter.EnsureResult {
+				return func(psf func(monitor mntr.Monitor) error) *orbiter.EnsureResult {
 					defer func() {
-						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+						if err != nil {
+							err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, err)
+						}
 					}()
 
 					done := true
@@ -213,7 +219,9 @@ func AdaptFunc(
 				}, nil
 			}, func(delegates map[string]interface{}) error {
 				defer func() {
-					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("destroying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				for _, destroyer := range clusterDestroyers {
@@ -224,7 +232,9 @@ func AdaptFunc(
 				return nil
 			}, func(orb orbcfg.Orb) error {
 				defer func() {
-					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				for _, configure := range append(providerConfigurers, clusterConfigurers...) {

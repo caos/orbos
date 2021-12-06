@@ -2,6 +2,7 @@ package cmds
 
 import (
 	"context"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -22,59 +23,58 @@ func Takeoff(
 	orbConfig *orbcfg.Orb,
 	gitClient *git.Client,
 	recur bool,
-	destroy bool,
 	deploy bool,
 	verbose bool,
-	ingestionAddress string,
 	version string,
 	gitCommit string,
 	kubeconfig string,
-	gitOpsBoom bool,
-	gitOpsNetworking bool,
+	gitOps bool,
+	operators []string,
 ) error {
+
+	if gitOps {
+		if err := orbcfg.IsComplete(orbConfig); err != nil {
+			return err
+		}
+
+		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+			return err
+		}
+
+		if err := gitClient.Clone(); err != nil {
+			return err
+		}
+
+		if gitClient.Exists(git.OrbiterFile) && deployOperator(operators, "orbiter") {
+			orbiterConfig := &ctrlgitops.OrbiterConfig{
+				Recur:         recur,
+				Deploy:        deploy,
+				Verbose:       verbose,
+				Version:       version,
+				OrbConfigPath: orbConfig.Path,
+				GitCommit:     gitCommit,
+			}
+			if err := ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
+				return err
+			}
+		}
+	}
 
 	if !deploy {
 		monitor.Info("Skipping operator deployments")
 		return nil
 	}
 
-	getKubeClient := func() (*kubernetes.Client, bool, error) {
-		return cli.Client(
-			monitor,
-			orbConfig,
-			gitClient,
-			kubeconfig,
-			gitOpsBoom || gitOpsNetworking,
-		)
-	}
-
-	k8sClient, fromOrbiter, err := getKubeClient()
-
-	if !fromOrbiter && err != nil {
+	k8sClient, err := cli.Client(
+		monitor,
+		orbConfig,
+		gitClient,
+		kubeconfig,
+		gitOps,
+		false,
+	)
+	if err != nil {
 		return err
-	}
-
-	if fromOrbiter {
-		err = nil
-		orbiterConfig := &ctrlgitops.OrbiterConfig{
-			Recur:            recur,
-			Destroy:          destroy,
-			Deploy:           deploy,
-			Verbose:          verbose,
-			Version:          version,
-			OrbConfigPath:    orbConfig.Path,
-			GitCommit:        gitCommit,
-			IngestionAddress: ingestionAddress,
-		}
-
-		if err = ctrlgitops.Orbiter(ctx, monitor, orbiterConfig, gitClient); err != nil {
-			return err
-		}
-
-		k8sClient, fromOrbiter, err = getKubeClient()
-		if err != nil {
-			return err
-		}
 	}
 
 	if err := kubernetes.EnsureCaosSystemNamespace(monitor, k8sClient); err != nil {
@@ -82,7 +82,7 @@ func Takeoff(
 		return err
 	}
 
-	if fromOrbiter || gitOpsBoom || gitOpsNetworking {
+	if gitOps {
 
 		orbConfigBytes, err := yaml.Marshal(orbConfig)
 		if err != nil {
@@ -95,8 +95,26 @@ func Takeoff(
 		}
 	}
 
-	if err := deployBoom(monitor, gitClient, k8sClient, version, gitOpsBoom); err != nil {
-		return err
+	if deployOperator(operators, "boom") {
+		if err := deployBoom(monitor, gitClient, k8sClient, version, gitOps); err != nil {
+			return err
+		}
 	}
-	return deployNetworking(monitor, gitClient, k8sClient, version, gitOpsNetworking)
+	if deployOperator(operators, "networking") {
+		return deployNetworking(monitor, gitClient, k8sClient, version, gitOps)
+	}
+	return nil
+}
+
+func deployOperator(arguments []string, operator string) bool {
+	if len(arguments) == 0 {
+		return true
+	}
+
+	for idx := range arguments {
+		if strings.ToLower(arguments[idx]) == strings.ToLower(operator) {
+			return true
+		}
+	}
+	return false
 }

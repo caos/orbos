@@ -62,12 +62,12 @@ type Origin struct {
 }
 
 type Subdomain struct {
-	Subdomain string `yaml:"subdomain"`
-	IP        string `yaml:"ip"`
-	Proxied   bool   `yaml:"proxied"`
-	TTL       int    `yaml:"ttl"`
-	Type      string `yaml:"type"`
-	Priority  int    `yaml:"priority"`
+	Subdomain string  `yaml:"subdomain"`
+	IP        string  `yaml:"ip"`
+	Proxied   *bool   `yaml:"proxied"`
+	TTL       int     `yaml:"ttl"`
+	Type      string  `yaml:"type"`
+	Priority  *uint16 `yaml:"priority"`
 }
 
 type Rule struct {

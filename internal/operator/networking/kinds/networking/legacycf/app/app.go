@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -17,8 +18,8 @@ type App struct {
 	internalPrefix string
 }
 
-func New(accountName string, user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
-	api, err := cloudflare.New(accountName, user, key, userServiceKey)
+func New(ctx context.Context, accountName string, user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
+	api, err := cloudflare.New(ctx, accountName, user, key, userServiceKey)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +40,7 @@ func (a *App) AddInternalPrefix(desc string) string {
 }
 
 func (a *App) Ensure(
+	ctx context.Context,
 	id string,
 	k8sClient kubernetes.ClientInt,
 	namespace string,
@@ -70,7 +72,7 @@ func (a *App) Ensure(
 		})
 	}
 
-	destroyPools, err := a.EnsureLoadBalancerPools(id, poolsInt)
+	destroyPools, err := a.EnsureLoadBalancerPools(ctx, id, poolsInt)
 	if err != nil {
 		return err
 	}
@@ -96,7 +98,7 @@ func (a *App) Ensure(
 		})
 	}
 
-	if err := a.EnsureLoadBalancers(id, lbs.ClusterID, lbs.Region, domain, lbsInt); err != nil {
+	if err := a.EnsureLoadBalancers(ctx, id, lbs.ClusterID, lbs.Region, domain, lbsInt); err != nil {
 		return err
 	}
 
@@ -132,7 +134,7 @@ func (a *App) Ensure(
 		})
 	}
 
-	err = a.EnsureDNSRecords(domain, recordsInt)
+	err = a.EnsureDNSRecords(ctx, domain, recordsInt)
 	if err != nil {
 		return err
 	}
@@ -174,7 +176,7 @@ func (a *App) Ensure(
 		}
 
 	}
-	filters, deleteFiltersFunc, err := a.EnsureFilters(domain, filtersInt)
+	filters, deleteFiltersFunc, err := a.EnsureFilters(ctx, domain, filtersInt)
 	if err != nil {
 		return err
 	}
@@ -197,7 +199,7 @@ func (a *App) Ensure(
 		}
 	}
 
-	if err := a.EnsureFirewallRules(domain, firewallRulesInt); err != nil {
+	if err := a.EnsureFirewallRules(ctx, domain, firewallRulesInt); err != nil {
 		return err
 	}
 
@@ -206,7 +208,7 @@ func (a *App) Ensure(
 		return err
 	}
 
-	return a.EnsureOriginCACertificate(k8sClient, namespace, originCALabels, domain)
+	return a.EnsureOriginCACertificate(ctx, k8sClient, namespace, originCALabels, domain)
 }
 
 func addSourcesFromList(subList []string, exp *expression.Expression) {

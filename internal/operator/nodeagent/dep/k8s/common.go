@@ -1,12 +1,11 @@
 package k8s
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
@@ -24,10 +23,7 @@ func New(os dep.OperatingSystem, manager *dep.PackageManager, pkg string) *Commo
 }
 
 func (c *Common) Current() (pkg common.Package, err error) {
-	installed, err := c.manager.CurrentVersions(c.pkg)
-	if err != nil {
-		return pkg, errors.Wrapf(err, "getting current %s version failed", c.pkg)
-	}
+	installed := c.manager.CurrentVersions(c.pkg)
 	if len(installed) == 0 {
 		return pkg, nil
 	}

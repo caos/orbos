@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"context"
 	"errors"
 	"github.com/cloudflare/cloudflare-go"
 )
@@ -14,7 +15,7 @@ type Cloudflare struct {
 	api *cloudflare.API
 }
 
-func New(accountName string, user string, key string, userServiceKey string) (*Cloudflare, error) {
+func New(ctx context.Context, accountName string, user string, key string, userServiceKey string) (*Cloudflare, error) {
 	api, err := cloudflare.New(key, user)
 	if err != nil {
 		return nil, err
@@ -22,7 +23,7 @@ func New(accountName string, user string, key string, userServiceKey string) (*C
 
 	api.APIUserServiceKey = userServiceKey
 	if accountName != "" {
-		accounts, _, err := api.Accounts(cloudflare.PaginationOptions{})
+		accounts, _, err := api.Accounts(ctx, cloudflare.PaginationOptions{})
 		if err != nil {
 			return nil, err
 		}

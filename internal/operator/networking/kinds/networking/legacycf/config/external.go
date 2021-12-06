@@ -3,13 +3,15 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net"
 	"strings"
+
+	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/pkg/secret"
 
 	opcore "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
-	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/pkg/labels"
 )
 
@@ -17,7 +19,7 @@ type ExternalConfig struct {
 	AccountName   string `yaml:"accountName"`
 	Verbose       bool
 	Domain        string
-	IP            orbiter.IPAddress
+	IP            string
 	Rules         []*Rule
 	Groups        []*Group      `yaml:"groups"`
 	Credentials   *Credentials  `yaml:"credentials"`
@@ -57,15 +59,18 @@ func (e *ExternalConfig) Internal(id, namespace string, apiLabels *labels.API) (
 
 var ErrNoLBID = errors.New("no loadbalancer identifier provided")
 
-func (e *ExternalConfig) Validate(lbID string) error {
+func (e *ExternalConfig) Validate(lbID string) (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 	if e == nil {
 		return errors.New("domain not found")
 	}
 	if e.Domain == "" {
-		return errors.New("no domain configured")
+		return errors.New("No domain configured")
 	}
-	if err := e.IP.Validate(); err != nil {
-		return err
+	if net.ParseIP(e.IP) == nil {
+		return fmt.Errorf("%s is not a valid ip address", e.IP)
 	}
 
 	if e.LoadBalancer != nil && lbID == "" {
@@ -74,8 +79,12 @@ func (e *ExternalConfig) Validate(lbID string) error {
 
 	return nil
 }
+func (e *ExternalConfig) ValidateSecrets() (err error) {
 
-func (e *ExternalConfig) ValidateSecrets() error {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
+
 	if e.Credentials == nil {
 		return errors.New("no credentials specified")
 	}
@@ -147,7 +156,7 @@ func subdomain(subdomain string, target string, ty string) *Subdomain {
 	return &Subdomain{
 		Subdomain: subdomain,
 		IP:        target,
-		Proxied:   true,
+		Proxied:   boolPtr(true),
 		TTL:       0,
 		Type:      ty,
 	}
@@ -186,3 +195,5 @@ func (c *current) GetReadyCertificate() opcore.EnsureFunc {
 func (c *current) GetTlsCertName() string {
 	return c.tlsCertName
 }
+
+func boolPtr(b bool) *bool { return &b }

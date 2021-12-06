@@ -23,7 +23,7 @@ clusters:
       verbose: false
       versions:
         kubernetes: v1.18.8
-        orbiter: v0.29.3
+        orbiter: v4.0.0
       workers:
         - updatesdisabled: false
           provider: gcezurich

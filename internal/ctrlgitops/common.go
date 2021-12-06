@@ -13,6 +13,7 @@ func gitClient(monitor mntr.Monitor, task string) *git.Client {
 }
 
 func checks(monitor mntr.Monitor, client *git.Client) {
+	defer func() { monitor.RecoverPanic(recover()) }()
 	t := time.NewTicker(13 * time.Hour)
 	for range t.C {
 		if err := client.Check(); err != nil {

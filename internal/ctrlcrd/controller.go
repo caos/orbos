@@ -10,7 +10,6 @@ import (
 	"github.com/caos/orbos/internal/utils/clientgo"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
-	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,15 +46,11 @@ func Start(monitor mntr.Monitor, version, toolsDirectoryPath, metricsAddr string
 		return err
 	}
 
-	k8sClient := kubernetes.NewK8sClientWithConfig(monitor, cfg)
-	if _, err := k8sClient.GetConfigMap("kube-public", "cluster-info"); err != nil {
-		if macherrs.IsNotFound(err) {
-			// This one and other client errors mean that the connection is basically possible
-			err = nil
-		} else {
-			return err
-		}
+	k8sClient, err := kubernetes.NewK8sClientWithConfig(monitor, cfg)
+	if err != nil {
+		return err
 	}
+
 	monitor.Info("successfully connected to kubernetes cluster")
 
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{

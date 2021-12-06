@@ -1,6 +1,10 @@
 package legacycf
 
 import (
+	"context"
+	"errors"
+	"fmt"
+
 	opcore "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
 	"github.com/caos/orbos/mntr"
@@ -9,10 +13,10 @@ import (
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/caos/orbos/pkg/treelabels"
-	"github.com/pkg/errors"
 )
 
 func AdaptFunc(
+	ctx context.Context,
 	namespace string,
 	id string,
 	operatorLabels *labels.Operator,
@@ -34,7 +38,7 @@ func AdaptFunc(
 
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
-			return nil, nil, nil, nil, false, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, nil, false, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -52,7 +56,7 @@ func AdaptFunc(
 
 		internalSpec, current := desiredKind.Spec.Internal(id, namespace, apiLabels)
 
-		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(monitor, internalSpec)
+		legacyQuerier, legacyDestroyer, readyCertificate, err := adaptFunc(ctx, monitor, internalSpec)
 		if err != nil {
 			return nil, nil, nil, nil, false, err
 		}

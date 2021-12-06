@@ -1,6 +1,7 @@
 package cloudflare
 
 import (
+	"context"
 	"github.com/cloudflare/cloudflare-go"
 	"time"
 )
@@ -37,13 +38,13 @@ type SessionAffinityAttributes struct {
 	Secure   string `json:"secure,omitempty"`
 }
 
-func (c *Cloudflare) CreateLoadBalancer(domain string, lb *LoadBalancer) (*LoadBalancer, error) {
+func (c *Cloudflare) CreateLoadBalancer(ctx context.Context, domain string, lb *LoadBalancer) (*LoadBalancer, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	createdLb, err := c.api.CreateLoadBalancer(id, internalLbToLb(lb))
+	createdLb, err := c.api.CreateLoadBalancer(ctx, id, internalLbToLb(lb))
 
 	if err != nil {
 		return nil, err
@@ -52,13 +53,13 @@ func (c *Cloudflare) CreateLoadBalancer(domain string, lb *LoadBalancer) (*LoadB
 	return lbToInternalLb(createdLb), err
 }
 
-func (c *Cloudflare) UpdateLoadBalancer(domain string, lb *LoadBalancer) (*LoadBalancer, error) {
+func (c *Cloudflare) UpdateLoadBalancer(ctx context.Context, domain string, lb *LoadBalancer) (*LoadBalancer, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	updated, err := c.api.ModifyLoadBalancer(id, internalLbToLb(lb))
+	updated, err := c.api.ModifyLoadBalancer(ctx, id, internalLbToLb(lb))
 	if err != nil {
 		return nil, err
 	}
@@ -66,22 +67,22 @@ func (c *Cloudflare) UpdateLoadBalancer(domain string, lb *LoadBalancer) (*LoadB
 	return lbToInternalLb(updated), err
 }
 
-func (c *Cloudflare) DeleteLoadBalancer(domain string, lbID string) error {
+func (c *Cloudflare) DeleteLoadBalancer(ctx context.Context, domain string, lbID string) error {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return err
 	}
 
-	return c.api.DeleteLoadBalancer(id, lbID)
+	return c.api.DeleteLoadBalancer(ctx, id, lbID)
 }
 
-func (c *Cloudflare) ListLoadBalancers(domain string) ([]*LoadBalancer, error) {
+func (c *Cloudflare) ListLoadBalancers(ctx context.Context, domain string) ([]*LoadBalancer, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	lbs, err := c.api.ListLoadBalancers(id)
+	lbs, err := c.api.ListLoadBalancers(ctx, id)
 	if err != nil {
 		return nil, err
 	}

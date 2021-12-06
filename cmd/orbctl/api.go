@@ -3,9 +3,12 @@ package main
 import (
 	"errors"
 
+	"github.com/caos/orbos/mntr"
+
+	"github.com/caos/orbos/pkg/git"
+
 	orbcfg "github.com/caos/orbos/pkg/orb"
 
-	"github.com/caos/orbos/internal/api"
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
@@ -24,16 +27,14 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, err := getRv()
+		rv, err := getRv("api", "", nil)
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = rv.ErrFunc(err)
-		}()
+		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {
-			return errors.New("api command is only supported with the --gitops flag")
+			return mntr.ToUserError(errors.New("api command is only supported with the --gitops flag"))
 		}
 
 		monitor := rv.Monitor
@@ -52,12 +53,8 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return err
-		}
-
-		if foundOrbiter {
+		var desireds []git.GitDesiredState
+		if gitClient.Exists(git.OrbiterFile) {
 			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
 				orbConfig,
@@ -71,19 +68,15 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 
 			if migrate {
-				if err := api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired); err != nil {
-					return err
-				}
+				desireds = append(desireds, git.GitDesiredState{
+					Desired: desired,
+					Path:    git.OrbiterFile,
+				})
 			}
-
 		}
-		foundBoom, err := api.ExistsBoomYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if foundBoom {
+		if gitClient.Exists(git.BoomFile) {
 
-			desired, err := api.ReadBoomYml(gitClient)
+			desired, err := gitClient.ReadTree(git.BoomFile)
 			if err != nil {
 				return err
 			}
@@ -94,10 +87,14 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 			if migrate {
 				desired.Parsed = toolset
-				if err := api.PushBoomYml(monitor, "Update boom.yml", gitClient, desired); err != nil {
-					return err
-				}
+				desireds = append(desireds, git.GitDesiredState{
+					Desired: desired,
+					Path:    git.BoomFile,
+				})
 			}
+		}
+		if len(desireds) > 0 {
+			return gitClient.PushGitDesiredStates(monitor, "migrate apis", desireds)
 		}
 		return nil
 	}

@@ -1,14 +1,13 @@
 package cri
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -57,15 +56,11 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 		return pkg, err
 	}
 
-	installed, err := c.manager.CurrentVersions("docker-ce", "containerd.io")
-	if err != nil {
-		return pkg, err
-	}
 	var (
 		dockerVersion     string
 		containerdVersion string
 	)
-	for _, installedPkg := range installed {
+	for _, installedPkg := range c.manager.CurrentVersions("docker-ce", "containerd.io") {
 		switch installedPkg.Package {
 		case "docker-ce":
 			dockerVersion = fmt.Sprintf("%s %s %s", dockerVersion, installedPkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(installedPkg.Version))
@@ -74,7 +69,7 @@ func (c *criDep) Current() (pkg common.Package, err error) {
 			containerdVersion = installedPkg.Version
 			continue
 		default:
-			panic(errors.Errorf("unexpected installed package %s", installedPkg.Package))
+			panic(fmt.Errorf("unexpected installed package %s", installedPkg.Package))
 		}
 	}
 	pkg.Version = strings.TrimSpace(dockerVersion)
@@ -122,7 +117,7 @@ func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {
-		return errors.Errorf("Container runtime must have the form [runtime] [version], but got %s", install)
+		return fmt.Errorf("container runtime must have the form [runtime] [version], but got %s", install)
 	}
 
 	if fields[0] != "docker-ce" {
@@ -137,5 +132,5 @@ func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 	case dep.CentOS:
 		return c.ensureCentOS(fields[0], version)
 	}
-	return errors.Errorf("Operating %s system is not supported", c.os)
+	return fmt.Errorf("operating system %s is not supported", c.os)
 }
