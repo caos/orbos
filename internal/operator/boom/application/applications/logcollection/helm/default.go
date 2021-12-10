@@ -30,12 +30,12 @@ func DefaultValues(imageTags map[string]string, image string) *Values {
 		NodeSelector: map[string]string{},
 		Resources: &k8s.Resources{
 			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("250m"),
-				corev1.ResourceMemory: resource.MustParse("200Mi"),
+				corev1.ResourceCPU:    resource.MustParse("200m"),
+				corev1.ResourceMemory: resource.MustParse("400Mi"),
 			},
 			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse("50m"),
-				corev1.ResourceMemory: resource.MustParse("100Mi"),
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("200Mi"),
 			},
 		},
 	}
