@@ -33,9 +33,9 @@ func (o OperatingSystem) String() string {
 }
 
 var (
-	UnknownOS OperatingSystem = OperatingSystem{}
-	Ubuntu    OperatingSystem = OperatingSystem{DebianBased}
-	CentOS    OperatingSystem = OperatingSystem{REMBased}
+	UnknownOS = OperatingSystem{}
+	Ubuntu    = OperatingSystem{DebianBased}
+	CentOS    = OperatingSystem{REMBased}
 )
 
 type OperatingSystemMajor struct {
@@ -56,9 +56,9 @@ func (o OperatingSystemMajor) String() string {
 }
 
 var (
-	Unknown OperatingSystemMajor = OperatingSystemMajor{UnknownOS, ""}
-	Bionic  OperatingSystemMajor = OperatingSystemMajor{Ubuntu, "bionic"}
-	CentOS7 OperatingSystemMajor = OperatingSystemMajor{CentOS, "7"}
+	Unknown = OperatingSystemMajor{UnknownOS, ""}
+	Bionic  = OperatingSystemMajor{Ubuntu, "bionic"}
+	CentOS7 = OperatingSystemMajor{CentOS, "7"}
 
 	//	Debian OperatingSystem = OperatingSystem{DebianBased}
 )

@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/nodeagent/dep"
+
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -119,19 +121,16 @@ func (k KubernetesVersion) String() string {
 }
 
 func (k KubernetesVersion) DefineSoftware() common.Software {
-	dockerVersion := "docker-ce v19.03.5"
-	//	if minor, err := k.ExtractMinor(); err != nil && minor <= 15 {
-	//		dockerVersion = "docker-ce v18.09.6"
-	//	}
-
 	sysctlPkg := common.Package{}
 	sysctl.Enable(&sysctlPkg, common.IpForward)
 	sysctl.Enable(&sysctlPkg, common.BridgeNfCallIptables)
 	sysctl.Enable(&sysctlPkg, common.BridgeNfCallIp6tables)
 	return common.Software{
 		Swap: common.Package{Version: "disabled"},
-		Containerruntime: common.Package{Version: dockerVersion, Config: map[string]string{
-			"daemon.json": `{
+		Containerruntime: common.Package{
+			Version: "docker-ce v19.03.5",
+			Config: map[string]string{
+				"daemon.json": `{
 	"exec-opts": ["native.cgroupdriver=systemd"],
 	"log-driver": "json-file",
 	"log-opts": {
@@ -139,11 +138,17 @@ func (k KubernetesVersion) DefineSoftware() common.Software {
 	},
 	"storage-driver": "overlay2"
 }`,
-		}},
+			}},
 		Kubelet: common.Package{Version: k.String()},
 		Kubeadm: common.Package{Version: k.String()},
 		Kubectl: common.Package{Version: k.String()},
 		Sysctl:  sysctlPkg,
+		Kernel: common.Package{
+			Version: "3.10.0",
+			Config: map[string]string{
+				dep.CentOS7.String(): "1160.42.2.el7",
+			},
+		},
 	}
 }
 
@@ -155,6 +160,7 @@ func KubernetesSoftware(current common.Software) common.Software {
 		Kubeadm:          current.Kubeadm,
 		Kubectl:          current.Kubectl,
 		Sysctl:           current.Sysctl,
+		Kernel:           current.Kernel,
 	}
 }
 
@@ -200,7 +206,7 @@ func (k KubernetesVersion) ExtractPatch(monitor mntr.Monitor) (int, error) {
 
 func (k KubernetesVersion) extractNumber(monitor mntr.Monitor, position int) (int, error) {
 	if k == Unknown {
-		return 0, errors.New("Unknown kubernetes version")
+		return 0, errors.New("unknown kubernetes version")
 	}
 
 	parts := strings.Split(k.String(), ".")
@@ -228,7 +234,8 @@ func softwareContains(this common.Software, that common.Software) bool {
 		contains(this.Nginx, that.Nginx) &&
 		contains(this.Hostname, that.Hostname) &&
 		sysctl.Contains(this.Sysctl, that.Sysctl) &&
-		contains(this.Health, that.Health)
+		contains(this.Health, that.Health) &&
+		contains(this.Kernel, that.Kernel)
 }
 
 func contains(this, that common.Package) bool {
@@ -245,11 +252,11 @@ func softwareDefines(this common.Software, that common.Software) bool {
 		defines(this.Nginx, that.Nginx) &&
 		defines(this.Hostname, that.Hostname) &&
 		defines(this.Sysctl, that.Sysctl) &&
-		defines(this.Health, that.Health)
+		defines(this.Health, that.Health) &&
+		defines(this.Kernel, that.Kernel)
 }
 
 func defines(this, that common.Package) bool {
 	zeroPkg := common.Package{}
-	defines := common.PackageEquals(that, zeroPkg) || !common.PackageEquals(this, zeroPkg)
-	return defines
+	return common.PackageEquals(that, zeroPkg) || !common.PackageEquals(this, zeroPkg)
 }

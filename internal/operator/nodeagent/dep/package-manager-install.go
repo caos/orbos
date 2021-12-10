@@ -10,16 +10,20 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-func (p *PackageManager) rembasedInstall(installVersion *Software, more ...*Software) error {
+func (p *PackageManager) rembasedInstall(install ...*Software) error {
+
+	if len(install) == 0 {
+		return nil
+	}
 
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
 	installPkgs := make([]string, 0)
-	for _, sw := range append([]*Software{installVersion}, more...) {
+	for _, sw := range install {
 
-		installedVersion, ok := p.installed[sw.Package]
-		if ok && (sw.Version == "" || sw.Version == installedVersion) {
+		_, ok := p.installed[sw.Package]
+		if ok && sw.Version == "" {
 			continue
 		}
 
@@ -86,14 +90,14 @@ func rembasedInstallPkg(monitor mntr.Monitor, pkg string) error {
 }
 
 // TODO: Use lower level apt instead of apt-get?
-func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Software) error {
+func (p *PackageManager) debbasedInstall(install ...*Software) error {
 
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	pkgs := make([]string, len(more)+1)
+	pkgs := make([]string, len(install))
 	hold := make([]string, 0)
-	for idx, sw := range append([]*Software{installVersion}, more...) {
+	for idx, sw := range install {
 		pkgs[idx] = sw.Package
 		if sw.Version == "" {
 			continue
@@ -149,9 +153,8 @@ func (p *PackageManager) debbasedInstall(installVersion *Software, more ...*Soft
 		errBuf.Reset()
 
 		p.monitor.WithFields(map[string]interface{}{
-			"package": installVersion.Package,
-			"version": installVersion.Version,
-		}).Debug("Installed package")
+			"software": pkg,
+		}).Debug("Holded package")
 	}
 	return nil
 }

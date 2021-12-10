@@ -111,7 +111,7 @@ After=network.target
 Type=simple
 User=root
 ExecStart=%s --id "%s" %s %s --environment "%s"
-Restart=always
+Restart=on-failure
 MemoryLimit=1G
 MemoryAccounting=yes
 RestartSec=10
@@ -203,7 +203,7 @@ WantedBy=multi-user.target
 					}
 
 					stopSystemd := fmt.Sprintf("sudo systemctl stop %s orbos.health* || true", systemdEntry)
-					if err := infra.Try(machineMonitor, time.NewTimer(60*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
+					if err := infra.Try(machineMonitor, time.NewTimer(60*time.Second), 2*time.Minute, machine, func(cmp infra.Machine) error {
 						if _, cbErr := cmp.Execute(nil, stopSystemd); cbErr != nil {
 							return fmt.Errorf("running command %s remotely failed: %w", stopSystemd, cbErr)
 						}

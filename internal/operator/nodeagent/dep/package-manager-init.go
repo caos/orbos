@@ -31,15 +31,11 @@ func (p *PackageManager) debSpecificInit() error {
 
 func (p *PackageManager) remSpecificInit() error {
 
-	if err := p.rembasedInstall(
+	return p.rembasedInstall(
 		&Software{Package: "yum-utils"},
 		&Software{Package: "yum-plugin-versionlock"},
 		&Software{Package: "firewalld"},
-	); err != nil {
-		return err
-	}
-
-	return p.systemd.Enable("firewalld")
+	)
 }
 
 func (p *PackageManager) remSpecificUpdatePackages() error {

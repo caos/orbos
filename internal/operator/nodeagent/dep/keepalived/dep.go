@@ -81,13 +81,15 @@ func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
 	redacted := new(bytes.Buffer)
 	defer redacted.Reset()
 
-	dep.Manipulate(bytes.NewReader(config), redacted, nil, nil, func(line string) *string {
+	if err := dep.Manipulate(bytes.NewReader(config), redacted, nil, nil, func(line string) *string {
 		searchString := "auth_pass "
 		if strings.Contains(line, searchString) {
 			line = line[0:strings.Index(line, searchString)+len(searchString)] + "[ REDACTED ]"
 		}
 		return &line
-	})
+	}); err != nil {
+		return pkg, err
+	}
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
 	}
