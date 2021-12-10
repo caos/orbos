@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-func getPoolName(domain, region, clusterID string) string {
-	return strings.Join([]string{clusterID, region, strings.ReplaceAll(domain, ".", "-")}, "-")
+func getPoolName(subdomain, domain, region, clusterID string) string {
+	return strings.Join([]string{clusterID, region, subdomain, strings.ReplaceAll(domain, ".", "-")}, "-")
 }
 
 func (a *App) EnsureLoadBalancerPools(ctx context.Context, id string, pools []*cloudflare.LoadBalancerPool) (func() error, error) {

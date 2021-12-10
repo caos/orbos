@@ -3,10 +3,15 @@ package app
 import (
 	"context"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/config"
 )
 
-func (a *App) EnsureLoadBalancers(ctx context.Context, id string, clusterID, region, domain string, lbs []*cloudflare.LoadBalancer) error {
+func (a *App) EnsureLoadBalancers(
+	ctx context.Context,
+	id string,
+	domain string,
+	lbs []*cloudflare.LoadBalancer,
+	lbsAdditional []*additionalInfos,
+) error {
 	currentLbs, err := a.cloudflare.ListLoadBalancers(ctx, domain)
 	if err != nil {
 		return err
@@ -40,7 +45,7 @@ func (a *App) EnsureLoadBalancers(ctx context.Context, id string, clusterID, reg
 		}
 	}
 
-	updateLbs = append(updateLbs, getLoadBalancerToUpdate(ctx, a.cloudflare, id, clusterID, region, domain, currentLbs, lbs)...)
+	updateLbs = append(updateLbs, getLoadBalancerToUpdate(ctx, a.cloudflare, id, domain, currentLbs, lbs, lbsAdditional)...)
 	if updateLbs != nil && len(updateLbs) > 0 {
 		for _, lb := range updateLbs {
 			_, err := a.cloudflare.UpdateLoadBalancer(ctx, domain, lb)
@@ -121,11 +126,10 @@ func getLoadBalancerToUpdate(
 	ctx context.Context,
 	cf *cloudflare.Cloudflare,
 	id,
-	clusterID,
-	region,
 	domain string,
 	currentLbs []*cloudflare.LoadBalancer,
 	lbs []*cloudflare.LoadBalancer,
+	infos []*additionalInfos,
 ) []*cloudflare.LoadBalancer {
 	updateLbs := make([]*cloudflare.LoadBalancer, 0)
 
@@ -133,11 +137,17 @@ func getLoadBalancerToUpdate(
 		return updateLbs
 	}
 
-	poolName := getPoolName(domain, region, clusterID)
-
 	for _, lb := range lbs {
+		additional := &additionalInfos{}
+		for _, add := range infos {
+			if add.name == lb.Name {
+				additional = add
+			}
+		}
+		poolName := getPoolName(additional.subdomain, domain, additional.region, additional.clusterID)
+
 		for _, currentLb := range currentLbs {
-			if currentLb.Name == config.GetLBName(domain) {
+			if currentLb.Name == lb.Name {
 				containedRegion := false
 				containedDefault := false
 				for _, currentPool := range currentLb.DefaultPools {
@@ -149,7 +159,7 @@ func getLoadBalancerToUpdate(
 
 			regionPoolsLoop:
 				for currentRegion, currentPools := range currentLb.RegionPools {
-					if currentRegion == region {
+					if currentRegion == additional.region {
 						for _, currentPool := range currentPools {
 							if currentPool == poolName {
 								containedRegion = true

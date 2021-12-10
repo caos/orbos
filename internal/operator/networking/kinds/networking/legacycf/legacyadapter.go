@@ -63,8 +63,7 @@ func adaptFunc(
 						domain.Subdomains,
 						domain.Rules,
 						caSecretLabels,
-						domain.LoadBalancer,
-						domain.FloatingIP,
+						domain.LoadBalancers,
 					)
 					if err != nil {
 						return err

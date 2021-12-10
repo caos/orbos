@@ -39,6 +39,13 @@ func (a *App) AddInternalPrefix(desc string) string {
 	return strings.Join([]string{a.internalPrefix, desc}, " ")
 }
 
+type additionalInfos struct {
+	name      string
+	subdomain string
+	clusterID string
+	region    string
+}
+
 func (a *App) Ensure(
 	ctx context.Context,
 	id string,
@@ -48,28 +55,31 @@ func (a *App) Ensure(
 	subdomains []*config.Subdomain,
 	rules []*config.Rule,
 	originCALabels *labels.Name,
-	lbs *config.LoadBalancer,
-	floatingIP string,
+	lbs []*config.LoadBalancer,
 ) error {
 	firewallRulesInt := make([]*cloudflare.FirewallRule, 0)
 	filtersInt := make([]*cloudflare.Filter, 0)
 	recordsInt := make([]*cloudflare.DNSRecord, 0)
 	poolsInt := make([]*cloudflare.LoadBalancerPool, 0)
 	lbsInt := make([]*cloudflare.LoadBalancer, 0)
+	lbsAdditionalInt := make([]*additionalInfos, 0)
 
-	if lbs != nil && lbs.Create {
-		originsInt := []*cloudflare.LoadBalancerOrigin{{
-			Name:    getPoolName(domain, lbs.Region, lbs.ClusterID),
-			Address: floatingIP,
-			Enabled: true,
-		}}
-
-		poolsInt = append(poolsInt, &cloudflare.LoadBalancerPool{
-			Name:        getPoolName(domain, lbs.Region, lbs.ClusterID),
-			Description: id,
-			Enabled:     lbs.Enabled,
-			Origins:     originsInt,
-		})
+	if lbs != nil {
+		for _, lb := range lbs {
+			for name, ip := range lb.Pool {
+				originsInt := []*cloudflare.LoadBalancerOrigin{{
+					Name:    name,
+					Address: ip,
+					Enabled: true,
+				}}
+				poolsInt = append(poolsInt, &cloudflare.LoadBalancerPool{
+					Name:        getPoolName(lb.Subdomain, domain, lb.Region, lb.ClusterID),
+					Description: id,
+					Enabled:     true,
+					Origins:     originsInt,
+				})
+			}
+		}
 	}
 
 	destroyPools, err := a.EnsureLoadBalancerPools(ctx, id, poolsInt)
@@ -77,28 +87,38 @@ func (a *App) Ensure(
 		return err
 	}
 
-	if lbs != nil && lbs.Create {
-		//ids get filled in the EnsureLoadBalancerPools-function
-		poolNames := []string{}
-		if poolsInt != nil {
-			for _, poolInt := range poolsInt {
-				poolNames = append(poolNames, poolInt.ID)
+	if lbs != nil {
+		for _, lb := range lbs {
+			//ids get filled in the EnsureLoadBalancerPools-function
+			poolNames := []string{}
+			if poolsInt != nil {
+				for _, poolInt := range poolsInt {
+					if poolInt.Name == getPoolName(lb.Subdomain, domain, lb.Region, lb.ClusterID) {
+						poolNames = append(poolNames, poolInt.ID)
+					}
+				}
 			}
-		}
 
-		enabled := true
-		lbsInt = append(lbsInt, &cloudflare.LoadBalancer{
-			Name:         config.GetLBName(domain),
-			DefaultPools: poolNames,
-			//the first pool is fallback pool for now
-			FallbackPool:   poolNames[0],
-			Enabled:        &enabled,
-			Proxied:        true,
-			SteeringPolicy: "random",
-		})
+			enabled := lb.Enabled
+			lbsInt = append(lbsInt, &cloudflare.LoadBalancer{
+				Name:         config.GetLBName(lb.Subdomain, domain),
+				DefaultPools: poolNames,
+				//the first pool is fallback pool for now
+				FallbackPool:   poolNames[0],
+				Enabled:        &enabled,
+				Proxied:        true,
+				SteeringPolicy: "random",
+			})
+			lbsAdditionalInt = append(lbsAdditionalInt, &additionalInfos{
+				name:      config.GetLBName(lb.Subdomain, domain),
+				clusterID: lb.ClusterID,
+				region:    lb.Region,
+				subdomain: lb.Subdomain,
+			})
+		}
 	}
 
-	if err := a.EnsureLoadBalancers(ctx, id, lbs.ClusterID, lbs.Region, domain, lbsInt); err != nil {
+	if err := a.EnsureLoadBalancers(ctx, id, domain, lbsInt, lbsAdditionalInt); err != nil {
 		return err
 	}
 

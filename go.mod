@@ -8,7 +8,7 @@ require (
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/caos/oidc v1.0.0
-	github.com/cloudflare/cloudflare-go v0.23.0
+	github.com/cloudflare/cloudflare-go v0.28.0
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.7.1
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
@@ -17,7 +17,6 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
 	github.com/google/uuid v1.3.0
-	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/kataras/tablewriter v0.0.0-20180708051242-e063d29b7c23
 	github.com/kr/pty v1.1.8 // indirect
 	github.com/landoop/tableprinter v0.0.0-20200805134727-ea32388e35c1

@@ -41,19 +41,19 @@ type Group struct {
 }
 
 type InternalDomain struct {
-	FloatingIP   string
-	Domain       string        `yaml:"domain"`
-	Origin       *Origin       `yaml:"origin"`
-	Subdomains   []*Subdomain  `yaml:"subdomains"`
-	Rules        []*Rule       `yaml:"rules"`
-	LoadBalancer *LoadBalancer `yaml:"loadbalancer"`
+	Domain        string          `yaml:"domain"`
+	Origin        *Origin         `yaml:"origin"`
+	Subdomains    []*Subdomain    `yaml:"subdomains"`
+	Rules         []*Rule         `yaml:"rules"`
+	LoadBalancers []*LoadBalancer `yaml:"loadbalancers"`
 }
 
 type LoadBalancer struct {
-	Create    bool   `yaml:"create"`
-	ClusterID string `yaml:"clusterid"`
-	Region    string `yaml:"region"`
-	Enabled   bool   `yaml:"enabled"`
+	Subdomain string            `yaml:"subdomain"`
+	ClusterID string            `yaml:"clusterid"`
+	Region    string            `yaml:"region"`
+	Enabled   bool              `yaml:"enabled"`
+	Pool      map[string]string `yaml:"pool"`
 }
 
 type Origin struct {

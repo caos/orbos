@@ -50,7 +50,7 @@ func AdaptFunc(
 			return nil, nil, nil, nil, false, errors.New("No specs found")
 		}
 
-		if err := desiredKind.Spec.Validate(id); err != nil {
+		if err := desiredKind.Spec.Validate(); err != nil {
 			return nil, nil, nil, nil, false, err
 		}
 
