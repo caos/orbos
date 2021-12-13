@@ -29,8 +29,8 @@ require (
 	github.com/tinylib/msgp v1.1.6 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20210614182718-04defd469f4e
-	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
-	google.golang.org/api v0.57.0
+	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8
+	google.golang.org/api v0.62.0
 	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/api v0.22.2
