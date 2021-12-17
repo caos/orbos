@@ -44,7 +44,7 @@ func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloud
 	for _, currentRecord := range currentRecords {
 		found := false
 		if records != nil {
-			if currentRecord.Type == "MX" {
+			if currentRecord.Type == "MX" || currentRecord.Type == "TXT" {
 				for _, record := range records {
 					if currentRecord.Type == record.Type &&
 						currentRecord.Name == record.Name &&
@@ -75,22 +75,20 @@ func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNS
 
 	if records != nil {
 		for _, record := range records {
-			if record.Type == "MX" {
+			if record.Type == "MX" || record.Type == "TXT" {
 				found := false
 				for _, currentRecord := range currentRecords {
 					if record.Type == currentRecord.Type &&
 						record.Name == currentRecord.Name &&
 						(record.Content == currentRecord.Content || strings.ToLower(record.Content) == currentRecord.Content) {
 						found = true
+						break
 					}
 				}
 				if !found {
 					createRecords = append(createRecords, record)
 				}
-			}
-		}
-		for _, record := range records {
-			if record.Type != "MX" {
+			} else {
 				found := false
 				for _, currentRecord := range currentRecords {
 					if record.Type == currentRecord.Type &&
@@ -107,7 +105,7 @@ func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNS
 						break
 					}
 				}
-				if found == false {
+				if !found {
 					createRecords = append(createRecords, record)
 				}
 			}
