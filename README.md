@@ -27,7 +27,7 @@ Copy the files [orbiter.yml](examples/orbiter/gce/orbiter.yml) and [boom.yml](ex
 
 ```bash
 # Install the latest orbctl
-curl -s https://api.github.com/repos/caos/orbos/releases/latest | grep "browser_download_url.*orbctl-$(uname)-$(uname -m)" | cut -d '"' -f 4 | sudo wget -i - -O /usr/local/bin/orbctl
+sudo wget https://github.com/caos/orbos/releases/latest/download/orbctl-Linux-x86_64 -O /usr/local/bin/orbctl
 sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 

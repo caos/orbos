@@ -22,7 +22,9 @@ orbctl
 *.out
 
 # cypress results and videos
-cypress/results
-cypress/videos
+orbconfig
+ghtoken
 
 /local
+
+.DS_Store
