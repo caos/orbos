@@ -83,7 +83,7 @@ func EnsureOrbiterArtifacts(
 							},
 						},
 						LivenessProbe: &core.Probe{
-							Handler: core.Handler{
+							ProbeHandler: core.ProbeHandler{
 								HTTPGet: &core.HTTPGetAction{
 									Path:        "/health",
 									Port:        intstr.FromInt(9000),
