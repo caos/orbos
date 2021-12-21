@@ -385,7 +385,7 @@ token_type: bearer`, accessToken))).To(BeNumerically(">", 0))
 	})
 	When("desiring the latest kubernetes release", func() {
 		It("upgrades the kubernetes binaries", func() {
-			AwaitUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.21.0", "v1.21.0", 1, 1, 60*time.Minute)
+			AwaitUpdatedOrbiter("clusters.k8s.spec.versions.kubernetes", "v1.23.2", "v1.23.2", 1, 1, 120*time.Minute)
 		})
 	})
 })
