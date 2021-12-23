@@ -24,7 +24,8 @@ func alignMachines(
 	}).Debug("Ensuring scale")
 
 	var machines []*initializedMachine
-	upscalingDone := true
+
+	upscalingUndone := make(chan bool)
 	var (
 		wg  sync.WaitGroup
 		err error
@@ -33,7 +34,7 @@ func alignMachines(
 		defer wg.Done()
 
 		if pool.upscaling > 0 {
-			upscalingDone = false
+			upscalingUndone <- true
 			machines, alignErr := newMachines(pool.infra, pool.upscaling, pool.desired.Nodes)
 			if alignErr != nil {
 				err = helpers.Concat(err, alignErr)
@@ -62,7 +63,21 @@ func alignMachines(
 		wg.Add(1)
 		go alignPool(workerPool)
 	}
+
+	upscalingDone := true
+	go func() {
+		for {
+			select {
+			case undone := <-upscalingUndone:
+				if upscalingDone {
+					upscalingDone = undone
+				}
+			}
+		}
+	}()
+
 	wg.Wait()
+	close(upscalingUndone)
 	if err != nil {
 		return false, machines, err
 	}
