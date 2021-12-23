@@ -155,7 +155,7 @@ type Client struct {
 	available         bool
 }
 
-func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
+func NewK8sClientPathBeforeInCluster(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
 	kubeconfigStr := ""
 	if kubeconfigPath != "" {
 		value, err := ioutil.ReadFile(helpers.PruneHome(kubeconfigPath))
@@ -166,16 +166,16 @@ func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client,
 		kubeconfigStr = string(value)
 	}
 
-	return NewK8sClient(monitor, &kubeconfigStr)
+	return NewK8sClient(monitor, &kubeconfigStr, kubeconfigPath)
 }
 
 func newClient(monitor mntr.Monitor) *Client {
 	return &Client{monitor: monitor}
 }
 
-func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) (*Client, error) {
+func NewK8sClient(monitor mntr.Monitor, kubeconfig *string, kubeconfigPath string) (*Client, error) {
 	kc := newClient(monitor)
-	if err := kc.init(kubeconfig); err != nil {
+	if err := kc.init(kubeconfig, kubeconfigPath); err != nil {
 		return nil, err
 	}
 	return kc, nil
@@ -882,7 +882,16 @@ func (c *Client) applyController(
 	)
 }
 
-func (c *Client) init(kubeconfig *string) (err error) {
+func restCfgFromContent(bytes []byte) (*rest.Config, error) {
+	clientCfg, err := clientcmd.NewClientConfigFromBytes(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientCfg.ClientConfig()
+}
+
+func (c *Client) init(kubeconfig *string, kubeconfigPath string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("refreshing Kubernetes client failed: %w", err)
@@ -890,21 +899,30 @@ func (c *Client) init(kubeconfig *string) (err error) {
 	}()
 
 	restCfg := new(rest.Config)
-	if kubeconfig == nil || *kubeconfig == "" {
-		restCfg, err = rest.InClusterConfig()
+	if kubeconfig != nil && *kubeconfig == "" {
+		restCfg, err = restCfgFromContent([]byte(*kubeconfig))
 		if err != nil {
 			return err
 		}
 	} else {
-		clientCfg, err := clientcmd.NewClientConfigFromBytes([]byte(*kubeconfig))
-		if err != nil {
-			return err
+
+		var inClusterErr error
+		restCfg, inClusterErr = rest.InClusterConfig()
+		if inClusterErr == nil {
+			return c.refreshAllClients(restCfg)
 		}
 
-		restCfg, err = clientCfg.ClientConfig()
-		if err != nil {
-			return err
+		localKubeconfigContent, localKubeconfigErr := ioutil.ReadFile(kubeconfigPath)
+		if localKubeconfigErr != nil {
+			return fmt.Errorf("can't create kubernetes client: in-cluster err: %w: local kubeconfig err: %s", inClusterErr, localKubeconfigErr)
 		}
+
+		restCfg, localKubeconfigErr = restCfgFromContent(localKubeconfigContent)
+		if localKubeconfigErr != nil {
+			return fmt.Errorf("can't create kubernetes client: in-cluster err: %w: local kubeconfig err: %s", inClusterErr, localKubeconfigErr)
+		}
+
+		return inClusterErr
 	}
 
 	return c.refreshAllClients(restCfg)

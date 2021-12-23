@@ -3,7 +3,6 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	orb2 "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
@@ -68,14 +67,14 @@ func Client(
 			}
 		}
 	}
-
-	if kc == "" {
-		value, err := ioutil.ReadFile(kubeconfig)
-		if err != nil {
-			return nil, err
+	/*
+		if kc == "" {
+			value, err := ioutil.ReadFile(kubeconfig)
+			if err != nil {
+				return nil, err
+			}
+			kc = string(value)
 		}
-		kc = string(value)
-	}
-
-	return kubernetes.NewK8sClient(monitor, &kc)
+	*/
+	return kubernetes.NewK8sClient(monitor, &kc, kubeconfig)
 }
