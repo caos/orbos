@@ -91,7 +91,7 @@ func build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 
 	builtTuple := builtTupleFunc(bin)
 
-	args := []string{"build", "-o", bin.OutDir}
+	args := []string{"build", "-race", "-o", bin.OutDir}
 
 	ldflags := "-s -w "
 	if debug {
@@ -107,6 +107,7 @@ func build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 	for k, v := range bin.Env {
 		cmdEnv = append(cmdEnv, fmt.Sprintf("%s=%s", k, v))
 	}
+	cmdEnv = append(cmdEnv, "CGO_ENABLED=1")
 
 	cmd := exec.Command("go", append(args, "-ldflags", ldflags, bin.MainDir)...)
 	cmd.Env = cmdEnv
