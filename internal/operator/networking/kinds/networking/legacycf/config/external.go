@@ -122,7 +122,7 @@ func subdomain(subdomain string, ip string) *Subdomain {
 	return &Subdomain{
 		Subdomain: subdomain,
 		IP:        ip,
-		Proxied:   true,
+		Proxied:   boolPtr(true),
 		TTL:       0,
 		Type:      "A",
 	}
@@ -161,3 +161,5 @@ func (c *current) GetReadyCertificate() core2.EnsureFunc {
 func (c *current) GetTlsCertName() string {
 	return c.tlsCertName
 }
+
+func boolPtr(b bool) *bool { return &b }

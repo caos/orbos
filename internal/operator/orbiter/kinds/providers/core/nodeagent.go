@@ -113,11 +113,12 @@ Type=simple
 User=root
 ExecStart=%s --id "%s" %s %s --environment "%s"
 Restart=always
-MemoryLimit=250M
+MemoryLimit=1G
 MemoryAccounting=yes
 RestartSec=10
 CPUAccounting=yes
-MemoryAccounting=yes
+TimeoutStopSec=300
+KillMode=mixed
 
 [Install]
 WantedBy=multi-user.target

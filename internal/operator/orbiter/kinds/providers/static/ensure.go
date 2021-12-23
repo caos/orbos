@@ -70,8 +70,14 @@ func query(
 			return vip.IP
 		}
 
+		vipInterface := desired.Spec.PrivateInterface
+		if len(desired.Spec.ExternalInterfaces) > 0 {
+			vipInterface = desired.Spec.ExternalInterfaces[0]
+		}
+
 		wrappedMachinesService := wrap.MachinesService(internalMachinesService, *lbCurrent, &dynamiclbmodel.VRRP{
-			VRRPInterface: "eth0",
+			VRRPInterface: desired.Spec.PrivateInterface,
+			VIPInterface:  vipInterface,
 			NotifyMaster:  nil,
 			AuthCheck:     nil,
 		}, mapVIP)

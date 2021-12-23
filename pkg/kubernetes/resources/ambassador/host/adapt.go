@@ -3,6 +3,7 @@ package host
 import (
 	"reflect"
 
+	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
@@ -15,13 +16,13 @@ const (
 	kind    = "Host"
 )
 
-func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
+type AdaptFuncToEnsureFunc func(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error)
 
+func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
 	labelInterfaceValues := make(map[string]interface{})
 	for k, v := range labels {
 		labelInterfaceValues[k] = v
 	}
-
 	acme := map[string]interface{}{
 		"authority": authority,
 	}
@@ -67,9 +68,17 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
-
 		ensure := func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
+		}
+		crdName := "hosts.getambassador.io"
+		_, ok, err := k8sClient.CheckCRD(crdName)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			monitor.WithField("name", crdName).Info("crd definition not found, skipping")
+			return func(k8sClient kubernetes.ClientInt) error { return nil }, nil
 		}
 
 		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)

@@ -58,18 +58,19 @@ func ensure(
 		return machinesDone, err
 	}
 
-	upgradingDone, err := ensureSoftware(
+	done, err = ensureSoftware(
+
 		monitor,
 		targetVersion,
 		k8sClient,
 		controlplaneMachines,
 		workerMachines)
-	if err != nil || !upgradingDone {
+	if err != nil || !done {
 		monitor.Info("Upgrading is not done yet")
-		return upgradingDone, err
+		return done, err
 	}
 
-	if scalingDone, err := ensureNodes(
+	done, err = ensureNodes(
 		monitor,
 		clusterID,
 		desired,
@@ -78,20 +79,16 @@ func ensure(
 		targetVersion,
 		k8sClient,
 		oneoff,
-		gitClient,
 		providerK8sSpec,
 		initializedMachines,
-		privateInterface,
-	); err != nil || !scalingDone {
+	)
+	if err != nil {
+		return done, err
+	}
+
+	if !done {
 		monitor.Info("Scaling is not done yet")
-		return scalingDone, err
 	}
 
-	for _, pool := range append(workers, controlplane) {
-		if err := pool.infra.EnsureMembers(); err != nil {
-			return false, err
-		}
-	}
-
-	return true, nil
+	return done, ensureK8sPlugins(monitor, gitClient, k8sClient, *desired, providerK8sSpec, privateInterface)
 }
