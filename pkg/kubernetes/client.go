@@ -903,7 +903,7 @@ func (c *Client) init(kubeconfig *string, kubeconfigPath string) (err error) {
 	}()
 
 	restCfg := new(rest.Config)
-	if kubeconfig != nil && *kubeconfig == "" {
+	if kubeconfig != nil && *kubeconfig != "" {
 		c.monitor.WithField("content", *kubeconfig).Debug("trying kubeconfig from in-memory content")
 		restCfg, err = restCfgFromContent([]byte(*kubeconfig))
 		if err != nil {
