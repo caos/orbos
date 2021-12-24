@@ -880,10 +880,16 @@ func (c *Client) applyController(
 	)
 }
 
-func restCfgFromContent(bytes []byte) (*rest.Config, error) {
+func restCfgFromContent(bytes []byte) (cfg *rest.Config, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("creating a kubernetes client from bytes failed: %w", err)
+		}
+	}()
+
 	clientCfg, err := clientcmd.NewClientConfigFromBytes(bytes)
 	if err != nil {
-		return nil, fmt.Errorf("creating a kubernetes client from bytes failed: %w", err)
+		return nil, err
 	}
 
 	return clientCfg.ClientConfig()
@@ -898,6 +904,7 @@ func (c *Client) init(kubeconfig *string, kubeconfigPath string) (err error) {
 
 	restCfg := new(rest.Config)
 	if kubeconfig != nil && *kubeconfig == "" {
+		c.monitor.WithField("content", *kubeconfig).Debug("trying kubeconfig from in-memory content")
 		restCfg, err = restCfgFromContent([]byte(*kubeconfig))
 		if err != nil {
 			return err
@@ -928,7 +935,13 @@ func (c *Client) initConfig(config *rest.Config) (err error) {
 	return c.refreshAllClients(config)
 }
 
-func (c *Client) refreshAllClients(config *rest.Config) error {
+func (c *Client) refreshAllClients(config *rest.Config) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("refreshing all kubernetes clients failed: %w", err)
+		}
+	}()
+
 	c.restConfig = config
 
 	set, err := kubernetes.NewForConfig(config)
