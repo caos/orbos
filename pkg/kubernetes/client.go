@@ -159,11 +159,9 @@ func NewK8sClientPathBeforeInCluster(monitor mntr.Monitor, kubeconfigPath string
 	kubeconfigStr := ""
 	if kubeconfigPath != "" {
 		value, err := ioutil.ReadFile(helpers.PruneHome(kubeconfigPath))
-		if err != nil {
-			monitor.Error(err)
-			return nil, err
+		if err == nil {
+			kubeconfigStr = string(value)
 		}
-		kubeconfigStr = string(value)
 	}
 
 	return NewK8sClient(monitor, &kubeconfigStr, kubeconfigPath)
@@ -885,7 +883,7 @@ func (c *Client) applyController(
 func restCfgFromContent(bytes []byte) (*rest.Config, error) {
 	clientCfg, err := clientcmd.NewClientConfigFromBytes(bytes)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating a kubernetes client from bytes failed: %w", err)
 	}
 
 	return clientCfg.ClientConfig()
