@@ -197,7 +197,7 @@ func (c *Client) checkConnectivity() error {
 	if err == nil || macherrs.IsNotFound(err) {
 		return nil
 	}
-	return err
+	return fmt.Errorf("connectivity check get node failed: %w", err)
 }
 
 func (c *Client) nodeApi() clgocore.NodeInterface {
@@ -921,8 +921,6 @@ func (c *Client) init(kubeconfig *string, kubeconfigPath string) (err error) {
 		if localKubeconfigErr != nil {
 			return fmt.Errorf("can't create kubernetes client: in-cluster err: %w: local kubeconfig err: %s", inClusterErr, localKubeconfigErr)
 		}
-
-		return inClusterErr
 	}
 
 	return c.refreshAllClients(restCfg)
@@ -937,25 +935,25 @@ func (c *Client) refreshAllClients(config *rest.Config) error {
 
 	set, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating Clientset failed: %w", err)
 	}
 	c.set = set
 
 	apixv1beta1clientC, err := apixv1beta1client.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating ApiextensionsV1beta1Client failed: %w", err)
 	}
 	c.apixv1beta1client = apixv1beta1clientC
 
 	dynamicC, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating dynamic client failed: %w", err)
 	}
 	c.dynamic = dynamicC
 
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating DiscoveryClient failed: %w", err)
 	}
 	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
 
