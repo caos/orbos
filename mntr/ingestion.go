@@ -86,6 +86,10 @@ func (m Monitor) SwitchEnvironment(environment string) {
 		panic("environment must not be empty")
 	}
 
+	if environment == env {
+		return
+	}
+
 	m.WithFields(map[string]interface{}{"from": env, "to": environment}).CaptureMessage("Environment changed")
 
 	env = environment
