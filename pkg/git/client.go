@@ -11,10 +11,13 @@ import (
 	"strings"
 	"time"
 
+	"errors"
+
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	gogit "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/config"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
 	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
@@ -80,7 +83,7 @@ func (g *Client) GetURL() string {
 func (g *Client) Configure(repoURL string, deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {
-		return fmt.Errorf("parsing deployment key failed: %w", err)
+		return mntr.ToUserError(fmt.Errorf("parsing deployment key failed: %w", err))
 	}
 
 	if repoURL != g.repoURL {
@@ -147,6 +150,7 @@ func (g *Client) writeCheck() (err error) {
 		if ref, err = g.repo.Tag(localWriteCheckTag); err != nil {
 			return err
 		}
+		createErr = nil
 	}
 
 	if createErr != nil {
@@ -159,7 +163,7 @@ func (g *Client) writeCheck() (err error) {
 			config.RefSpec("+" + ref.Name() + ":" + ref.Name()),
 		},
 		Auth: g.auth,
-	}); pushErr != nil && pushErr == gogit.NoErrAlreadyUpToDate {
+	}); pushErr != nil && pushErr != gogit.NoErrAlreadyUpToDate {
 		return fmt.Errorf("write-check failed: %w", pushErr)
 	}
 
@@ -324,7 +328,7 @@ type File struct {
 	Content []byte
 }
 
-func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
+func (g *Client) stageAndCommit(msg string, files ...File) (bool, error) {
 	if g.stage(files...) {
 		return false, nil
 	}
@@ -332,12 +336,13 @@ func (g *Client) StageAndCommit(msg string, files ...File) (bool, error) {
 	return true, g.Commit(msg)
 }
 
-func (g *Client) UpdateRemote(msg string, files ...File) error {
+func (g *Client) UpdateRemote(msg string, whenCloned func() []File) error {
+
 	if err := g.Clone(); err != nil {
 		return fmt.Errorf("recloning before committing changes failed: %w", err)
 	}
 
-	changed, err := g.StageAndCommit(msg, files...)
+	changed, err := g.stageAndCommit(msg, whenCloned()...)
 	if err != nil {
 		return err
 	}
@@ -346,8 +351,14 @@ func (g *Client) UpdateRemote(msg string, files ...File) error {
 		g.monitor.Info("No changes")
 		return nil
 	}
-
-	return g.Push()
+	err = g.Push()
+	if err != nil &&
+		(errors.Is(err, plumbing.ErrObjectNotFound) ||
+			strings.Contains(err.Error(), "cannot lock ref")) {
+		g.monitor.WithField("response", err.Error()).Info("Git collision detected, retrying")
+		return g.UpdateRemote(msg, whenCloned)
+	}
+	return err
 }
 
 func (g *Client) stage(files ...File) bool {
@@ -433,16 +444,17 @@ type GitDesiredState struct {
 
 func (g *Client) PushGitDesiredStates(monitor mntr.Monitor, msg string, desireds []GitDesiredState) (err error) {
 	monitor.OnChange = func(_ string, fields map[string]string) {
-		gitFiles := make([]File, len(desireds))
-		for i := range desireds {
-			desired := desireds[i]
-			gitFiles[i] = File{
-				Path:    string(desired.Path),
-				Content: common.MarshalYAML(desired.Desired),
+		err = g.UpdateRemote(mntr.SprintCommit(msg, fields), func() []File {
+			gitFiles := make([]File, len(desireds))
+			for i := range desireds {
+				desired := desireds[i]
+				gitFiles[i] = File{
+					Path:    string(desired.Path),
+					Content: common.MarshalYAML(desired.Desired),
+				}
 			}
-		}
-		err = g.UpdateRemote(mntr.SprintCommit(msg, fields), gitFiles...)
-		//		mntr.LogMessage(msg, fields)
+			return gitFiles
+		})
 	}
 	monitor.Changed(msg)
 	return err

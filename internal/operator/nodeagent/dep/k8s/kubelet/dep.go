@@ -46,10 +46,14 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (k *kubeletDep) InstalledFilter() []string {
+	return []string{"kubelet"}
+}
+
 func (k *kubeletDep) Current() (pkg common.Package, err error) {
 
 	pkg, err = k.common.Current()
-	if err != nil {
+	if err != nil || pkg.Version == "" {
 		return pkg, err
 	}
 

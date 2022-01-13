@@ -5,6 +5,7 @@
 package kubernetesmock
 
 import (
+	mntr "github.com/caos/orbos/mntr"
 	gomock "github.com/golang/mock/gomock"
 	io "io"
 	v1 "k8s.io/api/apps/v1"
@@ -293,6 +294,21 @@ func (mr *MockClientIntMockRecorder) ExecInPod(namespace, name, container, comma
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecInPod", reflect.TypeOf((*MockClientInt)(nil).ExecInPod), namespace, name, container, command)
 }
 
+// GetDeployment mocks base method
+func (m *MockClientInt) GetDeployment(namespace, name string) (*v1.Deployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeployment", namespace, name)
+	ret0, _ := ret[0].(*v1.Deployment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeployment indicates an expected call of GetDeployment
+func (mr *MockClientIntMockRecorder) GetDeployment(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployment", reflect.TypeOf((*MockClientInt)(nil).GetDeployment), namespace, name)
+}
+
 // ApplyDeployment mocks base method
 func (m *MockClientInt) ApplyDeployment(rsc *v1.Deployment, force bool) error {
 	m.ctrl.T.Helper()
@@ -378,12 +394,13 @@ func (mr *MockClientIntMockRecorder) ExecInPodOfDeployment(namespace, name, cont
 }
 
 // CheckCRD mocks base method
-func (m *MockClientInt) CheckCRD(name string) (*v1beta12.CustomResourceDefinition, error) {
+func (m *MockClientInt) CheckCRD(name string) (*v1beta12.CustomResourceDefinition, bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CheckCRD", name)
 	ret0, _ := ret[0].(*v1beta12.CustomResourceDefinition)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // CheckCRD indicates an expected call of CheckCRD
@@ -489,6 +506,21 @@ func (m *MockClientInt) DeleteCronJob(namespace, name string) error {
 func (mr *MockClientIntMockRecorder) DeleteCronJob(namespace, name interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCronJob", reflect.TypeOf((*MockClientInt)(nil).DeleteCronJob), namespace, name)
+}
+
+// ListCronJobs mocks base method
+func (m *MockClientInt) ListCronJobs(namespace string, labels map[string]string) (*v1beta1.CronJobList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCronJobs", namespace, labels)
+	ret0, _ := ret[0].(*v1beta1.CronJobList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCronJobs indicates an expected call of ListCronJobs
+func (mr *MockClientIntMockRecorder) ListCronJobs(namespace, labels interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCronJobs", reflect.TypeOf((*MockClientInt)(nil).ListCronJobs), namespace, labels)
 }
 
 // ListSecrets mocks base method
@@ -829,6 +861,20 @@ func (m *MockClientInt) ListPersistentVolumes() (*v11.PersistentVolumeList, erro
 func (mr *MockClientIntMockRecorder) ListPersistentVolumes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumes", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumes))
+}
+
+// ApplyPlainYAML mocks base method
+func (m *MockClientInt) ApplyPlainYAML(arg0 mntr.Monitor, arg1 []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyPlainYAML", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyPlainYAML indicates an expected call of ApplyPlainYAML
+func (mr *MockClientIntMockRecorder) ApplyPlainYAML(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPlainYAML", reflect.TypeOf((*MockClientInt)(nil).ApplyPlainYAML), arg0, arg1)
 }
 
 // ListPersistentVolumeClaims mocks base method

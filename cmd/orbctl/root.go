@@ -4,15 +4,13 @@ import (
 	"context"
 	"os"
 
-	"github.com/caos/orbos/internal/helpers"
+	"github.com/spf13/cobra"
 
+	"github.com/caos/orbos/internal/helpers"
+	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/orb"
 	orbcfg "github.com/caos/orbos/pkg/orb"
-
-	"github.com/spf13/cobra"
-
-	"github.com/caos/orbos/mntr"
 )
 
 type RootValues struct {
@@ -69,6 +67,7 @@ $ cat > ~/.orb/myorb << EOF
 > EOF
 $ orbctl --gitops -f ~/.orb/myorb [command]
 `,
+		SilenceErrors: true,
 	}
 
 	flags := cmd.PersistentFlags()

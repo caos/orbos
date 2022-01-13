@@ -50,6 +50,7 @@ func Ensurer(monitor mntr.Monitor) nodeagent.NetworkingEnsurer {
 }
 
 func ensureInterfaces(
+
 	monitor mntr.Monitor,
 	desired *common.Networking,
 	current *common.NetworkingCurrent,
@@ -125,11 +126,11 @@ deleteLoop:
 		}
 
 		for filename, _ := range getNetworkFiles(ifaceNameWithPrefix, "", []string{}) {
-			if err := os.Remove(filename); err != nil && err != os.ErrNotExist {
+			if err := os.RemoveAll(filename); err != nil && err != os.ErrNotExist {
 				return nil, err
 			}
 		}
-		changes = append(changes, fmt.Sprintf("link delete %s", ifaceName))
+		changes = append(changes, fmt.Sprintf("link delete %s", ifaceNameWithPrefix))
 	}
 
 	if (changes == nil || len(changes) == 0) &&
@@ -158,6 +159,7 @@ deleteLoop:
 }
 
 func ensureInterface(
+
 	monitor mntr.Monitor,
 	name string,
 	desired *common.NetworkingInterface,

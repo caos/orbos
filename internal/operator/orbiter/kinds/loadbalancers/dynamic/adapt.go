@@ -42,6 +42,7 @@ type WhiteListFunc func() []*orbiter.CIDR
 
 type VRRP struct {
 	VRRPInterface string
+	VIPInterface  string
 	NotifyMaster  func(machine infra.Machine) (string, bool)
 	AuthCheck     func(machine infra.Machine) (string, int)
 }
@@ -127,7 +128,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 			current.Current.Spec = enrichedVIPs
 			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
-				var lbMachines []infra.Machine
+				var lbMachines infra.Machines
 
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
@@ -199,8 +200,15 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
-					"forMachines": svc.List,
-					"add":         func(i, y int) int { return i + y },
+					"forMachines": func(poolName string) (infra.Machines, error) {
+						machines, err := svc.List(poolName)
+						if err != nil {
+							return nil, err
+						}
+						sort.Sort(machines)
+						return machines, nil
+					},
+					"add": func(i, y int) int { return i + y },
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
@@ -234,7 +242,9 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					for _, desiredVIPs := range desiredKind.Spec {
 						vips = append(vips, desiredVIPs...)
 					}
-					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
+					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 stream { {{ range $nat := .NATs }}
@@ -264,6 +274,8 @@ stream { {{ range $nat := .NATs }}
 						return false, err
 					}
 
+					sort.Sort(lbMachines)
+
 					spec, _, err := enrichedVIPs(svc)
 					if err != nil {
 						return false, err
@@ -279,7 +291,8 @@ stream { {{ range $nat := .NATs }}
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
 							CustomMasterNotifyer: vrrp.NotifyMaster != nil,
-							Interface:            vrrp.VRRPInterface,
+							VRRPInterface:        vrrp.VRRPInterface,
+							VIPInterface:         vrrp.VIPInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -310,7 +323,7 @@ vrrp_instance VI_{{ $idx }} {
 	unicast_peer {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
-	interface {{ $root.Interface }}
+	interface {{ $root.VRRPInterface }}
 	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
@@ -321,6 +334,10 @@ vrrp_instance VI_{{ $idx }} {
 		chk_{{ vip $vip }}
 	}
 
+	virtual_ipaddress {
+		{{ vip $vip }} dev {{ $root.VIPInterface }}
+	}
+
 {{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh"
 {{ else }}	virtual_ipaddress {
 		{{ vip $vip }}
@@ -329,7 +346,9 @@ vrrp_instance VI_{{ $idx }} {
 }
 {{ end }}`))
 
-					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 
@@ -395,7 +414,7 @@ http {
 						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
 							return false, err
 						}
-						ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+						ngxPkg := desireNginx(ngxBuf.String())
 						ngxBuf.Reset()
 
 						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
@@ -446,7 +465,8 @@ http {
 									return false, err
 								}
 
-								for _, machine := range destMachines {
+								for idx := range destMachines {
+									machine := destMachines[idx]
 									desireNodeAgent(machine, common.ToFirewall("internal", destFW), common.Package{}, common.Package{})
 									probe("Upstream", machine.IP(), uint16(transport.BackendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
 									if vrrp != nil || forPool != dest {
@@ -489,7 +509,7 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Version: nginxVersion, Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := desireNginx(ngxBuf.String())
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
@@ -563,7 +583,8 @@ type LB struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
-	Interface            string
+	VRRPInterface        string
+	VIPInterface         string
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
@@ -653,5 +674,15 @@ func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelis
 			enrichVIPsCache[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
 		}
 		return enrichVIPsCache, authCheckResultsCache, nil
+	}
+}
+
+func desireNginx(cfg string) common.Package {
+	return common.Package{
+		Version: nginxVersion,
+		Config: map[string]string{
+			"nginx.conf":                  cfg,
+			"Systemd[Service]LimitNOFILE": "8192",
+		},
 	}
 }

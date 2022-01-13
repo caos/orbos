@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
@@ -46,10 +48,12 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 		rv := getRv("writesecret", "", map[string]interface{}{"path": path, "value": value != "", "file": file, "stdin": stdin})
 		defer rv.ErrFunc(err)
 
-		s, err := key(value, file, stdin)
+		s, err := content(value, file, stdin)
 		if err != nil {
 			return err
 		}
+
+		defer rv.ErrFunc(err)
 
 		k8sClient, err := cli.Init(monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, rv.Gitops, !rv.Gitops)
 		if err != nil {
@@ -69,7 +73,13 @@ orbctl writesecret mygceprovider.google_application_credentials_value.encrypted 
 	return cmd
 }
 
-func key(value string, file string, stdin bool) (string, error) {
+func content(value string, file string, stdin bool) (val string, err error) {
+
+	defer func() {
+		if err != nil {
+			err = mntr.ToUserError(err)
+		}
+	}()
 
 	channels := 0
 	if value != "" {
@@ -83,7 +93,7 @@ func key(value string, file string, stdin bool) (string, error) {
 	}
 
 	if channels != 1 {
-		return "", errors.New("Key must be provided eighter by value or by file path or by standard input")
+		return "", errors.New("content must be provided eighter by value or by file path or by standard input")
 	}
 
 	if value != "" {
@@ -99,9 +109,9 @@ func key(value string, file string, stdin bool) (string, error) {
 		}
 	}
 
-	key, err := readFunc()
+	c, err := readFunc()
 	if err != nil {
 		panic(err)
 	}
-	return string(key), err
+	return string(c), err
 }

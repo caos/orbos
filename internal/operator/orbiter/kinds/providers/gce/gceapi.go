@@ -5,10 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"google.golang.org/api/servicemanagement/v1"
-
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/servicemanagement/v1"
 )
 
 func toErrFunc(fn func()) func() error {

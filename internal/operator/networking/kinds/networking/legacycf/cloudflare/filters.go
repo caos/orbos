@@ -1,6 +1,10 @@
 package cloudflare
 
-import "github.com/cloudflare/cloudflare-go"
+import (
+	"context"
+
+	"github.com/cloudflare/cloudflare-go"
+)
 
 type Filter struct {
 	ID          string `json:"id,omitempty"`
@@ -9,23 +13,23 @@ type Filter struct {
 	Description string `json:"description"`
 }
 
-func (c *Cloudflare) GetFilters(domain string) ([]*Filter, error) {
+func (c *Cloudflare) GetFilters(ctx context.Context, domain string) ([]*Filter, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	filters, err := c.api.Filters(id, pageOpts)
+	filters, err := c.api.Filters(ctx, id, pageOpts)
 	return filtersToInternalFilters(filters), err
 }
 
-func (c *Cloudflare) CreateFilters(domain string, filters []*Filter) ([]*Filter, error) {
+func (c *Cloudflare) CreateFilters(ctx context.Context, domain string, filters []*Filter) ([]*Filter, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	createdFilters, err := c.api.CreateFilters(id, internalFiltersToFilters(filters))
+	createdFilters, err := c.api.CreateFilters(ctx, id, internalFiltersToFilters(filters))
 	if err != nil {
 		return nil, err
 	}
@@ -33,13 +37,13 @@ func (c *Cloudflare) CreateFilters(domain string, filters []*Filter) ([]*Filter,
 	return filtersToInternalFilters(createdFilters), err
 }
 
-func (c *Cloudflare) UpdateFilters(domain string, filters []*Filter) ([]*Filter, error) {
+func (c *Cloudflare) UpdateFilters(ctx context.Context, domain string, filters []*Filter) ([]*Filter, error) {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return nil, err
 	}
 
-	updatedFilters, err := c.api.UpdateFilters(id, internalFiltersToFilters(filters))
+	updatedFilters, err := c.api.UpdateFilters(ctx, id, internalFiltersToFilters(filters))
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +51,14 @@ func (c *Cloudflare) UpdateFilters(domain string, filters []*Filter) ([]*Filter,
 	return filtersToInternalFilters(updatedFilters), err
 }
 
-func (c *Cloudflare) DeleteFilters(domain string, filterIDs []string) error {
+func (c *Cloudflare) DeleteFilters(ctx context.Context, domain string, filterIDs []string) error {
 	id, err := c.api.ZoneIDByName(domain)
 	if err != nil {
 		return err
 	}
 
 	for _, filterID := range filterIDs {
-		if err := c.api.DeleteFilter(id, filterID); err != nil {
+		if err := c.api.DeleteFilter(ctx, id, filterID); err != nil {
 			return err
 		}
 	}

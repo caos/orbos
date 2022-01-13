@@ -10,14 +10,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/caos/orbos/internal/utils/helper"
-
-	helperpkg "github.com/caos/orbos/pkg/helper"
-
 	"github.com/caos/oidc/pkg/client/rp"
 	"github.com/caos/oidc/pkg/client/rp/cli"
+	httphelper "github.com/caos/oidc/pkg/http"
 	"github.com/caos/oidc/pkg/oidc"
-	"github.com/caos/oidc/pkg/utils"
 	"github.com/caos/orbos/mntr"
 	"github.com/ghodss/yaml"
 	"github.com/google/go-github/v31/github"
@@ -25,6 +21,9 @@ import (
 	"golang.org/x/crypto/ssh/terminal"
 	"golang.org/x/oauth2"
 	githubOAuth "golang.org/x/oauth2/github"
+
+	"github.com/caos/orbos/internal/utils/helper"
+	helperpkg "github.com/caos/orbos/pkg/helper"
 )
 
 type githubAPI struct {
@@ -99,7 +98,7 @@ func (g *githubAPI) LoginOAuth(ctx context.Context, folderPath string, clientID,
 	}
 
 	key := helperpkg.RandStringBytes(32)
-	cookieHandler := utils.NewCookieHandler([]byte(key), []byte(key), utils.WithUnsecure())
+	cookieHandler := httphelper.NewCookieHandler([]byte(key), []byte(key), httphelper.WithUnsecure())
 	relyingParty, err := rp.NewRelyingPartyOAuth(rpConfig, rp.WithCookieHandler(cookieHandler))
 	if err != nil {
 		panic(fmt.Errorf("error creating relaying party: %w", err))

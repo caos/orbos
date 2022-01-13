@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"strings"
 
 	"github.com/caos/orbos/pkg/kubernetes"
@@ -38,7 +39,7 @@ func (a *App) AddInternalPrefix(desc string) string {
 	return strings.Join([]string{a.internalPrefix, desc}, " ")
 }
 
-func (a *App) Ensure(k8sClient kubernetes.ClientInt, namespace string, domain string, subdomains []*config.Subdomain, rules []*config.Rule, originCALabels *labels.Name) error {
+func (a *App) Ensure(ctx context.Context, k8sClient kubernetes.ClientInt, namespace string, domain string, subdomains []*config.Subdomain, rules []*config.Rule, originCALabels *labels.Name) error {
 	firewallRulesInt := make([]*cloudflare.FirewallRule, 0)
 	filtersInt := make([]*cloudflare.Filter, 0)
 	recordsInt := make([]*cloudflare.DNSRecord, 0)
@@ -68,7 +69,7 @@ func (a *App) Ensure(k8sClient kubernetes.ClientInt, namespace string, domain st
 		})
 	}
 
-	err := a.EnsureDNSRecords(domain, recordsInt)
+	err := a.EnsureDNSRecords(ctx, domain, recordsInt)
 	if err != nil {
 		return err
 	}
@@ -110,7 +111,7 @@ func (a *App) Ensure(k8sClient kubernetes.ClientInt, namespace string, domain st
 		}
 
 	}
-	filters, deleteFiltersFunc, err := a.EnsureFilters(domain, filtersInt)
+	filters, deleteFiltersFunc, err := a.EnsureFilters(ctx, domain, filtersInt)
 	if err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ func (a *App) Ensure(k8sClient kubernetes.ClientInt, namespace string, domain st
 		}
 	}
 
-	if err := a.EnsureFirewallRules(domain, firewallRulesInt); err != nil {
+	if err := a.EnsureFirewallRules(ctx, domain, firewallRulesInt); err != nil {
 		return err
 	}
 
@@ -142,7 +143,7 @@ func (a *App) Ensure(k8sClient kubernetes.ClientInt, namespace string, domain st
 		return err
 	}
 
-	return a.EnsureOriginCACertificate(k8sClient, namespace, originCALabels, domain)
+	return a.EnsureOriginCACertificate(ctx, k8sClient, namespace, originCALabels, domain)
 }
 
 func addSourcesFromList(subList []string, exp *expression.Expression) {

@@ -3,13 +3,11 @@ package main
 import (
 	"os"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
-
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-
-	"github.com/spf13/cobra"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func ReadSecretCommand(getRv GetRootValues) *cobra.Command {

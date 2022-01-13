@@ -66,7 +66,7 @@ func Init(
 					if err == nil {
 						return nil, ErrNotInitialized
 					}
-					return nil, fmt.Errorf(err.Error()+": %w", ErrNotInitialized)
+					return nil, mntr.ToUserError(fmt.Errorf(err.Error()+": %w", ErrNotInitialized))
 				}
 			}
 		}

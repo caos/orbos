@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/caos/orbos/mntr"
 )
@@ -34,6 +35,13 @@ func main() {
 		StartNetworking(getRootValues),
 	)
 
+	file := FileCommand()
+	file.AddCommand(
+		EditCommand(getRootValues),
+		PrintCommand(getRootValues),
+		//		PatchCommand(getRootValues),
+	)
+
 	nodes := NodeCommand()
 	nodes.AddCommand(
 		ReplaceCommand(getRootValues),
@@ -45,16 +53,17 @@ func main() {
 	rootCmd.AddCommand(
 		ReadSecretCommand(getRootValues),
 		WriteSecretCommand(getRootValues),
-		EditCommand(getRootValues),
 		TeardownCommand(getRootValues),
 		ConfigCommand(getRootValues),
 		APICommand(getRootValues),
 		TakeoffCommand(getRootValues),
+		file,
 		start,
 		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {
-		monitor.Error(err)
+		monitor.Error(mntr.ToUserError(err))
+		os.Exit(1)
 	}
 }

@@ -23,7 +23,7 @@ func main() {
 	debug := flag.Bool("debug", false, "Compile executables with debugging features enabled")
 	dev := flag.Bool("dev", false, "Compile executables with debugging features enabled")
 	containeronly := flag.Bool("containeronly", false, "Compile orbctl binaries only for in-container usage")
-	hostBinsOnly := flag.Bool("host-bins-only", false, "Build only this binary")
+	hostBinsOnly := flag.Bool("host-bins-only", false, "Build only daemon binaries running on host machines")
 
 	flag.Parse()
 
@@ -40,7 +40,7 @@ func main() {
 	}
 
 	_, selfPath, _, _ := runtime.Caller(0)
-	cmdPath := filepath.Join(filepath.Dir(selfPath), "..")
+	cmdPath := filepath.Join(filepath.Dir(selfPath), "../..")
 	path := curryJoinPath(cmdPath)
 
 	builtExecutables := executables.Build(
@@ -78,6 +78,7 @@ func main() {
 		orbctlBin(orbctlMain, *orbctldir, "linux", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "openbsd", "amd64"),
 		orbctlBin(orbctlMain, *orbctldir, "windows", "amd64"),
+		orbctlBin(orbctlMain, *orbctldir, "darwin", "arm64"),
 	}
 	if *dev {
 		orbctls = []executables.Buildable{orbctlBin(orbctlMain, *orbctldir, runtime.GOOS, "amd64")}
@@ -101,6 +102,10 @@ func main() {
 func orbctlBin(mainPath, outPath, goos, goarch string) executables.Buildable {
 
 	arch := "x86_64"
+	switch goarch {
+	case "arm64":
+		arch = "ARM64"
+	}
 	os := strings.ToUpper(goos[0:1]) + goos[1:]
 	switch goos {
 	case "freebsd":

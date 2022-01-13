@@ -19,7 +19,8 @@ type Installer interface {
 	nodeagent.Installer
 }
 
-type hostnameDep struct{}
+type hostnameDep struct {
+}
 
 func New() Installer {
 	return &hostnameDep{}
@@ -38,6 +39,8 @@ func (*hostnameDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*hostnameDep)
 	return ok
 }
+
+func (*hostnameDep) InstalledFilter() []string { return nil }
 
 func (s *hostnameDep) Current() (pkg common.Package, err error) {
 

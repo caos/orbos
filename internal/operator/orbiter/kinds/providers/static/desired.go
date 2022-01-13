@@ -3,12 +3,11 @@ package static
 import (
 	"errors"
 	"fmt"
+	"net"
 	"regexp"
 
 	"github.com/caos/orbos/mntr"
-
-	"github.com/caos/orbos/internal/operator/orbiter"
-	secret2 "github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )
 
@@ -23,13 +22,14 @@ type Spec struct {
 	Pools              map[string][]*Machine
 	Keys               *Keys
 	ExternalInterfaces []string
+	PrivateInterface   string
 }
 
 type Keys struct {
-	BootstrapKeyPrivate   *secret2.Secret `yaml:",omitempty"`
-	BootstrapKeyPublic    *secret2.Secret `yaml:",omitempty"`
-	MaintenanceKeyPrivate *secret2.Secret `yaml:",omitempty"`
-	MaintenanceKeyPublic  *secret2.Secret `yaml:",omitempty"`
+	BootstrapKeyPrivate   *secret.Secret `yaml:",omitempty"`
+	BootstrapKeyPublic    *secret.Secret `yaml:",omitempty"`
+	MaintenanceKeyPrivate *secret.Secret `yaml:",omitempty"`
+	MaintenanceKeyPublic  *secret.Secret `yaml:",omitempty"`
 }
 
 func (d DesiredV0) validateAdapt() (err error) {
@@ -88,7 +88,7 @@ func parseDesiredV0(desiredTree *tree.Tree) (desiredKind *DesiredV0, err error) 
 type Machine struct {
 	ID                  string
 	Hostname            string
-	IP                  orbiter.IPAddress
+	IP                  string
 	RebootRequired      bool
 	ReplacementRequired bool
 }
@@ -116,5 +116,8 @@ func (c *Machine) validate() error {
 		return fmt.Errorf("validating hostname failed: %w", err)
 	}
 
-	return c.IP.Validate()
+	if net.ParseIP(c.IP) == nil {
+		return fmt.Errorf("%s is not a valid ip address", c.IP)
+	}
+	return nil
 }

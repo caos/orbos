@@ -114,6 +114,10 @@ func EnsureOrbiterArtifacts(
 						Key:      "node-role.kubernetes.io/master",
 						Effect:   "NoSchedule",
 						Operator: "Exists",
+					}, {
+						Key:      fmt.Sprintf("%s%s", TaintKeyPrefix, Rebooting),
+						Operator: "Exists",
+						Effect:   "NoSchedule",
 					}},
 				},
 			},
