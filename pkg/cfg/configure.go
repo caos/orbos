@@ -134,7 +134,7 @@ func ORBOSConfigurers(
 					return nil, nil, err
 				}
 
-				_, _, _, _, _, err = nwOrb.AdaptFunc(ctx, nil, true)(monitor, desired, &tree.Tree{})
+				_, _, _, _, _, err = nwOrb.AdaptFunc(ctx, "", nil, true)(monitor, desired, &tree.Tree{})
 				return desired, desired.Parsed, err
 			},
 		),

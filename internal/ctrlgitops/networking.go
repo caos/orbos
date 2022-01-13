@@ -33,7 +33,7 @@ func Networking(ctx context.Context, monitor mntr.Monitor, orbConfigPath string,
 			return err
 		}
 
-		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(ctx, binaryVersion, true), k8sClient)
+		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(ctx, orbConfig.URL, binaryVersion, true), k8sClient)
 
 		go func() {
 			defer func() { monitor.RecoverPanic(recover()) }()

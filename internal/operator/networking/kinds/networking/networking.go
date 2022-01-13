@@ -15,6 +15,7 @@ import (
 func GetQueryAndDestroyFuncs(
 	ctx context.Context,
 	monitor mntr.Monitor,
+	ID string,
 	operatorLabels *labels.Operator,
 	desiredTree *tree.Tree,
 	currentTree *tree.Tree,
@@ -29,7 +30,7 @@ func GetQueryAndDestroyFuncs(
 ) {
 	switch desiredTree.Common.Kind {
 	case "networking.caos.ch/LegacyCloudflare":
-		return legacycf.AdaptFunc(ctx, namespace, operatorLabels)(monitor, desiredTree, currentTree)
+		return legacycf.AdaptFunc(ctx, namespace, ID, operatorLabels)(monitor, desiredTree, currentTree)
 	default:
 		return nil, nil, nil, nil, false, fmt.Errorf("unknown networking kind %s", desiredTree.Common.Kind)
 	}

@@ -17,7 +17,7 @@ func OperatorSelector() *labels.Selector {
 	return labels.OpenOperatorSelector("ORBOS", "networking.caos.ch")
 }
 
-func AdaptFunc(ctx context.Context, binaryVersion *string, gitops bool) core.AdaptFunc {
+func AdaptFunc(ctx context.Context, ID string, binaryVersion *string, gitops bool) core.AdaptFunc {
 
 	namespaceStr := "caos-zitadel"
 	return func(
@@ -52,7 +52,7 @@ func AdaptFunc(ctx context.Context, binaryVersion *string, gitops bool) core.Ada
 
 		operatorLabels := mustDatabaseOperator(binaryVersion)
 		networkingCurrent := &tree.Tree{}
-		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(ctx, orbMonitor, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
+		queryNW, destroyNW, secrets, existing, migrate, err := networking.GetQueryAndDestroyFuncs(ctx, orbMonitor, ID, operatorLabels, desiredKind.Networking, networkingCurrent, namespaceStr)
 		if err != nil {
 			return nil, nil, nil, nil, false, err
 		}

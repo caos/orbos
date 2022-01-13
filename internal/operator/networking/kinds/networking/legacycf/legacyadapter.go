@@ -47,14 +47,24 @@ func adaptFunc(
 					return err
 				}
 
-				apps, err := app.New(user, apiKey, userServiceKey, groups, cfg.Prefix)
+				apps, err := app.New(ctx, cfg.AccountName, user, apiKey, userServiceKey, groups, cfg.Prefix)
 				if err != nil {
 					return err
 				}
 
 				caSecretLabels := labels.MustForName(labels.MustForComponent(cfg.Labels, "cloudflare"), cfg.OriginCASecretName)
 				for _, domain := range cfg.Domains {
-					err = apps.Ensure(ctx, k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
+					err = apps.Ensure(
+						ctx,
+						cfg.ID,
+						k8sClient,
+						cfg.Namespace,
+						domain.Domain,
+						domain.Subdomains,
+						domain.Rules,
+						caSecretLabels,
+						domain.LoadBalancers,
+					)
 					if err != nil {
 						return err
 					}

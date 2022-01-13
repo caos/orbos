@@ -18,8 +18,8 @@ type App struct {
 	internalPrefix string
 }
 
-func New(user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
-	api, err := cloudflare.New(user, key, userServiceKey)
+func New(ctx context.Context, accountName string, user string, key string, userServiceKey string, groups map[string][]string, internalPrefix string) (*App, error) {
+	api, err := cloudflare.New(ctx, accountName, user, key, userServiceKey)
 	if err != nil {
 		return nil, err
 	}
@@ -39,10 +39,95 @@ func (a *App) AddInternalPrefix(desc string) string {
 	return strings.Join([]string{a.internalPrefix, desc}, " ")
 }
 
-func (a *App) Ensure(ctx context.Context, k8sClient kubernetes.ClientInt, namespace string, domain string, subdomains []*config.Subdomain, rules []*config.Rule, originCALabels *labels.Name) error {
+type additionalInfos struct {
+	name      string
+	subdomain string
+	clusterID string
+	region    string
+}
+
+func (a *App) Ensure(
+	ctx context.Context,
+	id string,
+	k8sClient kubernetes.ClientInt,
+	namespace string,
+	domain string,
+	subdomains []*config.Subdomain,
+	rules []*config.Rule,
+	originCALabels *labels.Name,
+	lbs []*config.LoadBalancer,
+) error {
 	firewallRulesInt := make([]*cloudflare.FirewallRule, 0)
 	filtersInt := make([]*cloudflare.Filter, 0)
 	recordsInt := make([]*cloudflare.DNSRecord, 0)
+	poolsInt := make([]*cloudflare.LoadBalancerPool, 0)
+	lbsInt := make([]*cloudflare.LoadBalancer, 0)
+	lbsAdditionalInt := make([]*additionalInfos, 0)
+
+	if lbs != nil {
+		for _, lb := range lbs {
+			for name, ip := range lb.Pool {
+				originsInt := []*cloudflare.LoadBalancerOrigin{{
+					Name:    name,
+					Address: ip,
+					Enabled: true,
+				}}
+				poolsInt = append(poolsInt, &cloudflare.LoadBalancerPool{
+					Name:        getPoolName(lb.Subdomain, domain, lb.Region, lb.ClusterID),
+					Description: id,
+					Enabled:     true,
+					Origins:     originsInt,
+				})
+			}
+		}
+	}
+
+	destroyPools, err := a.EnsureLoadBalancerPools(ctx, id, poolsInt)
+	if err != nil {
+		return err
+	}
+
+	if lbs != nil {
+		for _, lb := range lbs {
+			//ids get filled in the EnsureLoadBalancerPools-function
+			poolNames := []string{}
+			if poolsInt != nil {
+				for _, poolInt := range poolsInt {
+					if poolInt.Name == getPoolName(lb.Subdomain, domain, lb.Region, lb.ClusterID) {
+						poolNames = append(poolNames, poolInt.ID)
+					}
+				}
+			}
+
+			enabled := lb.Enabled
+			lbsInt = append(lbsInt, &cloudflare.LoadBalancer{
+				Name:         config.GetLBName(lb.Subdomain, domain),
+				DefaultPools: poolNames,
+				//the first pool is fallback pool for now
+				FallbackPool:   poolNames[0],
+				Enabled:        &enabled,
+				Proxied:        true,
+				SteeringPolicy: "random",
+			})
+			lbsAdditionalInt = append(lbsAdditionalInt, &additionalInfos{
+				name:      config.GetLBName(lb.Subdomain, domain),
+				clusterID: lb.ClusterID,
+				region:    lb.Region,
+				subdomain: lb.Subdomain,
+			})
+		}
+	}
+
+	if err := a.EnsureLoadBalancers(ctx, id, domain, lbsInt, lbsAdditionalInt); err != nil {
+		return err
+	}
+
+	//pools have to be deleted after the reference in the lbs is deleted
+	if destroyPools() != nil {
+		if err := destroyPools(); err != nil {
+			return err
+		}
+	}
 
 	for _, record := range subdomains {
 
@@ -69,7 +154,7 @@ func (a *App) Ensure(ctx context.Context, k8sClient kubernetes.ClientInt, namesp
 		})
 	}
 
-	err := a.EnsureDNSRecords(ctx, domain, recordsInt)
+	err = a.EnsureDNSRecords(ctx, domain, recordsInt)
 	if err != nil {
 		return err
 	}

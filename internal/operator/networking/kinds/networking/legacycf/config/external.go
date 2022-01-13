@@ -3,33 +3,33 @@ package config
 import (
 	"errors"
 	"fmt"
-	"net"
+	"strings"
 
 	"github.com/caos/orbos/mntr"
 
 	"github.com/caos/orbos/pkg/secret"
 
-	core2 "github.com/caos/orbos/internal/operator/core"
+	opcore "github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/core"
 	"github.com/caos/orbos/pkg/labels"
 )
 
 type ExternalConfig struct {
+	AccountName   string `yaml:"accountName"`
 	Verbose       bool
 	Domain        string
-	IP            string
 	Rules         []*Rule
-	Groups        []*Group     `yaml:"groups"`
-	Credentials   *Credentials `yaml:"credentials"`
-	Prefix        string       `yaml:"prefix"`
-	AdditionalDNS []*Subdomain `yaml:"additionalSubdomains,omitempty"`
+	Groups        []*Group        `yaml:"groups"`
+	Credentials   *Credentials    `yaml:"credentials"`
+	Prefix        string          `yaml:"prefix"`
+	AdditionalDNS []*Subdomain    `yaml:"additionalSubdomains,omitempty"`
+	LoadBalancers []*LoadBalancer `yaml:"loadBalancers,omitempty"`
 }
 
 func (i *ExternalConfig) IsZero() bool {
 	if (i.Credentials == nil || i.Credentials.IsZero()) &&
 		!i.Verbose &&
 		i.Domain == "" &&
-		i.IP == "" &&
 		i.Groups == nil &&
 		i.Prefix == "" &&
 		i.Rules == nil &&
@@ -39,9 +39,11 @@ func (i *ExternalConfig) IsZero() bool {
 	return false
 }
 
-func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
+func (e *ExternalConfig) Internal(id, namespace string, apiLabels *labels.API) (*InternalConfig, *current) {
 	dom, curr := e.internalDomain()
 	return &InternalConfig{
+		AccountName:        e.AccountName,
+		ID:                 id,
 		Domains:            []*InternalDomain{dom},
 		Groups:             e.Groups,
 		Credentials:        e.Credentials,
@@ -52,6 +54,9 @@ func (e *ExternalConfig) Internal(namespace string, apiLabels *labels.API) (*Int
 	}, curr
 }
 
+var ErrNoLBID = errors.New("no loadbalancer identifier provided")
+var ErrDoubleLBID = errors.New("loadbalancer identifier doublicate")
+
 func (e *ExternalConfig) Validate() (err error) {
 	defer func() {
 		err = mntr.ToUserError(err)
@@ -60,14 +65,29 @@ func (e *ExternalConfig) Validate() (err error) {
 		return errors.New("domain not found")
 	}
 	if e.Domain == "" {
-		return errors.New("no domain configured")
+		return errors.New("No domain configured")
 	}
-	if net.ParseIP(e.IP) == nil {
-		return fmt.Errorf("%s is not a valid ip address", e.IP)
+
+	identifiers := []string{}
+	for _, loadbalancer := range e.LoadBalancers {
+		if loadbalancer == nil {
+			continue
+		}
+
+		if loadbalancer.Subdomain == "" {
+			return ErrNoLBID
+		}
+
+		for _, id := range identifiers {
+			if id == loadbalancer.Subdomain {
+				return ErrDoubleLBID
+			}
+		}
+		identifiers = append(identifiers, loadbalancer.Subdomain)
 	}
+
 	return nil
 }
-
 func (e *ExternalConfig) ValidateSecrets() (err error) {
 
 	defer func() {
@@ -91,22 +111,34 @@ func (e *ExternalConfig) ValidateSecrets() (err error) {
 }
 
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
-
-	// TODO: Remove
-	subdomains := []*Subdomain{
-		subdomain("accounts", e.IP),
-		subdomain("api", e.IP),
-		subdomain("console", e.IP),
-		subdomain("issuer", e.IP),
-	}
+	subdomains := []*Subdomain{}
 	for _, sd := range e.AdditionalDNS {
 		subdomains = append(subdomains, sd)
 	}
 
+	lbs := make([]*LoadBalancer, 0)
+	if e.LoadBalancers != nil {
+		for _, lb := range e.LoadBalancers {
+			pool := map[string]string{}
+			for k, v := range lb.Pool {
+				pool[k] = v
+			}
+
+			lbs = append(lbs, &LoadBalancer{
+				Subdomain: lb.Subdomain,
+				ClusterID: lb.ClusterID,
+				Region:    lb.Region,
+				Enabled:   lb.Enabled,
+				Pool:      pool,
+			})
+		}
+	}
+
 	return &InternalDomain{
-			Domain:     e.Domain,
-			Subdomains: subdomains,
-			Rules:      e.Rules,
+			Domain:        e.Domain,
+			Subdomains:    subdomains,
+			Rules:         e.Rules,
+			LoadBalancers: lbs,
 		},
 		&current{
 			domain:            e.Domain,
@@ -117,14 +149,17 @@ func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
 			tlsCertName:       "tls-cert-wildcard",
 		}
 }
+func GetLBName(subdomain, domain string) string {
+	return strings.Join([]string{subdomain, domain}, ".")
+}
 
-func subdomain(subdomain string, ip string) *Subdomain {
+func subdomain(subdomain string, target string, ty string) *Subdomain {
 	return &Subdomain{
 		Subdomain: subdomain,
-		IP:        ip,
+		IP:        target,
 		Proxied:   boolPtr(true),
 		TTL:       0,
-		Type:      "A",
+		Type:      ty,
 	}
 }
 
@@ -137,7 +172,7 @@ type current struct {
 	apiSubdomain      string `yaml:"-"`
 	accountsSubdomain string `yaml:"-"`
 	tlsCertName       string `yaml:"-"`
-	ReadyCertificate  core2.EnsureFunc
+	ReadyCertificate  opcore.EnsureFunc
 }
 
 func (c *current) GetDomain() string {
@@ -155,7 +190,7 @@ func (c *current) GetAPISubDomain() string {
 func (c *current) GetAccountsSubDomain() string {
 	return c.accountsSubdomain
 }
-func (c *current) GetReadyCertificate() core2.EnsureFunc {
+func (c *current) GetReadyCertificate() opcore.EnsureFunc {
 	return c.ReadyCertificate
 }
 func (c *current) GetTlsCertName() string {
