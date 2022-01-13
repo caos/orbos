@@ -3,9 +3,8 @@
 package common
 
 import (
-	"fmt"
 	"regexp"
-	"strings"
+	"sort"
 	"sync"
 	"time"
 )
@@ -14,6 +13,7 @@ type NodeAgentSpec struct {
 	ChangesAllowed bool
 	//	RebootEnabled  bool
 	Software       *Software
+	Networking     *Networking
 	Firewall       *Firewall
 	RebootRequired time.Time
 }
@@ -21,82 +21,10 @@ type NodeAgentSpec struct {
 type NodeAgentCurrent struct {
 	NodeIsReady bool `mapstructure:"ready" yaml:"ready"`
 	Software    Software
-	Open        []*Allowed
+	Open        FirewallCurrent
+	Networking  NetworkingCurrent
 	Commit      string
 	Booted      time.Time
-}
-
-type Software struct {
-	Swap             Package `yaml:",omitempty"`
-	Kubelet          Package `yaml:",omitempty"`
-	Kubeadm          Package `yaml:",omitempty"`
-	Kubectl          Package `yaml:",omitempty"`
-	Containerruntime Package `yaml:",omitempty"`
-	KeepaliveD       Package `yaml:",omitempty"`
-	Nginx            Package `yaml:",omitempty"`
-	SSHD             Package `yaml:",omitempty"`
-	Hostname         Package `yaml:",omitempty"`
-	Sysctl           Package `yaml:",omitempty"`
-	Health           Package `yaml:",omitempty"`
-}
-
-func (s *Software) Merge(sw Software) {
-
-	zeroPkg := Package{}
-
-	if !sw.Containerruntime.Equals(zeroPkg) {
-		s.Containerruntime = sw.Containerruntime
-	}
-
-	if !sw.KeepaliveD.Equals(zeroPkg) {
-		s.KeepaliveD = sw.KeepaliveD
-	}
-
-	if !sw.Nginx.Equals(zeroPkg) {
-		s.Nginx = sw.Nginx
-	}
-
-	if !sw.Kubeadm.Equals(zeroPkg) {
-		s.Kubeadm = sw.Kubeadm
-	}
-
-	if !sw.Kubelet.Equals(zeroPkg) {
-		s.Kubelet = sw.Kubelet
-	}
-
-	if !sw.Kubectl.Equals(zeroPkg) {
-		s.Kubectl = sw.Kubectl
-	}
-
-	if !sw.Swap.Equals(zeroPkg) {
-		s.Swap = sw.Swap
-	}
-
-	if !sw.SSHD.Equals(zeroPkg) {
-		s.SSHD = sw.SSHD
-	}
-
-	if !sw.Hostname.Equals(zeroPkg) {
-		s.Hostname = sw.Hostname
-	}
-
-	if !sw.Sysctl.Equals(zeroPkg) && s.Sysctl.Config == nil {
-		s.Sysctl.Config = make(map[string]string)
-	}
-	for key, value := range sw.Sysctl.Config {
-		s.Sysctl.Config[key] = value
-	}
-	if !sw.Health.Equals(zeroPkg) && s.Health.Config == nil {
-		s.Health.Config = make(map[string]string)
-	}
-	for key, value := range sw.Health.Config {
-		s.Health.Config[key] = value
-	}
-}
-
-type Package struct {
-	Version string            `yaml:",omitempty"`
-	Config  map[string]string `yaml:",omitempty"`
 }
 
 var prune = regexp.MustCompile("[^a-zA-Z0-9]+")
@@ -130,73 +58,12 @@ func PackageEquals(this, that Package) bool {
 	return equals
 }
 
-type Firewall struct {
-	mux sync.Mutex          `yaml:"-"`
-	FW  map[string]*Allowed `yaml:",inline"`
-}
+type MarshallableSlice []string
 
-func ToFirewall(fw map[string]*Allowed) Firewall {
-	return Firewall{FW: fw}
-}
-
-func (f *Firewall) Merge(fw Firewall) {
-	f.mux.Lock()
-	defer f.mux.Unlock()
-	if len(fw.FW) > 0 && f.FW == nil {
-		f.FW = make(map[string]*Allowed)
-	}
-	for key, value := range fw.FW {
-		f.FW[key] = value
-	}
-}
-
-func (f *Firewall) Ports() Ports {
-	ports := make([]*Allowed, 0)
-	for _, value := range f.FW {
-		ports = append(ports, value)
-	}
-	return ports
-}
-
-type Ports []*Allowed
-
-func (p Ports) String() string {
-	strs := make([]string, len(p))
-	for idx, port := range p {
-		strs[idx] = fmt.Sprintf("%s/%s", port.Port, port.Protocol)
-	}
-	return strings.Join(strs, " ")
-}
-
-type Allowed struct {
-	Port     string
-	Protocol string
-}
-
-func (f Firewall) Contains(other Firewall) bool {
-	for name, port := range other.FW {
-		found, ok := f.FW[name]
-		if !ok {
-			return false
-		}
-		if !deriveEqualPort(*port, *found) {
-			return false
-		}
-	}
-	return true
-}
-
-func (f Firewall) IsContainedIn(ports []*Allowed) bool {
-checks:
-	for _, fwPort := range f.FW {
-		for _, port := range ports {
-			if deriveEqualPort(*port, *fwPort) {
-				continue checks
-			}
-		}
-		return false
-	}
-	return true
+func (m MarshallableSlice) MarshalYAML() (interface{}, error) {
+	sort.Strings(m)
+	type s []string
+	return s(m), nil
 }
 
 type NodeAgentsCurrentKind struct {
@@ -217,6 +84,11 @@ func (n *CurrentNodeAgents) Set(id string, na *NodeAgentCurrent) {
 	if n.NA == nil {
 		n.NA = make(map[string]*NodeAgentCurrent)
 	}
+
+	if _, ok := n.NA[id]; ok {
+		n.NA[id] = nil
+	}
+
 	n.NA[id] = na
 }
 
@@ -231,7 +103,8 @@ func (n *CurrentNodeAgents) Get(id string) (*NodeAgentCurrent, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentCurrent{
-			Open: make([]*Allowed, 0),
+			Open:       make(FirewallCurrent, 0),
+			Networking: make(NetworkingCurrent, 0),
 		}
 		n.NA[id] = na
 	}
@@ -253,7 +126,21 @@ type DesiredNodeAgents struct {
 func (n *DesiredNodeAgents) Delete(id string) {
 	n.mux.Lock()
 	defer n.mux.Unlock()
+
+	if _, ok := n.NA[id]; ok {
+		n.NA[id] = nil
+	}
 	delete(n.NA, id)
+}
+
+func (n *DesiredNodeAgents) List() []string {
+	n.mux.Lock()
+	defer n.mux.Unlock()
+	var ids []string
+	for id := range n.NA {
+		ids = append(ids, id)
+	}
+	return ids
 }
 
 func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
@@ -267,9 +154,31 @@ func (n *DesiredNodeAgents) Get(id string) (*NodeAgentSpec, bool) {
 	na, ok := n.NA[id]
 	if !ok {
 		na = &NodeAgentSpec{
-			Software: &Software{},
+			Software: &Software{
+				Sysctl: Package{
+					Config: map[string]string{
+						string(IpForward):             "0",
+						string(NonLocalBind):          "0",
+						string(BridgeNfCallIptables):  "0",
+						string(BridgeNfCallIp6tables): "0",
+					},
+				},
+			},
 			Firewall: &Firewall{
-				FW: make(map[string]*Allowed),
+				Zones: map[string]*Zone{
+					"internal": {
+						Interfaces: []string{},
+						FW:         map[string]*Allowed{},
+						Services:   map[string]*Service{},
+					}, "external": {
+						Interfaces: []string{},
+						FW:         map[string]*Allowed{},
+						Services:   map[string]*Service{},
+					},
+				},
+			},
+			Networking: &Networking{
+				Interfaces: map[string]*NetworkingInterface{},
 			},
 		}
 		n.NA[id] = na
@@ -282,3 +191,12 @@ type NodeAgentsDesiredKind struct {
 	Version string
 	Spec    NodeAgentsSpec `yaml:",omitempty"`
 }
+
+type KernelModule string
+
+const (
+	IpForward             KernelModule = "net.ipv4.ip_forward"
+	NonLocalBind          KernelModule = "net.ipv4.ip_nonlocal_bind"
+	BridgeNfCallIptables  KernelModule = "net.bridge.bridge-nf-call-iptables"
+	BridgeNfCallIp6tables KernelModule = "net.bridge.bridge-nf-call-ip6tables"
+)

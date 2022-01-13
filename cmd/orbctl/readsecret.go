@@ -1,53 +1,56 @@
 package main
 
 import (
-	"github.com/caos/orbos/internal/secret/operators"
 	"os"
 
-	"github.com/caos/orbos/internal/secret"
-
 	"github.com/spf13/cobra"
+
+	"github.com/caos/orbos/internal/secret/operators"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/secret"
 )
 
-func ReadSecretCommand(rv RootValues) *cobra.Command {
+func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
 
 	return &cobra.Command{
-		Use:     "readsecret [path]",
-		Short:   "Print a secrets decrypted value to stdout",
-		Long:    "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
-		Args:    cobra.MaximumNArgs(1),
-		Example: `orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-
-			_, monitor, orbConfig, gitClient, errFunc := rv()
-			if errFunc != nil {
-				return errFunc(cmd)
-			}
-
-			if err := orbConfig.IsComplete(); err != nil {
-				return err
-			}
-
-			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-				return err
-			}
-
-			if err := gitClient.Clone(); err != nil {
-				return err
-			}
+		Use:   "readsecret [path]",
+		Short: "Print a secrets decrypted value to stdout",
+		Long:  "Print a secrets decrypted value to stdout.\nIf no path is provided, a secret can interactively be chosen from a list of all possible secrets",
+		Args:  cobra.MaximumNArgs(1),
+		Example: `orbctl readsecret
+orbctl readsecret orbiter.k8s.kubeconfig.encrypted
+orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 			path := ""
 			if len(args) > 0 {
 				path = args[0]
 			}
 
-			value, err := secret.Read(
-				monitor,
-				gitClient,
-				path,
-				operators.GetAllSecretsFunc(orbConfig))
+			rv, err := getRv("readsecret", "", map[string]interface{}{"path": path})
 			if err != nil {
-				panic(err)
+				return err
+			}
+			defer rv.ErrFunc(err)
+
+			monitor := rv.Monitor
+			orbConfig := rv.OrbConfig
+			gitClient := rv.GitClient
+
+			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
+			if err != nil && !rv.Gitops {
+				return mntr.ToUserError(err)
+			}
+			err = nil
+
+			value, err := secret.Read(
+				k8sClient,
+				path,
+				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, gitClient, k8sClient, orbConfig),
+			)
+			if err != nil {
+				return err
 			}
 			if _, err := os.Stdout.Write([]byte(value)); err != nil {
 				panic(err)

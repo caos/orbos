@@ -1,7 +1,7 @@
 package gce
 
 import (
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func getSecretsMap(desiredKind *Desired) map[string]*secret.Secret {

@@ -1,17 +1,16 @@
 package helm
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/operator/boom/api/latest"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/yaml"
-
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/helmcommand"
 	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/pkg/errors"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/internal/utils/yaml"
 )
 
 func (h *Helm) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
@@ -65,7 +64,7 @@ func (h *Helm) Template(appInterface interface{}, spec *latest.ToolsetSpec, resu
 	deleteKind := "Namespace"
 	err = helper.DeleteKindFromYaml(resultAbsFilePath, deleteKind)
 	if err != nil {
-		return errors.Wrapf(err, "Error while trying to delete kind %s from results", deleteKind)
+		return fmt.Errorf("error while trying to delete kind %s from results: %w", deleteKind, err)
 	}
 
 	// mutate templated results
@@ -127,8 +126,7 @@ func (h *Helm) runHelmTemplate(overlay string, app templator.HelmApplication, va
 		ValuesFilePath:   valuesAbsFilePath,
 	})
 	if err != nil {
-		monitor.Error(err)
-		return err
+		return fmt.Errorf("helm templating failed: %w: %s", err, string(out))
 	}
 
 	return yaml.New(resultAbsFilePath).AddString(string(out))

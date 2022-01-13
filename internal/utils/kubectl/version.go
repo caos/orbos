@@ -1,11 +1,12 @@
 package kubectl
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
+
+	"github.com/caos/orbos/mntr"
 )
 
 type Version struct {
@@ -43,17 +44,13 @@ func (k *KubectlVersion) GetKubeVersion(monitor mntr.Monitor) (string, error) {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		err = errors.Wrap(err, "Error while executing command")
-		kubectlMonitor.Error(err)
-		return "", err
+		return "", fmt.Errorf("error while executing command: %w", err)
 	}
 
 	versions := &Versions{}
 	err = yaml.Unmarshal(out, versions)
 	if err != nil {
-		err = errors.Wrap(err, "Error while unmarshaling output")
-		kubectlMonitor.Error(err)
-		return "", err
+		return "", fmt.Errorf("error while unmarshaling output: %w", err)
 	}
 
 	parts := strings.Split(versions.ServerVersion.GitVersion, "-")

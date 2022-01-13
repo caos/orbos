@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 
-	"github.com/caos/orbos/internal/stores/github"
+	"github.com/caos/orbos/mntr"
 )
 
 var (
@@ -14,62 +13,57 @@ var (
 	version            = "none"
 	githubClientID     = "none"
 	githubClientSecret = "none"
+	monitor            = mntr.Monitor{
+		OnInfo:         mntr.LogMessage,
+		OnChange:       mntr.LogMessage,
+		OnError:        mntr.LogError,
+		OnRecoverPanic: mntr.LogPanic,
+	}
 )
 
 func main() {
-	defer func() {
-		if r := recover(); r != nil {
-			_, _ = os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
-			os.Exit(1)
-		}
-	}()
 
-	github.ClientID = githubClientID
-	github.ClientSecret = githubClientSecret
-	github.Key = RandStringBytes(32)
+	defer func() { monitor.RecoverPanic(recover()) }()
 
-	rootCmd, rootValues := RootCommand()
+	rootCmd, getRootValues := RootCommand()
 	rootCmd.Version = fmt.Sprintf("%s %s\n", version, gitCommit)
 
-	takeoff := TakeoffCommand(rootValues)
-	takeoff.AddCommand(
-		StartBoom(rootValues),
-		StartOrbiter(rootValues),
-		StartZitadel(rootValues),
+	start := StartCommand()
+	start.AddCommand(
+		StartBoom(getRootValues),
+		StartOrbiter(getRootValues),
+		StartNetworking(getRootValues),
+	)
+
+	file := FileCommand()
+	file.AddCommand(
+		EditCommand(getRootValues),
+		PrintCommand(getRootValues),
+		//		PatchCommand(getRootValues),
 	)
 
 	nodes := NodeCommand()
 	nodes.AddCommand(
-		ReplaceCommand(rootValues),
-		RebootCommand(rootValues),
-		ExecCommand(rootValues),
+		ReplaceCommand(getRootValues),
+		RebootCommand(getRootValues),
+		ExecCommand(getRootValues),
+		ListCommand(getRootValues),
 	)
 
 	rootCmd.AddCommand(
-		ReadSecretCommand(rootValues),
-		WriteSecretCommand(rootValues),
-		EditCommand(rootValues),
-		TeardownCommand(rootValues),
-		ConfigCommand(rootValues),
-		APICommand(rootValues),
-		BackupListCommand(rootValues),
-		RestoreCommand(rootValues),
-		BackupCommand(rootValues),
-		takeoff,
+		ReadSecretCommand(getRootValues),
+		WriteSecretCommand(getRootValues),
+		TeardownCommand(getRootValues),
+		ConfigCommand(getRootValues),
+		APICommand(getRootValues),
+		TakeoffCommand(getRootValues),
+		file,
+		start,
 		nodes,
 	)
 
 	if err := rootCmd.Execute(); err != nil {
+		monitor.Error(mntr.ToUserError(err))
 		os.Exit(1)
 	}
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func RandStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }

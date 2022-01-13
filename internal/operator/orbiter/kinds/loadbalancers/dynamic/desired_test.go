@@ -1,11 +1,10 @@
 package dynamic
 
 import (
-	"github.com/caos/orbos/internal/tree"
+	"errors"
 	"testing"
 
-	"github.com/pkg/errors"
-
+	"github.com/caos/orbos/pkg/tree"
 	"gopkg.in/yaml.v3"
 )
 

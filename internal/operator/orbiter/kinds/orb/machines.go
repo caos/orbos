@@ -1,25 +1,29 @@
 package orb
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/pkg/tree"
 )
 
-type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, repoURL string) (machineIDs []string, machines map[string]infra.Machine, err error)
+type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error)
 
-func ListMachines() MachinesFunc {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, repoURL string) (machineIDs []string, machines map[string]infra.Machine, err error) {
+func ListMachines(operarorLabels *labels.Operator) MachinesFunc {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 
@@ -30,9 +34,11 @@ func ListMachines() MachinesFunc {
 			clusterCurrent := &tree.Tree{}
 			_, _, _, _, _, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
+				operarorLabels,
 				clusterID,
 				clusterTree,
 				true,
+				false,
 				false,
 				clusterCurrent,
 				nil,
@@ -51,7 +57,7 @@ func ListMachines() MachinesFunc {
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				providerTree,
 				provID,
-				repoURL,
+				orbID,
 			)
 			if err != nil {
 				return nil, nil, err

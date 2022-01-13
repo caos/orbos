@@ -16,31 +16,35 @@ type action struct {
 
 type machine struct {
 	server *cloudscale.Server
-	ip     string
 	*ssh.Machine
-	remove      func() error
-	context     *context
-	reboot      *action
-	replacement *action
-	pool        *Pool
-	poolName    string
+	remove       func() error
+	context      *context
+	reboot       *action
+	replacement  *action
+	pool         *Pool
+	poolName     string
+	X_ID         string `header:"id"`
+	X_internalIP string `header:"internal ip"`
+	X_externalIP string `header:"external ip"`
 }
 
-func newMachine(server *cloudscale.Server, ip string, sshMachine *ssh.Machine, remove func() error, context *context, pool *Pool, poolName string) *machine {
+func newMachine(server *cloudscale.Server, internalIP, externalIP string, sshMachine *ssh.Machine, remove func() error, context *context, pool *Pool, poolName string) *machine {
 	return &machine{
-		server:   server,
-		ip:       ip,
-		Machine:  sshMachine,
-		remove:   remove,
-		context:  context,
-		pool:     pool,
-		poolName: poolName,
+		server:       server,
+		X_ID:         server.Name,
+		X_internalIP: internalIP,
+		X_externalIP: externalIP,
+		Machine:      sshMachine,
+		remove:       remove,
+		context:      context,
+		pool:         pool,
+		poolName:     poolName,
 	}
 }
 
-func (m *machine) ID() string    { return m.server.Name }
-func (m *machine) IP() string    { return m.ip }
-func (m *machine) Remove() error { return m.remove() }
+func (m *machine) ID() string                     { return m.X_ID }
+func (m *machine) IP() string                     { return m.X_internalIP }
+func (m *machine) Destroy() (func() error, error) { return m.remove, nil }
 
 func (m *machine) RebootRequired() (required bool, require func(), unrequire func()) {
 
@@ -72,7 +76,7 @@ func (m *machine) initAction(a *action, getSlice func() []string, setSlice func(
 		unrequire: func() {},
 		require: func() {
 			s := getSlice()
-			s = append(s, m.server.UUID)
+			s = append(s, m.server.Name)
 			setSlice(s)
 		},
 	}

@@ -1,11 +1,11 @@
 package yaml
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
 
-	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,7 +22,7 @@ func New(path string) *yamlFile {
 func readFile(path string) ([]byte, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, errors.Wrapf(err, "Error while reading yaml %s", path)
+		return nil, fmt.Errorf("error while reading yaml %s: %w", path, err)
 	}
 
 	return data, nil
@@ -52,7 +52,7 @@ func (y *yamlFile) ToStruct(struc interface{}) error {
 		}
 		err = yaml.Unmarshal([]byte(part), struc)
 		if err != nil {
-			return errors.Wrapf(err, "Error while unmarshaling yaml %s to struct", y.path)
+			return fmt.Errorf("error while unmarshaling yaml %s to struct: %w", y.path, err)
 		}
 		return nil
 	}

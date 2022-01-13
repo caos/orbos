@@ -1,32 +1,55 @@
 package gce
 
 import (
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/internal/tree"
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/internal/ssh"
 	"github.com/caos/orbos/mntr"
+	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 )
 
-func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string, oneoff bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
+func AdaptFunc(
+	providerID,
+	orbID string,
+	whitelist dynamic.WhiteListFunc,
+	orbiterCommit,
+	repoURL,
+	repoKey string,
+	oneoff bool,
+	pprof bool,
+) orbiter.AdaptFunc {
+	return func(
+		monitor mntr.Monitor,
+		finishedChan chan struct{},
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (
+		queryFunc orbiter.QueryFunc,
+		destroyFunc orbiter.DestroyFunc,
+		configureFunc orbiter.ConfigureFunc,
+		migrate bool,
+		secrets map[string]*secret.Secret,
+		err error,
+	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 		desiredKind, err := parseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.RebootRequired == nil {
 			desiredKind.Spec.RebootRequired = make([]string, 0)
@@ -37,7 +60,14 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 			monitor = monitor.Verbose()
 		}
 
-		if err := desiredKind.validate(); err != nil {
+		for _, pool := range desiredKind.Spec.Pools {
+			if pool.StorageDiskType == "" {
+				pool.StorageDiskType = "pd-standard"
+				migrate = true
+			}
+		}
+
+		if err := desiredKind.validateAdapt(); err != nil {
 			return nil, nil, nil, migrate, nil, err
 		}
 
@@ -51,27 +81,34 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbSecrets)
+		secret.AppendSecrets("", secrets, lbSecrets, nil, nil)
 
-		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-		if err != nil {
-			return nil, nil, nil, migrate, nil, err
+		svcFunc := func() (*machinesService, error) {
+			return service(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 		}
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/GCEProvider",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/GCEProvider", "v0", false),
 		}
 		currentTree.Parsed = current
 
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 				defer func() {
-					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("querying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
-				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+				if err := desiredKind.validateQuery(); err != nil {
+					return nil, err
+				}
+
+				svc, err := svcFunc()
+				if err != nil {
+					return nil, err
+				}
+
+				if err := svc.use(desiredKind.Spec.SSHKey); err != nil {
 					return nil, err
 				}
 
@@ -79,16 +116,26 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil, err
 				}
 
-				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey, pprof)
 
-				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
-			}, func() error {
-				if err := lbDestroy(); err != nil {
+				return query(&desiredKind.Spec, current, lbCurrent.Parsed, svc, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
+			}, func(delegates map[string]interface{}) error {
+				if err := lbDestroy(delegates); err != nil {
 					return err
 				}
 
-				return destroy(ctx)
-			}, func(orb orb.Orb) error {
+				ctx, err := svcFunc()
+				if err != nil {
+					return err
+				}
+				return destroy(ctx, delegates)
+			}, func(orb orbcfg.Orb) error {
+
+				if err := desiredKind.validateJSONKey(); err != nil {
+					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
+					return err
+				}
+
 				if err := lbConfigure(orb); err != nil {
 					return err
 				}
@@ -96,26 +143,23 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				if desiredKind.Spec.SSHKey == nil ||
 					desiredKind.Spec.SSHKey.Private == nil || desiredKind.Spec.SSHKey.Private.Value == "" ||
 					desiredKind.Spec.SSHKey.Public == nil || desiredKind.Spec.SSHKey.Public.Value == "" {
-					priv, pub, err := ssh.Generate()
-					if err != nil {
-						return err
-					}
+					priv, pub := ssh.Generate()
 					desiredKind.Spec.SSHKey = &SSHKey{
 						Private: &secret.Secret{Value: priv},
 						Public:  &secret.Secret{Value: pub},
 					}
 				}
 
-				if desiredKind.Spec.JSONKey == nil {
-					// TODO: Create service account and write its json key to desiredKind.Spec.JSONKey and push repo
-					return nil
+				svc, err := svcFunc()
+				if err != nil {
+					return err
 				}
 
-				if err := ctx.machinesService.use(desiredKind.Spec.SSHKey); err != nil {
+				if err := svc.use(desiredKind.Spec.SSHKey); err != nil {
 					panic(err)
 				}
 
-				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)
+				return core.ConfigureNodeAgents(svc, svc.context.monitor, orb, pprof)
 			},
 			migrate,
 			secrets,

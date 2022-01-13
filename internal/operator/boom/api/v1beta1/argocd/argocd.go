@@ -4,7 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/repository"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
-	"github.com/caos/orbos/internal/secret"
+	secret2 "github.com/caos/orbos/pkg/secret"
 )
 
 type Argocd struct {
@@ -35,6 +35,10 @@ func (r *Argocd) InitSecrets() {
 		r.Auth = &auth.Auth{}
 	}
 	r.Auth.InitSecrets()
+
+	for _, repo := range append(r.Repositories, r.Credentials...) {
+		repo.InitSecrets()
+	}
 }
 
 func (r *Argocd) IsZero() bool {
@@ -70,12 +74,12 @@ type CustomImage struct {
 }
 
 type GopassStore struct {
-	SSHKey *secret.Secret `yaml:"sshKey,omitempty"`
+	SSHKey *secret2.Secret `json:"sshKey,omitempty" yaml:"sshKey,omitempty"`
 	//Existing secret with ssh-key to clone the repository for gopass
-	ExistingSSHKeySecret *secret.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
-	GPGKey               *secret.Secret   `yaml:"gpgKey,omitempty"`
+	ExistingSSHKeySecret *secret2.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
+	GPGKey               *secret2.Secret   `json:"gpgKey,omitempty" yaml:"gpgKey,omitempty"`
 	//Existing secret with gpg-key to decode the repository for gopass
-	ExistingGPGKeySecret *secret.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
+	ExistingGPGKeySecret *secret2.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
 	//URL to repository for gopass store
 	Directory string `json:"directory,omitempty" yaml:"directory,omitempty"`
 	//Name of the gopass store

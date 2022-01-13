@@ -1,25 +1,21 @@
 package static
 
 import (
+	"fmt"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-
-	"github.com/caos/orbos/internal/tree"
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/ssh"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 var _ infra.Machine = (*machine)(nil)
 
 type machine struct {
-	active               bool
 	poolFile             string
-	id                   *string
-	ip                   string
 	rebootRequired       bool
 	requireReboot        func()
 	unrequireReboot      func()
@@ -27,6 +23,9 @@ type machine struct {
 	requireReplacement   func()
 	unrequireReplacement func()
 	*ssh.Machine
+	X_ID     *string `header:"id"`
+	X_IP     string  `header:"ip"`
+	X_active bool    `header:"active"`
 }
 
 func newMachine(
@@ -43,10 +42,10 @@ func newMachine(
 	unrequireReplacement func(),
 ) *machine {
 	return &machine{
-		active:               false,
+		X_active:             false,
 		poolFile:             poolFile,
-		id:                   id,
-		ip:                   ip,
+		X_ID:                 id,
+		X_IP:                 ip,
 		Machine:              ssh.NewMachine(monitor, remoteUser, ip),
 		rebootRequired:       rebootRequired,
 		requireReboot:        requireReboot,
@@ -58,23 +57,22 @@ func newMachine(
 }
 
 func (c *machine) ID() string {
-	return *c.id
+	return *c.X_ID
 }
 
 func (c *machine) IP() string {
-	return c.ip
+	return c.X_IP
 }
 
-func (c *machine) Remove() error {
-	if err := c.Machine.WriteFile(c.poolFile, strings.NewReader(""), 600); err != nil {
-		return err
-	}
-	c.active = false
-	c.Execute(nil, "sudo systemctl stop node-agentd")
-	c.Execute(nil, "sudo systemctl disable node-agentd")
-	c.Execute(nil, "sudo kubeadm reset -f")
-	c.Execute(nil, "sudo rm -rf /var/lib/etcd")
-	return nil
+func (c *machine) Destroy() (func() error, error) {
+	c.Execute(nil, "sudo systemctl stop node-agentd keepalived nginx")
+	c.Execute(nil, "sudo systemctl disable node-agentd keepalived nginx")
+	c.X_active = false
+	return func() error {
+		c.Execute(nil, "sudo kubeadm reset -f")
+		c.Execute(nil, "sudo rm -rf /var/lib/etcd")
+		return nil
+	}, c.Machine.WriteFile(c.poolFile, strings.NewReader(""), 600)
 }
 
 func (c *machine) RebootRequired() (bool, func(), func()) {
@@ -88,9 +86,14 @@ func (c *machine) ReplacementRequired() (bool, func(), func()) {
 func ListMachines(monitor mntr.Monitor, desiredTree *tree.Tree, providerID string) (map[string]infra.Machine, error) {
 	desired, err := parseDesiredV0(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desired
+
+	_, _, _, _, _, err = loadbalancers.GetQueryAndDestroyFunc(monitor, nil, desired.Loadbalancing, &tree.Tree{}, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	machinesSvc := NewMachinesService(monitor,
 		desired,

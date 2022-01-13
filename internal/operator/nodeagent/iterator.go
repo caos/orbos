@@ -5,13 +5,12 @@ package nodeagent
 import (
 	"fmt"
 	"io/ioutil"
-	"runtime/debug"
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 )
 
 type Rebooter interface {
@@ -34,9 +33,18 @@ func RepoKey() ([]byte, error) {
 	return key, err
 }
 
-func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit string, id string, firewallEnsurer FirewallEnsurer, conv Converter, before func() error) func() {
+func Iterator(
+	monitor mntr.Monitor,
+	gitClient *git.Client,
+	nodeAgentCommit string,
+	id string,
+	firewallEnsurer FirewallEnsurer,
+	networkingEnsurer NetworkingEnsurer,
+	conv Converter,
+	before func() error,
+) func() {
 
-	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, conv)
+	doQuery := prepareQuery(monitor, nodeAgentCommit, firewallEnsurer, networkingEnsurer, conv)
 
 	return func() {
 
@@ -74,7 +82,7 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			return
 		}
 
-		if desired.Spec.Commit != nodeAgentCommit {
+		if nodeAgentCommit != "debug" && desired.Spec.Commit != nodeAgentCommit {
 			monitor.WithFields(map[string]interface{}{
 				"desired": desired.Spec.Commit,
 				"current": nodeAgentCommit,
@@ -84,15 +92,6 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 
 		curr := &common.NodeAgentCurrent{}
 
-		events := make([]*event, 0)
-		monitor.OnChange = mntr.Concat(func(evt string, fields map[string]string) {
-			clone := *curr
-			events = append(events, &event{
-				commit:  mntr.CommitRecord(mntr.AggregateCommitFields(fields)),
-				current: &clone,
-			})
-		}, monitor.OnChange)
-
 		if err := before(); err != nil {
 			panic(err)
 		}
@@ -101,12 +100,9 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 		if err != nil {
 			monitor.Error(err)
 			return
-		}
 
+		}
 		readCurrent := func() common.NodeAgentsCurrentKind {
-			if err := gitClient.Clone(); err != nil {
-				panic(err)
-			}
 			current := common.NodeAgentsCurrentKind{}
 			yaml.Unmarshal(gitClient.Read("caos-internal/orbiter/node-agents-current.yml"), &current)
 			current.Kind = "nodeagent.caos.ch/NodeAgents"
@@ -114,51 +110,21 @@ func Iterator(monitor mntr.Monitor, gitClient *git.Client, nodeAgentCommit strin
 			return current
 		}
 
-		current := readCurrent()
-		current.Current.Set(id, curr)
-
 		reconciledCurrentStateMsg := "Current state reconciled"
-		reconciledCurrent, err := gitClient.StageAndCommit(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), git.File{
-			Path:    "caos-internal/orbiter/node-agents-current.yml",
-			Content: common.MarshalYAML(current),
-		})
-		if err != nil {
-			monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", reconciledCurrentStateMsg, err.Error()))
-			return
-		}
+		if err := gitClient.UpdateRemote(mntr.CommitRecord([]*mntr.Field{{Key: "evt", Value: reconciledCurrentStateMsg}}), func() []git.File {
 
-		if reconciledCurrent {
-			monitor.Error(gitClient.Push())
-		}
+			current := readCurrent()
+			current.Current.Set(id, curr)
 
-		events = make([]*event, 0)
-		if err := ensure(); err != nil {
-			monitor.Error(err)
-			return
-		}
-
-		current = readCurrent()
-
-		for _, event := range events {
-			current.Current.Set(id, event.current)
-			changed, err := gitClient.StageAndCommit(event.commit, git.File{
+			return []git.File{{
 				Path:    "caos-internal/orbiter/node-agents-current.yml",
 				Content: common.MarshalYAML(current),
-			})
-			if err != nil {
-				monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %s", event.commit, err.Error()))
-				return
-			}
-			if !changed {
-				monitor.Error(fmt.Errorf("event has no effect:", event.commit))
-				return
-			}
+			}}
+		}); err != nil {
+			monitor.Error(fmt.Errorf("commiting event \"%s\" failed: %w", reconciledCurrentStateMsg, err))
+			return
 		}
 
-		if len(events) > 0 {
-			monitor.Error(gitClient.Push())
-		}
-
-		debug.FreeOSMemory()
+		monitor.Error(ensure())
 	}
 }

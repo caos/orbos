@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -21,15 +22,16 @@ type Installer interface {
 	nodeagent.Installer
 }
 type keepaliveDDep struct {
-	monitor  mntr.Monitor
-	manager  *dep.PackageManager
-	systemd  *dep.SystemD
-	peerAuth string
-	os       dep.OperatingSystem
+	monitor    mntr.Monitor
+	manager    *dep.PackageManager
+	systemd    *dep.SystemD
+	peerAuth   string
+	os         dep.OperatingSystem
+	normalizer *regexp.Regexp
 }
 
 func New(monitor mntr.Monitor, manager *dep.PackageManager, systemd *dep.SystemD, os dep.OperatingSystem, cipher string) Installer {
-	return &keepaliveDDep{monitor, manager, systemd, cipher[:8], os}
+	return &keepaliveDDep{monitor, manager, systemd, cipher[:8], os, regexp.MustCompile(`\d+\.\d+\.\d+`)}
 }
 
 func (keepaliveDDep) isKeepalived() {}
@@ -46,31 +48,48 @@ func (*keepaliveDDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (keepaliveDDep) InstalledFilter() []string {
+	return []string{"keepalived"}
+}
+
 func (s *keepaliveDDep) Current() (pkg common.Package, err error) {
+
+	defer func() {
+		if err == nil && pkg.Version != "" {
+			err = selinux.Current(s.os, &pkg)
+		}
+	}()
+
 	if !s.systemd.Active("keepalived") {
 		return pkg, err
 	}
 
-	defer func() {
-		if err == nil {
-			err = selinux.Current(s.os, &pkg)
-		}
-	}()
-	config, err := ioutil.ReadFile("/etc/keepalived/keepalived.conf")
-	if os.IsNotExist(err) {
+	installed := s.manager.CurrentVersions("keepalived")
+	if len(installed) == 0 {
 		return pkg, nil
+	}
+	pkg.Version = "v" + s.normalizer.FindString(installed[0].Version)
+
+	config, err := ioutil.ReadFile("/etc/keepalived/keepalived.conf")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return pkg, nil
+		}
+		return pkg, err
 	}
 
 	redacted := new(bytes.Buffer)
 	defer redacted.Reset()
 
-	dep.Manipulate(bytes.NewReader(config), redacted, nil, nil, func(line string) *string {
+	if err := dep.Manipulate(bytes.NewReader(config), redacted, nil, nil, func(line string) *string {
 		searchString := "auth_pass "
 		if strings.Contains(line, searchString) {
 			line = line[0:strings.Index(line, searchString)+len(searchString)] + "[ REDACTED ]"
 		}
 		return &line
-	})
+	}); err != nil {
+		return pkg, err
+	}
 	pkg.Config = map[string]string{
 		"keepalived.conf": redacted.String(),
 	}
@@ -122,7 +141,7 @@ func (s *keepaliveDDep) Ensure(remove common.Package, ensure common.Package) err
 
 	if err := s.manager.Install(&dep.Software{
 		Package: "keepalived",
-		Version: ensure.Version,
+		Version: strings.TrimLeft(ensure.Version, "v"),
 	}); err != nil {
 		return err
 	}

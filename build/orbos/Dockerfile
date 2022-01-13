@@ -1,7 +1,7 @@
-FROM golang:1.14.4-alpine3.11 as build
+FROM golang:1.16-alpine3.14 as build
 
 RUN apk update && \
-    apk add -U --no-cache ca-certificates git curl openssh && \
+    apk add -U --no-cache ca-certificates git curl openssh build-base && \
     go get github.com/go-delve/delve/cmd/dlv
 
 # Runtime dependencies
@@ -11,7 +11,7 @@ RUN mkdir /dependencies && \
     curl -LO https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl && \
     chmod +x ./kubectl && \
     mv ./kubectl /dependencies/kubectl && \
-    curl -L "https://get.helm.sh/helm-v2.12.0-linux-amd64.tar.gz" |tar xvz && \
+    curl -L "https://get.helm.sh/helm-v2.17.0-linux-amd64.tar.gz" |tar xvz && \
     mv linux-amd64/helm /dependencies/helm && \
     chmod +x /dependencies/helm
 
@@ -28,10 +28,9 @@ ENV PATH="/dependencies:${PATH}"
 
 ENTRYPOINT [ "dlv", "exec", "/orbctl", "--api-version", "2", "--headless", "--listen", "127.0.0.1:2345", "--" ]
 
-FROM python:3.8.3-alpine3.11 as prod
+FROM alpine:3.13.1 as prod
 
 RUN apk update && \
-    apk add openssh && \
     addgroup -S -g 1000 orbiter && \
     adduser -S -u 1000 orbiter -G orbiter
 

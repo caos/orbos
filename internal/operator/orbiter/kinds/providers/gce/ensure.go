@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 
-	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 
 	"github.com/caos/orbos/internal/helpers"
 
@@ -17,7 +17,6 @@ import (
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
 	//	externallbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/external"
@@ -27,7 +26,7 @@ func query(
 	desired *Spec,
 	current *Current,
 	lb interface{},
-	context *context,
+	svc *machinesService,
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	naFuncs core.IterateNodeAgentFuncs,
@@ -36,13 +35,13 @@ func query(
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
+		panic(fmt.Errorf("unknown or unsupported load balancing of type %T", lb))
 	}
-	vips, _, err := lbCurrent.Current.Spec(context.machinesService)
+	vips, _, err := lbCurrent.Current.Spec(svc)
 	if err != nil {
 		return nil, err
 	}
-	normalized, firewalls := normalize(context, vips)
+	normalized, firewalls := normalize(svc.context, vips)
 
 	var (
 		ensureLB             func() error
@@ -51,12 +50,12 @@ func query(
 	if err := helpers.Fanout([]func() error{
 		func() error {
 			var err error
-			ensureLB, err = queryLB(context, normalized)
+			ensureLB, err = queryLB(svc.context, normalized)
 			return err
 		},
 		func() error {
 			var err error
-			createFWs, deleteFWs, err = queryFirewall(context, firewalls)
+			createFWs, deleteFWs, err = queryFirewall(svc.context, firewalls)
 			return err
 		},
 	})(); err != nil {
@@ -77,7 +76,7 @@ func query(
 	desireNodeAgent := func(pool string, machine infra.Machine) error {
 
 		machineID := machine.ID()
-		machineMonitor := context.monitor.WithField("machine", machineID)
+		machineMonitor := svc.context.monitor.WithField("machine", machineID)
 		na, _ := nodeAgentsDesired.Get(machineID)
 		if na.Software.Health.Config == nil {
 			na.Software.Health.Config = make(map[string]string)
@@ -86,7 +85,6 @@ func query(
 		for _, lb := range normalized {
 			for _, destPool := range lb.targetPool.destPools {
 				if pool == destPool {
-
 					key := fmt.Sprintf(
 						"%s:%d%s",
 						"0.0.0.0",
@@ -94,30 +92,32 @@ func query(
 						lb.healthcheck.gce.RequestPath)
 
 					value := fmt.Sprintf(
-						"%d@%s://%s:%d%s",
-						lb.healthcheck.desired.Code,
+						"--protocol %s --ip %s --port %d --path %s --status %d --proxy=%t",
 						lb.healthcheck.desired.Protocol,
 						machine.IP(),
 						internalPort(lb),
-						lb.healthcheck.desired.Path)
+						lb.healthcheck.desired.Path,
+						lb.healthcheck.desired.Code,
+						lb.healthcheck.proxyProtocol,
+					)
 
 					if v := na.Software.Health.Config[key]; v != value {
 						na.Software.Health.Config[key] = value
 						machineMonitor.WithFields(map[string]interface{}{
 							"listen": key,
 							"checks": value,
-						}).Changed("Healthcheck desired")
+						}).Debug("Healthcheck desired")
 					}
-					fw := common.ToFirewall(map[string]*common.Allowed{
+					fw := common.ToFirewall("external", map[string]*common.Allowed{
 						lb.healthcheck.gce.Description: {
 							Port:     fmt.Sprintf("%d", lb.healthcheck.gce.Port),
 							Protocol: "tcp",
 						},
 					})
 					if !na.Firewall.Contains(fw) {
-						na.Firewall.Merge(fw)
-						machineMonitor.WithField("ports", fw.Ports()).Changed("Firewall desired")
+						machineMonitor.WithField("ports", fw.ToCurrent()).Debug("Firewall desired")
 					}
+					na.Firewall.Merge(fw)
 				}
 			}
 		}
@@ -132,8 +132,8 @@ func query(
 		return nil
 	}
 
-	context.machinesService.onCreate = desireNodeAgent
-	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, nil, func(vip *dynamic.VIP) string {
+	svc.onCreate = desireNodeAgent
+	wrappedMachines := wrap.MachinesService(svc, *lbCurrent, nil, func(vip *dynamic.VIP) string {
 		for _, transport := range vip.Transport {
 			address, ok := current.Current.Ingresses[transport.Name]
 			if ok {
@@ -142,23 +142,23 @@ func query(
 		}
 		panic(fmt.Errorf("external address for %v is not ensured", vip))
 	})
-	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {
 
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
-			func() error { return ensureIdentityAwareProxyAPIEnabled(context) },
-			func() error { return ensureNetwork(context, createFWs, deleteFWs) },
-			context.machinesService.restartPreemptibleMachines,
+			func() error { return ensureIdentityAwareProxyAPIEnabled(svc.context) },
+			func() error { return ensureNetwork(svc.context, createFWs, deleteFWs) },
+			svc.restartPreemptibleMachines,
 			ensureLB,
 			func() error {
-				pools, err := context.machinesService.ListPools()
+				pools, err := svc.ListPools()
 				if err != nil {
 					return err
 				}
 
 				var desireNodeAgents []func() error
 				for _, pool := range pools {
-					machines, listErr := context.machinesService.List(pool)
+					machines, listErr := svc.List(pool)
 					if listErr != nil {
 						err = helpers.Concat(err, listErr)
 					}
@@ -174,11 +174,21 @@ func query(
 			},
 			func() error {
 				var err error
-				done, err = wrappedMachines.InitializeDesiredNodeAgents()
+				lbDone, err := wrappedMachines.InitializeDesiredNodeAgents()
+				if err != nil {
+					return err
+				}
+
+				fwDone, err := core.DesireInternalOSFirewall(svc.context.monitor, nodeAgentsDesired, nodeAgentsCurrent, svc, false, []string{"eth0"})
+				if err != nil {
+					return err
+				}
+				done = lbDone && fwDone
+
 				return err
 			},
 		})())
-	}, initPools(current, desired, context, normalized, wrappedMachines)
+	}, initPools(current, desired, svc, normalized, wrappedMachines)
 }
 
 func internalPort(lb *normalizedLoadbalancer) uint16 {
@@ -186,7 +196,7 @@ func internalPort(lb *normalizedLoadbalancer) uint16 {
 }
 
 func externalPort(lb *normalizedLoadbalancer) uint16 {
-	port, err := strconv.Atoi(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0])
+	port, err := strconv.ParseInt(strings.Split(lb.forwardingRule.gce.PortRange, "-")[0], 10, 16)
 	if err != nil {
 		panic(err)
 	}

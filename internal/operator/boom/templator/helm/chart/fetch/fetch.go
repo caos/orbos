@@ -22,7 +22,7 @@ type ChartInfo struct {
 func All(monitor mntr.Monitor, basePath string, newVersions bool) error {
 	allApps := bundles.GetAll()
 
-	monitor.Info("Init Helm")
+	monitor.Info("Ingest Helm")
 
 	// helm init to create a HELMHOME
 	if err := helmcommand.Init(basePath); err != nil {
@@ -103,8 +103,9 @@ func fetch(monitor mntr.Monitor, basePath string, chart *ChartInfo) error {
 	logFields := map[string]interface{}{
 		"application": chart.Name,
 		"version":     chart.Version,
+		"indexname":   chart.IndexName,
+		"folder":      basePath,
 	}
-	logFields["indexname"] = chart.IndexName
 
 	monitor.WithFields(logFields).Info("Fetching chart")
 	return helmcommand.FetchChart(&helmcommand.FetchConfig{

@@ -1,7 +1,7 @@
 package gitlab
 
 import (
-	"github.com/caos/orbos/internal/secret"
+	secret2 "github.com/caos/orbos/pkg/secret"
 )
 
 type Connector struct {
@@ -37,12 +37,12 @@ func (c *Config) IsZero() bool {
 }
 
 type Config struct {
-	ClientID *secret.Secret `yaml:"clientID,omitempty"`
+	ClientID *secret2.Secret `json:"clientID,omitempty" yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
-	ExistingClientIDSecret *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret           *secret.Secret   `yaml:"clientSecret,omitempty"`
+	ExistingClientIDSecret *secret2.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
+	ClientSecret           *secret2.Secret   `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 	//Existing secret with the clientSecret
-	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
+	ExistingClientSecretSecret *secret2.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//BaseURL of the gitlab instance
 	BaseURL string `json:"baseURL,omitempty" yaml:"baseURL,omitempty"`
 	//Optional groups whitelist, communicated through the "groups" scope

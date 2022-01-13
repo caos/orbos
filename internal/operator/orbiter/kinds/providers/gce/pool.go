@@ -12,15 +12,15 @@ var _ infra.Pool = (*infraPool)(nil)
 type infraPool struct {
 	pool       string
 	normalized []*normalizedLoadbalancer
-	context    *context
+	svc        *machinesService
 	machines   core.MachinesService
 }
 
-func newInfraPool(pool string, context *context, normalized []*normalizedLoadbalancer, machines core.MachinesService) *infraPool {
+func newInfraPool(pool string, svc *machinesService, normalized []*normalizedLoadbalancer, machines core.MachinesService) *infraPool {
 	return &infraPool{
 		pool:       pool,
 		normalized: normalized,
-		context:    context,
+		svc:        svc,
 		machines:   machines,
 	}
 }
@@ -35,7 +35,7 @@ func (i *infraPool) EnsureMembers() error {
 
 func (i *infraPool) ensureMembers(machine infra.Machine) error {
 
-	allInstances, err := i.context.machinesService.instances()
+	allInstances, err := getAllInstances(i.svc)
 	if err != nil {
 		return err
 	}
@@ -67,10 +67,10 @@ func (i *infraPool) ensureMembers(machine infra.Machine) error {
 
 				if err := operateFunc(
 					n.targetPool.log("Adding instances to target pool", true, addInstances),
-					computeOpCall(i.context.client.TargetPools.
+					computeOpCall(i.svc.context.client.TargetPools.
 						AddInstance(
-							i.context.projectID,
-							i.context.desired.Region,
+							i.svc.context.projectID,
+							i.svc.context.desired.Region,
 							n.targetPool.gce.Name,
 							&compute.TargetPoolsAddInstanceRequest{Instances: instances(addInstances).refs()},
 						).
@@ -86,10 +86,14 @@ func (i *infraPool) ensureMembers(machine infra.Machine) error {
 	return nil
 }
 
+func (i *infraPool) DesiredMembers(instances int) int {
+	return i.machines.DesiredMachines(i.pool, instances)
+}
+
 func (i *infraPool) GetMachines() (infra.Machines, error) {
 	return i.machines.List(i.pool)
 }
 
-func (i *infraPool) AddMachine() (infra.Machine, error) {
-	return i.machines.Create(i.pool)
+func (i *infraPool) AddMachine(desiredInstances int) (infra.Machines, error) {
+	return i.machines.Create(i.pool, desiredInstances)
 }

@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/internal/helpers"
+
+	secret2 "github.com/caos/orbos/pkg/secret"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
@@ -80,19 +82,27 @@ func (c *machinesService) List(poolName string) (infra.Machines, error) {
 	return pool.Machines(), nil
 }
 
-func (c *machinesService) Create(poolName string) (infra.Machine, error) {
+func (c *machinesService) DesiredMachines(poolName string, instances int) int {
+	_, err := c.cachedPool(poolName)
+	if err != nil {
+		return 0
+	}
+
+	return instances
+}
+
+func (c *machinesService) Create(poolName string, _ int) (infra.Machines, error) {
 	pool, err := c.cachedPool(poolName)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, machine := range pool {
-
-		if err := machine.WriteFile(fmt.Sprintf("/home/orbiter/.ssh/authorized_keys"), bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
-			return nil, err
-		}
-
-		if !machine.active {
+		if !machine.X_active {
+			machine.X_active = true
+			if err := machine.WriteFile(fmt.Sprintf("/home/orbiter/.ssh/authorized_keys"), bytes.NewReader([]byte(c.desired.Spec.Keys.MaintenanceKeyPublic.Value)), 600); err != nil {
+				return nil, err
+			}
 
 			if err := machine.WriteFile(c.statusFile, strings.NewReader("active"), 600); err != nil {
 				return nil, err
@@ -102,12 +112,11 @@ func (c *machinesService) Create(poolName string) (infra.Machine, error) {
 				return nil, err
 			}
 
-			machine.active = true
-			return machine, nil
+			return []infra.Machine{machine}, nil
 		}
 	}
 
-	return nil, errors.New("no machines left")
+	return nil, mntr.ToUserError(errors.New("no machines left"))
 }
 
 func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
@@ -126,39 +135,51 @@ func (c *machinesService) cachedPool(poolName string) (cachedMachines, error) {
 
 	newCache := make([]*machine, 0)
 
-	initializeMachine := func(rebootRequired bool, replacementRequired bool, spec *Machine) *machine {
-		return newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
-			rebootRequired,
-			func() {
-				spec.RebootRequired = true
-			}, func() {
-				spec.RebootRequired = false
-			},
-			replacementRequired,
-			func() {
-				spec.ReplacementRequired = true
-			}, func() {
-				spec.ReplacementRequired = false
-			})
+	initializeMachineFunc := func(spec *Machine) func() error {
+		return func() error {
+			newM := newMachine(c.monitor, c.statusFile, "orbiter", &spec.ID, string(spec.IP),
+				spec.RebootRequired,
+				func() {
+					spec.RebootRequired = true
+				}, func() {
+					spec.RebootRequired = false
+				},
+				spec.ReplacementRequired,
+				func() {
+					spec.ReplacementRequired = true
+				}, func() {
+					spec.ReplacementRequired = false
+				})
+
+			if err := newM.UseKey(keys...); err != nil {
+				return err
+			}
+
+			buf := new(bytes.Buffer)
+			defer buf.Reset()
+			if err := newM.ReadFile(c.statusFile, buf); err != nil {
+				// if error, treat as active
+			}
+			newM.X_active = strings.Contains(buf.String(), "active")
+			newCache = append(newCache, newM)
+			return nil
+		}
 	}
+
+	var fanout []func() error
 	for _, spec := range specifiedMachines {
+		fanout = append(fanout, initializeMachineFunc(spec))
+	}
 
-		machine := initializeMachine(spec.RebootRequired, spec.ReplacementRequired, spec)
-		if err := machine.UseKey(keys...); err != nil {
-			return nil, err
-		}
-
-		buf := new(bytes.Buffer)
-		if err := machine.ReadFile(c.statusFile, buf); err != nil {
-			// if error, treat as active
-		}
-		machine.active = strings.Contains(buf.String(), "active")
-		buf.Reset()
-		newCache = append(newCache, machine)
+	if err := helpers.Fanout(fanout)(); err != nil {
+		return nil, err
 	}
 
 	if c.cache == nil {
 		c.cache = make(map[string]cachedMachines)
+	} else if ok { // TODO: Never true
+		c.cache[poolName] = nil
+		delete(c.cache, poolName)
 	}
 	c.cache[poolName] = newCache
 	return newCache, nil
@@ -169,7 +190,7 @@ type cachedMachines []*machine
 func (c cachedMachines) Machines() infra.Machines {
 	machines := make([]infra.Machine, 0)
 	for _, machine := range c {
-		if machine.active {
+		if machine.X_active {
 			machines = append(machines, machine)
 		}
 	}
@@ -178,7 +199,7 @@ func (c cachedMachines) Machines() infra.Machines {
 
 func privateKeys(spec Spec) [][]byte {
 	var privateKeys [][]byte
-	toBytes := func(key *secret.Secret) {
+	toBytes := func(key *secret2.Secret) {
 		if key != nil {
 			privateKeys = append(privateKeys, []byte(key.Value))
 		}

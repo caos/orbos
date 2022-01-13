@@ -1,7 +1,7 @@
 package generic
 
 import (
-	"github.com/caos/orbos/internal/secret"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 type Auth struct {

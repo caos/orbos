@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/caos/orbos/pkg/kubernetes"
+
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -69,7 +71,7 @@ func initialize(
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	providerPools map[string]map[string]infra.Pool,
-	k8s *Client,
+	k8s *kubernetes.Client,
 	postInit func(machine *initializedMachine)) (
 	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
@@ -120,14 +122,19 @@ func initialize(
 			}
 		}
 
-		upscale := desired.Nodes + len(replace) - len(machines)
+		machinesPerDesired := 1
+		if desired.Nodes > 0 {
+			machinesPerDesired = pool.infra.DesiredMembers(desired.Nodes) / desired.Nodes
+		}
+
+		upscale := (desired.Nodes * machinesPerDesired) + len(replace) - len(machines)
 		if upscale > 0 {
 			pool.upscaling = upscale
 			return pool, nil
 		}
 
 		if len(replace) > 0 {
-			for backReplacement >= desired.Nodes && len(replace) > 0 {
+			for backReplacement >= (desired.Nodes*machinesPerDesired) && len(replace) > 0 {
 				backReplacement--
 				pool.downscaling = append(pool.downscaling, replace[0])
 				replace = replace[1:]
@@ -135,7 +142,7 @@ func initialize(
 			return pool, nil
 		}
 
-		pool.downscaling = machines[desired.Nodes:]
+		pool.downscaling = machines[(desired.Nodes * machinesPerDesired):]
 
 		return pool, nil
 	}
@@ -151,7 +158,7 @@ func initialize(
 		}
 
 		var node *v1.Node
-		if k8s.Available() {
+		if k8s != nil {
 			var k8sNodeErr error
 			node, k8sNodeErr = k8s.GetNode(machine.ID())
 			if k8sNodeErr != nil {
@@ -175,8 +182,8 @@ func initialize(
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					current.Ready = true
-					current.Updating = k8s.Tainted(node, updating)
-					current.Rebooting = k8s.Tainted(node, rebooting)
+					current.Updating = k8s.Tainted(node, kubernetes.Updating)
+					current.Rebooting = k8s.Tainted(node, kubernetes.Rebooting)
 				}
 			}
 		}
@@ -189,10 +196,10 @@ func initialize(
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
 
 		if !softwareDefines(*naSpec.Software, k8sSoftware) {
-			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
+			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software), false)
 			if !softwareContains(*naSpec.Software, k8sSoftware) {
-				naSpec.Software.Merge(k8sSoftware)
-				machineMonitor.Changed("Kubernetes software desired")
+				naSpec.Software.Merge(k8sSoftware, false)
+				machineMonitor.Debug("Kubernetes software desired")
 			}
 		}
 
@@ -288,7 +295,7 @@ func initialize(
 		}, nil
 }
 
-func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) func() error {
+func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *kubernetes.Client, tier Tier, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) func() error {
 	n := &node
 	reconcileNode := false
 	reconcileMonitor := monitor.WithField("node", n.Name)
@@ -308,11 +315,11 @@ func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Clien
 	}
 	return func() error {
 		reconcileMonitor.Info("Reconciling node")
-		return k8s.updateNode(n)
+		return k8s.UpdateNode(n)
 	}
 }
 
-func reconcileTaints(node *v1.Node, pool Pool, k8s *Client, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) map[string]interface{} {
+func reconcileTaints(node *v1.Node, pool Pool, k8s *kubernetes.Client, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) map[string]interface{} {
 	desiredTaints := pool.Taints.ToK8sTaints()
 	newTaints := append([]core.Taint{}, desiredTaints...)
 	updateTaints := false
@@ -320,7 +327,7 @@ func reconcileTaints(node *v1.Node, pool Pool, k8s *Client, naSpec *common.NodeA
 	// user defined taints
 outer:
 	for _, existing := range node.Spec.Taints {
-		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") || strings.HasPrefix(existing.Key, taintKeyPrefix) {
+		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") || strings.HasPrefix(existing.Key, kubernetes.TaintKeyPrefix) {
 			newTaints = append(newTaints, existing)
 			continue
 		}
@@ -335,13 +342,13 @@ outer:
 		break
 	}
 	// internal taints
-	if k8s.Tainted(node, updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
-		newTaints = k8s.RemoveFromTaints(newTaints, updating)
+	if k8s.Tainted(node, kubernetes.Updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
+		newTaints = k8s.RemoveFromTaints(newTaints, kubernetes.Updating)
 		updateTaints = true
 	}
 
-	if k8s.Tainted(node, rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
-		newTaints = k8s.RemoveFromTaints(newTaints, rebooting)
+	if k8s.Tainted(node, kubernetes.Rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
+		newTaints = k8s.RemoveFromTaints(newTaints, kubernetes.Rebooting)
 		updateTaints = true
 	}
 
