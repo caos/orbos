@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+
 	"github.com/caos/orbos/mntr"
 
 	"github.com/spf13/cobra"
@@ -27,29 +29,23 @@ func EditCommand(getRv GetRootValues) *cobra.Command {
 		Example: `orbctl file edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			rv, err := getRv("edit", "", map[string]interface{}{"file": args[0]})
-			if err != nil {
-				return err
-			}
+			rv := getRv("edit", "", map[string]interface{}{"file": args[0]})
 			defer rv.ErrFunc(err)
-
-			orbConfig := rv.OrbConfig
-			gitClient := rv.GitClient
 
 			if !rv.Gitops {
 				return mntr.ToUserError(errors.New("edit command is only supported with the --gitops flag"))
 			}
 
-			if err := initRepo(orbConfig, gitClient); err != nil {
+			if _, err := cli.Init(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, true, true); err != nil {
 				return err
 			}
 
-			edited, err := captureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(gitClient.Read(args[0])))
+			edited, err := captureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(rv.GitClient.Read(args[0])))
 			if err != nil {
 				panic(err)
 			}
 
-			return gitClient.UpdateRemote("File written by orbctl", func() []git.File {
+			return rv.GitClient.UpdateRemote("File written by orbctl", func() []git.File {
 				return []git.File{{
 					Path:    args[0],
 					Content: edited,

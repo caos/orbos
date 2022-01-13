@@ -10,8 +10,8 @@ import (
 	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/labels"
-	orbcfg "github.com/caos/orbos/pkg/orb"
 )
 
 func APICommand(getRv GetRootValues) *cobra.Command {
@@ -25,41 +25,26 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, err := getRv("api", "", nil)
-		if err != nil {
-			return err
-		}
+		rv := getRv("api", "", nil)
 		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {
 			return mntr.ToUserError(errors.New("api command is only supported with the --gitops flag"))
 		}
 
-		monitor := rv.Monitor
-		orbConfig := rv.OrbConfig
-		gitClient := rv.GitClient
-
-		if err := orbcfg.IsComplete(orbConfig); err != nil {
-			return err
-		}
-
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return err
-		}
-
-		if err := gitClient.Clone(); err != nil {
+		if _, err := cli.Init(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, true, true); err != nil {
 			return err
 		}
 
 		var desireds []git.GitDesiredState
-		if gitClient.Exists(git.OrbiterFile) {
-			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
+		if rv.GitClient.Exists(git.OrbiterFile) {
+			_, _, _, migrate, desired, _, _, err := orbiter.Adapt(rv.GitClient, monitor, make(chan struct{}), orbadapter.AdaptFunc(
 				labels.NoopOperator("ORBOS"),
-				orbConfig,
+				rv.OrbConfig,
 				gitCommit,
 				true,
 				false,
-				gitClient,
+				rv.GitClient,
 			))
 			if err != nil {
 				return err
@@ -72,9 +57,9 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 				})
 			}
 		}
-		if gitClient.Exists(git.BoomFile) {
+		if rv.GitClient.Exists(git.BoomFile) {
 
-			desired, err := gitClient.ReadTree(git.BoomFile)
+			desired, err := rv.GitClient.ReadTree(git.BoomFile)
 			if err != nil {
 				return err
 			}
@@ -92,7 +77,7 @@ func APICommand(getRv GetRootValues) *cobra.Command {
 			}
 		}
 		if len(desireds) > 0 {
-			return gitClient.PushGitDesiredStates(monitor, "migrate apis", desireds)
+			return rv.GitClient.PushGitDesiredStates(monitor, "migrate apis", desireds)
 		}
 		return nil
 	}

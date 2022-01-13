@@ -83,7 +83,7 @@ func (g *Client) GetURL() string {
 func (g *Client) Configure(repoURL string, deploykey []byte) error {
 	signer, err := ssh.ParsePrivateKey(deploykey)
 	if err != nil {
-		return fmt.Errorf("parsing deployment key failed: %w", err)
+		return mntr.ToUserError(fmt.Errorf("parsing deployment key failed: %w", err))
 	}
 
 	if repoURL != g.repoURL {

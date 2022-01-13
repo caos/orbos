@@ -38,7 +38,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 	flags.BoolVar(&stdin, "stdin", false, "Read content value by stdin")
 	flags.BoolVar(&exact, "exact", false, "Write the content exactly at the path given without further prompting")
 
-	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
 		var path []string
 		if len(args) > 1 {
@@ -47,10 +47,7 @@ Patching a node property non-interactively: orbctl file path orbiter.yml cluster
 
 		filePath := args[0]
 
-		rv, err := getRv("patch", "", map[string]interface{}{"value": value, "filePath": filePath, "valuePath": file, "stdin": stdin, "exact": exact})
-		if err != nil {
-			return err
-		}
+		rv := getRv("patch", "", map[string]interface{}{"value": value, "filePath": filePath, "valuePath": file, "stdin": stdin, "exact": exact})
 		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {

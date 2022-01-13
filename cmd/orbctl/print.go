@@ -16,14 +16,11 @@ func PrintCommand(getRv GetRootValues) *cobra.Command {
 		Short:   "Print the files contents to stdout",
 		Args:    cobra.ExactArgs(1),
 		Example: `orbctl file print orbiter.yml`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
 			file := args[0]
 
-			rv, err := getRv("print", "", map[string]interface{}{"file": file})
-			if err != nil {
-				return err
-			}
+			rv := getRv("print", "", map[string]interface{}{"file": file})
 			defer rv.ErrFunc(err)
 
 			if !rv.Gitops {

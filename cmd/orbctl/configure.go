@@ -33,7 +33,7 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, _ := getRv("configure", "", map[string]interface{}{"masterkey": newMasterKey != "", "newRepoURL": newRepoURL})
+		rv := getRv("configure", "", map[string]interface{}{"masterkey": newMasterKey != "", "newRepoURL": newRepoURL})
 		defer rv.ErrFunc(err)
 
 		if !rv.Gitops {
@@ -54,9 +54,13 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			return err
 		}
 
-		k8sClient, err := cli.Client(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, false)
+		var uninitialized bool
+		k8sClient, err := cli.Init(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, false, false)
 		if err != nil {
-			// ignore
+			if !errors.Is(err, cli.ErrNotInitialized) {
+				return err
+			}
+			uninitialized = true
 			err = nil
 		}
 
@@ -68,12 +72,14 @@ func ConfigCommand(getRv GetRootValues) *cobra.Command {
 			}
 		}
 
-		if err := cfg.ApplyOrbconfigSecret(
-			rv.OrbConfig,
-			k8sClient,
-			rv.Monitor,
-		); err != nil {
-			return err
+		if !uninitialized {
+			if err := cfg.ApplyOrbconfigSecret(
+				rv.OrbConfig,
+				k8sClient,
+				rv.Monitor,
+			); err != nil {
+				return err
+			}
 		}
 
 		return cfg.ConfigureOperators(

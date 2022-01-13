@@ -27,21 +27,14 @@ func TakeoffCommand(getRv GetRootValues) *cobra.Command {
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
 
-		rv, err := getRv("takeoff", "", map[string]interface{}{"recur": recur, "deploy": deploy, "args": args})
-		if err != nil {
-			return err
-		}
+		rv := getRv("takeoff", "", map[string]interface{}{"recur": recur, "deploy": deploy, "args": args})
 		defer rv.ErrFunc(err)
-
-		orbConfig := rv.OrbConfig
-		gitClient := rv.GitClient
-		ctx := rv.Ctx
 
 		return cmds.Takeoff(
 			monitor,
-			ctx,
-			orbConfig,
-			gitClient,
+			rv.Ctx,
+			rv.OrbConfig,
+			rv.GitClient,
 			recur,
 			deploy,
 			verbose,
