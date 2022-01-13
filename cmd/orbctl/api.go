@@ -3,17 +3,15 @@ package main
 import (
 	"errors"
 
-	"github.com/caos/orbos/mntr"
-
-	"github.com/caos/orbos/pkg/git"
-
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/spf13/cobra"
 
 	boomapi "github.com/caos/orbos/internal/operator/boom/api"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	orbadapter "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/labels"
-	"github.com/spf13/cobra"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 )
 
 func APICommand(getRv GetRootValues) *cobra.Command {

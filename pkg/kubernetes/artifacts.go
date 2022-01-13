@@ -1,12 +1,11 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/pkg/labels"
-
 	core "k8s.io/api/core/v1"
 	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/labels"
 )
 
 func EnsureCaosSystemNamespace(monitor mntr.Monitor, client ClientInt) error {

@@ -5,13 +5,9 @@ import (
 	"fmt"
 
 	"github.com/caos/orbos/mntr"
-
 	"github.com/caos/orbos/pkg/cfg"
-
-	"github.com/caos/orbos/pkg/kubernetes/cli"
-
 	"github.com/caos/orbos/pkg/git"
-
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/orb"
 	"github.com/spf13/cobra"
 )

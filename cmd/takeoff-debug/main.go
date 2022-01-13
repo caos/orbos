@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 
 	"github.com/caos/orbos/cmd/orbctl/cmds"
@@ -9,7 +10,6 @@ import (
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/orb"
 	orbcfg "github.com/caos/orbos/pkg/orb"
-	"golang.org/x/net/context"
 )
 
 func main() {
@@ -52,7 +52,7 @@ func main() {
 		gitCommit,
 		*kubeconfig,
 		*gitops,
-		*gitops,
+		[]string{"orbiter"},
 	); err != nil {
 		monitor.Error(err)
 		panic(err)

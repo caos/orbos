@@ -23,46 +23,49 @@ type CORS struct {
 	MaxAge         string
 }
 
-func AdaptFuncToEnsure(
-	monitor mntr.Monitor,
-	namespace string,
-	id labels.IDLabels,
-	grpc bool,
-	host,
-	prefix,
-	rewrite,
-	service string,
-	timeoutMS,
-	connectTimeoutMS int,
-	cors *CORS) (resources.QueryFunc, error) {
+type Arguments struct {
+	Monitor          mntr.Monitor
+	Namespace        string
+	ID               labels.IDLabels
+	GRPC             bool
+	Host             string
+	Prefix           string
+	Rewrite          string
+	Service          string
+	TimeoutMS        int
+	ConnectTimeoutMS int
+	CORS             *CORS
+}
+
+func AdaptFuncToEnsure(params *Arguments) (resources.QueryFunc, error) {
 
 	spec := map[string]interface{}{
-		"host":    host,
-		"rewrite": rewrite,
-		"service": service,
+		"host":    params.Host,
+		"rewrite": params.Rewrite,
+		"service": params.Service,
 	}
-	if prefix != "" {
-		spec["prefix"] = prefix
-	}
-
-	if timeoutMS != 0 {
-		spec["timeout_ms"] = timeoutMS
-	}
-	if connectTimeoutMS != 0 {
-		spec["connect_timeout_ms"] = connectTimeoutMS
-	}
-	if grpc {
-		spec["grpc"] = grpc
+	if params.Prefix != "" {
+		spec["prefix"] = params.Prefix
 	}
 
-	if cors != nil {
+	if params.TimeoutMS != 0 {
+		spec["timeout_ms"] = params.TimeoutMS
+	}
+	if params.ConnectTimeoutMS != 0 {
+		spec["connect_timeout_ms"] = params.ConnectTimeoutMS
+	}
+	if params.GRPC {
+		spec["grpc"] = params.GRPC
+	}
+
+	if params.CORS != nil {
 		corsMap := map[string]interface{}{
-			"origins":         cors.Origins,
-			"methods":         cors.Methods,
-			"headers":         cors.Headers,
-			"credentials":     cors.Credentials,
-			"exposed_headers": cors.ExposedHeaders,
-			"max_age":         cors.MaxAge,
+			"origins":         params.CORS.Origins,
+			"methods":         params.CORS.Methods,
+			"headers":         params.CORS.Headers,
+			"credentials":     params.CORS.Credentials,
+			"exposed_headers": params.CORS.ExposedHeaders,
+			"max_age":         params.CORS.MaxAge,
 		}
 		spec["cors"] = corsMap
 	}
@@ -72,9 +75,9 @@ func AdaptFuncToEnsure(
 			"kind":       kind,
 			"apiVersion": group + "/" + version,
 			"metadata": map[string]interface{}{
-				"name":      id.Name(),
-				"namespace": namespace,
-				"labels":    labels.MustK8sMap(id),
+				"name":      params.ID.Name(),
+				"namespace": params.Namespace,
+				"labels":    labels.MustK8sMap(params.ID),
 			},
 			"spec": spec,
 		}}
@@ -86,12 +89,12 @@ func AdaptFuncToEnsure(
 			return nil, err
 		}
 		if !ok {
-			monitor.WithField("name", crdName).Info("crd definition not found, skipping")
+			params.Monitor.WithField("name", crdName).Info("crd definition not found, skipping")
 			return func(k8sClient kubernetes.ClientInt) error { return nil }, nil
 		}
 
 		return func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, id.Name(), crd)
+			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, params.Namespace, params.ID.Name(), crd)
 		}, nil
 	}, nil
 }
