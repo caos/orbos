@@ -6,60 +6,54 @@ import (
 	"io"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func (p *PackageManager) debbasedInstalled() error {
-	return p.listAndParse(exec.Command("apt", "list", "--installed"), "Listing...", func(line string) (string, string, error) {
+	return p.listAndParse(exec.Command("apt", "list", "--installed"), "Listing...", false, func(line string) (string, string, error) {
 		parts := strings.Split(line, "/")
 		if len(parts) < 2 {
-			return "", "", errors.Errorf(`Splitting line "%s" by a forward slash failed`, line)
+			return "", "", fmt.Errorf(`splitting line "%s" by a forward slash failed`, line)
 		}
 
 		versionParts := strings.Fields(parts[1])
 		if len(versionParts) < 2 {
-			return "", "", errors.Errorf(`Splitting "%s" (the part after the forward slash) by empty characters failed`, parts[1])
+			return "", "", fmt.Errorf(`splitting "%s" (the part after the forward slash) by empty characters failed`, parts[1])
 		}
 
 		return parts[0], versionParts[1], nil
 	})
 }
 
-func (p *PackageManager) rembasedInstalled() error {
-	return p.listAndParse(exec.Command("yum", "list", "installed"), "Installed Packages", func(line string) (string, string, error) {
+func (p *PackageManager) rembasedInstalled(filter []string) error {
+	return p.listAndParse(exec.Command("rpm", append([]string{"-q", "--queryformat", "%{NAME} %{VERSION}-%{RELEASE}\n"}, filter...)...), "", true, func(line string) (string, string, error) {
 		parts := strings.Fields(line)
 		if len(parts) < 2 {
-			return "", "", errors.Errorf(`Splitting line "%s" empty characters failed`, line)
-		}
-		packageParts := strings.Split(parts[0], ".")
-		if len(packageParts) < 1 {
-			return "", "", errors.Errorf(`Splitting "%s" (the part before the first empty characters) by a dot failed`, parts[0])
+			return "", "", fmt.Errorf(`splitting line "%s" empty characters failed`, line)
 		}
 
-		return packageParts[0], parts[1], nil
+		return parts[0], parts[1], nil
 	})
 }
 
-func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining string, parse func(line string) (string, string, error)) error {
+func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining string, ignoreError bool, parse func(line string) (string, string, error)) error {
 
-	p.installed = make(map[string]string)
+	p.installed = make(map[string][]string)
 	if p.monitor.IsVerbose() {
 		fmt.Println(strings.Join(listCommand.Args, " "))
 	}
 
 	stdout, err := listCommand.StdoutPipe()
 	if err != nil {
-		return errors.Wrap(err, "getting stdout pipe for list command failed")
+		return fmt.Errorf("getting stdout pipe for list command failed: %w", err)
 	}
 	bufferedReader := bufio.NewReader(stdout)
 
 	err = listCommand.Start()
 	if err != nil {
-		return errors.Wrap(err, "listing packages failed")
+		return fmt.Errorf("listing packages failed: %w", err)
 	}
 
-	doParse := false
+	doParse := afterLineContaining == ""
 	for err == nil {
 		var line string
 		line, err = bufferedReader.ReadString('\n')
@@ -67,7 +61,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 			fmt.Println(line)
 		}
 
-		if strings.Contains(line, afterLineContaining) {
+		if !doParse && strings.Contains(line, afterLineContaining) {
 			doParse = true
 			continue
 		}
@@ -77,7 +71,7 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		}
 
 		pkg, version, _ := parse(line)
-		p.installed[pkg] = version
+		p.installed[pkg] = append(p.installed[pkg], version)
 		p.monitor.WithFields(map[string]interface{}{
 			"package": pkg,
 			"version": version,
@@ -88,9 +82,12 @@ func (p *PackageManager) listAndParse(listCommand *exec.Cmd, afterLineContaining
 		err = nil
 	}
 
-	if waitErr := listCommand.Wait(); waitErr != nil {
-		return errors.Wrap(waitErr, "waiting for list packages command failed")
+	if waitErr := listCommand.Wait(); waitErr != nil && !ignoreError {
+		return fmt.Errorf("waiting for list packages command failed: %w", waitErr)
 	}
 
-	return errors.Wrap(err, "reading and parsing installed packages failed")
+	if err != nil {
+		return fmt.Errorf("reading and parsing installed packages failed: %w", err)
+	}
+	return nil
 }

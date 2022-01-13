@@ -1,13 +1,13 @@
 package cri
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -15,6 +15,8 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
 	"github.com/caos/orbos/mntr"
 )
+
+const installContainerdVersion = "1.4.3"
 
 type Installer interface {
 	isCRI()
@@ -49,20 +51,51 @@ func (s *criDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (c *criDep) InstalledFilter() []string {
+	return []string{"docker-ce", "containerd.io", "device-mapper-persistent-data", "lvm2"}
+}
+
 func (c *criDep) Current() (pkg common.Package, err error) {
 	if !c.systemd.Active("docker") {
 		return pkg, err
 	}
 
-	installed, err := c.manager.CurrentVersions("docker-ce")
-	if err != nil {
-		return pkg, err
+	var (
+		dockerVersion     string
+		containerdVersion string
+	)
+	for _, installedPkg := range c.manager.CurrentVersions("docker-ce", "containerd.io") {
+		switch installedPkg.Package {
+		case "docker-ce":
+			dockerVersion = fmt.Sprintf("%s %s %s", dockerVersion, installedPkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(installedPkg.Version))
+			continue
+		case "containerd.io":
+			containerdVersion = installedPkg.Version
+			continue
+		default:
+			panic(fmt.Errorf("unexpected installed package %s", installedPkg.Package))
+		}
 	}
-	version := ""
-	for _, pkg := range installed {
-		version = fmt.Sprintf("%s %s %s", version, pkg.Package, "v"+c.dockerVersionPrunerRegexp.FindString(pkg.Version))
+	pkg.Version = strings.TrimSpace(dockerVersion)
+	if !strings.Contains(containerdVersion, "1.4.3") {
+		if pkg.Config == nil {
+			pkg.Config = map[string]string{}
+		}
+		pkg.Config["containerd.io"] = containerdVersion
+	} else {
+		// Deprecated Code: Ensure existing containerd versions get locked
+		// TODO: Remove in ORBOS v4
+		lock, err := exec.Command("yum", "versionlock", "list").Output()
+		if err != nil {
+			return pkg, err
+		}
+		if !strings.Contains(string(lock), "containerd.io-1.4.3") {
+			if pkg.Config == nil {
+				pkg.Config = map[string]string{}
+			}
+			pkg.Config["containerd.io"] = containerdVersion
+		}
 	}
-	pkg.Version = strings.TrimSpace(version)
 
 	daemonJson, _ := ioutil.ReadFile("/etc/docker/daemon.json")
 	if pkg.Config == nil {
@@ -88,7 +121,7 @@ func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 
 	fields := strings.Fields(install.Version)
 	if len(fields) != 2 {
-		return errors.Errorf("Container runtime must have the form [runtime] [version], but got %s", install)
+		return fmt.Errorf("container runtime must have the form [runtime] [version], but got %s", install)
 	}
 
 	if fields[0] != "docker-ce" {
@@ -103,5 +136,5 @@ func (c *criDep) Ensure(_ common.Package, install common.Package) error {
 	case dep.CentOS:
 		return c.ensureCentOS(fields[0], version)
 	}
-	return errors.Errorf("Operating %s system is not supported", c.os)
+	return fmt.Errorf("operating system %s is not supported", c.os)
 }

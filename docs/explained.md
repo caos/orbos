@@ -4,11 +4,11 @@
 
 We at CAOS believe that multicluster management, be it of Kubernetes, or any other clustered software, should be split into two equally important tasks. As with most critical systems an isolation of management (control-plane) and execution (data-plane) is vital to reduce the impact radius of misconfigurations and errors of a component.
 
-Our recommendation for customers is to build several smaller clusters instead of a few big multitenant ones. This is, because we firmly believe that separation of concern can not be achieved without a complex management within one cluster. The additional overhead can be easily mitigated by utilizing reproducible processes. Treat clusters as cattle, not pets.
+Our recommendation for customers is to build several smaller clusters instead of a few big multitenant ones. This is, because we firmly believe that separation of concerns can not be achieved without a complex management within one cluster. The additional overhead can be easily mitigated by utilizing reproducible processes. Treat clusters as cattle, not pets.
 
 ![ORBOS explained](./img/orbos-explained-flowchart.svg)
 
-## Priciples
+## Principles
 
 - Automate all executions of lifecycle operations
 - Separate management and execution into loosely coupled processes

@@ -1,20 +1,24 @@
 package grafana
 
 import (
+	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/admin"
+	"github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth"
+	generic "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Generic"
+	github "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Github"
+	gitlab "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Gitlab"
+	google "github.com/caos/orbos/internal/operator/boom/api/latest/monitoring/auth/Google"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate/network"
 	"github.com/caos/orbos/internal/operator/boom/api/migrate/storage"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/grafana"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/admin"
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth"
-	generic "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Generic"
-	github "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Github"
-	gitlab "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Gitlab"
-	google "github.com/caos/orbos/internal/operator/boom/api/v1beta2/monitoring/auth/Google"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
-	newSpec := &monitoring.Monitoring{Deploy: grafana.Deploy}
+	newSpec := &monitoring.Monitoring{
+		Deploy:       grafana.Deploy,
+		NodeSelector: grafana.NodeSelector,
+	}
 	if grafana.Datasources != nil && len(grafana.Datasources) > 0 {
 		datasources := make([]*monitoring.Datasource, 0)
 		for _, v := range grafana.Datasources {
@@ -48,9 +52,16 @@ func V1beta1Tov1beta2(grafana *grafana.Grafana) *monitoring.Monitoring {
 
 	if grafana.Admin != nil {
 		newSpec.Admin = &admin.Admin{
-			Username:       grafana.Admin.Username,
-			Password:       grafana.Admin.Password,
-			ExistingSecret: grafana.Admin.ExistingSecret,
+			Username: grafana.Admin.Username,
+			Password: grafana.Admin.Password,
+			ExistingUsername: &secret.Existing{
+				Name: grafana.Admin.ExistingSecret.Name,
+				Key:  grafana.Admin.ExistingSecret.IDKey,
+			},
+			ExistingPassword: &secret.Existing{
+				Name: grafana.Admin.ExistingSecret.Name,
+				Key:  grafana.Admin.ExistingSecret.SecretKey,
+			},
 		}
 	}
 

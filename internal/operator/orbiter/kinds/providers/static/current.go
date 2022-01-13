@@ -3,8 +3,37 @@ package static
 import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 )
+
+var _ infra.ProviderCurrent = (*Current)(nil)
+
+type Current struct {
+	Common  *tree.Common `yaml:",inline"`
+	Current struct {
+		pools            map[string]infra.Pool `yaml:"-"`
+		Ingresses        map[string]*infra.Address
+		cleanupped       <-chan error `yaml:"-"`
+		privateInterface string       `yaml:"-"`
+	}
+}
+
+func (c *Current) Pools() map[string]infra.Pool {
+	return c.Current.pools
+}
+func (c *Current) Ingresses() map[string]*infra.Address {
+	return c.Current.Ingresses
+}
+func (c *Current) Cleanupped() <-chan error {
+	return c.Current.cleanupped
+}
+func (c *Current) PrivateInterface() string {
+	return c.Current.privateInterface
+}
+
+func (c *Current) Kubernetes() infra.Kubernetes {
+	return infra.Kubernetes{}
+}
 
 func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesService) error {
 	current.Current.pools = make(map[string]infra.Pool)
@@ -22,23 +51,4 @@ func addPools(current *Current, desired *DesiredV0, machinesSvc core.MachinesSer
 		}
 	}
 	return nil
-}
-
-type Current struct {
-	Common  *tree.Common `yaml:",inline"`
-	Current struct {
-		pools      map[string]infra.Pool `yaml:"-"`
-		Ingresses  map[string]*infra.Address
-		cleanupped <-chan error `yaml:"-"`
-	}
-}
-
-func (c *Current) Pools() map[string]infra.Pool {
-	return c.Current.pools
-}
-func (c *Current) Ingresses() map[string]*infra.Address {
-	return c.Current.Ingresses
-}
-func (c *Current) Cleanupped() <-chan error {
-	return c.Current.cleanupped
 }

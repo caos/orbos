@@ -1,19 +1,16 @@
 package gitcrd
 
 import (
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
-
-	orbosapi "github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/internal/operator/boom/api"
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
-	"github.com/caos/orbos/internal/operator/boom/cmd"
 	"github.com/caos/orbos/internal/operator/boom/crd"
 	crdconfig "github.com/caos/orbos/internal/operator/boom/crd/config"
 	"github.com/caos/orbos/internal/operator/boom/current"
@@ -24,7 +21,7 @@ import (
 	"github.com/caos/orbos/internal/utils/kubectl"
 	"github.com/caos/orbos/internal/utils/kustomize"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/git"
 	"gopkg.in/yaml.v3"
 )
 
@@ -140,38 +137,18 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		return
 	}
 
-	if toolsetCRD.Spec.BoomVersion != "" {
-		conf, err := clientgo.GetClusterConfig()
-		if err != nil {
-			c.status = err
-			return
-		}
-
-		dummyKubeconfig := ""
-		k8sClient := kubernetes.NewK8sClient(monitor, &dummyKubeconfig)
-		if err := k8sClient.RefreshConfig(conf); err != nil {
-			c.status = err
-			return
-		}
-
-		if err := cmd.Reconcile(monitor, k8sClient, toolsetCRD.Spec.BoomVersion); err != nil {
-			c.status = err
-			return
-		}
-	}
-
 	// pre-steps
 	if toolsetCRD.Spec.PreApply != nil {
 		preapplymonitor := monitor.WithField("application", "preapply")
 		preapplymonitor.Info("Start")
 		if err := c.applyFolder(preapplymonitor, toolsetCRD.Spec.PreApply, toolsetCRD.Spec.ForceApply); err != nil {
-			c.status = errors.Wrap(err, "Preapply failed")
+			c.status = fmt.Errorf("preapply failed: %w", err)
 			return
 		}
 		preapplymonitor.Info("Done")
 	}
 
-	c.crd.Reconcile(currentResourceList, toolsetCRD)
+	c.crd.Reconcile(currentResourceList, toolsetCRD, true)
 	err = c.crd.GetStatus()
 	if err != nil {
 		c.status = err
@@ -183,33 +160,32 @@ func (c *GitCrd) Reconcile(currentResourceList []*clientgo.Resource) {
 		preapplymonitor := monitor.WithField("application", "postapply")
 		preapplymonitor.Info("Start")
 		if err := c.applyFolder(monitor, toolsetCRD.Spec.PostApply, toolsetCRD.Spec.ForceApply); err != nil {
-			c.status = errors.Wrap(err, "Postapply failed")
+			c.status = fmt.Errorf("postapply failed: %w", err)
 			return
 		}
 		preapplymonitor.Info("Done")
 	}
 }
 
-func (c *GitCrd) getCrdMetadata() (*toolsetsv1beta2.ToolsetMetadata, error) {
-	toolsetCRD := &toolsetsv1beta2.ToolsetMetadata{}
+func (c *GitCrd) getCrdMetadata() (*toolsetslatest.ToolsetMetadata, error) {
+	toolsetCRD := &toolsetslatest.ToolsetMetadata{}
 	err := c.git.ReadYamlIntoStruct("boom.yml", toolsetCRD)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error while unmarshaling boom.yml to struct")
+		return nil, fmt.Errorf("error while unmarshaling boom.yml to struct: %w", err)
 	}
 
 	return toolsetCRD, nil
-
 }
 
-func (c *GitCrd) getCrdContent() (*toolsetsv1beta2.Toolset, error) {
-	desiredTree, err := orbosapi.ReadBoomYml(c.git)
+func (c *GitCrd) getCrdContent() (*toolsetslatest.Toolset, error) {
+	desiredTree, err := c.git.ReadTree(git.BoomFile)
 	if err != nil {
 		return nil, err
 	}
 
-	desiredKind, _, err := api.ParseToolset(desiredTree)
+	desiredKind, _, _, _, err := api.ParseToolset(desiredTree)
 	if err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, fmt.Errorf("parsing desired state failed: %w", err)
 	}
 	desiredTree.Parsed = desiredKind
 
@@ -243,12 +219,13 @@ func (c *GitCrd) WriteBackCurrentState(currentResourceList []*clientgo.Resource)
 		Content: content,
 	}
 
-	c.status = c.git.UpdateRemote("current state changed", file)
+	c.status = c.git.UpdateRemote("current state changed", func() []git.File { return []git.File{file} })
 }
 
-func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply, force bool) error {
+func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetslatest.Apply, force bool) error {
 	if apply.Folder == "" {
-		return errors.New("No folder provided")
+		monitor.Info("No folder provided")
+		return nil
 	}
 
 	err := helper.CopyFolderToLocal(c.git, c.crdDirectoryPath, apply.Folder)
@@ -262,7 +239,8 @@ func (c *GitCrd) applyFolder(monitor mntr.Monitor, apply *toolsetsv1beta2.Apply,
 	}
 
 	if empty, err := helper.FolderEmpty(localFolder); empty == true || err != nil {
-		return errors.New("Provided folder is empty")
+		monitor.Info("Provided folder is empty")
+		return nil
 	}
 
 	if err := useFolder(monitor, apply.Deploy, localFolder, force); err != nil {

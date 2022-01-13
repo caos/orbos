@@ -1,6 +1,9 @@
 package v1beta1
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/toleration"
+)
 
 type Prometheus struct {
 	//Flag if tool should be deployed
@@ -14,6 +17,10 @@ type Prometheus struct {
 	Storage *storage.Spec `json:"storage,omitempty" yaml:"storage,omitempty"`
 	//Configuration to write to remote prometheus
 	RemoteWrite *RemoteWrite `json:"remoteWrite,omitempty" yaml:"remoteWrite,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run prometheus on nodes
+	Tolerations []toleration.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }
 
 // Metrics: When the metrics spec is nil all metrics will get scraped.

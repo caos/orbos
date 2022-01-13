@@ -8,8 +8,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/middleware"
@@ -42,14 +40,9 @@ func (*sysctlDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
-type SysctlPropery string
+func (*sysctlDep) InstalledFilter() []string { return nil }
 
-const (
-	IpForward             SysctlPropery = "net.ipv4.ip_forward"
-	NonLocalBind          SysctlPropery = "net.ipv4.ip_nonlocal_bind"
-	BridgeNfCallIptables  SysctlPropery = "net.bridge.bridge-nf-call-iptables"
-	BridgeNfCallIp6tables SysctlPropery = "net.bridge.bridge-nf-call-ip6tables"
-)
+var supportedModules = []common.KernelModule{common.IpForward, common.NonLocalBind, common.BridgeNfCallIptables, common.BridgeNfCallIp6tables}
 
 func Contains(this common.Package, that common.Package) bool {
 	if that.Config == nil {
@@ -67,45 +60,27 @@ func Contains(this common.Package, that common.Package) bool {
 	return true
 }
 
-func Enable(pkg *common.Package, property SysctlPropery) {
-
+func Enable(pkg *common.Package, property common.KernelModule) {
 	if pkg.Config == nil {
 		pkg.Config = make(map[string]string)
 	}
 
-	if _, ok := pkg.Config[string(IpForward)]; !ok {
-		pkg.Config[string(IpForward)] = "0"
+	for idx := range supportedModules {
+		module := supportedModules[idx]
+		if _, ok := pkg.Config[string(module)]; !ok {
+			pkg.Config[string(module)] = "0"
+		}
 	}
-
-	if _, ok := pkg.Config[string(NonLocalBind)]; !ok {
-		pkg.Config[string(NonLocalBind)] = "0"
-	}
-	if _, ok := pkg.Config[string(BridgeNfCallIptables)]; !ok {
-		pkg.Config[string(BridgeNfCallIptables)] = "0"
-	}
-	if _, ok := pkg.Config[string(BridgeNfCallIp6tables)]; !ok {
-		pkg.Config[string(BridgeNfCallIp6tables)] = "0"
-	}
-
 	pkg.Config[string(property)] = "1"
 }
 
 func (s *sysctlDep) Current() (pkg common.Package, err error) {
 
-	if err := currentSysctlConfig(s.monitor, IpForward, &pkg); err != nil {
-		return pkg, err
-	}
-
-	if err := currentSysctlConfig(s.monitor, NonLocalBind, &pkg); err != nil {
-		return pkg, err
-	}
-
-	if err := currentSysctlConfig(s.monitor, BridgeNfCallIptables, &pkg); err != nil {
-		return pkg, err
-	}
-
-	if err := currentSysctlConfig(s.monitor, BridgeNfCallIp6tables, &pkg); err != nil {
-		return pkg, err
+	for idx := range supportedModules {
+		module := supportedModules[idx]
+		if err := currentSysctlConfig(s.monitor, module, &pkg); err != nil {
+			return pkg, err
+		}
 	}
 
 	return pkg, nil
@@ -119,22 +94,30 @@ func (s *sysctlDep) Ensure(_ common.Package, ensure common.Package) error {
 %s = %s
 %s = %s
 `,
-		string(IpForward), ensure.Config[string(IpForward)],
-		string(NonLocalBind), ensure.Config[string(NonLocalBind)],
-		string(BridgeNfCallIptables), ensure.Config[string(BridgeNfCallIptables)],
-		string(BridgeNfCallIp6tables), ensure.Config[string(BridgeNfCallIp6tables)],
+		string(common.IpForward), oneOrZero(ensure.Config, common.IpForward),
+		string(common.NonLocalBind), oneOrZero(ensure.Config, common.NonLocalBind),
+		string(common.BridgeNfCallIptables), oneOrZero(ensure.Config, common.BridgeNfCallIptables),
+		string(common.BridgeNfCallIp6tables), oneOrZero(ensure.Config, common.BridgeNfCallIp6tables),
 	)), os.ModePerm); err != nil {
 		return err
 	}
 
 	cmd := exec.Command("sysctl", "--system")
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return errors.Wrapf(err, "running %s failed with stderr %s", strings.Join(cmd.Args, " "), string(output))
+		return fmt.Errorf("running %s failed with stderr %s: %w", strings.Join(cmd.Args, " "), string(output), err)
 	}
 	return nil
 }
 
-func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *common.Package) error {
+func oneOrZero(cfg map[string]string, property common.KernelModule) string {
+	val := cfg[string(property)]
+	if val == "1" {
+		return val
+	}
+	return "0"
+}
+
+func currentSysctlConfig(monitor mntr.Monitor, property common.KernelModule, pkg *common.Package) error {
 
 	propertyStr := string(property)
 
@@ -153,7 +136,7 @@ func currentSysctlConfig(monitor mntr.Monitor, property SysctlPropery, pkg *comm
 	if err := cmd.Run(); err != nil {
 		errStr := errBuf.String()
 		if !strings.Contains(errStr, "No such file or directory") {
-			return errors.Wrapf(err, "running %s failed with stderr %s", fullCmd, errStr)
+			return fmt.Errorf("running %s failed with stderr %s: %w", fullCmd, errStr, err)
 		}
 	}
 

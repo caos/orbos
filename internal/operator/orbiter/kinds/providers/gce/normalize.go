@@ -40,10 +40,11 @@ type targetPool struct {
 }
 
 type healthcheck struct {
-	log     StandardLogFunc
-	gce     *compute.HttpHealthCheck
-	desired dynamic.HealthChecks
-	pools   []string
+	log           StandardLogFunc
+	gce           *compute.HttpHealthCheck
+	desired       dynamic.HealthChecks
+	proxyProtocol bool
+	pools         []string
 }
 
 type firewall struct {
@@ -168,7 +169,7 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 						log: func(msg string, debug bool, insts []*instance) func() {
 							localMonitor := destMonitor
 							if len(insts) > 0 {
-								localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.id }))
+								localMonitor = localMonitor.WithField("instances", instances(insts).strings(func(i *instance) string { return i.X_ID }))
 							}
 							if tp.Name != "" {
 								localMonitor = localMonitor.WithField("id", tp.Name)
@@ -199,9 +200,10 @@ func normalize(ctx *context, spec map[string][]*dynamic.VIP) ([]*normalizedLoadb
 								level(msg)
 							}
 						},
-						gce:     hc,
-						desired: src.HealthChecks,
-						pools:   src.BackendPools,
+						gce:           hc,
+						desired:       src.HealthChecks,
+						pools:         src.BackendPools,
+						proxyProtocol: *src.ProxyProtocol,
 					},
 					address:   normalizedAddress,
 					transport: src.Name,

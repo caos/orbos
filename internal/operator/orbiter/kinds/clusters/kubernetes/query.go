@@ -1,13 +1,15 @@
 package kubernetes
 
 import (
-	"github.com/caos/orbos/internal/api"
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes"
 )
 
 func query(
@@ -18,10 +20,12 @@ func query(
 	providerCurrents map[string]interface{},
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
-	k8sClient *Client,
-	oneoff bool) (orbiter.EnsureFunc, error) {
+	k8sClient *kubernetes.Client,
+	oneoff bool,
+	gitClient *git.Client,
+) (orbiter.EnsureFunc, error) {
 
-	cloudPools, kubeAPIAddress, err := GetProviderInfos(desired, providerCurrents)
+	cloudPools, kubeAPIAddress, providerK8sSpec, privateInterface, err := GetProviderInfos(desired, providerCurrents)
 	if err != nil {
 		panic(err)
 	}
@@ -48,7 +52,7 @@ func query(
 			firewallFunc(monitor, *desired)(machine)
 		})
 
-	return func(psf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(psf func(mntr.Monitor) error) *orbiter.EnsureResult {
 		return orbiter.ToEnsureResult(ensure(
 			monitor,
 			clusterID,
@@ -62,24 +66,32 @@ func query(
 			workers,
 			workerMachines,
 			initializeMachine,
-			uninitializeMachine))
+			uninitializeMachine,
+			gitClient,
+			providerK8sSpec,
+			privateInterface,
+		))
 	}, err
 }
 
 func poolIsConfigured(poolSpec *Pool, infra map[string]map[string]infra.Pool) error {
 	prov, ok := infra[poolSpec.Provider]
 	if !ok {
-		return errors.Errorf("provider %s not configured", poolSpec.Provider)
+		return fmt.Errorf("provider %s not configured", poolSpec.Provider)
 	}
 	if _, ok := prov[poolSpec.Pool]; !ok {
-		return errors.Errorf("pool %s not configured on provider %s", poolSpec.Provider, poolSpec.Pool)
+		return fmt.Errorf("pool %s not configured on provider %s", poolSpec.Pool, poolSpec.Provider)
 	}
 	return nil
 }
 
-func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{}) (map[string]map[string]infra.Pool, *infra.Address, error) {
+func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{}) (map[string]map[string]infra.Pool, *infra.Address, infra.Kubernetes, string, error) {
 	cloudPools := make(map[string]map[string]infra.Pool)
-	var kubeAPIAddress *infra.Address
+	var (
+		kubeAPIAddress   *infra.Address
+		providerK8sSpec  infra.Kubernetes
+		privateInterface string
+	)
 
 	for providerName, provider := range providerCurrents {
 		if cloudPools[providerName] == nil {
@@ -94,10 +106,12 @@ func GetProviderInfos(desired *DesiredV0, providerCurrents map[string]interface{
 				var ok bool
 				kubeAPIAddress, ok = providerIngresses["kubeapi"]
 				if !ok {
-					return nil, nil, errors.New("no externally reachable address named kubeapi found")
+					return nil, nil, providerK8sSpec, "", errors.New("no externally reachable address named kubeapi found")
 				}
+				providerK8sSpec = prov.Kubernetes()
+				privateInterface = prov.PrivateInterface()
 			}
 		}
 	}
-	return cloudPools, kubeAPIAddress, nil
+	return cloudPools, kubeAPIAddress, providerK8sSpec, privateInterface, nil
 }

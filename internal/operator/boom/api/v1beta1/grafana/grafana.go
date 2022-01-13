@@ -25,6 +25,35 @@ type Grafana struct {
 	Auth *auth.Auth `json:"auth,omitempty" yaml:"auth,omitempty"`
 	//List of plugins which get added to the grafana instance
 	Plugins []string `json:"plugins,omitempty" yaml:"plugins,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+}
+
+func (g *Grafana) InitSecrets() {
+	if g.Admin == nil {
+		g.Admin = &admin.Admin{}
+	}
+	g.Admin.InitSecrets()
+	if g.Auth == nil {
+		g.Auth = &auth.Auth{}
+	}
+	g.Auth.InitSecrets()
+}
+
+func (m *Grafana) IsZero() bool {
+	if !m.Deploy &&
+		(m.Admin == nil || m.Admin.IsZero()) &&
+		(m.Auth == nil || m.Auth.IsZero()) &&
+		m.Datasources == nil &&
+		m.DashboardProviders == nil &&
+		m.Storage == nil &&
+		m.Network == nil &&
+		m.Plugins == nil &&
+		m.NodeSelector == nil {
+		return true
+	}
+
+	return false
 }
 
 type Datasource struct {

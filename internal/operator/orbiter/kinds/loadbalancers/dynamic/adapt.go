@@ -8,20 +8,22 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
-
-	"github.com/caos/orbos/internal/tree"
-
 	"github.com/caos/orbos/internal/helpers"
-	"github.com/prometheus/client_golang/prometheus"
-
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/sysctl"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+const (
+	nginxVersion      = "v1.18.0"
+	keepalivedVersion = "v1.3.5"
 )
 
 var probes = prometheus.NewGaugeVec(
@@ -38,25 +40,38 @@ func init() {
 
 type WhiteListFunc func() []*orbiter.CIDR
 
-func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
+type VRRP struct {
+	VRRPInterface string
+	VIPInterface  string
+	NotifyMaster  func(machine infra.Machine) (string, bool)
+	AuthCheck     func(machine infra.Machine) (string, int)
+}
 
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
+	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
-		if desiredTree.Common.Version != "v2" {
+		if desiredTree.Common.Version() != "v2" {
 			migrate = true
 		}
 		desiredKind := &Desired{Common: desiredTree.Common}
 		if err := desiredTree.Original.Decode(desiredKind); err != nil {
-			return nil, nil, nil, migrate, errors.Wrapf(err, "unmarshaling desired state for kind %s failed", desiredTree.Common.Kind)
+			return nil, nil, nil, migrate, nil, fmt.Errorf("unmarshaling desired state for kind %s failed: %w", desiredTree.Common.Kind, err)
 		}
 
 		for _, pool := range desiredKind.Spec {
 			for _, vip := range pool {
 				for _, t := range vip.Transport {
 					sort.Strings(t.BackendPools)
+					if t.ProxyProtocol == nil {
+						trueVal := true
+						t.ProxyProtocol = &trueVal
+						migrate = true
+					}
 					if t.Name == "kubeapi" {
 						if t.HealthChecks.Path != "/healthz" {
 							t.HealthChecks.Path = "/healthz"
@@ -64,6 +79,11 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						}
 						if t.HealthChecks.Protocol != "https" {
 							t.HealthChecks.Protocol = "https"
+							migrate = true
+						}
+						if t.ProxyProtocol == nil || *t.ProxyProtocol {
+							f := false
+							t.ProxyProtocol = &f
 							migrate = true
 						}
 					}
@@ -77,15 +97,12 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 		}
 
 		if err := desiredKind.Validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 		desiredTree.Parsed = desiredKind
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/DynamicLoadBalancer",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/DynamicLoadBalancer", "v0", false),
 		}
 		currentTree.Parsed = current
 
@@ -106,8 +123,12 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 			}
 
-			current.Current.Spec = desiredKind.Spec
-			current.Current.Desire = func(forPool string, svc core.MachinesService, balanceLoad bool, notifyMaster func(machine infra.Machine, peers infra.Machines, vips []*VIP) string, mapVIP func(*VIP) string) (bool, error) {
+			poolMachines := curryPoolMachines()
+			enrichedVIPs := curryEnrichedVIPs(*desiredKind, poolMachines, wl, nodeAgentsCurrent)
+
+			current.Current.Spec = enrichedVIPs
+			current.Current.Desire = func(forPool string, svc core.MachinesService, vrrp *VRRP, mapVIP func(*VIP) string) (bool, error) {
+				var lbMachines infra.Machines
 
 				done := true
 				desireNodeAgent := func(machine infra.Machine, fw common.Firewall, nginx, keepalived common.Package) {
@@ -116,14 +137,14 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 					deepNaCurr, _ := nodeAgentsCurrent.Get(machine.ID())
 
 					if !deepNa.Firewall.Contains(fw) {
-						deepNa.Firewall.Merge(fw)
-						machineMonitor.Changed("Loadbalancing firewall desired")
+						machineMonitor.WithField("open", fw.ToCurrent()).Debug("Loadbalancing firewall desired")
 					}
+					deepNa.Firewall.Merge(fw)
 					if !fw.IsContainedIn(deepNaCurr.Open) {
-						machineMonitor.WithField("ports", deepNa.Firewall.Ports()).Info("Awaiting firewalld config")
+						machineMonitor.WithField("ports", deepNa.Firewall.ToCurrent()).Info("Awaiting firewalld config")
 						done = false
 					}
-					for _, port := range fw.Ports() {
+					for _, port := range fw.Ports("external") {
 						if portInt, parseErr := strconv.ParseInt(port.Port, 10, 16); parseErr == nil && portInt == 22 {
 
 							if deepNa.Software.SSHD.Config == nil || deepNa.Software.SSHD.Config["listenaddress"] != machine.IP() {
@@ -143,23 +164,23 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 					if !nginx.Equals(common.Package{}) {
 						if !deepNa.Software.Nginx.Equals(nginx) {
-							deepNa.Software.Nginx = nginx
-							machineMonitor.Changed("NGINX desired")
+							machineMonitor.WithField("pkg", nginx).Debug("NGINX desired")
 						}
+						deepNa.Software.Nginx = nginx
 						if !deepNa.Software.Nginx.Equals(deepNaCurr.Software.Nginx) {
 							machineMonitor.Info("Awaiting NGINX")
 							done = false
 						}
 						if !sysctl.Contains(deepNa.Software.Sysctl, common.Package{
 							Config: map[string]string{
-								string(sysctl.IpForward):    "1",
-								string(sysctl.NonLocalBind): "1",
+								string(common.IpForward):    "1",
+								string(common.NonLocalBind): "1",
 							},
 						}) {
-							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.IpForward)
-							sysctl.Enable(&deepNa.Software.Sysctl, sysctl.NonLocalBind)
 							machineMonitor.Changed("sysctl desired")
 						}
+						sysctl.Enable(&deepNa.Software.Sysctl, common.IpForward)
+						sysctl.Enable(&deepNa.Software.Sysctl, common.NonLocalBind)
 						if !sysctl.Contains(deepNaCurr.Software.Sysctl, deepNa.Software.Sysctl) {
 							machineMonitor.Info("Awaiting sysctl config")
 							done = false
@@ -168,8 +189,7 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 
 					if !keepalived.Equals(common.Package{}) {
 						if !deepNa.Software.KeepaliveD.Equals(keepalived) {
-							deepNa.Software.KeepaliveD = keepalived
-							machineMonitor.Changed("Keepalived desired")
+							machineMonitor.WithField("pkg", keepalived).Debug("Keepalived desired")
 						}
 						deepNa.Software.KeepaliveD = keepalived
 						if !deepNa.Software.KeepaliveD.Equals(deepNaCurr.Software.KeepaliveD) {
@@ -180,16 +200,21 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 				}
 
 				templateFuncs := template.FuncMap(map[string]interface{}{
-					"forMachines": svc.List,
-					"add": func(i, y int) int {
-						return i + y
+					"forMachines": func(poolName string) (infra.Machines, error) {
+						machines, err := svc.List(poolName)
+						if err != nil {
+							return nil, err
+						}
+						sort.Sort(machines)
+						return machines, nil
 					},
+					"add": func(i, y int) int { return i + y },
 					"user": func(machine infra.Machine) (string, error) {
 						var user string
 						whoami := "whoami"
 						stdout, err := machine.Execute(nil, whoami)
 						if err != nil {
-							return "", errors.Wrapf(err, "running command %s remotely failed", whoami)
+							return "", fmt.Errorf("running command %s remotely failed", whoami)
 						}
 						user = strings.TrimSuffix(string(stdout), "\n")
 						monitor.WithFields(map[string]interface{}{
@@ -200,20 +225,28 @@ func AdaptFunc(whitelist WhiteListFunc) orbiter.AdaptFunc {
 						return user, nil
 					},
 					"vip": mapVIP,
+					"routerID": func(vip *VIP) string {
+						vipParts := strings.Split(mapVIP(vip), ".")
+						if len(vipParts) != 4 || vipParts[3] == "0" {
+							return "55"
+						}
+						return vipParts[3]
+					},
+					"derefBool": func(in *bool) bool { return in != nil && *in },
 				})
 
 				var nginxNATTemplate *template.Template
 				var vips []*VIP
-				var lbMachines []infra.Machine
 
-				if !balanceLoad {
+				if vrrp == nil {
 					for _, desiredVIPs := range desiredKind.Spec {
 						vips = append(vips, desiredVIPs...)
 					}
-					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`events {
+					nginxNATTemplate = template.Must(template.New("").Funcs(templateFuncs).Parse(`worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
-
 stream { {{ range $nat := .NATs }}
 	upstream {{ $nat.Name }} {
 		server {{ $nat.To }};
@@ -221,49 +254,45 @@ stream { {{ range $nat := .NATs }}
 
 {{ range $from := $nat.From }}	server {
 		listen {{ $from }};
+
+{{ range $white := $nat.Whitelist }}		allow {{ $white }};
+{{ end }}
+		deny all;
 		proxy_pass {{ $nat.Name }};
+		proxy_protocol {{ if derefBool $nat.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}`))
 
 				} else {
 
-					var ok bool
-					vips, ok = desiredKind.Spec[forPool]
-					if !ok {
-						return true, nil
+					lbMachines = nil
+					if err := poolMachines(svc, func(pool string, machines infra.Machines) {
+						if forPool == pool {
+							lbMachines = machines
+						}
+					}); err != nil {
+						return false, err
 					}
 
-					allPools, err := svc.ListPools()
+					sort.Sort(lbMachines)
+
+					spec, _, err := enrichedVIPs(svc)
 					if err != nil {
 						return false, err
 					}
 
-					for _, pool := range allPools {
-						machines, err := svc.List(pool)
-						if err != nil {
-							return false, err
-						}
-						if forPool == pool {
-							lbMachines = machines
-						}
-						for _, machine := range machines {
-							cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
-							vips = addToWhitelists(false, vips, &cidr)
-						}
-					}
-
-					vips = addToWhitelists(true, vips, wl...)
-
 					lbData := make([]LB, len(lbMachines))
 					for idx, machine := range lbMachines {
 						lbData[idx] = LB{
-							VIPs: vips,
+							VIPs: spec[forPool],
 							Self: machine,
 							Peers: deriveFilterMachines(func(cmp infra.Machine) bool {
 								return cmp.ID() != machine.ID()
 							}, append([]infra.Machine(nil), lbMachines...)),
 							State:                "BACKUP",
-							CustomMasterNotifyer: notifyMaster != nil,
+							CustomMasterNotifyer: vrrp.NotifyMaster != nil,
+							VRRPInterface:        vrrp.VRRPInterface,
+							VIPInterface:         vrrp.VIPInterface,
 						}
 						if idx == 0 {
 							lbData[idx].State = "MASTER"
@@ -282,7 +311,7 @@ vrrp_sync_group VG1 {
 }
 
 {{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ vip $vip }} {
-	script       "/usr/local/bin/health 200@http://127.0.0.1:29999/ready"
+	script       "/usr/local/bin/health --protocol http --ip 127.0.0.1 --port 29999 --path /ready --status 200"
 	interval 2   # check every 2 seconds
 	fall 15      # require 15 failures for KO
 	rise 2       # require 2 successes for OK
@@ -294,8 +323,8 @@ vrrp_instance VI_{{ $idx }} {
 	unicast_peer {
 		{{ range $peer := $root.Peers }}{{ $peer.IP }}
 		{{ end }}    }
-	interface eth0
-	virtual_router_id {{ add 55 $idx }}
+	interface {{ $root.VRRPInterface }}
+	virtual_router_id {{ routerID $vip }}
 	advert_int 1
 	authentication {
 		auth_type PASS
@@ -305,7 +334,11 @@ vrrp_instance VI_{{ $idx }} {
 		chk_{{ vip $vip }}
 	}
 
-{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh {{ $root.Self.ID }} {{ vip $vip }}"
+	virtual_ipaddress {
+		{{ vip $vip }} dev {{ $root.VIPInterface }}
+	}
+
+{{ if $root.CustomMasterNotifyer }}	notify_master "/etc/keepalived/notifymaster.sh"
 {{ else }}	virtual_ipaddress {
 		{{ vip $vip }}
 	}
@@ -313,7 +346,9 @@ vrrp_instance VI_{{ $idx }} {
 }
 {{ end }}`))
 
-					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}events {
+					nginxLBTemplate := template.Must(template.New("").Funcs(templateFuncs).Parse(`{{ $root := . }}worker_rlimit_nofile 8192;
+
+events {
 	worker_connections  4096;  ## Default: 1024
 }
 
@@ -327,6 +362,7 @@ stream { {{ range $vip := .VIPs }}{{ range $src := $vip.Transport }}
 {{ end }}
 		deny all;
 		proxy_pass {{ $src.Name }};
+		proxy_protocol {{ if derefBool $src.ProxyProtocol }}on{{ else }}off{{ end }};
 	}
 {{ end }}{{ end }}}
 
@@ -342,91 +378,118 @@ http {
 
 					for _, d := range lbData {
 
+						if len(d.VIPs) == 0 {
+							continue
+						}
+
 						ngxBuf := new(bytes.Buffer)
 						//noinspection GoDeferInLoop
 						defer ngxBuf.Reset()
-						if balanceLoad {
-							kaBuf := new(bytes.Buffer)
-							defer kaBuf.Reset()
+						kaBuf := new(bytes.Buffer)
+						defer kaBuf.Reset()
 
-							if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
-								return false, err
-							}
-
-							kaPkg := common.Package{Config: map[string]string{"keepalived.conf": kaBuf.String()}}
-							kaBuf.Reset()
-
-							if d.CustomMasterNotifyer {
-								kaPkg.Config["notifymaster.sh"] = notifyMaster(d.Self, d.Peers, d.VIPs)
-							}
-
-							if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
-								return false, err
-							}
-							ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
-							ngxBuf.Reset()
-
-							desireNodeAgent(d.Self, common.ToFirewall(make(map[string]*common.Allowed)), ngxPkg, kaPkg)
+						if err := keepaliveDTemplate.Execute(kaBuf, d); err != nil {
+							return false, err
 						}
+
+						kaPkg := common.Package{Version: keepalivedVersion, Config: map[string]string{"keepalived.conf": kaBuf.String()}}
+						kaBuf.Reset()
+
+						if d.CustomMasterNotifyer {
+							var enforceEnsuring bool
+							kaPkg.Config["notifymaster.sh"], enforceEnsuring = vrrp.NotifyMaster(d.Self)
+							if enforceEnsuring {
+								kaPkg.Config["reensure"] = "true"
+							}
+						}
+
+						if vrrp.AuthCheck != nil {
+							authCheck, expectedExitCode := vrrp.AuthCheck(d.Self)
+							if authCheck != "" {
+								kaPkg.Config["authcheck.sh"] = authCheck
+								kaPkg.Config["authcheckexitcode"] = strconv.Itoa(expectedExitCode)
+							}
+						}
+
+						if err := nginxLBTemplate.Execute(ngxBuf, d); err != nil {
+							return false, err
+						}
+						ngxPkg := desireNginx(ngxBuf.String())
+						ngxBuf.Reset()
+
+						desireNodeAgent(d.Self, common.ToFirewall("external", make(map[string]*common.Allowed)), ngxPkg, kaPkg)
 					}
 				}
 
 				nodesNats := make(map[string]*NATDesires)
-				for _, vip := range vips {
-					for _, transport := range vip.Transport {
-						srcFW := map[string]*common.Allowed{
-							fmt.Sprintf("%s-%d-src", transport.Name, transport.FrontendPort): {
-								Port:     fmt.Sprintf("%d", transport.FrontendPort),
-								Protocol: "tcp",
-							},
-						}
-						probeVIP := func() {
-							probe("VIP", vip.IP, uint16(transport.FrontendPort), transport.HealthChecks, *transport)
-						}
-
-						var natVIPProbed bool
-						if balanceLoad {
-							for _, machine := range lbMachines {
-								desireNodeAgent(machine, common.ToFirewall(srcFW), common.Package{}, common.Package{})
-							}
-							probeVIP()
-						}
-						for _, dest := range transport.BackendPools {
-
-							destFW := map[string]*common.Allowed{
-								fmt.Sprintf("%s-%d-dest", transport.Name, transport.BackendPort): {
-									Port:     fmt.Sprintf("%d", transport.BackendPort),
+				spec, _, err := enrichedVIPs(svc)
+				if err != nil {
+					return false, err
+				}
+				for srcPool, vips := range spec {
+					for _, vip := range vips {
+						for _, transport := range vip.Transport {
+							srcFW := map[string]*common.Allowed{
+								fmt.Sprintf("%s-%d-src", transport.Name, transport.FrontendPort): {
+									Port:     fmt.Sprintf("%d", transport.FrontendPort),
 									Protocol: "tcp",
 								},
 							}
-
-							destMachines, err := svc.List(dest)
-							if err != nil {
-								return false, err
+							ip := mapVIP(vip)
+							var vipProbed bool
+							probeVIP := func() {
+								if vipProbed {
+									return
+								}
+								probe("VIP", ip, uint16(transport.FrontendPort), false, transport.HealthChecks, *transport)
+								vipProbed = true
 							}
 
-							for _, machine := range destMachines {
-								desireNodeAgent(machine, common.ToFirewall(destFW), common.Package{}, common.Package{})
-								probe("Upstream", machine.IP(), uint16(transport.BackendPort), transport.HealthChecks, *transport)
-								if !balanceLoad && forPool == dest {
-									if !natVIPProbed {
-										probeVIP()
-										natVIPProbed = true
+							if vrrp != nil && forPool == srcPool {
+								for _, machine := range lbMachines {
+									desireNodeAgent(machine, common.ToFirewall("external", srcFW), common.Package{}, common.Package{})
+								}
+								probeVIP()
+							}
+							for _, dest := range transport.BackendPools {
+
+								destFW := map[string]*common.Allowed{
+									fmt.Sprintf("%s-%d-dest", transport.Name, transport.BackendPort): {
+										Port:     fmt.Sprintf("%d", transport.BackendPort),
+										Protocol: "tcp",
+									},
+								}
+
+								destMachines, err := svc.List(dest)
+								if err != nil {
+									return false, err
+								}
+
+								for idx := range destMachines {
+									machine := destMachines[idx]
+									desireNodeAgent(machine, common.ToFirewall("internal", destFW), common.Package{}, common.Package{})
+									probe("Upstream", machine.IP(), uint16(transport.BackendPort), *transport.ProxyProtocol, transport.HealthChecks, *transport)
+									if vrrp != nil || forPool != dest {
+										continue
 									}
+									probeVIP()
 
 									nodeNatDesires, ok := nodesNats[machine.IP()]
 									if !ok {
 										nodeNatDesires = &NATDesires{NATs: make([]*NAT, 0)}
 									}
-									nodeNatDesires.Firewall = common.ToFirewall(srcFW)
+									nodeNatDesires.Firewall.Merge(common.ToFirewall("external", srcFW))
 									nodeNatDesires.Machine = machine
+
 									nodeNatDesires.NATs = append(nodeNatDesires.NATs, &NAT{
-										Name: transport.Name,
+										Whitelist: transport.Whitelist,
+										Name:      transport.Name,
 										From: []string{
-											fmt.Sprintf("%s:%d", mapVIP(vip), transport.FrontendPort),  // VIP
+											fmt.Sprintf("%s:%d", ip, transport.FrontendPort),           // VIP
 											fmt.Sprintf("%s:%d", machine.IP(), transport.FrontendPort), // Node IP
 										},
-										To: fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+										To:            fmt.Sprintf("%s:%d", machine.IP(), transport.BackendPort),
+										ProxyProtocol: *transport.ProxyProtocol,
 									})
 									nodesNats[machine.IP()] = nodeNatDesires
 								}
@@ -446,14 +509,14 @@ http {
 					}); err != nil {
 						return false, err
 					}
-					ngxPkg := common.Package{Config: map[string]string{"nginx.conf": ngxBuf.String()}}
+					ngxPkg := desireNginx(ngxBuf.String())
 					ngxBuf.Reset()
 					desireNodeAgent(node.Machine, node.Firewall, ngxPkg, common.Package{})
 				}
 				return done, nil
 			}
 			return orbiter.NoopEnsure, nil
-		}, orbiter.NoopDestroy, orbiter.NoopConfigure, migrate, nil
+		}, orbiter.NoopDestroy, orbiter.NoopConfigure, migrate, make(map[string]*secret.Secret, 0), nil
 	}
 }
 
@@ -463,15 +526,16 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 		newTransport := make([]*Transport, len(vip.Transport))
 		for srcIdx, src := range vip.Transport {
 			newSource := &Transport{
-				Name:         src.Name,
-				FrontendPort: src.FrontendPort,
-				BackendPort:  src.BackendPort,
-				BackendPools: src.BackendPools,
-				Whitelist:    append(src.Whitelist, cidr...),
-				HealthChecks: src.HealthChecks,
+				Name:          src.Name,
+				FrontendPort:  src.FrontendPort,
+				BackendPort:   src.BackendPort,
+				BackendPools:  src.BackendPools,
+				Whitelist:     append(src.Whitelist, cidr...),
+				HealthChecks:  src.HealthChecks,
+				ProxyProtocol: src.ProxyProtocol,
 			}
 			if makeUnique {
-				newSource.Whitelist = unique(src.Whitelist)
+				newSource.Whitelist = unique(newSource.Whitelist)
 			}
 			newTransport[srcIdx] = newSource
 		}
@@ -483,17 +547,18 @@ func addToWhitelists(makeUnique bool, vips []*VIP, cidr ...*orbiter.CIDR) []*VIP
 	return newVIPs
 }
 
-func probe(probeType, ip string, port uint16, hc HealthChecks, source Transport) {
-	vipProbe := fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path)
-	_, err := helpers.Check(vipProbe, int(hc.Code))
+func probe(probeType, ip string, port uint16, proxyProtocol bool, hc HealthChecks, source Transport) {
+
 	var success float64
+	_, err := helpers.Check(hc.Protocol, ip, port, hc.Path, int(hc.Code), proxyProtocol)
 	if err == nil {
 		success = 1
 	}
+
 	probes.With(prometheus.Labels{
 		"name":   source.Name,
 		"type":   probeType,
-		"target": vipProbe,
+		"target": fmt.Sprintf("%s://%s:%d%s", hc.Protocol, ip, port, hc.Path),
 	}).Set(success)
 }
 
@@ -504,9 +569,11 @@ type NATDesires struct {
 }
 
 type NAT struct {
-	Name string
-	From []string
-	To   string
+	Name          string
+	Whitelist     []*orbiter.CIDR
+	From          []string
+	To            string
+	ProxyProtocol bool
 }
 
 type LB struct {
@@ -516,6 +583,8 @@ type LB struct {
 	Self                 infra.Machine
 	Peers                []infra.Machine
 	CustomMasterNotifyer bool
+	VRRPInterface        string
+	VIPInterface         string
 }
 
 func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
@@ -533,4 +602,87 @@ func unique(s []*orbiter.CIDR) []*orbiter.CIDR {
 	cidrs := orbiter.CIDRs(us)
 	sort.Sort(cidrs)
 	return cidrs
+}
+
+type poolMachinesFunc func(svc core.MachinesService, do func(string, infra.Machines)) error
+
+func curryPoolMachines() poolMachinesFunc {
+	var poolsCache map[string]infra.Machines
+	return func(svc core.MachinesService, do func(string, infra.Machines)) error {
+
+		if poolsCache == nil {
+			poolsCache = make(map[string]infra.Machines)
+			allPools, err := svc.ListPools()
+			if err != nil {
+				return err
+			}
+
+			for _, pool := range allPools {
+				machines, err := svc.List(pool)
+				if err != nil {
+					return err
+				}
+				poolsCache[pool] = machines
+			}
+		}
+
+		if poolsCache != nil {
+			for pool, machines := range poolsCache {
+				do(pool, machines)
+			}
+		}
+		return nil
+	}
+}
+
+func curryEnrichedVIPs(desired Desired, machines poolMachinesFunc, adaptWhitelist []*orbiter.CIDR, nodeAgents *common.CurrentNodeAgents) func(svc core.MachinesService) (map[string][]*VIP, []AuthCheckResult, error) {
+	var enrichVIPsCache map[string][]*VIP
+	var authCheckResultsCache []AuthCheckResult
+	return func(svc core.MachinesService) (map[string][]*VIP, []AuthCheckResult, error) {
+		if enrichVIPsCache != nil && authCheckResultsCache != nil {
+			return enrichVIPsCache, authCheckResultsCache, nil
+		}
+		enrichVIPsCache = make(map[string][]*VIP)
+		authCheckResultsCache = make([]AuthCheckResult, 0)
+
+		addedCIDRs := append([]*orbiter.CIDR(nil), adaptWhitelist...)
+		if err := machines(svc, func(_ string, machines infra.Machines) {
+			for _, machine := range machines {
+				na, found := nodeAgents.Get(machine.ID())
+				if found {
+					cfg := na.Software.KeepaliveD.Config
+					if cfg != nil {
+						authCheckExitCode, ok := cfg["authcheckexitcode"]
+						if ok {
+							authCheckExitCodeInt, err := strconv.Atoi(authCheckExitCode)
+							if err == nil {
+								authCheckResultsCache = append(authCheckResultsCache, AuthCheckResult{
+									Machine:  machine,
+									ExitCode: authCheckExitCodeInt,
+								})
+							}
+						}
+					}
+				}
+				cidr := orbiter.CIDR(fmt.Sprintf("%s/32", machine.IP()))
+				addedCIDRs = append(addedCIDRs, &cidr)
+			}
+		}); err != nil {
+			return nil, nil, err
+		}
+		for deployPool, vips := range desired.Spec {
+			enrichVIPsCache[deployPool] = addToWhitelists(true, vips, addedCIDRs...)
+		}
+		return enrichVIPsCache, authCheckResultsCache, nil
+	}
+}
+
+func desireNginx(cfg string) common.Package {
+	return common.Package{
+		Version: nginxVersion,
+		Config: map[string]string{
+			"nginx.conf":                  cfg,
+			"Systemd[Service]LimitNOFILE": "8192",
+		},
+	}
 }

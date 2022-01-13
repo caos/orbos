@@ -1,9 +1,10 @@
 package helper
 
 import (
+	"strings"
+
 	yamlfile "github.com/caos/orbos/internal/utils/yaml"
 	"gopkg.in/yaml.v3"
-	"strings"
 )
 
 type Metadata struct {
@@ -68,6 +69,7 @@ func DeleteKindFromYaml(path, kind string) error {
 	}
 
 	for _, part := range parts {
+
 		struc := &Resource{}
 		if err := yaml.Unmarshal([]byte(part), struc); err != nil {
 			return err

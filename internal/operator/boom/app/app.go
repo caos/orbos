@@ -3,6 +3,10 @@ package app
 import (
 	"strings"
 
+	"github.com/caos/orbos/internal/operator/boom/api"
+	crdconfig "github.com/caos/orbos/internal/operator/boom/crd/config"
+	"github.com/caos/orbos/pkg/tree"
+
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/crd"
 	"github.com/caos/orbos/internal/operator/boom/current"
@@ -19,7 +23,7 @@ import (
 type App struct {
 	ToolsDirectoryPath string
 	GitCrd             *gitcrd.GitCrd
-	Crds               map[string]crd.Crd
+	Crds               map[string]*crd.Crd
 	monitor            mntr.Monitor
 }
 
@@ -30,7 +34,7 @@ func New(monitor mntr.Monitor, toolsDirectoryPath string) *App {
 		monitor:            monitor,
 	}
 
-	app.Crds = make(map[string]crd.Crd, 0)
+	app.Crds = make(map[string]*crd.Crd, 0)
 
 	return app
 }
@@ -135,40 +139,46 @@ func (a *App) WriteBackCurrentState() error {
 	return nil
 }
 
-// func (a *App) ReconcileCrd(version, namespacedName string, getToolsetCRD func(instance runtime.Object) error) error {
-// 	a.monitor.WithFields(map[string]interface{}{
-// 		"name": namespacedName,
-// 	}).Info("Started reconciling of CRD")
+func (a *App) ReconcileCrd(namespacedName string, toolsetCRD *tree.Tree) error {
+	a.monitor.WithFields(map[string]interface{}{
+		"name": namespacedName,
+	}).Info("Started reconciling of CRD")
 
-// 	var err error
-// 	managedcrd, ok := a.Crds[namespacedName]
-// 	if !ok {
-// 		crdConf := &crdconfig.Config{
-// 			Monitor:  a.monitor,
-// 			Version: v1beta1.GetVersion(),
-// 		}
+	var err error
+	managedcrd, ok := a.Crds[namespacedName]
+	if !ok {
+		crdConf := &crdconfig.Config{
+			Monitor: a.monitor,
+		}
 
-// 		managedcrd, err = crd.New(crdConf)
-// 		if err != nil {
-// 			return err
-// 		}
+		managedcrd = crd.New(crdConf)
 
-// 		bundleConf := &bundleconfig.Config{
-// 			Monitor:            a.monitor,
-// 			CrdName:           namespacedName,
-// 			BundleName:        bundles.Caos,
-// 			BaseDirectoryPath: a.ToolsDirectoryPath,
-// 			Templator:         helm.GetName(),
-// 		}
-// 		managedcrd.SetBundle(bundleConf)
+		bundleConf := &bundleconfig.Config{
+			Monitor:           a.monitor,
+			CrdName:           namespacedName,
+			BundleName:        bundles.Caos,
+			BaseDirectoryPath: a.ToolsDirectoryPath,
+			Templator:         helm.GetName(),
+		}
+		managedcrd.SetBundle(bundleConf)
 
-// 		if err := managedcrd.GetStatus(); err != nil {
-// 			return err
-// 		}
+		if err := managedcrd.GetStatus(); err != nil {
+			return err
+		}
 
-// 		a.Crds[namespacedName] = managedcrd
-// 	}
+		a.Crds[namespacedName] = managedcrd
+	}
 
-// 	managedcrd.ReconcileWithFunc(getToolsetCRD)
-// 	return managedcrd.GetStatus()
-// }
+	currentResourceList, err := a.getCurrent(a.monitor)
+	if err != nil {
+		return err
+	}
+
+	desired, _, _, _, err := api.ParseToolset(toolsetCRD)
+	if err != nil {
+		return err
+	}
+
+	managedcrd.Reconcile(currentResourceList, desired, false)
+	return managedcrd.GetStatus()
+}

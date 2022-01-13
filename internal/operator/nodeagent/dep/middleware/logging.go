@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -24,21 +24,27 @@ func AddLogging(monitor mntr.Monitor, original nodeagent.Installer) Installer {
 	}
 }
 
+func (l *loggedDep) InstalledFilter() []string { return l.unwrapped.InstalledFilter() }
+
 func (l *loggedDep) Current() (common.Package, error) {
 	current, err := l.unwrapped.Current()
-	if err == nil {
-		l.monitor.WithFields(map[string]interface{}{
-			"version": current,
-		}).Debug("Queried current dependency version")
+	if err != nil {
+		return current, fmt.Errorf("querying installed package for dependency %s failed: %w", l.String(), err)
 	}
-	return current, errors.Wrapf(err, "querying installed package for dependency %s failed", l.String())
+	l.monitor.WithFields(map[string]interface{}{
+		"version": current,
+	}).Debug("Queried current dependency version")
+
+	return current, nil
 }
 
 func (l *loggedDep) Ensure(remove common.Package, install common.Package) error {
-	return errors.Wrapf(
-		l.unwrapped.Ensure(remove, install),
-		"uninstalling version %s and installing version %s failed for dependency %s",
-		remove,
-		install,
-		l.unwrapped.String())
+	if err := l.unwrapped.Ensure(remove, install); err != nil {
+		return fmt.Errorf("uninstalling version %s and installing version %s failed for dependency %s: %w",
+			remove,
+			install,
+			l.unwrapped.String(),
+			err)
+	}
+	return nil
 }

@@ -4,7 +4,7 @@ import (
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/auth"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/argocd/repository"
 	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/network"
-	"github.com/caos/orbos/internal/secret"
+	secret2 "github.com/caos/orbos/pkg/secret"
 )
 
 type Argocd struct {
@@ -26,6 +26,35 @@ type Argocd struct {
 	Credentials []*repository.Repository `json:"credentials,omitempty" yaml:"credentials,omitempty"`
 	//List of known_hosts as strings for argocd
 	KnownHosts []string `json:"knownHosts,omitempty" yaml:"knownHosts,omitempty"`
+	//NodeSelector for deployment
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+}
+
+func (r *Argocd) InitSecrets() {
+	if r.Auth == nil {
+		r.Auth = &auth.Auth{}
+	}
+	r.Auth.InitSecrets()
+
+	for _, repo := range append(r.Repositories, r.Credentials...) {
+		repo.InitSecrets()
+	}
+}
+
+func (r *Argocd) IsZero() bool {
+	if !r.Deploy &&
+		r.CustomImage == nil &&
+		r.Network == nil &&
+		(r.Auth == nil || r.Auth.IsZero()) &&
+		r.Rbac == nil &&
+		r.Repositories == nil &&
+		r.Credentials == nil &&
+		r.KnownHosts == nil &&
+		r.NodeSelector == nil {
+		return true
+	}
+
+	return false
 }
 
 type Rbac struct {
@@ -40,19 +69,17 @@ type Rbac struct {
 type CustomImage struct {
 	//Flag if custom argocd-image should get used with gopass
 	Enabled bool `json:"enabled,omitempty" yaml:"enabled,omitempty"`
-	//Name of used imagePullSecret to pull customImage
-	ImagePullSecret string `json:"imagePullSecret,omitempty" yaml:"imagePullSecret,omitempty"`
 	//List of gopass stores which should get cloned by argocd on startup
 	GopassStores []*GopassStore `json:"gopassStores,omitempty" yaml:"gopassStores,omitempty"`
 }
 
 type GopassStore struct {
-	SSHKey *secret.Secret `yaml:"sshKey,omitempty"`
+	SSHKey *secret2.Secret `json:"sshKey,omitempty" yaml:"sshKey,omitempty"`
 	//Existing secret with ssh-key to clone the repository for gopass
-	ExistingSSHKeySecret *secret.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
-	GPGKey               *secret.Secret   `yaml:"gpgKey,omitempty"`
+	ExistingSSHKeySecret *secret2.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
+	GPGKey               *secret2.Secret   `json:"gpgKey,omitempty" yaml:"gpgKey,omitempty"`
 	//Existing secret with gpg-key to decode the repository for gopass
-	ExistingGPGKeySecret *secret.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
+	ExistingGPGKeySecret *secret2.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
 	//URL to repository for gopass store
 	Directory string `json:"directory,omitempty" yaml:"directory,omitempty"`
 	//Name of the gopass store

@@ -1,14 +1,18 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/tree"
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
+
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type DesiredV0 struct {
 	Common *tree.Common `yaml:",inline"`
 	Spec   struct {
 		Verbose bool
+		PProf   bool
 	}
 	Clusters  map[string]*tree.Tree
 	Providers map[string]*tree.Tree
@@ -18,19 +22,22 @@ func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{Common: desiredTree.Common}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, mntr.ToUserError(fmt.Errorf("parsing desired state failed: %w", err))
 	}
-	desiredKind.Common.Version = "v0"
+	desiredKind.Common.OverwriteVersion("v0")
 
 	return desiredKind, nil
 }
 
-func (d *DesiredV0) validate() error {
+func (d *DesiredV0) validate() (err error) {
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 	if len(d.Clusters) < 1 {
-		return errors.New("No clusters configured")
+		return errors.New("no clusters configured")
 	}
 	if len(d.Providers) < 1 {
-		return errors.New("No providers configured")
+		return errors.New("no providers configured")
 	}
 
 	k8sKind := "orbiter.caos.ch/KubernetesCluster"
@@ -41,7 +48,7 @@ func (d *DesiredV0) validate() error {
 		}
 	}
 	if k8s != 1 {
-		return errors.Errorf("Exactly one cluster of kind %s must be configured, but got %d", k8sKind, k8s)
+		return fmt.Errorf("exactly one cluster of kind %s must be configured, but got %d", k8sKind, k8s)
 	}
 	return nil
 }

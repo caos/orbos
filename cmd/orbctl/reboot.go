@@ -1,58 +1,44 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 
-	"github.com/caos/orbos/internal/api"
+	"github.com/caos/orbos/mntr"
 
-	"github.com/caos/orbos/internal/tree"
-
-	"github.com/AlecAivazis/survey/v2"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 
 	"github.com/spf13/cobra"
 )
 
-func RebootCommand(rv RootValues) *cobra.Command {
+func RebootCommand(getRv GetRootValues) *cobra.Command {
 	return &cobra.Command{
-		Use:   "reboot",
+		Use:   "reboot [<provider>.<pool>.<machine>] [<provider>.<pool>.<machine>]",
 		Short: "Gracefully reboot machines",
 		Long:  "Pass machine ids as arguments, omit arguments for selecting machines interactively",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			_, monitor, orbConfig, gitClient, errFunc := rv()
-			if errFunc != nil {
-				return errFunc(cmd)
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+
+			node := ""
+			if len(args) > 0 {
+				node = args[0]
 			}
 
-			return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, desired *tree.Tree) error {
+			rv, err := getRv("reboot", "", map[string]interface{}{"node": node})
+			if err != nil {
+				return err
+			}
+			defer rv.ErrFunc(err)
 
-				if len(args) <= 0 {
-					if err := survey.AskOne(&survey.MultiSelect{
-						Message: "Select machines:",
-						Options: machineIDs,
-					}, &args, survey.WithValidator(survey.Required)); err != nil {
-						return err
-					}
-				}
+			monitor := rv.Monitor
+			orbConfig := rv.OrbConfig
+			gitClient := rv.GitClient
 
-				var push bool
-				for _, arg := range args {
-					machine, found := machines[arg]
-					if !found {
-						panic(fmt.Sprintf("Machine with ID %s unknown", arg))
-					}
-					required, require, _ := machine.RebootRequired()
-					if !required {
-						require()
-						push = true
-					}
-				}
+			if !rv.Gitops {
+				return mntr.ToUserError(errors.New("reboot command is only supported with the --gitops flag and a committed orbiter.yml"))
+			}
 
-				if !push {
-					monitor.Info("Nothing changed")
-					return nil
-				}
-				return api.PushOrbiterYml(monitor, "Update orbiter.yml", gitClient, desired)
+			return requireMachines(monitor, gitClient, orbConfig, args, func(machine infra.Machine) (required bool, require func(), unrequire func()) {
+				return machine.RebootRequired()
 			})
 		},
 	}

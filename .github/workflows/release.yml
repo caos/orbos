@@ -11,8 +11,9 @@ jobs:
       - name: Source Checkout
         id: source-checkout
         uses: actions/checkout@v1
+      - uses: actions/setup-go@v2
         with:
-          fetch-depth: 1
+          go-version: '1.16.0'
       - name: Release
         id: release
         shell: bash
@@ -20,27 +21,50 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GO111MODULE: on
           CGO_ENABLED: 0
+          CR_PAT: ${{ secrets.CR_PAT }}
+          REGISTRY: ghcr.io
         run: |
           npm install semantic-release@v16.0.2
           export BRANCH=${GITHUB_REF##*/}
           export VERSION=$BRANCH
           VERSION="v$(npx semantic-release --dry-run --plugins=@semantic-release/commit-analyzer --analize-commits | grep "The next release version is" | sed -ne 's/.*The\ next\ release\ version\ is\ \([0-9]\+\.[0-9]\+\.[0-9]\+\)$/\1/p')"
           [[ "$VERSION" == "v" ]] && echo "Exiting, as no new version needs to be released" && exit 0
+          echo "::set-output name=version::$VERSION"
 
-          export IMAGE=docker.pkg.github.com/caos/orbos/orbos
+          export IMAGE=$REGISTRY/$GITHUB_REPOSITORY
           export TAG_LATEST=${IMAGE}:latest
           export TAG_VERSION=${IMAGE}:${VERSION}
 
           go mod download
           mkdir -p ./artifacts
-          go run cmd/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" -githubclientid "${{ secrets.GITHUBOAUTHCLIENTID }}" -githubclientsecret "${{ secrets.GITHUBOAUTHCLIENTSECRET }}" --orbctl ./artifacts
+          go run cmd/chore/gen-executables/*.go -version "$VERSION" -commit "${{ github.sha }}" -githubclientid "${{ secrets.GITHUBOAUTHCLIENTID }}" -githubclientsecret "${{ secrets.GITHUBOAUTHCLIENTSECRET }}" --orbctl ./artifacts
 
-          CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/gen-charts/*.go
+          CGO_ENABLED=0 GOOS=linux go build -o ./artifacts/gen-charts  cmd/chore/gen-charts/*.go
 
-          echo "Publishing Orbos version $VERSION"
-          docker login docker.pkg.github.com -u ci -p ${GITHUB_TOKEN}
-          docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --file ./Dockerfile .
+          echo "Publishing ORBOS version $VERSION"
+          docker login $REGISTRY -u $GITHUB_ACTOR -p $CR_PAT
+          docker build --tag ${TAG_LATEST} --tag ${TAG_VERSION} --file ./build/orbos/Dockerfile .
 
           docker push ${TAG_VERSION}
           docker push ${TAG_LATEST}
+
           npx semantic-release && exit 0
+#      - name: Trigger E2E Test On StaticProvider
+#        if: steps.dev-release.outputs.relbranch != null
+#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-StaticProvider --access-token "${{ secrets.CR_PAT }}"
+#      - name: Trigger E2E Test On GCEProvider
+#        if: steps.dev-release.outputs.relbranch != null
+#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-GCEProvider --access-token "${{ secrets.CR_PAT }}"
+#      - name: Trigger E2E Test On CloudscaleProvider
+#        if: steps.dev-release.outputs.relbranch != null
+#        run: go run ./cmd/chore/e2e/trigger/*.go --branch "${GITHUB_REF#refs/heads/}" --organization caos --repository ORBOS-Test-CloudscaleProvider --access-token "${{ secrets.CR_PAT }}"
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: caos
+          SENTRY_PROJECT: orbctl
+        with:
+          version: orbos-${{ steps.release.outputs.version }}
+          projects: "orbctl boom orbiter networking-operator node-agent"
+        if: steps.release.outputs.version != null

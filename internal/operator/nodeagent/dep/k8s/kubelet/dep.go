@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
@@ -48,10 +46,14 @@ func (*kubeletDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (k *kubeletDep) InstalledFilter() []string {
+	return []string{"kubelet"}
+}
+
 func (k *kubeletDep) Current() (pkg common.Package, err error) {
 
 	pkg, err = k.common.Current()
-	if err != nil {
+	if err != nil || pkg.Version == "" {
 		return pkg, err
 	}
 
@@ -78,7 +80,7 @@ func (k *kubeletDep) Ensure(remove common.Package, install common.Package) error
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "loading module br_netfilter while installing kubelet failed with stderr %s", errBuf.String())
+		return fmt.Errorf("loading module br_netfilter while installing kubelet failed with stderr %s: %w", errBuf.String(), err)
 	}
 	errBuf.Reset()
 

@@ -44,8 +44,9 @@ func (*healthDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*healthDep)
 	return ok
 }
+func (*healthDep) InstalledFilter() []string { return nil }
 
-var r = regexp.MustCompile(`ExecStart=/usr/local/bin/health --http ([^\s]+) (.*)`)
+var r = regexp.MustCompile(`ExecStart=/usr/local/bin/health --listen ([^\s]+) (.*)`)
 
 func (s *healthDep) Current() (pkg common.Package, err error) {
 
@@ -102,11 +103,12 @@ After=network.target
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/local/bin/health --http %s %s
+ExecStart=/usr/local/bin/health --listen %s %s
 Restart=always
-MemoryMax=20M
 MemoryLimit=20M
+MemoryAccounting=yes
 RestartSec=10
+CPUAccounting=yes
 
 [Install]
 WantedBy=multi-user.target

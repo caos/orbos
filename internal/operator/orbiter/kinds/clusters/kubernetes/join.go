@@ -2,20 +2,15 @@ package kubernetes
 
 import (
 	"bytes"
-	"context"
 	"fmt"
-	"strings"
-	"time"
-
-	mach "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"io"
+	"strings"
+	"text/template"
+	"time"
 )
-
-type CloudIntegration int
 
 func join(
 	monitor mntr.Monitor,
@@ -27,119 +22,152 @@ func join(
 	joinToken string,
 	kubernetesVersion KubernetesVersion,
 	certKey string,
-	client *Client) (*string, error) {
+	client *kubernetes.Client,
+	imageRepository string,
+	providerK8sSpec infra.Kubernetes) (*string, error) {
 
 	monitor = monitor.WithFields(map[string]interface{}{
 		"machine": joining.infra.ID(),
 		"tier":    joining.pool.tier,
 	})
 
-	var applyNetworkCommand string
-	switch desired.Spec.Networking.Network {
-	case "cilium":
-		applyNetworkCommand = "kubectl create -f https://raw.githubusercontent.com/cilium/cilium/1.6.3/install/kubernetes/quick-install.yaml"
-	case "calico":
-		applyNetworkCommand = fmt.Sprintf(`curl https://docs.projectcalico.org/v3.10/manifests/calico.yaml -O && sed -i -e "s?192.168.0.0/16?%s?g" calico.yaml && kubectl apply -f calico.yaml`, desired.Spec.Networking.PodCidr)
-	default:
-		return nil, errors.Errorf("Unknown network implementation %s", desired.Spec.Networking.Network)
-	}
-
 	kubeadmCfgPath := "/etc/kubeadm/config.yaml"
-	kubeadmCfg := fmt.Sprintf(`apiVersion: kubeadm.k8s.io/v1beta2
+	cloudCfgPath := "/var/orbiter/cloud-config"
+
+	kubeadmCfg := new(bytes.Buffer)
+	defer kubeadmCfg.Reset()
+
+	if err := template.Must(template.New("").Parse(`kind: ClusterConfiguration
+apiVersion: kubeadm.k8s.io/v1beta2
+apiServer:
+  timeoutForControlPlane: 4m0s
+  certSANs:
+  - "{{ .CertSAN }}"{{if and .ProviderK8sSpec.CloudController.Supported (ne .ProviderK8sSpec.CloudController.ProviderName "external") }}
+  extraArgs:
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"
+  extraVolumes:
+  - name: cloud
+    hostPath: "{{ .CloudConfigPath }}"
+    mountPath: "{{ .CloudConfigPath }}"
+controllerManager:
+  extraArgs:
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"
+  extraVolumes:
+  - name: cloud
+    hostPath: "{{ .CloudConfigPath }}"
+    mountPath: "{{ .CloudConfigPath }}"{{ end }}
+certificatesDir: /etc/kubernetes/pki
+clusterName: "{{ .ClusterName }}"
+controlPlaneEndpoint: "{{ .ControlPlaneEndpoint }}"
+dns:
+  type: CoreDNS
+etcd:
+  local:
+    imageRepository: "{{ .ImageRepository }}"
+    dataDir: /var/lib/etcd
+    extraArgs:
+      listen-metrics-urls: http://0.0.0.0:2381
+imageRepository: "{{ .ImageRepository }}"
+kubernetesVersion: "{{ .KubernetesVersion }}"
+networking:
+  dnsDomain: "{{ .DNSDomain }}"
+  podSubnet: "{{ .PodSubnet }}"
+  serviceSubnet: "{{ .ServiceSubnet }}"
+scheduler: {}
+
+---
+
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+
+---{{if .JoinAt }}
+kind: JoinConfiguration
+apiVersion: kubeadm.k8s.io/v1beta2
+caCertPath: /etc/kubernetes/pki/ca.crt
+discovery:
+  bootstrapToken:
+    apiServerEndpoint: {{ .JoinAt.IP }}:{{ .BindPort }}
+    token: {{ .Token }}
+    unsafeSkipCAVerification: true
+  timeout: 5m0s
+nodeRegistration:
+  kubeletExtraArgs:
+    node-ip: "{{ .Node.IP }}"{{if .ProviderK8sSpec.CloudController.Supported}}
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"{{end}}
+  name: "{{ .Node.ID }}"{{if .IsControlPlane }}
+controlPlane:
+  localAPIEndpoint:
+    advertiseAddress: "{{ .Node.IP }}"
+    bindPort: {{ .BindPort }}
+  certificateKey: {{.CertKey}}{{end}}{{else}}
 kind: InitConfiguration
+apiVersion: kubeadm.k8s.io/v1beta2
 bootstrapTokens:
 - groups:
   - system:bootstrappers:kubeadm:default-node-token
-  token: %s
+  token: {{ .Token }}
   ttl: 10m0s
   usages:
   - signing
   - authentication
 localAPIEndpoint:
-  advertiseAddress: %s
-  bindPort: %d
+  advertiseAddress: "{{ .Node.IP }}"
+  bindPort: {{ .BindPort }}
 nodeRegistration:
 #	criSocket: /var/run/dockershim.sock
-  name: %s
+  name:  "{{ .Node.ID }}"
+  kubeletExtraArgs:
+    node-ip: "{{ .Node.IP }}"{{if .ProviderK8sSpec.CloudController.Supported }}
+    cloud-provider: "{{ .ProviderK8sSpec.CloudController.ProviderName }}"
+    cloud-config: "{{ .CloudConfigPath }}"{{end}}
   taints:
   - effect: NoSchedule
     key: node-role.kubernetes.io/master
----
-apiVersion: kubelet.config.k8s.io/v1beta1
-kind: KubeletConfiguration
-cgroupDriver: systemd
----
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: ClusterConfiguration
-apiServer:
-  timeoutForControlPlane: 4m0s
-  certSANs:
-  - "%s"
-certificatesDir: /etc/kubernetes/pki
-clusterName: %s
-controlPlaneEndpoint: %s
-controllerManager: {}
-dns:
-  type: CoreDNS
-etcd:
-  local:
-    dataDir: /var/lib/etcd
-    extraArgs:
-      listen-metrics-urls: http://0.0.0.0:2381
-imageRepository: k8s.gcr.io
-kubernetesVersion: %s
-networking:
-  dnsDomain: %s
-  podSubnet: %s
-  serviceSubnet: %s
-scheduler: {}
-`,
-		joinToken,
-		joining.infra.IP(),
-		kubeAPI.BackendPort,
-		joining.infra.ID(),
-		kubeAPI.Location,
-		clusterID,
-		kubeAPI,
-		kubernetesVersion,
-		desired.Spec.Networking.DNSDomain,
-		desired.Spec.Networking.PodCidr,
-		desired.Spec.Networking.ServiceCidr)
-
-	if joinAt != nil {
-		kubeadmCfg += fmt.Sprintf(`---
-apiVersion: kubeadm.k8s.io/v1beta2
-kind: JoinConfiguration
-caCertPath: /etc/kubernetes/pki/ca.crt
-discovery:
-  bootstrapToken:
-    apiServerEndpoint: %s:%d
-    token: %s
-    unsafeSkipCAVerification: true
-  timeout: 5m0s
-nodeRegistration:
-  name: %s
-`,
-			joinAt.IP(),
-			kubeAPI.BackendPort,
-			joinToken,
-			joining.infra.ID())
-
-		if joining.pool.tier == Controlplane {
-			kubeadmCfg += fmt.Sprintf(`controlPlane:
-  localAPIEndpoint:
-    advertiseAddress: %s
-    bindPort: %d
-  certificateKey: %s
-`,
-				joining.infra.IP(),
-				kubeAPI.BackendPort,
-				certKey)
-		}
+{{end}}
+`)).Execute(kubeadmCfg, struct {
+		Token                string
+		Node                 infra.Machine
+		BindPort             uint16
+		CertSAN              string
+		ClusterName          string
+		ControlPlaneEndpoint string
+		ImageRepository      string
+		KubernetesVersion    string
+		DNSDomain            string
+		PodSubnet            string
+		ServiceSubnet        string
+		JoinAt               infra.Machine
+		IsControlPlane       bool
+		CertKey              string
+		ProviderK8sSpec      infra.Kubernetes
+		CloudConfigPath      string
+	}{
+		Token:                joinToken,
+		Node:                 joining.infra,
+		BindPort:             kubeAPI.BackendPort,
+		CertSAN:              kubeAPI.Location,
+		ClusterName:          clusterID,
+		ControlPlaneEndpoint: kubeAPI.String(),
+		ImageRepository:      imageRepository,
+		KubernetesVersion:    kubernetesVersion.String(),
+		DNSDomain:            desired.Spec.Networking.DNSDomain,
+		PodSubnet:            string(desired.Spec.Networking.PodCidr),
+		ServiceSubnet:        string(desired.Spec.Networking.ServiceCidr),
+		JoinAt:               joinAt,
+		IsControlPlane:       joining.pool.tier == Controlplane,
+		CertKey:              certKey,
+		ProviderK8sSpec:      providerK8sSpec,
+		CloudConfigPath:      cloudCfgPath,
+	}); err != nil {
+		return nil, err
 	}
 
 	if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
-		return cmp.WriteFile(kubeadmCfgPath, strings.NewReader(kubeadmCfg), 600)
+		return cmp.WriteFile(kubeadmCfgPath, kubeadmCfg, 600)
 	}); err != nil {
 		return nil, err
 	}
@@ -147,10 +175,21 @@ nodeRegistration:
 		"path": kubeadmCfgPath,
 	}).Debug("Written file")
 
+	if providerK8sSpec.CloudController.Supported && providerK8sSpec.CloudController.CloudConfig != nil {
+		if err := infra.Try(monitor, time.NewTimer(7*time.Second), 2*time.Second, joining.infra, func(cmp infra.Machine) error {
+			return cmp.WriteFile(cloudCfgPath, providerK8sSpec.CloudController.CloudConfig(joining.infra), 600)
+		}); err != nil {
+			return nil, err
+		}
+		monitor.WithFields(map[string]interface{}{
+			"path": cloudCfgPath,
+		}).Debug("Written file")
+	}
+
 	cmd := "sudo kubeadm reset -f && sudo rm -rf /var/lib/etcd"
 	resetStdout, err := joining.infra.Execute(nil, cmd)
 	if err != nil {
-		return nil, errors.Wrapf(err, "executing %s failed", cmd)
+		return nil, fmt.Errorf("executing %s failed: %w", cmd, err)
 	}
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(resetStdout),
@@ -160,7 +199,7 @@ nodeRegistration:
 		cmd := fmt.Sprintf("sudo kubeadm join --ignore-preflight-errors=Port-%d %s:%d --config %s", kubeAPI.BackendPort, joinAt.IP(), kubeAPI.FrontendPort, kubeadmCfgPath)
 		joinStdout, err := joining.infra.Execute(nil, cmd)
 		if err != nil {
-			return nil, errors.Wrapf(err, "executing %s failed", cmd)
+			return nil, fmt.Errorf("executing %s failed: %w", cmd, err)
 		}
 
 		monitor.WithFields(map[string]interface{}{
@@ -173,14 +212,13 @@ nodeRegistration:
 
 		joining.currentMachine.Joined = true
 		monitor.Changed("Node joined")
-
-		dnsPods, err := client.set.CoreV1().Pods("kube-system").List(context.Background(), mach.ListOptions{LabelSelector: "k8s-app=kube-dns"})
+		dnsPods, err := client.ListPods("kube-system", map[string]string{"k8s-app": "kube-dns"})
 		if err != nil {
 			return nil, err
 		}
 
 		if len(dnsPods.Items) > 1 {
-			err = client.set.CoreV1().Pods("kube-system").Delete(context.Background(), dnsPods.Items[0].Name, mach.DeleteOptions{})
+			err = client.DeletePod("kube-system", dnsPods.Items[0].Name)
 		}
 
 		return nil, err
@@ -190,16 +228,22 @@ nodeRegistration:
 		return nil, err
 	}
 
-	initCmd := fmt.Sprintf("sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && %s", kubeAPI.BackendPort, kubeadmCfgPath, applyNetworkCommand)
+	initCmd := fmt.Sprintf(`\
+sudo kubeadm init --ignore-preflight-errors=Port-%d --config %s && \
+mkdir -p ${HOME}/.kube && yes | sudo cp -rf /etc/kubernetes/admin.conf ${HOME}/.kube/config && \
+sudo chown $(id -u):$(id -g) ${HOME}/.kube/config && \
+kubectl -n kube-system patch deployment coredns --type='json' \
+-p='[{"op": "add", "path": "/spec/template/spec/tolerations/0", "value": {"effect": "NoSchedule", key: "node.cloudprovider.kubernetes.io/uninitialized", value: "true" } }]'`, kubeAPI.BackendPort, kubeadmCfgPath)
 	initStdout, err := joining.infra.Execute(nil, initCmd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf(`error initializing kubernetes by executing command (%s): %s: %w`, initCmd, initStdout, err)
 	}
 	monitor.WithFields(map[string]interface{}{
 		"stdout": string(initStdout),
 	}).Debug("Executed kubeadm init")
 
 	kubeconfigBuf := new(bytes.Buffer)
+	defer kubeconfigBuf.Reset()
 	if err := joining.infra.ReadFile("${HOME}/.kube/config", kubeconfigBuf); err != nil {
 		return nil, err
 	}
@@ -210,4 +254,14 @@ nodeRegistration:
 	kc := strings.ReplaceAll(kubeconfigBuf.String(), "kubernetes-admin", strings.Join([]string{clusterID, "admin"}, "-"))
 
 	return &kc, nil
+}
+
+func concatYAML(head, tail io.Reader) io.Reader {
+	if head == nil {
+		return tail
+	}
+	if tail == nil {
+		return head
+	}
+	return io.MultiReader(head, strings.NewReader("---\n\n"), tail)
 }

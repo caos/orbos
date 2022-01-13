@@ -1,12 +1,13 @@
 package loadbalancers
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
-	"github.com/caos/orbos/internal/secret"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 func GetQueryAndDestroyFunc(
@@ -20,26 +21,6 @@ func GetQueryAndDestroyFunc(
 	orbiter.DestroyFunc,
 	orbiter.ConfigureFunc,
 	bool,
-	error,
-) {
-
-	switch loadBalancingTree.Common.Kind {
-	//		case "orbiter.caos.ch/ExternalLoadBalancer":
-	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
-	case "orbiter.caos.ch/DynamicLoadBalancer":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, error) {
-			return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
-		}
-		return orbiter.AdaptFuncGoroutine(adaptFunc)
-	default:
-		return nil, nil, nil, false, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
-	}
-}
-
-func GetSecrets(
-	monitor mntr.Monitor,
-	loadBalancingTree *tree.Tree,
-) (
 	map[string]*secret.Secret,
 	error,
 ) {
@@ -48,8 +29,8 @@ func GetSecrets(
 	//		case "orbiter.caos.ch/ExternalLoadBalancer":
 	//			return []orbiter.Assembler{external.New(depPath, generalOverwriteSpec, externallbadapter.New())}, nil
 	case "orbiter.caos.ch/DynamicLoadBalancer":
-		return dynamic.SecretsFunc()(monitor, loadBalancingTree)
+		return dynamic.AdaptFunc(whitelist)(monitor, finishedChan, loadBalancingTree, loadBalacingCurrent)
 	default:
-		return nil, errors.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown loadbalancing kind %s", loadBalancingTree.Common.Kind))
 	}
 }

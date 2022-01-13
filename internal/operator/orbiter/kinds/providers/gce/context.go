@@ -7,48 +7,49 @@ import (
 	"hash/fnv"
 
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 	"google.golang.org/api/compute/v1"
 	"google.golang.org/api/option"
 )
 
 type context struct {
-	monitor         mntr.Monitor
-	networkName     string
-	networkURL      string
-	orbID           string
-	providerID      string
-	projectID       string
-	desired         *Spec
-	client          *compute.Service
-	machinesService *machinesService
-	ctx             ctxpkg.Context
-	auth            *option.ClientOption
+	monitor     mntr.Monitor
+	networkName string
+	networkURL  string
+	orbID       string
+	providerID  string
+	projectID   string
+	desired     *Spec
+	client      *compute.Service
+	//	machinesService *machinesService
+	ctx  ctxpkg.Context
+	auth *option.ClientOption
 }
 
-func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*context, error) {
+func service(monitor mntr.Monitor, desired *Spec, orbID, providerID string, oneoff bool) (*machinesService, error) {
 
 	jsonKey := []byte(desired.JSONKey.Value)
 	ctx := ctxpkg.Background()
 	opt := option.WithCredentialsJSON(jsonKey)
 	computeClient, err := compute.NewService(ctx, opt)
 	if err != nil {
-		return nil, err
+		return nil, mntr.ToUserError(err)
 	}
 
 	key := struct {
 		ProjectID string `json:"project_id"`
 	}{}
-	if err := errors.Wrap(json.Unmarshal(jsonKey, &key), "extracting project id from jsonkey failed"); err != nil {
-		return nil, err
+	if err := json.Unmarshal(jsonKey, &key); err != nil {
+		panic("extracting project id from jsonkey failed")
 	}
 
 	monitor = monitor.WithField("projectID", key.ProjectID)
 	h := fnv.New32()
 	h.Write([]byte(orbID))
 	networkName := fmt.Sprintf("orbos-network-%d", h.Sum32())
+	h.Reset()
 	networkURL := fmt.Sprintf("projects/%s/global/networks/%s", key.ProjectID, networkName)
-	newContext := &context{
+
+	return newMachinesService(&context{
 		monitor:     monitor,
 		orbID:       orbID,
 		providerID:  providerID,
@@ -59,8 +60,5 @@ func buildContext(monitor mntr.Monitor, desired *Spec, orbID, providerID string,
 		auth:        &opt,
 		networkName: networkName,
 		networkURL:  networkURL,
-	}
-
-	newContext.machinesService = newMachinesService(newContext, oneoff, []byte(desired.SSHKey.Private.Value), []byte(desired.SSHKey.Public.Value))
-	return newContext, nil
+	}, oneoff), nil
 }

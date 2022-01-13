@@ -20,7 +20,7 @@ clusters:
         servicecidr: 100.126.4.0/22
       versions:
         kubernetes: v1.18.8
-        orbiter: v0.29.3
+        orbiter: v4.0.0
       workers:
       - nodes: 1
         pool: workers
@@ -44,14 +44,14 @@ providers:
       kind: orbiter.caos.ch/DynamicLoadBalancer
       version: v2
       spec:
-        application:
+        workers:
         - ip: 192.168.122.11
           transport:
           - name: httpsingress
             frontendport: 443
             backendport: 30443
             backendpools:
-            - application
+            - workers
             whitelist:
             - 0.0.0.0/0
             healthchecks:
@@ -62,21 +62,21 @@ providers:
             frontendport: 80
             backendport: 30080
             backendpools:
-            - application
+            - workers
             whitelist:
             - 0.0.0.0/0
             healthchecks:
               protocol: http
               path: /ambassador/v0/check_ready
               code: 200
-        management:
+        masters:
         - ip: 192.168.122.10
           transport:
           - name: kubeapi
             frontendport: 6443
             backendport: 6666
             backendpools:
-            - management
+            - masters
             whitelist:
             - 0.0.0.0/0
             healthchecks:

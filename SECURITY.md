@@ -4,11 +4,15 @@ At CAOS we are extremely grateful for security aware people that disclose vulner
 
 ## Supported Versions
 
-After the initial Release the following version support will apply
+The following version support applies
 
 | Version | Supported                               |
 | ------- | ------------------                      |
-| 1.x.x   | :white_check_mark: (not yet available)  |
+| 5.x.x   | :white_check_mark:  |
+| 4.x.x   | :white_check_mark:  |
+| 3.x.x   | :white_check_mark:  |
+| 2.x.x   | :white_check_mark:                      |
+| 1.x.x   | :white_check_mark:                      |
 | 0.x.x   | :x:                                     |
 
 ## Reporting a vulnerability
@@ -40,4 +44,3 @@ All accepted and mitigated vulnerabilitys will be published on the [Github Secur
 ### Timing
 
 We think it is crucial to publish advisories `ASAP` as mitigations are ready. But due to the unknown nature of the discloures the time frame can range from 7 to 90 days.
-

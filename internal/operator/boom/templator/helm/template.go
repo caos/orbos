@@ -1,19 +1,19 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
-	helper2 "github.com/caos/orbos/internal/utils/helper"
-	"github.com/caos/orbos/internal/utils/yaml"
+	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/internal/operator/boom/templator/helm/helmcommand"
 	"github.com/caos/orbos/internal/utils/helper"
-	"github.com/pkg/errors"
+	helper2 "github.com/caos/orbos/internal/utils/helper"
+	"github.com/caos/orbos/internal/utils/yaml"
 )
 
-func (h *Helm) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
+func (h *Helm) Template(appInterface interface{}, spec *latest.ToolsetSpec, resultFunc func(resultFilePath, namespace string) error) error {
 	app, err := checkTemplatorInterface(appInterface)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (h *Helm) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, res
 	deleteKind := "Namespace"
 	err = helper.DeleteKindFromYaml(resultAbsFilePath, deleteKind)
 	if err != nil {
-		return errors.Wrapf(err, "Error while trying to delete kind %s from results", deleteKind)
+		return fmt.Errorf("error while trying to delete kind %s from results: %w", deleteKind, err)
 	}
 
 	// mutate templated results
@@ -81,7 +81,7 @@ func (h *Helm) Template(appInterface interface{}, spec *v1beta2.ToolsetSpec, res
 	return resultFunc(resultAbsFilePath, app.GetNamespace())
 }
 
-func (h *Helm) prepareHelmTemplate(overlay string, app templator.HelmApplication, spec *v1beta2.ToolsetSpec, valuesAbsFilePath string) error {
+func (h *Helm) prepareHelmTemplate(overlay string, app templator.HelmApplication, spec *latest.ToolsetSpec, valuesAbsFilePath string) error {
 
 	logFields := map[string]interface{}{
 		"application": app.GetName().String(),
@@ -126,8 +126,7 @@ func (h *Helm) runHelmTemplate(overlay string, app templator.HelmApplication, va
 		ValuesFilePath:   valuesAbsFilePath,
 	})
 	if err != nil {
-		monitor.Error(err)
-		return err
+		return fmt.Errorf("helm templating failed: %w: %s", err, string(out))
 	}
 
 	return yaml.New(resultAbsFilePath).AddString(string(out))

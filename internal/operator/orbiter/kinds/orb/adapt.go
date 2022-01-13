@@ -1,36 +1,60 @@
 package orb
 
 import (
-	"github.com/caos/orbos/internal/api"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
-	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/orb"
-	"github.com/caos/orbos/internal/tree"
-	"github.com/pkg/errors"
+	"fmt"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
+	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/labels"
+	orbcfg "github.com/caos/orbos/pkg/orb"
+	"github.com/caos/orbos/pkg/secret"
+	"github.com/caos/orbos/pkg/tree"
 )
 
+func OperatorSelector() *labels.Selector {
+	return labels.OpenOperatorSelector("ORBOS", "orbiter.caos.ch")
+}
+
 func AdaptFunc(
-	orbConfig *orb.Orb,
+	operatorLabels *labels.Operator,
+	orbConfig *orbcfg.Orb,
 	orbiterCommit string,
 	oneoff bool,
-	deployOrbiter bool) orbiter.AdaptFunc {
-	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, err error) {
+	deployOrbiter bool,
+	gitClient *git.Client,
+) orbiter.AdaptFunc {
+	return func(
+		monitor mntr.Monitor,
+		finishedChan chan struct{},
+		desiredTree *tree.Tree,
+		currentTree *tree.Tree,
+	) (
+		queryFunc orbiter.QueryFunc,
+		destroyFunc orbiter.DestroyFunc,
+		configureFunc orbiter.ConfigureFunc,
+		migrate bool,
+		secrets map[string]*secret.Secret,
+		err error,
+	) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
+		secrets = make(map[string]*secret.Secret, 0)
 
 		if err := desiredKind.validate(); err != nil {
-			return nil, nil, nil, migrate, err
+			return nil, nil, nil, migrate, nil, err
 		}
 
 		if desiredKind.Spec.Verbose && !monitor.IsVerbose() {
@@ -44,6 +68,11 @@ func AdaptFunc(
 
 		whitelistChan := make(chan []*orbiter.CIDR)
 
+		orbID, err := orbConfig.ID()
+		if err != nil {
+			panic(err)
+		}
+
 		for provID, providerTree := range desiredKind.Providers {
 
 			providerCurrent := &tree.Tree{}
@@ -54,7 +83,7 @@ func AdaptFunc(
 			//			})
 
 			//			providerID := id + provID
-			query, destroy, configure, migrateLocal, err := providers.GetQueryAndDestroyFuncs(
+			query, destroy, configure, migrateLocal, providerSecrets, err := providers.GetQueryAndDestroyFuncs(
 				monitor,
 				provID,
 				providerTree,
@@ -62,13 +91,14 @@ func AdaptFunc(
 				whitelistChan,
 				finishedChan,
 				orbiterCommit,
+				orbID,
 				orbConfig.URL,
 				orbConfig.Repokey,
 				oneoff,
+				desiredKind.Spec.PProf,
 			)
-
 			if err != nil {
-				return nil, nil, nil, migrate, err
+				return nil, nil, nil, migrate, nil, err
 			}
 
 			if migrateLocal {
@@ -78,17 +108,18 @@ func AdaptFunc(
 			providerQueriers = append(providerQueriers, query)
 			providerDestroyers = append(providerDestroyers, destroy)
 			providerConfigurers = append(providerConfigurers, configure)
+			secret.AppendSecrets(provID, secrets, providerSecrets, nil, nil)
 		}
 
 		var provCurr map[string]interface{}
-		destroyProviders := func() (map[string]interface{}, error) {
+		destroyProviders := func(delegatedFromClusters map[string]interface{}) (map[string]interface{}, error) {
 			if provCurr != nil {
 				return provCurr, nil
 			}
 
 			provCurr = make(map[string]interface{})
 			for _, destroyer := range providerDestroyers {
-				if err := destroyer(); err != nil {
+				if err := destroyer(delegatedFromClusters); err != nil {
 					return nil, err
 				}
 			}
@@ -107,34 +138,34 @@ func AdaptFunc(
 
 			clusterCurrent := &tree.Tree{}
 			clusterCurrents[clusterID] = clusterCurrent
-			query, destroy, configure, migrateLocal, err := clusters.GetQueryAndDestroyFuncs(
+			query, destroy, configure, migrateLocal, clusterSecrets, err := clusters.GetQueryAndDestroyFuncs(
 				monitor,
+				operatorLabels,
 				clusterID,
 				clusterTree,
 				oneoff,
+				desiredKind.Spec.PProf,
 				deployOrbiter,
 				clusterCurrent,
 				destroyProviders,
 				whitelistChan,
 				finishedChan,
+				gitClient,
 			)
-
 			if err != nil {
-				return nil, nil, nil, migrate, err
+				return nil, nil, nil, migrate, nil, err
 			}
 			clusterQueriers = append(clusterQueriers, query)
 			clusterDestroyers = append(clusterDestroyers, destroy)
 			clusterConfigurers = append(clusterConfigurers, configure)
+			secret.AppendSecrets(clusterID, secrets, clusterSecrets, nil, nil)
 			if migrateLocal {
 				migrate = true
 			}
 		}
 
 		currentTree.Parsed = &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/Orb",
-				Version: "v0",
-			},
+			Common:    tree.NewCommon("orbiter.caos.ch/Orb", "v0", false),
 			Clusters:  clusterCurrents,
 			Providers: providerCurrents,
 		}
@@ -144,10 +175,7 @@ func AdaptFunc(
 				providerEnsurers := make([]orbiter.EnsureFunc, 0)
 				queriedProviders := make(map[string]interface{})
 				for _, querier := range providerQueriers {
-					queryFunc := func() (orbiter.EnsureFunc, error) {
-						return querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
-					}
-					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, nil)
 
 					if err != nil {
 						return nil, err
@@ -161,10 +189,7 @@ func AdaptFunc(
 
 				clusterEnsurers := make([]orbiter.EnsureFunc, 0)
 				for _, querier := range clusterQueriers {
-					queryFunc := func() (orbiter.EnsureFunc, error) {
-						return querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
-					}
-					ensurer, err := orbiter.QueryFuncGoroutine(queryFunc)
+					ensurer, err := querier(nodeAgentsCurrent, nodeAgentsDesired, queriedProviders)
 
 					if err != nil {
 						return nil, err
@@ -172,37 +197,44 @@ func AdaptFunc(
 					clusterEnsurers = append(clusterEnsurers, ensurer)
 				}
 
-				return func(psf api.PushDesiredFunc) *orbiter.EnsureResult {
+				return func(psf func(monitor mntr.Monitor) error) *orbiter.EnsureResult {
 					defer func() {
-						err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+						if err != nil {
+							err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, err)
+						}
 					}()
 
+					done := true
 					for _, ensurer := range append(providerEnsurers, clusterEnsurers...) {
-						ensureFunc := func() *orbiter.EnsureResult {
-							return ensurer(psf)
-						}
-
-						if result := orbiter.EnsureFuncGoroutine(ensureFunc); result.Err != nil || !result.Done {
+						result := ensurer(psf)
+						if result.Err != nil {
 							return result
+						}
+						if !result.Done {
+							done = false
 						}
 					}
 
-					return orbiter.ToEnsureResult(true, nil)
+					return orbiter.ToEnsureResult(done, nil)
 				}, nil
-			}, func() error {
+			}, func(delegates map[string]interface{}) error {
 				defer func() {
-					err = errors.Wrapf(err, "destroying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("destroying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				for _, destroyer := range clusterDestroyers {
-					if err := orbiter.DestroyFuncGoroutine(destroyer); err != nil {
+					if err := destroyer(delegates); err != nil {
 						return err
 					}
 				}
 				return nil
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 				defer func() {
-					err = errors.Wrapf(err, "ensuring %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("ensuring %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				for _, configure := range append(providerConfigurers, clusterConfigurers...) {
@@ -211,6 +243,9 @@ func AdaptFunc(
 					}
 				}
 				return nil
-			}, migrate, nil
+			},
+			migrate,
+			secrets,
+			nil
 	}
 }

@@ -1,6 +1,7 @@
 package nodeagent
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,12 +14,22 @@ import (
 )
 
 type FirewallEnsurer interface {
-	Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
+	Query(desired common.Firewall) (current common.FirewallCurrent, ensure func() error, err error)
 }
 
-type FirewallEnsurerFunc func(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error)
+type FirewallEnsurerFunc func(desired common.Firewall) (current common.FirewallCurrent, ensure func() error, err error)
 
-func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current []*common.Allowed, ensure func() error, err error) {
+func (f FirewallEnsurerFunc) Query(desired common.Firewall) (current common.FirewallCurrent, ensure func() error, err error) {
+	return f(desired)
+}
+
+type NetworkingEnsurer interface {
+	Query(desired common.Networking) (current common.NetworkingCurrent, ensure func() error, err error)
+}
+
+type NetworkingEnsurerFunc func(desired common.Networking) (current common.NetworkingCurrent, ensure func() error, err error)
+
+func (f NetworkingEnsurerFunc) Query(desired common.Networking) (current common.NetworkingCurrent, ensure func() error, err error) {
 	return f(desired)
 }
 
@@ -34,6 +45,7 @@ type Converter interface {
 }
 
 type Installer interface {
+	InstalledFilter() []string
 	Current() (common.Package, error)
 	Ensure(uninstall common.Package, install common.Package) error
 	Equals(other Installer) bool
@@ -41,7 +53,13 @@ type Installer interface {
 	fmt.Stringer
 }
 
-func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallEnsurer, conv Converter) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
+func prepareQuery(
+	monitor mntr.Monitor,
+	commit string,
+	firewallEnsurer FirewallEnsurer,
+	networkingEnsurer NetworkingEnsurer,
+	conv Converter,
+) func(common.NodeAgentSpec, *common.NodeAgentCurrent) (func() error, error) {
 
 	if err := os.MkdirAll("/var/orbiter", 0700); err != nil {
 		panic(err)
@@ -54,14 +72,12 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 
 		defer persistReadyness(curr.NodeIsReady)
 
-		who, err := exec.Command("who", "-b").CombinedOutput()
+		dateTime, err := exec.Command("last", "reboot", "-F", "-n", "1").CombinedOutput()
 		if err != nil {
 			return noop, err
 		}
 
-		dateTime := strings.Fields(string(who))[2:]
-		str := strings.Join(dateTime, " ") + ":00"
-		t, err := time.Parse("2006-01-02 15:04:05", str)
+		t, err := time.Parse(time.ANSIC, strings.Join(strings.Fields(string(bytes.Split(dateTime, []byte("\n"))[0]))[4:9], " "))
 		if err != nil {
 			return noop, err
 		}
@@ -83,11 +99,19 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 			}, nil
 		}
 
+		var ensureNetworking func() error
+		curr.Networking, ensureNetworking, err = networkingEnsurer.Query(*desired.Networking)
+		if err != nil {
+			return noop, err
+		}
+		curr.Networking.Sort()
+
 		var ensureFirewall func() error
 		curr.Open, ensureFirewall, err = firewallEnsurer.Query(*desired.Firewall)
 		if err != nil {
 			return noop, err
 		}
+		curr.Open.Sort()
 
 		installedSw, err := deriveTraverse(queryFunc(monitor), conv.ToDependencies(*desired.Software))
 		if err != nil {
@@ -99,7 +123,7 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 		})
 
 		divergentSw := deriveFilter(divergent, append([]*Dependency(nil), installedSw...))
-		if len(divergentSw) == 0 && ensureFirewall == nil {
+		if len(divergentSw) == 0 && ensureFirewall == nil && ensureNetworking == nil {
 			curr.NodeIsReady = true
 			return noop, nil
 		}
@@ -117,12 +141,22 @@ func prepareQuery(monitor mntr.Monitor, commit string, firewallEnsurer FirewallE
 				return nil
 			}
 
+			if ensureNetworking != nil {
+				if err := ensureNetworking(); err != nil {
+					return err
+				}
+				curr.Networking = desired.Networking.ToCurrent()
+				monitor.Changed("networking changed")
+				curr.Networking.Sort()
+			}
+
 			if ensureFirewall != nil {
 				if err := ensureFirewall(); err != nil {
 					return err
 				}
-				curr.Open = desired.Firewall.Ports()
+				curr.Open = desired.Firewall.ToCurrent()
 				monitor.Changed("firewall changed")
+				curr.Open.Sort()
 			}
 
 			if len(divergentSw) > 0 {
@@ -167,7 +201,7 @@ func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurr
 
 		curr.Software.Merge(conv.ToSoftware([]*Dependency{dep}, func(dep Dependency) common.Package {
 			return dep.Desired
-		}))
+		}), true)
 		monitor.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
 			"from":       dep.Current.Version,

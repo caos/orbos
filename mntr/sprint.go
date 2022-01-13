@@ -2,32 +2,8 @@ package mntr
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/ingestion"
-	"github.com/golang/protobuf/ptypes"
-	structpb "github.com/golang/protobuf/ptypes/struct"
 	"strings"
 )
-
-func EventRecord(namespace, evt string, fields map[string]string) *ingestion.EventRequest {
-	return &ingestion.EventRequest{
-		CreationDate: ptypes.TimestampNow(),
-		Data: &structpb.Struct{
-			Fields: protoStruct(fields),
-		},
-		Type: strings.ReplaceAll(strings.ToLower(fmt.Sprintf("%s.%s", namespace, evt)), " ", "."),
-	}
-}
-
-func protoStruct(fields map[string]string) map[string]*structpb.Value {
-	pstruct := make(map[string]*structpb.Value)
-	for key, value := range fields {
-		if key == "ts" {
-			continue
-		}
-		pstruct[key] = &structpb.Value{Kind: &structpb.Value_StringValue{StringValue: value}}
-	}
-	return pstruct
-}
 
 func CommitRecord(fields []*Field) string {
 	stringFields := make([]string, len(fields))
@@ -52,11 +28,9 @@ func LogRecord(fields []*Field) string {
 	for _, field := range fields {
 		var color string
 		switch field.Key {
-		case "msg":
-			fallthrough
-		case "evt":
+		case "msg", "evt":
 			color = "1;35"
-		case "err":
+		case "err", "panic":
 			color = "1;31"
 		default:
 			color = "0;33"

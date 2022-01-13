@@ -13,7 +13,7 @@ if [[ "$DEBUG" == "true" ]]; then
   TARGET=build
 fi
 
-docker build --tag $IMAGE --target $TARGET .
+docker build --tag $IMAGE --target $TARGET --file ./build/orbos/Dockerfile .
 [[ "$PUSH_IMAGE" == "true" ]] && docker push $IMAGE
 rm -rf ./artifacts/*
 

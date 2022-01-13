@@ -9,8 +9,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/caos/orbos)](https://goreportcard.com/report/github.com/caos/orbos)
 [![codecov](https://codecov.io/gh/caos/orbos/branch/master/graph/badge.svg)](https://codecov.io/gh/caos/orbos)
 
-> This project is in alpha state. The API will continue breaking until version 1.0.0 is released
-
 ## [ORBOS explained](docs/explained.md)
 
 ### [ORBITER](docs/orbiter/orbiter.md)
@@ -34,7 +32,8 @@ sudo chmod +x /usr/local/bin/orbctl
 sudo chown $(id -u):$(id -g) /usr/local/bin/orbctl
 
 # Create an orb file at ${HOME}/.orb/config
-orbctl configure --repourl git@github.com:me/my-orb.git --masterkey "$(openssl rand -base64 21)"
+MY_GIT_REPO="git@github.com:me/my-orb.git"
+orbctl --gitops configure --repourl ${MY_GIT_REPO} --masterkey "$(openssl rand -base64 21)"
 ```
 
 ### Configure a billable Google Cloud Platform project of your choice
@@ -59,6 +58,9 @@ gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
 gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
     --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
     --role=roles/serviceusage.serviceUsageAdmin
+gcloud projects add-iam-policy-binding ${MY_GCE_PROJECT} \
+    --member=serviceAccount:${ORBOS_SERVICE_ACCOUNT} \
+    --role=roles/iam.serviceAccountUser
 
 
 # Create a JSON key for the service account
@@ -66,21 +68,21 @@ gcloud iam service-accounts keys create /tmp/key.json \
   --iam-account ${ORBOS_SERVICE_ACCOUNT}
 
 # Encrypt and write the created JSON key to the orbiter.yml
-orbctl writesecret orbiter.gce.jsonkey --file /tmp/key.json
+orbctl --gitops writesecret orbiter.gce.jsonkey --file /tmp/key.json
 rm -f /tmp/key.json
 ```
 
 ### Bootstrap your Kubernetes cluster on GCE
 
 ```bash
-orbctl takeoff
+orbctl --gitops takeoff
 ```
 
 As soon as the Orbiter has deployed itself to the cluster, you can decrypt the generated admin kubeconfig
 
 ```bash
 mkdir -p ~/.kube
-orbctl readsecret orbiter.k8s.kubeconfig > ~/.kube/config
+orbctl --gitops readsecret orbiter.k8s.kubeconfig > ~/.kube/config
 ```
 
 Wait for grafana to become running
@@ -99,7 +101,7 @@ Delete everything created by Orbiter
 
 ```bash
 # Remove all GCE compute resources
-orbctl destroy
+orbctl --gitops destroy
 
 # Unassign all service account roles
 gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
@@ -116,10 +118,28 @@ gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
 gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 ```
 
+## Offerings
 
+The usage of our open source code is and stays completely free. Below you will find our base offerings without Service Level. If you'd like to operate ORBOS in production we recommend you to get in touch with us to arrange a Service Level Agreement and benefit from guaranteed availability and response times. For further information or if you need something else, contact us now at orbos@caos.ch.
+
+### Support
+
+You run an maintain your Orbs yourself. Your incidents are treated with a high priority. In return, we charge you with a price from CHF 250 per Orb and Month, decreasing to CHF 100.
+
+### Dedicated Orbs
+
+We run and maintain your Orbs on a supported provider of your choice. Your incidents are treated with a high priority. In return, we charge you with a price from CHF 500 per Orb and Month, decreasing to CHF 100.
+
+## Usage Data
+
+ORBOS components send errors and usage data to CAOS Ltd., so that we are able to identify code improvement potential. If you don't want to send this data or don't have an internet connection, pass the global flag `--disable-analytics` when using orbctl. For disabling ingestion for already-running components, execute the takeoff command again with the `--disable-analytics` flag.
+
+We try to distinguishing the environments from which events come from. As environment identifier, we defer the environment identifier from your git repository URL if the --gitops flag is passed.
+
+Besides from errors that don't clearly come from misconfiguration or cli misuage, we send an inital event when any binary is started. This is a "<component> invoked" event along with the flags that are passed to it, except secret values of course.
 ## License
 
-The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using Orbiter for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
+The full functionality of the operator is and stays open source and free to use for everyone. We pay our wages by using ORBOS for selling further workload enterprise services like support, monitoring and forecasting, IAM, CI/CD, secrets management etc. Visit our [website](https://caos.ch) and get in touch.
 
 See the exact licensing terms [here](./LICENSE)
 

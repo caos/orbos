@@ -2,7 +2,14 @@ package crd
 
 import (
 	"errors"
-	toolsetsv1beta2 "github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"strings"
+
+	"github.com/caos/orbos/internal/operator/boom/cmd"
+	"github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/labels"
+	ctrl "sigs.k8s.io/controller-runtime"
+
+	toolsetslatest "github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/bundle"
 	bundleconfig "github.com/caos/orbos/internal/operator/boom/bundle/config"
 	"github.com/caos/orbos/internal/operator/boom/crd/config"
@@ -13,7 +20,7 @@ import (
 )
 
 const (
-	version name.Version = "v1beta2"
+	version name.Version = "latest"
 )
 
 type Crd struct {
@@ -71,7 +78,7 @@ func (c *Crd) GetBundle() *bundle.Bundle {
 	return c.bundle
 }
 
-func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetsv1beta2.Toolset) {
+func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *toolsetslatest.Toolset, gitops bool) {
 	if c.GetStatus() != nil {
 		return
 	}
@@ -89,9 +96,44 @@ func (c *Crd) Reconcile(currentResourceList []*clientgo.Resource, toolsetCRD *to
 	}
 
 	if c.bundle == nil {
-		c.status = errors.New("No bundle for crd")
+		c.status = errors.New("no bundle for crd")
 		monitor.Error(c.status)
 		return
+	}
+
+	boomSpec := toolsetCRD.Spec.Boom
+	if boomSpec != nil && boomSpec.SelfReconciling && boomSpec.Version != "" {
+		conf, err := ctrl.GetConfig()
+		if err != nil {
+			c.status = err
+			return
+		}
+
+		k8sClient, err := kubernetes.NewK8sClientWithConfig(monitor, conf)
+		if err != nil {
+			c.status = err
+			return
+		}
+
+		apiVersion := toolsetCRD.APIVersion
+		apiVersionSplit := strings.Split(apiVersion, "/")
+		if len(apiVersionSplit) == 2 {
+			apiVersion = apiVersionSplit[1]
+		}
+
+		if err := cmd.Reconcile(
+			monitor,
+			labels.MustForAPI(labels.MustForOperator("ORBOS", "boom.caos.ch", boomSpec.Version), toolsetCRD.Kind, apiVersion),
+			k8sClient,
+			boomSpec,
+			boomSpec.Version,
+			gitops,
+		); err != nil {
+			c.status = err
+			return
+		}
+	} else {
+		monitor.Info("not reconciling BOOM itself as selfReconciling is not specified to true or version is empty")
 	}
 
 	c.status = c.bundle.Reconcile(currentResourceList, toolsetCRD.Spec)

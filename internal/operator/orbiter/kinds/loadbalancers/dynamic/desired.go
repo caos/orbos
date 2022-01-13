@@ -3,11 +3,14 @@
 package dynamic
 
 import (
-	"github.com/caos/orbos/internal/tree"
-	"github.com/pkg/errors"
+	"errors"
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/caos/orbos/internal/operator/orbiter"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type Desired struct {
@@ -17,9 +20,10 @@ type Desired struct {
 
 func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
 	defer func() {
-		d.Common.Version = "v2"
+		err = mntr.ToUserError(err)
+		d.Common.OverwriteVersion("v2")
 	}()
-	switch d.Common.Version {
+	switch d.Common.Version() {
 	case "v2":
 		type latest Desired
 		l := latest{}
@@ -45,20 +49,24 @@ func (d *Desired) UnmarshalYAML(node *yaml.Node) (err error) {
 		d.Spec = v1tov2(v0tov1(v0)).Spec
 		return nil
 	}
-	return errors.Errorf("Version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)
+	return fmt.Errorf("version %s for kind %s is not supported", d.Common.Version, d.Common.Kind)
 }
 
-func (d *Desired) Validate() error {
+func (d *Desired) Validate() (err error) {
+
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 
 	ips := make([]string, 0)
 
 	for pool, vips := range d.Spec {
 		if len(vips) == 0 {
-			return errors.Errorf("pool %s has no virtual ip configured", pool)
+			return fmt.Errorf("pool %s has no virtual ip configured", pool)
 		}
 		for _, vip := range vips {
 			if err := vip.validate(); err != nil {
-				return errors.Wrapf(err, "configuring vip for pool %s failed", pool)
+				return fmt.Errorf("configuring vip for pool %s failed: %w", pool, err)
 			}
 			if vip != nil && vip.IP != "" {
 				ips = append(ips, vip.IP)
@@ -78,15 +86,19 @@ type VIP struct {
 	Transport []*Transport
 }
 
-func (v *VIP) validate() error {
+func (v *VIP) validate() (err error) {
+
+	defer func() {
+		err = mntr.ToUserError(err)
+	}()
 
 	if len(v.Transport) == 0 {
-		return errors.Errorf("vip %s has no transport configured", v.IP)
+		return fmt.Errorf("vip %s has no transport configured", v.IP)
 	}
 
 	for _, source := range v.Transport {
 		if err := source.validate(); err != nil {
-			return errors.Wrapf(err, "configuring sources for vip %s failed", v.IP)
+			return fmt.Errorf("configuring sources for vip %s failed: %w", v.IP, err)
 		}
 	}
 
@@ -101,7 +113,7 @@ type HealthChecks struct {
 
 func (h *HealthChecks) validate() error {
 	if h.Protocol == "" {
-		return errors.New("no protocol configured")
+		return mntr.ToUserError(errors.New("no protocol configured"))
 	}
 	return nil
 }
@@ -109,19 +121,21 @@ func (h *HealthChecks) validate() error {
 func (s *Transport) validate() (err error) {
 
 	defer func() {
-		err = errors.Wrapf(err, "source %s is invalid", s.Name)
+		if err != nil {
+			mntr.ToUserError(fmt.Errorf("source %s is invalid: %w", s.Name, err))
+		}
 	}()
 
 	if s.Name == "" {
-		return errors.Errorf("source with port %d has no name", s.FrontendPort)
+		return fmt.Errorf("source with port %d has no name", s.FrontendPort)
 	}
 
 	if err := s.FrontendPort.validate(); err != nil {
-		return errors.Wrap(err, "configuring frontend port failed")
+		return fmt.Errorf("configuring frontend port failed: %w", err)
 	}
 
 	if err := s.BackendPort.validate(); err != nil {
-		return errors.Wrap(err, "configuring backend port failed")
+		return fmt.Errorf("configuring backend port failed: %w", err)
 	}
 
 	if s.FrontendPort == s.BackendPort {
@@ -139,7 +153,7 @@ func (s *Transport) validate() (err error) {
 	}
 
 	if err := s.HealthChecks.validate(); err != nil {
-		return errors.Wrap(err, "configuring health checks failed")
+		return fmt.Errorf("configuring health checks failed: %w", err)
 	}
 
 	return nil
@@ -151,14 +165,16 @@ type Transport struct {
 	BackendPort  Port
 	BackendPools []string
 	Whitelist    []*orbiter.CIDR
-	HealthChecks HealthChecks
+	//	DownstreamProxies []*orbiter.IPAddress
+	HealthChecks  HealthChecks
+	ProxyProtocol *bool
 }
 
 type Port uint16
 
 func (p Port) validate() error {
 	if p == 0 {
-		return errors.Errorf("port %d is not allowed", p)
+		return mntr.ToUserError(fmt.Errorf("port %d is not allowed", p))
 	}
 	return nil
 }

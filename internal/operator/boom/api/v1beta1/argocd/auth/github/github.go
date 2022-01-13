@@ -1,7 +1,7 @@
 package github
 
 import (
-	"github.com/caos/orbos/internal/secret"
+	secret2 "github.com/caos/orbos/pkg/secret"
 )
 
 type Connector struct {
@@ -13,13 +13,37 @@ type Connector struct {
 	Config *Config `json:"config,omitempty" yaml:"config,omitempty"`
 }
 
+func (c *Connector) IsZero() bool {
+	if c.ID == "" &&
+		c.Name == "" &&
+		(c.Config == nil || c.Config.IsZero()) {
+		return true
+	}
+
+	return false
+}
+
+func (c *Config) IsZero() bool {
+	if (c.ClientID == nil || c.ClientID.IsZero()) &&
+		(c.ClientSecret == nil || c.ClientSecret.IsZero()) &&
+		c.ExistingClientIDSecret == nil &&
+		c.ExistingClientSecretSecret == nil &&
+		c.Orgs == nil &&
+		!c.LoadAllGroups &&
+		c.TeamNameField == "" &&
+		!c.UseLoginAsID {
+		return true
+	}
+	return false
+}
+
 type Config struct {
-	ClientID *secret.Secret `yaml:"clientID,omitempty"`
+	ClientID *secret2.Secret `json:"clientID,omitempty" yaml:"clientID,omitempty"`
 	//Existing secret with the clientID
-	ExistingClientIDSecret *secret.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
-	ClientSecret           *secret.Secret   `yaml:"clientSecret,omitempty"`
+	ExistingClientIDSecret *secret2.Existing `json:"existingClientIDSecret,omitempty" yaml:"existingClientIDSecret,omitempty"`
+	ClientSecret           *secret2.Secret   `json:"clientSecret,omitempty" yaml:"clientSecret,omitempty"`
 	//Existing secret with the clientSecret
-	ExistingClientSecretSecret *secret.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
+	ExistingClientSecretSecret *secret2.Existing `json:"existingClientSecretSecret,omitempty" yaml:"existingClientSecretSecret,omitempty"`
 	//Required membership to organization in github
 	Orgs []*Org `json:"orgs,omitempty" yaml:"orgs,omitempty"`
 	//Flag which indicates that all user groups and teams should be loaded

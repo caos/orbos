@@ -7,8 +7,6 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/mntr"
 )
 
@@ -37,7 +35,7 @@ func (s *SystemD) Disable(binary string) error {
 		if strings.Contains(errString, "not loaded") {
 			err = nil
 		} else {
-			return errors.Wrapf(err, "stopping %s by systemd failed with stderr %s", binary, errString)
+			return fmt.Errorf("stopping %s by systemd failed with stderr %s: %w", binary, errString, err)
 		}
 	}
 
@@ -53,7 +51,7 @@ func (s *SystemD) Disable(binary string) error {
 		if strings.Contains(errString, "No such file or directory") {
 			err = nil
 		} else {
-			return errors.Wrapf(err, "disabling %s by systemd failed with stderr %s", binary, errString)
+			return fmt.Errorf("disabling %s by systemd failed with stderr %s: %w", binary, errString, err)
 		}
 	}
 
@@ -66,7 +64,11 @@ func (s *SystemD) Start(binary string) error {
 
 	cmd := exec.Command("systemctl", "restart", binary)
 	cmd.Stderr = errBuf
-	return errors.Wrapf(cmd.Run(), "restarting %s from systemd failed with stderr %s", binary, errBuf.String())
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("restarting %s from systemd failed with stderr %s: %w", binary, errBuf.String(), err)
+	}
+	return nil
 }
 
 func (s *SystemD) Enable(binary string) error {
@@ -74,18 +76,7 @@ func (s *SystemD) Enable(binary string) error {
 	errBuf := new(bytes.Buffer)
 	defer errBuf.Reset()
 
-	cmd := exec.Command("systemctl", "daemon-reload")
-	cmd.Stderr = errBuf
-	if s.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "reloading systemd in order to use new %s failed with stderr %s", binary, errBuf.String())
-	}
-
-	errBuf.Reset()
-	cmd = exec.Command("systemctl", "enable", binary)
+	cmd := exec.Command("systemctl", "enable", binary)
 	cmd.Stderr = errBuf
 	if s.monitor.IsVerbose() {
 		fmt.Println(strings.Join(cmd.Args, " "))
@@ -93,7 +84,7 @@ func (s *SystemD) Enable(binary string) error {
 	}
 
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "enabling systemd unit %s failed with stderr %s", binary, errBuf.String())
+		return fmt.Errorf("enabling systemd unit %s failed with stderr %s: %w", binary, errBuf.String(), err)
 	}
 
 	if !s.Active(binary) {
@@ -109,4 +100,34 @@ func (s *SystemD) Active(binary string) bool {
 		cmd.Stdout = os.Stdout
 	}
 	return cmd.Run() == nil
+}
+
+func (s *SystemD) UnitPath(unit string) (string, error) {
+
+	const showProperty = "FragmentPath"
+	const expectOutputPrefix = showProperty + "="
+
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	outBuf := new(bytes.Buffer)
+	defer outBuf.Reset()
+	cmd := exec.Command("systemctl", "show", "-p", showProperty, unit)
+	cmd.Stderr = errBuf
+	cmd.Stdout = outBuf
+	err := cmd.Run()
+	errStr := errBuf.String()
+	outStr := outBuf.String()
+	s.monitor.WithFields(map[string]interface{}{
+		"stdout": outStr,
+		"stderr": errStr,
+	}).Debug("Executed " + strings.Join(cmd.Args, " "))
+	if err != nil {
+		return "", fmt.Errorf("getting systemd unit path for %s failed with stderr %s: %w", unit, errStr, err)
+	}
+
+	if !strings.HasPrefix(outStr, expectOutputPrefix) {
+		return "", fmt.Errorf("expected prefix %s but got %s", expectOutputPrefix, outStr)
+	}
+
+	return strings.Trim(strings.TrimPrefix(outStr, expectOutputPrefix), "\n"), nil
 }

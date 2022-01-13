@@ -1,8 +1,8 @@
 package config
 
 import (
-	"github.com/caos/orbos/internal/git"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
 )
 
 type Config struct {

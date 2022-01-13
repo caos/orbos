@@ -1,41 +1,63 @@
 package orb
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/core/infra"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers"
-	"github.com/caos/orbos/internal/tree"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/labels"
+	"github.com/caos/orbos/pkg/tree"
 )
 
-type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, repoURL string) (machineIDs []string, machines map[string]infra.Machine, err error)
+type MachinesFunc func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error)
 
-func ListMachines() MachinesFunc {
-	return func(monitor mntr.Monitor, desiredTree *tree.Tree, repoURL string) (machineIDs []string, machines map[string]infra.Machine, err error) {
+func ListMachines(operarorLabels *labels.Operator) MachinesFunc {
+	return func(monitor mntr.Monitor, desiredTree *tree.Tree, orbID string) (machineIDs []string, machines map[string]infra.Machine, err error) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 
 		desiredKind, err := ParseDesiredV0(desiredTree)
 		if err != nil {
-			return nil, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 
 		machines = make(map[string]infra.Machine, 0)
 		machineIDs = make([]string, 0)
 
-		for _, clusterTree := range desiredKind.Clusters {
-			clusters.GetSecrets(monitor, clusterTree)
+		for clusterID, clusterTree := range desiredKind.Clusters {
+			clusterCurrent := &tree.Tree{}
+			_, _, _, _, _, err := clusters.GetQueryAndDestroyFuncs(
+				monitor,
+				operarorLabels,
+				clusterID,
+				clusterTree,
+				true,
+				false,
+				false,
+				clusterCurrent,
+				nil,
+				nil,
+				nil,
+				nil,
+			)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		for provID, providerTree := range desiredKind.Providers {
+
 			providerMachines, err := providers.ListMachines(
 				monitor.WithFields(map[string]interface{}{"provider": provID}),
 				providerTree,
 				provID,
-				repoURL,
+				orbID,
 			)
 			if err != nil {
 				return nil, nil, err
@@ -47,6 +69,7 @@ func ListMachines() MachinesFunc {
 				machines[machineID] = providerMachine
 			}
 		}
+
 		return machineIDs, machines, nil
 	}
 }

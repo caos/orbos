@@ -1,19 +1,20 @@
 package helm
 
 import (
-	"github.com/caos/orbos/internal/operator/boom/api/v1beta2"
+	"fmt"
+
+	"github.com/caos/orbos/internal/operator/boom/api/latest"
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/internal/utils/yaml"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 type TemplatorPreSteps interface {
 	templator.HelmApplication
-	HelmPreApplySteps(mntr.Monitor, *v1beta2.ToolsetSpec) ([]interface{}, error)
+	HelmPreApplySteps(mntr.Monitor, *latest.ToolsetSpec) ([]interface{}, error)
 }
 
-func (h *Helm) preApplySteps(app interface{}, spec *v1beta2.ToolsetSpec) error {
+func (h *Helm) preApplySteps(app interface{}, spec *latest.ToolsetSpec) error {
 
 	pre, ok := app.(TemplatorPreSteps)
 	if ok {
@@ -27,7 +28,7 @@ func (h *Helm) preApplySteps(app interface{}, spec *v1beta2.ToolsetSpec) error {
 		monitor.Debug("Pre-steps")
 		resources, err := pre.HelmPreApplySteps(monitor, spec)
 		if err != nil {
-			return errors.Wrapf(err, "Error while processing pre-steps for application %s", pre.GetName().String())
+			return fmt.Errorf("error while processing pre-steps for application %s: %w", pre.GetName().String(), err)
 		}
 
 		resultfilepath := h.GetResultsFilePath(pre.GetName(), h.overlay, h.templatorDirectoryPath)
@@ -38,12 +39,12 @@ func (h *Helm) preApplySteps(app interface{}, spec *v1beta2.ToolsetSpec) error {
 			if isString {
 				err := y.AddStringObject(value)
 				if err != nil {
-					return errors.Wrapf(err, "Error while adding element %d to result-file", i)
+					return fmt.Errorf("error while adding element %d to result-file: %w", i, err)
 				}
 			} else {
 				err = y.AddStruct(resource)
 				if err != nil {
-					return errors.Wrapf(err, "Error while adding element %d to result-file", i)
+					return fmt.Errorf("error while adding element %d to result-file: %w", i, err)
 				}
 			}
 		}

@@ -10,8 +10,6 @@ import (
 	"runtime"
 
 	"github.com/caos/orbos/internal/helpers"
-
-	"github.com/pkg/errors"
 )
 
 var Unpack func(string)
@@ -30,6 +28,19 @@ func Build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 
 func PackableBuilds(builds <-chan BuiltTuple) <-chan PackableTuple {
 	return deriveFmapPackableFromBuild(packableBuild, builds)
+}
+
+func PackableFiles(paths <-chan string) <-chan PackableTuple {
+	return deriveFmapPackableFromFile(packableFile, paths)
+}
+
+func packableFile(path string) PackableTuple {
+
+	file, err := os.Open(path)
+	return deriveTuplePackable(&packable{
+		key:  filepath.Base(path),
+		data: file,
+	}, err)
 }
 
 func packableBuild(built BuiltTuple) PackableTuple {
@@ -102,7 +113,12 @@ func build(debug bool, gitCommit, version, githubClientID, githubClientSecret st
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	return builtTuple(errors.Wrapf(cmd.Run(), "building %s failed", bin.OutDir))
+	err := cmd.Run()
+	if err != nil {
+		err = fmt.Errorf("building %s failed: %w", bin.OutDir, err)
+	}
+
+	return builtTuple(err)
 }
 
 func builtTupleFunc(bin Buildable) func(error) BuiltTuple {

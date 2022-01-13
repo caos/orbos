@@ -1,6 +1,9 @@
 package v1beta1
 
-import "github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
+import (
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/storage"
+	"github.com/caos/orbos/internal/operator/boom/api/v1beta1/toleration"
+)
 
 type Loki struct {
 	//Flag if tool should be deployed
@@ -15,6 +18,10 @@ type Loki struct {
 	//Flag if loki-output should be a clusteroutput instead a output crd
 	//@default: false
 	ClusterOutput bool `json:"clusterOutput,omitempty" yaml:"clusterOutput,omitempty"`
+	//NodeSelector for statefulset
+	NodeSelector map[string]string `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	//Tolerations to run loki on nodes
+	Tolerations []toleration.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
 }
 
 // Logs: When the logs spec is nil all logs will get persisted in loki.
@@ -31,10 +38,14 @@ type Logs struct {
 	PrometheusNodeExporter bool `json:"prometheus-node-exporter"  yaml:"prometheus-node-exporter"`
 	//Bool if logs will get persisted for prometheus-operator
 	PrometheusOperator bool `json:"prometheus-operator" yaml:"prometheus-operator"`
+	//Bool if logs will get persisted for prometheus-systemd-exporter
+	PrometheusSystemdExporter bool `json:"prometheus-systemd-exporter"  yaml:"prometheus-systemd-exporter"`
 	//Bool if logs will get persisted for logging-operator
 	LoggingOperator bool `json:"logging-operator" yaml:"logging-operator"`
 	//Bool if logs will get persisted for loki
 	Loki bool `json:"loki"`
 	//Bool if logs will get persisted for prometheus
 	Prometheus bool `json:"prometheus"`
+	//Bool if logs will get persisted for metrics-server
+	MetricsServer bool `json:"metrics-server"`
 }

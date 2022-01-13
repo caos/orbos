@@ -5,6 +5,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/caos/orbos/pkg/kubernetes"
+
 	macherrs "k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -15,10 +17,12 @@ import (
 )
 
 type initializedPool struct {
-	infra    infra.Pool
-	tier     Tier
-	desired  Pool
-	machines func() ([]*initializedMachine, error)
+	upscaling   int
+	downscaling []*initializedMachine
+	infra       infra.Pool
+	tier        Tier
+	desired     Pool
+	machines    func() ([]*initializedMachine, error)
 }
 
 func (i *initializedMachines) forEach(baseMonitor mntr.Monitor, do func(machine *initializedMachine, machineMonitor mntr.Monitor) (goon bool)) {
@@ -34,7 +38,7 @@ func (i *initializedMachines) forEach(baseMonitor mntr.Monitor, do func(machine 
 
 type initializeFunc func(initializedPool, []*initializedMachine) error
 type uninitializeMachineFunc func(id string)
-type initializeMachineFunc func(machine infra.Machine, pool initializedPool) *initializedMachine
+type initializeMachineFunc func(machine infra.Machine, pool *initializedPool) *initializedMachine
 
 func (i *initializedPool) enhance(initialize initializeFunc) {
 	original := i.machines
@@ -67,11 +71,11 @@ func initialize(
 	nodeAgentsCurrent *common.CurrentNodeAgents,
 	nodeAgentsDesired *common.DesiredNodeAgents,
 	providerPools map[string]map[string]infra.Pool,
-	k8s *Client,
+	k8s *kubernetes.Client,
 	postInit func(machine *initializedMachine)) (
-	controlplane initializedPool,
+	controlplane *initializedPool,
 	controlplaneMachines []*initializedMachine,
-	workers []initializedPool,
+	workers []*initializedPool,
 	workerMachines []*initializedMachine,
 	initializeMachine initializeMachineFunc,
 	uninitializeMachine uninitializeMachineFunc,
@@ -79,8 +83,8 @@ func initialize(
 
 	curr.Status = "running"
 
-	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) initializedPool {
-		pool := initializedPool{
+	initializePool := func(infraPool infra.Pool, desired Pool, tier Tier) (*initializedPool, error) {
+		pool := &initializedPool{
 			infra:   infraPool,
 			tier:    tier,
 			desired: desired,
@@ -100,10 +104,50 @@ func initialize(
 			sort.Sort(initializedMachines(machines))
 			return machines, nil
 		}
-		return pool
+
+		machines, err := pool.machines()
+		if err != nil {
+			return pool, err
+		}
+
+		var replace initializedMachines
+		var backReplacement int
+		for _, machine := range machines {
+			if req, _, _ := machine.infra.ReplacementRequired(); req {
+				replace = append(replace, machine)
+				continue
+			}
+			if machine.currentMachine.Joined {
+				backReplacement++
+			}
+		}
+
+		machinesPerDesired := 1
+		if desired.Nodes > 0 {
+			machinesPerDesired = pool.infra.DesiredMembers(desired.Nodes) / desired.Nodes
+		}
+
+		upscale := (desired.Nodes * machinesPerDesired) + len(replace) - len(machines)
+		if upscale > 0 {
+			pool.upscaling = upscale
+			return pool, nil
+		}
+
+		if len(replace) > 0 {
+			for backReplacement >= (desired.Nodes*machinesPerDesired) && len(replace) > 0 {
+				backReplacement--
+				pool.downscaling = append(pool.downscaling, replace[0])
+				replace = replace[1:]
+			}
+			return pool, nil
+		}
+
+		pool.downscaling = machines[(desired.Nodes * machinesPerDesired):]
+
+		return pool, nil
 	}
 
-	initializeMachine = func(machine infra.Machine, pool initializedPool) *initializedMachine {
+	initializeMachine = func(machine infra.Machine, pool *initializedPool) *initializedMachine {
 
 		current := &Machine{
 			Metadata: MachineMetadata{
@@ -114,7 +158,7 @@ func initialize(
 		}
 
 		var node *v1.Node
-		if k8s.Available() {
+		if k8s != nil {
 			var k8sNodeErr error
 			node, k8sNodeErr = k8s.GetNode(machine.ID())
 			if k8sNodeErr != nil {
@@ -138,8 +182,8 @@ func initialize(
 			for _, cond := range node.Status.Conditions {
 				if cond.Type == v1.NodeReady {
 					current.Ready = true
-					current.Updating = k8s.Tainted(node, updating)
-					current.Rebooting = k8s.Tainted(node, rebooting)
+					current.Updating = k8s.Tainted(node, kubernetes.Updating)
+					current.Rebooting = k8s.Tainted(node, kubernetes.Rebooting)
 				}
 			}
 		}
@@ -152,10 +196,10 @@ func initialize(
 		k8sSoftware := ParseString(desired.Spec.Versions.Kubernetes).DefineSoftware()
 
 		if !softwareDefines(*naSpec.Software, k8sSoftware) {
-			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software))
+			k8sSoftware.Merge(KubernetesSoftware(naCurr.Software), false)
 			if !softwareContains(*naSpec.Software, k8sSoftware) {
-				naSpec.Software.Merge(k8sSoftware)
-				machineMonitor.Changed("Kubernetes software desired")
+				naSpec.Software.Merge(k8sSoftware, false)
+				machineMonitor.Debug("Kubernetes software desired")
 			}
 		}
 
@@ -165,7 +209,7 @@ func initialize(
 			desiredNodeagent: naSpec,
 			reconcile:        reconcile,
 			currentMachine:   current,
-			pool:             &pool,
+			pool:             pool,
 			node:             node,
 		}
 
@@ -178,7 +222,16 @@ func initialize(
 	pools:
 		for poolName, pool := range provider {
 			if desired.Spec.ControlPlane.Provider == providerName && desired.Spec.ControlPlane.Pool == poolName {
-				controlplane = initializePool(pool, desired.Spec.ControlPlane, Controlplane)
+				controlplane, err = initializePool(pool, desired.Spec.ControlPlane, Controlplane)
+				if err != nil {
+					return controlplane,
+						controlplaneMachines,
+						workers,
+						workerMachines,
+						initializeMachine,
+						uninitializeMachine,
+						err
+				}
 				controlplaneMachines, err = controlplane.machines()
 				if err != nil {
 					return controlplane,
@@ -194,7 +247,16 @@ func initialize(
 
 			for _, desiredPool := range desired.Spec.Workers {
 				if providerName == desiredPool.Provider && poolName == desiredPool.Pool {
-					workerPool := initializePool(pool, *desiredPool, Workers)
+					workerPool, err := initializePool(pool, *desiredPool, Workers)
+					if err != nil {
+						return controlplane,
+							controlplaneMachines,
+							workers,
+							workerMachines,
+							initializeMachine,
+							uninitializeMachine,
+							err
+					}
 					workers = append(workers, workerPool)
 					initializedWorkerMachines, err := workerPool.machines()
 					if err != nil {
@@ -233,7 +295,7 @@ func initialize(
 		}, nil
 }
 
-func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Client, tier Tier, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) func() error {
+func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *kubernetes.Client, tier Tier, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) func() error {
 	n := &node
 	reconcileNode := false
 	reconcileMonitor := monitor.WithField("node", n.Name)
@@ -253,11 +315,11 @@ func reconcileNodeFunc(node v1.Node, monitor mntr.Monitor, pool Pool, k8s *Clien
 	}
 	return func() error {
 		reconcileMonitor.Info("Reconciling node")
-		return k8s.updateNode(n)
+		return k8s.UpdateNode(n)
 	}
 }
 
-func reconcileTaints(node *v1.Node, pool Pool, k8s *Client, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) map[string]interface{} {
+func reconcileTaints(node *v1.Node, pool Pool, k8s *kubernetes.Client, naSpec *common.NodeAgentSpec, naCurr *common.NodeAgentCurrent) map[string]interface{} {
 	desiredTaints := pool.Taints.ToK8sTaints()
 	newTaints := append([]core.Taint{}, desiredTaints...)
 	updateTaints := false
@@ -265,7 +327,7 @@ func reconcileTaints(node *v1.Node, pool Pool, k8s *Client, naSpec *common.NodeA
 	// user defined taints
 outer:
 	for _, existing := range node.Spec.Taints {
-		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") || strings.HasPrefix(existing.Key, taintKeyPrefix) {
+		if strings.HasPrefix(existing.Key, "node.kubernetes.io/") || strings.HasPrefix(existing.Key, kubernetes.TaintKeyPrefix) {
 			newTaints = append(newTaints, existing)
 			continue
 		}
@@ -280,13 +342,13 @@ outer:
 		break
 	}
 	// internal taints
-	if k8s.Tainted(node, updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
-		newTaints = k8s.RemoveFromTaints(newTaints, updating)
+	if k8s.Tainted(node, kubernetes.Updating) && node.Labels["orbos.ch/updating"] == node.Status.NodeInfo.KubeletVersion {
+		newTaints = k8s.RemoveFromTaints(newTaints, kubernetes.Updating)
 		updateTaints = true
 	}
 
-	if k8s.Tainted(node, rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
-		newTaints = k8s.RemoveFromTaints(newTaints, rebooting)
+	if k8s.Tainted(node, kubernetes.Rebooting) && naCurr.Booted.After(naSpec.RebootRequired) {
+		newTaints = k8s.RemoveFromTaints(newTaints, kubernetes.Rebooting)
 		updateTaints = true
 	}
 

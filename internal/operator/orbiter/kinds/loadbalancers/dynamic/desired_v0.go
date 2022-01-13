@@ -1,7 +1,7 @@
 package dynamic
 
 import (
-	"github.com/caos/orbos/internal/tree"
+	"github.com/caos/orbos/pkg/tree"
 )
 
 type DesiredV0 struct {
