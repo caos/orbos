@@ -1,9 +1,9 @@
 package providers
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/pkg/secret"
-	"regexp"
-	"strings"
 
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/cs"
 
@@ -14,10 +14,7 @@ import (
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/static"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
-
-var alphanum = regexp.MustCompile("[^a-zA-Z0-9]+")
 
 func GetQueryAndDestroyFuncs(
 	monitor mntr.Monitor,
@@ -26,8 +23,9 @@ func GetQueryAndDestroyFuncs(
 	providerCurrent *tree.Tree,
 	whitelistChan chan []*orbiter.CIDR,
 	finishedChan chan struct{},
-	orbiterCommit, repoURL, repoKey string,
+	orbiterCommit, orbID, repoURL, repoKey string,
 	oneoff bool,
+	pprof bool,
 ) (
 	orbiter.QueryFunc,
 	orbiter.DestroyFunc,
@@ -49,10 +47,11 @@ func GetQueryAndDestroyFuncs(
 	case "orbiter.caos.ch/GCEProvider":
 		return gce.AdaptFunc(
 			provID,
-			orbID(repoURL),
+			orbID,
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
+			pprof,
 		)(
 			monitor,
 			finishedChan,
@@ -62,10 +61,11 @@ func GetQueryAndDestroyFuncs(
 	case "orbiter.caos.ch/CloudScaleProvider":
 		return cs.AdaptFunc(
 			provID,
-			orbID(repoURL),
+			orbID,
 			wlFunc,
 			orbiterCommit, repoURL, repoKey,
 			oneoff,
+			pprof,
 		)(
 			monitor,
 			finishedChan,
@@ -73,20 +73,20 @@ func GetQueryAndDestroyFuncs(
 			providerCurrent,
 		)
 	case "orbiter.caos.ch/StaticProvider":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
-			return static.AdaptFunc(
-				provID,
-				wlFunc,
-				orbiterCommit, repoURL, repoKey,
-			)(
-				monitor.WithFields(map[string]interface{}{"provider": provID}),
-				finishedChan,
-				providerTree,
-				providerCurrent)
-		}
-		return orbiter.AdaptFuncGoroutine(adaptFunc)
+		return static.AdaptFunc(
+			provID,
+			wlFunc,
+			orbiterCommit,
+			repoURL,
+			repoKey,
+			pprof,
+		)(
+			monitor.WithFields(map[string]interface{}{"provider": provID}),
+			finishedChan,
+			providerTree,
+			providerCurrent)
 	default:
-		return nil, nil, nil, false, nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown provider kind %s", providerTree.Common.Kind))
 	}
 }
 
@@ -94,7 +94,7 @@ func ListMachines(
 	monitor mntr.Monitor,
 	providerTree *tree.Tree,
 	provID string,
-	repoURL string,
+	orbID string,
 ) (
 	map[string]infra.Machine,
 	error,
@@ -105,14 +105,14 @@ func ListMachines(
 		return gce.ListMachines(
 			monitor,
 			providerTree,
-			orbID(repoURL),
+			orbID,
 			provID,
 		)
 	case "orbiter.caos.ch/CloudScaleProvider":
 		return cs.ListMachines(
 			monitor,
 			providerTree,
-			orbID(repoURL),
+			orbID,
 			provID,
 		)
 	case "orbiter.caos.ch/StaticProvider":
@@ -122,10 +122,6 @@ func ListMachines(
 			provID,
 		)
 	default:
-		return nil, errors.Errorf("unknown provider kind %s", providerTree.Common.Kind)
+		return nil, mntr.ToUserError(fmt.Errorf("unknown provider kind %s", providerTree.Common.Kind))
 	}
-}
-
-func orbID(repoURL string) string {
-	return alphanum.ReplaceAllString(strings.TrimSuffix(strings.TrimPrefix(repoURL, "git@"), ".git"), "-")
 }

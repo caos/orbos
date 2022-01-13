@@ -2,45 +2,61 @@ package centos
 
 import (
 	"fmt"
-	"github.com/caos/orbos/internal/operator/common"
-	"github.com/caos/orbos/mntr"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/common"
 )
 
 func getAddAndRemovePorts(
-	monitor mntr.Monitor,
-	zone string,
 	current *common.ZoneDesc,
 	desiredPorts []*common.Allowed,
-	ignore []string,
+	open []string,
+	currentZone Zone,
 ) (
 	[]string,
 	[]string,
-	error,
 ) {
 
-	alreadyOpen, err := getPorts(monitor, zone)
-	if err != nil {
-		return nil, nil, err
-	}
+	ensure := make([]string, 0)
+	remove := make([]string, 0)
 
-	addPorts := make([]string, 0)
-	removePorts := make([]string, 0)
+	alwaysOpen := ignoredPorts(open)
 
-	ensureOpen := append(desiredPorts, ignoredPorts(ignore)...)
-openloop:
-	for _, des := range ensureOpen {
-		desStr := fmt.Sprintf("%s/%s", des.Port, des.Protocol)
-		for _, already := range alreadyOpen {
-			if desStr == already {
-				continue openloop
+	//ports that should stay open
+	for _, open := range alwaysOpen {
+		found := false
+		openStr := fmt.Sprintf("%s/%s", open.Port, open.Protocol)
+		for _, open := range currentZone.Ports.slice {
+			if open == openStr {
+				found = true
+				break
 			}
 		}
-		addPorts = append(addPorts, fmt.Sprintf("--add-port=%s", desStr))
+		if !found {
+			ensure = append(ensure, fmt.Sprintf("--add-port=%s", openStr))
+		}
 	}
-closeloop:
-	for _, already := range alreadyOpen {
-		fields := strings.Split(already, "/")
+
+	//desired ports
+	for _, desired := range desiredPorts {
+		found := false
+		desStr := fmt.Sprintf("%s/%s", desired.Port, desired.Protocol)
+		for _, open := range currentZone.Ports.slice {
+			if open == desStr {
+				found = true
+				break
+			}
+		}
+		if !found {
+			ensure = append(ensure, fmt.Sprintf("--add-port=%s", desStr))
+		}
+	}
+
+	//port that are not desired anymore
+	for _, open := range currentZone.Ports.slice {
+		found := false
+
+		fields := strings.Split(open, "/")
 		port := fields[0]
 		protocol := fields[1]
 
@@ -49,19 +65,28 @@ closeloop:
 			Protocol: protocol,
 		})
 
-		for _, des := range ensureOpen {
-			if des.Port == port && des.Protocol == protocol {
-				continue closeloop
+		for _, desired := range desiredPorts {
+			if desired.Port == port && desired.Protocol == protocol {
+				found = true
+				break
 			}
 		}
-		removePorts = append(removePorts, fmt.Sprintf("--remove-port=%s", already))
+
+		if !found {
+			for _, open := range alwaysOpen {
+				if open.Port == port && open.Protocol == protocol {
+					found = true
+					break
+				}
+			}
+		}
+
+		if !found {
+			remove = append(remove, fmt.Sprintf("--remove-port=%s", open))
+		}
 	}
 
-	return addPorts, removePorts, nil
-}
-
-func getPorts(monitor mntr.Monitor, zone string) ([]string, error) {
-	return listFirewall(monitor, zone, "--list-ports")
+	return ensure, remove
 }
 
 func ignoredPorts(ports []string) []*common.Allowed {

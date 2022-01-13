@@ -2,159 +2,89 @@ package main
 
 import (
 	"errors"
-	"io/ioutil"
+	"fmt"
 
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/cfg"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/orb"
-
-	"github.com/caos/orbos/pkg/kubernetes"
-	"github.com/caos/orbos/pkg/labels"
-	"github.com/caos/orbos/pkg/secret"
-
-	boomapi "github.com/caos/orbos/internal/operator/boom/api"
-
-	"github.com/caos/orbos/internal/start"
-
-	"github.com/caos/orbos/internal/operator/orbiter"
-
-	orbiterorb "github.com/caos/orbos/internal/operator/orbiter/kinds/orb"
-
-	"github.com/caos/orbos/internal/api"
 	"github.com/spf13/cobra"
 )
 
-func ConfigCommand(rv RootValues) *cobra.Command {
+func ConfigCommand(getRv GetRootValues) *cobra.Command {
 
 	var (
-		kubeconfig   string
 		newMasterKey string
 		newRepoURL   string
+		newRepoKey   string
 		cmd          = &cobra.Command{
 			Use:     "configure",
 			Short:   "Configures and reconfigures an orb",
-			Long:    "Configures and reconfigures an orb",
+			Long:    "Generates missing ssh keys and other secrets where it makes sense",
 			Aliases: []string{"reconfigure", "config", "reconfig"},
 		}
 	)
 
 	flags := cmd.Flags()
-	flags.StringVar(&kubeconfig, "kubeconfig", "", "Needed in boom-only scenarios")
 	flags.StringVar(&newMasterKey, "masterkey", "", "Reencrypts all secrets")
 	flags.StringVar(&newRepoURL, "repourl", "", "Configures the repository URL")
+	flags.StringVar(&newRepoKey, "repokey", "", "Configures the used key to communicate with the repository")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		ctx, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		rv, _ := getRv("configure", "", map[string]interface{}{"masterkey": newMasterKey != "", "newRepoURL": newRepoURL})
+		defer rv.ErrFunc(err)
+
+		if !rv.Gitops {
+			return mntr.ToUserError(errors.New("configure command is only supported with the --gitops flag"))
+		}
+
+		if err := orb.Reconfigure(
+			rv.Ctx,
+			rv.Monitor,
+			rv.OrbConfig,
+			newRepoURL,
+			newMasterKey,
+			newRepoKey,
+			rv.GitClient,
+			githubClientID,
+			githubClientSecret,
+		); err != nil {
+			return err
+		}
+
+		k8sClient, err := cli.Client(rv.Monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, false)
 		if err != nil {
+			// ignore
+			err = nil
+		}
+
+		unmanagedOperators := []git.DesiredFile{git.DatabaseFile, git.ZitadelFile}
+		for i := range unmanagedOperators {
+			operatorFile := unmanagedOperators[i]
+			if rv.GitClient.Exists(operatorFile) {
+				return mntr.ToUserError(fmt.Errorf("found %s in git repository. Please use zitadelctl's configure command", operatorFile))
+			}
+		}
+
+		if err := cfg.ApplyOrbconfigSecret(
+			rv.OrbConfig,
+			k8sClient,
+			rv.Monitor,
+		); err != nil {
 			return err
 		}
-		defer func() {
-			err = errFunc(err)
-		}()
 
-		if err := orb.ReconfigureAndClone(ctx, monitor, orbConfig, newRepoURL, newMasterKey, gitClient); err != nil {
-			return err
-		}
-
-		allKubeconfigs := make([]string, 0)
-		foundOrbiter, err := api.ExistsOrbiterYml(gitClient)
-		if err != nil {
-			return err
-		}
-
-		rewriteKey := orbConfig.Masterkey
-		if newMasterKey != "" {
-			rewriteKey = newMasterKey
-		}
-
-		if foundOrbiter {
-
-			_, _, configure, _, desired, _, _, err := orbiter.Adapt(gitClient, monitor, make(chan struct{}), orbiterorb.AdaptFunc(
-				labels.NoopOperator("ORBOS"),
-				orbConfig,
-				gitCommit,
-				true,
-				false,
-				gitClient,
+		return cfg.ConfigureOperators(
+			rv.GitClient,
+			rv.OrbConfig.Masterkey,
+			cfg.ORBOSConfigurers(
+				rv.Ctx,
+				rv.Monitor,
+				rv.OrbConfig,
+				rv.GitClient,
 			))
-			if err != nil {
-				return err
-			}
-
-			if err := configure(*orbConfig); err != nil {
-				return err
-			}
-
-			monitor.Info("Repopulating orbiter secrets")
-			if err := secret.Rewrite(
-				monitor,
-				gitClient,
-				rewriteKey,
-				desired,
-				api.PushOrbiterDesiredFunc); err != nil {
-				return err
-			}
-
-			monitor.Info("Reading kubeconfigs from orbiter.yml")
-			kubeconfigs, err := start.GetKubeconfigs(monitor, gitClient, orbConfig, version)
-			if err == nil {
-				allKubeconfigs = append(allKubeconfigs, kubeconfigs...)
-			}
-
-		} else {
-			monitor.Info("No orbiter.yml existent, reading kubeconfig from path provided as parameter")
-			if kubeconfig == "" {
-				return errors.New("error to change config as no kubeconfig is provided")
-			}
-			value, err := ioutil.ReadFile(kubeconfig)
-			if err != nil {
-				return err
-			}
-			allKubeconfigs = append(allKubeconfigs, string(value))
-		}
-
-		foundBoom, err := api.ExistsBoomYml(gitClient)
-		if err != nil {
-			return err
-		}
-		if foundBoom {
-			monitor.Info("Repopulating boom secrets")
-
-			tree, err := api.ReadBoomYml(gitClient)
-			if err != nil {
-				return err
-			}
-
-			toolset, _, _, _, _, err := boomapi.ParseToolset(tree)
-			if err != nil {
-				return err
-			}
-
-			tree.Parsed = toolset
-			if err := secret.Rewrite(
-				monitor,
-				gitClient,
-				rewriteKey,
-				tree,
-				api.PushBoomDesiredFunc); err != nil {
-				return err
-			}
-		}
-
-		for _, kubeconfig := range allKubeconfigs {
-			k8sClient := kubernetes.NewK8sClient(monitor, &kubeconfig)
-			if k8sClient.Available() {
-				monitor.Info("Ensuring orbconfig in kubernetes cluster")
-				if err := kubernetes.EnsureConfigArtifacts(monitor, k8sClient, orbConfig); err != nil {
-					monitor.Error(errors.New("failed to apply configuration resources into k8s-cluster"))
-					return err
-				}
-
-				monitor.Info("Applied configuration resources")
-			} else {
-				monitor.Info("No connection to the k8s-cluster possible")
-			}
-		}
-
-		return nil
 	}
 	return cmd
 }

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 
 	"github.com/caos/orbos/cmd/orbctl/cmds"
@@ -8,12 +9,13 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
 	"github.com/caos/orbos/pkg/orb"
-	"golang.org/x/net/context"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 )
 
 func main() {
 	orbConfigPath := flag.String("orbconfig", "~/.orb/config", "The orbconfig file to use")
 	kubeconfig := flag.String("kubeconfig", "~/.kube/config", "The kubeconfig file to use")
+	gitops := flag.Bool("gitops", false, "Use gitops mode")
 	verbose := flag.Bool("verbose", false, "Print debug levelled logs")
 
 	flag.Parse()
@@ -21,7 +23,7 @@ func main() {
 	prunedPath := helpers.PruneHome(*orbConfigPath)
 	orbConfig, err := orb.ParseOrbConfig(prunedPath)
 	if err != nil {
-		orbConfig = &orb.Orb{Path: prunedPath}
+		orbConfig = &orbcfg.Orb{Path: prunedPath}
 	}
 
 	monitor := mntr.Monitor{
@@ -45,12 +47,12 @@ func main() {
 		git.New(ctx, monitor, "orbos", "orbos@caos.ch"),
 		false,
 		false,
-		true,
 		*verbose,
-		"",
-		string(version),
-		string(gitCommit),
+		version,
+		gitCommit,
 		*kubeconfig,
+		*gitops,
+		[]string{"orbiter"},
 	); err != nil {
 		monitor.Error(err)
 		panic(err)

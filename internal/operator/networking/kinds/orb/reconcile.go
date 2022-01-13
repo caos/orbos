@@ -1,45 +1,46 @@
 package orb
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/tree"
 	"github.com/caos/orbos/pkg/treelabels"
-	"github.com/pkg/errors"
 )
 
-func Reconcile(monitor mntr.Monitor, desiredTree *tree.Tree) core.EnsureFunc {
+func Reconcile(
+	monitor mntr.Monitor,
+	spec *Spec,
+	gitops bool,
+) core.EnsureFunc {
 	return func(k8sClient kubernetes.ClientInt) (err error) {
-		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
-		}()
+		recMonitor := monitor.WithField("version", spec.Version)
 
-		desiredKind, err := ParseDesiredV0(desiredTree)
-		if err != nil {
-			return errors.Wrap(err, "parsing desired state failed")
-		}
-		desiredTree.Parsed = desiredKind
-
-		recMonitor := monitor.WithField("version", desiredKind.Spec.Version)
-
-		if desiredKind.Spec.Version == "" {
+		if spec.Version == "" {
 			err := errors.New("No version set in networking.yml")
 			monitor.Error(err)
 			return err
 		}
 
-		imageRegistry := desiredKind.Spec.CustomImageRegistry
+		imageRegistry := spec.CustomImageRegistry
 		if imageRegistry == "" {
 			imageRegistry = "ghcr.io"
 		}
-		if err := kubernetes.EnsureNetworkingArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&desiredKind.Spec.Version)), k8sClient, desiredKind.Spec.Version, desiredKind.Spec.NodeSelector, desiredKind.Spec.Tolerations, imageRegistry); err != nil {
-			recMonitor.Error(errors.Wrap(err, "Failed to deploy networking-operator into k8s-cluster"))
-			return err
+
+		if spec.SelfReconciling {
+			desiredTree := &tree.Tree{
+				Common: tree.NewCommon("networking.caos.ch/Orb", "v0", false),
+			}
+
+			if err := kubernetes.EnsureNetworkingArtifacts(monitor, treelabels.MustForAPI(desiredTree, mustDatabaseOperator(&spec.Version)), k8sClient, spec.Version, spec.NodeSelector, spec.Tolerations, imageRegistry, gitops); err != nil {
+				return fmt.Errorf("failed to deploy networking-operator into k8s-cluster: %w", err)
+			}
+
+			recMonitor.Info("Applied networking-operator")
 		}
-
-		recMonitor.Info("Applied networking-operator")
-
 		return nil
 
 	}

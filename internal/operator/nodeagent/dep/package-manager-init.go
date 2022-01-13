@@ -3,12 +3,9 @@ package dep
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 func (p *PackageManager) debSpecificUpdatePackages() error {
@@ -21,31 +18,56 @@ func (p *PackageManager) debSpecificUpdatePackages() error {
 		cmd.Stdout = os.Stdout
 	}
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "updating deb packages failed with stderr %s", errBuf.String())
+		return fmt.Errorf("updating deb packages failed with stderr %s: %w", errBuf.String(), err)
 	}
-
+	return nil
+}
+func (p *PackageManager) debSpecificInit() error {
 	return p.debbasedInstall(
 		&Software{Package: "apt-transport-https"},
 		&Software{Package: "gnupg2"},
 		&Software{Package: "software-properties-common"})
 }
 
-func (p *PackageManager) remSpecificUpdatePackages() error {
+func (p *PackageManager) remSpecificInit() error {
 
-	if err := ioutil.WriteFile("/etc/cron.daily/yumupdate.sh", []byte(`#!/bin/bash
-YUM=/usr/bin/yum
-$YUM -y -R 10 -e 3 -d 3 update
-`), 0777); err != nil {
-		return err
-	}
-
-	if err := p.rembasedInstall(
+	return p.rembasedInstall(
 		&Software{Package: "yum-utils"},
 		&Software{Package: "yum-plugin-versionlock"},
 		&Software{Package: "firewalld"},
-	); err != nil {
+	)
+}
+
+func (p *PackageManager) remSpecificUpdatePackages() error {
+
+	conflictingCronFile := "/etc/cron.daily/yumupdate.sh"
+	removeConflictingCronFile := true
+	_, err := os.Stat(conflictingCronFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			removeConflictingCronFile = false
+			err = nil
+		}
+	}
+	if err != nil {
 		return err
 	}
+	if removeConflictingCronFile {
+		if err := os.Remove(conflictingCronFile); err != nil {
+			return err
+		}
+	}
 
-	return p.systemd.Enable("firewalld")
+	cmd := exec.Command("/usr/bin/yum", "--assumeyes", "--errorlevel", "0", "--debuglevel", "3", "update")
+	errBuf := new(bytes.Buffer)
+	defer errBuf.Reset()
+	cmd.Stderr = errBuf
+	if p.monitor.IsVerbose() {
+		fmt.Println(strings.Join(cmd.Args, " "))
+		cmd.Stdout = os.Stdout
+	}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("updating yum packages failed with stderr %s: %w", errBuf.String(), err)
+	}
+	return nil
 }

@@ -1,33 +1,39 @@
 package orb
 
 import (
+	"fmt"
+
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 )
 
 type DesiredV0 struct {
-	Common *tree.Common `yaml:",inline"`
-	Spec   struct {
-		Verbose         bool
-		NodeSelector    map[string]string   `yaml:"nodeSelector,omitempty"`
-		Tolerations     []corev1.Toleration `yaml:"tolerations,omitempty"`
-		Version         string              `yaml:"version,omitempty"`
-		SelfReconciling bool                `yaml:"selfReconciling"`
-		//Use this registry to pull the BOOM image from
-		//@default: ghcr.io
-		CustomImageRegistry string `json:"customImageRegistry,omitempty" yaml:"customImageRegistry,omitempty"`
-	}
+	Common     *tree.Common `json:",inline" yaml:",inline"`
+	Spec       *Spec        `json:"spec" yaml:"spec"`
 	Networking *tree.Tree
+}
+
+// +kubebuilder:object:generate=true
+type Spec struct {
+	Verbose         bool                `json:"verbose" yaml:"verbose"`
+	NodeSelector    map[string]string   `json:"nodeSelector,omitempty" yaml:"nodeSelector,omitempty"`
+	Tolerations     []corev1.Toleration `json:"tolerations,omitempty" yaml:"tolerations,omitempty"`
+	Version         string              `json:"version,omitempty" yaml:"version,omitempty"`
+	SelfReconciling bool                `json:"selfReconciling" yaml:"selfReconciling"`
+	//Use this registry to pull the Networking-operator image from
+	//@default: ghcr.io
+	CustomImageRegistry string `json:"customImageRegistry,omitempty" yaml:"customImageRegistry,omitempty"`
 }
 
 func ParseDesiredV0(desiredTree *tree.Tree) (*DesiredV0, error) {
 	desiredKind := &DesiredV0{Common: desiredTree.Common}
 
 	if err := desiredTree.Original.Decode(desiredKind); err != nil {
-		return nil, errors.Wrap(err, "parsing desired state failed")
+		return nil, mntr.ToUserError(fmt.Errorf("parsing desired state failed: %w", err))
 	}
-	desiredKind.Common.Version = "v0"
+	desiredKind.Common.OverwriteVersion("v0")
 
 	return desiredKind, nil
 }

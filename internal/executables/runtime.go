@@ -13,7 +13,6 @@ import (
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/helpers"
-	"github.com/pkg/errors"
 )
 
 var executables map[string][]byte
@@ -27,7 +26,7 @@ func Populate() {
 func PreBuilt(name string) []byte {
 	executable, ok := executables[name]
 	if !ok {
-		panic(errors.Errorf("%s was not prebuilt", name))
+		panic(fmt.Errorf("%s was not prebuilt", name))
 	}
 	return executable
 }
@@ -38,7 +37,7 @@ func PreBuild(packables <-chan PackableTuple) (err error) {
 	outFile := filepath.Join(sp, "prebuilt.go")
 	prebuilt, err := os.Create(tmpFile)
 	if err != nil {
-		return errors.Wrapf(err, "creating %s failed", tmpFile)
+		return fmt.Errorf("creating %s failed: %w", tmpFile, err)
 	}
 	defer func() {
 		if err != nil {
@@ -123,15 +122,15 @@ func pack(packableTuple PackableTuple) packedTuple {
 	gzipWriter := gzip.NewWriter(gzipBuffer)
 	_, err = io.Copy(gzipWriter, packable.data)
 	if err != nil {
-		return packedTuple(nil, errors.Wrap(err, "gzipping failed"))
+		return packedTuple(nil, fmt.Errorf("gzipping failed: %w", err))
 	}
 
 	if err := packable.data.Close(); err != nil {
-		return packedTuple(nil, errors.Wrap(err, "closing data failed"))
+		return packedTuple(nil, fmt.Errorf("closing data failed: %w", err))
 	}
 
 	if err := gzipWriter.Close(); err != nil {
-		return packedTuple(nil, errors.Wrap(err, "closing gzip writer failed"))
+		return packedTuple(nil, fmt.Errorf("closing gzip writer failed: %w", err))
 	}
 
 	packed := base64.StdEncoding.EncodeToString(gzipBuffer.Bytes())
@@ -142,19 +141,19 @@ func pack(packableTuple PackableTuple) packedTuple {
 func unpack(executable string) []byte {
 	gzipNodeAgent, err := base64.StdEncoding.DecodeString(executable)
 	if err != nil {
-		panic(errors.Wrap(err, "decoding node agent from base64 failed"))
+		panic(fmt.Errorf("decoding node agent from base64 failed: %w", err))
 	}
 	bytesReader := bytes.NewReader(gzipNodeAgent)
 
 	gzipReader, err := gzip.NewReader(bytesReader)
 	if err != nil {
-		panic(errors.Wrap(err, "ungzipping node agent failed"))
+		panic(fmt.Errorf("ungzipping node agent failed: %w", err))
 	}
 	defer gzipReader.Close()
 
 	unpacked, err := ioutil.ReadAll(gzipReader)
 	if err != nil {
-		panic(errors.Wrap(err, "reading unpacked node agent failed"))
+		panic(fmt.Errorf("reading unpacked node agent failed: %w", err))
 	}
 	return unpacked
 }

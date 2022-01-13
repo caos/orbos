@@ -1,32 +1,43 @@
 package cs
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
 	"github.com/caos/orbos/internal/ssh"
-	"github.com/caos/orbos/pkg/orb"
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/mntr"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
 )
 
-func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbiterCommit, repoURL, repoKey string, oneoff bool) orbiter.AdaptFunc {
+func AdaptFunc(
+	providerID,
+	orbID string,
+	whitelist dynamic.WhiteListFunc,
+	orbiterCommit,
+	repoURL,
+	repoKey string,
+	oneoff bool,
+	pprof bool,
+) orbiter.AdaptFunc {
 	return func(monitor mntr.Monitor, finishedChan chan struct{}, desiredTree *tree.Tree, currentTree *tree.Tree) (queryFunc orbiter.QueryFunc, destroyFunc orbiter.DestroyFunc, configureFunc orbiter.ConfigureFunc, migrate bool, secrets map[string]*secret.Secret, err error) {
 		defer func() {
-			err = errors.Wrapf(err, "building %s failed", desiredTree.Common.Kind)
+			if err != nil {
+				err = fmt.Errorf("building %s failed: %w", desiredTree.Common.Kind, err)
+			}
 		}()
 		desiredKind, err := parseDesired(desiredTree)
 		if err != nil {
-			return nil, nil, nil, migrate, nil, errors.Wrap(err, "parsing desired state failed")
+			return nil, nil, nil, migrate, nil, fmt.Errorf("parsing desired state failed: %w", err)
 		}
 		desiredTree.Parsed = desiredKind
 		secrets = make(map[string]*secret.Secret, 0)
-		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind))
+		secret.AppendSecrets("", secrets, getSecretsMap(desiredKind), nil, nil)
 
 		if desiredKind.Spec.RebootRequired == nil {
 			desiredKind.Spec.RebootRequired = make([]string, 0)
@@ -51,24 +62,20 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 		if migrateLocal {
 			migrate = true
 		}
-		secret.AppendSecrets("", secrets, lbSecrets)
+		secret.AppendSecrets("", secrets, lbSecrets, nil, nil)
 
-		ctx, err := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
-		if err != nil {
-			return nil, nil, nil, migrate, nil, err
-		}
+		ctx := buildContext(monitor, &desiredKind.Spec, orbID, providerID, oneoff)
 
 		current := &Current{
-			Common: &tree.Common{
-				Kind:    "orbiter.caos.ch/CloudScaleProvider",
-				Version: "v0",
-			},
+			Common: tree.NewCommon("orbiter.caos.ch/CloudScaleProvider", "v0", false),
 		}
 		currentTree.Parsed = current
 
 		return func(nodeAgentsCurrent *common.CurrentNodeAgents, nodeAgentsDesired *common.DesiredNodeAgents, _ map[string]interface{}) (ensureFunc orbiter.EnsureFunc, err error) {
 				defer func() {
-					err = errors.Wrapf(err, "querying %s failed", desiredKind.Common.Kind)
+					if err != nil {
+						err = fmt.Errorf("querying %s failed: %w", desiredKind.Common.Kind, err)
+					}
 				}()
 
 				if err := desiredKind.validateQuery(); err != nil {
@@ -83,7 +90,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					return nil, err
 				}
 
-				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey)
+				_, naFuncs := core.NodeAgentFuncs(monitor, repoURL, repoKey, pprof)
 
 				return query(&desiredKind.Spec, current, lbCurrent.Parsed, ctx, nodeAgentsCurrent, nodeAgentsDesired, naFuncs, orbiterCommit)
 			}, func(delegates map[string]interface{}) error {
@@ -96,7 +103,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				}
 
 				return destroy(ctx, current)
-			}, func(orb orb.Orb) error {
+			}, func(orb orbcfg.Orb) error {
 
 				if err := desiredKind.validateAPIToken(); err != nil {
 					return err
@@ -109,10 +116,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 				if desiredKind.Spec.SSHKey == nil ||
 					desiredKind.Spec.SSHKey.Private == nil || desiredKind.Spec.SSHKey.Private.Value == "" ||
 					desiredKind.Spec.SSHKey.Public == nil || desiredKind.Spec.SSHKey.Public.Value == "" {
-					priv, pub, err := ssh.Generate()
-					if err != nil {
-						return err
-					}
+					priv, pub := ssh.Generate()
 					desiredKind.Spec.SSHKey = &SSHKey{
 						Private: &secret.Secret{Value: priv},
 						Public:  &secret.Secret{Value: pub},
@@ -123,7 +127,7 @@ func AdaptFunc(providerID, orbID string, whitelist dynamic.WhiteListFunc, orbite
 					panic(err)
 				}
 
-				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb)
+				return core.ConfigureNodeAgents(ctx.machinesService, ctx.monitor, orb, pprof)
 			}, migrate, secrets, nil
 	}
 }

@@ -1,9 +1,8 @@
 package cs
 
 import (
-	"github.com/pkg/errors"
+	"fmt"
 
-	"github.com/caos/orbos/internal/api"
 	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/orbiter"
@@ -11,6 +10,7 @@ import (
 	dynamiclbmodel "github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/loadbalancers/dynamic/wrap"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/providers/core"
+	"github.com/caos/orbos/mntr"
 )
 
 func query(
@@ -26,7 +26,7 @@ func query(
 
 	lbCurrent, ok := lb.(*dynamiclbmodel.Current)
 	if !ok {
-		panic(errors.Errorf("Unknown or unsupported load balancing of type %T", lb))
+		panic(fmt.Errorf("unknown or unsupported load balancing of type %T", lb))
 	}
 
 	hostPools, authChecks, err := lbCurrent.Current.Spec(context.machinesService)
@@ -62,20 +62,15 @@ func query(
 			return err
 		}
 
-		vips := hostedVIPs(hostPools, m, current)
-		_, err = core.DesireOSNetworkingForMachine(context.monitor, nodeAgentsDesired, nodeAgentsCurrent, m, "dummy", vips)
-		if err != nil {
-			return err
-		}
-
 		return ensureServer(context, current, hostPools, pool, m.(*machine), ensureNodeAgent)
 	}
 	wrappedMachines := wrap.MachinesService(context.machinesService, *lbCurrent, &dynamiclbmodel.VRRP{
 		VRRPInterface: "eth1",
+		VIPInterface:  "eth0",
 		NotifyMaster:  notifyMaster(hostPools, current, poolsWithUnassignedVIPs),
 		AuthCheck:     checkAuth,
 	}, desiredToCurrentVIP(current))
-	return func(pdf api.PushDesiredFunc) *orbiter.EnsureResult {
+	return func(pdf func(mntr.Monitor) error) *orbiter.EnsureResult {
 		var done bool
 		return orbiter.ToEnsureResult(done, helpers.Fanout([]func() error{
 			func() error {
@@ -94,7 +89,7 @@ func query(
 				if err != nil {
 					return err
 				}
-
+				/* TODO: Remove unused code
 				vips, err := allHostedVIPs(hostPools, context.machinesService, current)
 				if err != nil {
 					return err
@@ -103,8 +98,8 @@ func query(
 				if err != nil {
 					return err
 				}
-
-				done = lbDone && fwDone && nwDone
+				*/
+				done = lbDone && fwDone //&& nwDone
 				return nil
 			},
 		})())

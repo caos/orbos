@@ -1,6 +1,8 @@
 package clusters
 
 import (
+	"fmt"
+
 	"github.com/caos/orbos/internal/operator/orbiter"
 	"github.com/caos/orbos/internal/operator/orbiter/kinds/clusters/kubernetes"
 	"github.com/caos/orbos/mntr"
@@ -8,7 +10,6 @@ import (
 	"github.com/caos/orbos/pkg/labels"
 	"github.com/caos/orbos/pkg/secret"
 	"github.com/caos/orbos/pkg/tree"
-	"github.com/pkg/errors"
 )
 
 func GetQueryAndDestroyFuncs(
@@ -17,6 +18,7 @@ func GetQueryAndDestroyFuncs(
 	clusterID string,
 	clusterTree *tree.Tree,
 	oneoff bool,
+	pprof bool,
 	deployOrbiter bool,
 	clusterCurrent *tree.Tree,
 	destroyProviders func(map[string]interface{}) (map[string]interface{}, error),
@@ -34,32 +36,31 @@ func GetQueryAndDestroyFuncs(
 
 	switch clusterTree.Common.Kind {
 	case "orbiter.caos.ch/KubernetesCluster":
-		adaptFunc := func() (orbiter.QueryFunc, orbiter.DestroyFunc, orbiter.ConfigureFunc, bool, map[string]*secret.Secret, error) {
-			return kubernetes.AdaptFunc(
-				labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version),
-				clusterID,
-				oneoff,
-				deployOrbiter,
-				destroyProviders,
-				func(whitelist []*orbiter.CIDR) {
-					go func() {
-						monitor.Debug("Sending whitelist")
-						whitelistChan <- whitelist
-						close(whitelistChan)
-					}()
-					monitor.Debug("Whitelist sent")
-				},
-				gitClient,
-			)(
-				monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
-				finishedChan,
-				clusterTree,
-				clusterCurrent,
-			)
-		}
-		return orbiter.AdaptFuncGoroutine(adaptFunc)
+		return kubernetes.AdaptFunc(
+			labels.MustForAPI(operator, "KubernetesCluster", clusterTree.Common.Version()),
+			clusterID,
+			oneoff,
+			deployOrbiter,
+			pprof,
+			destroyProviders,
+			func(whitelist []*orbiter.CIDR) {
+				go func() {
+					monitor.Debug("Sending whitelist")
+					whitelistChan <- whitelist
+					close(whitelistChan)
+				}()
+				monitor.Debug("Whitelist sent")
+			},
+			gitClient,
+		)(
+			monitor.WithFields(map[string]interface{}{"cluster": clusterID}),
+			finishedChan,
+			clusterTree,
+			clusterCurrent,
+		)
+
 		//				subassemblers[provIdx] = static.New(providerPath, generalOverwriteSpec, staticadapter.New(providermonitor, providerID, "/healthz", updatesDisabled, cfg.NodeAgent))
 	default:
-		return nil, nil, nil, false, nil, errors.Errorf("unknown cluster kind %s", clusterTree.Common.Kind)
+		return nil, nil, nil, false, nil, mntr.ToUserError(fmt.Errorf("unknown cluster kind %s", clusterTree.Common.Kind))
 	}
 }

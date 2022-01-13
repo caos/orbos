@@ -1,10 +1,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"reflect"
 	"strings"
+
+	"github.com/caos/orbos/mntr"
 
 	"github.com/kataras/tablewriter"
 	"github.com/landoop/tableprinter"
@@ -14,14 +17,14 @@ import (
 	"github.com/caos/orbos/pkg/tree"
 )
 
-func ListCommand(rv RootValues) *cobra.Command {
+func ListCommand(getRv GetRootValues) *cobra.Command {
 	var (
 		column, context string
 		cmd             = &cobra.Command{
 			Use:   "list",
 			Short: "List available machines",
 			Long:  "List available machines",
-			Args:  cobra.MaximumNArgs(1),
+			Args:  cobra.MaximumNArgs(0),
 		}
 	)
 
@@ -30,13 +33,20 @@ func ListCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&context, "context", "", "Print machines from this context only")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		rv, err := getRv("list", "", map[string]interface{}{"column": column, "context": context})
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = errFunc(err)
-		}()
+		defer rv.ErrFunc(err)
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+
+		if !rv.Gitops {
+			return mntr.ToUserError(errors.New("list command is only supported with the --gitops flag and a committed orbiter.yml"))
+		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
 
@@ -56,10 +66,10 @@ func ListCommand(rv RootValues) *cobra.Command {
 				if context == "" || context == ctx {
 					v := reflect.ValueOf(mach).Elem()
 					if !tail {
-						headers = tableprinter.StructParser.ParseHeaders(v)
+						headers = append([]string{"context"}, tableprinter.StructParser.ParseHeaders(v)...)
 						if column != "" {
 							for idx, h := range headers {
-								if strings.Contains(h, column) {
+								if strings.Contains(strings.ToLower(h), strings.ToLower(column)) {
 									cellIdx = idx
 								}
 							}
@@ -67,17 +77,17 @@ func ListCommand(rv RootValues) *cobra.Command {
 								return fmt.Errorf("unknown column: %s", column)
 							}
 						}
-						headers = append([]string{"context"}, headers...)
 						tail = true
 					}
 
 					cells, _ := tableprinter.StructParser.ParseRow(v)
+					cells = append([]string{ctx}, cells...)
 
 					if cellIdx > -1 {
 						fmt.Println(cells[cellIdx])
 						continue
 					}
-					rows = append(rows, append([]string{ctx}, cells...))
+					rows = append(rows, cells)
 				}
 			}
 

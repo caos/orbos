@@ -13,7 +13,6 @@ type Reconciling struct {
 	//@default: false
 	Deploy bool `json:"deploy" yaml:"deploy"`
 	//Use of custom argocd-image which includes gopass
-	//@default: false
 	CustomImage *CustomImage `json:"customImage,omitempty" yaml:"customImage,omitempty"`
 	//Network configuration, used for SSO and external access
 	Network *network.Network `json:"network,omitempty" yaml:"network,omitempty"`
@@ -41,6 +40,21 @@ type Reconciling struct {
 	Controller *CommonComponent `json:"controller,omitempty" yaml:"controller,omitempty"`
 	//Server options
 	Server *CommonComponent `json:"server,omitempty" yaml:"server,omitempty"`
+	//Overwrite used image
+	OverwriteImage string `json:"overwriteImage,omitempty" yaml:"overwriteImage,omitempty"`
+	//Overwrite used image version
+	OverwriteVersion string `json:"overwriteVersion,omitempty" yaml:"overwriteVersion,omitempty"`
+	//Additional parameters to use in the deployments
+	AdditionalParameters *AdditionalParameters `json:"additionalParameters,omitempty" yaml:"additionalParameters,omitempty"`
+}
+
+type AdditionalParameters struct {
+	//Additional parameters for the Repo-Server
+	RepoServer []string `json:"repoServer,omitempty" yaml:"repoServer,omitempty"`
+	//Additional parameters for the Application-Controller
+	ApplicationController []string `json:"applicationController,omitempty" yaml:"applicationController,omitempty"`
+	//Additional parameters for the Server
+	Server []string `json:"server,omitempty" yaml:"server,omitempty"`
 }
 
 func (r *Reconciling) InitSecrets() {
@@ -102,10 +116,10 @@ type CustomImage struct {
 }
 
 type GopassStore struct {
-	SSHKey *secret.Secret `yaml:"sshKey,omitempty"`
+	SSHKey *secret.Secret `json:"sshKey,omitempty" yaml:"sshKey,omitempty"`
 	//Existing secret with ssh-key to clone the repository for gopass
 	ExistingSSHKeySecret *secret.Existing `json:"existingSshKeySecret,omitempty" yaml:"existingSshKeySecret,omitempty"`
-	GPGKey               *secret.Secret   `yaml:"gpgKey,omitempty"`
+	GPGKey               *secret.Secret   `json:"gpgKey,omitempty" yaml:"gpgKey,omitempty"`
 	//Existing secret with gpg-key to decode the repository for gopass
 	ExistingGPGKeySecret *secret.Existing `json:"existingGpgKeySecret,omitempty" yaml:"existingGpgKeySecret,omitempty"`
 	//URL to repository for gopass store

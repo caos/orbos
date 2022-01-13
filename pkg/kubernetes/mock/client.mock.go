@@ -5,6 +5,7 @@
 package kubernetesmock
 
 import (
+	mntr "github.com/caos/orbos/mntr"
 	gomock "github.com/golang/mock/gomock"
 	io "io"
 	v1 "k8s.io/api/apps/v1"
@@ -138,6 +139,20 @@ func (mr *MockClientIntMockRecorder) ApplyJob(rsc interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyJob", reflect.TypeOf((*MockClientInt)(nil).ApplyJob), rsc)
 }
 
+// ApplyJobDryRun mocks base method
+func (m *MockClientInt) ApplyJobDryRun(rsc *v10.Job) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyJobDryRun", rsc)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyJobDryRun indicates an expected call of ApplyJobDryRun
+func (mr *MockClientIntMockRecorder) ApplyJobDryRun(rsc interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyJobDryRun", reflect.TypeOf((*MockClientInt)(nil).ApplyJobDryRun), rsc)
+}
+
 // DeleteJob mocks base method
 func (m *MockClientInt) DeleteJob(namespace, name string) error {
 	m.ctrl.T.Helper()
@@ -153,17 +168,17 @@ func (mr *MockClientIntMockRecorder) DeleteJob(namespace, name interface{}) *gom
 }
 
 // WaitUntilJobCompleted mocks base method
-func (m *MockClientInt) WaitUntilJobCompleted(namespace, name string, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitUntilJobCompleted(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilJobCompleted", namespace, name, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitUntilJobCompleted", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitUntilJobCompleted indicates an expected call of WaitUntilJobCompleted
-func (mr *MockClientIntMockRecorder) WaitUntilJobCompleted(namespace, name, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitUntilJobCompleted(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilJobCompleted", reflect.TypeOf((*MockClientInt)(nil).WaitUntilJobCompleted), namespace, name, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilJobCompleted", reflect.TypeOf((*MockClientInt)(nil).WaitUntilJobCompleted), namespace, name, timeout)
 }
 
 // ApplyServiceAccount mocks base method
@@ -222,18 +237,32 @@ func (mr *MockClientIntMockRecorder) DeleteStatefulset(namespace, name interface
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteStatefulset", reflect.TypeOf((*MockClientInt)(nil).DeleteStatefulset), namespace, name)
 }
 
-// WaitUntilStatefulsetIsReady mocks base method
-func (m *MockClientInt) WaitUntilStatefulsetIsReady(namespace, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+// ScaleStatefulset mocks base method
+func (m *MockClientInt) ScaleStatefulset(namespace, name string, replicaCount int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilStatefulsetIsReady", namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	ret := m.ctrl.Call(m, "ScaleStatefulset", namespace, name, replicaCount)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ScaleStatefulset indicates an expected call of ScaleStatefulset
+func (mr *MockClientIntMockRecorder) ScaleStatefulset(namespace, name, replicaCount interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ScaleStatefulset", reflect.TypeOf((*MockClientInt)(nil).ScaleStatefulset), namespace, name, replicaCount)
+}
+
+// WaitUntilStatefulsetIsReady mocks base method
+func (m *MockClientInt) WaitUntilStatefulsetIsReady(namespace, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WaitUntilStatefulsetIsReady", namespace, name, containerCheck, readyCheck, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitUntilStatefulsetIsReady indicates an expected call of WaitUntilStatefulsetIsReady
-func (mr *MockClientIntMockRecorder) WaitUntilStatefulsetIsReady(namespace, name, containerCheck, readyCheck, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitUntilStatefulsetIsReady(namespace, name, containerCheck, readyCheck, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStatefulsetIsReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilStatefulsetIsReady), namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilStatefulsetIsReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilStatefulsetIsReady), namespace, name, containerCheck, readyCheck, timeout)
 }
 
 // ExecInPodWithOutput mocks base method
@@ -263,6 +292,21 @@ func (m *MockClientInt) ExecInPod(namespace, name, container, command string) er
 func (mr *MockClientIntMockRecorder) ExecInPod(namespace, name, container, command interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ExecInPod", reflect.TypeOf((*MockClientInt)(nil).ExecInPod), namespace, name, container, command)
+}
+
+// GetDeployment mocks base method
+func (m *MockClientInt) GetDeployment(namespace, name string) (*v1.Deployment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeployment", namespace, name)
+	ret0, _ := ret[0].(*v1.Deployment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetDeployment indicates an expected call of GetDeployment
+func (mr *MockClientIntMockRecorder) GetDeployment(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployment", reflect.TypeOf((*MockClientInt)(nil).GetDeployment), namespace, name)
 }
 
 // ApplyDeployment mocks base method
@@ -308,17 +352,17 @@ func (mr *MockClientIntMockRecorder) PatchDeployment(namespace, name, data inter
 }
 
 // WaitUntilDeploymentReady mocks base method
-func (m *MockClientInt) WaitUntilDeploymentReady(namespace, name string, containerCheck, readyCheck bool, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitUntilDeploymentReady(namespace, name string, containerCheck, readyCheck bool, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitUntilDeploymentReady", namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitUntilDeploymentReady", namespace, name, containerCheck, readyCheck, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitUntilDeploymentReady indicates an expected call of WaitUntilDeploymentReady
-func (mr *MockClientIntMockRecorder) WaitUntilDeploymentReady(namespace, name, containerCheck, readyCheck, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitUntilDeploymentReady(namespace, name, containerCheck, readyCheck, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilDeploymentReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilDeploymentReady), namespace, name, containerCheck, readyCheck, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitUntilDeploymentReady", reflect.TypeOf((*MockClientInt)(nil).WaitUntilDeploymentReady), namespace, name, containerCheck, readyCheck, timeout)
 }
 
 // ScaleDeployment mocks base method
@@ -408,6 +452,34 @@ func (mr *MockClientIntMockRecorder) DeleteNamespacedCRDResource(group, version,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteNamespacedCRDResource", reflect.TypeOf((*MockClientInt)(nil).DeleteNamespacedCRDResource), group, version, kind, namespace, name)
 }
 
+// ApplyCRDResource mocks base method
+func (m *MockClientInt) ApplyCRDResource(crd *unstructured.Unstructured) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyCRDResource", crd)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyCRDResource indicates an expected call of ApplyCRDResource
+func (mr *MockClientIntMockRecorder) ApplyCRDResource(crd interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyCRDResource", reflect.TypeOf((*MockClientInt)(nil).ApplyCRDResource), crd)
+}
+
+// DeleteCRDResource mocks base method
+func (m *MockClientInt) DeleteCRDResource(group, version, kind, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteCRDResource", group, version, kind, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteCRDResource indicates an expected call of DeleteCRDResource
+func (mr *MockClientIntMockRecorder) DeleteCRDResource(group, version, kind, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCRDResource", reflect.TypeOf((*MockClientInt)(nil).DeleteCRDResource), group, version, kind, name)
+}
+
 // ApplyCronJob mocks base method
 func (m *MockClientInt) ApplyCronJob(rsc *v1beta1.CronJob) error {
 	m.ctrl.T.Helper()
@@ -436,6 +508,21 @@ func (mr *MockClientIntMockRecorder) DeleteCronJob(namespace, name interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteCronJob", reflect.TypeOf((*MockClientInt)(nil).DeleteCronJob), namespace, name)
 }
 
+// ListCronJobs mocks base method
+func (m *MockClientInt) ListCronJobs(namespace string, labels map[string]string) (*v1beta1.CronJobList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCronJobs", namespace, labels)
+	ret0, _ := ret[0].(*v1beta1.CronJobList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCronJobs indicates an expected call of ListCronJobs
+func (mr *MockClientIntMockRecorder) ListCronJobs(namespace, labels interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCronJobs", reflect.TypeOf((*MockClientInt)(nil).ListCronJobs), namespace, labels)
+}
+
 // ListSecrets mocks base method
 func (m *MockClientInt) ListSecrets(namespace string, labels map[string]string) (*v11.SecretList, error) {
 	m.ctrl.T.Helper()
@@ -449,6 +536,21 @@ func (m *MockClientInt) ListSecrets(namespace string, labels map[string]string) 
 func (mr *MockClientIntMockRecorder) ListSecrets(namespace, labels interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSecrets", reflect.TypeOf((*MockClientInt)(nil).ListSecrets), namespace, labels)
+}
+
+// GetSecret mocks base method
+func (m *MockClientInt) GetSecret(namespace, name string) (*v11.Secret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecret", namespace, name)
+	ret0, _ := ret[0].(*v11.Secret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecret indicates an expected call of GetSecret
+func (mr *MockClientIntMockRecorder) GetSecret(namespace, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockClientInt)(nil).GetSecret), namespace, name)
 }
 
 // ApplySecret mocks base method
@@ -480,17 +582,17 @@ func (mr *MockClientIntMockRecorder) DeleteSecret(namespace, name interface{}) *
 }
 
 // WaitForSecret mocks base method
-func (m *MockClientInt) WaitForSecret(namespace, name string, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitForSecret(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForSecret", namespace, name, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitForSecret", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForSecret indicates an expected call of WaitForSecret
-func (mr *MockClientIntMockRecorder) WaitForSecret(namespace, name, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitForSecret(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForSecret", reflect.TypeOf((*MockClientInt)(nil).WaitForSecret), namespace, name, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForSecret", reflect.TypeOf((*MockClientInt)(nil).WaitForSecret), namespace, name, timeout)
 }
 
 // GetConfigMap mocks base method
@@ -537,17 +639,17 @@ func (mr *MockClientIntMockRecorder) DeleteConfigmap(namespace, name interface{}
 }
 
 // WaitForConfigMap mocks base method
-func (m *MockClientInt) WaitForConfigMap(namespace, name string, timeoutSeconds time.Duration) error {
+func (m *MockClientInt) WaitForConfigMap(namespace, name string, timeout time.Duration) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "WaitForConfigMap", namespace, name, timeoutSeconds)
+	ret := m.ctrl.Call(m, "WaitForConfigMap", namespace, name, timeout)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // WaitForConfigMap indicates an expected call of WaitForConfigMap
-func (mr *MockClientIntMockRecorder) WaitForConfigMap(namespace, name, timeoutSeconds interface{}) *gomock.Call {
+func (mr *MockClientIntMockRecorder) WaitForConfigMap(namespace, name, timeout interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForConfigMap", reflect.TypeOf((*MockClientInt)(nil).WaitForConfigMap), namespace, name, timeoutSeconds)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WaitForConfigMap", reflect.TypeOf((*MockClientInt)(nil).WaitForConfigMap), namespace, name, timeout)
 }
 
 // ApplyRole mocks base method
@@ -759,6 +861,49 @@ func (m *MockClientInt) ListPersistentVolumes() (*v11.PersistentVolumeList, erro
 func (mr *MockClientIntMockRecorder) ListPersistentVolumes() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumes", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumes))
+}
+
+// ApplyPlainYAML mocks base method
+func (m *MockClientInt) ApplyPlainYAML(arg0 mntr.Monitor, arg1 []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyPlainYAML", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyPlainYAML indicates an expected call of ApplyPlainYAML
+func (mr *MockClientIntMockRecorder) ApplyPlainYAML(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPlainYAML", reflect.TypeOf((*MockClientInt)(nil).ApplyPlainYAML), arg0, arg1)
+}
+
+// ListPersistentVolumeClaims mocks base method
+func (m *MockClientInt) ListPersistentVolumeClaims(namespace string) (*v11.PersistentVolumeClaimList, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListPersistentVolumeClaims", namespace)
+	ret0, _ := ret[0].(*v11.PersistentVolumeClaimList)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListPersistentVolumeClaims indicates an expected call of ListPersistentVolumeClaims
+func (mr *MockClientIntMockRecorder) ListPersistentVolumeClaims(namespace interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPersistentVolumeClaims", reflect.TypeOf((*MockClientInt)(nil).ListPersistentVolumeClaims), namespace)
+}
+
+// DeletePersistentVolumeClaim mocks base method
+func (m *MockClientInt) DeletePersistentVolumeClaim(namespace, name string, timeout time.Duration) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeletePersistentVolumeClaim", namespace, name, timeout)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeletePersistentVolumeClaim indicates an expected call of DeletePersistentVolumeClaim
+func (mr *MockClientIntMockRecorder) DeletePersistentVolumeClaim(namespace, name, timeout interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePersistentVolumeClaim", reflect.TypeOf((*MockClientInt)(nil).DeletePersistentVolumeClaim), namespace, name, timeout)
 }
 
 // MockMachine is a mock of Machine interface

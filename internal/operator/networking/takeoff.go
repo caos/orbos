@@ -2,6 +2,7 @@ package networking
 
 import (
 	"errors"
+
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/git"
@@ -20,12 +21,12 @@ func Takeoff(monitor mntr.Monitor, gitClient *git.Client, adapt core.AdaptFunc, 
 		}
 		treeCurrent := &tree.Tree{}
 
-		if !k8sClient.Available() {
+		if k8sClient == nil {
 			internalMonitor.Error(errors.New("kubeclient is not available"))
 			return
 		}
 
-		query, _, _, err := adapt(internalMonitor, treeDesired, treeCurrent)
+		query, _, _, _, _, err := adapt(internalMonitor, treeDesired, treeCurrent)
 		if err != nil {
 			internalMonitor.Error(err)
 			return

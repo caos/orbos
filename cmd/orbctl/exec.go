@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/caos/orbos/pkg/tree"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -12,7 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func ExecCommand(rv RootValues) *cobra.Command {
+func ExecCommand(getRv GetRootValues) *cobra.Command {
 	var (
 		command string
 		cmd     = &cobra.Command{
@@ -27,20 +29,29 @@ func ExecCommand(rv RootValues) *cobra.Command {
 	flags.StringVar(&command, "command", "", "Command to be executed")
 
 	cmd.RunE = func(cmd *cobra.Command, args []string) (err error) {
-		_, monitor, orbConfig, gitClient, errFunc, err := rv()
+
+		machineID := ""
+		if len(args) > 0 {
+			machineID = args[0]
+		}
+
+		rv, err := getRv("exec", "", map[string]interface{}{"machine": machineID, "command": command != ""})
 		if err != nil {
 			return err
 		}
-		defer func() {
-			err = errFunc(err)
-		}()
+		defer rv.ErrFunc(err)
+
+		monitor := rv.Monitor
+		orbConfig := rv.OrbConfig
+		gitClient := rv.GitClient
+
+		if !rv.Gitops {
+			return mntr.ToUserError(errors.New("exec command is only supported with the --gitops flag and a committed orbiter.yml"))
+		}
 
 		return machines(monitor, gitClient, orbConfig, func(machineIDs []string, machines map[string]infra.Machine, _ *tree.Tree) error {
 
-			machineID := ""
-			if len(args) > 0 {
-				machineID = args[0]
-			} else {
+			if machineID == "" {
 				if err := survey.AskOne(&survey.Select{
 					Message: "Select a machine:",
 					Options: machineIDs,
@@ -51,13 +62,13 @@ func ExecCommand(rv RootValues) *cobra.Command {
 
 			machine, found := machines[machineID]
 			if !found {
-				return errors.New(fmt.Sprintf("Machine with ID %s unknown", machineID))
+				return mntr.ToUserError(errors.New(fmt.Sprintf("Machine with ID %s unknown", machineID)))
 			}
 
 			if command != "" {
 				output, err := machine.Execute(nil, command)
 				if err != nil {
-					return err
+					return mntr.ToUserError(err)
 				}
 				fmt.Print(string(output))
 			} else {
