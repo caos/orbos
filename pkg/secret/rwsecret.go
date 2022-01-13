@@ -269,7 +269,8 @@ func findSecret(
 	error,
 ) {
 	if *path != "" {
-		return exactSecret(allSecrets, allExisting, *path)
+		secret, err := exactSecret(allSecrets, allExisting, *path)
+		return secret, mntr.ToUserError(err)
 	}
 
 	selectItems := secretsListToSlice(allSecrets, allExisting, includeEmpty)
@@ -289,7 +290,11 @@ func findSecret(
 	}
 	*path = result
 
-	return exactSecret(allSecrets, allExisting, *path)
+	secret, err := exactSecret(allSecrets, allExisting, *path)
+	if err != nil {
+		panic(err)
+	}
+	return secret, nil
 }
 
 func exactSecret(

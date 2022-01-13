@@ -11,6 +11,8 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/caos/orbos/mntr"
+
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/term"
 
@@ -19,47 +21,39 @@ import (
 
 func EditCommand(getRv GetRootValues) *cobra.Command {
 	return &cobra.Command{
-		Use:     "edit [file]",
-		Short:   "Edit a file and push changes to the remote orb repository",
+		Use:     "edit <path>",
+		Short:   "Edit the file in your favorite text editor",
 		Args:    cobra.ExactArgs(1),
-		Example: `orbctl edit desired.yml`,
+		Example: `orbctl file edit desired.yml`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			rv, err := getRv()
+			rv, err := getRv("edit", "", map[string]interface{}{"file": args[0]})
 			if err != nil {
 				return err
 			}
-			defer func() {
-				err = rv.ErrFunc(err)
-			}()
+			defer rv.ErrFunc(err)
 
 			orbConfig := rv.OrbConfig
 			gitClient := rv.GitClient
 
 			if !rv.Gitops {
-				return errors.New("edit command is only supported with the --gitops flag")
+				return mntr.ToUserError(errors.New("edit command is only supported with the --gitops flag"))
 			}
 
-			if err := orbConfig.IsConnectable(); err != nil {
+			if err := initRepo(orbConfig, gitClient); err != nil {
 				return err
 			}
 
-			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-				return err
-			}
-
-			if err := gitClient.Clone(); err != nil {
-				return err
-			}
-
-			edited, err := CaptureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(gitClient.Read(args[0])))
+			edited, err := captureInputFromEditor(GetPreferredEditorFromEnvironment, bytes.NewReader(gitClient.Read(args[0])))
 			if err != nil {
 				panic(err)
 			}
 
-			return gitClient.UpdateRemote("File written by orbctl", git.File{
-				Path:    args[0],
-				Content: edited,
+			return gitClient.UpdateRemote("File written by orbctl", func() []git.File {
+				return []git.File{{
+					Path:    args[0],
+					Content: edited,
+				}}
 			})
 		},
 	}
@@ -100,12 +94,12 @@ func resolveEditorArguments(executable string, filename string) []string {
 	return args
 }
 
-// OpenFileInEditor opens filename in a text editor.
-func OpenFileInEditor(filename string, resolveEditor PreferredEditorResolver) error {
+// openFileInEditor opens filename in a text editor.
+func openFileInEditor(filename string, resolveEditor PreferredEditorResolver) error {
 	// Get the full executable path for the editor.
 	executable, err := exec.LookPath(resolveEditor())
 	if err != nil {
-		return err
+		return mntr.ToUserError(err)
 	}
 
 	cmd := exec.Command(executable, resolveEditorArguments(executable, filename)...)
@@ -116,10 +110,10 @@ func OpenFileInEditor(filename string, resolveEditor PreferredEditorResolver) er
 	return (term.TTY{In: os.Stdin, TryDev: true}).Safe(cmd.Run)
 }
 
-// CaptureInputFromEditor opens a temporary file in a text editor and returns
+// captureInputFromEditor opens a temporary file in a text editor and returns
 // the written bytes on success or an error on failure. It handles deletion
 // of the temporary file behind the scenes.
-func CaptureInputFromEditor(resolveEditor PreferredEditorResolver, content io.Reader) ([]byte, error) {
+func captureInputFromEditor(resolveEditor PreferredEditorResolver, content io.Reader) ([]byte, error) {
 	file, err := ioutil.TempFile(os.TempDir(), "*")
 	if err != nil {
 		return []byte{}, err
@@ -138,7 +132,7 @@ func CaptureInputFromEditor(resolveEditor PreferredEditorResolver, content io.Re
 		return []byte{}, err
 	}
 
-	if err = OpenFileInEditor(filename, resolveEditor); err != nil {
+	if err = openFileInEditor(filename, resolveEditor); err != nil {
 		return []byte{}, err
 	}
 

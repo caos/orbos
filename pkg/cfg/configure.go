@@ -1,6 +1,7 @@
 package cfg
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/caos/orbos/pkg/helper"
@@ -36,7 +37,7 @@ func ApplyOrbconfigSecret(
 
 	orbConfigBytes, err := yaml.Marshal(orbConfig)
 	if err != nil {
-		return err
+		return mntr.ToUserError(err)
 	}
 
 	if err := kubernetes.EnsureOrbconfigSecret(monitor, k8sClient, orbConfigBytes); err != nil {
@@ -70,16 +71,19 @@ func ConfigureOperators(
 	return secret.Rewrite(
 		rewriteKey,
 		func() error {
-			gitFiles := make([]git.File, len(marshallers))
-			for i := range marshallers {
-				gitFiles[i] = marshallers[i]()
-			}
-			return gitClient.UpdateRemote("Reconfigured operators", gitFiles...)
+			return gitClient.UpdateRemote("Reconfigured operators", func() []git.File {
+				gitFiles := make([]git.File, len(marshallers))
+				for i := range marshallers {
+					gitFiles[i] = marshallers[i]()
+				}
+				return gitFiles
+			})
 		},
 	)
 }
 
 func ORBOSConfigurers(
+	ctx context.Context,
 	monitor mntr.Monitor,
 	orbConfig *orb.Orb,
 	gitClient *git.Client,
@@ -130,7 +134,7 @@ func ORBOSConfigurers(
 					return nil, nil, err
 				}
 
-				_, _, _, _, _, err = nwOrb.AdaptFunc(nil, true)(monitor, desired, &tree.Tree{})
+				_, _, _, _, _, err = nwOrb.AdaptFunc(ctx, nil, true)(monitor, desired, &tree.Tree{})
 				return desired, desired.Parsed, err
 			},
 		),

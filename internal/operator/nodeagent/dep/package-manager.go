@@ -3,8 +3,6 @@ package dep
 import (
 	"fmt"
 
-	"github.com/pkg/errors"
-
 	"github.com/caos/orbos/mntr"
 )
 
@@ -26,24 +24,26 @@ type Repository struct {
 type PackageManager struct {
 	monitor   mntr.Monitor
 	os        OperatingSystem
-	installed map[string]string
+	installed map[string][]string
 	systemd   *SystemD
 }
 
-func (p *PackageManager) RefreshInstalled() error {
+func (p *PackageManager) RefreshInstalled(filter []string) error {
 	var err error
 	switch p.os.Packages {
 	case DebianBased:
 		err = p.debbasedInstalled()
 	case REMBased:
-		err = p.rembasedInstalled()
+		err = p.rembasedInstalled(filter)
 	}
 
+	if err != nil {
+		return fmt.Errorf("refreshing installed packages failed: %w", err)
+	}
 	p.monitor.WithFields(map[string]interface{}{
 		"packages": len(p.installed),
 	}).Debug("Refreshed installed packages")
-
-	return errors.Wrap(err, "refreshing installed packages failed")
+	return nil
 }
 
 func (p *PackageManager) Init() error {
@@ -87,34 +87,37 @@ func NewPackageManager(monitor mntr.Monitor, os OperatingSystem, systemd *System
 	return &PackageManager{monitor, os, nil, systemd}
 }
 
-func (p *PackageManager) CurrentVersions(possiblePackages ...string) ([]*Software, error) {
+func (p *PackageManager) CurrentVersions(possiblePackages ...string) []*Software {
 
 	software := make([]*Software, 0)
-	for _, pkg := range possiblePackages {
-		if version, ok := p.installed[pkg]; ok {
-			pkg := &Software{
-				Package: pkg,
-				Version: version,
+	for i := range possiblePackages {
+		pkg := possiblePackages[i]
+		if versions, ok := p.installed[pkg]; ok {
+			for j := range versions {
+				foundSw := &Software{
+					Package: pkg,
+					Version: versions[j],
+				}
+				software = append(software, foundSw)
+				p.monitor.WithFields(map[string]interface{}{
+					"package": foundSw.Package,
+					"version": foundSw.Version,
+				}).Debug("Found filtered installed package")
 			}
-			software = append(software, pkg)
-			p.monitor.WithFields(map[string]interface{}{
-				"package": pkg.Package,
-				"version": pkg.Version,
-			}).Debug("Found filtered installed package")
 		}
 	}
 
-	return software, nil
+	return software
 }
 
-func (p *PackageManager) Install(installVersion *Software, more ...*Software) error {
+func (p *PackageManager) Install(installVersion ...*Software) error {
 	switch p.os.Packages {
 	case DebianBased:
-		return p.debbasedInstall(installVersion, more...)
+		return p.debbasedInstall(installVersion...)
 	case REMBased:
-		return p.rembasedInstall(installVersion, more...)
+		return p.rembasedInstall(installVersion...)
 	}
-	return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
+	return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
 }
 
 func (p *PackageManager) Add(repo *Repository) error {
@@ -124,6 +127,17 @@ func (p *PackageManager) Add(repo *Repository) error {
 	case REMBased:
 		return p.rembasedAdd(repo)
 	default:
-		return errors.Errorf("Package manager %s is not implemented", p.os.Packages)
+		return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
+	}
+}
+
+func (p *PackageManager) Remove(remove ...*Software) error {
+	switch p.os.Packages {
+	case DebianBased:
+		panic("removing software on debian bases systems is not yet implemented")
+	case REMBased:
+		return p.rembasedRemove(remove...)
+	default:
+		return fmt.Errorf("package manager %s is not implemented", p.os.Packages)
 	}
 }

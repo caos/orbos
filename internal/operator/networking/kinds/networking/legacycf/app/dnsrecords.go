@@ -1,27 +1,29 @@
 package app
 
 import (
-	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
+	"context"
 	"strings"
+
+	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/cloudflare"
 )
 
-func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) error {
+func (a *App) EnsureDNSRecords(ctx context.Context, domain string, records []*cloudflare.DNSRecord) error {
 
-	currentRecords, err := a.cloudflare.GetDNSRecords(domain)
+	currentRecords, err := a.cloudflare.GetDNSRecords(ctx, domain)
 	if err != nil {
 		return err
 	}
 
 	createRecords, updateRecords := getRecordsToCreateAndUpdate(domain, currentRecords, records)
 	if createRecords != nil && len(createRecords) > 0 {
-		_, err := a.cloudflare.CreateDNSRecords(domain, createRecords)
+		_, err := a.cloudflare.CreateDNSRecords(ctx, domain, createRecords)
 		if err != nil {
 			return err
 		}
 	}
 
 	if updateRecords != nil && len(updateRecords) > 0 {
-		_, err := a.cloudflare.UpdateDNSRecords(domain, updateRecords)
+		_, err := a.cloudflare.UpdateDNSRecords(ctx, domain, updateRecords)
 		if err != nil {
 			return err
 		}
@@ -29,7 +31,7 @@ func (a *App) EnsureDNSRecords(domain string, records []*cloudflare.DNSRecord) e
 
 	deleteRecords := getRecordsToDelete(currentRecords, records)
 	if deleteRecords != nil && len(deleteRecords) > 0 {
-		if err := a.cloudflare.DeleteDNSRecords(domain, deleteRecords); err != nil {
+		if err := a.cloudflare.DeleteDNSRecords(ctx, domain, deleteRecords); err != nil {
 			return err
 		}
 	}
@@ -42,7 +44,7 @@ func getRecordsToDelete(currentRecords []*cloudflare.DNSRecord, records []*cloud
 	for _, currentRecord := range currentRecords {
 		found := false
 		if records != nil {
-			if currentRecord.Type == "MX" {
+			if currentRecord.Type == "MX" || currentRecord.Type == "TXT" {
 				for _, record := range records {
 					if currentRecord.Type == record.Type &&
 						currentRecord.Name == record.Name &&
@@ -73,22 +75,20 @@ func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNS
 
 	if records != nil {
 		for _, record := range records {
-			if record.Type == "MX" {
+			if record.Type == "MX" || record.Type == "TXT" {
 				found := false
 				for _, currentRecord := range currentRecords {
 					if record.Type == currentRecord.Type &&
 						record.Name == currentRecord.Name &&
 						(record.Content == currentRecord.Content || strings.ToLower(record.Content) == currentRecord.Content) {
 						found = true
+						break
 					}
 				}
 				if !found {
 					createRecords = append(createRecords, record)
 				}
-			}
-		}
-		for _, record := range records {
-			if record.Type != "MX" {
+			} else {
 				found := false
 				for _, currentRecord := range currentRecords {
 					if record.Type == currentRecord.Type &&
@@ -105,7 +105,7 @@ func getRecordsToCreateAndUpdate(domain string, currentRecords []*cloudflare.DNS
 						break
 					}
 				}
-				if found == false {
+				if !found {
 					createRecords = append(createRecords, record)
 				}
 			}

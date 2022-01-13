@@ -1,9 +1,9 @@
 package legacycf
 
 import (
+	"context"
+	"fmt"
 	"time"
-
-	"github.com/caos/orbos/pkg/secret/read"
 
 	"github.com/caos/orbos/internal/operator/core"
 	"github.com/caos/orbos/internal/operator/networking/kinds/networking/legacycf/app"
@@ -11,10 +11,11 @@ import (
 	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/labels"
-	"github.com/pkg/errors"
+	"github.com/caos/orbos/pkg/secret/read"
 )
 
 func adaptFunc(
+	ctx context.Context,
 	monitor mntr.Monitor,
 	cfg *config.InternalConfig,
 ) (
@@ -53,7 +54,7 @@ func adaptFunc(
 
 				caSecretLabels := labels.MustForName(labels.MustForComponent(cfg.Labels, "cloudflare"), cfg.OriginCASecretName)
 				for _, domain := range cfg.Domains {
-					err = apps.Ensure(k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
+					err = apps.Ensure(ctx, k8sClient, cfg.Namespace, domain.Domain, domain.Subdomains, domain.Rules, caSecretLabels)
 					if err != nil {
 						return err
 					}
@@ -67,7 +68,7 @@ func adaptFunc(
 		func(k8sClient kubernetes.ClientInt) error {
 			monitor.Info("waiting for certificate to be created")
 			if err := k8sClient.WaitForSecret(cfg.Namespace, cfg.OriginCASecretName, 60*time.Second); err != nil {
-				return errors.Wrap(err, "error while waiting for certificate secret to be created")
+				return fmt.Errorf("error while waiting for certificate secret to be created: %w", err)
 			}
 			monitor.Info("certificateis created")
 			return nil

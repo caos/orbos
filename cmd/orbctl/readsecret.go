@@ -3,13 +3,12 @@ package main
 import (
 	"os"
 
-	"github.com/caos/orbos/pkg/kubernetes/cli"
-
-	"github.com/caos/orbos/pkg/secret"
+	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-
-	"github.com/spf13/cobra"
+	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/kubernetes/cli"
+	"github.com/caos/orbos/pkg/secret"
 )
 
 func ReadSecretCommand(getRv GetRootValues) *cobra.Command {
@@ -24,26 +23,24 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted
 orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 
-			rv, err := getRv()
-			if err != nil {
-				return err
-			}
-			defer func() {
-				err = rv.ErrFunc(err)
-			}()
-
-			monitor := rv.Monitor
-			orbConfig := rv.OrbConfig
-			gitClient := rv.GitClient
-
 			path := ""
 			if len(args) > 0 {
 				path = args[0]
 			}
 
-			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops)
-			if err != nil && !rv.Gitops {
+			rv, err := getRv("readsecret", "", map[string]interface{}{"path": path})
+			if err != nil {
 				return err
+			}
+			defer rv.ErrFunc(err)
+
+			monitor := rv.Monitor
+			orbConfig := rv.OrbConfig
+			gitClient := rv.GitClient
+
+			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
+			if err != nil && !rv.Gitops {
+				return mntr.ToUserError(err)
 			}
 			err = nil
 

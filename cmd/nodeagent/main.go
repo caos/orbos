@@ -8,7 +8,10 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"os/signal"
+	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/networking"
@@ -24,24 +27,29 @@ import (
 	"github.com/caos/orbos/internal/operator/nodeagent/firewall"
 )
 
-var gitCommit string
-var version string
+var (
+	gitCommit string
+	version   string
+)
 
 func main() {
 
-	defer func() {
-		r := recover()
-		if r != nil {
-			os.Stderr.Write([]byte(fmt.Sprintf("\x1b[0;31m%v\x1b[0m\n", r)))
-			os.Exit(1)
-		}
-	}()
+	ctx, cancelCtx := context.WithCancel(context.Background())
+
+	monitor := mntr.Monitor{
+		OnInfo:   mntr.LogMessage,
+		OnChange: mntr.LogMessage,
+		OnError:  mntr.LogError,
+	}
+
+	defer func() { monitor.RecoverPanic(recover()) }()
 
 	verbose := flag.Bool("verbose", false, "Print logs for debugging")
 	printVersion := flag.Bool("version", false, "Print build information")
 	ignorePorts := flag.String("ignore-ports", "", "Comma separated list of firewall ports that are ignored")
 	nodeAgentID := flag.String("id", "", "The managed machines ID")
 	pprof := flag.Bool("pprof", false, "start pprof as port 6060")
+	sentryEnvironment := flag.String("environment", "", "Sentry environment")
 
 	flag.Parse()
 
@@ -50,25 +58,46 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *nodeAgentID == "" {
-		panic("flag --id is required")
+	if *sentryEnvironment != "" {
+		if err := mntr.Ingest(monitor, "orbos", version, *sentryEnvironment, "node-agent"); err != nil {
+			panic(err)
+		}
 	}
-	monitor := mntr.Monitor{
-		OnInfo:   mntr.LogMessage,
-		OnChange: mntr.LogMessage,
-		OnError:  mntr.LogError,
-	}
+
+	monitor.WithField("id", nodeAgentID).CaptureMessage("nodeagent invoked")
 
 	if *verbose {
 		monitor = monitor.Verbose()
 	}
 
+	if *nodeAgentID == "" {
+		panic("flag --id is required")
+	}
+
 	monitor.WithFields(map[string]interface{}{
-		"version":     version,
-		"commit":      gitCommit,
-		"verbose":     *verbose,
-		"nodeAgentID": *nodeAgentID,
+		"version":           version,
+		"commit":            gitCommit,
+		"verbose":           *verbose,
+		"nodeAgentID":       *nodeAgentID,
+		"sentryEnvironment": *sentryEnvironment,
 	}).Info("Node Agent is starting")
+
+	mutexActionChannel := make(chan interface{})
+
+	signalChannel := make(chan os.Signal)
+	signal.Notify(signalChannel,
+		syscall.SIGTERM,
+		syscall.SIGINT,
+		syscall.SIGQUIT,
+	)
+
+	go func() {
+		for sig := range signalChannel {
+			monitor.WithField("signal", sig.String()).Info("Received signal")
+			cancelCtx()
+			mutexActionChannel <- sig
+		}
+	}()
 
 	if *pprof {
 		go func() {
@@ -76,7 +105,7 @@ func main() {
 		}()
 	}
 
-	os, err := dep.GetOperatingSystem()
+	runningOnOS, err := dep.GetOperatingSystem()
 	if err != nil {
 		panic(err)
 	}
@@ -88,9 +117,9 @@ func main() {
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-	conv := conv.New(monitor, os, fmt.Sprintf("%x", hashed[:]))
+	conv := conv.New(ctx, monitor, runningOnOS, fmt.Sprintf("%x", hashed[:]))
 
-	gitClient := git.New(context.Background(), monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
+	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
 
 	var portsSlice []string
 	if len(*ignorePorts) > 0 {
@@ -102,36 +131,49 @@ func main() {
 		gitClient,
 		gitCommit,
 		*nodeAgentID,
-		firewall.Ensurer(monitor, os.OperatingSystem, portsSlice),
-		networking.Ensurer(monitor, os.OperatingSystem),
+		firewall.Ensurer(monitor, runningOnOS.OperatingSystem, portsSlice),
+		networking.Ensurer(monitor, runningOnOS.OperatingSystem),
 		conv,
 		conv.Init())
 
-	daily := time.NewTicker(24 * time.Hour)
-	defer daily.Stop()
-	update := make(chan struct{})
+	type updateType struct{}
 	go func() {
-		for range daily.C {
+		for range time.Tick(24 * time.Hour) {
 			timer := time.NewTimer(time.Duration(rand.Intn(120)) * time.Minute)
 			<-timer.C
-			update <- struct{}{}
+			mutexActionChannel <- updateType{}
 			timer.Stop()
 		}
 	}()
 
-	iterate := make(chan struct{})
+	type iterateType struct{}
 	//trigger first iteration
-	go func() { iterate <- struct{}{} }()
-	for {
-		select {
-		case <-iterate:
+	go func() { mutexActionChannel <- iterateType{} }()
+
+	go func() {
+		for range time.Tick(5 * time.Minute) {
+			if PrintMemUsage(monitor) > 250 {
+				monitor.Info("Shutting down as memory usage exceeded 250 MiB")
+				mutexActionChannel <- syscall.Signal(0)
+			}
+		}
+	}()
+
+	for action := range mutexActionChannel {
+		switch sig := action.(type) {
+		case os.Signal:
+			monitor.WithField("signal", sig.String()).Info("Shutting down")
+			os.Exit(0)
+		case iterateType:
 			monitor.Info("Starting iteration")
 			itFunc()
 			monitor.Info("Iteration done")
-			time.Sleep(10 * time.Second)
-			//trigger next iteration
-			go func() { iterate <- struct{}{} }()
-		case <-update:
+			go func() {
+				//trigger next iteration
+				time.Sleep(10 * time.Second)
+				mutexActionChannel <- iterateType{}
+			}()
+		case updateType:
 			monitor.Info("Starting update")
 			if err := conv.Update(); err != nil {
 				monitor.Error(fmt.Errorf("updating packages failed: %w", err))
@@ -140,4 +182,14 @@ func main() {
 			}
 		}
 	}
+}
+
+func PrintMemUsage(monitor mntr.Monitor) uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	mB := m.Sys / 1024 / 1024
+	monitor.WithFields(map[string]interface{}{
+		"MiB": mB,
+	}).Info("Read current memory usage")
+	return mB
 }

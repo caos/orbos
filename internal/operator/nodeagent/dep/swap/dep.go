@@ -2,11 +2,11 @@ package swap
 
 import (
 	"bytes"
+
+	"fmt"
 	"io"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -24,7 +24,7 @@ type swapDep struct {
 }
 
 func New(fstabFilePath string) Installer {
-	return &swapDep{fstabFilePath}
+	return &swapDep{fstabFilePath: fstabFilePath}
 }
 
 func (swapDep) Is(other nodeagent.Installer) bool {
@@ -40,6 +40,8 @@ func (*swapDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*swapDep)
 	return ok
 }
+
+func (*swapDep) InstalledFilter() []string { return nil }
 
 func (s *swapDep) Current() (pkg common.Package, err error) {
 
@@ -80,7 +82,7 @@ func (s *swapDep) Ensure(remove common.Package, ensure common.Package, _ bool) e
 	swapoff := exec.Command("swapoff", "--all")
 	swapoff.Stderr = buf
 	if err := swapoff.Run(); err != nil {
-		return errors.Wrapf(err, "Disabling swap failed with standard error: %s", buf.String())
+		return fmt.Errorf("disabling swap failed with standard error: %s: %w", buf.String(), err)
 	}
 
 	return dep.ManipulateFile(s.fstabFilePath, nil, nil, func(line string) *string {

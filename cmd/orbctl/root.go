@@ -2,16 +2,15 @@ package main
 
 import (
 	"context"
-
-	"github.com/caos/orbos/internal/helpers"
-
-	"github.com/caos/orbos/pkg/git"
-	"github.com/caos/orbos/pkg/orb"
-	orbcfg "github.com/caos/orbos/pkg/orb"
+	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/caos/orbos/internal/helpers"
 	"github.com/caos/orbos/mntr"
+	"github.com/caos/orbos/pkg/git"
+	"github.com/caos/orbos/pkg/orb"
+	orbcfg "github.com/caos/orbos/pkg/orb"
 )
 
 type RootValues struct {
@@ -24,26 +23,28 @@ type RootValues struct {
 	ErrFunc    errFunc
 }
 
-type GetRootValues func() (*RootValues, error)
+type GetRootValues func(command, component string, tags map[string]interface{}) (*RootValues, error)
 
-type errFunc func(err error) error
+type errFunc func(err error)
 
 func RootCommand() (*cobra.Command, GetRootValues) {
 
 	ctx := context.Background()
 	rv := &RootValues{
 		Ctx: ctx,
-		ErrFunc: func(err error) error {
-			if err != nil {
-				monitor.Error(err)
+		ErrFunc: func(err error) {
+			if err == nil {
+				return
 			}
-			return nil
+			monitor.Error(err)
+			os.Exit(1)
 		},
 	}
 
 	var (
-		orbConfigPath string
-		verbose       bool
+		orbConfigPath    string
+		verbose          bool
+		disableAnalytics bool
 	)
 
 	cmd := &cobra.Command{
@@ -67,6 +68,7 @@ $ cat > ~/.orb/myorb << EOF
 > EOF
 $ orbctl --gitops -f ~/.orb/myorb [command]
 `,
+		SilenceErrors: true,
 	}
 
 	flags := cmd.PersistentFlags()
@@ -74,8 +76,9 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 	flags.StringVarP(&rv.Kubeconfig, "kubeconfig", "k", "~/.kube/config", "Path to the kubeconfig file to the cluster orbctl should target")
 	flags.BoolVar(&rv.Gitops, "gitops", false, "Run orbctl in gitops mode. Not specifying this flag is only supported for BOOM and Networking Operator")
 	flags.BoolVar(&verbose, "verbose", false, "Print debug levelled logs")
+	flags.BoolVar(&disableAnalytics, "disable-analytics", false, "Don't help CAOS Ltd. to improve ORBOS by sending them errors and usage data")
 
-	return cmd, func() (*RootValues, error) {
+	return cmd, func(command, component string, tags map[string]interface{}) (*RootValues, error) {
 
 		if verbose {
 			monitor = monitor.Verbose()
@@ -92,6 +95,24 @@ $ orbctl --gitops -f ~/.orb/myorb [command]
 				rv.OrbConfig = &orb.Orb{Path: prunedPath}
 			}
 		}
+
+		env := "unknown"
+		if orbID, err := rv.OrbConfig.ID(); err == nil {
+			env = orbID
+		}
+		err = nil
+
+		if component == "" {
+			component = "orbctl"
+		}
+
+		if !disableAnalytics {
+			if err := mntr.Ingest(rv.Monitor, "orbos", version, env, component); err != nil {
+				panic(err)
+			}
+		}
+
+		rv.Monitor.WithFields(map[string]interface{}{"command": command, "gitops": rv.Gitops}).WithFields(tags).CaptureMessage("orbctl invoked")
 
 		return rv, err
 	}

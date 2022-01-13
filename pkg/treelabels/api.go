@@ -13,9 +13,9 @@ func MustForAPI(tree *tree.Tree, operator *labels.Operator) *labels.API {
 		tree.Common == nil ||
 		tree.Common.Kind == "" ||
 		strings.Count(tree.Common.Kind, "/") != 1 ||
-		tree.Common.Version == "" {
+		tree.Common.Version() == "" {
 		panic(fmt.Errorf("invalid tree: %+v", tree))
 	}
 
-	return labels.MustForAPI(operator, strings.Split(tree.Common.Kind, "/")[1], tree.Common.Version)
+	return labels.MustForAPI(operator, strings.Split(tree.Common.Kind, "/")[1], tree.Common.Version())
 }

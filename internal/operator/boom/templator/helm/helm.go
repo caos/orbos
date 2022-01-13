@@ -1,13 +1,13 @@
 package helm
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 
 	"github.com/caos/orbos/internal/operator/boom/name"
 	"github.com/caos/orbos/internal/operator/boom/templator"
 	"github.com/caos/orbos/mntr"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -51,8 +51,7 @@ func (h *Helm) GetResultsFilePath(appName name.Application, overlay, basePath st
 func checkTemplatorInterface(templatorInterface interface{}) (templator.HelmApplication, error) {
 	app, isTemplator := templatorInterface.(templator.HelmApplication)
 	if !isTemplator {
-		err := errors.Errorf("Helm templating interface not implemented")
-		return nil, err
+		return nil, errors.New("helm templating interface not implemented")
 	}
 
 	return app, nil

@@ -1,8 +1,12 @@
 package host
 
 import (
+	"reflect"
+
+	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
+	macherrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -12,7 +16,13 @@ const (
 	kind    = "Host"
 )
 
-func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
+type AdaptFuncToEnsureFunc func(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error)
+
+func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
+	labelInterfaceValues := make(map[string]interface{})
+	for k, v := range labels {
+		labelInterfaceValues[k] = v
+	}
 	acme := map[string]interface{}{
 		"authority": authority,
 	}
@@ -22,10 +32,26 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 		}
 	}
 
-	selectorInternal := make(map[string]interface{}, 0)
+	selectorInterfaceValues := make(map[string]interface{}, 0)
 	for k, v := range selector {
-		selectorInternal[k] = v
+		selectorInterfaceValues[k] = v
 	}
+
+	spec := map[string]interface{}{
+		"hostname": hostname,
+		"selector": map[string]interface{}{
+			"matchLabels": selectorInterfaceValues,
+		},
+		"ambassador_id": []interface{}{"default"},
+		"acmeProvider":  acme,
+	}
+
+	if tlsSecret != "" {
+		spec["tlsSecret"] = map[string]interface{}{
+			"name": tlsSecret,
+		}
+	}
+
 	crd := &unstructured.Unstructured{
 		Object: map[string]interface{}{
 			"kind":       kind,
@@ -33,31 +59,77 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, hostnam
 			"metadata": map[string]interface{}{
 				"name":      name,
 				"namespace": namespace,
-				"labels":    labels,
+				"labels":    labelInterfaceValues,
 				"annotations": map[string]interface{}{
 					"aes_res_changed": "true",
 				},
 			},
-			"spec": map[string]interface{}{
-				"hostname":     hostname,
-				"acmeProvider": acme,
-				"ambassador_id": []string{
-					"default",
-				},
-				"selector": map[string]interface{}{
-					"matchLabels": selectorInternal,
-				},
-				"tlsSecret": map[string]interface{}{
-					"name": tlsSecret,
-				},
-			},
+			"spec": spec,
 		}}
 
 	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
-		return func(k8sClient kubernetes.ClientInt) error {
+		ensure := func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
-		}, nil
+		}
+		crdName := "hosts.getambassador.io"
+		_, ok, err := k8sClient.CheckCRD(crdName)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			monitor.WithField("name", crdName).Info("crd definition not found, skipping")
+			return func(k8sClient kubernetes.ClientInt) error { return nil }, nil
+		}
+
+		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
+		if err != nil && !macherrs.IsNotFound(err) {
+			return nil, err
+		}
+		err = nil
+
+		if existing == nil {
+			return ensure, nil
+		}
+
+		if contains(existing.Object, crd.Object) {
+			// Noop
+			return func(clientInt kubernetes.ClientInt) error { return nil }, nil
+		}
+
+		return ensure, nil
 	}, nil
+}
+
+// The order matters!!
+// TODO: Is this reusable?
+func contains(set, subset map[string]interface{}) bool {
+
+	if len(set) < len(subset) {
+		return false
+	}
+
+	for k, subsetValue := range subset {
+		setValue, ok := set[k]
+		if !ok {
+			return false
+		}
+		setValueMap, setValueIsMap := setValue.(map[string]interface{})
+		subsetValueMap, subsetValueIsMap := subsetValue.(map[string]interface{})
+		if setValueIsMap != subsetValueIsMap {
+			return false
+		}
+		if subsetValueIsMap {
+			if contains(setValueMap, subsetValueMap) {
+				continue
+			}
+			return false
+		}
+		if !reflect.DeepEqual(setValue, subsetValue) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {

@@ -44,6 +44,7 @@ func (*healthDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*healthDep)
 	return ok
 }
+func (*healthDep) InstalledFilter() []string { return nil }
 
 var r = regexp.MustCompile(`ExecStart=/usr/local/bin/health --listen ([^\s]+) (.*)`)
 

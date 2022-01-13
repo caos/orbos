@@ -40,6 +40,10 @@ func (*kubeadmDep) Equals(other nodeagent.Installer) bool {
 	return ok
 }
 
+func (k *kubeadmDep) InstalledFilter() []string {
+	return []string{"kubeadm"}
+}
+
 func (k *kubeadmDep) Current() (common.Package, error) {
 	return k.common.Current()
 }

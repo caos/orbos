@@ -1,8 +1,12 @@
 package conv
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/caos/orbos/internal/operator/nodeagent/dep/kernel"
+
 	"github.com/caos/orbos/internal/operator/nodeagent/dep/health"
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/common"
 	"github.com/caos/orbos/internal/operator/nodeagent"
@@ -28,6 +32,7 @@ type Converter interface {
 }
 
 type dependencies struct {
+	ctx     context.Context
 	monitor mntr.Monitor
 	os      dep.OperatingSystemMajor
 	pm      *dep.PackageManager
@@ -35,8 +40,8 @@ type dependencies struct {
 	cipher  string
 }
 
-func New(monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Converter {
-	return &dependencies{monitor, os, nil, nil, cipher}
+func New(ctx context.Context, monitor mntr.Monitor, os dep.OperatingSystemMajor, cipher string) Converter {
+	return &dependencies{ctx, monitor, os, nil, nil, cipher}
 }
 
 func (d *dependencies) Init() func() error {
@@ -45,10 +50,22 @@ func (d *dependencies) Init() func() error {
 	d.pm = dep.NewPackageManager(d.monitor, d.os.OperatingSystem, d.sysd)
 
 	return func() error {
+		if err := d.pm.RefreshInstalled(append(d.InstalledFilter(),
+			"yum-cron",
+			"yum-utils",
+			"yum-plugin-versionlock",
+			"firewalld",
+		)); err != nil {
+			return err
+		}
 		if err := d.pm.Init(); err != nil {
 			return err
 		}
-		return d.pm.RefreshInstalled()
+		sw := d.pm.CurrentVersions("yum-cron")
+		if len(sw) == 0 {
+			return nil
+		}
+		return d.pm.Remove(sw...)
 	}
 }
 
@@ -56,9 +73,20 @@ func (d *dependencies) Update() error {
 	return d.pm.Update()
 }
 
+func (d *dependencies) InstalledFilter() []string {
+	var query []string
+	for _, dep := range d.ToDependencies(common.Software{}) {
+		query = append(query, dep.Installer.InstalledFilter()...)
+	}
+	return query
+}
+
 func (d *dependencies) ToDependencies(sw common.Software) []*nodeagent.Dependency {
 
 	dependencies := []*nodeagent.Dependency{{
+		Desired:   sw.Kernel,
+		Installer: kernel.New(d.ctx, d.monitor, d.pm),
+	}, {
 		Desired:   sw.Sysctl,
 		Installer: sysctl.New(d.monitor),
 	}, {
@@ -105,6 +133,8 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 
 	for _, dependency := range dependencies {
 		switch i := middleware.Unwrap(dependency.Installer).(type) {
+		case kernel.Installer:
+			sw.Kernel = pkg(*dependency)
 		case sysctl.Installer:
 			sw.Sysctl = pkg(*dependency)
 		case health.Installer:
@@ -128,7 +158,7 @@ func (d *dependencies) ToSoftware(dependencies []*nodeagent.Dependency, pkg func
 		case sshd.Installer:
 			sw.SSHD = pkg(*dependency)
 		default:
-			panic(errors.Errorf("No installer type for dependency %s found", i))
+			panic(fmt.Errorf("no installer type for dependency %s found", i))
 		}
 	}
 

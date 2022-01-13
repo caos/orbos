@@ -1,10 +1,9 @@
 package helper
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/pkg/errors"
 )
 
 func GetAbsPath(pathParts ...string) (string, error) {
@@ -12,7 +11,7 @@ func GetAbsPath(pathParts ...string) (string, error) {
 	filePath := filepath.Join(pathParts...)
 	absFilePath, err := filepath.Abs(filePath)
 	if err != nil {
-		return "", errors.Wrapf(err, "Error while getting absolute path for %s", filePath)
+		return "", fmt.Errorf("error while getting absolute path for %s: %w", filePath, err)
 	}
 	return absFilePath, nil
 }

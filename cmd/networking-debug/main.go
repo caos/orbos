@@ -50,12 +50,12 @@ func main() {
 
 	if gitopsmode {
 
-		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, kubeconfig, gitopsmode)
+		k8sClient, err := cli.Client(monitor, orbConfig, gitClient, kubeconfig, gitopsmode, true)
 		if err != nil {
 			monitor.Error(err)
 			os.Exit(1)
 		}
-		if err := ctrlgitops.Networking(monitor, orbConfig.Path, k8sClient, &version); err != nil {
+		if err := ctrlgitops.Networking(context.Background(), monitor, orbConfig.Path, k8sClient, &version); err != nil {
 			monitor.Error(err)
 			os.Exit(1)
 		}

@@ -13,7 +13,7 @@ import (
 	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
 )
 
-func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, binaryVersion *string) error {
+func Networking(ctx context.Context, monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernetes2.Client, binaryVersion *string) error {
 	takeoffChan := make(chan struct{})
 	go func() {
 		takeoffChan <- struct{}{}
@@ -33,9 +33,10 @@ func Networking(monitor mntr.Monitor, orbConfigPath string, k8sClient *kubernete
 			return err
 		}
 
-		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(binaryVersion, true), k8sClient)
+		takeoff := networking.Takeoff(monitor, gitClient, orb.AdaptFunc(ctx, binaryVersion, true), k8sClient)
 
 		go func() {
+			defer func() { monitor.RecoverPanic(recover()) }()
 			started := time.Now()
 			takeoff()
 

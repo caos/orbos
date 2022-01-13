@@ -9,10 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pires/go-proxyproto"
-
 	"github.com/AppsFlyer/go-sundheit/checks"
-	"github.com/pkg/errors"
+	"github.com/pires/go-proxyproto"
 )
 
 func Check(protocol string, ip string, port uint16, path string, status int, proxyProdocol bool) (string, error) {
@@ -87,5 +85,5 @@ func check(check checks.Check, err error) (string, error) {
 	if !ok {
 		return "", err
 	}
-	return message, errors.Wrap(err, fmt.Sprintf("%s", message))
+	return message, err
 }

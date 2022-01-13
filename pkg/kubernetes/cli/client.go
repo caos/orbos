@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -12,7 +13,6 @@ import (
 	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/orb"
 	"github.com/caos/orbos/pkg/secret"
-	"github.com/pkg/errors"
 )
 
 func Client(
@@ -21,6 +21,7 @@ func Client(
 	gitClient *git.Client,
 	kubeconfig string,
 	gitops bool,
+	clone bool,
 ) (*kubernetes.Client, error) {
 
 	var kc string
@@ -30,12 +31,14 @@ func Client(
 	}
 
 	if orbConfigIsIncompleteErr == nil && gitops {
-		if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
-			return nil, err
-		}
+		if clone {
+			if err := gitClient.Configure(orbConfig.URL, []byte(orbConfig.Repokey)); err != nil {
+				return nil, err
+			}
 
-		if err := gitClient.Clone(); err != nil {
-			return nil, err
+			if err := gitClient.Clone(); err != nil {
+				return nil, err
+			}
 		}
 		if gitClient.Exists(git.OrbiterFile) {
 			orbTree, err := gitClient.ReadTree(git.OrbiterFile)

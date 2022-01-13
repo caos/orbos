@@ -3,39 +3,29 @@ package cri
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/pkg/errors"
 
 	"github.com/caos/orbos/internal/operator/nodeagent/dep"
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string, leaveOSRepositories bool) error {
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-	cmd := exec.Command("yum", "remove", "docker",
-		"docker-client",
-		"docker-client-latest",
-		"docker-common",
-		"docker-latest",
-		"docker-latest-logrotate",
-		"docker-logrotate",
-		"docker-engine")
-	cmd.Stderr = errBuf
-	if c.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "removing older docker versions failed with stderr %s", errBuf.String())
+
+	if err := c.manager.Remove(
+		&dep.Software{Package: "docker"},
+		&dep.Software{Package: "docker-client"},
+		&dep.Software{Package: "docker-client-latest"},
+		&dep.Software{Package: "docker-common"},
+		&dep.Software{Package: "docker-latest"},
+		&dep.Software{Package: "docker-latest-logrotate"},
+		&dep.Software{Package: "docker-logrotate"},
+		&dep.Software{Package: "docker-engine"},
+	); err != nil {
+		return fmt.Errorf("removing older docker versions failed: %w", err)
 	}
 
-	for _, pkg := range []string{"device-mapper-persistent-data", "lvm2"} {
-		if err := c.manager.Install(&dep.Software{Package: pkg}); err != nil {
-			c.monitor.Error(errors.Wrap(err, "installing docker dependency failed"))
-		}
+	if err := c.manager.Install(&dep.Software{Package: "device-mapper-persistent-data"}, &dep.Software{Package: "lvm2"}); err != nil {
+		c.monitor.Error(fmt.Errorf("installing docker dependency failed: %w", err))
 	}
 
 	return c.run(
@@ -60,7 +50,7 @@ func (c *criDep) ensureUbuntu(runtime string, version string, leaveOSRepositorie
 	cmd.Stderr = errBuf
 	cmd.Stdout = buf
 	if err := cmd.Run(); err != nil {
-		return errors.Wrapf(err, "running apt-cache madison %s failed with stderr %s", runtime, errBuf.String())
+		return fmt.Errorf("running apt-cache madison %s failed with stderr %s: %w", runtime, errBuf.String(), err)
 	}
 	errBuf.Reset()
 
@@ -81,7 +71,7 @@ func (c *criDep) ensureUbuntu(runtime string, version string, leaveOSRepositorie
 	buf.Reset()
 
 	if err != nil && versionLine == "" {
-		return errors.Wrapf(err, "finding line containing desired container runtime version \"%s\" failed", version)
+		return fmt.Errorf("finding line containing desired container runtime version \"%s\" failed: %w", version, err)
 	}
 
 	return c.run(
@@ -115,7 +105,7 @@ func (c *criDep) run(runtime, version, repoURL, keyURL, keyFingerprint string, l
 	// https://docs.docker.com/engine/install/ubuntu/
 	if err := c.manager.Install(&dep.Software{
 		Package: "containerd.io",
-		Version: containerdVersion,
+		Version: installContainerdVersion,
 	}); err != nil {
 		return err
 	}
