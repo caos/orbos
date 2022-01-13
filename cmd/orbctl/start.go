@@ -122,7 +122,7 @@ func StartNetworking(getRv GetRootValues) *cobra.Command {
 
 		if rv.Gitops {
 
-			k8sClient, err := kubernetes.NewK8sClientWithPath(monitor, rv.Kubeconfig)
+			k8sClient, err := kubernetes.NewK8sClientPathBeforeInCluster(monitor, rv.Kubeconfig)
 			if err != nil {
 				return err
 			}

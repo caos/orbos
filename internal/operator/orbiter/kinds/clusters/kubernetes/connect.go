@@ -10,7 +10,7 @@ func tryToConnect(monitor mntr.Monitor, desired DesiredV0) *kubernetes.Client {
 	if desired.Spec.Kubeconfig != nil && desired.Spec.Kubeconfig.Value != "" {
 		kc = &desired.Spec.Kubeconfig.Value
 	}
-	k8sClient, err := kubernetes.NewK8sClient(monitor, kc)
+	k8sClient, err := kubernetes.NewK8sClient(monitor, kc, "")
 	if err != nil {
 		// ignore
 		err = nil
