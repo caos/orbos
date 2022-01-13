@@ -1,6 +1,7 @@
 package nodeagent
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -44,6 +45,7 @@ type Converter interface {
 }
 
 type Installer interface {
+	InstalledFilter() []string
 	Current() (common.Package, error)
 	Ensure(uninstall common.Package, install common.Package) error
 	Equals(other Installer) bool
@@ -70,14 +72,12 @@ func prepareQuery(
 
 		defer persistReadyness(curr.NodeIsReady)
 
-		dateTime, err := exec.Command("uptime", "-s").CombinedOutput()
+		dateTime, err := exec.Command("last", "reboot", "-F", "-n", "1").CombinedOutput()
 		if err != nil {
 			return noop, err
 		}
 
-		//dateTime := strings.Fields(string(who))[2:]
-		//str := strings.Join(dateTime, " ") + ":00"
-		t, err := time.Parse("2006-01-02 15:04:05", strings.TrimSuffix(string(dateTime), "\n"))
+		t, err := time.Parse(time.ANSIC, strings.Join(strings.Fields(string(bytes.Split(dateTime, []byte("\n"))[0]))[4:9], " "))
 		if err != nil {
 			return noop, err
 		}
@@ -201,7 +201,7 @@ func ensureFunc(monitor mntr.Monitor, conv Converter, curr *common.NodeAgentCurr
 
 		curr.Software.Merge(conv.ToSoftware([]*Dependency{dep}, func(dep Dependency) common.Package {
 			return dep.Desired
-		}))
+		}), true)
 		monitor.WithFields(map[string]interface{}{
 			"dependency": dep.Installer,
 			"from":       dep.Current.Version,

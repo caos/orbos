@@ -15,7 +15,6 @@ func getAddAndRemoveSources(
 ) (
 	[]string,
 	[]string,
-	error,
 ) {
 
 	addSources := make([]string, 0)
@@ -53,9 +52,5 @@ func getAddAndRemoveSources(
 		}
 	}
 
-	return addSources, removeSources, nil
-}
-
-func getSources(monitor mntr.Monitor, zone string) ([]string, error) {
-	return listFirewall(monitor, zone, "--list-sources")
+	return addSources, removeSources
 }

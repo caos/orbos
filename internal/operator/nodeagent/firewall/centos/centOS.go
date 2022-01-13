@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	"github.com/caos/orbos/internal/operator/common"
@@ -20,13 +21,38 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 			desired.Zones = make(map[string]*common.Zone, 0)
 		}
 
+		_, inactiveErr := runCommand(monitor, "systemctl", "is-active", "firewalld")
+		_, disabledErr := runCommand(monitor, "systemctl", "is-enabled", "firewalld")
+		if inactiveErr != nil || disabledErr != nil {
+			monitor.WithFields(
+				map[string]interface{}{
+					"disabled": strconv.FormatBool(disabledErr != nil),
+					"inactive": strconv.FormatBool(inactiveErr != nil),
+				},
+			).Info("Firewall is inactive or disabled")
+			return current, func() error {
+				monitor.Info("Enabling and starting firewall")
+				if _, err := runCommand(monitor, "systemctl", "enable", "firewalld"); err != nil {
+					return err
+				}
+
+				_, err := runCommand(monitor, "systemctl", "start", "firewalld")
+				return err
+			}, nil
+		}
+
 		// Ensure that all runtime config made in the previous iteration becomes permanent.
 		if _, err := runFirewallCommand(monitor, "--runtime-to-permanent"); err != nil {
 			return current, nil, err
 		}
 
+		currentFirewall, err := queryCurrentFirewall(monitor)
+		if err != nil {
+			return current, nil, err
+		}
+
 		for name, _ := range desired.Zones {
-			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, open)
+			currentZone, ensureFunc, err := ensureZone(monitor, name, desired, currentFirewall, open)
 			if err != nil {
 				return current, nil, err
 			}
@@ -36,8 +62,7 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 			}
 		}
 
-		_, inactiveErr := runCommand(monitor, "systemctl", "is-active", "firewalld")
-		if inactiveErr == nil && len(ensurers) == 0 {
+		if len(ensurers) == 0 {
 			monitor.Debug("Not changing firewall")
 			return current, nil, nil
 		}
@@ -56,7 +81,7 @@ func Ensurer(monitor mntr.Monitor, open []string) nodeagent.FirewallEnsurer {
 	})
 }
 
-func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, open []string) (*common.ZoneDesc, func() error, error) {
+func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, currentFW map[string]Zone, open []string) (*common.ZoneDesc, func() error, error) {
 	current := &common.ZoneDesc{
 		Name:       zoneName,
 		Interfaces: []string{},
@@ -64,42 +89,14 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 		FW:         []*common.Allowed{},
 	}
 
-	ifaces, err := getInterfaces(monitor, zoneName)
-	if err != nil {
-		return current, nil, err
-	}
-	current.Interfaces = ifaces
+	current.Interfaces = currentFW[zoneName].Interfaces.slice
+	current.Sources = currentFW[zoneName].Sources.slice
 
-	sources, err := getSources(monitor, zoneName)
-	if err != nil {
-		return current, nil, err
-	}
-	current.Sources = sources
-
-	ensureMasquerade, err := getEnsureMasquerade(monitor, zoneName, current, desired)
-	if err != nil {
-		return current, nil, err
-	}
-
-	addPorts, removePorts, err := getAddAndRemovePorts(monitor, zoneName, current, desired.Ports(zoneName), open)
-	if err != nil {
-		return current, nil, err
-	}
-
-	ensureIfaces, removeIfaces, err := getEnsureAndRemoveInterfaces(zoneName, current, desired)
-	if err != nil {
-		return current, nil, err
-	}
-
-	addSources, removeSources, err := getAddAndRemoveSources(monitor, zoneName, current, desired)
-	if err != nil {
-		return current, nil, err
-	}
-
-	ensureTarget, err := getEnsureTarget(monitor, zoneName)
-	if err != nil {
-		return current, nil, err
-	}
+	ensureMasquerade := getEnsureMasquerade(zoneName, current, desired, currentFW[zoneName])
+	addPorts, removePorts := getAddAndRemovePorts(current, desired.Ports(zoneName), open, currentFW[zoneName])
+	ensureIfaces, removeIfaces := getEnsureAndRemoveInterfaces(zoneName, current, desired)
+	addSources, removeSources := getAddAndRemoveSources(monitor, zoneName, current, desired)
+	ensureTarget := getEnsureTarget(currentFW[zoneName])
 
 	monitor.WithFields(map[string]interface{}{
 		"open":  strings.Join(addPorts, ";"),
@@ -171,14 +168,6 @@ func ensureZone(monitor mntr.Monitor, zoneName string, desired common.Firewall, 
 func ensure(monitor mntr.Monitor, changes []string, zone string) error {
 	if changes == nil || len(changes) == 0 {
 		return nil
-	}
-
-	if _, err := runCommand(monitor, "systemctl", "enable", "firewalld"); err != nil {
-		return err
-	}
-
-	if _, err := runCommand(monitor, "systemctl", "start", "firewalld"); err != nil {
-		return err
 	}
 
 	return changeFirewall(monitor, changes, zone)

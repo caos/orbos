@@ -16,7 +16,7 @@ import (
 	"github.com/caos/orbos/mntr"
 )
 
-const containerdVersion = "1.4.3"
+const installContainerdVersion = "1.4.3"
 
 type Installer interface {
 	isCRI()
@@ -49,6 +49,10 @@ func (c criDep) String() string { return "Container Runtime" }
 func (s *criDep) Equals(other nodeagent.Installer) bool {
 	_, ok := other.(*criDep)
 	return ok
+}
+
+func (c *criDep) InstalledFilter() []string {
+	return []string{"docker-ce", "containerd.io", "device-mapper-persistent-data", "lvm2"}
 }
 
 func (c *criDep) Current() (pkg common.Package, err error) {

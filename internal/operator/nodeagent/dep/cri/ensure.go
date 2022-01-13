@@ -3,7 +3,6 @@ package cri
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -11,29 +10,22 @@ import (
 )
 
 func (c *criDep) ensureCentOS(runtime string, version string) error {
-	errBuf := new(bytes.Buffer)
-	defer errBuf.Reset()
-	cmd := exec.Command("yum", "--assumeyes", "remove", "docker",
-		"docker-client",
-		"docker-client-latest",
-		"docker-common",
-		"docker-latest",
-		"docker-latest-logrotate",
-		"docker-logrotate",
-		"docker-engine")
-	cmd.Stderr = errBuf
-	if c.monitor.IsVerbose() {
-		fmt.Println(strings.Join(cmd.Args, " "))
-		cmd.Stdout = os.Stdout
-	}
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("removing older docker versions failed with stderr %s: %w", errBuf.String(), err)
+
+	if err := c.manager.Remove(
+		&dep.Software{Package: "docker"},
+		&dep.Software{Package: "docker-client"},
+		&dep.Software{Package: "docker-client-latest"},
+		&dep.Software{Package: "docker-common"},
+		&dep.Software{Package: "docker-latest"},
+		&dep.Software{Package: "docker-latest-logrotate"},
+		&dep.Software{Package: "docker-logrotate"},
+		&dep.Software{Package: "docker-engine"},
+	); err != nil {
+		return fmt.Errorf("removing older docker versions failed: %w", err)
 	}
 
-	for _, pkg := range []string{"device-mapper-persistent-data", "lvm2"} {
-		if err := c.manager.Install(&dep.Software{Package: pkg}); err != nil {
-			c.monitor.Error(fmt.Errorf("installing docker dependency failed: %w", err))
-		}
+	if err := c.manager.Install(&dep.Software{Package: "device-mapper-persistent-data"}, &dep.Software{Package: "lvm2"}); err != nil {
+		c.monitor.Error(fmt.Errorf("installing docker dependency failed: %w", err))
 	}
 
 	return c.run(runtime, version, "https://download.docker.com/linux/centos/docker-ce.repo", "", "")
@@ -92,7 +84,7 @@ func (c *criDep) run(runtime, version, repoURL, keyURL, keyFingerprint string) e
 		// https://docs.docker.com/engine/install/ubuntu/
 		if err := c.manager.Install(&dep.Software{
 			Package: "containerd.io",
-			Version: containerdVersion,
+			Version: installContainerdVersion,
 		}); err != nil {
 			return err
 		}

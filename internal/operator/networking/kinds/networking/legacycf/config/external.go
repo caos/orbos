@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"net"
 
 	"github.com/caos/orbos/mntr"
 
@@ -17,7 +16,6 @@ import (
 type ExternalConfig struct {
 	Verbose       bool
 	Domain        string
-	IP            string
 	Rules         []*Rule
 	Groups        []*Group     `yaml:"groups"`
 	Credentials   *Credentials `yaml:"credentials"`
@@ -29,7 +27,6 @@ func (i *ExternalConfig) IsZero() bool {
 	if (i.Credentials == nil || i.Credentials.IsZero()) &&
 		!i.Verbose &&
 		i.Domain == "" &&
-		i.IP == "" &&
 		i.Groups == nil &&
 		i.Prefix == "" &&
 		i.Rules == nil &&
@@ -62,9 +59,6 @@ func (e *ExternalConfig) Validate() (err error) {
 	if e.Domain == "" {
 		return errors.New("no domain configured")
 	}
-	if net.ParseIP(e.IP) == nil {
-		return fmt.Errorf("%s is not a valid ip address", e.IP)
-	}
 	return nil
 }
 
@@ -92,13 +86,7 @@ func (e *ExternalConfig) ValidateSecrets() (err error) {
 
 func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
 
-	// TODO: Remove
-	subdomains := []*Subdomain{
-		subdomain("accounts", e.IP),
-		subdomain("api", e.IP),
-		subdomain("console", e.IP),
-		subdomain("issuer", e.IP),
-	}
+	subdomains := make([]*Subdomain, 0)
 	for _, sd := range e.AdditionalDNS {
 		subdomains = append(subdomains, sd)
 	}
@@ -109,51 +97,21 @@ func (e *ExternalConfig) internalDomain() (*InternalDomain, *current) {
 			Rules:      e.Rules,
 		},
 		&current{
-			domain:            e.Domain,
-			issureSubdomain:   "issuer",
-			consoleSubdomain:  "console",
-			apiSubdomain:      "api",
-			accountsSubdomain: "accounts",
-			tlsCertName:       "tls-cert-wildcard",
+			domain:      e.Domain,
+			tlsCertName: "tls-cert-wildcard",
 		}
-}
-
-func subdomain(subdomain string, ip string) *Subdomain {
-	return &Subdomain{
-		Subdomain: subdomain,
-		IP:        ip,
-		Proxied:   boolPtr(true),
-		TTL:       0,
-		Type:      "A",
-	}
 }
 
 var _ core.NetworkingCurrent = (*current)(nil)
 
 type current struct {
-	domain            string `yaml:"-"`
-	issureSubdomain   string `yaml:"-"`
-	consoleSubdomain  string `yaml:"-"`
-	apiSubdomain      string `yaml:"-"`
-	accountsSubdomain string `yaml:"-"`
-	tlsCertName       string `yaml:"-"`
-	ReadyCertificate  core2.EnsureFunc
+	domain           string `yaml:"-"`
+	tlsCertName      string `yaml:"-"`
+	ReadyCertificate core2.EnsureFunc
 }
 
 func (c *current) GetDomain() string {
 	return c.domain
-}
-func (c *current) GetIssuerSubDomain() string {
-	return c.issureSubdomain
-}
-func (c *current) GetConsoleSubDomain() string {
-	return c.consoleSubdomain
-}
-func (c *current) GetAPISubDomain() string {
-	return c.apiSubdomain
-}
-func (c *current) GetAccountsSubDomain() string {
-	return c.accountsSubdomain
 }
 func (c *current) GetReadyCertificate() core2.EnsureFunc {
 	return c.ReadyCertificate
@@ -161,5 +119,3 @@ func (c *current) GetReadyCertificate() core2.EnsureFunc {
 func (c *current) GetTlsCertName() string {
 	return c.tlsCertName
 }
-
-func boolPtr(b bool) *bool { return &b }

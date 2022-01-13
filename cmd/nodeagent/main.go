@@ -93,6 +93,8 @@ func main() {
 
 	go func() {
 		for sig := range signalChannel {
+			monitor.WithField("signal", sig.String()).Info("Received signal")
+			cancelCtx()
 			mutexActionChannel <- sig
 		}
 	}()
@@ -115,7 +117,7 @@ func main() {
 
 	pruned := strings.Split(string(repoKey), "-----")[2]
 	hashed := sha256.Sum256([]byte(pruned))
-	conv := conv.New(monitor, runningOnOS, fmt.Sprintf("%x", hashed[:]))
+	conv := conv.New(ctx, monitor, runningOnOS, fmt.Sprintf("%x", hashed[:]))
 
 	gitClient := git.New(ctx, monitor, fmt.Sprintf("Node Agent %s", *nodeAgentID), "node-agent@caos.ch")
 
@@ -161,8 +163,7 @@ func main() {
 		switch sig := action.(type) {
 		case os.Signal:
 			monitor.WithField("signal", sig.String()).Info("Shutting down")
-			cancelCtx()
-			os.Exit(int(sig.(syscall.Signal)))
+			os.Exit(0)
 		case iterateType:
 			monitor.Info("Starting iteration")
 			itFunc()
