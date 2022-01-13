@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -31,7 +32,7 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 			defer rv.ErrFunc(err)
 
 			k8sClient, err := cli.Init(monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, rv.Gitops, !rv.Gitops)
-			if err != nil {
+			if err != nil && (!rv.Gitops || !errors.Is(err, cli.ErrNotInitialized)) {
 				return err
 			}
 
