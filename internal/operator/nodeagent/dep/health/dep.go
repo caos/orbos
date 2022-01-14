@@ -77,7 +77,7 @@ func extractArguments(content []byte) (string, string) {
 	return match[1], match[2]
 }
 
-func (s *healthDep) Ensure(_ common.Package, ensure common.Package) error {
+func (s *healthDep) Ensure(_ common.Package, ensure common.Package, _ bool) error {
 
 	files, _ := ioutil.ReadDir(dir)
 	for _, file := range files {
@@ -112,7 +112,7 @@ CPUAccounting=yes
 
 [Install]
 WantedBy=multi-user.target
-`, location, quote(args))), 0600); err != nil {
+`, location, quote(args))), 0644); err != nil {
 			return err
 		}
 

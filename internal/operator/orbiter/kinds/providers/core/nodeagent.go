@@ -219,7 +219,7 @@ WantedBy=multi-user.target
 						configure(machine),
 						func() error {
 							if err := infra.Try(machineMonitor, time.NewTimer(8*time.Second), 2*time.Second, machine, func(cmp infra.Machine) error {
-								if cbErr := cmp.WriteFile(systemdPath, strings.NewReader(systemdUnitFile(machine)), 600); cbErr != nil {
+								if cbErr := cmp.WriteFile(systemdPath, strings.NewReader(systemdUnitFile(machine)), 644); cbErr != nil {
 									return fmt.Errorf("creating remote file %s failed: %w", systemdPath, cbErr)
 								}
 								return nil

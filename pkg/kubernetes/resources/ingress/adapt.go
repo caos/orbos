@@ -9,32 +9,34 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func AdaptFuncToEnsure(
-	namespace string,
-	id labels.IDLabels,
-	host,
-	prefix,
-	service string,
-	servicePort uint16,
-	annotations map[string]string,
-) (resources.QueryFunc, error) {
+type Arguments struct {
+	Namespace   string
+	Id          labels.IDLabels
+	Host        string
+	Prefix      string
+	Service     string
+	ServicePort uint16
+	Annotations map[string]string
+}
+
+func AdaptFuncToEnsure(params *Arguments) (resources.QueryFunc, error) {
 
 	ingress := &v1beta1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        id.Name(),
-			Namespace:   namespace,
-			Labels:      labels.MustK8sMap(id),
-			Annotations: annotations,
+			Name:        params.Id.Name(),
+			Namespace:   params.Namespace,
+			Labels:      labels.MustK8sMap(params.Id),
+			Annotations: params.Annotations,
 		},
 		Spec: v1beta1.IngressSpec{
 			Rules: []v1beta1.IngressRule{{
-				Host: host,
+				Host: params.Host,
 				IngressRuleValue: v1beta1.IngressRuleValue{HTTP: &v1beta1.HTTPIngressRuleValue{Paths: []v1beta1.HTTPIngressPath{{
-					Path:     prefix,
+					Path:     params.Prefix,
 					PathType: pathTypePtr(v1beta1.PathTypePrefix),
 					Backend: v1beta1.IngressBackend{
-						ServiceName: service,
-						ServicePort: intstr.FromInt(int(servicePort)),
+						ServiceName: params.Service,
+						ServicePort: intstr.FromInt(int(params.ServicePort)),
 						Resource:    nil,
 					},
 				}}}},

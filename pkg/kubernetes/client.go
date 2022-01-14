@@ -155,27 +155,25 @@ type Client struct {
 	available         bool
 }
 
-func NewK8sClientWithPath(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
+func NewK8sClientPathBeforeInCluster(monitor mntr.Monitor, kubeconfigPath string) (*Client, error) {
 	kubeconfigStr := ""
 	if kubeconfigPath != "" {
 		value, err := ioutil.ReadFile(helpers.PruneHome(kubeconfigPath))
-		if err != nil {
-			monitor.Error(err)
-			return nil, err
+		if err == nil {
+			kubeconfigStr = string(value)
 		}
-		kubeconfigStr = string(value)
 	}
 
-	return NewK8sClient(monitor, &kubeconfigStr)
+	return NewK8sClient(monitor, &kubeconfigStr, kubeconfigPath)
 }
 
 func newClient(monitor mntr.Monitor) *Client {
 	return &Client{monitor: monitor}
 }
 
-func NewK8sClient(monitor mntr.Monitor, kubeconfig *string) (*Client, error) {
+func NewK8sClient(monitor mntr.Monitor, kubeconfig *string, kubeconfigPath string) (*Client, error) {
 	kc := newClient(monitor)
-	if err := kc.init(kubeconfig); err != nil {
+	if err := kc.init(kubeconfig, kubeconfigPath); err != nil {
 		return nil, err
 	}
 	return kc, nil
@@ -197,7 +195,7 @@ func (c *Client) checkConnectivity() error {
 	if err == nil || macherrs.IsNotFound(err) {
 		return nil
 	}
-	return err
+	return fmt.Errorf("connectivity check get node failed: %w", err)
 }
 
 func (c *Client) nodeApi() clgocore.NodeInterface {
@@ -882,7 +880,22 @@ func (c *Client) applyController(
 	)
 }
 
-func (c *Client) init(kubeconfig *string) (err error) {
+func restCfgFromContent(bytes []byte) (cfg *rest.Config, err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("creating a kubernetes client from bytes failed: %w", err)
+		}
+	}()
+
+	clientCfg, err := clientcmd.NewClientConfigFromBytes(bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientCfg.ClientConfig()
+}
+
+func (c *Client) init(kubeconfig *string, kubeconfigPath string) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("refreshing Kubernetes client failed: %w", err)
@@ -890,20 +903,28 @@ func (c *Client) init(kubeconfig *string) (err error) {
 	}()
 
 	restCfg := new(rest.Config)
-	if kubeconfig == nil || *kubeconfig == "" {
-		restCfg, err = rest.InClusterConfig()
+	if kubeconfig != nil && *kubeconfig != "" {
+		c.monitor.WithField("content", *kubeconfig).Debug("trying kubeconfig from in-memory content")
+		restCfg, err = restCfgFromContent([]byte(*kubeconfig))
 		if err != nil {
 			return err
 		}
 	} else {
-		clientCfg, err := clientcmd.NewClientConfigFromBytes([]byte(*kubeconfig))
-		if err != nil {
-			return err
+
+		var inClusterErr error
+		restCfg, inClusterErr = rest.InClusterConfig()
+		if inClusterErr == nil {
+			return c.refreshAllClients(restCfg)
 		}
 
-		restCfg, err = clientCfg.ClientConfig()
-		if err != nil {
-			return err
+		localKubeconfigContent, localKubeconfigErr := ioutil.ReadFile(kubeconfigPath)
+		if localKubeconfigErr != nil {
+			return fmt.Errorf("can't create kubernetes client: in-cluster err: %w: local kubeconfig err: %s", inClusterErr, localKubeconfigErr)
+		}
+
+		restCfg, localKubeconfigErr = restCfgFromContent(localKubeconfigContent)
+		if localKubeconfigErr != nil {
+			return fmt.Errorf("can't create kubernetes client: in-cluster err: %w: local kubeconfig err: %s", inClusterErr, localKubeconfigErr)
 		}
 	}
 
@@ -914,30 +935,36 @@ func (c *Client) initConfig(config *rest.Config) (err error) {
 	return c.refreshAllClients(config)
 }
 
-func (c *Client) refreshAllClients(config *rest.Config) error {
+func (c *Client) refreshAllClients(config *rest.Config) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("refreshing all kubernetes clients failed: %w", err)
+		}
+	}()
+
 	c.restConfig = config
 
 	set, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating Clientset failed: %w", err)
 	}
 	c.set = set
 
 	apixv1beta1clientC, err := apixv1beta1client.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating ApiextensionsV1beta1Client failed: %w", err)
 	}
 	c.apixv1beta1client = apixv1beta1clientC
 
 	dynamicC, err := dynamic.NewForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating dynamic client failed: %w", err)
 	}
 	c.dynamic = dynamicC
 
 	dc, err := discovery.NewDiscoveryClientForConfig(config)
 	if err != nil {
-		return err
+		return fmt.Errorf("creating DiscoveryClient failed: %w", err)
 	}
 	c.mapper = restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(dc))
 

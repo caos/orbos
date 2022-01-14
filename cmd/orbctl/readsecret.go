@@ -1,12 +1,12 @@
 package main
 
 import (
+	"errors"
 	"os"
 
 	"github.com/spf13/cobra"
 
 	"github.com/caos/orbos/internal/secret/operators"
-	"github.com/caos/orbos/mntr"
 	"github.com/caos/orbos/pkg/kubernetes/cli"
 	"github.com/caos/orbos/pkg/secret"
 )
@@ -28,26 +28,18 @@ orbctl readsecret orbiter.k8s.kubeconfig.encrypted > ~/.kube/config`,
 				path = args[0]
 			}
 
-			rv, err := getRv("readsecret", "", map[string]interface{}{"path": path})
-			if err != nil {
-				return err
-			}
+			rv := getRv("readsecret", "", map[string]interface{}{"path": path})
 			defer rv.ErrFunc(err)
 
-			monitor := rv.Monitor
-			orbConfig := rv.OrbConfig
-			gitClient := rv.GitClient
-
-			k8sClient, err := cli.Client(monitor, orbConfig, gitClient, rv.Kubeconfig, rv.Gitops, true)
-			if err != nil && !rv.Gitops {
-				return mntr.ToUserError(err)
+			k8sClient, err := cli.Init(monitor, rv.OrbConfig, rv.GitClient, rv.Kubeconfig, rv.Gitops, rv.Gitops, !rv.Gitops)
+			if err != nil && (!rv.Gitops || !errors.Is(err, cli.ErrNotInitialized)) {
+				return err
 			}
-			err = nil
 
 			value, err := secret.Read(
 				k8sClient,
 				path,
-				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, gitClient, k8sClient, orbConfig),
+				operators.GetAllSecretsFunc(monitor, path == "", rv.Gitops, rv.GitClient, k8sClient, rv.OrbConfig),
 			)
 			if err != nil {
 				return err

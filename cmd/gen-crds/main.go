@@ -22,7 +22,7 @@ func main() {
 	flag.Parse()
 
 	if kubeconfig != "" {
-		k8sClient, err := kubernetes.NewK8sClientWithPath(mntr.Monitor{}, kubeconfig)
+		k8sClient, err := kubernetes.NewK8sClientPathBeforeInCluster(mntr.Monitor{}, kubeconfig)
 		if err != nil {
 			panic(err)
 		}

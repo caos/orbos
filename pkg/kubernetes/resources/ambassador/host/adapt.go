@@ -16,29 +16,43 @@ const (
 	kind    = "Host"
 )
 
-type AdaptFuncToEnsureFunc func(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error)
+type Arguments struct {
+	Monitor          mntr.Monitor
+	Namespace        string
+	Name             string
+	Labels           map[string]string
+	Hostname         string
+	Authority        string
+	PrivateKeySecret string
+	Selector         map[string]string
+	TlsSecret        string
+}
 
-func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error) {
+//type AdaptFuncToEnsureFunc func(monitor mntr.Monitor, namespace, name string, labels map[string]string, hostname string, authority string, privateKeySecret string, selector map[string]string, tlsSecret string) (resources.QueryFunc, error)
+
+func AdaptFuncToEnsure(params *Arguments) (resources.QueryFunc, error) {
+
 	labelInterfaceValues := make(map[string]interface{})
-	for k, v := range labels {
+	for k, v := range params.Labels {
 		labelInterfaceValues[k] = v
 	}
+
 	acme := map[string]interface{}{
-		"authority": authority,
+		"authority": params.Authority,
 	}
-	if privateKeySecret != "" {
+	if params.PrivateKeySecret != "" {
 		acme["privateKeySecret"] = map[string]interface{}{
-			"name": privateKeySecret,
+			"name": params.PrivateKeySecret,
 		}
 	}
 
 	selectorInterfaceValues := make(map[string]interface{}, 0)
-	for k, v := range selector {
+	for k, v := range params.Selector {
 		selectorInterfaceValues[k] = v
 	}
 
 	spec := map[string]interface{}{
-		"hostname": hostname,
+		"hostname": params.Hostname,
 		"selector": map[string]interface{}{
 			"matchLabels": selectorInterfaceValues,
 		},
@@ -46,9 +60,9 @@ func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[
 		"acmeProvider":  acme,
 	}
 
-	if tlsSecret != "" {
+	if params.TlsSecret != "" {
 		spec["tlsSecret"] = map[string]interface{}{
-			"name": tlsSecret,
+			"name": params.TlsSecret,
 		}
 	}
 
@@ -57,8 +71,8 @@ func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[
 			"kind":       kind,
 			"apiVersion": group + "/" + version,
 			"metadata": map[string]interface{}{
-				"name":      name,
-				"namespace": namespace,
+				"name":      params.Name,
+				"namespace": params.Namespace,
 				"labels":    labelInterfaceValues,
 				"annotations": map[string]interface{}{
 					"aes_res_changed": "true",
@@ -67,9 +81,9 @@ func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[
 			"spec": spec,
 		}}
 
-	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		ensure := func(k8sClient kubernetes.ClientInt) error {
-			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
+			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, params.Namespace, params.Name, crd)
 		}
 		crdName := "hosts.getambassador.io"
 		_, ok, err := k8sClient.CheckCRD(crdName)
@@ -77,11 +91,11 @@ func AdaptFuncToEnsure(monitor mntr.Monitor, namespace, name string, labels map[
 			return nil, err
 		}
 		if !ok {
-			monitor.WithField("name", crdName).Info("crd definition not found, skipping")
+			params.Monitor.WithField("name", crdName).Info("crd definition not found, skipping")
 			return func(k8sClient kubernetes.ClientInt) error { return nil }, nil
 		}
 
-		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, namespace, name)
+		existing, err := k8sClient.GetNamespacedCRDResource(group, version, kind, params.Namespace, params.Name)
 		if err != nil && !macherrs.IsNotFound(err) {
 			return nil, err
 		}

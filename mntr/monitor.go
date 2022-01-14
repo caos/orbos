@@ -21,6 +21,10 @@ type UserError struct{ Err error }
 
 func (e UserError) Error() string { return e.Err.Error() }
 
+func (e UserError) Unwrap() error {
+	return e.Err
+}
+
 func ToUserError(err error) error {
 	if err == nil {
 		return nil

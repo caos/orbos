@@ -83,7 +83,7 @@ func (k *kernelDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (k *kernelDep) Ensure(remove common.Package, ensure common.Package) error {
+func (k *kernelDep) Ensure(remove common.Package, ensure common.Package, _ bool) error {
 
 	corruptedKernels := make([]*dep.Software, 0)
 	corruptedKernelsStr, ok := remove.Config["corrupted"]

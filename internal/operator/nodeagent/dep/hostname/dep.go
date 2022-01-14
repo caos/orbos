@@ -57,7 +57,7 @@ func (s *hostnameDep) Current() (pkg common.Package, err error) {
 	return pkg, nil
 }
 
-func (s *hostnameDep) Ensure(_ common.Package, ensure common.Package) error {
+func (s *hostnameDep) Ensure(_ common.Package, ensure common.Package, _ bool) error {
 
 	newHostname := ensure.Config["hostname"]
 
