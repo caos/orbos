@@ -14,7 +14,7 @@ import (
 )
 
 func AdaptFuncToEnsure(job *batch.Job) (resources.QueryFunc, error) {
-	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 
 		jobDef, err := k8sClient.GetJob(job.GetNamespace(), job.GetName())
 		if err != nil && !macherrs.IsNotFound(err) {

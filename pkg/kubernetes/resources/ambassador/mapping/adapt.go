@@ -82,7 +82,7 @@ func AdaptFuncToEnsure(params *Arguments) (resources.QueryFunc, error) {
 			"spec": spec,
 		}}
 
-	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		crdName := "mappings.getambassador.io"
 		_, ok, err := k8sClient.CheckCRD(crdName)
 		if err != nil {

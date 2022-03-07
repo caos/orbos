@@ -38,7 +38,7 @@ func AdaptFuncToEnsure(namespace, name string, labels map[string]string, config 
 			"spec": spec,
 		}}
 
-	return func(k8sClient kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(k8sClient kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespacedCRDResource(group, version, kind, namespace, name, crd)
 		}, nil

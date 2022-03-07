@@ -16,7 +16,7 @@ func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, 
 		},
 		Data: data,
 	}
-	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyConfigmap(cm)
 		}, nil

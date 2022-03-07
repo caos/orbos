@@ -1,7 +1,8 @@
 package dockerconfigsecret
 
+/*
 import (
-	kubernetes2 "github.com/caos/orbos/pkg/kubernetes"
+	"github.com/caos/orbos/pkg/kubernetes"
 	"github.com/caos/orbos/pkg/kubernetes/resources"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,15 +21,18 @@ func AdaptFuncToEnsure(namespace string, name string, labels map[string]string, 
 		},
 	}
 
-	return func(_ *kubernetes2.Client) (resources.EnsureFunc, error) {
-		return func(k8sClient *kubernetes2.Client) error {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
+		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplySecret(dcs)
 		}, nil
 	}, nil
 }
 
 func AdaptFuncToDestroy(namespace, name string) (resources.DestroyFunc, error) {
-	return func(client *kubernetes2.Client) error {
+	return func(client *kubernetes.Client) error {
 		return client.DeleteSecret(namespace, name)
 	}, nil
 }
+
+
+*/

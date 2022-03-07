@@ -20,7 +20,7 @@ func AdaptFuncToEnsure(nameLabels *labels.Name, apiGroups, kubeResources, verbs 
 			Verbs:     verbs,
 		}},
 	}
-	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyClusterRole(cr)
 		}, nil
