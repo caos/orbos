@@ -19,7 +19,7 @@ func AdaptFuncToEnsure(namespace string, id labels.IDLabels, data map[string]str
 		Type:       corev1.SecretTypeOpaque,
 		StringData: data,
 	}
-	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplySecret(secret)
 		}, nil

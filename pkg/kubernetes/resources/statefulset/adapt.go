@@ -7,7 +7,7 @@ import (
 )
 
 func AdaptFuncToEnsure(statefulset *appsv1.StatefulSet, force bool) (resources.QueryFunc, error) {
-	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyStatefulSet(statefulset, force)
 		}, nil

@@ -13,7 +13,7 @@ func AdaptFuncToEnsure(namespace string) (resources.QueryFunc, error) {
 			Name: namespace,
 		},
 	}
-	return func(_ kubernetes.ClientInt) (resources.EnsureFunc, error) {
+	return func(_ kubernetes.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		return func(k8sClient kubernetes.ClientInt) error {
 			return k8sClient.ApplyNamespace(ns)
 		}, nil

@@ -30,7 +30,7 @@ func AdaptFuncToEnsure(
 	resources.QueryFunc,
 	error,
 ) {
-	return func(_ kubernetes2.ClientInt) (resources.EnsureFunc, error) {
+	return func(_ kubernetes2.ClientInt, _ map[string]interface{}) (resources.EnsureFunc, error) {
 		portList := make([]corev1.ServicePort, 0)
 		for _, port := range ports {
 			portList = append(portList, corev1.ServicePort{
