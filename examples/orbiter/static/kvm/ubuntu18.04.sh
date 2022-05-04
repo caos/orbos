@@ -5,9 +5,9 @@ ORBITER_BOOTSTRAP_PUBLICKEY="$(cat $2)" envsubst < $1 > /tmp/ks.cfg
 virt-install \
     --virt-type kvm \
     --os-type linux \
-    --os-variant ubuntu20.04 \
+    --os-variant ubuntu18.04 \
     --disk size=10 \
-    --location 'http://mirror.init7.net/ubuntu-releases/20.04/ubuntu-20.04.4-live-server-amd64.iso' \
+    --location 'http://mirror.init7.net/ubuntu/dists/bionic/main/installer-amd64/' \
     --initrd-inject=/tmp/ks.cfg \
     --memory 4096 \
     --vcpus 2 \
