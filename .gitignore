@@ -13,7 +13,7 @@ sandbox*
 *.dll
 *.so
 *.dylib
-orbctl
+/orbctl
 
 # Test binary, built with `go test -c`
 *.test
