@@ -8,7 +8,7 @@ require (
 	github.com/afiskon/promtail-client v0.0.0-20190305142237-506f3f921e9c
 	github.com/aws/aws-sdk-go v1.40.45
 	github.com/caos/oidc v1.0.0
-	github.com/cloudflare/cloudflare-go v0.23.0
+	github.com/cloudflare/cloudflare-go v0.39.0
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.7.1
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
@@ -25,11 +25,10 @@ require (
 	github.com/prometheus/client_golang v1.11.0
 	github.com/satori/go.uuid v1.2.0
 	github.com/spf13/cobra v1.2.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/tinylib/msgp v1.1.6 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
-	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
 	google.golang.org/api v0.57.0
 	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
