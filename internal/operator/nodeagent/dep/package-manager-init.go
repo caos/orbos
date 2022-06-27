@@ -32,6 +32,10 @@ func (p *PackageManager) debSpecificInit() error {
 
 func (p *PackageManager) remSpecificInit() error {
 
+	if err := p.remSpecificDisableGPGRepoCheckForGcloudRepo(); err != nil {
+		return err
+	}
+
 	return p.rembasedInstall(
 		&Software{Package: "yum-utils"},
 		&Software{Package: "yum-plugin-versionlock"},
@@ -51,10 +55,6 @@ func (p *PackageManager) remSpecificDisableGPGRepoCheckForGcloudRepo() error {
 }
 
 func (p *PackageManager) remSpecificUpdatePackages() error {
-
-	if err := p.remSpecificDisableGPGRepoCheckForGcloudRepo(); err != nil {
-		return err
-	}
 
 	conflictingCronFile := "/etc/cron.daily/yumupdate.sh"
 	removeConflictingCronFile := true
