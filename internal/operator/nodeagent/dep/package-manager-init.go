@@ -56,6 +56,10 @@ func (p *PackageManager) remSpecificDisableGPGRepoCheckForGcloudRepo() error {
 
 func (p *PackageManager) remSpecificUpdatePackages() error {
 
+	if err := p.remSpecificDisableGPGRepoCheckForGcloudRepo(); err != nil {
+		return err
+	}
+
 	conflictingCronFile := "/etc/cron.daily/yumupdate.sh"
 	removeConflictingCronFile := true
 	_, err := os.Stat(conflictingCronFile)
