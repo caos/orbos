@@ -313,8 +313,9 @@ vrrp_sync_group VG1 {
 {{ range $idx, $vip := .VIPs }}vrrp_script chk_{{ vip $vip }} {
 	script       "/usr/local/bin/health --protocol http --ip 127.0.0.1 --port 29999 --path /ready --status 200"
 	interval 2   # check every 2 seconds
-	fall 15      # require 15 failures for KO
-	rise 2       # require 2 successes for OK
+	fall 5       # require 5 failures for KO
+	rise 5       # require 5 successes for OK
+	timeout 5    # time out after 5 seconds
 }
 
 vrrp_instance VI_{{ $idx }} {
