@@ -118,6 +118,22 @@ gcloud projects remove-iam-policy-binding ${MY_GCE_PROJECT} \
 gcloud iam service-accounts delete --quiet ${ORBOS_SERVICE_ACCOUNT}
 ```
 
+## Kubernetes Certificates
+
+Kubernetes certificates expire after a year from the latest kubernetes version update.
+ORBITER doesn't replace the admin kubeconfig that is encrypted in orbiter.yaml automatically.
+After a Kubernetes update, we recommend to replace the kubeconfig manually.
+To do so, copy the file /etc/kubernetes/admin.conf to your local machine at `/tmp/kubeconfig`.
+Then, execute the following commands.
+
+```bash
+# Encrypt and replace the kubeconfig in your orbiter.yaml
+orbctl -f ~/.orb/config --gitops writesecret orbiter.k8s.kubeconfig.encrypted --file /tmp/kubeconfig
+
+# Remove the file from your local machine
+rm /tmp/kubeconfig
+```
+
 ## Offerings
 
 The usage of our open source code is and stays completely free. Below you will find our base offerings without Service Level. If you'd like to operate ORBOS in production we recommend you to get in touch with us to arrange a Service Level Agreement and benefit from guaranteed availability and response times. For further information or if you need something else, contact us now at orbos@caos.ch.
