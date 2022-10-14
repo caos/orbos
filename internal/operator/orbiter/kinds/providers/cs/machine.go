@@ -93,13 +93,14 @@ func (m *machine) initAction(a *action, getSlice func() []string, setSlice func(
 	if newAction.required {
 		newAction.unrequire = func() {
 			s := getSlice()
+			var withoutThisMachine []string
 			for sIdx := range s {
 				req := s[sIdx]
-				if req == m.ID() {
-					s = append(s[0:sIdx], s[sIdx+1:]...)
+				if req != m.ID() {
+					withoutThisMachine = append(withoutThisMachine, req)
 				}
 			}
-			setSlice(s)
+			setSlice(withoutThisMachine)
 		}
 	}
 
