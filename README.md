@@ -1,3 +1,6 @@
+:warning: ORBOS is in maintenance mode and not actively developed anymore. Generally, important fixes are done and pull requests are reviewed and merged.
+
+
 # ORBOS - GitOps everything
 
 ![ORBOS](./docs/img/orbos-logo-oneline-lightdesign@2x.png)
