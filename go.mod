@@ -12,7 +12,7 @@ require (
 	github.com/cloudscale-ch/cloudscale-go-sdk v1.7.1
 	github.com/getsentry/sentry-go v0.11.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-git/go-billy/v5 v5.0.0
+	github.com/go-git/go-billy/v5 v5.4.0
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/golang/mock v1.6.0
 	github.com/google/go-github/v31 v31.0.0
@@ -29,7 +29,6 @@ require (
 	github.com/tinylib/msgp v1.1.6 // indirect
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
-	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
 	google.golang.org/api v0.57.0
 	gopkg.in/raintank/schema.v1 v1.0.0
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
