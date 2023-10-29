@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/caos/orbos/internal/executables"
@@ -96,11 +97,11 @@ func NodeAgentFuncs(
 
 	systemdEntry := "node-agentd"
 	systemdPath := fmt.Sprintf("/lib/systemd/system/%s.service", systemdEntry)
-	systemdUnitCache := make(map[string]string)
+	systemdUnitCache := sync.Map{}
 	systemdUnitFile := func(machine infra.Machine) string {
 
-		if cached, ok := systemdUnitCache[machine.ID()]; ok {
-			return cached
+		if cached, ok := systemdUnitCache.Load(machine.ID()); ok {
+			return cached.(string)
 		}
 
 		newFile := fmt.Sprintf(`[Unit]
@@ -122,7 +123,7 @@ KillMode=mixed
 [Install]
 WantedBy=multi-user.target
 `, binary, machine.ID(), pprofStr, verboseStr, sentryEnvironment)
-		systemdUnitCache[machine.ID()] = newFile
+		systemdUnitCache.Store(machine.ID(), newFile)
 		return newFile
 	}
 
